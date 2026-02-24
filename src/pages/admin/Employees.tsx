@@ -253,8 +253,11 @@ export default function Employees() {
               {importStep === "upload" && (
                 <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
                   <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-sm text-muted-foreground mb-3">
-                    El archivo debe tener columnas: First name, Last name (mínimo). Formatos: Excel o CSV.
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Sube el archivo exportado de Connecteam (Excel o CSV)
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Columnas esperadas: First name, Last name, Email, Mobile phone, Verification SSN - EIN, Connecteam User ID
                   </p>
                   <input
                     type="file"
@@ -278,10 +281,12 @@ export default function Employees() {
                   <div className="max-h-60 overflow-y-auto border rounded-lg">
                     <Table>
                       <TableHeader>
-                        <TableRow>
+                         <TableRow>
                           <TableHead className="text-xs">Nombre</TableHead>
+                          <TableHead className="text-xs">Teléfono</TableHead>
                           <TableHead className="text-xs">Email</TableHead>
                           <TableHead className="text-xs">SSN/EIN</TableHead>
+                          <TableHead className="text-xs">Connecteam ID</TableHead>
                           <TableHead className="text-xs">Estado</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -289,8 +294,10 @@ export default function Employees() {
                         {importPreview.map((r, i) => (
                           <TableRow key={i} className={r.exists ? "opacity-50" : ""}>
                             <TableCell className="text-xs font-medium">{r.first_name} {r.last_name}</TableCell>
+                            <TableCell className="text-xs">{r.phone_number || "—"}</TableCell>
                             <TableCell className="text-xs">{r.email || "—"}</TableCell>
                             <TableCell className="text-xs font-mono">{r.verification_ssn_ein || "—"}</TableCell>
+                            <TableCell className="text-xs font-mono">{r.connecteam_employee_id || "—"}</TableCell>
                             <TableCell>
                               <span className={`text-xs px-2 py-0.5 rounded-full ${r.exists ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
                                 {r.exists ? "Existe" : "Nuevo"}
