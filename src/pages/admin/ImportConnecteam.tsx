@@ -132,9 +132,9 @@ export default function ImportConnecteam() {
       // Group by employee (first + last name)
       const employeeGroups: Record<string, Record<string, string>[]> = {};
       allRows.forEach((row) => {
-        const fn = row[reverseMap["First name"] ?? "First name"] ?? "";
-        const ln = row[reverseMap["Last name"] ?? "Last name"] ?? "";
-        const key = `${fn.trim().toLowerCase()}|${ln.trim().toLowerCase()}`;
+        const fn = String(row[reverseMap["First name"] ?? "First name"] ?? "").trim();
+        const ln = String(row[reverseMap["Last name"] ?? "Last name"] ?? "").trim();
+        const key = `${fn.toLowerCase()}|${ln.toLowerCase()}`;
         if (!employeeGroups[key]) employeeGroups[key] = [];
         employeeGroups[key].push(row);
       });
