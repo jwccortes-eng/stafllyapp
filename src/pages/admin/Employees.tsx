@@ -16,86 +16,112 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, MoreHorizontal, Pencil, Trash2, UserX, UserCheck } from "lucide-react";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 
-interface Employee {
-  id: string;
-  first_name: string;
-  last_name: string;
-  phone_number: string | null;
-  email: string | null;
-  connecteam_employee_id: string | null;
-  verification_ssn_ein: string | null;
-  is_active: boolean;
-}
+// All Connecteam fields
+const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean }[] = [
+  { key: "first_name", label: "Nombre", fileCol: ["First name"], required: true },
+  { key: "last_name", label: "Apellido", fileCol: ["Last name"], required: true },
+  { key: "email", label: "Email", fileCol: ["Email"] },
+  { key: "phone_number", label: "Teléfono", fileCol: ["Mobile phone", "Phone"] },
+  { key: "country_code", label: "Código país", fileCol: ["Country code"] },
+  { key: "gender", label: "Género", fileCol: ["Gender"] },
+  { key: "employer_identification", label: "Employer ID", fileCol: ["Employer identification"] },
+  { key: "birthday", label: "Cumpleaños", fileCol: ["Birthday"] },
+  { key: "address", label: "Dirección", fileCol: ["Address (street, apt.)"] },
+  { key: "county", label: "Condado", fileCol: ["Condado"] },
+  { key: "start_date", label: "Fecha inicio", fileCol: ["Start Date"] },
+  { key: "english_level", label: "Nivel inglés", fileCol: ["English Level"] },
+  { key: "employee_role", label: "Rol", fileCol: ["Role"] },
+  { key: "qualify", label: "Calificación", fileCol: ["Qualify"] },
+  { key: "social_security_number", label: "Social Security #", fileCol: ["Social security number"] },
+  { key: "verification_ssn_ein", label: "SSN/EIN Verificación", fileCol: ["Verification SSN - EIN"] },
+  { key: "recommended_by", label: "Recomendado por", fileCol: ["Recommended by?"] },
+  { key: "direct_manager", label: "Manager directo", fileCol: ["Direct manager"] },
+  { key: "has_car", label: "¿Tiene carro?", fileCol: ["You have car?"] },
+  { key: "driver_licence", label: "Licencia", fileCol: ["Driver Licence"] },
+  { key: "end_date", label: "Fecha fin", fileCol: ["End Date"] },
+  { key: "kiosk_code", label: "Código kiosk", fileCol: ["Kiosk code"] },
+  { key: "date_added", label: "Fecha agregado", fileCol: ["Date added"] },
+  { key: "last_login", label: "Último login", fileCol: ["Last login"] },
+  { key: "connecteam_employee_id", label: "Connecteam ID", fileCol: ["Connecteam User ID"] },
+  { key: "added_via", label: "Agregado vía", fileCol: ["Added via"] },
+  { key: "added_by", label: "Agregado por", fileCol: ["Added by"] },
+  { key: "groups", label: "Grupos", fileCol: ["Groups"] },
+  { key: "tags", label: "Tags", fileCol: ["Tags"] },
+];
 
-interface ImportPreviewRow {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone_number: string;
-  connecteam_employee_id: string;
-  verification_ssn_ein: string;
+type EmployeeRecord = Record<string, any>;
+
+interface ImportPreviewRow extends EmployeeRecord {
   exists: boolean;
 }
 
 export default function Employees() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [form, setForm] = useState({ first_name: "", last_name: "", phone_number: "", email: "", connecteam_employee_id: "", verification_ssn_ein: "" });
+  const [form, setForm] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<EmployeeRecord | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EmployeeRecord | null>(null);
+  const [viewEmployee, setViewEmployee] = useState<EmployeeRecord | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   const [importing, setImporting] = useState(false);
   const { toast } = useToast();
 
+  const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
+
   const fetchEmployees = async () => {
     const { data } = await supabase.from("employees").select("*").order("first_name");
-    setEmployees((data as Employee[]) ?? []);
+    setEmployees((data as EmployeeRecord[]) ?? []);
   };
 
   useEffect(() => { fetchEmployees(); }, []);
 
+  const buildInsertData = (src: Record<string, string>) => {
+    const data: Record<string, any> = {};
+    CONNECTEAM_FIELDS.forEach(f => {
+      const val = (src[f.key] ?? "").trim();
+      data[f.key] = val || null;
+    });
+    // Ensure required fields
+    data.first_name = data.first_name || "";
+    data.last_name = data.last_name || "";
+    return data;
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.from("employees").insert({
-      first_name: form.first_name.trim(),
-      last_name: form.last_name.trim(),
-      phone_number: form.phone_number.trim() || null,
-      email: form.email.trim() || null,
-      connecteam_employee_id: form.connecteam_employee_id.trim() || null,
-      verification_ssn_ein: form.verification_ssn_ein.trim() || null,
-    });
+    const { error } = await supabase.from("employees").insert(buildInsertData(form) as any);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Empleado creado" });
       setOpen(false);
-      setForm({ first_name: "", last_name: "", phone_number: "", email: "", connecteam_employee_id: "", verification_ssn_ein: "" });
+      setForm(emptyForm());
       fetchEmployees();
     }
     setLoading(false);
   };
 
-  const openEdit = (emp: Employee) => {
+  const openEdit = (emp: EmployeeRecord) => {
     setEditingEmployee(emp);
-    setForm({
-      first_name: emp.first_name,
-      last_name: emp.last_name,
-      phone_number: emp.phone_number ?? "",
-      email: emp.email ?? "",
-      connecteam_employee_id: emp.connecteam_employee_id ?? "",
-      verification_ssn_ein: emp.verification_ssn_ein ?? "",
-    });
+    const f: Record<string, string> = {};
+    CONNECTEAM_FIELDS.forEach(field => { f[field.key] = emp[field.key] ?? ""; });
+    setForm(f);
     setEditOpen(true);
   };
 
@@ -103,21 +129,14 @@ export default function Employees() {
     e.preventDefault();
     if (!editingEmployee) return;
     setLoading(true);
-    const { error } = await supabase.from("employees").update({
-      first_name: form.first_name.trim(),
-      last_name: form.last_name.trim(),
-      phone_number: form.phone_number.trim() || null,
-      email: form.email.trim() || null,
-      connecteam_employee_id: form.connecteam_employee_id.trim() || null,
-      verification_ssn_ein: form.verification_ssn_ein.trim() || null,
-    }).eq("id", editingEmployee.id);
+    const { error } = await supabase.from("employees").update(buildInsertData(form) as any).eq("id", editingEmployee.id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Empleado actualizado" });
       setEditOpen(false);
       setEditingEmployee(null);
-      setForm({ first_name: "", last_name: "", phone_number: "", email: "", connecteam_employee_id: "", verification_ssn_ein: "" });
+      setForm(emptyForm());
       fetchEmployees();
     }
     setLoading(false);
@@ -135,7 +154,7 @@ export default function Employees() {
     setDeleteTarget(null);
   };
 
-  const toggleActive = async (emp: Employee) => {
+  const toggleActive = async (emp: EmployeeRecord) => {
     const { error } = await supabase.from("employees").update({ is_active: !emp.is_active }).eq("id", emp.id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -154,7 +173,6 @@ export default function Employees() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
 
-      // Try to find column mappings (case-insensitive)
       const findCol = (row: Record<string, any>, candidates: string[]) => {
         const keys = Object.keys(row);
         for (const c of candidates) {
@@ -164,13 +182,12 @@ export default function Employees() {
         return "";
       };
 
-      // Extract unique employees from the file
       const seen = new Set<string>();
       const preview: ImportPreviewRow[] = [];
 
       for (const row of rows) {
-        const firstName = findCol(row, ["First name", "FirstName", "first_name", "Nombre"]);
-        const lastName = findCol(row, ["Last name", "LastName", "last_name", "Apellido"]);
+        const firstName = findCol(row, ["First name"]);
+        const lastName = findCol(row, ["Last name"]);
         if (!firstName && !lastName) continue;
 
         const key = `${firstName.toLowerCase()}|${lastName.toLowerCase()}`;
@@ -182,15 +199,11 @@ export default function Employees() {
                  emp.last_name.toLowerCase() === lastName.toLowerCase()
         );
 
-        preview.push({
-          first_name: firstName,
-          last_name: lastName,
-          email: findCol(row, ["Email", "email", "Correo"]),
-          phone_number: findCol(row, ["Mobile phone", "Phone", "phone_number", "Teléfono", "Telefono"]),
-          connecteam_employee_id: findCol(row, ["Connecteam User ID", "Employee ID", "Connecteam ID", "connecteam_employee_id"]),
-          verification_ssn_ein: findCol(row, ["Verification SSN - EIN", "SSN", "EIN", "verification_ssn_ein"]),
-          exists,
+        const record: ImportPreviewRow = { exists };
+        CONNECTEAM_FIELDS.forEach(f => {
+          record[f.key] = findCol(row, f.fileCol as unknown as string[]);
         });
+        preview.push(record);
       }
 
       setImportPreview(preview);
@@ -205,14 +218,13 @@ export default function Employees() {
     let created = 0;
 
     for (const emp of toCreate) {
-      const { error } = await supabase.from("employees").insert({
-        first_name: emp.first_name,
-        last_name: emp.last_name,
-        email: emp.email || null,
-        phone_number: emp.phone_number || null,
-        connecteam_employee_id: emp.connecteam_employee_id || null,
-        verification_ssn_ein: emp.verification_ssn_ein || null,
+      const data: Record<string, any> = {};
+      CONNECTEAM_FIELDS.forEach(f => {
+        data[f.key] = emp[f.key] || null;
       });
+      data.first_name = data.first_name || "";
+      data.last_name = data.last_name || "";
+      const { error } = await supabase.from("employees").insert(data as any);
       if (!error) created++;
     }
 
@@ -229,7 +241,24 @@ export default function Employees() {
   };
 
   const filtered = employees.filter((e) =>
-    `${e.first_name} ${e.last_name}`.toLowerCase().includes(search.toLowerCase())
+    `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const EmployeeForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
+    <form onSubmit={onSubmit} className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+      {CONNECTEAM_FIELDS.map(f => (
+        <div key={f.key}>
+          <Label className="text-xs">{f.label} {f.required && <span className="text-destructive">*</span>}</Label>
+          <Input
+            value={form[f.key] ?? ""}
+            onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+            required={f.required}
+            className="h-8 text-sm"
+          />
+        </div>
+      ))}
+      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
+    </form>
   );
 
   return (
@@ -244,10 +273,10 @@ export default function Employees() {
             <DialogTrigger asChild>
               <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Importar</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Importar empleados</DialogTitle>
-                <DialogDescription>Sube un archivo Excel con los datos de los empleados</DialogDescription>
+                <DialogDescription>Sube el archivo exportado de Connecteam</DialogDescription>
               </DialogHeader>
 
               {importStep === "upload" && (
@@ -257,14 +286,10 @@ export default function Employees() {
                     Sube el archivo exportado de Connecteam (Excel o CSV)
                   </p>
                   <p className="text-xs text-muted-foreground mb-3">
-                    Columnas esperadas: First name, Last name, Email, Mobile phone, Verification SSN - EIN, Connecteam User ID
+                    Se importarán todos los campos automáticamente
                   </p>
-                  <input
-                    type="file"
-                    accept=".xls,.xlsx,.csv"
-                    onChange={handleImportFile}
-                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer"
-                  />
+                  <input type="file" accept=".xls,.xlsx,.csv" onChange={handleImportFile}
+                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
                 </div>
               )}
 
@@ -281,12 +306,13 @@ export default function Employees() {
                   <div className="max-h-60 overflow-y-auto border rounded-lg">
                     <Table>
                       <TableHeader>
-                         <TableRow>
+                        <TableRow>
                           <TableHead className="text-xs">Nombre</TableHead>
                           <TableHead className="text-xs">Teléfono</TableHead>
                           <TableHead className="text-xs">Email</TableHead>
                           <TableHead className="text-xs">SSN/EIN</TableHead>
-                          <TableHead className="text-xs">Connecteam ID</TableHead>
+                          <TableHead className="text-xs">Rol</TableHead>
+                          <TableHead className="text-xs">Manager</TableHead>
                           <TableHead className="text-xs">Estado</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -297,7 +323,8 @@ export default function Employees() {
                             <TableCell className="text-xs">{r.phone_number || "—"}</TableCell>
                             <TableCell className="text-xs">{r.email || "—"}</TableCell>
                             <TableCell className="text-xs font-mono">{r.verification_ssn_ein || "—"}</TableCell>
-                            <TableCell className="text-xs font-mono">{r.connecteam_employee_id || "—"}</TableCell>
+                            <TableCell className="text-xs">{r.employee_role || "—"}</TableCell>
+                            <TableCell className="text-xs">{r.direct_manager || "—"}</TableCell>
                             <TableCell>
                               <span className={`text-xs px-2 py-0.5 rounded-full ${r.exists ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
                                 {r.exists ? "Existe" : "Nuevo"}
@@ -330,26 +357,16 @@ export default function Employees() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />Nuevo empleado</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Nuevo empleado</DialogTitle>
                 <DialogDescription>Ingresa los datos del nuevo empleado</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Nombre</Label><Input value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} required /></div>
-                  <div><Label>Apellido</Label><Input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} required /></div>
-                </div>
-                <div><Label>Teléfono</Label><Input value={form.phone_number} onChange={e => setForm(f => ({ ...f, phone_number: e.target.value }))} /></div>
-                <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
-                <div><Label>Connecteam ID</Label><Input value={form.connecteam_employee_id} onChange={e => setForm(f => ({ ...f, connecteam_employee_id: e.target.value }))} /></div>
-                <div><Label>SSN/EIN</Label><Input value={form.verification_ssn_ein} onChange={e => setForm(f => ({ ...f, verification_ssn_ein: e.target.value }))} /></div>
-                <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : "Crear"}</Button>
-              </form>
+              <EmployeeForm onSubmit={handleCreate} submitLabel="Crear" />
             </DialogContent>
           </Dialog>
         </div>
@@ -368,21 +385,23 @@ export default function Employees() {
               <TableHead>Nombre</TableHead>
               <TableHead>Teléfono</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Connecteam ID</TableHead>
+              <TableHead>Rol</TableHead>
+              <TableHead>Manager</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
             ) : (
               filtered.map((e) => (
                 <TableRow key={e.id} className={!e.is_active ? "opacity-50" : ""}>
                   <TableCell className="font-medium">{e.first_name} {e.last_name}</TableCell>
                   <TableCell>{e.phone_number ?? "—"}</TableCell>
                   <TableCell>{e.email ?? "—"}</TableCell>
-                  <TableCell className="font-mono text-xs">{e.connecteam_employee_id ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{e.employee_role ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{e.direct_manager ?? "—"}</TableCell>
                   <TableCell>
                     <span className={e.is_active ? "earning-badge" : "deduction-badge"}>
                       {e.is_active ? "Activo" : "Inactivo"}
@@ -396,6 +415,9 @@ export default function Employees() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setViewEmployee(e)}>
+                          <Eye className="h-4 w-4 mr-2" />Ver detalle
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(e)}>
                           <Pencil className="h-4 w-4 mr-2" />Editar
                         </DropdownMenuItem>
@@ -416,24 +438,47 @@ export default function Employees() {
         </Table>
       </div>
 
+      {/* View Detail Sheet */}
+      <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) setViewEmployee(null); }}>
+        <SheetContent className="w-[400px] sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle>{viewEmployee?.first_name} {viewEmployee?.last_name}</SheetTitle>
+            <SheetDescription>Todos los datos del empleado</SheetDescription>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100vh-120px)] mt-4 pr-4">
+            <div className="space-y-1">
+              {CONNECTEAM_FIELDS.map(f => (
+                <div key={f.key} className="flex justify-between py-2 border-b border-border/50">
+                  <span className="text-xs text-muted-foreground">{f.label}</span>
+                  <span className="text-sm font-medium text-right max-w-[60%] break-words">
+                    {viewEmployee?.[f.key] || "—"}
+                  </span>
+                </div>
+              ))}
+              <Separator className="my-2" />
+              <div className="flex justify-between py-2">
+                <span className="text-xs text-muted-foreground">Connecteam ID</span>
+                <span className="text-sm font-mono">{viewEmployee?.connecteam_employee_id || "—"}</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-xs text-muted-foreground">Estado</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${viewEmployee?.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                  {viewEmployee?.is_active ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar empleado</DialogTitle>
             <DialogDescription>Modifica los datos del empleado</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleUpdate} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Nombre</Label><Input value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} required /></div>
-              <div><Label>Apellido</Label><Input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} required /></div>
-            </div>
-            <div><Label>Teléfono</Label><Input value={form.phone_number} onChange={e => setForm(f => ({ ...f, phone_number: e.target.value }))} /></div>
-            <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
-            <div><Label>Connecteam ID</Label><Input value={form.connecteam_employee_id} onChange={e => setForm(f => ({ ...f, connecteam_employee_id: e.target.value }))} /></div>
-            <div><Label>SSN/EIN</Label><Input value={form.verification_ssn_ein} onChange={e => setForm(f => ({ ...f, verification_ssn_ein: e.target.value }))} /></div>
-            <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : "Guardar cambios"}</Button>
-          </form>
+          <EmployeeForm onSubmit={handleUpdate} submitLabel="Guardar cambios" />
         </DialogContent>
       </Dialog>
 
