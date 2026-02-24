@@ -185,11 +185,11 @@ export default function Employees() {
                 <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
                   <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                   <p className="text-sm text-muted-foreground mb-3">
-                    El archivo debe tener columnas: First name, Last name (mínimo)
+                    El archivo debe tener columnas: First name, Last name (mínimo). Formatos: Excel o CSV.
                   </p>
                   <input
                     type="file"
-                    accept=".xls,.xlsx"
+                    accept=".xls,.xlsx,.csv"
                     onChange={handleImportFile}
                     className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer"
                   />
