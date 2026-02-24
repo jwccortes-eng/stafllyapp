@@ -24,7 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
@@ -442,9 +442,12 @@ export default function Employees() {
   return (
     <div>
       <div className="page-header flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Empleados</h1>
-          <p className="page-subtitle">Gestiona los empleados de nómina</p>
+        <div className="flex items-center gap-3">
+          <Users className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="page-title">Empleados</h1>
+            <p className="page-subtitle">Empleados ({filtered.length}/{employees.length}) · Gestiona los empleados de nómina</p>
+          </div>
         </div>
         <div className="flex gap-2">
           {/* Update Dialog (diff + full) */}
@@ -693,30 +696,45 @@ export default function Employees() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Teléfono</TableHead>
+              <TableHead className="w-10"></TableHead>
+              <TableHead>First name</TableHead>
+              <TableHead>Last name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>SSN/EIN</TableHead>
-              <TableHead>Manager</TableHead>
-              <TableHead>Fecha inicio</TableHead>
+              <TableHead>Groups</TableHead>
+              <TableHead>Tags</TableHead>
+              <TableHead>Country code</TableHead>
+              <TableHead>Mobile phone</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
             ) : (
-              filtered.map((e) => (
+              filtered.map((e) => {
+                const initials = `${(e.first_name?.[0] ?? "").toUpperCase()}${(e.last_name?.[0] ?? "").toUpperCase()}`;
+                // Generate a consistent color from name
+                const hue = ((e.first_name?.charCodeAt(0) ?? 0) * 37 + (e.last_name?.charCodeAt(0) ?? 0) * 17) % 360;
+                return (
                 <TableRow key={e.id} className={!e.is_active ? "opacity-50" : ""}>
-                  <TableCell className="font-medium">{e.first_name} {e.last_name}</TableCell>
-                  <TableCell>{e.phone_number ?? "—"}</TableCell>
-                  <TableCell>{e.email ?? "—"}</TableCell>
+                  <TableCell>
+                    <div
+                      className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground"
+                      style={{ backgroundColor: `hsl(${hue}, 55%, 55%)` }}
+                    >
+                      {initials}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">{e.first_name}</TableCell>
+                  <TableCell className="font-medium">{e.last_name}</TableCell>
+                  <TableCell className="text-muted-foreground">{e.email ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{e.groups ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{e.tags ? <Badge variant="outline" className="text-xs">{e.tags}</Badge> : <span className="text-muted-foreground">Untagged</span>}</TableCell>
+                  <TableCell className="text-xs">{e.country_code ?? "+1"}</TableCell>
+                  <TableCell className="text-xs">{e.phone_number ?? "—"}</TableCell>
                   <TableCell className="text-xs">{e.employee_role ?? "—"}</TableCell>
-                  <TableCell className="text-xs font-mono">{e.verification_ssn_ein ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{e.direct_manager ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{e.start_date ?? "—"}</TableCell>
                   <TableCell>
                     <span className={e.is_active ? "earning-badge" : "deduction-badge"}>
                       {e.is_active ? "Activo" : "Inactivo"}
@@ -747,7 +765,8 @@ export default function Employees() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

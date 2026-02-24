@@ -30,7 +30,7 @@ export default function AdminSidebar() {
   const location = useLocation();
 
   const visibleLinks = links.filter(link => {
-    if (!link.module) return true; // Dashboard always visible
+    if (!link.module) return true;
     if (role === 'owner' || role === 'admin') return true;
     if (role === 'manager') return hasModuleAccess(link.module, 'view');
     return false;
@@ -39,15 +39,21 @@ export default function AdminSidebar() {
   const roleLabel = role === 'owner' ? 'Dueño' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Usuario';
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
-      <div className="p-5 border-b border-sidebar-border">
-        <h1 className="text-lg font-bold text-sidebar-primary-foreground font-heading tracking-tight">
-          Payroll Weekly
-        </h1>
-        <p className="text-xs text-sidebar-foreground/60 mt-0.5">{roleLabel}</p>
+    <aside className="fixed inset-y-0 left-0 z-30 w-60 bg-sidebar border-r border-sidebar-border flex flex-col">
+      {/* Logo / Brand */}
+      <div className="px-5 py-4 border-b border-sidebar-border flex items-center gap-3">
+        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+          <span className="text-primary-foreground text-sm font-bold">PW</span>
+        </div>
+        <div>
+          <h1 className="text-sm font-bold text-foreground font-heading tracking-tight leading-none">
+            Payroll Weekly
+          </h1>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{roleLabel}</p>
+        </div>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         {visibleLinks.map((link) => {
           const isActive = location.pathname === link.to || 
             (link.to !== "/admin" && location.pathname.startsWith(link.to));
@@ -56,41 +62,40 @@ export default function AdminSidebar() {
               key={link.to}
               to={link.to}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-primary"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
               )}
             >
-              <link.icon className="h-4 w-4 shrink-0" />
+              <link.icon className={cn("h-[18px] w-[18px] shrink-0", isActive && "text-primary")} />
               {link.label}
             </NavLink>
           );
         })}
 
-        {/* Users management - only owner */}
         {role === 'owner' && (
           <NavLink
             to="/admin/users"
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all",
               location.pathname.startsWith("/admin/users")
-                ? "bg-sidebar-accent text-sidebar-primary"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
             )}
           >
-            <Shield className="h-4 w-4 shrink-0" />
+            <Shield className={cn("h-[18px] w-[18px] shrink-0", location.pathname.startsWith("/admin/users") && "text-primary")} />
             Usuarios
           </NavLink>
         )}
       </nav>
 
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="px-3 py-3 border-t border-sidebar-border">
         <button
           onClick={signOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors w-full"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-all w-full"
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-[18px] w-[18px]" />
           Cerrar sesión
         </button>
       </div>
