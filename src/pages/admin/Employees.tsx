@@ -32,9 +32,9 @@ import * as XLSX from "xlsx";
 const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean }[] = [
   { key: "first_name", label: "Nombre", fileCol: ["First name"], required: true },
   { key: "last_name", label: "Apellido", fileCol: ["Last name"], required: true },
-  { key: "email", label: "Email", fileCol: ["Email"] },
   { key: "phone_number", label: "Teléfono", fileCol: ["Mobile phone", "Phone"] },
   { key: "country_code", label: "Código país", fileCol: ["Country code"] },
+  { key: "email", label: "Email", fileCol: ["Email"] },
   { key: "gender", label: "Género", fileCol: ["Gender"] },
   { key: "employer_identification", label: "Employer ID", fileCol: ["Employer identification"] },
   { key: "birthday", label: "Cumpleaños", fileCol: ["Birthday"] },
@@ -582,14 +582,16 @@ export default function Employees() {
               <TableHead>Teléfono</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Rol</TableHead>
+              <TableHead>SSN/EIN</TableHead>
               <TableHead>Manager</TableHead>
+              <TableHead>Fecha inicio</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
             ) : (
               filtered.map((e) => (
                 <TableRow key={e.id} className={!e.is_active ? "opacity-50" : ""}>
@@ -597,7 +599,9 @@ export default function Employees() {
                   <TableCell>{e.phone_number ?? "—"}</TableCell>
                   <TableCell>{e.email ?? "—"}</TableCell>
                   <TableCell className="text-xs">{e.employee_role ?? "—"}</TableCell>
+                  <TableCell className="text-xs font-mono">{e.verification_ssn_ein ?? "—"}</TableCell>
                   <TableCell className="text-xs">{e.direct_manager ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{e.start_date ?? "—"}</TableCell>
                   <TableCell>
                     <span className={e.is_active ? "earning-badge" : "deduction-badge"}>
                       {e.is_active ? "Activo" : "Inactivo"}
