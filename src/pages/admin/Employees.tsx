@@ -7,9 +7,16 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, MoreHorizontal, Pencil, Trash2, UserX, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 
@@ -41,6 +48,9 @@ export default function Employees() {
   const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState({ first_name: "", last_name: "", phone_number: "", email: "", connecteam_employee_id: "", verification_ssn_ein: "" });
   const [loading, setLoading] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
@@ -74,6 +84,65 @@ export default function Employees() {
       fetchEmployees();
     }
     setLoading(false);
+  };
+
+  const openEdit = (emp: Employee) => {
+    setEditingEmployee(emp);
+    setForm({
+      first_name: emp.first_name,
+      last_name: emp.last_name,
+      phone_number: emp.phone_number ?? "",
+      email: emp.email ?? "",
+      connecteam_employee_id: emp.connecteam_employee_id ?? "",
+      verification_ssn_ein: emp.verification_ssn_ein ?? "",
+    });
+    setEditOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmployee) return;
+    setLoading(true);
+    const { error } = await supabase.from("employees").update({
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      phone_number: form.phone_number.trim() || null,
+      email: form.email.trim() || null,
+      connecteam_employee_id: form.connecteam_employee_id.trim() || null,
+      verification_ssn_ein: form.verification_ssn_ein.trim() || null,
+    }).eq("id", editingEmployee.id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Empleado actualizado" });
+      setEditOpen(false);
+      setEditingEmployee(null);
+      setForm({ first_name: "", last_name: "", phone_number: "", email: "", connecteam_employee_id: "", verification_ssn_ein: "" });
+      fetchEmployees();
+    }
+    setLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("employees").delete().eq("id", deleteTarget.id);
+    if (error) {
+      toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Empleado eliminado" });
+      fetchEmployees();
+    }
+    setDeleteTarget(null);
+  };
+
+  const toggleActive = async (emp: Employee) => {
+    const { error } = await supabase.from("employees").update({ is_active: !emp.is_active }).eq("id", emp.id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: emp.is_active ? "Empleado desactivado" : "Empleado activado" });
+      fetchEmployees();
+    }
   };
 
   const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,14 +363,15 @@ export default function Employees() {
               <TableHead>Email</TableHead>
               <TableHead>Connecteam ID</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
             ) : (
               filtered.map((e) => (
-                <TableRow key={e.id}>
+                <TableRow key={e.id} className={!e.is_active ? "opacity-50" : ""}>
                   <TableCell className="font-medium">{e.first_name} {e.last_name}</TableCell>
                   <TableCell>{e.phone_number ?? "—"}</TableCell>
                   <TableCell>{e.email ?? "—"}</TableCell>
@@ -311,12 +381,72 @@ export default function Employees() {
                       {e.is_active ? "Activo" : "Inactivo"}
                     </span>
                   </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(e)}>
+                          <Pencil className="h-4 w-4 mr-2" />Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleActive(e)}>
+                          {e.is_active ? <UserX className="h-4 w-4 mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
+                          {e.is_active ? "Desactivar" : "Activar"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(e)}>
+                          <Trash2 className="h-4 w-4 mr-2" />Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar empleado</DialogTitle>
+            <DialogDescription>Modifica los datos del empleado</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Nombre</Label><Input value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} required /></div>
+              <div><Label>Apellido</Label><Input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} required /></div>
+            </div>
+            <div><Label>Teléfono</Label><Input value={form.phone_number} onChange={e => setForm(f => ({ ...f, phone_number: e.target.value }))} /></div>
+            <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+            <div><Label>Connecteam ID</Label><Input value={form.connecteam_employee_id} onChange={e => setForm(f => ({ ...f, connecteam_employee_id: e.target.value }))} /></div>
+            <div><Label>SSN/EIN</Label><Input value={form.verification_ssn_ein} onChange={e => setForm(f => ({ ...f, verification_ssn_ein: e.target.value }))} /></div>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : "Guardar cambios"}</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar empleado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará permanentemente a <strong>{deleteTarget?.first_name} {deleteTarget?.last_name}</strong>. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
