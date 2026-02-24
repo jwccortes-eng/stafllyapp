@@ -74,13 +74,9 @@ function parseConnecteamCSV(rawText: string): Record<string, string>[] {
     line = line.replace(/,+\s*$/, "").trim();
     // Rejoin CSV-split fragments: "," or ", " between value parts
     line = line.replace(/"\s*,\s*"/g, ", ");
-    // Unescape doubled quotes
-    line = line.replace(/""/g, "\x01");
-    // Remove remaining quotes
+    // Remove all double-quote characters (they are CSV escaping artifacts)
     line = line.replace(/"/g, "");
-    // Restore escaped quotes
-    line = line.replace(/\x01/g, '"');
-    // Split by semicolons and trim each value
+    // Split by semicolons and trim each value, then strip leading/trailing quotes
     return line.split(";").map(v => v.trim());
   };
 
@@ -159,7 +155,10 @@ export function parseConnecteamFile(
     for (const [rawHeader, value] of Object.entries(raw)) {
       const dbKey = mapHeader(rawHeader);
       if (dbKey && !mapped[dbKey]) {
-        mapped[dbKey] = String(value ?? "").trim();
+        let val = String(value ?? "").trim();
+        // Clean up garbage values (only commas/spaces/empty)
+        if (/^[\s,]*$/.test(val)) val = "";
+        mapped[dbKey] = val;
       }
     }
     // Skip if no name
