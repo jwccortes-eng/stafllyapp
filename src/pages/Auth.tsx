@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyError } from "@/lib/error-helpers";
 
 export default function Auth() {
   const { user, role, loading: authLoading } = useAuth();
@@ -31,7 +32,7 @@ export default function Auth() {
     if (isLogin) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
       }
     } else {
       const { error } = await supabase.auth.signUp({
@@ -43,7 +44,7 @@ export default function Auth() {
         },
       });
       if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
       } else {
         toast({
           title: "Cuenta creada",

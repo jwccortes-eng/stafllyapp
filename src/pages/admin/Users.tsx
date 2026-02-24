@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useAuth } from "@/hooks/useAuth";
 
 const MODULES = [
@@ -129,7 +130,7 @@ export default function UsersPage() {
       .eq("user_id", editUser.user_id);
 
     if (roleError) {
-      toast({ title: "Error", description: roleError.message, variant: "destructive" });
+      toast({ title: "Error", description: getUserFriendlyError(roleError), variant: "destructive" });
       setLoading(false);
       return;
     }

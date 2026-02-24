@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyError } from "@/lib/error-helpers";
 
 interface Employee { id: string; first_name: string; last_name: string; }
 interface Period { id: string; start_date: string; end_date: string; status: string; }
@@ -85,7 +86,7 @@ export default function Movements() {
       note: form.note.trim() || null,
     });
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
       toast({ title: "Movimiento registrado" });
       setOpen(false);

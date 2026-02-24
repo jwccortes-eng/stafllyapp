@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyError } from "@/lib/error-helpers";
 import * as XLSX from "xlsx";
 
 // All Connecteam fields
@@ -130,7 +131,7 @@ export default function Employees() {
     setLoading(true);
     const { error } = await supabase.from("employees").insert(buildInsertData(form) as any);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
       toast({ title: "Empleado creado" });
       setOpen(false);
@@ -154,7 +155,7 @@ export default function Employees() {
     setLoading(true);
     const { error } = await supabase.from("employees").update(buildInsertData(form) as any).eq("id", editingEmployee.id);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
       toast({ title: "Empleado actualizado" });
       setEditOpen(false);
@@ -169,7 +170,7 @@ export default function Employees() {
     if (!deleteTarget) return;
     const { error } = await supabase.from("employees").delete().eq("id", deleteTarget.id);
     if (error) {
-      toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
+      toast({ title: "Error al eliminar", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
       toast({ title: "Empleado eliminado" });
       fetchEmployees();
@@ -180,7 +181,7 @@ export default function Employees() {
   const toggleActive = async (emp: EmployeeRecord) => {
     const { error } = await supabase.from("employees").update({ is_active: !emp.is_active }).eq("id", emp.id);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
       toast({ title: emp.is_active ? "Empleado desactivado" : "Empleado activado" });
       fetchEmployees();
