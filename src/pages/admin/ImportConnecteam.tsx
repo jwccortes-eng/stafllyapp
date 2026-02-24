@@ -7,7 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyError } from "@/lib/error-helpers";
 import * as XLSX from "xlsx";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_ROW_COUNT = 10000;
 
 const KNOWN_HEADERS = [
   "First name", "Last name", "Verification SSN - EIN",
@@ -55,6 +59,10 @@ export default function ImportConnecteam() {
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    if (f.size > MAX_FILE_SIZE) {
+      toast({ title: "Error", description: "El archivo es demasiado grande (máx 10MB)", variant: "destructive" });
+      return;
+    }
     setFile(f);
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -103,7 +111,9 @@ export default function ImportConnecteam() {
     try {
       const ws = workbook.Sheets[selectedSheet];
       const allRows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
-
+      if (allRows.length > MAX_ROW_COUNT) {
+        throw new Error(`El archivo tiene demasiadas filas (${allRows.length}). Máximo permitido: ${MAX_ROW_COUNT}`);
+      }
       // Get employees for matching
       const { data: employees } = await supabase.from("employees").select("id, first_name, last_name, verification_ssn_ein");
       const empList = employees ?? [];
@@ -209,8 +219,8 @@ export default function ImportConnecteam() {
       });
       setStep(4);
     } catch (err: any) {
-      setResult({ success: false, message: err.message });
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      setResult({ success: false, message: getUserFriendlyError(err) });
+      toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
     }
 
     setImporting(false);

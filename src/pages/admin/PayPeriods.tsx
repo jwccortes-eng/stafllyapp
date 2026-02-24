@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Lock, Unlock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyError } from "@/lib/error-helpers";
 import { format, addDays, nextWednesday, previousWednesday, isWednesday } from "date-fns";
 
 interface PayPeriod {
@@ -47,7 +48,7 @@ export default function PayPeriods() {
       end_date: format(end, "yyyy-MM-dd"),
     });
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
       toast({ title: "Periodo creado" });
       setOpen(false);
@@ -64,7 +65,7 @@ export default function PayPeriods() {
       .update({ status: newStatus, closed_at: newStatus === "closed" ? new Date().toISOString() : null })
       .eq("id", period.id);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
       fetchPeriods();
     }

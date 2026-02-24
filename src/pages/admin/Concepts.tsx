@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFriendlyError } from "@/lib/error-helpers";
 
 interface Concept {
   id: string;
@@ -49,7 +50,7 @@ export default function Concepts() {
       rate_source: form.rate_source as "concept_default" | "per_employee",
     });
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
       toast({ title: "Concepto creado" });
       setOpen(false);
