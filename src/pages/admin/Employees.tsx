@@ -23,12 +23,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
+import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
 import * as XLSX from "xlsx";
 
-// All Connecteam fields
+// All Connecteam fields in Excel order
 const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean }[] = [
   { key: "first_name", label: "Nombre", fileCol: ["First name"], required: true },
   { key: "last_name", label: "Apellido", fileCol: ["Last name"], required: true },
@@ -90,11 +92,12 @@ export default function Employees() {
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   const [importing, setImporting] = useState(false);
-  // CSV Update state
+  // Update state (diff + full replace)
   const [updateDiffs, setUpdateDiffs] = useState<UpdateDiff[]>([]);
   const [updateStep, setUpdateStep] = useState<"upload" | "preview" | "done">("upload");
-  const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number } | null>(null);
+  const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [updateMode, setUpdateMode] = useState<"diff" | "full">("full");
   const { toast } = useToast();
 
   const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
@@ -188,38 +191,66 @@ export default function Employees() {
     }
   };
 
+  // ---- Match employee from file row to existing DB record ----
+  const matchEmployee = (parsed: ParsedEmployee): EmployeeRecord | undefined => {
+    // Match by Connecteam ID first
+    if (parsed.connecteam_employee_id) {
+      const match = employees.find(e => e.connecteam_employee_id === parsed.connecteam_employee_id);
+      if (match) return match;
+    }
+    // Then by phone number
+    if (parsed.phone_number) {
+      const phone = parsed.phone_number.replace(/\D/g, "");
+      const match = employees.find(e => e.phone_number?.replace(/\D/g, "") === phone);
+      if (match) return match;
+    }
+    // Then by name
+    if (parsed.first_name && parsed.last_name) {
+      const match = employees.find(
+        e => e.first_name?.toLowerCase().trim() === parsed.first_name?.toLowerCase().trim() &&
+             e.last_name?.toLowerCase().trim() === parsed.last_name?.toLowerCase().trim()
+      );
+      if (match) return match;
+    }
+    return undefined;
+  };
+
   // ---- IMPORT (create new) ----
   const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const wb = XLSX.read(evt.target?.result, { type: "binary" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+      const content = evt.target?.result;
+      if (!content) return;
+
+      let parsed: ParsedEmployee[];
+      try {
+        parsed = parseConnecteamFile(content as string, f.name);
+      } catch {
+        // Fallback to XLSX direct parse
+        const wb = XLSX.read(content, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+        parsed = rows.map(row => {
+          const mapped: ParsedEmployee = {};
+          CONNECTEAM_FIELDS.forEach(field => {
+            mapped[field.key] = findCol(row, field.fileCol);
+          });
+          return mapped;
+        }).filter(r => r.first_name || r.last_name);
+      }
 
       const seen = new Set<string>();
       const preview: ImportPreviewRow[] = [];
 
-      for (const row of rows) {
-        const firstName = findCol(row, ["First name"]);
-        const lastName = findCol(row, ["Last name"]);
-        if (!firstName && !lastName) continue;
-
-        const key = `${firstName.toLowerCase()}|${lastName.toLowerCase()}`;
+      for (const row of parsed) {
+        const key = `${(row.first_name ?? "").toLowerCase()}|${(row.last_name ?? "").toLowerCase()}`;
         if (seen.has(key)) continue;
         seen.add(key);
 
-        const exists = employees.some(
-          emp => emp.first_name.toLowerCase() === firstName.toLowerCase() &&
-                 emp.last_name.toLowerCase() === lastName.toLowerCase()
-        );
-
-        const record: ImportPreviewRow = { exists };
-        CONNECTEAM_FIELDS.forEach(f => {
-          record[f.key] = findCol(row, f.fileCol as unknown as string[]);
-        });
-        preview.push(record);
+        const exists = !!matchEmployee(row);
+        preview.push({ ...row, exists });
       }
 
       setImportPreview(preview);
@@ -234,12 +265,7 @@ export default function Employees() {
     let created = 0;
 
     for (const emp of toCreate) {
-      const data: Record<string, any> = {};
-      CONNECTEAM_FIELDS.forEach(f => {
-        data[f.key] = emp[f.key] || null;
-      });
-      data.first_name = data.first_name || "";
-      data.last_name = data.last_name || "";
+      const data = buildInsertData(emp);
       const { error } = await supabase.from("employees").insert(data as any);
       if (!error) created++;
     }
@@ -256,42 +282,83 @@ export default function Employees() {
     setImportResult(null);
   };
 
-  // ---- CSV UPDATE (update existing) ----
+  // ---- UPDATE (diff or full replace) ----
   const handleUpdateFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const wb = XLSX.read(evt.target?.result, { type: "binary" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+      const content = evt.target?.result;
+      if (!content) return;
+
+      let parsed: ParsedEmployee[];
+      try {
+        parsed = parseConnecteamFile(content as string, f.name);
+      } catch {
+        const wb = XLSX.read(content, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+        parsed = rows.map(row => {
+          const mapped: ParsedEmployee = {};
+          CONNECTEAM_FIELDS.forEach(field => {
+            mapped[field.key] = findCol(row, field.fileCol);
+          });
+          return mapped;
+        }).filter(r => r.first_name || r.last_name);
+      }
 
       const diffs: UpdateDiff[] = [];
 
-      for (const row of rows) {
-        const csvConnecteamId = findCol(row, ["Connecteam User ID"]);
-        const csvPhone = findCol(row, ["Mobile phone", "Phone"]);
-
-        // Match by connecteam_employee_id or phone_number
-        const existing = employees.find(emp => {
-          if (csvConnecteamId && emp.connecteam_employee_id === csvConnecteamId) return true;
-          if (csvPhone && emp.phone_number === csvPhone) return true;
-          return false;
-        });
-
-        if (!existing) continue;
+      for (const row of parsed) {
+        const existing = matchEmployee(row);
+        if (!existing) {
+          // For full mode, new employees show as "all fields are new"
+          if (updateMode === "full") {
+            const allChanges = CONNECTEAM_FIELDS
+              .filter(field => row[field.key]?.trim())
+              .map(field => ({
+                field: field.key,
+                label: field.label,
+                oldVal: "—",
+                newVal: row[field.key] ?? "",
+              }));
+            if (allChanges.length > 0) {
+              diffs.push({
+                employeeId: "__new__" + (row.connecteam_employee_id || row.phone_number || `${row.first_name}_${row.last_name}`),
+                name: `${row.first_name ?? ""} ${row.last_name ?? ""} (NUEVO)`,
+                changes: allChanges,
+                selected: true,
+              });
+            }
+          }
+          continue;
+        }
 
         const changes: UpdateDiff["changes"] = [];
         CONNECTEAM_FIELDS.forEach(field => {
-          const newVal = findCol(row, field.fileCol as unknown as string[]);
-          const oldVal = existing[field.key] ?? "";
-          if (newVal && newVal !== String(oldVal || "")) {
-            changes.push({
-              field: field.key,
-              label: field.label,
-              oldVal: String(oldVal || "—"),
-              newVal,
-            });
+          const newVal = (row[field.key] ?? "").trim();
+          const oldVal = String(existing[field.key] ?? "").trim();
+
+          if (updateMode === "full") {
+            // Full mode: show all fields that will be set (even if same)
+            if (newVal) {
+              changes.push({
+                field: field.key,
+                label: field.label,
+                oldVal: oldVal || "—",
+                newVal,
+              });
+            }
+          } else {
+            // Diff mode: only changed fields
+            if (newVal && newVal !== oldVal) {
+              changes.push({
+                field: field.key,
+                label: field.label,
+                oldVal: oldVal || "—",
+                newVal,
+              });
+            }
           }
         });
 
@@ -309,27 +376,37 @@ export default function Employees() {
       setUpdateStep("preview");
     };
     reader.readAsBinaryString(f);
-  }, [employees]);
+  }, [employees, updateMode]);
 
   const toggleDiffSelected = (idx: number) => {
     setUpdateDiffs(prev => prev.map((d, i) => i === idx ? { ...d, selected: !d.selected } : d));
   };
 
-  const executeUpdate = async () => {
+  const executeUpdateDiffs = async () => {
     setUpdating(true);
     const selected = updateDiffs.filter(d => d.selected);
     let updated = 0;
+    let created = 0;
 
     for (const diff of selected) {
       const updateData: Record<string, any> = {};
       diff.changes.forEach(c => {
         updateData[c.field] = c.newVal || null;
       });
-      const { error } = await supabase.from("employees").update(updateData as any).eq("id", diff.employeeId);
-      if (!error) updated++;
+
+      if (diff.employeeId.startsWith("__new__")) {
+        // Create new employee
+        updateData.first_name = updateData.first_name || "";
+        updateData.last_name = updateData.last_name || "";
+        const { error } = await supabase.from("employees").insert(updateData as any);
+        if (!error) created++;
+      } else {
+        const { error } = await supabase.from("employees").update(updateData as any).eq("id", diff.employeeId);
+        if (!error) updated++;
+      }
     }
 
-    setUpdateResult({ updated, skipped: updateDiffs.length - selected.length });
+    setUpdateResult({ updated, skipped: updateDiffs.length - selected.length, created });
     setUpdateStep("done");
     setUpdating(false);
     fetchEmployees();
@@ -370,28 +447,47 @@ export default function Employees() {
           <p className="page-subtitle">Gestiona los empleados de nómina</p>
         </div>
         <div className="flex gap-2">
-          {/* CSV Update Dialog */}
+          {/* Update Dialog (diff + full) */}
           <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
             <DialogTrigger asChild>
-              <Button variant="outline"><RefreshCw className="h-4 w-4 mr-2" />Actualizar CSV</Button>
+              <Button variant="outline"><ArrowUpDown className="h-4 w-4 mr-2" />Actualizar datos</Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Actualizar datos desde CSV</DialogTitle>
-                <DialogDescription>Sube un CSV para comparar y actualizar datos existentes (match por Connecteam ID o Teléfono)</DialogDescription>
+                <DialogTitle>Actualizar datos de empleados</DialogTitle>
+                <DialogDescription>Sube un archivo Excel o CSV para actualizar la información (match por Connecteam ID, Teléfono o Nombre)</DialogDescription>
               </DialogHeader>
 
               {updateStep === "upload" && (
-                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-                  <RefreshCw className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Sube el archivo con los datos actualizados
-                  </p>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Se compararán los datos y podrás elegir qué actualizar
-                  </p>
-                  <input type="file" accept=".xls,.xlsx,.csv" onChange={handleUpdateFile}
-                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                <div className="space-y-4">
+                  <Tabs defaultValue="full" onValueChange={(v) => setUpdateMode(v as "diff" | "full")}>
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="full">Reemplazo completo</TabsTrigger>
+                      <TabsTrigger value="diff">Solo cambios</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="full">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Reemplaza <strong>todos los campos</strong> del empleado con los datos del archivo. Los empleados nuevos también se crearán.
+                      </p>
+                    </TabsContent>
+                    <TabsContent value="diff">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Solo actualiza los campos que sean <strong>diferentes</strong> entre el archivo y la base de datos.
+                      </p>
+                    </TabsContent>
+                  </Tabs>
+
+                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+                    <RefreshCw className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Sube el archivo con los datos actualizados
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Soporta Excel (.xlsx/.xls) y CSV de Connecteam
+                    </p>
+                    <input type="file" accept=".xls,.xlsx,.csv,.txt" onChange={handleUpdateFile}
+                      className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                  </div>
                 </div>
               )}
 
@@ -406,12 +502,20 @@ export default function Employees() {
                     </div>
                   ) : (
                     <>
-                      <div className="flex gap-3 text-sm items-center">
+                      <div className="flex gap-3 text-sm items-center flex-wrap">
                         <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">
-                          {updateDiffs.length} empleados con cambios
+                          {updateDiffs.filter(d => !d.employeeId.startsWith("__new__")).length} empleados a actualizar
                         </Badge>
+                        {updateDiffs.some(d => d.employeeId.startsWith("__new__")) && (
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                            {updateDiffs.filter(d => d.employeeId.startsWith("__new__")).length} nuevos a crear
+                          </Badge>
+                        )}
                         <Badge variant="outline">
-                          {updateDiffs.reduce((acc, d) => acc + d.changes.length, 0)} campos diferentes
+                          {updateDiffs.reduce((acc, d) => acc + d.changes.length, 0)} campos totales
+                        </Badge>
+                        <Badge variant="secondary">
+                          Modo: {updateMode === "full" ? "Reemplazo completo" : "Solo cambios"}
                         </Badge>
                       </div>
 
@@ -424,15 +528,22 @@ export default function Employees() {
                                 onCheckedChange={() => toggleDiffSelected(idx)}
                               />
                               <span className="font-medium text-sm">{diff.name}</span>
-                              <Badge variant="secondary" className="text-xs">{diff.changes.length} cambios</Badge>
+                              <Badge variant="secondary" className="text-xs">{diff.changes.length} campos</Badge>
+                              {diff.employeeId.startsWith("__new__") && (
+                                <Badge className="bg-primary/10 text-primary text-xs">Nuevo</Badge>
+                              )}
                             </div>
-                            <div className="ml-7 space-y-1">
+                            <div className="ml-7 space-y-1 max-h-32 overflow-y-auto">
                               {diff.changes.map(c => (
                                 <div key={c.field} className="flex items-center gap-2 text-xs">
                                   <span className="text-muted-foreground w-28 shrink-0">{c.label}:</span>
-                                  <span className="text-destructive/70 line-through">{c.oldVal}</span>
-                                  <span>→</span>
-                                  <span className="text-primary font-medium">{c.newVal}</span>
+                                  {c.oldVal !== "—" && (
+                                    <>
+                                      <span className="text-destructive/70 line-through max-w-[30%] truncate">{c.oldVal}</span>
+                                      <span>→</span>
+                                    </>
+                                  )}
+                                  <span className="text-primary font-medium max-w-[40%] truncate">{c.newVal}</span>
                                 </div>
                               ))}
                             </div>
@@ -442,8 +553,8 @@ export default function Employees() {
 
                       <div className="flex gap-2">
                         <Button variant="outline" onClick={resetUpdate}>Cancelar</Button>
-                        <Button onClick={executeUpdate} disabled={updating || updateDiffs.every(d => !d.selected)}>
-                          {updating ? "Actualizando..." : `Actualizar ${updateDiffs.filter(d => d.selected).length} empleados`}
+                        <Button onClick={executeUpdateDiffs} disabled={updating || updateDiffs.every(d => !d.selected)}>
+                          {updating ? "Procesando..." : `Aplicar a ${updateDiffs.filter(d => d.selected).length} empleados`}
                         </Button>
                       </div>
                     </>
@@ -454,7 +565,11 @@ export default function Employees() {
               {updateStep === "done" && updateResult && (
                 <div className="text-center py-6">
                   <CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" />
-                  <p className="text-lg font-medium">{updateResult.updated} empleados actualizados</p>
+                  <p className="text-lg font-medium">
+                    {updateResult.updated > 0 && `${updateResult.updated} actualizados`}
+                    {updateResult.updated > 0 && updateResult.created && updateResult.created > 0 && " · "}
+                    {updateResult.created && updateResult.created > 0 && `${updateResult.created} creados`}
+                  </p>
                   {updateResult.skipped > 0 && (
                     <p className="text-sm text-muted-foreground">{updateResult.skipped} omitidos</p>
                   )}
@@ -467,12 +582,12 @@ export default function Employees() {
           {/* Import Dialog */}
           <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImport(); }}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Importar</Button>
+              <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Importar nuevos</Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Importar empleados</DialogTitle>
-                <DialogDescription>Sube el archivo exportado de Connecteam</DialogDescription>
+                <DialogTitle>Importar empleados nuevos</DialogTitle>
+                <DialogDescription>Sube el archivo exportado de Connecteam (solo crea nuevos, no actualiza existentes)</DialogDescription>
               </DialogHeader>
 
               {importStep === "upload" && (
@@ -482,9 +597,9 @@ export default function Employees() {
                     Sube el archivo exportado de Connecteam (Excel o CSV)
                   </p>
                   <p className="text-xs text-muted-foreground mb-3">
-                    Se importarán todos los campos automáticamente
+                    Se importarán solo empleados que no existan
                   </p>
-                  <input type="file" accept=".xls,.xlsx,.csv" onChange={handleImportFile}
+                  <input type="file" accept=".xls,.xlsx,.csv,.txt" onChange={handleImportFile}
                     className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
                 </div>
               )}
@@ -656,10 +771,6 @@ export default function Employees() {
                 </div>
               ))}
               <Separator className="my-2" />
-              <div className="flex justify-between py-2">
-                <span className="text-xs text-muted-foreground">Connecteam ID</span>
-                <span className="text-sm font-mono">{viewEmployee?.connecteam_employee_id || "—"}</span>
-              </div>
               <div className="flex justify-between py-2">
                 <span className="text-xs text-muted-foreground">Estado</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${viewEmployee?.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
