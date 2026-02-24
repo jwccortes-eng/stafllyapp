@@ -295,6 +295,39 @@ export type Database = {
           },
         ]
       }
+      module_permissions: {
+        Row: {
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
+          created_at: string
+          id: string
+          module: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          module: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          module?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       movements: {
         Row: {
           concept_id: string
@@ -612,6 +645,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_module_permission: {
+        Args: { _module: string; _permission: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -621,7 +658,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "employee"
+      app_role: "admin" | "employee" | "owner" | "manager"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
       concept_category: "extra" | "deduction"
       rate_source: "concept_default" | "per_employee"
@@ -752,7 +789,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "employee"],
+      app_role: ["admin", "employee", "owner", "manager"],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
       concept_category: ["extra", "deduction"],
       rate_source: ["concept_default", "per_employee"],
