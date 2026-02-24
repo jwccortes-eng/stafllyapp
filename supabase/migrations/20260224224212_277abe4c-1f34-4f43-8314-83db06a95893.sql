@@ -1,0 +1,26 @@
+
+-- Add all Connecteam employee fields to employees table
+ALTER TABLE public.employees
+  ADD COLUMN IF NOT EXISTS country_code text,
+  ADD COLUMN IF NOT EXISTS gender text,
+  ADD COLUMN IF NOT EXISTS employer_identification text,
+  ADD COLUMN IF NOT EXISTS birthday text,
+  ADD COLUMN IF NOT EXISTS address text,
+  ADD COLUMN IF NOT EXISTS county text,
+  ADD COLUMN IF NOT EXISTS start_date text,
+  ADD COLUMN IF NOT EXISTS english_level text,
+  ADD COLUMN IF NOT EXISTS employee_role text,
+  ADD COLUMN IF NOT EXISTS qualify text,
+  ADD COLUMN IF NOT EXISTS social_security_number text,
+  ADD COLUMN IF NOT EXISTS recommended_by text,
+  ADD COLUMN IF NOT EXISTS direct_manager text,
+  ADD COLUMN IF NOT EXISTS has_car text,
+  ADD COLUMN IF NOT EXISTS driver_licence text,
+  ADD COLUMN IF NOT EXISTS end_date text,
+  ADD COLUMN IF NOT EXISTS kiosk_code text,
+  ADD COLUMN IF NOT EXISTS date_added text,
+  ADD COLUMN IF NOT EXISTS last_login text,
+  ADD COLUMN IF NOT EXISTS added_via text,
+  ADD COLUMN IF NOT EXISTS added_by text,
+  ADD COLUMN IF NOT EXISTS groups text,
+  ADD COLUMN IF NOT EXISTS tags text;
