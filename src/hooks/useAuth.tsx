@@ -27,43 +27,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserData = async (userId: string) => {
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      const newRole = (roleData?.role as 'admin' | 'employee') ?? null;
+      setRole(newRole);
+
+      if (newRole === 'employee') {
+        const { data: empData } = await supabase
+          .from('employees')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        setEmployeeId(empData?.id ?? null);
+      } else {
+        setEmployeeId(null);
+      }
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      setRole(null);
+      setEmployeeId(null);
+    }
+  };
+
   useEffect(() => {
+    // Set up listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Fetch role
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-          setRole((roleData?.role as 'admin' | 'employee') ?? null);
-
-          // Fetch employee id if employee
-          if (roleData?.role === 'employee') {
-            const { data: empData } = await supabase
-              .from('employees')
-              .select('id')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-            setEmployeeId(empData?.id ?? null);
-          } else {
-            setEmployeeId(null);
-          }
+          // Use setTimeout to avoid async deadlock in onAuthStateChange
+          setTimeout(() => {
+            fetchUserData(session.user.id).then(() => setLoading(false));
+          }, 0);
         } else {
           setRole(null);
           setEmployeeId(null);
+          setLoading(false);
         }
-
-        setLoading(false);
       }
     );
 
+    // Then check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setLoading(false);
+      if (!session) {
+        setLoading(false);
+      }
+      // If session exists, onAuthStateChange will handle it
     });
 
     return () => subscription.unsubscribe();
