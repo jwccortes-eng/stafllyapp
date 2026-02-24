@@ -117,8 +117,8 @@ export default function Employees() {
           first_name: firstName,
           last_name: lastName,
           email: findCol(row, ["Email", "email", "Correo"]),
-          phone_number: findCol(row, ["Phone", "phone_number", "Teléfono", "Telefono"]),
-          connecteam_employee_id: findCol(row, ["Employee ID", "Connecteam ID", "connecteam_employee_id"]),
+          phone_number: findCol(row, ["Mobile phone", "Phone", "phone_number", "Teléfono", "Telefono"]),
+          connecteam_employee_id: findCol(row, ["Connecteam User ID", "Employee ID", "Connecteam ID", "connecteam_employee_id"]),
           verification_ssn_ein: findCol(row, ["Verification SSN - EIN", "SSN", "EIN", "verification_ssn_ein"]),
           exists,
         });
