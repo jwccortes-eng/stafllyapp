@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
 import { CalendarDays, BarChart3, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -9,8 +9,19 @@ const links = [
 ];
 
 export default function EmployeeLayout() {
-  const { signOut } = useAuth();
+  const { user, role, loading, signOut } = useAuth();
   const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/auth" replace />;
+  if (role !== 'employee') return <Navigate to="/auth" replace />;
 
   return (
     <div className="min-h-screen bg-background">
