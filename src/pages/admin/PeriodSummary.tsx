@@ -59,6 +59,26 @@ export default function PeriodSummary() {
         });
       });
 
+      // Also fetch employee names for movements without base pay
+      const { data: movEmployees } = await supabase
+        .from("movements")
+        .select("employee_id, employees(first_name, last_name)")
+        .eq("period_id", selectedPeriod);
+
+      (movEmployees ?? []).forEach((me: any) => {
+        if (!empMap.has(me.employee_id) && me.employees) {
+          empMap.set(me.employee_id, {
+            employee_id: me.employee_id,
+            first_name: me.employees.first_name ?? "",
+            last_name: me.employees.last_name ?? "",
+            base_total_pay: 0,
+            extras_total: 0,
+            deductions_total: 0,
+            total_final_pay: 0,
+          });
+        }
+      });
+
       (movements ?? []).forEach((m: any) => {
         const row = empMap.get(m.employee_id);
         if (!row) return;
