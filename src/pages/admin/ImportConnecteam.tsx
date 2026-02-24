@@ -1,0 +1,339 @@
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
+
+const KNOWN_HEADERS = [
+  "First name", "Last name", "Verification SSN - EIN",
+  "Weekly total hours", "Total work hours", "Total Paid Hours",
+  "Total Regular", "Total overtime", "Total pay",
+  "Shift Number", "Scheduled shift title", "Type", "Job code",
+  "Sub-job", "Sub-job code", "Start Date", "In", "Start - location",
+  "End Date", "Out", "End - location", "Shift hours", "Hourly rate (USD)",
+  "Daily total hours", "Daily total pay (USD)", "Customer", "Ride",
+  "Employee notes", "Manager notes",
+];
+
+const BASE_PAY_FIELDS: Record<string, string> = {
+  "Weekly total hours": "weekly_total_hours",
+  "Total work hours": "total_work_hours",
+  "Total Paid Hours": "total_paid_hours",
+  "Total Regular": "total_regular",
+  "Total overtime": "total_overtime",
+  "Total pay": "base_total_pay",
+};
+
+interface Period { id: string; start_date: string; end_date: string; status: string; }
+
+export default function ImportConnecteam() {
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [sheets, setSheets] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState("");
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    supabase.from("pay_periods").select("*").order("start_date", { ascending: false }).then(({ data }) => {
+      setPeriods((data as Period[]) ?? []);
+    });
+  }, []);
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFile(f);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const wb = XLSX.read(evt.target?.result, { type: "binary" });
+      setWorkbook(wb);
+      setSheets(wb.SheetNames);
+      if (wb.SheetNames.length === 1) {
+        setSelectedSheet(wb.SheetNames[0]);
+        processSheet(wb, wb.SheetNames[0]);
+        setStep(3);
+      } else {
+        setStep(2);
+      }
+    };
+    reader.readAsBinaryString(f);
+  }, []);
+
+  const processSheet = (wb: XLSX.WorkBook, sheetName: string) => {
+    const ws = wb.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
+    if (json.length === 0) return;
+    const hdrs = Object.keys(json[0]);
+    setHeaders(hdrs);
+    setPreviewRows(json.slice(0, 5));
+
+    // Auto-map
+    const autoMap: Record<string, string> = {};
+    hdrs.forEach((h) => {
+      const match = KNOWN_HEADERS.find((k) => k.toLowerCase() === h.toLowerCase());
+      if (match) autoMap[h] = match;
+    });
+    setMapping(autoMap);
+  };
+
+  const selectSheet = (name: string) => {
+    setSelectedSheet(name);
+    if (workbook) processSheet(workbook, name);
+    setStep(3);
+  };
+
+  const handleImport = async () => {
+    if (!workbook || !selectedPeriod || !selectedSheet) return;
+    setImporting(true);
+    setResult(null);
+
+    try {
+      const ws = workbook.Sheets[selectedSheet];
+      const allRows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
+
+      // Get employees for matching
+      const { data: employees } = await supabase.from("employees").select("id, first_name, last_name, verification_ssn_ein");
+      const empList = employees ?? [];
+
+      // Create import record
+      const { data: importRecord, error: impErr } = await supabase.from("imports").insert({
+        period_id: selectedPeriod,
+        file_name: file!.name,
+        column_mapping: mapping,
+        row_count: allRows.length,
+        status: "processing",
+      }).select().single();
+
+      if (impErr || !importRecord) throw new Error(impErr?.message ?? "Failed to create import");
+
+      // Delete existing base pay & shifts for this period (replace strategy)
+      await supabase.from("period_base_pay").delete().eq("period_id", selectedPeriod);
+      await supabase.from("shifts").delete().eq("period_id", selectedPeriod);
+
+      // Find mapped column names
+      const reverseMap: Record<string, string> = {};
+      Object.entries(mapping).forEach(([fileCol, knownCol]) => {
+        reverseMap[knownCol] = fileCol;
+      });
+
+      // Group by employee (first + last name)
+      const employeeGroups: Record<string, Record<string, string>[]> = {};
+      allRows.forEach((row) => {
+        const fn = row[reverseMap["First name"] ?? "First name"] ?? "";
+        const ln = row[reverseMap["Last name"] ?? "Last name"] ?? "";
+        const key = `${fn.trim().toLowerCase()}|${ln.trim().toLowerCase()}`;
+        if (!employeeGroups[key]) employeeGroups[key] = [];
+        employeeGroups[key].push(row);
+      });
+
+      let matched = 0;
+      let unmatched = 0;
+
+      for (const [key, rows] of Object.entries(employeeGroups)) {
+        const [fn, ln] = key.split("|");
+        const emp = empList.find(
+          (e) => e.first_name.toLowerCase() === fn && e.last_name.toLowerCase() === ln
+        );
+
+        if (!emp) {
+          unmatched++;
+          continue;
+        }
+        matched++;
+
+        // Aggregate base pay from last row (summary row) or first row with Total pay
+        const summaryRow = rows[rows.length - 1];
+        const getVal = (knownCol: string) => {
+          const fileCol = reverseMap[knownCol];
+          if (!fileCol) return 0;
+          return parseFloat(summaryRow[fileCol] || "0") || 0;
+        };
+
+        await supabase.from("period_base_pay").upsert({
+          employee_id: emp.id,
+          period_id: selectedPeriod,
+          weekly_total_hours: getVal("Weekly total hours"),
+          total_work_hours: getVal("Total work hours"),
+          total_paid_hours: getVal("Total Paid Hours"),
+          total_regular: getVal("Total Regular"),
+          total_overtime: getVal("Total overtime"),
+          base_total_pay: getVal("Total pay"),
+          import_id: importRecord.id,
+        }, { onConflict: "employee_id,period_id" });
+
+        // Insert shifts
+        for (const row of rows) {
+          const shiftNum = row[reverseMap["Shift Number"] ?? "Shift Number"] ?? "";
+          if (!shiftNum && !row[reverseMap["Shift hours"] ?? "Shift hours"]) continue;
+
+          await supabase.from("shifts").insert({
+            employee_id: emp.id,
+            period_id: selectedPeriod,
+            import_id: importRecord.id,
+            shift_number: shiftNum || null,
+            scheduled_shift_title: row[reverseMap["Scheduled shift title"] ?? ""] || null,
+            type: row[reverseMap["Type"] ?? ""] || null,
+            job_code: row[reverseMap["Job code"] ?? ""] || null,
+            sub_job: row[reverseMap["Sub-job"] ?? ""] || null,
+            sub_job_code: row[reverseMap["Sub-job code"] ?? ""] || null,
+            shift_hours: parseFloat(row[reverseMap["Shift hours"] ?? ""] || "0") || null,
+            hourly_rate_usd: parseFloat(row[reverseMap["Hourly rate (USD)"] ?? ""] || "0") || null,
+            daily_total_hours: parseFloat(row[reverseMap["Daily total hours"] ?? ""] || "0") || null,
+            daily_total_pay_usd: parseFloat(row[reverseMap["Daily total pay (USD)"] ?? ""] || "0") || null,
+            customer: row[reverseMap["Customer"] ?? ""] || null,
+            ride: row[reverseMap["Ride"] ?? ""] || null,
+            employee_notes: row[reverseMap["Employee notes"] ?? ""] || null,
+            manager_notes: row[reverseMap["Manager notes"] ?? ""] || null,
+          });
+        }
+      }
+
+      await supabase.from("imports").update({ status: "completed" }).eq("id", importRecord.id);
+
+      setResult({
+        success: true,
+        message: `Importación completada: ${matched} empleados procesados, ${unmatched} no encontrados.`,
+      });
+      setStep(4);
+    } catch (err: any) {
+      setResult({ success: false, message: err.message });
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+
+    setImporting(false);
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1 className="page-title">Importar Connecteam</h1>
+        <p className="page-subtitle">Sube el archivo XLS/XLSX exportado de Connecteam</p>
+      </div>
+
+      <div className="flex gap-2 mb-6">
+        {[1, 2, 3, 4].map((s) => (
+          <div key={s} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+            step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+          }`}>
+            {s}. {s === 1 ? "Periodo y archivo" : s === 2 ? "Hoja" : s === 3 ? "Mapeo" : "Resultado"}
+          </div>
+        ))}
+      </div>
+
+      {step === 1 && (
+        <Card>
+          <CardHeader><CardTitle>Paso 1: Selecciona periodo y archivo</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Periodo</Label>
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar periodo" /></SelectTrigger>
+                <SelectContent>
+                  {periods.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.start_date} → {p.end_date} ({p.status})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedPeriod && (
+              <div>
+                <Label>Archivo XLS/XLSX</Label>
+                <div className="mt-1 border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <input type="file" accept=".xls,.xlsx" onChange={handleFileUpload} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 2 && (
+        <Card>
+          <CardHeader><CardTitle>Paso 2: Selecciona la hoja</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {sheets.map(s => (
+              <Button key={s} variant="outline" className="w-full justify-start" onClick={() => selectSheet(s)}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" /> {s}
+              </Button>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 3 && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Paso 3: Mapeo de columnas</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                {headers.map((h) => (
+                  <div key={h} className="flex items-center gap-2 text-sm">
+                    <span className="font-mono text-xs bg-muted px-2 py-1 rounded shrink-0 max-w-32 truncate" title={h}>{h}</span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="text-xs">{mapping[h] ?? "sin mapeo"}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {previewRows.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Vista previa (primeras 5 filas)</CardTitle></CardHeader>
+              <CardContent className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {headers.slice(0, 8).map(h => <TableHead key={h} className="text-xs">{h}</TableHead>)}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewRows.map((row, i) => (
+                      <TableRow key={i}>
+                        {headers.slice(0, 8).map(h => <TableCell key={h} className="text-xs">{row[h]}</TableCell>)}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          <Button onClick={handleImport} disabled={importing} className="w-full sm:w-auto">
+            {importing ? "Importando..." : "Importar datos"}
+          </Button>
+        </div>
+      )}
+
+      {step === 4 && result && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            {result.success ? (
+              <CheckCircle2 className="h-12 w-12 text-earning mx-auto mb-4" />
+            ) : (
+              <AlertCircle className="h-12 w-12 text-deduction mx-auto mb-4" />
+            )}
+            <p className="text-lg font-medium">{result.message}</p>
+            <Button className="mt-4" onClick={() => { setStep(1); setResult(null); setFile(null); }}>
+              Nueva importación
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
