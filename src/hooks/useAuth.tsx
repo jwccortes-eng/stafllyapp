@@ -2,13 +2,24 @@ import { useState, useEffect, createContext, useContext, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
+type AppRole = 'owner' | 'admin' | 'manager' | 'employee' | null;
+
+interface ModulePermission {
+  module: string;
+  can_view: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  role: 'admin' | 'employee' | null;
+  role: AppRole;
   employeeId: string | null;
   loading: boolean;
+  permissions: ModulePermission[];
   signOut: () => Promise<void>;
+  hasModuleAccess: (module: string, permission: 'view' | 'edit' | 'delete') => boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,15 +28,18 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   employeeId: null,
   loading: true,
+  permissions: [],
   signOut: async () => {},
+  hasModuleAccess: () => false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<'admin' | 'employee' | null>(null);
+  const [role, setRole] = useState<AppRole>(null);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [permissions, setPermissions] = useState<ModulePermission[]>([]);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -35,8 +49,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
       
-      const newRole = (roleData?.role as 'admin' | 'employee') ?? null;
+      const newRole = (roleData?.role as AppRole) ?? null;
       setRole(newRole);
+
+      // Fetch module permissions for managers
+      if (newRole === 'manager') {
+        const { data: permsData } = await supabase
+          .from('module_permissions')
+          .select('module, can_view, can_edit, can_delete')
+          .eq('user_id', userId);
+        setPermissions((permsData as ModulePermission[]) ?? []);
+      } else {
+        setPermissions([]);
+      }
 
       if (newRole === 'employee') {
         const { data: empData } = await supabase
@@ -52,35 +77,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching user data:', err);
       setRole(null);
       setEmployeeId(null);
+      setPermissions([]);
     }
   };
 
   useEffect(() => {
-    // Set up listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Use setTimeout to avoid async deadlock in onAuthStateChange
           setTimeout(() => {
             fetchUserData(session.user.id).then(() => setLoading(false));
           }, 0);
         } else {
           setRole(null);
           setEmployeeId(null);
+          setPermissions([]);
           setLoading(false);
         }
       }
     );
 
-    // Then check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         setLoading(false);
       }
-      // If session exists, onAuthStateChange will handle it
     });
 
     return () => subscription.unsubscribe();
@@ -90,8 +113,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
+    if (role === 'owner' || role === 'admin') return true;
+    if (role === 'manager') {
+      const perm = permissions.find(p => p.module === module);
+      if (!perm) return false;
+      if (permission === 'view') return perm.can_view;
+      if (permission === 'edit') return perm.can_edit;
+      if (permission === 'delete') return perm.can_delete;
+    }
+    return false;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, role, employeeId, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, employeeId, loading, permissions, signOut, hasModuleAccess }}>
       {children}
     </AuthContext.Provider>
   );

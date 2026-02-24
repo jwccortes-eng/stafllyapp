@@ -17,6 +17,7 @@ import Concepts from "./pages/admin/Concepts";
 import Movements from "./pages/admin/Movements";
 import PeriodSummary from "./pages/admin/PeriodSummary";
 import Reports from "./pages/admin/Reports";
+import UsersPage from "./pages/admin/Users";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="movements" element={<Movements />} />
               <Route path="summary" element={<PeriodSummary />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="users" element={<UsersPage />} />
             </Route>
 
             {/* Employee portal routes */}
