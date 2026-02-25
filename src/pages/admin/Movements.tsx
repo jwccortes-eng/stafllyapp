@@ -15,7 +15,7 @@ import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, C
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
-import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
+import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
@@ -173,8 +173,10 @@ export default function Movements() {
     setImportResults(null);
     try {
       const buf = await file.arrayBuffer();
-      const wb = safeRead(buf, { type: "array" });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const wb = await safeRead(buf);
+      const names = getSheetNames(wb);
+      const sheet = getSheet(wb, names[0]);
+      if (!sheet) { setImporting(false); return; }
       const rows = safeSheetToJson<Record<string, any>>(sheet);
       if (!rows.length) { toast({ title: "Archivo vacío", variant: "destructive" }); setImporting(false); return; }
       const keys = Object.keys(rows[0]);

@@ -27,11 +27,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown } from "lucide-react";
-import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
-import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
+import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
@@ -238,30 +237,29 @@ export default function Employees() {
   };
 
   // ---- IMPORT (create new) ----
-  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const content = evt.target?.result;
-      if (!content) return;
+    const content = await f.arrayBuffer();
 
-      let parsed: ParsedEmployee[];
-      try {
-        parsed = parseConnecteamFile(content as string, f.name);
-      } catch {
-        // Fallback to XLSX direct parse
-        const wb = safeRead(content, { type: "binary" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = safeSheetToJson<Record<string, any>>(ws, { defval: "" });
-        parsed = rows.map(row => {
-          const mapped: ParsedEmployee = {};
-          CONNECTEAM_FIELDS.forEach(field => {
-            mapped[field.key] = findCol(row, field.fileCol);
-          });
-          return mapped;
-        }).filter(r => r.first_name || r.last_name);
-      }
+    let parsed: ParsedEmployee[];
+    try {
+      parsed = await parseConnecteamFile(content, f.name);
+    } catch {
+      // Fallback to ExcelJS direct parse
+      const wb = await safeRead(content);
+      const names = getSheetNames(wb);
+      const ws = getSheet(wb, names[0]);
+      if (!ws) return;
+      const rows = safeSheetToJson<Record<string, any>>(ws, { defval: "" });
+      parsed = rows.map(row => {
+        const mapped: ParsedEmployee = {};
+        CONNECTEAM_FIELDS.forEach(field => {
+          mapped[field.key] = findCol(row, field.fileCol);
+        });
+        return mapped;
+      }).filter(r => r.first_name || r.last_name);
+    }
 
       const seen = new Set<string>();
       const preview: ImportPreviewRow[] = [];
@@ -277,8 +275,6 @@ export default function Employees() {
 
       setImportPreview(preview);
       setImportStep("preview");
-    };
-    reader.readAsBinaryString(f);
   }, [employees]);
 
   const executeImport = async () => {
@@ -305,29 +301,28 @@ export default function Employees() {
   };
 
   // ---- UPDATE (diff or full replace) ----
-  const handleUpdateFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpdateFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const content = evt.target?.result;
-      if (!content) return;
+    const content = await f.arrayBuffer();
 
-      let parsed: ParsedEmployee[];
-      try {
-        parsed = parseConnecteamFile(content as string, f.name);
-      } catch {
-        const wb = safeRead(content, { type: "binary" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = safeSheetToJson<Record<string, any>>(ws, { defval: "" });
-        parsed = rows.map(row => {
-          const mapped: ParsedEmployee = {};
-          CONNECTEAM_FIELDS.forEach(field => {
-            mapped[field.key] = findCol(row, field.fileCol);
-          });
-          return mapped;
-        }).filter(r => r.first_name || r.last_name);
-      }
+    let parsed: ParsedEmployee[];
+    try {
+      parsed = await parseConnecteamFile(content, f.name);
+    } catch {
+      const wb = await safeRead(content);
+      const names = getSheetNames(wb);
+      const ws = getSheet(wb, names[0]);
+      if (!ws) return;
+      const rows = safeSheetToJson<Record<string, any>>(ws, { defval: "" });
+      parsed = rows.map(row => {
+        const mapped: ParsedEmployee = {};
+        CONNECTEAM_FIELDS.forEach(field => {
+          mapped[field.key] = findCol(row, field.fileCol);
+        });
+        return mapped;
+      }).filter(r => r.first_name || r.last_name);
+    }
 
       const diffs: UpdateDiff[] = [];
 
@@ -396,8 +391,6 @@ export default function Employees() {
 
       setUpdateDiffs(diffs);
       setUpdateStep("preview");
-    };
-    reader.readAsBinaryString(f);
   }, [employees, updateMode]);
 
   const toggleDiffSelected = (idx: number) => {
@@ -443,7 +436,7 @@ export default function Employees() {
   // ---- EXPORT to Excel (excluding sensitive fields) ----
   const SENSITIVE_KEYS = ["social_security_number", "verification_ssn_ein"];
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const exportFields = CONNECTEAM_FIELDS.filter(f => !SENSITIVE_KEYS.includes(f.key));
     const rows = filtered.map(emp => {
       const row: Record<string, string> = {};
@@ -454,10 +447,7 @@ export default function Employees() {
       return row;
     });
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Empleados");
-    XLSX.writeFile(wb, `empleados_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    await writeExcelFile(rows, "Empleados", `empleados_${new Date().toISOString().slice(0, 10)}.xlsx`);
     toast({ title: "Exportado", description: `${rows.length} empleados exportados a Excel` });
   };
 

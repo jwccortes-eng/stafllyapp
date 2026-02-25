@@ -12,8 +12,7 @@ import { Plus, MoreHorizontal, Pencil, Trash2, ToggleLeft, Upload, Download } fr
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
-import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
-import * as XLSX from "xlsx";
+import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } from "@/lib/safe-xlsx";
 
 interface Concept {
   id: string;
@@ -140,8 +139,10 @@ export default function Concepts() {
 
     try {
       const data = await file.arrayBuffer();
-      const wb = safeRead(data, { type: "array" });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const wb = await safeRead(data);
+      const sheetNames = getSheetNames(wb);
+      const sheet = getSheet(wb, sheetNames[0]);
+      if (!sheet) { setImporting(false); return; }
       const rows = safeSheetToJson<Record<string, any>>(sheet);
 
       if (rows.length === 0) {
@@ -266,10 +267,7 @@ export default function Concepts() {
               { nombre: "Bono productividad", categoría: "extra", cálculo: "quantity_x_rate", unidad: "unidades", tarifa: 50, fuente_tarifa: "concept_default" },
               { nombre: "Descuento uniforme", categoría: "deducción", cálculo: "manual_value", unidad: "pesos", tarifa: "", fuente_tarifa: "concept_default" },
             ];
-            const ws = XLSX.utils.json_to_sheet(template);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Conceptos");
-            XLSX.writeFile(wb, "plantilla_conceptos.xlsx");
+            writeExcelFile(template, "Conceptos", "plantilla_conceptos.xlsx");
           }}>
             <Download className="h-4 w-4 mr-2" />Plantilla
           </Button>
