@@ -116,9 +116,26 @@ export default function ImportConnecteam() {
     loading: boolean;
   } | null>(null);
   const [creatingEmployees, setCreatingEmployees] = useState(false);
+  const [periodHasImport, setPeriodHasImport] = useState(false);
 
   const selectedPeriodObj = periods.find(p => p.id === selectedPeriod);
   const isPeriodClosed = selectedPeriodObj?.status === "closed";
+
+  // Check if selected period already has an import
+  useEffect(() => {
+    if (!selectedPeriod || !selectedCompanyId) {
+      setPeriodHasImport(false);
+      return;
+    }
+    supabase
+      .from("imports")
+      .select("id", { count: "exact", head: true })
+      .eq("period_id", selectedPeriod)
+      .eq("company_id", selectedCompanyId)
+      .then(({ count }) => {
+        setPeriodHasImport((count ?? 0) > 0);
+      });
+  }, [selectedPeriod, selectedCompanyId]);
 
   const handleCreateMissingEmployees = async () => {
     if (!preImportSummary || !workbook || !selectedSheet || !selectedCompanyId) return;
@@ -189,6 +206,7 @@ export default function ImportConnecteam() {
         setExpandedEmployees([]);
       }
       toast({ title: "Importación eliminada", description: "Se revirtieron los datos base y turnos asociados." });
+      setPeriodHasImport(false);
       fetchHistory();
     } catch (err: any) {
       toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
@@ -346,6 +364,16 @@ export default function ImportConnecteam() {
       toast({ title: "Periodo cerrado", description: "No se pueden importar datos en un periodo cerrado.", variant: "destructive" });
       return;
     }
+    // Double-check: only one import per period
+    const { count: existingCount } = await supabase
+      .from("imports")
+      .select("id", { count: "exact", head: true })
+      .eq("period_id", selectedPeriod)
+      .eq("company_id", selectedCompanyId!);
+    if ((existingCount ?? 0) > 0) {
+      toast({ title: "Importación existente", description: "Este periodo ya tiene una importación. Elimínala primero desde el historial.", variant: "destructive" });
+      return;
+    }
     setImporting(true);
     setResult(null);
 
@@ -468,6 +496,7 @@ export default function ImportConnecteam() {
         message: `Importación completada: ${matched} empleados procesados, ${unmatched} no encontrados.`,
       });
       setStep(4);
+      setPeriodHasImport(true);
       fetchHistory();
     } catch (err: any) {
       setResult({ success: false, message: getUserFriendlyError(err) });
@@ -540,7 +569,15 @@ export default function ImportConnecteam() {
                 </p>
               </div>
             )}
-            {selectedPeriod && !isPeriodClosed && (
+            {selectedPeriod && !isPeriodClosed && periodHasImport && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <strong>Este periodo ya tiene una importación.</strong> Elimina la importación existente desde el historial antes de importar un nuevo archivo.
+                </p>
+              </div>
+            )}
+            {selectedPeriod && !isPeriodClosed && !periodHasImport && (
               <div>
                 <Label>Archivo XLS / XLSX / CSV</Label>
                 <div className="mt-1 border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
