@@ -111,7 +111,7 @@ export default function ImportConnecteam() {
   const [deletingImportId, setDeletingImportId] = useState<string | null>(null);
   const [preImportSummary, setPreImportSummary] = useState<{
     matched: { name: string; total: number }[];
-    unmatched: string[];
+    unmatched: { first_name: string; last_name: string }[];
     estimatedTotal: number;
     loading: boolean;
   } | null>(null);
@@ -126,20 +126,10 @@ export default function ImportConnecteam() {
       const reverseMap: Record<string, string> = {};
       Object.entries(mapping).forEach(([fileCol, knownCol]) => { reverseMap[knownCol] = fileCol; });
 
-      const unmatchedNames = new Set(preImportSummary.unmatched.map(n => n.toLowerCase()));
-      const toCreate: { first_name: string; last_name: string; company_id: string }[] = [];
-      const seen = new Set<string>();
-
-      for (const row of allRows) {
-        const fn = String(row[reverseMap["First name"] ?? "First name"] ?? "").trim();
-        const ln = String(row[reverseMap["Last name"] ?? "Last name"] ?? "").trim();
-        const displayName = `${fn} ${ln}`;
-        const key = displayName.toLowerCase();
-        if (unmatchedNames.has(key) && !seen.has(key) && fn && ln) {
-          toCreate.push({ first_name: fn, last_name: ln, company_id: selectedCompanyId });
-          seen.add(key);
-        }
-      }
+      // Use the edited names directly from state
+      const toCreate = preImportSummary.unmatched
+        .filter(u => u.first_name.trim() && u.last_name.trim())
+        .map(u => ({ first_name: u.first_name.trim(), last_name: u.last_name.trim(), company_id: selectedCompanyId }));
 
       if (toCreate.length > 0) {
         const { error } = await supabase.from("employees").insert(toCreate);
@@ -289,7 +279,7 @@ export default function ImportConnecteam() {
 
   const computePreImportSummary = async () => {
     if (!workbook || !selectedPeriod || !selectedSheet) return;
-    setPreImportSummary({ matched: [], unmatched: [], estimatedTotal: 0, loading: true });
+    setPreImportSummary({ matched: [], unmatched: [] as { first_name: string; last_name: string }[], estimatedTotal: 0, loading: true });
 
     const ws = workbook.Sheets[selectedSheet];
     const allRows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
@@ -311,7 +301,7 @@ export default function ImportConnecteam() {
 
     const parseCurrency = (val: string): number => parseFloat(String(val || "0").replace(/[$,]/g, "")) || 0;
     const matched: { name: string; total: number }[] = [];
-    const unmatched: string[] = [];
+    const unmatched: { first_name: string; last_name: string }[] = [];
     let estimatedTotal = 0;
 
     for (const [key, rows] of Object.entries(employeeGroups)) {
@@ -333,7 +323,7 @@ export default function ImportConnecteam() {
         matched.push({ name: displayName, total });
         estimatedTotal += total;
       } else {
-        unmatched.push(displayName);
+        unmatched.push({ first_name: fn, last_name: ln });
       }
     }
 
@@ -624,9 +614,30 @@ export default function ImportConnecteam() {
                     <p className="text-sm font-medium text-destructive mb-1 flex items-center gap-1.5">
                       <AlertCircle className="h-4 w-4" /> Empleados no encontrados en el sistema
                     </p>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {preImportSummary.unmatched.map((name, i) => (
-                        <Badge key={i} variant="outline" className="text-xs border-destructive/30 text-destructive">{name}</Badge>
+                    <div className="space-y-1.5 mt-2">
+                      {preImportSummary.unmatched.map((emp, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input
+                            className="h-7 px-2 text-xs rounded border border-destructive/30 bg-background w-36 focus:outline-none focus:ring-1 focus:ring-ring"
+                            value={emp.first_name}
+                            onChange={(e) => {
+                              const updated = [...preImportSummary.unmatched];
+                              updated[i] = { ...updated[i], first_name: e.target.value };
+                              setPreImportSummary({ ...preImportSummary, unmatched: updated });
+                            }}
+                            placeholder="Nombre"
+                          />
+                          <input
+                            className="h-7 px-2 text-xs rounded border border-destructive/30 bg-background w-36 focus:outline-none focus:ring-1 focus:ring-ring"
+                            value={emp.last_name}
+                            onChange={(e) => {
+                              const updated = [...preImportSummary.unmatched];
+                              updated[i] = { ...updated[i], last_name: e.target.value };
+                              setPreImportSummary({ ...preImportSummary, unmatched: updated });
+                            }}
+                            placeholder="Apellido"
+                          />
+                        </div>
                       ))}
                     </div>
                     <div className="flex items-center justify-between mt-3">
