@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { CompanyProvider } from "@/hooks/useCompany";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -18,6 +19,7 @@ import Movements from "./pages/admin/Movements";
 import PeriodSummary from "./pages/admin/PeriodSummary";
 import Reports from "./pages/admin/Reports";
 import UsersPage from "./pages/admin/Users";
+import CompaniesPage from "./pages/admin/Companies";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -29,6 +31,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
+          <CompanyProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -47,6 +50,7 @@ function App() {
                 <Route path="summary" element={<PeriodSummary />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="users" element={<UsersPage />} />
+                <Route path="companies" element={<CompaniesPage />} />
               </Route>
 
               {/* Employee portal routes */}
@@ -59,6 +63,7 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </CompanyProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
