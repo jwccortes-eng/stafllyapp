@@ -9,6 +9,10 @@ import {
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface Stats {
   totalEmployees: number;
@@ -19,6 +23,13 @@ interface Stats {
   periodTotal: number;
   periodStartDate: string | null;
   periodEndDate: string | null;
+}
+
+interface PeriodChartData {
+  label: string;
+  base: number;
+  extras: number;
+  deducciones: number;
 }
 
 /* ─── animated counter hook ─── */
@@ -55,6 +66,7 @@ export default function AdminDashboard() {
     periodEndDate: null,
   });
   const [loading, setLoading] = useState(true);
+  const [chartData, setChartData] = useState<PeriodChartData[]>([]);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -90,7 +102,49 @@ export default function AdminDashboard() {
       });
       setLoading(false);
     }
+
+    async function fetchChartData() {
+      // Get last 8 periods
+      const { data: periods } = await supabase
+        .from("pay_periods")
+        .select("id, start_date, end_date")
+        .eq("company_id", selectedCompanyId!)
+        .order("start_date", { ascending: true })
+        .limit(8);
+
+      if (!periods || periods.length === 0) { setChartData([]); return; }
+
+      const periodIds = periods.map(p => p.id);
+
+      const [baseRes, movRes] = await Promise.all([
+        supabase.from("period_base_pay").select("period_id, base_total_pay").in("period_id", periodIds),
+        supabase.from("movements").select("period_id, total_value, concept_id, concepts(category)").in("period_id", periodIds),
+      ]);
+
+      const chart: PeriodChartData[] = periods.map(p => {
+        const base = (baseRes.data ?? [])
+          .filter(bp => bp.period_id === p.id)
+          .reduce((s, bp) => s + Number(bp.base_total_pay || 0), 0);
+
+        const extras = (movRes.data ?? [])
+          .filter((m: any) => m.period_id === p.id && m.concepts?.category === "extra")
+          .reduce((s, m) => s + Number(m.total_value || 0), 0);
+
+        const deducciones = (movRes.data ?? [])
+          .filter((m: any) => m.period_id === p.id && m.concepts?.category === "deduction")
+          .reduce((s, m) => s + Math.abs(Number(m.total_value || 0)), 0);
+
+        const startDate = parseISO(p.start_date);
+        const label = format(startDate, "dd MMM", { locale: es });
+
+        return { label, base: Math.round(base), extras: Math.round(extras), deducciones: Math.round(deducciones) };
+      });
+
+      setChartData(chart);
+    }
+
     fetchStats();
+    fetchChartData();
   }, [selectedCompanyId]);
 
   /* period progress */
@@ -247,6 +301,36 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Payment Trend Chart ── */}
+      {chartData.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base font-semibold font-heading">Tendencia de pagos por periodo</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                  <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} />
+                  <RechartsTooltip
+                    contentStyle={{ borderRadius: "0.75rem", border: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--card))", fontSize: 12 }}
+                    formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === "base" ? "Base" : name === "extras" ? "Extras" : "Deducciones"]}
+                  />
+                  <Bar dataKey="base" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="base" />
+                  <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[4, 4, 0, 0]} name="extras" />
+                  <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="deducciones" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* ── Quick Actions ── */}
