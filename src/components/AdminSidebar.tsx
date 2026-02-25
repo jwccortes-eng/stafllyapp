@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   BarChart3,
   LogOut,
+  ContactRound,
   DollarSign,
   Shield,
   Building2,
@@ -60,6 +61,7 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/admin/employees", icon: Users, label: "Empleados", module: "employees", section: "Catálogos" },
   { to: "/admin/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Catálogos" },
   { to: "/admin/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Catálogos" },
+  { to: "/admin/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Catálogos" },
 ];
 
 const OWNER_LINKS: LinkDef[] = [
