@@ -10,9 +10,14 @@ import {
   LogOut,
   DollarSign,
   Shield,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 const links = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", module: null },
@@ -27,6 +32,7 @@ const links = [
 
 export default function AdminSidebar() {
   const { signOut, role, hasModuleAccess } = useAuth();
+  const { companies, selectedCompanyId, setSelectedCompanyId } = useCompany();
   const location = useLocation();
 
   const visibleLinks = links.filter(link => {
@@ -53,6 +59,22 @@ export default function AdminSidebar() {
         </div>
       </div>
 
+      {/* Company selector */}
+      {companies.length > 1 && (
+        <div className="px-3 py-2 border-b border-sidebar-border">
+          <Select value={selectedCompanyId ?? ""} onValueChange={setSelectedCompanyId}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         {visibleLinks.map((link) => {
           const isActive = location.pathname === link.to || 
@@ -75,18 +97,32 @@ export default function AdminSidebar() {
         })}
 
         {role === 'owner' && (
-          <NavLink
-            to="/admin/users"
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all",
-              location.pathname.startsWith("/admin/users")
-                ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-            )}
-          >
-            <Shield className={cn("h-[18px] w-[18px] shrink-0", location.pathname.startsWith("/admin/users") && "text-primary")} />
-            Usuarios
-          </NavLink>
+          <>
+            <NavLink
+              to="/admin/companies"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all",
+                location.pathname.startsWith("/admin/companies")
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <Building2 className={cn("h-[18px] w-[18px] shrink-0", location.pathname.startsWith("/admin/companies") && "text-primary")} />
+              Empresas
+            </NavLink>
+            <NavLink
+              to="/admin/users"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all",
+                location.pathname.startsWith("/admin/users")
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <Shield className={cn("h-[18px] w-[18px] shrink-0", location.pathname.startsWith("/admin/users") && "text-primary")} />
+              Usuarios
+            </NavLink>
+          </>
         )}
       </nav>
 

@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      companies: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_users: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       concept_employee_rates: {
         Row: {
           concept_id: string
@@ -70,6 +129,7 @@ export type Database = {
         Row: {
           calc_mode: Database["public"]["Enums"]["calc_mode"]
           category: Database["public"]["Enums"]["concept_category"]
+          company_id: string
           created_at: string
           default_rate: number | null
           id: string
@@ -81,6 +141,7 @@ export type Database = {
         Insert: {
           calc_mode?: Database["public"]["Enums"]["calc_mode"]
           category: Database["public"]["Enums"]["concept_category"]
+          company_id?: string
           created_at?: string
           default_rate?: number | null
           id?: string
@@ -92,6 +153,7 @@ export type Database = {
         Update: {
           calc_mode?: Database["public"]["Enums"]["calc_mode"]
           category?: Database["public"]["Enums"]["concept_category"]
+          company_id?: string
           created_at?: string
           default_rate?: number | null
           id?: string
@@ -100,13 +162,22 @@ export type Database = {
           rate_source?: Database["public"]["Enums"]["rate_source"]
           unit_label?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "concepts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employees: {
         Row: {
           access_pin: string | null
           added_by: string | null
           added_via: string | null
+          company_id: string
           connecteam_employee_id: string | null
           country_code: string | null
           created_at: string
@@ -138,6 +209,7 @@ export type Database = {
           access_pin?: string | null
           added_by?: string | null
           added_via?: string | null
+          company_id?: string
           connecteam_employee_id?: string | null
           country_code?: string | null
           created_at?: string
@@ -169,6 +241,7 @@ export type Database = {
           access_pin?: string | null
           added_by?: string | null
           added_via?: string | null
+          company_id?: string
           connecteam_employee_id?: string | null
           country_code?: string | null
           created_at?: string
@@ -196,7 +269,15 @@ export type Database = {
           user_id?: string | null
           verification_ssn_ein?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       import_rows: {
         Row: {
@@ -253,6 +334,7 @@ export type Database = {
       imports: {
         Row: {
           column_mapping: Json | null
+          company_id: string
           created_at: string
           error_message: string | null
           file_name: string
@@ -264,6 +346,7 @@ export type Database = {
         }
         Insert: {
           column_mapping?: Json | null
+          company_id?: string
           created_at?: string
           error_message?: string | null
           file_name: string
@@ -275,6 +358,7 @@ export type Database = {
         }
         Update: {
           column_mapping?: Json | null
+          company_id?: string
           created_at?: string
           error_message?: string | null
           file_name?: string
@@ -285,6 +369,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "imports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "imports_period_id_fkey"
             columns: ["period_id"]
@@ -329,6 +420,7 @@ export type Database = {
       }
       movements: {
         Row: {
+          company_id: string
           concept_id: string
           created_at: string
           created_by: string | null
@@ -342,6 +434,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          company_id?: string
           concept_id: string
           created_at?: string
           created_by?: string | null
@@ -355,6 +448,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          company_id?: string
           concept_id?: string
           created_at?: string
           created_by?: string | null
@@ -368,6 +462,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "movements_concept_id_fkey"
             columns: ["concept_id"]
@@ -401,6 +502,7 @@ export type Database = {
       pay_periods: {
         Row: {
           closed_at: string | null
+          company_id: string
           created_at: string
           end_date: string
           id: string
@@ -409,6 +511,7 @@ export type Database = {
         }
         Insert: {
           closed_at?: string | null
+          company_id?: string
           created_at?: string
           end_date: string
           id?: string
@@ -417,17 +520,27 @@ export type Database = {
         }
         Update: {
           closed_at?: string | null
+          company_id?: string
           created_at?: string
           end_date?: string
           id?: string
           start_date?: string
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pay_periods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       period_base_pay: {
         Row: {
           base_total_pay: number
+          company_id: string
           created_at: string
           employee_id: string
           id: string
@@ -441,6 +554,7 @@ export type Database = {
         }
         Insert: {
           base_total_pay?: number
+          company_id?: string
           created_at?: string
           employee_id: string
           id?: string
@@ -454,6 +568,7 @@ export type Database = {
         }
         Update: {
           base_total_pay?: number
+          company_id?: string
           created_at?: string
           employee_id?: string
           id?: string
@@ -466,6 +581,13 @@ export type Database = {
           weekly_total_hours?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "period_base_pay_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "period_base_pay_employee_id_fkey"
             columns: ["employee_id"]
@@ -522,6 +644,7 @@ export type Database = {
       }
       saved_reports: {
         Row: {
+          company_id: string
           created_at: string
           filters: Json | null
           id: string
@@ -532,6 +655,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          company_id?: string
           created_at?: string
           filters?: Json | null
           id?: string
@@ -542,6 +666,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          company_id?: string
           created_at?: string
           filters?: Json | null
           id?: string
@@ -551,7 +676,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "saved_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shifts: {
         Row: {
@@ -561,6 +694,7 @@ export type Database = {
           clock_out_device: string | null
           clock_out_location: string | null
           clock_out_time: string | null
+          company_id: string
           created_at: string
           customer: string | null
           daily_total_hours: number | null
@@ -591,6 +725,7 @@ export type Database = {
           clock_out_device?: string | null
           clock_out_location?: string | null
           clock_out_time?: string | null
+          company_id?: string
           created_at?: string
           customer?: string | null
           daily_total_hours?: number | null
@@ -621,6 +756,7 @@ export type Database = {
           clock_out_device?: string | null
           clock_out_location?: string | null
           clock_out_time?: string | null
+          company_id?: string
           created_at?: string
           customer?: string | null
           daily_total_hours?: number | null
@@ -645,6 +781,13 @@ export type Database = {
           type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "shifts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shifts_employee_id_fkey"
             columns: ["employee_id"]
@@ -870,6 +1013,10 @@ export type Database = {
       }
     }
     Functions: {
+      has_company_role: {
+        Args: { _company_id: string; _role: string; _user_id: string }
+        Returns: boolean
+      }
       has_module_permission: {
         Args: { _module: string; _permission: string; _user_id: string }
         Returns: boolean
@@ -881,6 +1028,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_global_owner: { Args: { _user_id: string }; Returns: boolean }
+      user_company_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "employee" | "owner" | "manager"
