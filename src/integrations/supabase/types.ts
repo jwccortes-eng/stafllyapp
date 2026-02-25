@@ -911,6 +911,7 @@ export type Database = {
     Views: {
       employees_safe: {
         Row: {
+          company_id: string | null
           connecteam_employee_id: string | null
           created_at: string | null
           direct_manager: string | null
@@ -929,6 +930,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          company_id?: string | null
           connecteam_employee_id?: string | null
           created_at?: string | null
           direct_manager?: string | null
@@ -947,6 +949,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          company_id?: string | null
           connecteam_employee_id?: string | null
           created_at?: string | null
           direct_manager?: string | null
@@ -964,7 +967,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shifts_safe: {
         Row: {
