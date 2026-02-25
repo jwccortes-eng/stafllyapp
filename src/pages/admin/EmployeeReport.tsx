@@ -132,9 +132,11 @@ export default function EmployeeReport() {
 
   /* ── filtered by date range ── */
   const filteredPeriods = useMemo(() => {
+    const fromStr = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null;
+    const toStr = dateTo ? format(dateTo, "yyyy-MM-dd") : null;
     return periods.filter(p => {
-      if (dateFrom && new Date(p.start_date) < dateFrom) return false;
-      if (dateTo && new Date(p.end_date) > dateTo) return false;
+      if (fromStr && p.start_date < fromStr) return false;
+      if (toStr && p.end_date > toStr) return false;
       return true;
     });
   }, [periods, dateFrom, dateTo]);
