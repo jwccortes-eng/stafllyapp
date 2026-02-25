@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Search, Phone, MessageSquare, Mail, Users } from "lucide-react";
+import { Search, Phone, MessageSquare, Mail, Users, MessageCircle } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 
 interface DirectoryEntry {
@@ -133,6 +133,15 @@ export default function Directory() {
                       >
                         <Phone className="h-3.5 w-3.5" />
                         Llamar
+                      </a>
+                      <a
+                        href={`https://wa.me/${phone.replace('+', '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        WhatsApp
                       </a>
                       <a
                         href={`sms:${phone}`}
