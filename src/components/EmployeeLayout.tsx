@@ -3,6 +3,7 @@ import { CalendarDays, BarChart3, LogOut, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import EmployeeChatWidget from "@/components/EmployeeChatWidget";
 
 const links = [
   { to: "/portal", icon: CalendarDays, label: "Mis Pagos" },
@@ -87,6 +88,8 @@ export default function EmployeeLayout() {
             })}
           </div>
         </nav>
+
+        <EmployeeChatWidget />
       </div>
     );
   }
@@ -129,6 +132,7 @@ export default function EmployeeLayout() {
       <main className="max-w-3xl mx-auto px-6 py-8 animate-fade-in">
         <Outlet />
       </main>
+      <EmployeeChatWidget />
     </div>
   );
 }
