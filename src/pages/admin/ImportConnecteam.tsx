@@ -5,12 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import * as XLSX from "xlsx";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
+import { Badge } from "@/components/ui/badge";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_ROW_COUNT = 10000;
@@ -35,6 +36,19 @@ const BASE_PAY_FIELDS: Record<string, string> = {
   "Total pay": "base_total_pay",
 };
 
+interface ImportHistory {
+  id: string;
+  file_name: string;
+  status: string;
+  row_count: number | null;
+  created_at: string;
+  error_message: string | null;
+  period_id: string;
+  pay_periods: { start_date: string; end_date: string } | null;
+  _emp_count?: number;
+  _base_total?: number;
+}
+
 interface Period { id: string; start_date: string; end_date: string; status: string; }
 
 export default function ImportConnecteam() {
@@ -52,6 +66,36 @@ export default function ImportConnecteam() {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const { toast } = useToast();
+  const [importHistory, setImportHistory] = useState<ImportHistory[]>([]);
+
+  const fetchHistory = useCallback(async () => {
+    if (!selectedCompanyId) return;
+    const { data } = await supabase
+      .from("imports")
+      .select("id, file_name, status, row_count, created_at, error_message, period_id, pay_periods(start_date, end_date)")
+      .eq("company_id", selectedCompanyId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (!data) { setImportHistory([]); return; }
+
+    // Enrich with employee count and base total per import
+    const enriched = await Promise.all(
+      (data as any[]).map(async (imp) => {
+        const { count } = await supabase
+          .from("period_base_pay")
+          .select("id", { count: "exact", head: true })
+          .eq("import_id", imp.id);
+        const { data: basePays } = await supabase
+          .from("period_base_pay")
+          .select("base_total_pay")
+          .eq("import_id", imp.id);
+        const total = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.base_total_pay || 0), 0);
+        return { ...imp, _emp_count: count ?? 0, _base_total: Math.round(total * 100) / 100 } as ImportHistory;
+      })
+    );
+    setImportHistory(enriched);
+  }, [selectedCompanyId]);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -59,7 +103,8 @@ export default function ImportConnecteam() {
       setPeriods((data as Period[]) ?? []);
       setSelectedPeriod("");
     });
-  }, [selectedCompanyId]);
+    fetchHistory();
+  }, [selectedCompanyId, fetchHistory]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -224,6 +269,7 @@ export default function ImportConnecteam() {
         message: `Importación completada: ${matched} empleados procesados, ${unmatched} no encontrados.`,
       });
       setStep(4);
+      fetchHistory();
     } catch (err: any) {
       setResult({ success: false, message: getUserFriendlyError(err) });
       toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
@@ -347,6 +393,69 @@ export default function ImportConnecteam() {
             <Button className="mt-4" onClick={() => { setStep(1); setResult(null); setFile(null); }}>
               Nueva importación
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Import History */}
+      {importHistory.length > 0 && (
+        <Card className="mt-8">
+          <CardHeader className="flex flex-row items-center gap-2">
+            <History className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Historial de importaciones</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Periodo</TableHead>
+                  <TableHead>Archivo</TableHead>
+                  <TableHead className="text-center">Filas</TableHead>
+                  <TableHead className="text-center">Empleados</TableHead>
+                  <TableHead className="text-right">Base total</TableHead>
+                  <TableHead className="text-center">Estado</TableHead>
+                  <TableHead>Fecha</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {importHistory.map((imp) => (
+                  <TableRow key={imp.id}>
+                    <TableCell className="text-sm font-medium">
+                      {imp.pay_periods
+                        ? `${imp.pay_periods.start_date} → ${imp.pay_periods.end_date}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-xs max-w-40 truncate" title={imp.file_name}>
+                      <div className="flex items-center gap-1.5">
+                        <FileSpreadsheet className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        {imp.file_name}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center font-mono text-xs">{imp.row_count ?? "—"}</TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="font-mono text-xs">{imp._emp_count}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs">
+                      {imp._base_total ? `$${imp._base_total.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={imp.status === "completed" ? "default" : imp.status === "processing" ? "secondary" : "destructive"} className="text-xs">
+                        {imp.status === "completed" ? "Completado" : imp.status === "processing" ? "Procesando" : imp.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        {new Date(imp.created_at).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}
