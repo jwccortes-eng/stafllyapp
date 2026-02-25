@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Pencil, Trash2, ToggleLeft } from "lucide-react";
+import { Plus, MoreHorizontal, Pencil, Trash2, ToggleLeft, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
+import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 
 interface Concept {
   id: string;
@@ -39,6 +40,7 @@ export default function Concepts() {
   const [form, setForm] = useState(emptyForm);
   const [editForm, setEditForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const { toast } = useToast();
 
   const fetchConcepts = async () => {
@@ -130,6 +132,79 @@ export default function Concepts() {
     setDeleteTarget(null);
   };
 
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedCompanyId) return;
+    setImporting(true);
+
+    try {
+      const data = await file.arrayBuffer();
+      const wb = safeRead(data, { type: "array" });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = safeSheetToJson<Record<string, any>>(sheet);
+
+      if (rows.length === 0) {
+        toast({ title: "Archivo vacío", description: "No se encontraron filas.", variant: "destructive" });
+        setImporting(false);
+        return;
+      }
+
+      const normalize = (s: string) => s?.toString().trim().toLowerCase().replace(/[^a-záéíóúñü0-9]/g, "") ?? "";
+
+      const categoryMap: Record<string, "extra" | "deduction"> = {
+        extra: "extra", extras: "extra", suma: "extra",
+        deduccion: "deduction", deducción: "deduction", deduction: "deduction", resta: "deduction",
+      };
+      const calcModeMap: Record<string, "quantity_x_rate" | "manual_value" | "hybrid"> = {
+        cantidadxtarifa: "quantity_x_rate", quantityxrate: "quantity_x_rate", "quantity_x_rate": "quantity_x_rate",
+        valormanual: "manual_value", manualvalue: "manual_value", "manual_value": "manual_value",
+        hibrido: "hybrid", híbrido: "hybrid", hybrid: "hybrid",
+      };
+      const rateSourceMap: Record<string, "concept_default" | "per_employee"> = {
+        conceptdefault: "concept_default", defaultdelconcepto: "concept_default", "concept_default": "concept_default",
+        perempleado: "per_employee", porempleado: "per_employee", "per_employee": "per_employee",
+      };
+
+      const findCol = (row: Record<string, any>, candidates: string[]) => {
+        for (const key of Object.keys(row)) {
+          if (candidates.includes(normalize(key))) return row[key];
+        }
+        return undefined;
+      };
+
+      let created = 0, skipped = 0;
+      for (const row of rows) {
+        const name = (findCol(row, ["nombre", "name"]) ?? "").toString().trim();
+        if (!name) { skipped++; continue; }
+
+        const catRaw = normalize((findCol(row, ["categoria", "categoría", "category"]) ?? "extra").toString());
+        const calcRaw = normalize((findCol(row, ["calculo", "cálculo", "calcmode", "modocalculo", "mododecalculo", "calculation"]) ?? "manual_value").toString());
+        const rateSourceRaw = normalize((findCol(row, ["fuentetarifa", "ratesource", "fuente"]) ?? "concept_default").toString());
+        const unitLabel = (findCol(row, ["unidad", "unit", "unitlabel"]) ?? "unidades").toString().trim();
+        const defaultRate = parseFloat((findCol(row, ["tarifa", "tarifadefault", "rate", "defaultrate"]) ?? "").toString()) || null;
+
+        const { error } = await supabase.from("concepts").insert({
+          name,
+          category: categoryMap[catRaw] ?? "extra",
+          calc_mode: calcModeMap[calcRaw] ?? "manual_value",
+          unit_label: unitLabel,
+          default_rate: defaultRate,
+          rate_source: rateSourceMap[rateSourceRaw] ?? "concept_default",
+          company_id: selectedCompanyId,
+        });
+        if (error) { skipped++; } else { created++; }
+      }
+
+      toast({ title: `Importación completada`, description: `${created} creados, ${skipped} omitidos` });
+      fetchConcepts();
+    } catch (err: any) {
+      toast({ title: "Error al importar", description: err.message, variant: "destructive" });
+    }
+    setImporting(false);
+    e.target.value = "";
+  };
+
+
   const ConceptForm = ({ values, onChange, onSubmit, submitLabel }: {
     values: typeof emptyForm;
     onChange: (v: typeof emptyForm) => void;
@@ -184,15 +259,21 @@ export default function Concepts() {
           <h1 className="page-title">Conceptos</h1>
           <p className="page-subtitle">Extras y deducciones dinámicas</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Nuevo concepto</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Nuevo concepto</DialogTitle></DialogHeader>
-            <ConceptForm values={form} onChange={setForm} onSubmit={handleCreate} submitLabel="Crear" />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button variant="outline" disabled={importing} onClick={() => document.getElementById("import-concepts-file")?.click()}>
+            <Upload className="h-4 w-4 mr-2" />{importing ? "Importando..." : "Importar XLS"}
+          </Button>
+          <input id="import-concepts-file" type="file" accept=".xls,.xlsx" className="hidden" onChange={handleImportFile} />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />Nuevo concepto</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Nuevo concepto</DialogTitle></DialogHeader>
+              <ConceptForm values={form} onChange={setForm} onSubmit={handleCreate} submitLabel="Crear" />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="data-table-wrapper">
