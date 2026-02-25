@@ -637,6 +637,18 @@ export default function ImportConnecteam() {
                             }}
                             placeholder="Apellido"
                           />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                            onClick={() => {
+                              const updated = preImportSummary.unmatched.filter((_, idx) => idx !== i);
+                              setPreImportSummary({ ...preImportSummary, unmatched: updated });
+                            }}
+                            title="Quitar de la lista"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       ))}
                     </div>
