@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
+
 import {
   LayoutDashboard,
   Users,
@@ -14,6 +15,7 @@ import {
   Globe,
   PanelLeftClose,
   PanelLeft,
+  Smartphone,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -43,6 +45,7 @@ const sections = [
     links: [
       { to: "/admin/employees", icon: Users, label: "Empleados", module: "employees" },
       { to: "/admin/concepts", icon: Tags, label: "Conceptos", module: "concepts" },
+      { to: "/admin/invite", icon: Smartphone, label: "Invitar", module: "employees" },
     ],
   },
 ];
