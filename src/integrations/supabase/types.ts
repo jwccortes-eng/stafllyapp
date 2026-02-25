@@ -104,6 +104,7 @@ export type Database = {
       }
       employees: {
         Row: {
+          access_pin: string | null
           added_by: string | null
           added_via: string | null
           connecteam_employee_id: string | null
@@ -134,6 +135,7 @@ export type Database = {
           verification_ssn_ein: string | null
         }
         Insert: {
+          access_pin?: string | null
           added_by?: string | null
           added_via?: string | null
           connecteam_employee_id?: string | null
@@ -164,6 +166,7 @@ export type Database = {
           verification_ssn_ein?: string | null
         }
         Update: {
+          access_pin?: string | null
           added_by?: string | null
           added_via?: string | null
           connecteam_employee_id?: string | null

@@ -9,7 +9,7 @@ const links = [
 ];
 
 export default function EmployeeLayout() {
-  const { user, role, loading, signOut } = useAuth();
+  const { user, role, employeeActive, loading, signOut } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -22,6 +22,23 @@ export default function EmployeeLayout() {
 
   if (!user) return <Navigate to="/auth" replace />;
   if (role !== 'employee') return <Navigate to="/auth" replace />;
+  
+  if (!employeeActive) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 text-center gap-4">
+        <h2 className="text-xl font-bold text-destructive">Cuenta inactiva</h2>
+        <p className="text-muted-foreground max-w-md">
+          Tu cuenta de empleado está inactiva. Contacta al administrador para más información.
+        </p>
+        <button
+          onClick={signOut}
+          className="text-sm text-primary hover:underline"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

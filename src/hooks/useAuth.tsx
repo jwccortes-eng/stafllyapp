@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
 type AppRole = 'owner' | 'admin' | 'manager' | 'employee' | null;
+type EmployeeStatus = 'active' | 'inactive' | null;
 
 interface ModulePermission {
   module: string;
@@ -16,6 +17,7 @@ interface AuthContextType {
   session: Session | null;
   role: AppRole;
   employeeId: string | null;
+  employeeActive: boolean;
   loading: boolean;
   permissions: ModulePermission[];
   signOut: () => Promise<void>;
@@ -27,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   role: null,
   employeeId: null,
+  employeeActive: true,
   loading: true,
   permissions: [],
   signOut: async () => {},
@@ -38,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole>(null);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [employeeActive, setEmployeeActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
 
@@ -66,12 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (newRole === 'employee') {
         const { data: empData } = await supabase
           .from('employees')
-          .select('id')
+          .select('id, is_active')
           .eq('user_id', userId)
           .maybeSingle();
         setEmployeeId(empData?.id ?? null);
+        setEmployeeActive(empData?.is_active ?? false);
       } else {
         setEmployeeId(null);
+        setEmployeeActive(true);
       }
     } catch (err) {
       console.error('Error fetching user data:', err);
@@ -126,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, employeeId, loading, permissions, signOut, hasModuleAccess }}>
+    <AuthContext.Provider value={{ user, session, role, employeeId, employeeActive, loading, permissions, signOut, hasModuleAccess }}>
       {children}
     </AuthContext.Provider>
   );
