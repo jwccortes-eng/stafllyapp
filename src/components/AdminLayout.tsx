@@ -45,7 +45,10 @@ const BOTTOM_BAR_KEYS = ["/admin", "/admin/movements", "/admin/summary", "/admin
 export default function AdminLayout() {
   const { user, role, loading, signOut, hasModuleAccess } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebar-collapsed");
+    return saved !== null ? saved === "true" : true;
+  });
   const [sheetOpen, setSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   const location = useLocation();
@@ -212,7 +215,7 @@ export default function AdminLayout() {
 
   // Desktop layout
   return (
-    <SidebarContext.Provider value={{ collapsed, setCollapsed }}>
+    <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); localStorage.setItem("sidebar-collapsed", String(v)); } }}>
       <div className="min-h-screen bg-background">
         <AdminSidebar />
         <main className={cn("transition-all duration-200 p-6 lg:p-8 animate-fade-in", collapsed ? "ml-14" : "ml-60")}>
