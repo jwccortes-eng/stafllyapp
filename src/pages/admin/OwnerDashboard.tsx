@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Building2, Users, CalendarDays, DollarSign, FileSpreadsheet, TrendingUp } from "lucide-react";
+import { Building2, Users, DollarSign, FileSpreadsheet, TrendingUp, BarChart3 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line,
+} from "recharts";
 
 interface CompanyStats {
   id: string;
@@ -15,8 +19,24 @@ interface CompanyStats {
   movements: number;
 }
 
+interface PeriodPayData {
+  period_label: string;
+  [companyName: string]: number | string;
+}
+
+const CHART_COLORS = [
+  "hsl(207, 90%, 54%)",   // primary blue
+  "hsl(152, 60%, 40%)",   // earning green
+  "hsl(38, 92%, 50%)",    // warning orange
+  "hsl(280, 60%, 50%)",   // purple
+  "hsl(0, 72%, 51%)",     // deduction red
+  "hsl(180, 60%, 40%)",   // teal
+];
+
 export default function OwnerDashboard() {
   const [companies, setCompanies] = useState<CompanyStats[]>([]);
+  const [payTrendData, setPayTrendData] = useState<PeriodPayData[]>([]);
+  const [companyNames, setCompanyNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,31 +51,92 @@ export default function OwnerDashboard() {
         return;
       }
 
-      const stats: CompanyStats[] = await Promise.all(
-        companyList.map(async (c) => {
-          const [empRes, periodRes, impRes, movRes] = await Promise.all([
-            supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", c.id).eq("is_active", true),
-            supabase.from("pay_periods").select("start_date, end_date, status").eq("company_id", c.id).order("start_date", { ascending: false }).limit(1).maybeSingle(),
-            supabase.from("imports").select("id", { count: "exact", head: true }).eq("company_id", c.id),
-            supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", c.id),
-          ]);
+      const names = companyList.map((c) => c.name);
+      setCompanyNames(names);
 
-          return {
-            id: c.id,
-            name: c.name,
-            is_active: c.is_active,
-            employees: empRes.count ?? 0,
-            active_period: periodRes.data
-              ? `${periodRes.data.start_date} → ${periodRes.data.end_date}`
-              : null,
-            period_status: periodRes.data?.status ?? null,
-            imports: impRes.count ?? 0,
-            movements: movRes.count ?? 0,
-          };
-        })
-      );
+      // Fetch stats and trend data in parallel
+      const [stats, trendData] = await Promise.all([
+        // Company stats
+        Promise.all(
+          companyList.map(async (c) => {
+            const [empRes, periodRes, impRes, movRes] = await Promise.all([
+              supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", c.id).eq("is_active", true),
+              supabase.from("pay_periods").select("start_date, end_date, status").eq("company_id", c.id).order("start_date", { ascending: false }).limit(1).maybeSingle(),
+              supabase.from("imports").select("id", { count: "exact", head: true }).eq("company_id", c.id),
+              supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", c.id),
+            ]);
+            return {
+              id: c.id,
+              name: c.name,
+              is_active: c.is_active,
+              employees: empRes.count ?? 0,
+              active_period: periodRes.data ? `${periodRes.data.start_date} → ${periodRes.data.end_date}` : null,
+              period_status: periodRes.data?.status ?? null,
+              imports: impRes.count ?? 0,
+              movements: movRes.count ?? 0,
+            };
+          })
+        ),
+        // Trend data: base pay per period per company (last 8 periods)
+        (async () => {
+          const { data: periods } = await supabase
+            .from("pay_periods")
+            .select("id, start_date, end_date, company_id")
+            .order("start_date", { ascending: true });
+
+          if (!periods?.length) return [];
+
+          // Get unique period date ranges across all companies
+          const periodMap = new Map<string, { label: string; ids: Map<string, string> }>();
+          for (const p of periods) {
+            const label = `${p.start_date.slice(5)}`;
+            if (!periodMap.has(p.start_date)) {
+              periodMap.set(p.start_date, { label, ids: new Map() });
+            }
+            const company = companyList.find((c) => c.id === p.company_id);
+            if (company) {
+              periodMap.get(p.start_date)!.ids.set(company.name, p.id);
+            }
+          }
+
+          // Get last 8 period dates
+          const sortedDates = Array.from(periodMap.keys()).sort().slice(-8);
+
+          // Fetch all base pay data
+          const allPeriodIds = sortedDates.flatMap(
+            (d) => Array.from(periodMap.get(d)!.ids.values())
+          );
+
+          const { data: basePays } = await supabase
+            .from("period_base_pay")
+            .select("period_id, base_total_pay, company_id")
+            .in("period_id", allPeriodIds);
+
+          // Build chart data
+          const chartData: PeriodPayData[] = sortedDates.map((date) => {
+            const entry = periodMap.get(date)!;
+            const row: PeriodPayData = { period_label: entry.label };
+
+            for (const company of companyList) {
+              const periodId = entry.ids.get(company.name);
+              if (periodId && basePays) {
+                const total = basePays
+                  .filter((bp) => bp.period_id === periodId && bp.company_id === company.id)
+                  .reduce((sum, bp) => sum + Number(bp.base_total_pay), 0);
+                row[company.name] = Math.round(total * 100) / 100;
+              } else {
+                row[company.name] = 0;
+              }
+            }
+            return row;
+          });
+
+          return chartData;
+        })(),
+      ]);
 
       setCompanies(stats);
+      setPayTrendData(trendData);
       setLoading(false);
     }
     fetchAll();
@@ -75,6 +156,8 @@ export default function OwnerDashboard() {
     { title: "Novedades", value: totals.movements, icon: DollarSign, color: "text-deduction" },
   ];
 
+  const formatCurrency = (value: number) => `$${value.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
   return (
     <div>
       <div className="page-header">
@@ -83,13 +166,17 @@ export default function OwnerDashboard() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="stat-card h-28 animate-pulse bg-muted rounded-xl" />
-          ))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="stat-card h-28 animate-pulse bg-muted rounded-xl" />
+            ))}
+          </div>
+          <div className="h-72 animate-pulse bg-muted rounded-xl" />
         </div>
       ) : (
         <>
+          {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {summaryCards.map((card) => (
               <Card key={card.title} className="stat-card">
@@ -104,6 +191,97 @@ export default function OwnerDashboard() {
             ))}
           </div>
 
+          {/* Charts */}
+          {payTrendData.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Bar Chart - Total Pay by Period */}
+              <Card>
+                <CardHeader className="flex flex-row items-center gap-2 pb-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-base">Pago total por periodo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={payTrendData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis
+                        dataKey="period_label"
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <YAxis
+                        tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <Tooltip
+                        formatter={(value: number, name: string) => [formatCurrency(value), name]}
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: "12px" }} />
+                      {companyNames.map((name, i) => (
+                        <Bar
+                          key={name}
+                          dataKey={name}
+                          fill={CHART_COLORS[i % CHART_COLORS.length]}
+                          radius={[4, 4, 0, 0]}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Line Chart - Payment Trend */}
+              <Card>
+                <CardHeader className="flex flex-row items-center gap-2 pb-2">
+                  <TrendingUp className="h-5 w-5 text-earning" />
+                  <CardTitle className="text-base">Tendencia de pagos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={payTrendData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis
+                        dataKey="period_label"
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <YAxis
+                        tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <Tooltip
+                        formatter={(value: number, name: string) => [formatCurrency(value), name]}
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: "12px" }} />
+                      {companyNames.map((name, i) => (
+                        <Line
+                          key={name}
+                          type="monotone"
+                          dataKey={name}
+                          stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: CHART_COLORS[i % CHART_COLORS.length] }}
+                          activeDot={{ r: 6 }}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Detail Table */}
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
