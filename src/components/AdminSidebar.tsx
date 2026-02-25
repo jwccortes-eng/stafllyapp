@@ -11,6 +11,7 @@ import {
   DollarSign,
   Shield,
   Building2,
+  Globe,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -98,6 +99,19 @@ export default function AdminSidebar() {
 
         {role === 'owner' && (
           <>
+            <div className="my-2 border-t border-sidebar-border" />
+            <NavLink
+              to="/admin/global"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all",
+                location.pathname.startsWith("/admin/global")
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <Globe className={cn("h-[18px] w-[18px] shrink-0", location.pathname.startsWith("/admin/global") && "text-primary")} />
+              Vista global
+            </NavLink>
             <NavLink
               to="/admin/companies"
               className={cn(
