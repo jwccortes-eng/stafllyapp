@@ -63,9 +63,11 @@ export default function PeriodSummary() {
   useEffect(() => {
     if (!dateFrom && !dateTo) return;
     if (periods.length === 0) return;
+    const fromStr = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null;
+    const toStr = dateTo ? format(dateTo, "yyyy-MM-dd") : null;
     const matching = periods.filter(p => {
-      if (dateFrom && new Date(p.start_date + "T00:00:00") < dateFrom) return false;
-      if (dateTo && new Date(p.end_date + "T00:00:00") > dateTo) return false;
+      if (fromStr && p.start_date < fromStr) return false;
+      if (toStr && p.end_date > toStr) return false;
       return true;
     });
     if (matching.length > 0 && matching[0].id !== selectedPeriod) {
