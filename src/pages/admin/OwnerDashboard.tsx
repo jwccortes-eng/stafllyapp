@@ -1,12 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Building2, Users, DollarSign, FileSpreadsheet, TrendingUp, BarChart3 } from "lucide-react";
+import { Building2, Users, DollarSign, FileSpreadsheet, TrendingUp, BarChart3, CalendarIcon, X } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line,
 } from "recharts";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface CompanyStats {
   id: string;
@@ -35,9 +41,29 @@ const CHART_COLORS = [
 
 export default function OwnerDashboard() {
   const [companies, setCompanies] = useState<CompanyStats[]>([]);
-  const [payTrendData, setPayTrendData] = useState<PeriodPayData[]>([]);
   const [companyNames, setCompanyNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  // All trend data (unfiltered) stored separately
+  const [allTrendData, setAllTrendData] = useState<(PeriodPayData & { _start_date: string })[]>([]);
+
+  // Filter trend data by date range
+  const payTrendData = useMemo(() => {
+    let filtered = allTrendData;
+    if (dateFrom) {
+      const fromStr = format(dateFrom, "yyyy-MM-dd");
+      filtered = filtered.filter((d) => d._start_date >= fromStr);
+    }
+    if (dateTo) {
+      const toStr = format(dateTo, "yyyy-MM-dd");
+      filtered = filtered.filter((d) => d._start_date <= toStr);
+    }
+    // Remove internal field for chart consumption
+    return filtered.map(({ _start_date, ...rest }) => rest as PeriodPayData);
+  }, [allTrendData, dateFrom, dateTo]);
 
   useEffect(() => {
     async function fetchAll() {
@@ -99,8 +125,8 @@ export default function OwnerDashboard() {
             }
           }
 
-          // Get last 8 period dates
-          const sortedDates = Array.from(periodMap.keys()).sort().slice(-8);
+          // Don't limit to 8 — fetch all, filtering happens client-side
+          const sortedDates = Array.from(periodMap.keys()).sort();
 
           // Fetch all base pay data
           const allPeriodIds = sortedDates.flatMap(
@@ -112,10 +138,10 @@ export default function OwnerDashboard() {
             .select("period_id, base_total_pay, company_id")
             .in("period_id", allPeriodIds);
 
-          // Build chart data
-          const chartData: PeriodPayData[] = sortedDates.map((date) => {
+          // Build chart data with _start_date for filtering
+          const chartData = sortedDates.map((date) => {
             const entry = periodMap.get(date)!;
-            const row: PeriodPayData = { period_label: entry.label };
+            const row: PeriodPayData & { _start_date: string } = { period_label: entry.label, _start_date: date };
 
             for (const company of companyList) {
               const periodId = entry.ids.get(company.name);
@@ -136,7 +162,7 @@ export default function OwnerDashboard() {
       ]);
 
       setCompanies(stats);
-      setPayTrendData(trendData);
+      setAllTrendData(trendData);
       setLoading(false);
     }
     fetchAll();
@@ -190,6 +216,40 @@ export default function OwnerDashboard() {
               </Card>
             ))}
           </div>
+
+          {/* Date Range Filter */}
+          {allTrendData.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <span className="text-sm font-medium text-muted-foreground">Filtrar gráficos:</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(dateFrom, "dd MMM yyyy", { locale: es }) : "Desde"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateTo ? format(dateTo, "dd MMM yyyy", { locale: es }) : "Hasta"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+              {(dateFrom || dateTo) && (
+                <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+                  <X className="h-4 w-4 mr-1" /> Limpiar
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Charts */}
           {payTrendData.length > 0 && (
