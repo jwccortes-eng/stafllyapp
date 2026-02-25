@@ -13,6 +13,7 @@ import * as XLSX from "xlsx";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { Badge } from "@/components/ui/badge";
+import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_ROW_COUNT = 10000;
 
@@ -109,6 +110,8 @@ export default function ImportConnecteam() {
   const [expandedEmployees, setExpandedEmployees] = useState<{ first_name: string; last_name: string; base_total_pay: number; total_work_hours: number | null; total_overtime: number | null; total_paid_hours: number | null }[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [deletingImportId, setDeletingImportId] = useState<string | null>(null);
+  const [deletePasswordOpen, setDeletePasswordOpen] = useState(false);
+  const [pendingDeleteImportId, setPendingDeleteImportId] = useState<string | null>(null);
   const [preImportSummary, setPreImportSummary] = useState<{
     matched: { name: string; total: number }[];
     unmatched: { first_name: string; last_name: string }[];
@@ -816,27 +819,14 @@ export default function ImportConnecteam() {
                         </div>
                       </TableCell>
                       <TableCell className="px-2" onClick={(e) => e.stopPropagation()}>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" disabled={deletingImportId === imp.id}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>¿Eliminar importación?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Se eliminarán los datos base y turnos asociados a esta importación ({imp.file_name}). Los movimientos manuales del periodo no se verán afectados. Esta acción no se puede deshacer.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteImport(imp.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Eliminar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          disabled={deletingImportId === imp.id}
+                          onClick={() => { setPendingDeleteImportId(imp.id); setDeletePasswordOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                     {expandedImport === imp.id && (
@@ -882,6 +872,14 @@ export default function ImportConnecteam() {
           </CardContent>
         </Card>
       )}
+
+      <PasswordConfirmDialog
+        open={deletePasswordOpen}
+        onOpenChange={setDeletePasswordOpen}
+        title="Eliminar importación"
+        description="Se eliminarán los datos base y turnos asociados a esta importación. Confirma tu contraseña para continuar."
+        onConfirm={async () => { if (pendingDeleteImportId) await handleDeleteImport(pendingDeleteImportId); setPendingDeleteImportId(null); }}
+      />
     </div>
   );
 }

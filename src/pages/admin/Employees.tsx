@@ -31,6 +31,7 @@ import { getUserFriendlyError } from "@/lib/error-helpers";
 import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
+import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 
 // All Connecteam fields in Excel order
 const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean; hidden?: boolean }[] = [
@@ -91,6 +92,7 @@ export default function Employees() {
   const [editingEmployee, setEditingEmployee] = useState<EmployeeRecord | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<EmployeeRecord | null>(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [viewEmployee, setViewEmployee] = useState<EmployeeRecord | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
@@ -788,7 +790,7 @@ export default function Employees() {
                           {e.is_active ? <UserX className="h-4 w-4 mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
                           {e.is_active ? "Desactivar" : "Activar"}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(e)}>
+                        <DropdownMenuItem className="text-destructive" onClick={() => { setDeleteTarget(e); setPasswordOpen(true); }}>
                           <Trash2 className="h-4 w-4 mr-2" />Eliminar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -842,23 +844,14 @@ export default function Employees() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar empleado?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará permanentemente a <strong>{deleteTarget?.first_name} {deleteTarget?.last_name}</strong>. Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Confirmation with Password */}
+      <PasswordConfirmDialog
+        open={passwordOpen}
+        onOpenChange={(v) => { setPasswordOpen(v); if (!v) setDeleteTarget(null); }}
+        title="Eliminar empleado"
+        description={`Se eliminará permanentemente a ${deleteTarget?.first_name} ${deleteTarget?.last_name}. Confirma tu contraseña para continuar.`}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Lock, Unlock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { format, addDays, nextWednesday, previousWednesday, isWednesday } from "date-fns";
+import { format, addDays, nextWednesday, isWednesday } from "date-fns";
 import { useCompany } from "@/hooks/useCompany";
+import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 
 interface PayPeriod {
   id: string;
@@ -25,6 +26,8 @@ export default function PayPeriods() {
   const [open, setOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingToggle, setPendingToggle] = useState<PayPeriod | null>(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchPeriods = async () => {
@@ -62,17 +65,25 @@ export default function PayPeriods() {
     setLoading(false);
   };
 
-  const toggleStatus = async (period: PayPeriod) => {
-    const newStatus = period.status === "open" ? "closed" : "open";
+  const requestToggle = (period: PayPeriod) => {
+    setPendingToggle(period);
+    setPasswordOpen(true);
+  };
+
+  const toggleStatus = async () => {
+    if (!pendingToggle) return;
+    const newStatus = pendingToggle.status === "open" ? "closed" : "open";
     const { error } = await supabase
       .from("pay_periods")
       .update({ status: newStatus, closed_at: newStatus === "closed" ? new Date().toISOString() : null })
-      .eq("id", period.id);
+      .eq("id", pendingToggle.id);
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
+      toast({ title: newStatus === "closed" ? "Periodo cerrado" : "Periodo reabierto" });
       fetchPeriods();
     }
+    setPendingToggle(null);
   };
 
   return (
@@ -135,7 +146,7 @@ export default function PayPeriods() {
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => toggleStatus(p)}>
+                    <Button variant="ghost" size="icon" onClick={() => requestToggle(p)} title={p.status === "open" ? "Cerrar periodo" : "Reabrir periodo"}>
                       {p.status === "open" ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                     </Button>
                   </TableCell>
@@ -145,6 +156,16 @@ export default function PayPeriods() {
           </TableBody>
         </Table>
       </div>
+
+      <PasswordConfirmDialog
+        open={passwordOpen}
+        onOpenChange={setPasswordOpen}
+        title={pendingToggle?.status === "open" ? "Cerrar periodo" : "Reabrir periodo"}
+        description={pendingToggle?.status === "open"
+          ? "Cerrar un periodo bloquea la creación y eliminación de novedades e importaciones. Confirma tu contraseña para continuar."
+          : "Reabrir un periodo permite modificar datos nuevamente. Confirma tu contraseña para continuar."}
+        onConfirm={toggleStatus}
+      />
     </div>
   );
 }
