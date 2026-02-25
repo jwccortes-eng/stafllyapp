@@ -249,6 +249,31 @@ export default function EmployeeReport() {
           <CalendarIcon className="h-3.5 w-3.5 mr-1" /> Semana actual
         </Button>
 
+        <Button variant="ghost" size="sm" onClick={() => {
+          const today = new Date();
+          const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          const lastDay = new Date(today.getFullYear(), today.getMonth(), 0);
+          firstDay.setHours(0, 0, 0, 0);
+          lastDay.setHours(23, 59, 59, 999);
+          setDateFrom(firstDay);
+          setDateTo(lastDay);
+        }} className="text-muted-foreground">
+          <CalendarIcon className="h-3.5 w-3.5 mr-1" /> Último mes
+        </Button>
+
+        <Button variant="ghost" size="sm" onClick={() => {
+          const today = new Date();
+          const qMonth = Math.floor(today.getMonth() / 3) * 3;
+          const firstDay = new Date(today.getFullYear(), qMonth - 3, 1);
+          const lastDay = new Date(today.getFullYear(), qMonth, 0);
+          firstDay.setHours(0, 0, 0, 0);
+          lastDay.setHours(23, 59, 59, 999);
+          setDateFrom(firstDay);
+          setDateTo(lastDay);
+        }} className="text-muted-foreground">
+          <CalendarIcon className="h-3.5 w-3.5 mr-1" /> Último trimestre
+        </Button>
+
         {hasDateFilter && (
           <Button variant="ghost" size="sm" onClick={clearDates} className="text-muted-foreground">
             <X className="h-3.5 w-3.5 mr-1" /> Limpiar
