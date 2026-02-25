@@ -609,16 +609,40 @@ export default function ImportConnecteam() {
                   </div>
                 </div>
 
-                {preImportSummary.unmatched.length > 0 && (
+                {preImportSummary.unmatched.length > 0 && (() => {
+                  // Validation: detect empty names and duplicates
+                  const duplicateKeys = new Set<string>();
+                  const seenKeys = new Map<string, number>();
+                  preImportSummary.unmatched.forEach((emp, i) => {
+                    const key = `${emp.first_name.trim().toLowerCase()}|${emp.last_name.trim().toLowerCase()}`;
+                    if (key === "|") return; // skip empties for dup check
+                    if (seenKeys.has(key)) {
+                      duplicateKeys.add(key);
+                    }
+                    seenKeys.set(key, i);
+                  });
+
+                  const validEntries = preImportSummary.unmatched.filter(
+                    emp => emp.first_name.trim() && emp.last_name.trim()
+                  );
+                  const hasEmpty = validEntries.length < preImportSummary.unmatched.length;
+                  const hasDuplicates = duplicateKeys.size > 0;
+                  const canCreate = validEntries.length > 0 && !hasDuplicates;
+
+                  return (
                   <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
                     <p className="text-sm font-medium text-destructive mb-1 flex items-center gap-1.5">
                       <AlertCircle className="h-4 w-4" /> Empleados no encontrados en el sistema
                     </p>
                     <div className="space-y-1.5 mt-2">
-                      {preImportSummary.unmatched.map((emp, i) => (
+                      {preImportSummary.unmatched.map((emp, i) => {
+                        const isEmpty = !emp.first_name.trim() || !emp.last_name.trim();
+                        const key = `${emp.first_name.trim().toLowerCase()}|${emp.last_name.trim().toLowerCase()}`;
+                        const isDuplicate = key !== "|" && duplicateKeys.has(key);
+                        return (
                         <div key={i} className="flex items-center gap-2">
                           <input
-                            className="h-7 px-2 text-xs rounded border border-destructive/30 bg-background w-36 focus:outline-none focus:ring-1 focus:ring-ring"
+                            className={`h-7 px-2 text-xs rounded border bg-background w-36 focus:outline-none focus:ring-1 focus:ring-ring ${!emp.first_name.trim() ? "border-destructive ring-1 ring-destructive/40" : isDuplicate ? "border-amber-500 ring-1 ring-amber-400/40" : "border-destructive/30"}`}
                             value={emp.first_name}
                             onChange={(e) => {
                               const updated = [...preImportSummary.unmatched];
@@ -628,7 +652,7 @@ export default function ImportConnecteam() {
                             placeholder="Nombre"
                           />
                           <input
-                            className="h-7 px-2 text-xs rounded border border-destructive/30 bg-background w-36 focus:outline-none focus:ring-1 focus:ring-ring"
+                            className={`h-7 px-2 text-xs rounded border bg-background w-36 focus:outline-none focus:ring-1 focus:ring-ring ${!emp.last_name.trim() ? "border-destructive ring-1 ring-destructive/40" : isDuplicate ? "border-amber-500 ring-1 ring-amber-400/40" : "border-destructive/30"}`}
                             value={emp.last_name}
                             onChange={(e) => {
                               const updated = [...preImportSummary.unmatched];
@@ -637,6 +661,8 @@ export default function ImportConnecteam() {
                             }}
                             placeholder="Apellido"
                           />
+                          {isEmpty && <span className="text-[10px] text-destructive whitespace-nowrap">Vacío</span>}
+                          {isDuplicate && !isEmpty && <span className="text-[10px] text-amber-600 whitespace-nowrap">Duplicado</span>}
                           <Button
                             size="icon"
                             variant="ghost"
@@ -650,23 +676,32 @@ export default function ImportConnecteam() {
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
+                    {(hasEmpty || hasDuplicates) && (
+                      <div className="mt-2 space-y-0.5">
+                        {hasEmpty && <p className="text-[11px] text-destructive">⚠ Hay nombres vacíos. Se omitirán al crear.</p>}
+                        {hasDuplicates && <p className="text-[11px] text-amber-600">⚠ Hay nombres duplicados. Corrígelos o elimínalos antes de crear.</p>}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between mt-3">
                       <p className="text-xs text-muted-foreground">Estos empleados serán omitidos, o puedes crearlos automáticamente.</p>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleCreateMissingEmployees}
-                        disabled={creatingEmployees}
+                        disabled={creatingEmployees || !canCreate}
                         className="shrink-0"
+                        title={!canCreate ? (hasDuplicates ? "Corrige los duplicados primero" : "No hay empleados válidos") : ""}
                       >
                         <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                        {creatingEmployees ? "Creando..." : `Crear ${preImportSummary.unmatched.length} empleados`}
+                        {creatingEmployees ? "Creando..." : `Crear ${validEntries.length} empleados`}
                       </Button>
                     </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 {preImportSummary.matched.length > 0 && (
                   <div className="max-h-48 overflow-y-auto">
