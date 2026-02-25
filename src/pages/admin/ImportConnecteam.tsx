@@ -507,40 +507,51 @@ export default function ImportConnecteam() {
   };
 
   return (
-    <div>
-      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="page-title">Importar Connecteam</h1>
-          <p className="page-subtitle">Importa turnos y pagos desde archivos XLS, XLSX o CSV exportados de Connecteam</p>
+          <p className="page-subtitle">Turnos y pagos desde archivos XLS, XLSX o CSV</p>
         </div>
         <Button variant="outline" size="sm" onClick={downloadTemplate} className="shrink-0">
-          <Download className="h-4 w-4 mr-2" /> Descargar plantilla
+          <Download className="h-4 w-4 mr-2" /> Plantilla
         </Button>
       </div>
 
-      <div className="bg-muted/50 border border-border rounded-lg p-4 mb-6 flex items-start gap-3">
-        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-        <div className="text-sm text-muted-foreground space-y-1">
-          <p className="font-medium text-foreground">Instrucciones de importación</p>
-          <ul className="list-disc list-inside space-y-0.5">
-            <li>Formatos aceptados: <strong>XLS, XLSX, CSV</strong></li>
-            <li>Tamaño máximo: 10 MB / máximo 10,000 filas</li>
-            <li>El archivo debe contener las columnas: <strong>First name, Last name</strong> (obligatorias) y columnas de turnos/pago</li>
-            <li>Los empleados se emparejan por nombre exacto (nombre + apellido)</li>
-            <li>Al importar se <strong>reemplazan</strong> los datos base y turnos del periodo seleccionado</li>
-            <li>Los movimientos/novedades manuales <strong>no</strong> se afectan</li>
+      {/* Collapsible instructions */}
+      <details className="rounded-2xl border bg-card group">
+        <summary className="flex items-center gap-3 p-4 cursor-pointer text-sm font-medium text-foreground select-none">
+          <Info className="h-4 w-4 text-primary shrink-0" />
+          Instrucciones de importación
+          <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="px-4 pb-4 text-sm text-muted-foreground space-y-1 border-t pt-3 mx-4">
+          <ul className="list-disc list-inside space-y-0.5 text-xs">
+            <li>Formatos: <strong>XLS, XLSX, CSV</strong> (máx 10 MB / 10,000 filas)</li>
+            <li>Columnas obligatorias: <strong>First name, Last name</strong></li>
+            <li>Emparejan por nombre exacto · Se reemplazan datos base y turnos</li>
+            <li>Los movimientos manuales <strong>no</strong> se afectan</li>
           </ul>
-          <p className="text-xs mt-2">Descarga la plantilla de ejemplo para ver el formato esperado con todas las columnas.</p>
         </div>
-      </div>
+      </details>
 
-      <div className="flex gap-2 mb-6">
-        {[1, 2, 3, 4].map((s) => (
-          <div key={s} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-            step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-          }`}>
-            {s}. {s === 1 ? "Periodo y archivo" : s === 2 ? "Hoja" : s === 3 ? "Mapeo" : "Resultado"}
-          </div>
+      {/* Step indicator — minimal pills */}
+      <div className="flex items-center gap-1.5">
+        {[
+          { n: 1, label: "Archivo" },
+          { n: 2, label: "Hoja" },
+          { n: 3, label: "Mapeo" },
+          { n: 4, label: "Resultado" },
+        ].map((s, i) => (
+          <React.Fragment key={s.n}>
+            {i > 0 && <div className={`h-px flex-1 ${step >= s.n ? "bg-primary" : "bg-border"}`} />}
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              step === s.n ? "bg-primary text-primary-foreground" : step > s.n ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+            }`}>
+              <span className="tabular-nums">{s.n}</span>
+              <span className="hidden sm:inline">{s.label}</span>
+            </div>
+          </React.Fragment>
         ))}
       </div>
 
@@ -816,7 +827,7 @@ export default function ImportConnecteam() {
 
       {/* Import History */}
       {importHistory.length > 0 && (
-        <Card className="mt-8">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center gap-2">
             <History className="h-5 w-5 text-primary" />
             <CardTitle className="text-base">Historial de importaciones</CardTitle>
