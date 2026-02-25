@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User, KeyRound } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User, KeyRound, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useAuth } from "@/hooks/useAuth";
@@ -81,6 +81,12 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "manager">("admin");
+  const [inviteLoading, setInviteLoading] = useState(false);
   const { toast } = useToast();
 
   const fetchUsers = async () => {
@@ -200,6 +206,30 @@ export default function UsersPage() {
     }));
   };
 
+  const handleInviteAdmin = async () => {
+    if (!inviteEmail || !invitePassword) return;
+    setInviteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-admin", {
+        body: { email: inviteEmail, password: invitePassword, full_name: inviteName, role: inviteRole },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      } else {
+        toast({ title: "Usuario creado", description: `${inviteEmail} fue agregado como ${inviteRole === "admin" ? "Administrador" : "Manager"}` });
+        setInviteOpen(false);
+        setInviteEmail("");
+        setInviteName("");
+        setInvitePassword("");
+        fetchUsers();
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Error al crear usuario", variant: "destructive" });
+    }
+    setInviteLoading(false);
+  };
+
   const filtered = users.filter(u =>
     `${u.full_name} ${u.email} ${u.role}`.toLowerCase().includes(search.toLowerCase())
   );
@@ -214,9 +244,15 @@ export default function UsersPage() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Gestión de Usuarios</h1>
-        <p className="page-subtitle">Administra roles y permisos por módulo</p>
+      <div className="page-header flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Gestión de Usuarios</h1>
+          <p className="page-subtitle">Administra roles y permisos por módulo</p>
+        </div>
+        <Button onClick={() => setInviteOpen(true)} className="gap-2">
+          <UserPlus className="h-4 w-4" />
+          Invitar Admin
+        </Button>
       </div>
 
       {/* Role summary cards */}
@@ -433,6 +469,45 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Invite Admin Dialog */}
+      <Dialog open={inviteOpen} onOpenChange={(v) => { setInviteOpen(v); if (!v) { setInviteEmail(""); setInviteName(""); setInvitePassword(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Invitar Administrador</DialogTitle>
+            <DialogDescription>Crea una cuenta nueva con rol de admin o manager</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nombre completo</Label>
+              <Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Juan Pérez" />
+            </div>
+            <div className="space-y-2">
+              <Label>Correo electrónico</Label>
+              <Input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="admin@empresa.com" />
+            </div>
+            <div className="space-y-2">
+              <Label>Contraseña</Label>
+              <Input type="password" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+            </div>
+            <div className="space-y-2">
+              <Label>Rol</Label>
+              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as "admin" | "manager")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleInviteAdmin} className="w-full" disabled={inviteLoading || !inviteEmail || invitePassword.length < 6}>
+              {inviteLoading ? "Creando..." : "Crear usuario"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
