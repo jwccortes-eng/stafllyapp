@@ -19,9 +19,13 @@ const MAX_ROW_COUNT = 10000;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
 
 const KNOWN_HEADERS = [
+  // Identity
   "First name", "Last name", "Verification SSN - EIN",
-  "Weekly total hours", "Total work hours", "Total Paid Hours",
-  "Total Regular", "Total overtime", "Total pay",
+  // Summary / base pay totals
+  "Weekly total hours", "Total work hours", "Total Paid Hours", "Total paid hours",
+  "Total Regular", "Regular", "Total overtime", "Total pay", "Total pay USD",
+  "Total paid time off hours", "Total unpaid time off hours", "Worked days",
+  // Shift-level columns
   "Shift Number", "Scheduled shift title", "Type", "Job code",
   "Sub-job", "Sub-job code", "Start Date", "In", "Start - location",
   "End Date", "Out", "End - location", "Shift hours", "Hourly rate (USD)",
@@ -29,38 +33,32 @@ const KNOWN_HEADERS = [
   "Employee notes", "Manager notes",
   "Clock In - Device", "Clock Out - Device",
   "Clock In - Time", "Clock Out - Time",
+  // Profile fields
+  "Gender", "Employer identification", "Birthday",
+  "Address (street, apt).", "Condado", "English Level", "Role", "Qualify",
+  "Social security number", "Recommended by?", "Direct manager",
+  "You have car?", "Driver Licence", "Mobile phone",
+  "Breaking policy/monitoring",
 ];
 
 const downloadTemplate = () => {
   const templateData = [
     {
       "First name": "Juan", "Last name": "Pérez", "Verification SSN - EIN": "123-45-6789",
-      "Shift Number": "1", "Scheduled shift title": "Morning", "Type": "Regular",
-      "Job code": "JC01", "Sub-job": "", "Sub-job code": "",
-      "Start Date": "2025-01-06", "In": "08:00", "Start - location": "Office",
-      "End Date": "2025-01-06", "Out": "16:00", "End - location": "Office",
-      "Shift hours": 8, "Hourly rate (USD)": 15, "Daily total hours": 8,
-      "Daily total pay (USD)": 120, "Customer": "", "Ride": "",
-      "Employee notes": "", "Manager notes": "",
-      "Weekly total hours": 40, "Total work hours": 40, "Total Paid Hours": 40,
-      "Total Regular": 40, "Total overtime": 0, "Total pay": 600,
+      "Total work hours": 40, "Total paid hours": 40, "Regular": 40,
+      "Total overtime": 0, "Total pay USD": "$600.00", "Worked days": 5,
+      "Start date": "02/18/2026", "End date": "02/24/2026",
     },
     {
       "First name": "María", "Last name": "López", "Verification SSN - EIN": "987-65-4321",
-      "Shift Number": "1", "Scheduled shift title": "Afternoon", "Type": "Regular",
-      "Job code": "JC02", "Sub-job": "", "Sub-job code": "",
-      "Start Date": "2025-01-06", "In": "14:00", "Start - location": "Site A",
-      "End Date": "2025-01-06", "Out": "22:00", "End - location": "Site A",
-      "Shift hours": 8, "Hourly rate (USD)": 18, "Daily total hours": 8,
-      "Daily total pay (USD)": 144, "Customer": "Client X", "Ride": "Van 1",
-      "Employee notes": "", "Manager notes": "",
-      "Weekly total hours": 45, "Total work hours": 45, "Total Paid Hours": 45,
-      "Total Regular": 40, "Total overtime": 5, "Total pay": 855,
+      "Total work hours": 45, "Total paid hours": 45, "Regular": 40,
+      "Total overtime": 5, "Total pay USD": "$855.00", "Worked days": 6,
+      "Start date": "02/18/2026", "End date": "02/24/2026",
     },
   ];
   const ws = XLSX.utils.json_to_sheet(templateData);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Turnos");
+  XLSX.utils.book_append_sheet(wb, ws, "Horas");
   XLSX.writeFile(wb, "plantilla_importacion_connecteam.xlsx");
 };
 
@@ -68,9 +66,12 @@ const BASE_PAY_FIELDS: Record<string, string> = {
   "Weekly total hours": "weekly_total_hours",
   "Total work hours": "total_work_hours",
   "Total Paid Hours": "total_paid_hours",
+  "Total paid hours": "total_paid_hours",
   "Total Regular": "total_regular",
+  "Regular": "total_regular",
   "Total overtime": "total_overtime",
   "Total pay": "base_total_pay",
+  "Total pay USD": "base_total_pay",
 };
 
 interface ImportHistory {
@@ -305,10 +306,17 @@ export default function ImportConnecteam() {
 
         // Aggregate base pay from last row (summary row) or first row with Total pay
         const summaryRow = rows[rows.length - 1];
-        const getVal = (knownCol: string) => {
-          const fileCol = reverseMap[knownCol];
-          if (!fileCol) return 0;
-          return parseFloat(summaryRow[fileCol] || "0") || 0;
+        const parseCurrency = (val: string): number => {
+          // Handle "$1,549.60" format
+          return parseFloat(String(val || "0").replace(/[$,]/g, "")) || 0;
+        };
+        const getVal = (knownCol: string, ...altCols: string[]) => {
+          const cols = [knownCol, ...altCols];
+          for (const col of cols) {
+            const fileCol = reverseMap[col];
+            if (fileCol && summaryRow[fileCol]) return parseCurrency(summaryRow[fileCol]);
+          }
+          return 0;
         };
 
         await supabase.from("period_base_pay").upsert({
@@ -316,10 +324,10 @@ export default function ImportConnecteam() {
           period_id: selectedPeriod,
           weekly_total_hours: getVal("Weekly total hours"),
           total_work_hours: getVal("Total work hours"),
-          total_paid_hours: getVal("Total Paid Hours"),
-          total_regular: getVal("Total Regular"),
+          total_paid_hours: getVal("Total Paid Hours", "Total paid hours"),
+          total_regular: getVal("Total Regular", "Regular"),
           total_overtime: getVal("Total overtime"),
-          base_total_pay: getVal("Total pay"),
+          base_total_pay: getVal("Total pay", "Total pay USD"),
           import_id: importRecord.id,
         }, { onConflict: "employee_id,period_id" });
 
