@@ -19,6 +19,7 @@ import Movements from "./pages/admin/Movements";
 import PeriodSummary from "./pages/admin/PeriodSummary";
 import EmployeePeriodDetail from "./pages/admin/EmployeePeriodDetail";
 import Reports from "./pages/admin/Reports";
+import EmployeeReport from "./pages/admin/EmployeeReport";
 import UsersPage from "./pages/admin/Users";
 import CompaniesPage from "./pages/admin/Companies";
 import OwnerDashboard from "./pages/admin/OwnerDashboard";
@@ -53,6 +54,7 @@ function App() {
                 <Route path="summary" element={<PeriodSummary />} />
                 <Route path="summary/detail" element={<EmployeePeriodDetail />} />
                 <Route path="reports" element={<Reports />} />
+                <Route path="reports/employee" element={<EmployeeReport />} />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="companies" element={<CompaniesPage />} />
                 <Route path="global" element={<OwnerDashboard />} />
