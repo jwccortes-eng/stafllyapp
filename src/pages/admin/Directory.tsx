@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Search, Phone, MessageSquare, Mail, Users, MessageCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Phone, MessageSquare, Mail, Users, MessageCircle, Filter } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 
 interface DirectoryEntry {
@@ -17,6 +18,7 @@ export default function Directory() {
   const { selectedCompanyId } = useCompany();
   const [employees, setEmployees] = useState<DirectoryEntry[]>([]);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,11 +36,21 @@ export default function Directory() {
       });
   }, [selectedCompanyId]);
 
-  const filtered = employees.filter((e) =>
-    `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`
+  const roles = useMemo(() => {
+    const set = new Set<string>();
+    employees.forEach((e) => {
+      if (e.employee_role) set.add(e.employee_role);
+    });
+    return Array.from(set).sort();
+  }, [employees]);
+
+  const filtered = employees.filter((e) => {
+    const matchesSearch = `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`
       .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+      .includes(search.toLowerCase());
+    const matchesRole = roleFilter === "all" || e.employee_role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
 
   const cleanPhone = (phone: string | null) => phone?.replace(/[^+\d]/g, "") ?? "";
 
@@ -56,15 +68,31 @@ export default function Directory() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre, teléfono o correo…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, teléfono o correo…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {roles.length > 0 && (
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Filtrar por rol" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los roles</SelectItem>
+              {roles.map((role) => (
+                <SelectItem key={role} value={role}>{role}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Cards grid */}
