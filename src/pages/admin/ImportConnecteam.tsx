@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import * as XLSX from "xlsx";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
+import { useCompany } from "@/hooks/useCompany";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_ROW_COUNT = 10000;
@@ -37,6 +38,7 @@ const BASE_PAY_FIELDS: Record<string, string> = {
 interface Period { id: string; start_date: string; end_date: string; status: string; }
 
 export default function ImportConnecteam() {
+  const { selectedCompanyId } = useCompany();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -52,10 +54,12 @@ export default function ImportConnecteam() {
   const { toast } = useToast();
 
   useEffect(() => {
-    supabase.from("pay_periods").select("*").order("start_date", { ascending: false }).then(({ data }) => {
+    if (!selectedCompanyId) return;
+    supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId).order("start_date", { ascending: false }).then(({ data }) => {
       setPeriods((data as Period[]) ?? []);
+      setSelectedPeriod("");
     });
-  }, []);
+  }, [selectedCompanyId]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -116,7 +120,7 @@ export default function ImportConnecteam() {
         throw new Error(`El archivo tiene demasiadas filas (${allRows.length}). Máximo permitido: ${MAX_ROW_COUNT}`);
       }
       // Get employees for matching
-      const { data: employees } = await supabase.from("employees").select("id, first_name, last_name, verification_ssn_ein");
+      const { data: employees } = await supabase.from("employees").select("id, first_name, last_name, verification_ssn_ein").eq("company_id", selectedCompanyId!);
       const empList = employees ?? [];
 
       // Create import record
@@ -126,6 +130,7 @@ export default function ImportConnecteam() {
         column_mapping: mapping,
         row_count: allRows.length,
         status: "processing",
+        company_id: selectedCompanyId!,
       }).select().single();
 
       if (impErr || !importRecord) throw new Error(impErr?.message ?? "Failed to create import");

@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { useCompany } from "@/hooks/useCompany";
 
 interface Period { id: string; start_date: string; end_date: string; }
 interface SummaryRow {
@@ -17,16 +18,19 @@ interface SummaryRow {
 }
 
 export default function PeriodSummary() {
+  const { selectedCompanyId } = useCompany();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState("");
   const [rows, setRows] = useState<SummaryRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.from("pay_periods").select("id, start_date, end_date").order("start_date", { ascending: false }).then(({ data }) => {
+    if (!selectedCompanyId) return;
+    supabase.from("pay_periods").select("id, start_date, end_date").eq("company_id", selectedCompanyId).order("start_date", { ascending: false }).then(({ data }) => {
       setPeriods((data as Period[]) ?? []);
+      setSelectedPeriod("");
     });
-  }, []);
+  }, [selectedCompanyId]);
 
   useEffect(() => {
     if (!selectedPeriod) return;
