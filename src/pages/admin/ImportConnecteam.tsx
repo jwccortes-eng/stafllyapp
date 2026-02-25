@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import * as XLSX from "xlsx";
@@ -70,6 +71,7 @@ export default function ImportConnecteam() {
   const [expandedImport, setExpandedImport] = useState<string | null>(null);
   const [expandedEmployees, setExpandedEmployees] = useState<{ first_name: string; last_name: string; base_total_pay: number; total_work_hours: number | null; total_overtime: number | null; total_paid_hours: number | null }[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [deletingImportId, setDeletingImportId] = useState<string | null>(null);
 
   const toggleExpand = async (importId: string) => {
     if (expandedImport === importId) {
@@ -95,6 +97,27 @@ export default function ImportConnecteam() {
       }))
     );
     setLoadingDetail(false);
+  };
+
+  const handleDeleteImport = async (importId: string) => {
+    setDeletingImportId(importId);
+    try {
+      // Delete in order: shifts → period_base_pay → import_rows → imports
+      await supabase.from("shifts").delete().eq("import_id", importId);
+      await supabase.from("period_base_pay").delete().eq("import_id", importId);
+      await supabase.from("import_rows").delete().eq("import_id", importId);
+      await supabase.from("imports").delete().eq("id", importId);
+
+      if (expandedImport === importId) {
+        setExpandedImport(null);
+        setExpandedEmployees([]);
+      }
+      toast({ title: "Importación eliminada", description: "Se revirtieron los datos base y turnos asociados." });
+      fetchHistory();
+    } catch (err: any) {
+      toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
+    }
+    setDeletingImportId(null);
   };
 
   const fetchHistory = useCallback(async () => {
@@ -445,6 +468,7 @@ export default function ImportConnecteam() {
                   <TableHead className="text-right">Base total</TableHead>
                   <TableHead className="text-center">Estado</TableHead>
                   <TableHead>Fecha</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -488,10 +512,33 @@ export default function ImportConnecteam() {
                           {new Date(imp.created_at).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                         </div>
                       </TableCell>
+                      <TableCell className="px-2" onClick={(e) => e.stopPropagation()}>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" disabled={deletingImportId === imp.id}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Eliminar importación?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Se eliminarán los datos base y turnos asociados a esta importación ({imp.file_name}). Los movimientos manuales del periodo no se verán afectados. Esta acción no se puede deshacer.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteImport(imp.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Eliminar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
                     </TableRow>
                     {expandedImport === imp.id && (
                       <TableRow key={`${imp.id}-detail`}>
-                        <TableCell colSpan={8} className="p-0">
+                        <TableCell colSpan={9} className="p-0">
                           <div className="bg-muted/30 px-6 py-3">
                             {loadingDetail ? (
                               <p className="text-sm text-muted-foreground py-2">Cargando detalle...</p>
