@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Lock, Unlock } from "lucide-react";
+import { Plus, Lock, Unlock, CalendarPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { format, addDays, nextWednesday, isWednesday } from "date-fns";
@@ -24,8 +24,11 @@ export default function PayPeriods() {
   const { selectedCompanyId } = useCompany();
   const [periods, setPeriods] = useState<PayPeriod[]>([]);
   const [open, setOpen] = useState(false);
+  const [yearOpen, setYearOpen] = useState(false);
+  const [yearValue, setYearValue] = useState(new Date().getFullYear());
   const [startDate, setStartDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const [generatingYear, setGeneratingYear] = useState(false);
   const [pendingToggle, setPendingToggle] = useState<PayPeriod | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const { toast } = useToast();
@@ -48,7 +51,7 @@ export default function PayPeriods() {
     e.preventDefault();
     setLoading(true);
     const start = new Date(startDate + "T00:00:00");
-    const end = addDays(start, 6); // Wed to Tue
+    const end = addDays(start, 6);
     const { error } = await supabase.from("pay_periods").insert({
       start_date: format(start, "yyyy-MM-dd"),
       end_date: format(end, "yyyy-MM-dd"),
@@ -63,6 +66,54 @@ export default function PayPeriods() {
       fetchPeriods();
     }
     setLoading(false);
+  };
+
+  const handleGenerateYear = async () => {
+    if (!selectedCompanyId) return;
+    setGeneratingYear(true);
+
+    // Find first Wednesday of the year
+    let d = new Date(yearValue, 0, 1); // Jan 1
+    while (d.getDay() !== 3) { // 3 = Wednesday
+      d = addDays(d, 1);
+    }
+
+    const rows: { start_date: string; end_date: string; company_id: string }[] = [];
+    while (d.getFullYear() === yearValue) {
+      const end = addDays(d, 6);
+      rows.push({
+        start_date: format(d, "yyyy-MM-dd"),
+        end_date: format(end, "yyyy-MM-dd"),
+        company_id: selectedCompanyId,
+      });
+      d = addDays(d, 7);
+    }
+
+    // Insert in batches to avoid issues
+    let created = 0;
+    let skipped = 0;
+    for (let i = 0; i < rows.length; i += 20) {
+      const batch = rows.slice(i, i + 20);
+      const { error, data } = await supabase.from("pay_periods").insert(batch).select();
+      if (error) {
+        // Likely duplicate — try one by one
+        for (const row of batch) {
+          const { error: singleErr } = await supabase.from("pay_periods").insert(row);
+          if (singleErr) skipped++;
+          else created++;
+        }
+      } else {
+        created += (data?.length ?? batch.length);
+      }
+    }
+
+    toast({
+      title: `${created} periodos creados`,
+      description: skipped > 0 ? `${skipped} ya existían y fueron omitidos` : `Año ${yearValue} completo`,
+    });
+    setYearOpen(false);
+    fetchPeriods();
+    setGeneratingYear(false);
   };
 
   const requestToggle = (period: PayPeriod) => {
@@ -93,31 +144,56 @@ export default function PayPeriods() {
           <h1 className="page-title">Periodos de pago</h1>
           <p className="page-subtitle">Miércoles a Martes — ciclo semanal</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Nuevo periodo</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Crear periodo semanal</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <Label>Fecha inicio (miércoles)</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
-                  <Button type="button" variant="outline" size="sm" onClick={suggestNextWednesday}>Próx. miércoles</Button>
-                </div>
-              </div>
-              {startDate && (
+        <div className="flex gap-2">
+          <Dialog open={yearOpen} onOpenChange={setYearOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><CalendarPlus className="h-4 w-4 mr-2" />Generar año</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Generar periodos de un año</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Periodo: {startDate} → {format(addDays(new Date(startDate + "T00:00:00"), 6), "yyyy-MM-dd")}
+                  Se crearán ~52 periodos semanales (miércoles a martes) para el año seleccionado. Los periodos que ya existan serán omitidos.
                 </p>
-              )}
-              <Button type="submit" className="w-full" disabled={loading}>{loading ? "Creando..." : "Crear periodo"}</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div>
+                  <Label>Año</Label>
+                  <Input type="number" value={yearValue} onChange={e => setYearValue(Number(e.target.value))} min={2020} max={2030} className="mt-1" />
+                </div>
+                <Button className="w-full" onClick={handleGenerateYear} disabled={generatingYear}>
+                  {generatingYear ? "Generando..." : `Crear periodos ${yearValue}`}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />Nuevo periodo</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Crear periodo semanal</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreate} className="space-y-4">
+                <div>
+                  <Label>Fecha inicio (miércoles)</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+                    <Button type="button" variant="outline" size="sm" onClick={suggestNextWednesday}>Próx. miércoles</Button>
+                  </div>
+                </div>
+                {startDate && (
+                  <p className="text-sm text-muted-foreground">
+                    Periodo: {startDate} → {format(addDays(new Date(startDate + "T00:00:00"), 6), "yyyy-MM-dd")}
+                  </p>
+                )}
+                <Button type="submit" className="w-full" disabled={loading}>{loading ? "Creando..." : "Crear periodo"}</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="data-table-wrapper">
