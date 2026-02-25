@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Loader2, Bot, User } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Bot, User, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -22,9 +23,11 @@ export default function EmployeeChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -32,15 +35,42 @@ export default function EmployeeChatWidget() {
     }, 50);
   }, []);
 
+  // Load history when chat opens for the first time
   useEffect(() => {
-    if (open && inputRef.current) {
-      inputRef.current.focus();
-    }
+    if (!open || historyLoaded || !user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("id, role, content")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .limit(50);
+      if (data && data.length > 0) {
+        setMessages(data.map((m: any) => ({ id: m.id, role: m.role, content: m.content })));
+      }
+      setHistoryLoaded(true);
+    })();
+  }, [open, historyLoaded, user]);
+
+  useEffect(() => {
+    if (open && inputRef.current) inputRef.current.focus();
   }, [open]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  const persistMessage = async (role: "user" | "assistant", content: string) => {
+    if (!user) return;
+    await supabase.from("chat_messages").insert({ user_id: user.id, role, content });
+  };
+
+  const clearHistory = async () => {
+    if (!user) return;
+    await supabase.from("chat_messages").delete().eq("user_id", user.id);
+    setMessages([]);
+    toast({ title: "Historial borrado" });
+  };
 
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
@@ -50,37 +80,25 @@ export default function EmployeeChatWidget() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+    persistMessage("user", trimmed);
 
     try {
       const { data, error } = await supabase.functions.invoke("employee-chat", {
         body: { message: trimmed },
       });
 
-      if (error) {
-        throw new Error(error.message || "Error al contactar al asistente");
-      }
+      if (error) throw new Error(error.message || "Error al contactar al asistente");
+      if (data?.error) throw new Error(data.error);
 
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      const assistantMsg: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: data?.reply || "No pude generar una respuesta.",
-      };
+      const reply = data?.reply || "No pude generar una respuesta.";
+      const assistantMsg: Message = { id: crypto.randomUUID(), role: "assistant", content: reply };
       setMessages((prev) => [...prev, assistantMsg]);
+      persistMessage("assistant", reply);
     } catch (e: any) {
       const errorMessage = e?.message || "Error desconocido";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: `⚠️ ${errorMessage}` },
-      ]);
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+      const errMsg: Message = { id: crypto.randomUUID(), role: "assistant", content: `⚠️ ${errorMessage}` };
+      setMessages((prev) => [...prev, errMsg]);
     } finally {
       setLoading(false);
     }
@@ -113,9 +131,7 @@ export default function EmployeeChatWidget() {
           className={cn(
             "fixed z-50 flex flex-col bg-background border rounded-2xl shadow-2xl overflow-hidden",
             "transition-all duration-300 animate-fade-in",
-            // Mobile: full width with margins
             "bottom-40 right-4 left-4 h-[60vh] max-h-[500px]",
-            // Desktop: fixed width
             "md:bottom-24 md:right-8 md:left-auto md:w-[400px] md:h-[520px]"
           )}
         >
@@ -128,6 +144,15 @@ export default function EmployeeChatWidget() {
               <p className="text-sm font-semibold text-foreground">Asistente de Nómina</p>
               <p className="text-[11px] text-muted-foreground">Pregunta sobre tus pagos</p>
             </div>
+            {messages.length > 0 && (
+              <button
+                onClick={clearHistory}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                title="Borrar historial"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
             <button
               onClick={() => setOpen(false)}
               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
