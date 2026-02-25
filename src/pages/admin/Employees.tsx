@@ -40,6 +40,7 @@ import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 // Fields that only owner/admin can see - hidden from managers
 const SENSITIVE_FIELD_KEYS = new Set([
   "access_pin", "driver_licence", "has_car", "country_code", "english_level",
+  "social_security_number", "verification_ssn_ein",
 ]);
 
 // All Connecteam fields in Excel order
@@ -716,7 +717,7 @@ export default function Employees() {
                           <TableHead className="text-xs">Nombre</TableHead>
                           <TableHead className="text-xs">Teléfono</TableHead>
                           <TableHead className="text-xs">Email</TableHead>
-                          <TableHead className="text-xs">SSN/EIN</TableHead>
+                          {isPrivileged && <TableHead className="text-xs">SSN/EIN</TableHead>}
                           <TableHead className="text-xs">Rol</TableHead>
                           <TableHead className="text-xs">Manager</TableHead>
                           <TableHead className="text-xs">Estado</TableHead>
@@ -728,7 +729,7 @@ export default function Employees() {
                             <TableCell className="text-xs font-medium">{r.first_name} {r.last_name}</TableCell>
                             <TableCell className="text-xs">{r.phone_number || "—"}</TableCell>
                             <TableCell className="text-xs">{r.email || "—"}</TableCell>
-                            <TableCell className="text-xs font-mono">{r.verification_ssn_ein || "—"}</TableCell>
+                            {isPrivileged && <TableCell className="text-xs font-mono">{r.verification_ssn_ein || "—"}</TableCell>}
                             <TableCell className="text-xs">{r.employee_role || "—"}</TableCell>
                             <TableCell className="text-xs">{r.direct_manager || "—"}</TableCell>
                             <TableCell>
