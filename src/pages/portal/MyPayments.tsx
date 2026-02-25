@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
@@ -7,11 +7,14 @@ import {
   TrendingUp,
   TrendingDown,
   ChevronRight,
+  ChevronDown,
   CalendarDays,
   BarChart3,
   Wallet,
   Clock,
+  Loader2,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface PaymentRow {
   period_id: string;
@@ -23,10 +26,56 @@ interface PaymentRow {
   total_final_pay: number;
 }
 
+interface MovementDetail {
+  id: string;
+  concept_name: string;
+  category: string;
+  quantity: number | null;
+  rate: number | null;
+  total_value: number;
+  note: string | null;
+}
+
 export default function MyPayments() {
   const { employeeId } = useAuth();
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null);
+  const [periodDetails, setPeriodDetails] = useState<Record<string, MovementDetail[]>>({});
+  const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
+
+  const loadPeriodDetails = useCallback(async (periodId: string) => {
+    if (periodDetails[periodId]) return; // already cached
+    if (!employeeId) return;
+    setLoadingDetails(periodId);
+    const { data } = await supabase
+      .from("movements")
+      .select("id, total_value, quantity, rate, note, concepts(name, category)")
+      .eq("employee_id", employeeId)
+      .eq("period_id", periodId);
+
+    const details: MovementDetail[] = (data ?? []).map((m: any) => ({
+      id: m.id,
+      concept_name: m.concepts?.name ?? "",
+      category: m.concepts?.category ?? "",
+      quantity: m.quantity,
+      rate: m.rate,
+      total_value: Number(m.total_value),
+      note: m.note,
+    }));
+
+    setPeriodDetails(prev => ({ ...prev, [periodId]: details }));
+    setLoadingDetails(null);
+  }, [employeeId, periodDetails]);
+
+  const toggleExpand = useCallback((periodId: string) => {
+    if (expandedPeriod === periodId) {
+      setExpandedPeriod(null);
+    } else {
+      setExpandedPeriod(periodId);
+      loadPeriodDetails(periodId);
+    }
+  }, [expandedPeriod, loadPeriodDetails]);
 
   useEffect(() => {
     if (!employeeId) return;
@@ -237,7 +286,7 @@ export default function MyPayments() {
         </div>
       </div>
 
-      {/* Payments list */}
+      {/* Payments list - expandable */}
       <div>
         <h2 className="text-sm font-semibold text-foreground mb-3">Historial de pagos</h2>
         {payments.length === 0 ? (
@@ -247,31 +296,146 @@ export default function MyPayments() {
           </div>
         ) : (
           <div className="space-y-2">
-            {payments.map(p => (
-              <Link
-                key={p.period_id}
-                to={`/portal/week/${p.period_id}`}
-                className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
-              >
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <CalendarDays className="h-5 w-5 text-primary" />
+            {payments.map(p => {
+              const isExpanded = expandedPeriod === p.period_id;
+              const details = periodDetails[p.period_id];
+              const isLoadingThis = loadingDetails === p.period_id;
+
+              const extras = details?.filter(m => m.category === "extra") ?? [];
+              const deductions = details?.filter(m => m.category === "deduction") ?? [];
+
+              return (
+                <div
+                  key={p.period_id}
+                  className={cn(
+                    "rounded-2xl border bg-card overflow-hidden transition-all duration-300",
+                    isExpanded ? "border-primary/30 shadow-md" : "border-border hover:shadow-md"
+                  )}
+                >
+                  {/* Header - clickable */}
+                  <button
+                    onClick={() => toggleExpand(p.period_id)}
+                    className="w-full flex items-center gap-3 p-4 text-left hover:-translate-y-0 transition-all"
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <CalendarDays className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">
+                        {p.start_date} → {p.end_date}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1 text-[11px]">
+                        <span className="text-muted-foreground">Base: ${p.base_total_pay.toFixed(2)}</span>
+                        {p.extras_total > 0 && <span className="text-earning">+${p.extras_total.toFixed(2)}</span>}
+                        {p.deductions_total > 0 && <span className="text-deduction">−${p.deductions_total.toFixed(2)}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 flex items-center gap-2">
+                      <p className="text-sm font-bold font-heading">${p.total_final_pay.toFixed(2)}</p>
+                      <ChevronDown className={cn(
+                        "h-4 w-4 text-muted-foreground transition-transform duration-300",
+                        isExpanded && "rotate-180 text-primary"
+                      )} />
+                    </div>
+                  </button>
+
+                  {/* Expandable detail */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 animate-fade-in">
+                      <div className="border-t border-border pt-3">
+                        {isLoadingThis ? (
+                          <div className="flex items-center justify-center py-6 text-muted-foreground">
+                            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                            <span className="text-sm">Cargando detalles...</span>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Summary cards */}
+                            <div className="grid grid-cols-4 gap-2 mb-4">
+                              <div className="rounded-xl bg-muted/50 p-2.5 text-center">
+                                <p className="text-[10px] text-muted-foreground">Base</p>
+                                <p className="text-xs font-bold font-heading mt-0.5">${p.base_total_pay.toFixed(2)}</p>
+                              </div>
+                              <div className="rounded-xl bg-earning/5 p-2.5 text-center">
+                                <p className="text-[10px] text-earning">Extras</p>
+                                <p className="text-xs font-bold font-heading text-earning mt-0.5">+${p.extras_total.toFixed(2)}</p>
+                              </div>
+                              <div className="rounded-xl bg-destructive/5 p-2.5 text-center">
+                                <p className="text-[10px] text-deduction">Deduc.</p>
+                                <p className="text-xs font-bold font-heading text-deduction mt-0.5">−${p.deductions_total.toFixed(2)}</p>
+                              </div>
+                              <div className="rounded-xl bg-primary/5 p-2.5 text-center">
+                                <p className="text-[10px] text-primary">Total</p>
+                                <p className="text-xs font-bold font-heading mt-0.5">${p.total_final_pay.toFixed(2)}</p>
+                              </div>
+                            </div>
+
+                            {/* Movement details */}
+                            {details && details.length > 0 ? (
+                              <div className="space-y-3">
+                                {extras.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-earning mb-1.5">Extras</p>
+                                    <div className="space-y-1">
+                                      {extras.map(m => (
+                                        <div key={m.id} className="flex items-center justify-between rounded-lg bg-earning/5 px-3 py-2">
+                                          <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-medium text-foreground truncate">{m.concept_name}</p>
+                                            {m.note && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{m.note}</p>}
+                                          </div>
+                                          <div className="text-right shrink-0 ml-3">
+                                            {m.quantity != null && m.rate != null && (
+                                              <p className="text-[10px] text-muted-foreground">{m.quantity} × ${m.rate}</p>
+                                            )}
+                                            <p className="text-xs font-bold text-earning">+${m.total_value.toFixed(2)}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {deductions.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-deduction mb-1.5">Deducciones</p>
+                                    <div className="space-y-1">
+                                      {deductions.map(m => (
+                                        <div key={m.id} className="flex items-center justify-between rounded-lg bg-destructive/5 px-3 py-2">
+                                          <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-medium text-foreground truncate">{m.concept_name}</p>
+                                            {m.note && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{m.note}</p>}
+                                          </div>
+                                          <div className="text-right shrink-0 ml-3">
+                                            {m.quantity != null && m.rate != null && (
+                                              <p className="text-[10px] text-muted-foreground">{m.quantity} × ${m.rate}</p>
+                                            )}
+                                            <p className="text-xs font-bold text-deduction">−${m.total_value.toFixed(2)}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground text-center py-3">Solo pago base en este periodo</p>
+                            )}
+
+                            {/* Link to full detail */}
+                            <Link
+                              to={`/portal/week/${p.period_id}`}
+                              className="mt-3 flex items-center justify-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                            >
+                              Ver detalle completo <ChevronRight className="h-3.5 w-3.5" />
+                            </Link>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
-                    {p.start_date} → {p.end_date}
-                  </p>
-                  <div className="flex items-center gap-3 mt-1 text-[11px]">
-                    <span className="text-muted-foreground">Base: ${p.base_total_pay.toFixed(2)}</span>
-                    {p.extras_total > 0 && <span className="text-earning">+${p.extras_total.toFixed(2)}</span>}
-                    {p.deductions_total > 0 && <span className="text-deduction">−${p.deductions_total.toFixed(2)}</span>}
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-bold font-heading">${p.total_final_pay.toFixed(2)}</p>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto mt-0.5 group-hover:text-primary transition-colors" />
-                </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
