@@ -106,27 +106,21 @@ export type Database = {
         Row: {
           added_by: string | null
           added_via: string | null
-          address: string | null
-          birthday: string | null
           connecteam_employee_id: string | null
           country_code: string | null
-          county: string | null
           created_at: string
           date_added: string | null
           direct_manager: string | null
           driver_licence: string | null
           email: string | null
           employee_role: string | null
-          employer_identification: string | null
           end_date: string | null
           english_level: string | null
           first_name: string
-          gender: string | null
           groups: string | null
           has_car: string | null
           id: string
           is_active: boolean
-          kiosk_code: string | null
           last_login: string | null
           last_name: string
           phone_number: string | null
@@ -142,27 +136,21 @@ export type Database = {
         Insert: {
           added_by?: string | null
           added_via?: string | null
-          address?: string | null
-          birthday?: string | null
           connecteam_employee_id?: string | null
           country_code?: string | null
-          county?: string | null
           created_at?: string
           date_added?: string | null
           direct_manager?: string | null
           driver_licence?: string | null
           email?: string | null
           employee_role?: string | null
-          employer_identification?: string | null
           end_date?: string | null
           english_level?: string | null
           first_name: string
-          gender?: string | null
           groups?: string | null
           has_car?: string | null
           id?: string
           is_active?: boolean
-          kiosk_code?: string | null
           last_login?: string | null
           last_name: string
           phone_number?: string | null
@@ -178,27 +166,21 @@ export type Database = {
         Update: {
           added_by?: string | null
           added_via?: string | null
-          address?: string | null
-          birthday?: string | null
           connecteam_employee_id?: string | null
           country_code?: string | null
-          county?: string | null
           created_at?: string
           date_added?: string | null
           direct_manager?: string | null
           driver_licence?: string | null
           email?: string | null
           employee_role?: string | null
-          employer_identification?: string | null
           end_date?: string | null
           english_level?: string | null
           first_name?: string
-          gender?: string | null
           groups?: string | null
           has_car?: string | null
           id?: string
           is_active?: boolean
-          kiosk_code?: string | null
           last_login?: string | null
           last_name?: string
           phone_number?: string | null
