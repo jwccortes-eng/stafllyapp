@@ -16,7 +16,7 @@ interface Stats {
 }
 
 export default function AdminDashboard() {
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, isModuleActive } = useCompany();
   const { role, hasModuleAccess } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({
@@ -65,6 +65,7 @@ export default function AdminDashboard() {
   }, [selectedCompanyId]);
 
   const canAccess = (module: string) => {
+    if (!isModuleActive(module)) return false;
     if (role === 'owner' || role === 'admin') return true;
     if (role === 'manager') return hasModuleAccess(module, 'view');
     return false;
