@@ -6,11 +6,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { cn } from "@/lib/utils";
+import { format, isWithinInterval, parseISO } from "date-fns";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+
+/**
+ * Find the period that contains today (Wed–Tue cycle), or the most recent past period.
+ */
+function findCurrentWeekPeriod(periods: Period[]): string {
+  const today = new Date().toISOString().slice(0, 10);
+  // First try to find a period that contains today
+  const current = periods.find(p => p.start_date <= today && p.end_date >= today);
+  if (current) return current.id;
+  // Otherwise pick the most recent past period (periods are already sorted desc)
+  const past = periods.find(p => p.end_date < today);
+  return past?.id ?? "";
+}
 
 interface Period { id: string; start_date: string; end_date: string; status: string; }
 interface SummaryRow {
@@ -39,11 +56,37 @@ export default function PeriodSummary() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  // When date range changes, find matching period(s) - for now select the first match
+  useEffect(() => {
+    if (!dateFrom && !dateTo) return;
+    if (periods.length === 0) return;
+    const matching = periods.filter(p => {
+      if (dateFrom && new Date(p.start_date + "T00:00:00") < dateFrom) return false;
+      if (dateTo && new Date(p.end_date + "T00:00:00") > dateTo) return false;
+      return true;
+    });
+    if (matching.length > 0 && matching[0].id !== selectedPeriod) {
+      setSelectedPeriod(matching[0].id);
+      setSearchParams({ periodId: matching[0].id });
+    }
+  }, [dateFrom, dateTo]);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
     supabase.from("pay_periods").select("id, start_date, end_date, status").eq("company_id", selectedCompanyId).order("start_date", { ascending: false }).then(({ data }) => {
-      setPeriods((data as Period[]) ?? []);
+      const all = (data as Period[]) ?? [];
+      setPeriods(all);
+      // Auto-select current week if no period is selected
+      if (!searchParams.get("periodId") && all.length > 0) {
+        const autoId = findCurrentWeekPeriod(all);
+        if (autoId) {
+          setSelectedPeriod(autoId);
+          setSearchParams({ periodId: autoId });
+        }
+      }
     });
   }, [selectedCompanyId]);
 
@@ -153,18 +196,33 @@ export default function PeriodSummary() {
   };
 
   const hasActiveFilters = searchTerm || payFilter !== "all";
+  const hasDateFilter = dateFrom || dateTo;
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const clearDates = () => {
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
 
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Resumen del periodo</h1>
-          <p className="page-subtitle">Consolidación: base + extras − deducciones</p>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="page-title">Resumen del periodo</h1>
+            <p className="page-subtitle">Consolidación: base + extras − deducciones</p>
+          </div>
+          {rows.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-1.5" />Exportar
+            </Button>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <div className="max-w-[220px]">
+
+        {/* Period selector + date range */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-[220px]">
             <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Seleccionar periodo" />
@@ -178,9 +236,36 @@ export default function PeriodSummary() {
               </SelectContent>
             </Select>
           </div>
-          {rows.length > 0 && (
-            <Button variant="outline" size="sm" onClick={exportCSV}>
-              <Download className="h-4 w-4 mr-1.5" />Exportar
+
+          <span className="text-xs text-muted-foreground">o filtrar por fechas:</span>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("min-w-[130px] justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                {dateFrom ? format(dateFrom, "yyyy-MM-dd") : "Desde"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("min-w-[130px] justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                {dateTo ? format(dateTo, "yyyy-MM-dd") : "Hasta"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+            </PopoverContent>
+          </Popover>
+
+          {hasDateFilter && (
+            <Button variant="ghost" size="sm" onClick={clearDates} className="text-muted-foreground">
+              <X className="h-3.5 w-3.5 mr-1" /> Limpiar fechas
             </Button>
           )}
         </div>
