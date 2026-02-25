@@ -16,6 +16,8 @@ interface CompanyContextType {
   setSelectedCompanyId: (id: string) => void;
   loading: boolean;
   refetch: () => Promise<void>;
+  activeModules: Set<string>;
+  isModuleActive: (module: string) => boolean;
 }
 
 const CompanyContext = createContext<CompanyContextType>({
@@ -25,6 +27,8 @@ const CompanyContext = createContext<CompanyContextType>({
   setSelectedCompanyId: () => {},
   loading: true,
   refetch: async () => {},
+  activeModules: new Set(),
+  isModuleActive: () => true,
 });
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
@@ -32,6 +36,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeModules, setActiveModules] = useState<Set<string>>(new Set());
 
   const fetchCompanies = async () => {
     if (!user) {
@@ -68,13 +73,28 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (selectedCompanyId) {
       localStorage.setItem("selectedCompanyId", selectedCompanyId);
+      // Fetch active modules for selected company
+      supabase
+        .from("company_modules")
+        .select("module")
+        .eq("company_id", selectedCompanyId)
+        .eq("is_active", true)
+        .then(({ data }) => {
+          setActiveModules(new Set((data ?? []).map(d => d.module)));
+        });
     }
   }, [selectedCompanyId]);
 
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) ?? null;
 
+  const isModuleActive = (module: string) => {
+    // If no modules configured yet, show everything
+    if (activeModules.size === 0) return true;
+    return activeModules.has(module);
+  };
+
   return (
-    <CompanyContext.Provider value={{ companies, selectedCompanyId, selectedCompany, setSelectedCompanyId, loading, refetch: fetchCompanies }}>
+    <CompanyContext.Provider value={{ companies, selectedCompanyId, selectedCompany, setSelectedCompanyId, loading, refetch: fetchCompanies, activeModules, isModuleActive }}>
       {children}
     </CompanyContext.Provider>
   );
