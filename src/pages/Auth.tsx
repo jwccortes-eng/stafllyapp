@@ -20,9 +20,13 @@ export default function Auth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (authLoading) return;
-    if (user && role === "admin") navigate("/admin");
-    else if (user && role === "employee") navigate("/portal");
+    if (authLoading || !user) return;
+
+    if (role === "employee") {
+      navigate("/portal");
+    } else if (role === "admin" || role === "owner" || role === "manager") {
+      navigate("/admin");
+    }
   }, [user, role, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
