@@ -24,6 +24,7 @@ import UsersPage from "./pages/admin/Users";
 import CompaniesPage from "./pages/admin/Companies";
 import OwnerDashboard from "./pages/admin/OwnerDashboard";
 import InviteEmployees from "./pages/admin/InviteEmployees";
+import Directory from "./pages/admin/Directory";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -59,6 +60,7 @@ function App() {
                 <Route path="companies" element={<CompaniesPage />} />
                 <Route path="global" element={<OwnerDashboard />} />
                 <Route path="invite" element={<InviteEmployees />} />
+                <Route path="directory" element={<Directory />} />
               </Route>
 
               {/* Employee portal routes */}
