@@ -38,8 +38,28 @@ export default function EmployeeReport() {
   const [search, setSearch] = useState("");
   const [periods, setPeriods] = useState<PeriodRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
-  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  // Auto-select current Wed–Tue week
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(() => {
+    const today = new Date();
+    const day = today.getDay(); // 0=Sun
+    // Wednesday = 3; offset to previous Wednesday
+    const diff = (day - 3 + 7) % 7;
+    const wed = new Date(today);
+    wed.setDate(today.getDate() - diff);
+    wed.setHours(0, 0, 0, 0);
+    return wed;
+  });
+  const [dateTo, setDateTo] = useState<Date | undefined>(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = (day - 3 + 7) % 7;
+    const wed = new Date(today);
+    wed.setDate(today.getDate() - diff);
+    const tue = new Date(wed);
+    tue.setDate(wed.getDate() + 6);
+    tue.setHours(23, 59, 59, 999);
+    return tue;
+  });
 
   useEffect(() => {
     if (!selectedCompanyId) return;
