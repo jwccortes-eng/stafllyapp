@@ -5,11 +5,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Filter } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
+import { KpiCard } from "@/components/ui/kpi-card";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
-interface Period { id: string; start_date: string; end_date: string; }
+interface Period { id: string; start_date: string; end_date: string; status: string; }
 interface SummaryRow {
   employee_id: string;
   first_name: string;
@@ -31,18 +34,16 @@ export default function PeriodSummary() {
   const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("periodId") ?? "");
   const [rows, setRows] = useState<SummaryRow[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Search & filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [payFilter, setPayFilter] = useState<PayFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
-    supabase.from("pay_periods").select("id, start_date, end_date").eq("company_id", selectedCompanyId).order("start_date", { ascending: false }).then(({ data }) => {
+    supabase.from("pay_periods").select("id, start_date, end_date, status").eq("company_id", selectedCompanyId).order("start_date", { ascending: false }).then(({ data }) => {
       setPeriods((data as Period[]) ?? []);
-      if (!selectedPeriod) setSelectedPeriod("");
     });
   }, [selectedCompanyId]);
 
@@ -54,72 +55,52 @@ export default function PeriodSummary() {
   useEffect(() => {
     if (!selectedPeriod) return;
     setLoading(true);
-
     async function load() {
       const { data: basePays } = await supabase
         .from("period_base_pay")
         .select("employee_id, base_total_pay, employees(first_name, last_name)")
         .eq("period_id", selectedPeriod);
-
       const { data: movements } = await supabase
         .from("movements")
         .select("employee_id, total_value, concepts(category)")
         .eq("period_id", selectedPeriod);
-
       const empMap = new Map<string, SummaryRow>();
-
       (basePays ?? []).forEach((bp: any) => {
         empMap.set(bp.employee_id, {
           employee_id: bp.employee_id,
           first_name: bp.employees?.first_name ?? "",
           last_name: bp.employees?.last_name ?? "",
           base_total_pay: Number(bp.base_total_pay) || 0,
-          extras_total: 0,
-          deductions_total: 0,
-          total_final_pay: 0,
+          extras_total: 0, deductions_total: 0, total_final_pay: 0,
         });
       });
-
       const { data: movEmployees } = await supabase
         .from("movements")
         .select("employee_id, employees(first_name, last_name)")
         .eq("period_id", selectedPeriod);
-
       (movEmployees ?? []).forEach((me: any) => {
         if (!empMap.has(me.employee_id) && me.employees) {
           empMap.set(me.employee_id, {
             employee_id: me.employee_id,
             first_name: me.employees.first_name ?? "",
             last_name: me.employees.last_name ?? "",
-            base_total_pay: 0,
-            extras_total: 0,
-            deductions_total: 0,
-            total_final_pay: 0,
+            base_total_pay: 0, extras_total: 0, deductions_total: 0, total_final_pay: 0,
           });
         }
       });
-
       (movements ?? []).forEach((m: any) => {
         const row = empMap.get(m.employee_id);
         if (!row) return;
-        if (m.concepts?.category === "extra") {
-          row.extras_total += Number(m.total_value) || 0;
-        } else {
-          row.deductions_total += Number(m.total_value) || 0;
-        }
+        if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0;
+        else row.deductions_total += Number(m.total_value) || 0;
       });
-
-      empMap.forEach((row) => {
-        row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total;
-      });
-
+      empMap.forEach((row) => { row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total; });
       setRows(Array.from(empMap.values()));
       setLoading(false);
     }
     load();
   }, [selectedPeriod]);
 
-  // Filter & sort
   const filtered = rows.filter((r) => {
     const fullName = `${r.first_name} ${r.last_name}`.toLowerCase();
     if (searchTerm && !fullName.includes(searchTerm.toLowerCase())) return false;
@@ -146,12 +127,19 @@ export default function PeriodSummary() {
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const sortIndicator = (key: SortKey) => sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "";
+  const sortIcon = (key: SortKey) => (
+    <ArrowUpDown className={`h-3 w-3 ml-1 inline-block transition-opacity ${sortKey === key ? "opacity-100" : "opacity-30"}`} />
+  );
 
   const grandTotal = filtered.reduce((s, r) => s + r.total_final_pay, 0);
   const grandBase = filtered.reduce((s, r) => s + r.base_total_pay, 0);
   const grandExtras = filtered.reduce((s, r) => s + r.extras_total, 0);
   const grandDeductions = filtered.reduce((s, r) => s + r.deductions_total, 0);
+  const withExtras = rows.filter(r => r.extras_total > 0).length;
+  const withDeductions = rows.filter(r => r.deductions_total > 0).length;
+  const withBase = rows.filter(r => r.base_total_pay > 0).length;
+
+  const selectedPeriodObj = periods.find(p => p.id === selectedPeriod);
 
   const exportCSV = () => {
     const header = "Empleado,Base,Extras,Deducciones,Total Final\n";
@@ -165,31 +153,84 @@ export default function PeriodSummary() {
   };
 
   const hasActiveFilters = searchTerm || payFilter !== "all";
+  const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <div>
-      <div className="page-header flex items-center justify-between">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Resumen del periodo</h1>
           <p className="page-subtitle">Consolidación: base + extras − deducciones</p>
         </div>
-        {rows.length > 0 && (
-          <Button variant="outline" onClick={exportCSV}>
-            <Download className="h-4 w-4 mr-2" />Exportar CSV
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <div className="max-w-[220px]">
+            <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Seleccionar periodo" />
+              </SelectTrigger>
+              <SelectContent>
+                {periods.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.start_date} → {p.end_date} {p.status === "closed" ? "🔒" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {rows.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-1.5" />Exportar
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="mb-4 max-w-xs">
-        <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
-          <SelectTrigger><SelectValue placeholder="Seleccionar periodo" /></SelectTrigger>
-          <SelectContent>{periods.map(p => <SelectItem key={p.id} value={p.id}>{p.start_date} → {p.end_date}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
+      {/* KPI Cards */}
+      {rows.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiCard
+            value={rows.length.toString()}
+            label="Empleados en periodo"
+            icon={<Users className="h-5 w-5 text-primary" />}
+            accent="primary"
+            subtitle={`${withBase} con pago base`}
+          />
+          <KpiCard
+            value={`$${fmt(grandBase)}`}
+            label="Total pago base"
+            icon={<DollarSign className="h-5 w-5 text-primary" />}
+            accent="primary"
+          />
+          <KpiCard
+            value={`$${fmt(grandExtras)}`}
+            label="Total extras"
+            icon={<TrendingUp className="h-5 w-5 text-earning" />}
+            accent="earning"
+            subtitle={`${withExtras} empleados con extras`}
+          />
+          <KpiCard
+            value={`$${fmt(grandDeductions)}`}
+            label="Total deducciones"
+            icon={<TrendingDown className="h-5 w-5 text-deduction" />}
+            accent="deduction"
+            subtitle={`${withDeductions} con deducciones`}
+          />
+        </div>
+      )}
+
+      {/* Progress Bars */}
+      {rows.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <ProgressBar current={withBase} total={rows.length} label="Con pago base" accent="primary" />
+          <ProgressBar current={withExtras} total={rows.length} label="Con extras" accent="earning" />
+          <ProgressBar current={withDeductions} total={rows.length} label="Con deducciones" accent="deduction" />
+        </div>
+      )}
 
       {/* Search & Filters */}
       {rows.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -204,7 +245,6 @@ export default function PeriodSummary() {
               </button>
             )}
           </div>
-
           <div className="flex items-center gap-1.5">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={payFilter} onValueChange={(v) => setPayFilter(v as PayFilter)}>
@@ -219,72 +259,124 @@ export default function PeriodSummary() {
               </SelectContent>
             </Select>
           </div>
-
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={() => { setSearchTerm(""); setPayFilter("all"); }} className="text-xs">
-              <X className="h-3.5 w-3.5 mr-1" /> Limpiar filtros
+              <X className="h-3.5 w-3.5 mr-1" /> Limpiar
             </Button>
           )}
-
-          <span className="text-xs text-muted-foreground ml-auto">
-            {sorted.length} de {rows.length} empleados
+          <span className="text-xs text-muted-foreground ml-auto tabular-nums">
+            {sorted.length}/{rows.length} empleados
           </span>
         </div>
       )}
 
+      {/* Main Table */}
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Cargando...</div>
+        <div className="text-center py-16 text-muted-foreground">
+          <div className="inline-flex items-center gap-2">
+            <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            Cargando resumen...
+          </div>
+        </div>
       ) : (
         <div className="data-table-wrapper">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
-                  Empleado{sortIndicator("name")}
+              <TableRow className="bg-muted/30">
+                <TableHead className="cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("name")}>
+                  <span className="flex items-center gap-1">Empleado {sortIcon("name")}</span>
                 </TableHead>
-                <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("base")}>
-                  Base{sortIndicator("base")}
+                <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("base")}>
+                  <span className="flex items-center justify-end gap-1">Base {sortIcon("base")}</span>
                 </TableHead>
-                <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("extras")}>
-                  Extras{sortIndicator("extras")}
+                <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("extras")}>
+                  <span className="flex items-center justify-end gap-1">Extras {sortIcon("extras")}</span>
                 </TableHead>
-                <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("deductions")}>
-                  Deducciones{sortIndicator("deductions")}
+                <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("deductions")}>
+                  <span className="flex items-center justify-end gap-1">Deducciones {sortIcon("deductions")}</span>
                 </TableHead>
-                <TableHead className="text-right font-bold cursor-pointer select-none" onClick={() => toggleSort("total")}>
-                  Total Final{sortIndicator("total")}
+                <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors font-bold" onClick={() => toggleSort("total")}>
+                  <span className="flex items-center justify-end gap-1">Total Final {sortIcon("total")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sorted.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  {rows.length === 0 ? "Selecciona un periodo" : "Sin resultados para los filtros aplicados"}
-                </TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-16">
+                    {rows.length === 0 ? "Selecciona un periodo para ver el resumen" : "Sin resultados para los filtros aplicados"}
+                  </TableCell>
+                </TableRow>
               ) : (
                 <>
                   {sorted.map(r => (
-                    <TableRow key={r.employee_id}>
-                      <TableCell className="font-medium">
-                        <Link
-                          to={`/admin/summary/detail?employeeId=${r.employee_id}&periodId=${selectedPeriod}`}
-                          className="text-primary hover:underline"
+                    <Tooltip key={r.employee_id}>
+                      <TooltipTrigger asChild>
+                        <TableRow
+                          className="group cursor-pointer transition-colors hover:bg-accent/40"
+                          onMouseEnter={() => setHoveredRow(r.employee_id)}
+                          onMouseLeave={() => setHoveredRow(null)}
                         >
-                          {r.first_name} {r.last_name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-right font-mono">${r.base_total_pay.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-mono text-earning">+${r.extras_total.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-mono text-deduction">−${r.deductions_total.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-mono font-bold">${r.total_final_pay.toFixed(2)}</TableCell>
-                    </TableRow>
+                          <TableCell>
+                            <Link
+                              to={`/admin/summary/detail?employeeId=${r.employee_id}&periodId=${selectedPeriod}`}
+                              className="flex items-center gap-2.5 group-hover:text-primary transition-colors"
+                            >
+                              <EmployeeAvatar firstName={r.first_name} lastName={r.last_name} size="sm" />
+                              <span className="font-medium">{r.first_name} {r.last_name}</span>
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm tabular-nums">
+                            ${fmt(r.base_total_pay)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm tabular-nums">
+                            {r.extras_total > 0 ? (
+                              <span className="text-earning font-medium">+${fmt(r.extras_total)}</span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm tabular-nums">
+                            {r.deductions_total > 0 ? (
+                              <span className="text-deduction font-medium">−${fmt(r.deductions_total)}</span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm tabular-nums font-bold">
+                            ${fmt(r.total_final_pay)}
+                          </TableCell>
+                        </TableRow>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="space-y-1 text-xs">
+                        <p className="font-semibold">{r.first_name} {r.last_name}</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                          <span className="text-muted-foreground">Base:</span>
+                          <span className="text-right font-mono">${fmt(r.base_total_pay)}</span>
+                          <span className="text-muted-foreground">Extras:</span>
+                          <span className="text-right font-mono text-earning">+${fmt(r.extras_total)}</span>
+                          <span className="text-muted-foreground">Deducciones:</span>
+                          <span className="text-right font-mono text-deduction">−${fmt(r.deductions_total)}</span>
+                          <span className="font-semibold border-t pt-0.5">Total:</span>
+                          <span className="text-right font-mono font-bold border-t pt-0.5">${fmt(r.total_final_pay)}</span>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                   ))}
-                  <TableRow className="bg-muted/50 font-bold">
-                    <TableCell>TOTAL ({sorted.length})</TableCell>
-                    <TableCell className="text-right font-mono">${grandBase.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono text-earning">+${grandExtras.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono text-deduction">−${grandDeductions.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono">${grandTotal.toFixed(2)}</TableCell>
+                  {/* Totals row */}
+                  <TableRow className="bg-muted/50 border-t-2 border-border">
+                    <TableCell className="font-bold">
+                      <span className="flex items-center gap-2">
+                        <span className="rounded-full bg-primary/10 text-primary h-7 w-7 flex items-center justify-center text-[10px] font-bold shrink-0">
+                          Σ
+                        </span>
+                        TOTAL ({sorted.length})
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-bold tabular-nums">${fmt(grandBase)}</TableCell>
+                    <TableCell className="text-right font-mono font-bold tabular-nums text-earning">+${fmt(grandExtras)}</TableCell>
+                    <TableCell className="text-right font-mono font-bold tabular-nums text-deduction">−${fmt(grandDeductions)}</TableCell>
+                    <TableCell className="text-right font-mono font-bold tabular-nums text-lg">${fmt(grandTotal)}</TableCell>
                   </TableRow>
                 </>
               )}
