@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useAuth } from "@/hooks/useAuth";
@@ -77,11 +77,13 @@ export default function UsersPage() {
   const [editRole, setEditRole] = useState<RoleType>("employee");
   const [editPerms, setEditPerms] = useState<Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }>>({});
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
+  const [passwordTarget, setPasswordTarget] = useState<UserRecord | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const fetchUsers = async () => {
-    // Get all profiles + roles + permissions
     const { data: profiles } = await supabase.from("profiles").select("user_id, email, full_name");
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
     const { data: perms } = await supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete");
@@ -123,7 +125,6 @@ export default function UsersPage() {
     if (!editUser) return;
     setLoading(true);
 
-    // Update role
     const { error: roleError } = await supabase
       .from("user_roles")
       .update({ role: editRole } as any)
@@ -135,7 +136,6 @@ export default function UsersPage() {
       return;
     }
 
-    // If manager, upsert permissions
     if (editRole === "manager") {
       for (const mod of MODULES) {
         const perm = editPerms[mod.key];
@@ -150,7 +150,6 @@ export default function UsersPage() {
           } as any, { onConflict: "user_id,module" });
       }
     } else {
-      // Remove permissions if not manager
       await supabase
         .from("module_permissions")
         .delete()
@@ -166,12 +165,32 @@ export default function UsersPage() {
 
   const handleDeleteUser = async () => {
     if (!deleteTarget) return;
-    // Only delete role, not the user itself
     await supabase.from("user_roles").delete().eq("user_id", deleteTarget.user_id);
     await supabase.from("module_permissions").delete().eq("user_id", deleteTarget.user_id);
     toast({ title: "Rol de usuario eliminado" });
     setDeleteTarget(null);
     fetchUsers();
+  };
+
+  const handleResetPassword = async () => {
+    if (!passwordTarget || !newPassword) return;
+    setPasswordLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-reset-password", {
+        body: { user_id: passwordTarget.user_id, new_password: newPassword },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      } else {
+        toast({ title: "Contraseña actualizada", description: `Se cambió la contraseña de ${passwordTarget.full_name || passwordTarget.email}` });
+        setPasswordTarget(null);
+        setNewPassword("");
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Error al cambiar contraseña", variant: "destructive" });
+    }
+    setPasswordLoading(false);
   };
 
   const togglePerm = (module: string, field: 'can_view' | 'can_edit' | 'can_delete') => {
@@ -275,6 +294,9 @@ export default function UsersPage() {
                             <DropdownMenuItem onClick={() => openEditUser(u)}>
                               <Pencil className="h-4 w-4 mr-2" />Editar rol
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setPasswordTarget(u); setNewPassword(""); }}>
+                              <KeyRound className="h-4 w-4 mr-2" />Cambiar contraseña
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(u)}>
                               <Trash2 className="h-4 w-4 mr-2" />Quitar rol
                             </DropdownMenuItem>
@@ -357,6 +379,38 @@ export default function UsersPage() {
 
             <Button onClick={handleSaveRole} className="w-full" disabled={loading}>
               {loading ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={!!passwordTarget} onOpenChange={(v) => { if (!v) { setPasswordTarget(null); setNewPassword(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cambiar contraseña</DialogTitle>
+            <DialogDescription>
+              {passwordTarget?.full_name || passwordTarget?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">Nueva contraseña</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                minLength={6}
+              />
+            </div>
+            <Button
+              onClick={handleResetPassword}
+              className="w-full"
+              disabled={passwordLoading || newPassword.length < 6}
+            >
+              {passwordLoading ? "Cambiando..." : "Cambiar contraseña"}
             </Button>
           </div>
         </DialogContent>
