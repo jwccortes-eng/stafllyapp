@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ interface MovementDetail {
 export default function WeekDetail() {
   const { periodId } = useParams();
   const { employeeId } = useAuth();
+  const navigate = useNavigate();
   const [basePay, setBasePay] = useState(0);
   const [movements, setMovements] = useState<MovementDetail[]>([]);
   const [periodLabel, setPeriodLabel] = useState("");
@@ -28,10 +29,21 @@ export default function WeekDetail() {
   useEffect(() => {
     if (!employeeId || !periodId) return;
     async function load() {
-      const [bpRes, movRes, perRes] = await Promise.all([
+      // Check if period is published
+      const { data: periodData } = await supabase
+        .from("pay_periods")
+        .select("start_date, end_date, published_at")
+        .eq("id", periodId)
+        .maybeSingle();
+
+      if (!periodData?.published_at) {
+        navigate("/portal");
+        return;
+      }
+
+      const [bpRes, movRes] = await Promise.all([
         supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", employeeId).eq("period_id", periodId).maybeSingle(),
         supabase.from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)").eq("employee_id", employeeId).eq("period_id", periodId),
-        supabase.from("pay_periods").select("start_date, end_date").eq("id", periodId).maybeSingle(),
       ]);
 
       setBasePay(Number(bpRes.data?.base_total_pay) || 0);
@@ -46,7 +58,7 @@ export default function WeekDetail() {
           note: m.note,
         }))
       );
-      setPeriodLabel(perRes.data ? `${perRes.data.start_date} → ${perRes.data.end_date}` : "");
+      setPeriodLabel(`${periodData.start_date} → ${periodData.end_date}`);
       setLoading(false);
     }
     load();

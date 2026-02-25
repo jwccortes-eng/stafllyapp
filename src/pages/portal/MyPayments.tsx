@@ -24,26 +24,45 @@ export default function MyPayments() {
   useEffect(() => {
     if (!employeeId) return;
     async function load() {
-      // Get base pays
+      // Get published periods only
+      const { data: publishedPeriods } = await supabase
+        .from("pay_periods")
+        .select("id, start_date, end_date")
+        .not("published_at", "is", null);
+
+      const publishedIds = new Set((publishedPeriods ?? []).map((p: any) => p.id));
+      const periodMap = new Map<string, { start_date: string; end_date: string }>();
+      (publishedPeriods ?? []).forEach((p: any) => periodMap.set(p.id, { start_date: p.start_date, end_date: p.end_date }));
+
+      if (publishedIds.size === 0) {
+        setPayments([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get base pays only for published periods
       const { data: basePays } = await supabase
         .from("period_base_pay")
-        .select("period_id, base_total_pay, pay_periods(start_date, end_date)")
+        .select("period_id, base_total_pay")
         .eq("employee_id", employeeId)
-        .order("created_at", { ascending: false });
+        .in("period_id", Array.from(publishedIds));
 
-      // Get movements
+      // Get movements only for published periods
       const { data: movements } = await supabase
         .from("movements")
         .select("period_id, total_value, concepts(category)")
-        .eq("employee_id", employeeId);
+        .eq("employee_id", employeeId)
+        .in("period_id", Array.from(publishedIds));
 
-      const periodMap = new Map<string, PaymentRow>();
+      const paymentMap = new Map<string, PaymentRow>();
 
       (basePays ?? []).forEach((bp: any) => {
-        periodMap.set(bp.period_id, {
+        const pInfo = periodMap.get(bp.period_id);
+        if (!pInfo) return;
+        paymentMap.set(bp.period_id, {
           period_id: bp.period_id,
-          start_date: bp.pay_periods?.start_date ?? "",
-          end_date: bp.pay_periods?.end_date ?? "",
+          start_date: pInfo.start_date,
+          end_date: pInfo.end_date,
           base_total_pay: Number(bp.base_total_pay) || 0,
           extras_total: 0,
           deductions_total: 0,
@@ -52,7 +71,7 @@ export default function MyPayments() {
       });
 
       (movements ?? []).forEach((m: any) => {
-        const row = periodMap.get(m.period_id);
+        const row = paymentMap.get(m.period_id);
         if (!row) return;
         if (m.concepts?.category === "extra") {
           row.extras_total += Number(m.total_value) || 0;
@@ -61,11 +80,11 @@ export default function MyPayments() {
         }
       });
 
-      periodMap.forEach(row => {
+      paymentMap.forEach(row => {
         row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total;
       });
 
-      setPayments(Array.from(periodMap.values()));
+      setPayments(Array.from(paymentMap.values()));
       setLoading(false);
     }
     load();
@@ -106,7 +125,7 @@ export default function MyPayments() {
           </TableHeader>
           <TableBody>
             {payments.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay pagos registrados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay pagos publicados</TableCell></TableRow>
             ) : (
               payments.map(p => (
                 <TableRow key={p.period_id}>

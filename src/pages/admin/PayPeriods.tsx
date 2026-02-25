@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Lock, Unlock, CalendarPlus } from "lucide-react";
+import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { format, addDays, nextWednesday, isWednesday } from "date-fns";
@@ -18,6 +18,7 @@ interface PayPeriod {
   end_date: string;
   status: string;
   closed_at: string | null;
+  published_at: string | null;
 }
 
 export default function PayPeriods() {
@@ -137,6 +138,20 @@ export default function PayPeriods() {
     setPendingToggle(null);
   };
 
+  const togglePublish = async (period: PayPeriod) => {
+    const isPublished = !!period.published_at;
+    const { error } = await supabase
+      .from("pay_periods")
+      .update({ published_at: isPublished ? null : new Date().toISOString() })
+      .eq("id", period.id);
+    if (error) {
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+    } else {
+      toast({ title: isPublished ? "Publicación retirada" : "Periodo publicado — visible para empleados" });
+      fetchPeriods();
+    }
+  };
+
   return (
     <div>
       <div className="page-header flex items-center justify-between">
@@ -203,13 +218,14 @@ export default function PayPeriods() {
               <TableHead>Inicio</TableHead>
               <TableHead>Fin</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Publicado</TableHead>
               <TableHead>Cerrado</TableHead>
-              <TableHead className="w-20">Acción</TableHead>
+              <TableHead className="w-28">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {periods.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No hay periodos</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay periodos</TableCell></TableRow>
             ) : (
               periods.map((p) => (
                 <TableRow key={p.id}>
@@ -220,11 +236,29 @@ export default function PayPeriods() {
                       {p.status === "open" ? "Abierto" : "Cerrado"}
                     </span>
                   </TableCell>
+                  <TableCell>
+                    {p.published_at ? (
+                      <span className="earning-badge">Publicado</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No publicado</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => requestToggle(p)} title={p.status === "open" ? "Cerrar periodo" : "Reabrir periodo"}>
-                      {p.status === "open" ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => requestToggle(p)} title={p.status === "open" ? "Cerrar periodo" : "Reabrir periodo"}>
+                        {p.status === "open" ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => togglePublish(p)}
+                        title={p.published_at ? "Retirar publicación" : "Publicar para empleados"}
+                        disabled={p.status === "open"}
+                      >
+                        {p.published_at ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Send className="h-4 w-4 text-primary" />}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
