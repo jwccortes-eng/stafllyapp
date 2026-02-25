@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import * as XLSX from "xlsx";
@@ -67,6 +67,35 @@ export default function ImportConnecteam() {
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const { toast } = useToast();
   const [importHistory, setImportHistory] = useState<ImportHistory[]>([]);
+  const [expandedImport, setExpandedImport] = useState<string | null>(null);
+  const [expandedEmployees, setExpandedEmployees] = useState<{ first_name: string; last_name: string; base_total_pay: number; total_work_hours: number | null; total_overtime: number | null; total_paid_hours: number | null }[]>([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  const toggleExpand = async (importId: string) => {
+    if (expandedImport === importId) {
+      setExpandedImport(null);
+      setExpandedEmployees([]);
+      return;
+    }
+    setExpandedImport(importId);
+    setLoadingDetail(true);
+    const { data } = await supabase
+      .from("period_base_pay")
+      .select("base_total_pay, total_work_hours, total_overtime, total_paid_hours, employees(first_name, last_name)")
+      .eq("import_id", importId)
+      .order("base_total_pay", { ascending: false });
+    setExpandedEmployees(
+      (data ?? []).map((d: any) => ({
+        first_name: d.employees?.first_name ?? "",
+        last_name: d.employees?.last_name ?? "",
+        base_total_pay: Number(d.base_total_pay) || 0,
+        total_work_hours: d.total_work_hours,
+        total_overtime: d.total_overtime,
+        total_paid_hours: d.total_paid_hours,
+      }))
+    );
+    setLoadingDetail(false);
+  };
 
   const fetchHistory = useCallback(async () => {
     if (!selectedCompanyId) return;
@@ -408,6 +437,7 @@ export default function ImportConnecteam() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10" />
                   <TableHead>Periodo</TableHead>
                   <TableHead>Archivo</TableHead>
                   <TableHead className="text-center">Filas</TableHead>
@@ -419,40 +449,83 @@ export default function ImportConnecteam() {
               </TableHeader>
               <TableBody>
                 {importHistory.map((imp) => (
-                  <TableRow key={imp.id}>
-                    <TableCell className="text-sm font-medium">
-                      {imp.pay_periods
-                        ? `${imp.pay_periods.start_date} → ${imp.pay_periods.end_date}`
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-xs max-w-40 truncate" title={imp.file_name}>
-                      <div className="flex items-center gap-1.5">
-                        <FileSpreadsheet className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        {imp.file_name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center font-mono text-xs">{imp.row_count ?? "—"}</TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="font-mono text-xs">{imp._emp_count}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs">
-                      {imp._base_total ? `$${imp._base_total.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={imp.status === "completed" ? "default" : imp.status === "processing" ? "secondary" : "destructive"} className="text-xs">
-                        {imp.status === "completed" ? "Completado" : imp.status === "processing" ? "Procesando" : imp.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        {new Date(imp.created_at).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <React.Fragment key={imp.id}>
+                    <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => toggleExpand(imp.id)}>
+                      <TableCell className="w-10 px-2">
+                        {expandedImport === imp.id
+                          ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {imp.pay_periods
+                          ? `${imp.pay_periods.start_date} → ${imp.pay_periods.end_date}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs max-w-40 truncate" title={imp.file_name}>
+                        <div className="flex items-center gap-1.5">
+                          <FileSpreadsheet className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          {imp.file_name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center font-mono text-xs">{imp.row_count ?? "—"}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="font-mono text-xs">{imp._emp_count}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs">
+                        {imp._base_total ? `$${imp._base_total.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={imp.status === "completed" ? "default" : imp.status === "processing" ? "secondary" : "destructive"} className="text-xs">
+                          {imp.status === "completed" ? "Completado" : imp.status === "processing" ? "Procesando" : imp.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          {new Date(imp.created_at).toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {expandedImport === imp.id && (
+                      <TableRow key={`${imp.id}-detail`}>
+                        <TableCell colSpan={8} className="p-0">
+                          <div className="bg-muted/30 px-6 py-3">
+                            {loadingDetail ? (
+                              <p className="text-sm text-muted-foreground py-2">Cargando detalle...</p>
+                            ) : expandedEmployees.length === 0 ? (
+                              <p className="text-sm text-muted-foreground py-2">Sin empleados procesados en esta importación</p>
+                            ) : (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="text-xs">Empleado</TableHead>
+                                    <TableHead className="text-xs text-right">Horas trabajadas</TableHead>
+                                    <TableHead className="text-xs text-right">Horas extra</TableHead>
+                                    <TableHead className="text-xs text-right">Horas pagadas</TableHead>
+                                    <TableHead className="text-xs text-right font-bold">Pago base</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {expandedEmployees.map((emp, i) => (
+                                    <TableRow key={i} className="border-muted">
+                                      <TableCell className="text-sm font-medium py-1.5">{emp.first_name} {emp.last_name}</TableCell>
+                                      <TableCell className="text-right font-mono text-xs py-1.5">{emp.total_work_hours != null ? emp.total_work_hours.toFixed(1) : "—"}</TableCell>
+                                      <TableCell className="text-right font-mono text-xs py-1.5">{emp.total_overtime != null ? emp.total_overtime.toFixed(1) : "—"}</TableCell>
+                                      <TableCell className="text-right font-mono text-xs py-1.5">{emp.total_paid_hours != null ? emp.total_paid_hours.toFixed(1) : "—"}</TableCell>
+                                      <TableCell className="text-right font-mono text-xs font-bold py-1.5">${emp.base_total_pay.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>
