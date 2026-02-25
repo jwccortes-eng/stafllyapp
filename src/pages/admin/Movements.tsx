@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
+import { useCompany } from "@/hooks/useCompany";
 
 interface Employee { id: string; first_name: string; last_name: string; }
 interface Period { id: string; start_date: string; end_date: string; status: string; }
@@ -22,6 +23,7 @@ interface Movement {
 }
 
 export default function Movements() {
+  const { selectedCompanyId } = useCompany();
   const [movements, setMovements] = useState<Movement[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
@@ -36,17 +38,18 @@ export default function Movements() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!selectedCompanyId) return;
     Promise.all([
-      supabase.from("employees").select("id, first_name, last_name").eq("is_active", true).order("first_name"),
-      supabase.from("pay_periods").select("*").order("start_date", { ascending: false }),
-      supabase.from("concepts").select("*").eq("is_active", true).order("name"),
+      supabase.from("employees").select("id, first_name, last_name").eq("is_active", true).eq("company_id", selectedCompanyId).order("first_name"),
+      supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId).order("start_date", { ascending: false }),
+      supabase.from("concepts").select("*").eq("is_active", true).eq("company_id", selectedCompanyId).order("name"),
     ]).then(([e, p, c]) => {
       setEmployees((e.data as Employee[]) ?? []);
       setPeriods((p.data as Period[]) ?? []);
       setConcepts((c.data as Concept[]) ?? []);
       if (p.data?.length) setFilterPeriod(p.data[0].id);
     });
-  }, []);
+  }, [selectedCompanyId]);
 
   const fetchMovements = async (periodId: string) => {
     if (!periodId) return;
@@ -84,6 +87,7 @@ export default function Movements() {
       rate: form.rate ? parseFloat(form.rate) : null,
       total_value: parseFloat(form.total_value) || 0,
       note: form.note.trim() || null,
+      company_id: selectedCompanyId,
     });
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });

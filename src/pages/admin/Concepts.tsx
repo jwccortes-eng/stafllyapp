@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
+import { useCompany } from "@/hooks/useCompany";
 
 interface Concept {
   id: string;
@@ -22,6 +23,7 @@ interface Concept {
 }
 
 export default function Concepts() {
+  const { selectedCompanyId } = useCompany();
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -32,11 +34,12 @@ export default function Concepts() {
   const { toast } = useToast();
 
   const fetch = async () => {
-    const { data } = await supabase.from("concepts").select("*").order("name");
+    if (!selectedCompanyId) return;
+    const { data } = await supabase.from("concepts").select("*").eq("company_id", selectedCompanyId).order("name");
     setConcepts((data as Concept[]) ?? []);
   };
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetch(); }, [selectedCompanyId]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +51,7 @@ export default function Concepts() {
       unit_label: form.unit_label.trim(),
       default_rate: form.default_rate ? parseFloat(form.default_rate) : null,
       rate_source: form.rate_source as "concept_default" | "per_employee",
+      company_id: selectedCompanyId,
     });
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });

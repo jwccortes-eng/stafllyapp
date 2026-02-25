@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
+import { useCompany } from "@/hooks/useCompany";
 
 // All Connecteam fields in Excel order
 const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean; hidden?: boolean }[] = [
@@ -71,6 +72,7 @@ interface UpdateDiff {
 }
 
 export default function Employees() {
+  const { selectedCompanyId } = useCompany();
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -97,11 +99,12 @@ export default function Employees() {
   const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
 
   const fetchEmployees = async () => {
-    const { data } = await supabase.from("employees").select("*").order("first_name");
+    if (!selectedCompanyId) return;
+    const { data } = await supabase.from("employees").select("*").eq("company_id", selectedCompanyId).order("first_name");
     setEmployees((data as EmployeeRecord[]) ?? []);
   };
 
-  useEffect(() => { fetchEmployees(); }, []);
+  useEffect(() => { fetchEmployees(); }, [selectedCompanyId]);
 
   const findCol = (row: Record<string, any>, candidates: string[]) => {
     const keys = Object.keys(row);
@@ -126,7 +129,7 @@ export default function Employees() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.from("employees").insert(buildInsertData(form) as any);
+    const { error } = await supabase.from("employees").insert({ ...buildInsertData(form), company_id: selectedCompanyId } as any);
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
@@ -260,7 +263,7 @@ export default function Employees() {
 
     for (const emp of toCreate) {
       const data = buildInsertData(emp);
-      const { error } = await supabase.from("employees").insert(data as any);
+      const { error } = await supabase.from("employees").insert({ ...data, company_id: selectedCompanyId } as any);
       if (!error) created++;
     }
 
@@ -392,7 +395,7 @@ export default function Employees() {
         // Create new employee
         updateData.first_name = updateData.first_name || "";
         updateData.last_name = updateData.last_name || "";
-        const { error } = await supabase.from("employees").insert(updateData as any);
+        const { error } = await supabase.from("employees").insert({ ...updateData, company_id: selectedCompanyId } as any);
         if (!error) created++;
       } else {
         const { error } = await supabase.from("employees").update(updateData as any).eq("id", diff.employeeId);
