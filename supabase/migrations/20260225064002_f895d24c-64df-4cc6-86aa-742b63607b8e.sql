@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS pay_periods_company_start_unique ON public.pay_periods (company_id, start_date);
