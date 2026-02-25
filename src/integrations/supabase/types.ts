@@ -734,6 +734,122 @@ export type Database = {
         }
         Relationships: []
       }
+      shifts_safe: {
+        Row: {
+          clock_in_device: string | null
+          clock_in_location: string | null
+          clock_in_time: string | null
+          clock_out_device: string | null
+          clock_out_location: string | null
+          clock_out_time: string | null
+          created_at: string | null
+          customer: string | null
+          daily_total_hours: number | null
+          employee_id: string | null
+          employee_notes: string | null
+          id: string | null
+          import_id: string | null
+          job_code: string | null
+          manager_notes: string | null
+          period_id: string | null
+          ride: string | null
+          scheduled_shift_title: string | null
+          shift_end_date: string | null
+          shift_hash: string | null
+          shift_hours: number | null
+          shift_number: string | null
+          shift_start_date: string | null
+          sub_job: string | null
+          sub_job_code: string | null
+          type: string | null
+        }
+        Insert: {
+          clock_in_device?: string | null
+          clock_in_location?: string | null
+          clock_in_time?: string | null
+          clock_out_device?: string | null
+          clock_out_location?: string | null
+          clock_out_time?: string | null
+          created_at?: string | null
+          customer?: string | null
+          daily_total_hours?: number | null
+          employee_id?: string | null
+          employee_notes?: string | null
+          id?: string | null
+          import_id?: string | null
+          job_code?: string | null
+          manager_notes?: string | null
+          period_id?: string | null
+          ride?: string | null
+          scheduled_shift_title?: string | null
+          shift_end_date?: string | null
+          shift_hash?: string | null
+          shift_hours?: number | null
+          shift_number?: string | null
+          shift_start_date?: string | null
+          sub_job?: string | null
+          sub_job_code?: string | null
+          type?: string | null
+        }
+        Update: {
+          clock_in_device?: string | null
+          clock_in_location?: string | null
+          clock_in_time?: string | null
+          clock_out_device?: string | null
+          clock_out_location?: string | null
+          clock_out_time?: string | null
+          created_at?: string | null
+          customer?: string | null
+          daily_total_hours?: number | null
+          employee_id?: string | null
+          employee_notes?: string | null
+          id?: string | null
+          import_id?: string | null
+          job_code?: string | null
+          manager_notes?: string | null
+          period_id?: string | null
+          ride?: string | null
+          scheduled_shift_title?: string | null
+          shift_end_date?: string | null
+          shift_hash?: string | null
+          shift_hours?: number | null
+          shift_number?: string | null
+          shift_start_date?: string | null
+          sub_job?: string | null
+          sub_job_code?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_module_permission: {
