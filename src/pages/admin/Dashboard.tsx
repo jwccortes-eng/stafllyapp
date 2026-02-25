@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, Users, DollarSign, FileSpreadsheet } from "lucide-react";
+import { useCompany } from "@/hooks/useCompany";
 
 interface Stats {
   totalEmployees: number;
@@ -12,6 +13,7 @@ interface Stats {
 }
 
 export default function AdminDashboard() {
+  const { selectedCompanyId } = useCompany();
   const [stats, setStats] = useState<Stats>({
     totalEmployees: 0,
     activePeriod: null,
@@ -22,12 +24,14 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!selectedCompanyId) return;
+    setLoading(true);
     async function fetchStats() {
       const [empRes, periodRes, impRes, movRes] = await Promise.all([
-        supabase.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("pay_periods").select("*").order("start_date", { ascending: false }).limit(1).maybeSingle(),
-        supabase.from("imports").select("id", { count: "exact", head: true }),
-        supabase.from("movements").select("id", { count: "exact", head: true }),
+        supabase.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", selectedCompanyId!),
+        supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId!).order("start_date", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("imports").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!),
+        supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!),
       ]);
 
       setStats({
@@ -42,7 +46,7 @@ export default function AdminDashboard() {
       setLoading(false);
     }
     fetchStats();
-  }, []);
+  }, [selectedCompanyId]);
 
   const cards = [
     {
