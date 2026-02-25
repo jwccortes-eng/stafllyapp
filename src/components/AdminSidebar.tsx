@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { useTheme } from "next-themes";
 
 import {
   LayoutDashboard,
@@ -16,6 +17,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   Smartphone,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -61,6 +64,7 @@ export default function AdminSidebar() {
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
   const location = useLocation();
   const { collapsed, setCollapsed } = useSidebarCollapsed();
+  const { theme, setTheme } = useTheme();
 
   const isLinkVisible = (module: string | null) => {
     if (!module) return true;
@@ -180,6 +184,22 @@ export default function AdminSidebar() {
 
       {/* Footer */}
       <div className="px-2 py-2 border-t border-sidebar-border space-y-1">
+        {/* Dark mode toggle */}
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className={cn(
+                "flex items-center gap-3 rounded-lg text-[13px] font-medium text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-all w-full",
+                collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
+              )}
+            >
+              {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+              {!collapsed && (theme === "dark" ? "Modo claro" : "Modo oscuro")}
+            </button>
+          </TooltipTrigger>
+          {collapsed && <TooltipContent side="right" className="text-xs">{theme === "dark" ? "Modo claro" : "Modo oscuro"}</TooltipContent>}
+        </Tooltip>
         {/* Collapse toggle */}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
