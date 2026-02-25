@@ -9,8 +9,8 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clo
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import * as XLSX from "xlsx";
-import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
+import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } from "@/lib/safe-xlsx";
+import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { Badge } from "@/components/ui/badge";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
@@ -57,10 +57,7 @@ const downloadTemplate = () => {
       "Start date": "02/18/2026", "End date": "02/24/2026",
     },
   ];
-  const ws = XLSX.utils.json_to_sheet(templateData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Horas");
-  XLSX.writeFile(wb, "plantilla_importacion_connecteam.xlsx");
+  writeExcelFile(templateData, "Horas", "plantilla_importacion_connecteam.xlsx");
 };
 
 const BASE_PAY_FIELDS: Record<string, string> = {
@@ -101,7 +98,7 @@ export default function ImportConnecteam() {
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [workbook, setWorkbook] = useState<SafeWorkbook | null>(null);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const { toast } = useToast();
@@ -127,7 +124,8 @@ export default function ImportConnecteam() {
     if (!preImportSummary || !workbook || !selectedSheet || !selectedCompanyId) return;
     setCreatingEmployees(true);
     try {
-      const ws = workbook.Sheets[selectedSheet];
+      const ws = getSheet(workbook, selectedSheet);
+      if (!ws) return;
       const allRows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
       const reverseMap: Record<string, string> = {};
       Object.entries(mapping).forEach(([fileCol, knownCol]) => { reverseMap[knownCol] = fileCol; });
@@ -245,23 +243,27 @@ export default function ImportConnecteam() {
     }
     setFile(f);
     const reader = new FileReader();
-    reader.onload = (evt) => {
-      const wb = safeRead(evt.target?.result, { type: "binary" });
+    reader.onload = async (evt) => {
+      const data = evt.target?.result;
+      if (!data) return;
+      const wb = await safeRead(data as ArrayBuffer);
       setWorkbook(wb);
-      setSheets(wb.SheetNames);
-      if (wb.SheetNames.length === 1) {
-        setSelectedSheet(wb.SheetNames[0]);
-        processSheet(wb, wb.SheetNames[0]);
+      const names = getSheetNames(wb);
+      setSheets(names);
+      if (names.length === 1) {
+        setSelectedSheet(names[0]);
+        processSheet(wb, names[0]);
         setStep(3);
       } else {
         setStep(2);
       }
     };
-    reader.readAsBinaryString(f);
+    reader.readAsArrayBuffer(f);
   }, []);
 
-  const processSheet = (wb: XLSX.WorkBook, sheetName: string) => {
-    const ws = wb.Sheets[sheetName];
+  const processSheet = (wb: SafeWorkbook, sheetName: string) => {
+    const ws = getSheet(wb, sheetName);
+    if (!ws) return;
     const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
     if (json.length === 0) return;
     const hdrs = Object.keys(json[0]);
@@ -287,7 +289,8 @@ export default function ImportConnecteam() {
     if (!workbook || !selectedPeriod || !selectedSheet) return;
     setPreImportSummary({ matched: [], unmatched: [] as { first_name: string; last_name: string }[], estimatedTotal: 0, loading: true });
 
-    const ws = workbook.Sheets[selectedSheet];
+    const ws = getSheet(workbook, selectedSheet);
+    if (!ws) return;
     const allRows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
 
     const { data: employees } = await supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId!);
@@ -347,7 +350,8 @@ export default function ImportConnecteam() {
     setResult(null);
 
     try {
-      const ws = workbook.Sheets[selectedSheet];
+      const ws = getSheet(workbook, selectedSheet);
+      if (!ws) { setImporting(false); return; }
       const allRows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
       if (allRows.length > MAX_ROW_COUNT) {
         throw new Error(`El archivo tiene demasiadas filas (${allRows.length}). Máximo permitido: ${MAX_ROW_COUNT}`);
