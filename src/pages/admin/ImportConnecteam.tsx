@@ -9,6 +9,7 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import * as XLSX from "xlsx";
+import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_ROW_COUNT = 10000;
@@ -66,7 +67,7 @@ export default function ImportConnecteam() {
     setFile(f);
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const wb = XLSX.read(evt.target?.result, { type: "binary" });
+      const wb = safeRead(evt.target?.result, { type: "binary" });
       setWorkbook(wb);
       setSheets(wb.SheetNames);
       if (wb.SheetNames.length === 1) {
@@ -82,7 +83,7 @@ export default function ImportConnecteam() {
 
   const processSheet = (wb: XLSX.WorkBook, sheetName: string) => {
     const ws = wb.Sheets[sheetName];
-    const json = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
+    const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
     if (json.length === 0) return;
     const hdrs = Object.keys(json[0]);
     setHeaders(hdrs);
@@ -110,7 +111,7 @@ export default function ImportConnecteam() {
 
     try {
       const ws = workbook.Sheets[selectedSheet];
-      const allRows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
+      const allRows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
       if (allRows.length > MAX_ROW_COUNT) {
         throw new Error(`El archivo tiene demasiadas filas (${allRows.length}). Máximo permitido: ${MAX_ROW_COUNT}`);
       }
