@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search, Download } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search, Download, CalendarIcon, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 interface Employee {
   id: string;
@@ -34,6 +38,8 @@ export default function EmployeeReport() {
   const [search, setSearch] = useState("");
   const [periods, setPeriods] = useState<PeriodRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -111,21 +117,32 @@ export default function EmployeeReport() {
     load();
   }, [selectedEmployee, selectedCompanyId]);
 
+  /* ── filtered by date range ── */
+  const filteredPeriods = useMemo(() => {
+    return periods.filter(p => {
+      if (dateFrom && new Date(p.start_date) < dateFrom) return false;
+      if (dateTo && new Date(p.end_date) > dateTo) return false;
+      return true;
+    });
+  }, [periods, dateFrom, dateTo]);
+
   const filteredEmployees = employees.filter(e =>
     `${e.first_name} ${e.last_name}`.toLowerCase().includes(search.toLowerCase())
   );
 
   const selectedEmp = employees.find(e => e.id === selectedEmployee);
-  const totalBase = periods.reduce((s, r) => s + r.base_total_pay, 0);
-  const totalExtras = periods.reduce((s, r) => s + r.extras_total, 0);
+  const totalBase = filteredPeriods.reduce((s, r) => s + r.base_total_pay, 0);
+  const totalExtras = filteredPeriods.reduce((s, r) => s + r.extras_total, 0);
+  const totalDeductions = filteredPeriods.reduce((s, r) => s + r.deductions_total, 0);
+  const totalFinal = filteredPeriods.reduce((s, r) => s + r.total_final_pay, 0);
 
   const exportCSV = () => {
-    if (!selectedEmp || periods.length === 0) return;
+    if (!selectedEmp || filteredPeriods.length === 0) return;
     const header = "Inicio,Fin,Estado,Base,Extras,Deducciones,Total";
-    const rows = periods.map(p =>
+    const rows = filteredPeriods.map(p =>
       `${p.start_date},${p.end_date},${p.status},${p.base_total_pay.toFixed(2)},${p.extras_total.toFixed(2)},${p.deductions_total.toFixed(2)},${p.total_final_pay.toFixed(2)}`
     );
-    const totalsRow = `TOTALES,,,${totalBase.toFixed(2)},${totalExtras.toFixed(2)},${periods.reduce((s, r) => s + r.deductions_total, 0).toFixed(2)},${periods.reduce((s, r) => s + r.total_final_pay, 0).toFixed(2)}`;
+    const totalsRow = `TOTALES,,,${totalBase.toFixed(2)},${totalExtras.toFixed(2)},${totalDeductions.toFixed(2)},${totalFinal.toFixed(2)}`;
     const csv = [header, ...rows, totalsRow].join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -135,8 +152,13 @@ export default function EmployeeReport() {
     a.click();
     URL.revokeObjectURL(url);
   };
-  const totalDeductions = periods.reduce((s, r) => s + r.deductions_total, 0);
-  const totalFinal = periods.reduce((s, r) => s + r.total_final_pay, 0);
+
+  const clearDates = () => {
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
+
+  const hasDateFilter = dateFrom || dateTo;
 
   return (
     <div>
@@ -153,40 +175,75 @@ export default function EmployeeReport() {
         <p className="page-subtitle">Historial de pagos y novedades de un empleado</p>
       </div>
 
-      <div className="mb-6 flex items-end gap-4">
-        <div className="flex-1 max-w-sm">
-        <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecciona un empleado" />
-          </SelectTrigger>
-          <SelectContent>
-            <div className="px-2 pb-2">
-              <div className="flex items-center gap-2 border rounded-md px-2">
-                <Search className="h-3 w-3 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="border-0 h-8 px-0 focus-visible:ring-0"
-                />
+      {/* Controls row */}
+      <div className="mb-6 flex flex-wrap items-end gap-3">
+        {/* Employee selector */}
+        <div className="flex-1 min-w-[200px] max-w-sm">
+          <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona un empleado" />
+            </SelectTrigger>
+            <SelectContent>
+              <div className="px-2 pb-2">
+                <div className="flex items-center gap-2 border rounded-md px-2">
+                  <Search className="h-3 w-3 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="border-0 h-8 px-0 focus-visible:ring-0"
+                  />
+                </div>
               </div>
-            </div>
-            {filteredEmployees.map(e => (
-              <SelectItem key={e.id} value={e.id}>
-                {e.first_name} {e.last_name} {!e.is_active && "(inactivo)"}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              {filteredEmployees.map(e => (
+                <SelectItem key={e.id} value={e.id}>
+                  {e.first_name} {e.last_name} {!e.is_active && "(inactivo)"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        {selectedEmployee && periods.length > 0 && (
+
+        {/* Date from */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("min-w-[140px] justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+              <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+              {dateFrom ? format(dateFrom, "yyyy-MM-dd") : "Desde"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+
+        {/* Date to */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("min-w-[140px] justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+              <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+              {dateTo ? format(dateTo, "yyyy-MM-dd") : "Hasta"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+
+        {hasDateFilter && (
+          <Button variant="ghost" size="sm" onClick={clearDates} className="text-muted-foreground">
+            <X className="h-3.5 w-3.5 mr-1" /> Limpiar
+          </Button>
+        )}
+
+        {selectedEmployee && filteredPeriods.length > 0 && (
           <Button variant="outline" size="sm" onClick={exportCSV}>
             <Download className="h-4 w-4 mr-1" /> Exportar CSV
           </Button>
         )}
       </div>
 
-      {selectedEmployee && !loading && periods.length > 0 && (
+      {selectedEmployee && !loading && filteredPeriods.length > 0 && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card>
@@ -211,7 +268,7 @@ export default function EmployeeReport() {
               <CardContent className="pt-4 pb-3">
                 <p className="text-xs text-muted-foreground mb-1">Total acumulado</p>
                 <p className="text-xl font-bold font-mono">${totalFinal.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">{periods.length} periodos</p>
+                <p className="text-xs text-muted-foreground">{filteredPeriods.length} periodos</p>
               </CardContent>
             </Card>
           </div>
@@ -230,7 +287,7 @@ export default function EmployeeReport() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {periods.map(p => (
+                {filteredPeriods.map(p => (
                   <TableRow key={p.period_id}>
                     <TableCell className="font-medium text-sm">{p.start_date} → {p.end_date}</TableCell>
                     <TableCell>
@@ -263,8 +320,12 @@ export default function EmployeeReport() {
         </>
       )}
 
-      {selectedEmployee && !loading && periods.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">No hay datos de pago para este empleado</div>
+      {selectedEmployee && !loading && filteredPeriods.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          {periods.length > 0 && hasDateFilter
+            ? "No hay periodos en el rango de fechas seleccionado"
+            : "No hay datos de pago para este empleado"}
+        </div>
       )}
 
       {loading && (
