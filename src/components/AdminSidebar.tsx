@@ -58,12 +58,15 @@ const ownerLinks = [
 
 export default function AdminSidebar() {
   const { signOut, role, hasModuleAccess } = useAuth();
-  const { companies, selectedCompanyId, setSelectedCompanyId } = useCompany();
+  const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
   const location = useLocation();
   const { collapsed, setCollapsed } = useSidebarCollapsed();
 
   const isLinkVisible = (module: string | null) => {
     if (!module) return true;
+    // First check company module activation
+    if (!isModuleActive(module)) return false;
+    // Then check role-based access
     if (role === 'owner' || role === 'admin') return true;
     if (role === 'manager') return hasModuleAccess(module, 'view');
     return false;
