@@ -487,6 +487,18 @@ export default function Employees() {
     const f: Record<string, string> = {};
     CONNECTEAM_FIELDS.forEach(field => { f[field.key] = emp[field.key] ?? ""; });
     setForm(f);
+    // Audit log: track access to sensitive employee data
+    if (isPrivileged && emp.id) {
+      const sensitiveFields = ['social_security_number', 'access_pin', 'verification_ssn_ein', 'driver_licence']
+        .filter(k => emp[k]);
+      if (sensitiveFields.length > 0) {
+        supabase.rpc('log_sensitive_access', {
+          _table_name: 'employees',
+          _record_id: emp.id,
+          _fields: sensitiveFields,
+        }).then();
+      }
+    }
   };
 
   const handleSaveFromSheet = async () => {

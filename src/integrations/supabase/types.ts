@@ -727,6 +727,39 @@ export type Database = {
           },
         ]
       }
+      sensitive_data_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          fields_accessed: string[]
+          id: string
+          ip_address: string | null
+          record_id: string | null
+          table_name: string
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          fields_accessed: string[]
+          id?: string
+          ip_address?: string | null
+          record_id?: string | null
+          table_name: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          fields_accessed?: string[]
+          id?: string
+          ip_address?: string | null
+          record_id?: string | null
+          table_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       shifts: {
         Row: {
           clock_in_device: string | null
@@ -1111,6 +1144,10 @@ export type Database = {
         Returns: boolean
       }
       is_global_owner: { Args: { _user_id: string }; Returns: boolean }
+      log_sensitive_access: {
+        Args: { _fields: string[]; _record_id: string; _table_name: string }
+        Returns: undefined
+      }
       user_company_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
