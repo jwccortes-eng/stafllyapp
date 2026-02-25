@@ -10,13 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search } from "lucide-react";
+import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 
 interface Employee { id: string; first_name: string; last_name: string; }
 interface Period { id: string; start_date: string; end_date: string; status: string; }
@@ -63,6 +64,12 @@ export default function Movements() {
   const [confirmImport, setConfirmImport] = useState(false);
   const [pendingInserts, setPendingInserts] = useState<any[]>([]);
   const [pendingResults, setPendingResults] = useState<ImportResult[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [passwordConfirmOpen, setPasswordConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const selectedPeriod = periods.find(p => p.id === filterPeriod);
+  const isPeriodClosed = selectedPeriod?.status === "closed";
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -105,10 +112,16 @@ export default function Movements() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const targetPeriodId = form.period_id || filterPeriod;
+    const targetPeriod = periods.find(p => p.id === targetPeriodId);
+    if (targetPeriod?.status === "closed") {
+      toast({ title: "Periodo cerrado", description: "No se pueden agregar novedades a un periodo cerrado.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     const { error } = await supabase.from("movements").insert({
       employee_id: form.employee_id,
-      period_id: form.period_id || filterPeriod,
+      period_id: targetPeriodId,
       concept_id: form.concept_id,
       quantity: form.quantity ? parseFloat(form.quantity) : null,
       rate: form.rate ? parseFloat(form.rate) : null,
@@ -127,9 +140,17 @@ export default function Movements() {
     setLoading(false);
   };
 
-  const handleDelete = async (id: string) => {
-    await supabase.from("movements").delete().eq("id", id);
+  const requestDelete = (id: string) => {
+    setPendingDeleteId(id);
+    setPasswordConfirmOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!pendingDeleteId) return;
+    await supabase.from("movements").delete().eq("id", pendingDeleteId);
+    setPendingDeleteId(null);
     fetchMovements(filterPeriod);
+    toast({ title: "Novedad eliminada" });
   };
 
   // --- Bulk Import Logic ---
@@ -334,7 +355,7 @@ export default function Movements() {
           {/* Bulk Import */}
           <Dialog open={importOpen} onOpenChange={(o) => { setImportOpen(o); if (!o) setImportResults(null); }}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Importar</Button>
+              <Button variant="outline" disabled={isPeriodClosed}><Upload className="h-4 w-4 mr-2" />Importar</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
@@ -421,7 +442,7 @@ export default function Movements() {
           {/* Single create */}
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />Nueva novedad</Button>
+              <Button disabled={isPeriodClosed}><Plus className="h-4 w-4 mr-2" />Nueva novedad</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Registrar novedad</DialogTitle></DialogHeader>
@@ -494,11 +515,25 @@ export default function Movements() {
         </div>
       </div>
 
+      {isPeriodClosed && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            <strong>Periodo cerrado.</strong> No se pueden agregar, modificar ni eliminar novedades en un periodo cerrado.
+          </p>
+        </div>
+      )}
+
       <div className="mb-4 flex items-center gap-3 flex-wrap">
         <div className="max-w-xs">
           <Select value={filterPeriod} onValueChange={setFilterPeriod}>
             <SelectTrigger><SelectValue placeholder="Filtrar por periodo" /></SelectTrigger>
-            <SelectContent>{periods.map(p => <SelectItem key={p.id} value={p.id}>{p.start_date} → {p.end_date}</SelectItem>)}</SelectContent>
+            <SelectContent>{periods.map(p => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.start_date} → {p.end_date}
+                {p.status === "closed" ? " 🔒" : ""}
+              </SelectItem>
+            ))}</SelectContent>
           </Select>
         </div>
         <div className="relative max-w-xs flex-1">
@@ -552,7 +587,7 @@ export default function Movements() {
                   <TableCell className="font-mono font-medium">${m.total_value}</TableCell>
                   <TableCell className="text-xs text-muted-foreground max-w-32 truncate">{m.note ?? ""}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(m.id)} className="text-deduction hover:text-deduction">
+                    <Button variant="ghost" size="icon" onClick={() => requestDelete(m.id)} className="text-deduction hover:text-deduction" disabled={isPeriodClosed}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -582,6 +617,15 @@ export default function Movements() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Password confirmation for delete */}
+      <PasswordConfirmDialog
+        open={passwordConfirmOpen}
+        onOpenChange={setPasswordConfirmOpen}
+        title="Eliminar novedad"
+        description="Para eliminar esta novedad, confirma tu contraseña de administrador."
+        onConfirm={executeDelete}
+      />
     </div>
   );
 }
