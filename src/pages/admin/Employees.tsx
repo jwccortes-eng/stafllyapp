@@ -60,6 +60,14 @@ const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; requir
 
 type EmployeeRecord = Record<string, any>;
 
+/** Converts "JOHN DOE" or "john doe" to "John Doe" */
+const toTitleCase = (s: string | null | undefined): string => {
+  if (!s) return "";
+  return s.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+};
+
+const NAME_FIELDS = ["first_name", "last_name", "direct_manager", "recommended_by", "added_by"];
+
 interface ImportPreviewRow extends EmployeeRecord {
   exists: boolean;
 }
@@ -118,7 +126,8 @@ export default function Employees() {
   const buildInsertData = (src: Record<string, string>) => {
     const data: Record<string, any> = {};
     CONNECTEAM_FIELDS.forEach(f => {
-      const val = (src[f.key] ?? "").trim();
+      let val = (src[f.key] ?? "").trim();
+      if (NAME_FIELDS.includes(f.key)) val = toTitleCase(val);
       data[f.key] = val || null;
     });
     data.first_name = data.first_name || "";
@@ -388,7 +397,7 @@ export default function Employees() {
     for (const diff of selected) {
       const updateData: Record<string, any> = {};
       diff.changes.forEach(c => {
-        updateData[c.field] = c.newVal || null;
+        updateData[c.field] = NAME_FIELDS.includes(c.field) ? toTitleCase(c.newVal) : (c.newVal || null);
       });
 
       if (diff.employeeId.startsWith("__new__")) {
