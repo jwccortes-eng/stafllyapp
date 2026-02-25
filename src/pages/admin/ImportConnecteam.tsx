@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight, Trash2, Download, Info } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
@@ -13,9 +13,10 @@ import * as XLSX from "xlsx";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { Badge } from "@/components/ui/badge";
-
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_ROW_COUNT = 10000;
+
+const ACCEPTED_EXTENSIONS = ".xls,.xlsx,.csv";
 
 const KNOWN_HEADERS = [
   "First name", "Last name", "Verification SSN - EIN",
@@ -26,7 +27,42 @@ const KNOWN_HEADERS = [
   "End Date", "Out", "End - location", "Shift hours", "Hourly rate (USD)",
   "Daily total hours", "Daily total pay (USD)", "Customer", "Ride",
   "Employee notes", "Manager notes",
+  "Clock In - Device", "Clock Out - Device",
+  "Clock In - Time", "Clock Out - Time",
 ];
+
+const downloadTemplate = () => {
+  const templateData = [
+    {
+      "First name": "Juan", "Last name": "Pérez", "Verification SSN - EIN": "123-45-6789",
+      "Shift Number": "1", "Scheduled shift title": "Morning", "Type": "Regular",
+      "Job code": "JC01", "Sub-job": "", "Sub-job code": "",
+      "Start Date": "2025-01-06", "In": "08:00", "Start - location": "Office",
+      "End Date": "2025-01-06", "Out": "16:00", "End - location": "Office",
+      "Shift hours": 8, "Hourly rate (USD)": 15, "Daily total hours": 8,
+      "Daily total pay (USD)": 120, "Customer": "", "Ride": "",
+      "Employee notes": "", "Manager notes": "",
+      "Weekly total hours": 40, "Total work hours": 40, "Total Paid Hours": 40,
+      "Total Regular": 40, "Total overtime": 0, "Total pay": 600,
+    },
+    {
+      "First name": "María", "Last name": "López", "Verification SSN - EIN": "987-65-4321",
+      "Shift Number": "1", "Scheduled shift title": "Afternoon", "Type": "Regular",
+      "Job code": "JC02", "Sub-job": "", "Sub-job code": "",
+      "Start Date": "2025-01-06", "In": "14:00", "Start - location": "Site A",
+      "End Date": "2025-01-06", "Out": "22:00", "End - location": "Site A",
+      "Shift hours": 8, "Hourly rate (USD)": 18, "Daily total hours": 8,
+      "Daily total pay (USD)": 144, "Customer": "Client X", "Ride": "Van 1",
+      "Employee notes": "", "Manager notes": "",
+      "Weekly total hours": 45, "Total work hours": 45, "Total Paid Hours": 45,
+      "Total Regular": 40, "Total overtime": 5, "Total pay": 855,
+    },
+  ];
+  const ws = XLSX.utils.json_to_sheet(templateData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Turnos");
+  XLSX.writeFile(wb, "plantilla_importacion_connecteam.xlsx");
+};
 
 const BASE_PAY_FIELDS: Record<string, string> = {
   "Weekly total hours": "weekly_total_hours",
@@ -332,9 +368,30 @@ export default function ImportConnecteam() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Importar Connecteam</h1>
-        <p className="page-subtitle">Sube el archivo XLS/XLSX exportado de Connecteam</p>
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h1 className="page-title">Importar Connecteam</h1>
+          <p className="page-subtitle">Importa turnos y pagos desde archivos XLS, XLSX o CSV exportados de Connecteam</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={downloadTemplate} className="shrink-0">
+          <Download className="h-4 w-4 mr-2" /> Descargar plantilla
+        </Button>
+      </div>
+
+      <div className="bg-muted/50 border border-border rounded-lg p-4 mb-6 flex items-start gap-3">
+        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">Instrucciones de importación</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            <li>Formatos aceptados: <strong>XLS, XLSX, CSV</strong></li>
+            <li>Tamaño máximo: 10 MB / máximo 10,000 filas</li>
+            <li>El archivo debe contener las columnas: <strong>First name, Last name</strong> (obligatorias) y columnas de turnos/pago</li>
+            <li>Los empleados se emparejan por nombre exacto (nombre + apellido)</li>
+            <li>Al importar se <strong>reemplazan</strong> los datos base y turnos del periodo seleccionado</li>
+            <li>Los movimientos/novedades manuales <strong>no</strong> se afectan</li>
+          </ul>
+          <p className="text-xs mt-2">Descarga la plantilla de ejemplo para ver el formato esperado con todas las columnas.</p>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6">
@@ -364,10 +421,11 @@ export default function ImportConnecteam() {
             </div>
             {selectedPeriod && (
               <div>
-                <Label>Archivo XLS/XLSX</Label>
+                <Label>Archivo XLS / XLSX / CSV</Label>
                 <div className="mt-1 border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
                   <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <input type="file" accept=".xls,.xlsx" onChange={handleFileUpload} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                  <p className="text-xs text-muted-foreground mb-2">Arrastra o selecciona tu archivo exportado de Connecteam</p>
+                  <input type="file" accept={ACCEPTED_EXTENSIONS} onChange={handleFileUpload} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
                 </div>
               </div>
             )}
