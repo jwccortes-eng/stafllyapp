@@ -8,11 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Pencil, Trash2, ToggleLeft, Upload } from "lucide-react";
+import { Plus, MoreHorizontal, Pencil, Trash2, ToggleLeft, Upload, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
+import * as XLSX from "xlsx";
 
 interface Concept {
   id: string;
@@ -260,6 +261,18 @@ export default function Concepts() {
           <p className="page-subtitle">Extras y deducciones dinámicas</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => {
+            const template = [
+              { nombre: "Bono productividad", categoría: "extra", cálculo: "quantity_x_rate", unidad: "unidades", tarifa: 50, fuente_tarifa: "concept_default" },
+              { nombre: "Descuento uniforme", categoría: "deducción", cálculo: "manual_value", unidad: "pesos", tarifa: "", fuente_tarifa: "concept_default" },
+            ];
+            const ws = XLSX.utils.json_to_sheet(template);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Conceptos");
+            XLSX.writeFile(wb, "plantilla_conceptos.xlsx");
+          }}>
+            <Download className="h-4 w-4 mr-2" />Plantilla
+          </Button>
           <Button variant="outline" disabled={importing} onClick={() => document.getElementById("import-concepts-file")?.click()}>
             <Upload className="h-4 w-4 mr-2" />{importing ? "Importando..." : "Importar XLS"}
           </Button>
