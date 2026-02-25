@@ -124,30 +124,30 @@ export default function Directory() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="relative z-10 flex items-center gap-2 mt-3 pt-3 border-t border-border">
+                <div className="relative z-10 flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border">
                   {phone && (
                     <>
                       <a
                         href={`tel:${phone}`}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
+                        className="flex-1 min-w-[4.5rem] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
                       >
-                        <Phone className="h-3.5 w-3.5" />
+                        <Phone className="h-3.5 w-3.5 shrink-0" />
                         Llamar
                       </a>
                       <a
                         href={`https://wa.me/${phone.replace('+', '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
+                        className="flex-1 min-w-[4.5rem] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
                       >
-                        <MessageCircle className="h-3.5 w-3.5" />
+                        <MessageCircle className="h-3.5 w-3.5 shrink-0" />
                         WhatsApp
                       </a>
                       <a
                         href={`sms:${phone}`}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        className="flex-1 min-w-[4.5rem] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                       >
-                        <MessageSquare className="h-3.5 w-3.5" />
+                        <MessageSquare className="h-3.5 w-3.5 shrink-0" />
                         Texto
                       </a>
                     </>
@@ -155,9 +155,9 @@ export default function Directory() {
                   {emp.email && (
                     <a
                       href={`mailto:${emp.email}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
+                      className="flex-1 min-w-[4.5rem] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
                     >
-                      <Mail className="h-3.5 w-3.5" />
+                      <Mail className="h-3.5 w-3.5 shrink-0" />
                       Correo
                     </a>
                   )}
