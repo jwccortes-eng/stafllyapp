@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      auth_rate_limits: {
+        Row: {
+          created_at: string
+          failed_attempts: number
+          id: string
+          last_attempt_at: string | null
+          locked_until: string | null
+          phone_number: string
+        }
+        Insert: {
+          created_at?: string
+          failed_attempts?: number
+          id?: string
+          last_attempt_at?: string | null
+          locked_until?: string | null
+          phone_number: string
+        }
+        Update: {
+          created_at?: string
+          failed_attempts?: number
+          id?: string
+          last_attempt_at?: string | null
+          locked_until?: string | null
+          phone_number?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           created_at: string
@@ -1128,6 +1155,7 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       has_company_role: {
         Args: { _company_id: string; _role: string; _user_id: string }
         Returns: boolean
