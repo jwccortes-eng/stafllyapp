@@ -30,6 +30,8 @@ interface CompanyRecord {
   is_sandbox: boolean;
   created_at: string;
   user_count?: number;
+  active_modules?: number;
+  total_modules?: number;
 }
 
 export default function CompaniesPage() {
@@ -55,16 +57,29 @@ export default function CompaniesPage() {
     if (!data) return;
 
     // Get user counts per company
-    const { data: counts } = await supabase
-      .from("company_users")
-      .select("company_id");
+    const [{ data: counts }, { data: modules }] = await Promise.all([
+      supabase.from("company_users").select("company_id"),
+      supabase.from("company_modules").select("company_id, is_active"),
+    ]);
 
     const countMap: Record<string, number> = {};
     counts?.forEach(c => {
       countMap[c.company_id] = (countMap[c.company_id] || 0) + 1;
     });
 
-    setCompanies(data.map(c => ({ ...c, user_count: countMap[c.id] || 0 })));
+    const activeModMap: Record<string, number> = {};
+    const totalModMap: Record<string, number> = {};
+    modules?.forEach(m => {
+      totalModMap[m.company_id] = (totalModMap[m.company_id] || 0) + 1;
+      if (m.is_active) activeModMap[m.company_id] = (activeModMap[m.company_id] || 0) + 1;
+    });
+
+    setCompanies(data.map(c => ({
+      ...c,
+      user_count: countMap[c.id] || 0,
+      active_modules: activeModMap[c.id] || 0,
+      total_modules: totalModMap[c.id] || 0,
+    })));
   };
 
   useEffect(() => { fetchCompanies(); }, []);
@@ -217,6 +232,7 @@ export default function CompaniesPage() {
               <TableHead>Nombre</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Usuarios</TableHead>
+              <TableHead>Módulos</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
@@ -224,8 +240,8 @@ export default function CompaniesPage() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  No hay empresas
+                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                   No hay empresas
                 </TableCell>
               </TableRow>
             ) : (
@@ -238,9 +254,19 @@ export default function CompaniesPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{c.slug}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{c.user_count} usuarios</Badge>
-                  </TableCell>
+                   <TableCell>
+                     <Badge variant="outline">{c.user_count} usuarios</Badge>
+                   </TableCell>
+                   <TableCell>
+                     {c.total_modules ? (
+                       <Badge variant="outline" className={c.active_modules === c.total_modules ? "border-primary/30 text-primary" : ""}>
+                         <LayoutGrid className="h-3 w-3 mr-1" />
+                         {c.active_modules}/{c.total_modules}
+                       </Badge>
+                     ) : (
+                       <span className="text-xs text-muted-foreground">Sin configurar</span>
+                     )}
+                   </TableCell>
                   <TableCell>
                     <Badge variant={c.is_active ? "default" : "secondary"}>
                       {c.is_active ? "Activa" : "Inactiva"}
