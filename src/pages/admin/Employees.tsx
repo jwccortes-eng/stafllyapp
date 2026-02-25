@@ -46,8 +46,6 @@ const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; requir
   { key: "english_level", label: "Nivel inglés", fileCol: ["English Level"] },
   { key: "employee_role", label: "Rol", fileCol: ["Role"] },
   { key: "qualify", label: "Calificación", fileCol: ["Qualify"] },
-  { key: "social_security_number", label: "Social Security #", fileCol: ["Social security number"] },
-  { key: "verification_ssn_ein", label: "SSN/EIN Verificación", fileCol: ["Verification SSN - EIN"] },
   { key: "recommended_by", label: "Recomendado por", fileCol: ["Recommended by?"] },
   { key: "direct_manager", label: "Manager directo", fileCol: ["Direct manager"] },
   { key: "has_car", label: "¿Tiene carro?", fileCol: ["You have car?"] },
