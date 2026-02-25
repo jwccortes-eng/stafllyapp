@@ -12,6 +12,7 @@ import { getUserFriendlyError } from "@/lib/error-helpers";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } from "@/lib/safe-xlsx";
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
+import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -89,12 +90,16 @@ interface Period { id: string; start_date: string; end_date: string; status: str
 
 export default function ImportConnecteam() {
   const { selectedCompanyId } = useCompany();
+  const { role } = useAuth();
+  const canSeeSsn = role === "owner" || role === "admin";
+  const isSsnHeader = (h: string) => /ssn|ein|social.?security/i.test(h);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [sheets, setSheets] = useState<string[]>([]);
   const [selectedSheet, setSelectedSheet] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
+  const visiblePreviewHeaders = headers.slice(0, 8).filter(h => canSeeSsn || !isSsnHeader(h));
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -621,7 +626,7 @@ export default function ImportConnecteam() {
             <CardHeader><CardTitle>Paso 3: Mapeo de columnas</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-                {headers.map((h) => (
+                {headers.filter(h => canSeeSsn || !isSsnHeader(h)).map((h) => (
                   <div key={h} className="flex items-center gap-2 text-sm">
                     <span className="font-mono text-xs bg-muted px-2 py-1 rounded shrink-0 max-w-32 truncate" title={h}>{h}</span>
                     <span className="text-muted-foreground">→</span>
@@ -639,13 +644,13 @@ export default function ImportConnecteam() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {headers.slice(0, 8).map(h => <TableHead key={h} className="text-xs">{h}</TableHead>)}
+                      {visiblePreviewHeaders.map(h => <TableHead key={h} className="text-xs">{h}</TableHead>)}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {previewRows.map((row, i) => (
                       <TableRow key={i}>
-                        {headers.slice(0, 8).map(h => <TableCell key={h} className="text-xs">{row[h]}</TableCell>)}
+                        {visiblePreviewHeaders.map(h => <TableCell key={h} className="text-xs">{row[h]}</TableCell>)}
                       </TableRow>
                     ))}
                   </TableBody>
