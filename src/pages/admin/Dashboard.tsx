@@ -53,7 +53,7 @@ function useAnimatedNumber(target: number, duration = 800) {
 
 export default function AdminDashboard() {
   const { selectedCompanyId, selectedCompany, isModuleActive } = useCompany();
-  const { role, hasModuleAccess } = useAuth();
+  const { role, hasModuleAccess, fullName } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({
     totalEmployees: 0,
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
               <span className="text-sm font-medium opacity-80">{greeting}</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold font-heading tracking-tight">
-              Dashboard
+              {fullName ? `${greeting}, ${fullName}` : "Dashboard"}
             </h1>
             <p className="text-sm opacity-80 mt-1">
               {selectedCompany?.name ?? "Selecciona una empresa"} · Nómina semanal
@@ -221,9 +221,13 @@ export default function AdminDashboard() {
                 <span className="text-[11px] font-medium opacity-80">{periodProgress}%</span>
               </div>
               <span className={`text-[11px] mt-1 inline-block px-2 py-0.5 rounded-full font-medium ${
-                stats.periodStatus === 'open' ? 'bg-white/25 text-white' : 'bg-white/15 text-white/80'
+                stats.periodStatus === 'open'
+                  ? 'bg-earning/30 text-white'
+                  : stats.periodStatus === 'closed'
+                    ? 'bg-warning/30 text-white'
+                    : 'bg-white/25 text-white'
               }`}>
-                {stats.periodStatus === 'open' ? '● Abierto' : '○ Cerrado'}
+                {stats.periodStatus === 'open' ? '● Abierto' : stats.periodStatus === 'closed' ? '● Cerrado' : '● Publicado'}
               </span>
             </div>
           )}

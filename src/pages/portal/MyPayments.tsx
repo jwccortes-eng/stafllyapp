@@ -35,6 +35,9 @@ export default function MyPayments() {
   const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null);
   const [periodDetails, setPeriodDetails] = useState<Record<string, MovementDetail[]>>({});
   const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
+  const [empName, setEmpName] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [currentPeriod, setCurrentPeriod] = useState<{ start_date: string; end_date: string; status: string; published_at: string | null } | null>(null);
 
   const loadPeriodDetails = useCallback(async (periodId: string) => {
     if (periodDetails[periodId]) return;
@@ -72,6 +75,31 @@ export default function MyPayments() {
   useEffect(() => {
     if (!employeeId) return;
     async function load() {
+      // Fetch employee name and company
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("first_name, last_name, company_id")
+        .eq("id", employeeId)
+        .maybeSingle();
+      if (empData) {
+        setEmpName(`${empData.first_name} ${empData.last_name}`);
+        const { data: comp } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", empData.company_id)
+          .maybeSingle();
+        setCompanyName(comp?.name ?? null);
+
+        // Fetch current (latest) period for the company
+        const { data: latestPeriod } = await supabase
+          .from("pay_periods")
+          .select("start_date, end_date, status, published_at")
+          .eq("company_id", empData.company_id)
+          .order("start_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setCurrentPeriod(latestPeriod ?? null);
+      }
       const { data, error } = await supabase
         .from("period_base_pay")
         .select(
@@ -162,12 +190,33 @@ export default function MyPayments() {
     );
   }
 
+  const periodStatusLabel = currentPeriod
+    ? currentPeriod.published_at
+      ? { label: "Publicado", cls: "bg-primary/10 text-primary" }
+      : currentPeriod.status === "open"
+        ? { label: "Abierto", cls: "bg-earning/10 text-earning" }
+        : { label: "Cerrado", cls: "bg-warning/10 text-warning" }
+    : null;
+
   return (
     <div className="space-y-8">
       {/* Greeting + summary */}
       <div>
         <p className="text-sm text-muted-foreground">{greeting}</p>
-        <h1 className="text-2xl font-bold font-heading tracking-tight mt-1">Mis Pagos</h1>
+        <h1 className="text-2xl font-bold font-heading tracking-tight mt-1">
+          {empName ? `${greeting}, ${empName}` : "Mis Pagos"}
+        </h1>
+        {companyName && <p className="text-sm text-muted-foreground mt-0.5">{companyName}</p>}
+        {currentPeriod && periodStatusLabel && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-muted-foreground">
+              {currentPeriod.start_date} → {currentPeriod.end_date}
+            </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${periodStatusLabel.cls}`}>
+              {periodStatusLabel.label}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Big number card */}
