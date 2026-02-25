@@ -39,16 +39,16 @@ export default function Reports() {
           </Card>
         </Link>
 
-        <Link to="/admin/employees">
+        <Link to="/admin/directory">
           <Card className="stat-card cursor-pointer hover:border-primary/30">
             <CardHeader className="flex flex-row items-center gap-3">
               <Users className="h-8 w-8 text-earning" />
               <div>
-                <CardTitle className="text-base">Directorio empleados</CardTitle>
+                <CardTitle className="text-base">Directorio de contacto</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Lista completa con búsqueda y datos de contacto.</p>
+              <p className="text-sm text-muted-foreground">Teléfonos, correos y acciones rápidas de llamada, texto y email.</p>
             </CardContent>
           </Card>
         </Link>
