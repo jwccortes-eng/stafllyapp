@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { useSidebarCollapsed } from "./AdminLayout";
+import logoQS from "@/assets/logo-quality-staff.png";
 
 interface LinkDef {
   to: string;
@@ -326,16 +327,11 @@ export default function AdminSidebar() {
       collapsed ? "w-14" : "w-60"
     )}>
       {/* Header */}
-      <div className={cn("border-b border-sidebar-border flex items-center", collapsed ? "px-2 py-3 justify-center" : "px-5 py-4 gap-3")}>
-        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <span className="text-primary-foreground text-sm font-bold">PW</span>
-        </div>
+      <div className={cn("border-b border-sidebar-border flex items-center", collapsed ? "px-2 py-3 justify-center" : "px-4 py-3 gap-3")}>
+        <img src={logoQS} alt="Quality Staff" className={cn("shrink-0 object-contain", collapsed ? "h-8 w-8" : "h-9")} />
         {!collapsed && (
           <div className="min-w-0">
-            <h1 className="text-sm font-bold text-foreground font-heading tracking-tight leading-none">
-              Payroll Weekly
-            </h1>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{roleLabel}</p>
+            <p className="text-[11px] text-muted-foreground">{roleLabel}</p>
           </div>
         )}
       </div>

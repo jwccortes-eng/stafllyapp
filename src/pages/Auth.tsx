@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Phone, Mail } from "lucide-react";
+import logoQS from "@/assets/logo-quality-staff.png";
 
 function isPhoneNumber(value: string): boolean {
   const cleaned = value.replace(/[\s\-\(\)\+]/g, "");
@@ -90,8 +91,9 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-heading">Payroll Weekly Manager</CardTitle>
+        <CardHeader className="text-center space-y-3">
+          <img src={logoQS} alt="Quality Staff" className="h-16 mx-auto object-contain" />
+          <CardTitle className="text-xl font-heading">Quality Staff</CardTitle>
           <CardDescription>
             {isLogin
               ? isPhone
