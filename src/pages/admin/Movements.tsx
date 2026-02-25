@@ -80,10 +80,22 @@ export default function Movements() {
       supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId).order("start_date", { ascending: false }),
       supabase.from("concepts").select("*").eq("is_active", true).eq("company_id", selectedCompanyId).order("name"),
     ]).then(([e, p, c]) => {
-      setEmployees((e.data as Employee[]) ?? []);
-      setPeriods((p.data as Period[]) ?? []);
-      setConcepts((c.data as Concept[]) ?? []);
-      if (p.data?.length) setFilterPeriod(p.data[0].id);
+      const emps = (e.data as Employee[]) ?? [];
+      const pers = (p.data as Period[]) ?? [];
+      const cons = (c.data as Concept[]) ?? [];
+      setEmployees(emps);
+      setPeriods(pers);
+      setConcepts(cons);
+      if (pers.length) {
+        const today = new Date().toISOString().slice(0, 10);
+        const current = pers.find(pp => pp.start_date <= today && pp.end_date >= today);
+        if (current) {
+          setFilterPeriod(current.id);
+        } else {
+          const past = pers.find(pp => pp.end_date < today);
+          setFilterPeriod(past?.id ?? pers[0].id);
+        }
+      }
     });
   }, [selectedCompanyId]);
 
