@@ -24,7 +24,9 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
@@ -84,6 +86,10 @@ export default function Employees() {
   const { selectedCompanyId } = useCompany();
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+  const [filterRole, setFilterRole] = useState<string>("all");
+  const [filterGroup, setFilterGroup] = useState<string>("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
@@ -94,11 +100,11 @@ export default function Employees() {
   const [deleteTarget, setDeleteTarget] = useState<EmployeeRecord | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [viewEmployee, setViewEmployee] = useState<EmployeeRecord | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   const [importing, setImporting] = useState(false);
-  // Update state (diff + full replace)
   const [updateDiffs, setUpdateDiffs] = useState<UpdateDiff[]>([]);
   const [updateStep, setUpdateStep] = useState<"upload" | "preview" | "done">("upload");
   const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
@@ -447,9 +453,50 @@ export default function Employees() {
     toast({ title: "Exportado", description: `${rows.length} empleados exportados a Excel` });
   };
 
-  const filtered = employees.filter((e) =>
-    `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase())
-  );
+  // Derive unique roles and groups for filters
+  const uniqueRoles = [...new Set(employees.map(e => e.employee_role).filter(Boolean))];
+  const uniqueGroups = [...new Set(employees.map(e => e.groups).filter(Boolean))];
+
+  const activeFilterCount = [filterStatus !== "all", filterRole !== "all", filterGroup !== "all"].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setFilterStatus("all");
+    setFilterRole("all");
+    setFilterGroup("all");
+  };
+
+  const filtered = employees.filter((e) => {
+    const matchesSearch = `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = filterStatus === "all" || (filterStatus === "active" ? e.is_active : !e.is_active);
+    const matchesRole = filterRole === "all" || e.employee_role === filterRole;
+    const matchesGroup = filterGroup === "all" || e.groups === filterGroup;
+    return matchesSearch && matchesStatus && matchesRole && matchesGroup;
+  });
+
+  const openDetailSheet = (emp: EmployeeRecord) => {
+    setViewEmployee(emp);
+    setIsEditing(false);
+    const f: Record<string, string> = {};
+    CONNECTEAM_FIELDS.forEach(field => { f[field.key] = emp[field.key] ?? ""; });
+    setForm(f);
+  };
+
+  const handleSaveFromSheet = async () => {
+    if (!viewEmployee) return;
+    setLoading(true);
+    const { error } = await supabase.from("employees").update(buildInsertData(form) as any).eq("id", viewEmployee.id);
+    if (error) {
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+    } else {
+      toast({ title: "Empleado actualizado" });
+      setIsEditing(false);
+      fetchEmployees();
+      // Update viewEmployee with new data
+      const updated = { ...viewEmployee, ...buildInsertData(form) };
+      setViewEmployee(updated);
+    }
+    setLoading(false);
+  };
 
   const EmployeeForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
     <form onSubmit={onSubmit} className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
@@ -719,38 +766,103 @@ export default function Employees() {
       </div>
 
       <div className="data-table-wrapper">
-        <div className="p-4 border-b">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar empleado..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        <div className="p-4 border-b space-y-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por nombre, email o teléfono..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+            </div>
+            <Button
+              variant={filtersOpen || activeFilterCount > 0 ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtros
+              {activeFilterCount > 0 && (
+                <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full">
+                  {activeFilterCount}
+                </Badge>
+              )}
+              <ChevronDown className={`h-3 w-3 ml-1 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+            </Button>
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
+                <X className="h-3 w-3 mr-1" />Limpiar
+              </Button>
+            )}
           </div>
+
+          {filtersOpen && (
+            <div className="flex gap-3 flex-wrap animate-in slide-in-from-top-2 duration-200">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Estado</Label>
+                <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Activos</SelectItem>
+                    <SelectItem value="inactive">Inactivos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {uniqueRoles.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Rol</Label>
+                  <Select value={filterRole} onValueChange={setFilterRole}>
+                    <SelectTrigger className="w-[160px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los roles</SelectItem>
+                      {uniqueRoles.map(r => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {uniqueGroups.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Grupo</Label>
+                  <Select value={filterGroup} onValueChange={setFilterGroup}>
+                    <SelectTrigger className="w-[160px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los grupos</SelectItem>
+                      {uniqueGroups.map(g => (
+                        <SelectItem key={g} value={g}>{g}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-10"></TableHead>
-              <TableHead>First name</TableHead>
-              <TableHead>Last name</TableHead>
+              <TableHead>Nombre</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Groups</TableHead>
-              <TableHead>Tags</TableHead>
-              <TableHead>Country code</TableHead>
-              <TableHead>Mobile phone</TableHead>
-              <TableHead>Role</TableHead>
+              <TableHead>Teléfono</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
             ) : (
               filtered.map((e) => {
                 const initials = `${(e.first_name?.[0] ?? "").toUpperCase()}${(e.last_name?.[0] ?? "").toUpperCase()}`;
-                // Generate a consistent color from name
                 const hue = ((e.first_name?.charCodeAt(0) ?? 0) * 37 + (e.last_name?.charCodeAt(0) ?? 0) * 17) % 360;
                 return (
-                <TableRow key={e.id} className={!e.is_active ? "opacity-50" : ""}>
+                <TableRow key={e.id} className={`${!e.is_active ? "opacity-50" : ""} group`}>
                   <TableCell>
                     <div
                       className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground"
@@ -759,14 +871,35 @@ export default function Employees() {
                       {initials}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{e.first_name}</TableCell>
-                  <TableCell className="font-medium">{e.last_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{e.email ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{e.groups ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{e.tags ? <Badge variant="outline" className="text-xs">{e.tags}</Badge> : <span className="text-muted-foreground">Untagged</span>}</TableCell>
-                  <TableCell className="text-xs">{e.country_code ?? "+1"}</TableCell>
-                  <TableCell className="text-xs">{e.phone_number ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{e.employee_role ?? "—"}</TableCell>
+                  <TableCell>
+                    <button
+                      onClick={() => openDetailSheet(e)}
+                      className="text-left hover:text-primary transition-colors"
+                    >
+                      <span className="font-medium">{e.first_name} {e.last_name}</span>
+                      {e.employee_role && (
+                        <span className="block text-xs text-muted-foreground">{e.employee_role}</span>
+                      )}
+                    </button>
+                  </TableCell>
+                  <TableCell>
+                    {e.email ? (
+                      <a href={`mailto:${e.email}`} className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1.5">
+                        <Mail className="h-3 w-3" />{e.email}
+                      </a>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {e.phone_number ? (
+                      <a href={`tel:${e.phone_number}`} className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1.5">
+                        <Phone className="h-3 w-3" />{e.phone_number}
+                      </a>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <span className={e.is_active ? "earning-badge" : "deduction-badge"}>
                       {e.is_active ? "Activo" : "Inactivo"}
@@ -775,16 +908,13 @@ export default function Employees() {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setViewEmployee(e)}>
+                        <DropdownMenuItem onClick={() => openDetailSheet(e)}>
                           <Eye className="h-4 w-4 mr-2" />Ver detalle
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEdit(e)}>
-                          <Pencil className="h-4 w-4 mr-2" />Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleActive(e)}>
                           {e.is_active ? <UserX className="h-4 w-4 mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
@@ -804,36 +934,89 @@ export default function Employees() {
         </Table>
       </div>
 
-      {/* View Detail Sheet */}
-      <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) setViewEmployee(null); }}>
+      {/* Detail + Edit Sheet */}
+      <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); } }}>
         <SheetContent className="w-[400px] sm:w-[540px]">
           <SheetHeader>
-            <SheetTitle>{viewEmployee?.first_name} {viewEmployee?.last_name}</SheetTitle>
-            <SheetDescription>Todos los datos del empleado</SheetDescription>
+            <div className="flex items-center justify-between pr-6">
+              <div>
+                <SheetTitle>{viewEmployee?.first_name} {viewEmployee?.last_name}</SheetTitle>
+                <SheetDescription>
+                  {viewEmployee?.employee_role ?? "Sin rol asignado"} · {viewEmployee?.is_active ? "Activo" : "Inactivo"}
+                </SheetDescription>
+              </div>
+              <Button
+                variant={isEditing ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  if (isEditing) {
+                    handleSaveFromSheet();
+                  } else {
+                    setIsEditing(true);
+                  }
+                }}
+                disabled={loading}
+              >
+                {isEditing ? (loading ? "Guardando..." : "Guardar") : <><Pencil className="h-3 w-3 mr-1.5" />Editar</>}
+              </Button>
+            </div>
           </SheetHeader>
           <ScrollArea className="h-[calc(100vh-120px)] mt-4 pr-4">
+            {isEditing && (
+              <div className="mb-3 flex justify-end">
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
+                  <X className="h-3 w-3 mr-1" />Cancelar
+                </Button>
+              </div>
+            )}
             <div className="space-y-1">
-              {CONNECTEAM_FIELDS.map(f => (
-                <div key={f.key} className="flex justify-between py-2 border-b border-border/50">
-                  <span className="text-xs text-muted-foreground">{f.label}</span>
-                  <span className="text-sm font-medium text-right max-w-[60%] break-words">
-                    {viewEmployee?.[f.key] || "—"}
-                  </span>
+              {CONNECTEAM_FIELDS.filter(f => !f.hidden).map(f => (
+                <div key={f.key} className="flex justify-between items-center py-2 border-b border-border/50 gap-3">
+                  <span className="text-xs text-muted-foreground shrink-0 w-28">{f.label}</span>
+                  {isEditing ? (
+                    <Input
+                      value={form[f.key] ?? ""}
+                      onChange={ev => setForm(prev => ({ ...prev, [f.key]: ev.target.value }))}
+                      className="h-7 text-sm flex-1"
+                    />
+                  ) : (
+                    <span className="text-sm font-medium text-right max-w-[60%] break-words">
+                      {viewEmployee?.[f.key] || "—"}
+                    </span>
+                  )}
                 </div>
               ))}
-              <Separator className="my-2" />
+              <Separator className="my-3" />
               <div className="flex justify-between py-2">
                 <span className="text-xs text-muted-foreground">Estado</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${viewEmployee?.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                   {viewEmployee?.is_active ? "Activo" : "Inactivo"}
                 </span>
               </div>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}
+                >
+                  {viewEmployee?.is_active ? <><UserX className="h-3 w-3 mr-1.5" />Desactivar</> : <><UserCheck className="h-3 w-3 mr-1.5" />Activar</>}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => { if (viewEmployee) { setDeleteTarget(viewEmployee); setPasswordOpen(true); setViewEmployee(null); } }}
+                >
+                  <Trash2 className="h-3 w-3 mr-1.5" />Eliminar
+                </Button>
+              </div>
             </div>
           </ScrollArea>
         </SheetContent>
       </Sheet>
 
-      {/* Edit Dialog */}
+      {/* Create Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
