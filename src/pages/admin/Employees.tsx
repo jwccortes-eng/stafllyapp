@@ -32,12 +32,13 @@ import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parse
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 
 // All Connecteam fields in Excel order
-const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean }[] = [
+const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean; hidden?: boolean }[] = [
   { key: "first_name", label: "Nombre", fileCol: ["First name"], required: true },
   { key: "last_name", label: "Apellido", fileCol: ["Last name"], required: true },
   { key: "phone_number", label: "Teléfono", fileCol: ["Mobile phone", "Phone"] },
   { key: "country_code", label: "Código país", fileCol: ["Country code"] },
   { key: "email", label: "Email", fileCol: ["Email"] },
+  { key: "access_pin", label: "PIN de acceso", fileCol: [], hidden: true },
   { key: "start_date", label: "Fecha inicio", fileCol: ["Start Date"] },
   { key: "english_level", label: "Nivel inglés", fileCol: ["English Level"] },
   { key: "employee_role", label: "Rol", fileCol: ["Role"] },
