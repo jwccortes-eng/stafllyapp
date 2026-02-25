@@ -328,7 +328,7 @@ export default function AdminSidebar() {
     )}>
       {/* Header */}
       <div className={cn("border-b border-sidebar-border flex items-center", collapsed ? "px-2 py-3 justify-center" : "px-4 py-3 gap-3")}>
-        <img src={logoQS} alt="Quality Staff" className={cn("shrink-0 object-contain", collapsed ? "h-8 w-8" : "h-9")} />
+        <img src={logoQS} alt="Quality Staff" className={cn("shrink-0 object-contain", collapsed ? "h-10 w-10" : "h-9")} />
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground">{roleLabel}</p>
