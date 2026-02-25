@@ -57,6 +57,13 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "concept_employee_rates_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       concepts: {
@@ -243,6 +250,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "import_rows_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "import_rows_import_id_fkey"
             columns: ["import_id"]
             isOneToOne: false
@@ -384,6 +398,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "movements_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "movements_period_id_fkey"
             columns: ["period_id"]
             isOneToOne: false
@@ -465,6 +486,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_base_pay_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
           {
@@ -607,6 +635,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "shifts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "shifts_import_id_fkey"
             columns: ["import_id"]
             isOneToOne: false
@@ -642,7 +677,63 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      employees_safe: {
+        Row: {
+          connecteam_employee_id: string | null
+          created_at: string | null
+          direct_manager: string | null
+          email: string | null
+          employee_role: string | null
+          end_date: string | null
+          first_name: string | null
+          groups: string | null
+          id: string | null
+          is_active: boolean | null
+          last_name: string | null
+          phone_number: string | null
+          start_date: string | null
+          tags: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          connecteam_employee_id?: string | null
+          created_at?: string | null
+          direct_manager?: string | null
+          email?: string | null
+          employee_role?: string | null
+          end_date?: string | null
+          first_name?: string | null
+          groups?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_name?: string | null
+          phone_number?: string | null
+          start_date?: string | null
+          tags?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          connecteam_employee_id?: string | null
+          created_at?: string | null
+          direct_manager?: string | null
+          email?: string | null
+          employee_role?: string | null
+          end_date?: string | null
+          first_name?: string | null
+          groups?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_name?: string | null
+          phone_number?: string | null
+          start_date?: string | null
+          tags?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_module_permission: {
