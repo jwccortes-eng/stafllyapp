@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setEmployeeActive(true);
       }
     } catch (err) {
-      console.error('Error fetching user data:', err);
+      if (import.meta.env.DEV) console.error('Error fetching user data:', err);
       setRole(null);
       setEmployeeId(null);
       setPermissions([]);
