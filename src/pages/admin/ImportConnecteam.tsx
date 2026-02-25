@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight, Trash2, Download, Info } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight, Trash2, Download, Info, UserPlus } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
@@ -115,6 +115,45 @@ export default function ImportConnecteam() {
     estimatedTotal: number;
     loading: boolean;
   } | null>(null);
+  const [creatingEmployees, setCreatingEmployees] = useState(false);
+
+  const handleCreateMissingEmployees = async () => {
+    if (!preImportSummary || !workbook || !selectedSheet || !selectedCompanyId) return;
+    setCreatingEmployees(true);
+    try {
+      const ws = workbook.Sheets[selectedSheet];
+      const allRows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+      const reverseMap: Record<string, string> = {};
+      Object.entries(mapping).forEach(([fileCol, knownCol]) => { reverseMap[knownCol] = fileCol; });
+
+      const unmatchedNames = new Set(preImportSummary.unmatched.map(n => n.toLowerCase()));
+      const toCreate: { first_name: string; last_name: string; company_id: string }[] = [];
+      const seen = new Set<string>();
+
+      for (const row of allRows) {
+        const fn = String(row[reverseMap["First name"] ?? "First name"] ?? "").trim();
+        const ln = String(row[reverseMap["Last name"] ?? "Last name"] ?? "").trim();
+        const displayName = `${fn} ${ln}`;
+        const key = displayName.toLowerCase();
+        if (unmatchedNames.has(key) && !seen.has(key) && fn && ln) {
+          toCreate.push({ first_name: fn, last_name: ln, company_id: selectedCompanyId });
+          seen.add(key);
+        }
+      }
+
+      if (toCreate.length > 0) {
+        const { error } = await supabase.from("employees").insert(toCreate);
+        if (error) throw error;
+      }
+
+      toast({ title: `${toCreate.length} empleados creados`, description: "Se crearon los empleados faltantes. Recalculando resumen..." });
+      // Re-run summary to reflect new employees
+      await computePreImportSummary();
+    } catch (err: any) {
+      toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
+    }
+    setCreatingEmployees(false);
+  };
 
   const toggleExpand = async (importId: string) => {
     if (expandedImport === importId) {
@@ -590,7 +629,19 @@ export default function ImportConnecteam() {
                         <Badge key={i} variant="outline" className="text-xs border-destructive/30 text-destructive">{name}</Badge>
                       ))}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">Estos empleados serán omitidos. Verifica que sus nombres coincidan exactamente con el sistema.</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <p className="text-xs text-muted-foreground">Estos empleados serán omitidos, o puedes crearlos automáticamente.</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCreateMissingEmployees}
+                        disabled={creatingEmployees}
+                        className="shrink-0"
+                      >
+                        <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                        {creatingEmployees ? "Creando..." : `Crear ${preImportSummary.unmatched.length} empleados`}
+                      </Button>
+                    </div>
                   </div>
                 )}
 
