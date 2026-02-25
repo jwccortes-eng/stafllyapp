@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import { safeRead, safeSheetToJson } from "./safe-xlsx";
 
 /**
  * Column mapping: Connecteam header → DB field key
@@ -128,9 +128,9 @@ export function parseConnecteamFile(
 
   if (isExcel) {
     // Parse as Excel
-    const wb = XLSX.read(content, { type: "binary" });
+    const wb = safeRead(content, { type: "binary" });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    rawRows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    rawRows = safeSheetToJson(ws, { defval: "" });
   } else {
     // Parse as CSV
     const text = typeof content === "string"
@@ -141,9 +141,9 @@ export function parseConnecteamFile(
       rawRows = parseConnecteamCSV(text);
     } else {
       // Standard CSV - try XLSX parser
-      const wb = XLSX.read(content, { type: typeof content === "string" ? "string" : "binary" });
+      const wb = safeRead(content, { type: typeof content === "string" ? "string" : "binary" });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      rawRows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      rawRows = safeSheetToJson(ws, { defval: "" });
     }
   }
 

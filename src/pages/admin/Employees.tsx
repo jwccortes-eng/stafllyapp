@@ -28,7 +28,7 @@ import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pe
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
-import * as XLSX from "xlsx";
+import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 
 // All Connecteam fields in Excel order
 const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean }[] = [
@@ -227,9 +227,9 @@ export default function Employees() {
         parsed = parseConnecteamFile(content as string, f.name);
       } catch {
         // Fallback to XLSX direct parse
-        const wb = XLSX.read(content, { type: "binary" });
+        const wb = safeRead(content, { type: "binary" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+        const rows = safeSheetToJson<Record<string, any>>(ws, { defval: "" });
         parsed = rows.map(row => {
           const mapped: ParsedEmployee = {};
           CONNECTEAM_FIELDS.forEach(field => {
@@ -293,9 +293,9 @@ export default function Employees() {
       try {
         parsed = parseConnecteamFile(content as string, f.name);
       } catch {
-        const wb = XLSX.read(content, { type: "binary" });
+        const wb = safeRead(content, { type: "binary" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+        const rows = safeSheetToJson<Record<string, any>>(ws, { defval: "" });
         parsed = rows.map(row => {
           const mapped: ParsedEmployee = {};
           CONNECTEAM_FIELDS.forEach(field => {
