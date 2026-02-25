@@ -8,12 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Employee { id: string; first_name: string; last_name: string; }
 interface Period { id: string; start_date: string; end_date: string; status: string; }
@@ -43,7 +46,9 @@ export default function Movements() {
   const [periods, setPeriods] = useState<Period[]>([]);
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [filterPeriod, setFilterPeriod] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
+  const [employeePopoverOpen, setEmployeePopoverOpen] = useState(false);
   const [form, setForm] = useState({
     employee_id: "", period_id: "", concept_id: "",
     quantity: "", rate: "", total_value: "", note: "",
@@ -423,10 +428,39 @@ export default function Movements() {
               <form onSubmit={handleCreate} className="space-y-3">
                 <div>
                   <Label>Empleado</Label>
-                  <Select value={form.employee_id} onValueChange={v => setForm(f => ({ ...f, employee_id: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <Popover open={employeePopoverOpen} onOpenChange={setEmployeePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" aria-expanded={employeePopoverOpen} className="w-full justify-between font-normal">
+                        {form.employee_id
+                          ? (() => { const e = employees.find(e => e.id === form.employee_id); return e ? `${e.first_name} ${e.last_name}` : "Seleccionar"; })()
+                          : "Buscar empleado..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar por nombre..." />
+                        <CommandList>
+                          <CommandEmpty>No se encontró empleado.</CommandEmpty>
+                          <CommandGroup>
+                            {employees.map(e => (
+                              <CommandItem
+                                key={e.id}
+                                value={`${e.first_name} ${e.last_name}`}
+                                onSelect={() => {
+                                  setForm(f => ({ ...f, employee_id: e.id }));
+                                  setEmployeePopoverOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", form.employee_id === e.id ? "opacity-100" : "opacity-0")} />
+                                {e.first_name} {e.last_name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label>Periodo</Label>
@@ -460,11 +494,22 @@ export default function Movements() {
         </div>
       </div>
 
-      <div className="mb-4 max-w-xs">
-        <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-          <SelectTrigger><SelectValue placeholder="Filtrar por periodo" /></SelectTrigger>
-          <SelectContent>{periods.map(p => <SelectItem key={p.id} value={p.id}>{p.start_date} → {p.end_date}</SelectItem>)}</SelectContent>
-        </Select>
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
+        <div className="max-w-xs">
+          <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+            <SelectTrigger><SelectValue placeholder="Filtrar por periodo" /></SelectTrigger>
+            <SelectContent>{periods.map(p => <SelectItem key={p.id} value={p.id}>{p.start_date} → {p.end_date}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="relative max-w-xs flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar empleado o concepto..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
       </div>
 
       <div className="data-table-wrapper">
@@ -482,10 +527,18 @@ export default function Movements() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {movements.length === 0 ? (
+            {(() => {
+              const filtered = movements.filter(m => {
+                if (!searchTerm.trim()) return true;
+                const s = normalize(searchTerm);
+                const empName = normalize(`${m.employees?.first_name ?? ""} ${m.employees?.last_name ?? ""}`);
+                const conceptName = normalize(m.concepts?.name ?? "");
+                return empName.includes(s) || conceptName.includes(s);
+              });
+              return filtered.length === 0 ? (
               <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No hay novedades</TableCell></TableRow>
             ) : (
-              movements.map(m => (
+              filtered.map(m => (
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.employees?.first_name} {m.employees?.last_name}</TableCell>
                   <TableCell>{m.concepts?.name}</TableCell>
@@ -505,7 +558,8 @@ export default function Movements() {
                   </TableCell>
                 </TableRow>
               ))
-            )}
+            );
+            })()}
           </TableBody>
         </Table>
       </div>
