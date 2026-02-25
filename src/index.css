@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,91 +7,90 @@
 @layer base {
   :root {
     --font-heading: 'Space Grotesk', sans-serif;
-    --font-body: 'DM Sans', sans-serif;
+    --font-body: 'Inter', sans-serif;
 
-    --background: 210 20% 98%;
-    --foreground: 220 25% 16%;
+    --background: 0 0% 99%;
+    --foreground: 220 14% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 16%;
+    --card-foreground: 220 14% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 16%;
+    --popover-foreground: 220 14% 10%;
 
-    --primary: 207 90% 54%;
+    --primary: 220 72% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 95%;
-    --secondary-foreground: 220 25% 16%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 14% 10%;
 
-    --muted: 210 15% 94%;
-    --muted-foreground: 215 14% 50%;
+    --muted: 220 10% 96%;
+    --muted-foreground: 220 8% 46%;
 
-    --accent: 207 90% 95%;
-    --accent-foreground: 207 90% 40%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 14% 10%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 68% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 60% 40%;
+    --success: 160 60% 40%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --earning: 152 60% 40%;
+    --earning: 160 60% 40%;
     --earning-foreground: 0 0% 100%;
-    --earning-bg: 152 60% 95%;
+    --earning-bg: 160 50% 96%;
 
-    --deduction: 0 72% 51%;
+    --deduction: 0 68% 50%;
     --deduction-foreground: 0 0% 100%;
-    --deduction-bg: 0 72% 96%;
+    --deduction-bg: 0 60% 97%;
 
-    --border: 214 18% 91%;
-    --input: 214 18% 91%;
-    --ring: 207 90% 54%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 220 72% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    /* Light sidebar like Connecteam */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 215 14% 40%;
-    --sidebar-primary: 207 90% 54%;
+    --sidebar-foreground: 220 8% 46%;
+    --sidebar-primary: 220 72% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 207 90% 96%;
-    --sidebar-accent-foreground: 207 90% 40%;
-    --sidebar-border: 214 18% 91%;
-    --sidebar-ring: 207 90% 54%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 14% 10%;
+    --sidebar-border: 220 13% 93%;
+    --sidebar-ring: 220 72% 50%;
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 220 15% 92%;
-    --card: 222 40% 10%;
-    --card-foreground: 220 15% 92%;
-    --popover: 222 40% 10%;
-    --popover-foreground: 220 15% 92%;
-    --primary: 207 90% 54%;
+    --background: 224 40% 4%;
+    --foreground: 220 10% 93%;
+    --card: 224 32% 8%;
+    --card-foreground: 220 10% 93%;
+    --popover: 224 32% 8%;
+    --popover-foreground: 220 10% 93%;
+    --primary: 220 72% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 222 30% 18%;
-    --secondary-foreground: 220 15% 92%;
-    --muted: 222 30% 18%;
-    --muted-foreground: 220 10% 55%;
-    --accent: 222 30% 18%;
-    --accent-foreground: 220 15% 92%;
-    --destructive: 0 62% 45%;
+    --secondary: 224 24% 14%;
+    --secondary-foreground: 220 10% 93%;
+    --muted: 224 24% 14%;
+    --muted-foreground: 220 8% 52%;
+    --accent: 224 24% 14%;
+    --accent-foreground: 220 10% 93%;
+    --destructive: 0 60% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
-    --ring: 207 90% 54%;
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 220 15% 70%;
-    --sidebar-primary: 207 90% 54%;
+    --border: 224 20% 14%;
+    --input: 224 20% 14%;
+    --ring: 220 72% 55%;
+    --sidebar-background: 224 40% 6%;
+    --sidebar-foreground: 220 10% 60%;
+    --sidebar-primary: 220 72% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 40% 14%;
-    --sidebar-accent-foreground: 207 70% 70%;
-    --sidebar-border: 222 30% 14%;
-    --sidebar-ring: 207 90% 54%;
+    --sidebar-accent: 224 24% 12%;
+    --sidebar-accent-foreground: 220 10% 90%;
+    --sidebar-border: 224 20% 12%;
+    --sidebar-ring: 220 72% 55%;
   }
 }
 
