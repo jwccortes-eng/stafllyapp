@@ -24,7 +24,8 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
@@ -416,6 +417,27 @@ export default function Employees() {
     setUpdateResult(null);
   };
 
+  // ---- EXPORT to Excel (excluding sensitive fields) ----
+  const SENSITIVE_KEYS = ["social_security_number", "verification_ssn_ein"];
+
+  const handleExport = () => {
+    const exportFields = CONNECTEAM_FIELDS.filter(f => !SENSITIVE_KEYS.includes(f.key));
+    const rows = filtered.map(emp => {
+      const row: Record<string, string> = {};
+      exportFields.forEach(f => {
+        row[f.label] = emp[f.key] ?? "";
+      });
+      row["Estado"] = emp.is_active ? "Activo" : "Inactivo";
+      return row;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Empleados");
+    XLSX.writeFile(wb, `empleados_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast({ title: "Exportado", description: `${rows.length} empleados exportados a Excel` });
+  };
+
   const filtered = employees.filter((e) =>
     `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase())
   );
@@ -447,7 +469,10 @@ export default function Employees() {
             <p className="page-subtitle">Empleados ({filtered.length}/{employees.length}) · Gestiona los empleados de nómina</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" />Exportar Excel
+          </Button>
           {/* Update Dialog (diff + full) */}
           <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
             <DialogTrigger asChild>
