@@ -19,6 +19,7 @@ import { Search, MoreHorizontal, Pencil, Building2, Plus, Users } from "lucide-r
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import CompanyUsersDialog from "@/components/CompanyUsersDialog";
 
 interface CompanyRecord {
   id: string;
@@ -39,6 +40,7 @@ export default function CompaniesPage() {
   const [formName, setFormName] = useState("");
   const [formSlug, setFormSlug] = useState("");
   const [loading, setLoading] = useState(false);
+  const [usersCompany, setUsersCompany] = useState<CompanyRecord | null>(null);
   const { toast } = useToast();
 
   const fetchCompanies = async () => {
@@ -235,6 +237,9 @@ export default function CompaniesPage() {
                         <DropdownMenuItem onClick={() => openEdit(c)}>
                           <Pencil className="h-4 w-4 mr-2" />Editar
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setUsersCompany(c)}>
+                          <Users className="h-4 w-4 mr-2" />Usuarios
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleActive(c)}>
                           {c.is_active ? "Desactivar" : "Activar"}
                         </DropdownMenuItem>
@@ -293,6 +298,15 @@ export default function CompaniesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Company Users Dialog */}
+      <CompanyUsersDialog
+        companyId={usersCompany?.id ?? null}
+        companyName={usersCompany?.name ?? ""}
+        open={!!usersCompany}
+        onOpenChange={(v) => { if (!v) setUsersCompany(null); }}
+        onUpdated={fetchCompanies}
+      />
     </div>
   );
 }
