@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search } from "lucide-react";
+import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface Employee {
@@ -118,6 +118,23 @@ export default function EmployeeReport() {
   const selectedEmp = employees.find(e => e.id === selectedEmployee);
   const totalBase = periods.reduce((s, r) => s + r.base_total_pay, 0);
   const totalExtras = periods.reduce((s, r) => s + r.extras_total, 0);
+
+  const exportCSV = () => {
+    if (!selectedEmp || periods.length === 0) return;
+    const header = "Inicio,Fin,Estado,Base,Extras,Deducciones,Total";
+    const rows = periods.map(p =>
+      `${p.start_date},${p.end_date},${p.status},${p.base_total_pay.toFixed(2)},${p.extras_total.toFixed(2)},${p.deductions_total.toFixed(2)},${p.total_final_pay.toFixed(2)}`
+    );
+    const totalsRow = `TOTALES,,,${totalBase.toFixed(2)},${totalExtras.toFixed(2)},${periods.reduce((s, r) => s + r.deductions_total, 0).toFixed(2)},${periods.reduce((s, r) => s + r.total_final_pay, 0).toFixed(2)}`;
+    const csv = [header, ...rows, totalsRow].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte_${selectedEmp.first_name}_${selectedEmp.last_name}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   const totalDeductions = periods.reduce((s, r) => s + r.deductions_total, 0);
   const totalFinal = periods.reduce((s, r) => s + r.total_final_pay, 0);
 
@@ -136,7 +153,8 @@ export default function EmployeeReport() {
         <p className="page-subtitle">Historial de pagos y novedades de un empleado</p>
       </div>
 
-      <div className="mb-6 max-w-sm">
+      <div className="mb-6 flex items-end gap-4">
+        <div className="flex-1 max-w-sm">
         <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
           <SelectTrigger>
             <SelectValue placeholder="Selecciona un empleado" />
@@ -160,6 +178,12 @@ export default function EmployeeReport() {
             ))}
           </SelectContent>
         </Select>
+        </div>
+        {selectedEmployee && periods.length > 0 && (
+          <Button variant="outline" size="sm" onClick={exportCSV}>
+            <Download className="h-4 w-4 mr-1" /> Exportar CSV
+          </Button>
+        )}
       </div>
 
       {selectedEmployee && !loading && periods.length > 0 && (
