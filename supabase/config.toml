@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.employee-auth]
 verify_jwt = false
+
+[functions.employee-chat]
+verify_jwt = false
