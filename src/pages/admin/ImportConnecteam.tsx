@@ -109,6 +109,12 @@ export default function ImportConnecteam() {
   const [expandedEmployees, setExpandedEmployees] = useState<{ first_name: string; last_name: string; base_total_pay: number; total_work_hours: number | null; total_overtime: number | null; total_paid_hours: number | null }[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [deletingImportId, setDeletingImportId] = useState<string | null>(null);
+  const [preImportSummary, setPreImportSummary] = useState<{
+    matched: { name: string; total: number }[];
+    unmatched: string[];
+    estimatedTotal: number;
+    loading: boolean;
+  } | null>(null);
 
   const toggleExpand = async (importId: string) => {
     if (expandedImport === importId) {
@@ -240,6 +246,59 @@ export default function ImportConnecteam() {
     setSelectedSheet(name);
     if (workbook) processSheet(workbook, name);
     setStep(3);
+  };
+
+  const computePreImportSummary = async () => {
+    if (!workbook || !selectedPeriod || !selectedSheet) return;
+    setPreImportSummary({ matched: [], unmatched: [], estimatedTotal: 0, loading: true });
+
+    const ws = workbook.Sheets[selectedSheet];
+    const allRows = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+
+    const { data: employees } = await supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId!);
+    const empList = employees ?? [];
+
+    const reverseMap: Record<string, string> = {};
+    Object.entries(mapping).forEach(([fileCol, knownCol]) => { reverseMap[knownCol] = fileCol; });
+
+    const employeeGroups: Record<string, Record<string, string>[]> = {};
+    allRows.forEach((row) => {
+      const fn = String(row[reverseMap["First name"] ?? "First name"] ?? "").trim();
+      const ln = String(row[reverseMap["Last name"] ?? "Last name"] ?? "").trim();
+      const key = `${fn.toLowerCase()}|${ln.toLowerCase()}`;
+      if (!employeeGroups[key]) employeeGroups[key] = [];
+      employeeGroups[key].push(row);
+    });
+
+    const parseCurrency = (val: string): number => parseFloat(String(val || "0").replace(/[$,]/g, "")) || 0;
+    const matched: { name: string; total: number }[] = [];
+    const unmatched: string[] = [];
+    let estimatedTotal = 0;
+
+    for (const [key, rows] of Object.entries(employeeGroups)) {
+      const [fn, ln] = key.split("|");
+      const displayName = `${rows[0][reverseMap["First name"] ?? "First name"] || fn} ${rows[0][reverseMap["Last name"] ?? "Last name"] || ln}`;
+      const emp = empList.find(e => e.first_name.toLowerCase() === fn && e.last_name.toLowerCase() === ln);
+      const summaryRow = rows[rows.length - 1];
+
+      const getVal = (knownCol: string, ...altCols: string[]) => {
+        for (const col of [knownCol, ...altCols]) {
+          const fileCol = reverseMap[col];
+          if (fileCol && summaryRow[fileCol]) return parseCurrency(summaryRow[fileCol]);
+        }
+        return 0;
+      };
+      const total = getVal("Total pay", "Total pay USD");
+
+      if (emp) {
+        matched.push({ name: displayName, total });
+        estimatedTotal += total;
+      } else {
+        unmatched.push(displayName);
+      }
+    }
+
+    setPreImportSummary({ matched, unmatched, estimatedTotal, loading: false });
   };
 
   const handleImport = async () => {
@@ -493,9 +552,78 @@ export default function ImportConnecteam() {
             </Card>
           )}
 
-          <Button onClick={handleImport} disabled={importing} className="w-full sm:w-auto">
-            {importing ? "Importando..." : "Importar datos"}
+          <Button onClick={computePreImportSummary} disabled={importing || preImportSummary?.loading} className="w-full sm:w-auto">
+            {preImportSummary?.loading ? "Analizando..." : "Verificar antes de importar"}
           </Button>
+
+          {preImportSummary && !preImportSummary.loading && (
+            <Card className="border-primary/30">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Resumen pre-importación
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-muted/50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-foreground">{preImportSummary.matched.length}</p>
+                    <p className="text-xs text-muted-foreground">Empleados encontrados</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-destructive">{preImportSummary.unmatched.length}</p>
+                    <p className="text-xs text-muted-foreground">No encontrados</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-foreground">${preImportSummary.estimatedTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</p>
+                    <p className="text-xs text-muted-foreground">Total estimado</p>
+                  </div>
+                </div>
+
+                {preImportSummary.unmatched.length > 0 && (
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                    <p className="text-sm font-medium text-destructive mb-1 flex items-center gap-1.5">
+                      <AlertCircle className="h-4 w-4" /> Empleados no encontrados en el sistema
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {preImportSummary.unmatched.map((name, i) => (
+                        <Badge key={i} variant="outline" className="text-xs border-destructive/30 text-destructive">{name}</Badge>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">Estos empleados serán omitidos. Verifica que sus nombres coincidan exactamente con el sistema.</p>
+                  </div>
+                )}
+
+                {preImportSummary.matched.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Empleado</TableHead>
+                          <TableHead className="text-xs text-right">Pago estimado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {preImportSummary.matched.map((emp, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-sm py-1.5">{emp.name}</TableCell>
+                            <TableCell className="text-right font-mono text-xs py-1.5">${emp.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={() => { handleImport(); setPreImportSummary(null); }} disabled={importing || preImportSummary.matched.length === 0} className="flex-1 sm:flex-none">
+                    {importing ? "Importando..." : `Confirmar importación (${preImportSummary.matched.length} empleados)`}
+                  </Button>
+                  <Button variant="outline" onClick={() => setPreImportSummary(null)}>Cancelar</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
@@ -508,7 +636,7 @@ export default function ImportConnecteam() {
               <AlertCircle className="h-12 w-12 text-deduction mx-auto mb-4" />
             )}
             <p className="text-lg font-medium">{result.message}</p>
-            <Button className="mt-4" onClick={() => { setStep(1); setResult(null); setFile(null); }}>
+            <Button className="mt-4" onClick={() => { setStep(1); setResult(null); setFile(null); setPreImportSummary(null); }}>
               Nueva importación
             </Button>
           </CardContent>
