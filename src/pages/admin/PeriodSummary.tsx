@@ -204,6 +204,20 @@ export default function PeriodSummary() {
     setDateTo(undefined);
   };
 
+  const resetToCurrentWeek = () => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = (day - 3 + 7) % 7;
+    const wed = new Date(today);
+    wed.setDate(today.getDate() - diff);
+    wed.setHours(0, 0, 0, 0);
+    const tue = new Date(wed);
+    tue.setDate(wed.getDate() + 6);
+    tue.setHours(23, 59, 59, 999);
+    setDateFrom(wed);
+    setDateTo(tue);
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -262,6 +276,10 @@ export default function PeriodSummary() {
               <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className={cn("p-3 pointer-events-auto")} />
             </PopoverContent>
           </Popover>
+
+          <Button variant="ghost" size="sm" onClick={resetToCurrentWeek} className="text-muted-foreground">
+            <CalendarIcon className="h-3.5 w-3.5 mr-1" /> Semana actual
+          </Button>
 
           {hasDateFilter && (
             <Button variant="ghost" size="sm" onClick={clearDates} className="text-muted-foreground">
