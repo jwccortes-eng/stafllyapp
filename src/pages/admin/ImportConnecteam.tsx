@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight, Trash2, Download, Info, UserPlus } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight, Trash2, Download, Info, UserPlus, Lock } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
@@ -119,6 +119,9 @@ export default function ImportConnecteam() {
     loading: boolean;
   } | null>(null);
   const [creatingEmployees, setCreatingEmployees] = useState(false);
+
+  const selectedPeriodObj = periods.find(p => p.id === selectedPeriod);
+  const isPeriodClosed = selectedPeriodObj?.status === "closed";
 
   const handleCreateMissingEmployees = async () => {
     if (!preImportSummary || !workbook || !selectedSheet || !selectedCompanyId) return;
@@ -335,6 +338,11 @@ export default function ImportConnecteam() {
 
   const handleImport = async () => {
     if (!workbook || !selectedPeriod || !selectedSheet) return;
+    const targetPeriod = periods.find(p => p.id === selectedPeriod);
+    if (targetPeriod?.status === "closed") {
+      toast({ title: "Periodo cerrado", description: "No se pueden importar datos en un periodo cerrado.", variant: "destructive" });
+      return;
+    }
     setImporting(true);
     setResult(null);
 
@@ -513,12 +521,22 @@ export default function ImportConnecteam() {
                 <SelectTrigger><SelectValue placeholder="Seleccionar periodo" /></SelectTrigger>
                 <SelectContent>
                   {periods.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.start_date} → {p.end_date} ({p.status})</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.start_date} → {p.end_date} {p.status === "closed" ? "🔒" : `(${p.status})`}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            {selectedPeriod && (
+            {selectedPeriod && isPeriodClosed && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <strong>Periodo cerrado.</strong> No se pueden importar datos en un periodo cerrado.
+                </p>
+              </div>
+            )}
+            {selectedPeriod && !isPeriodClosed && (
               <div>
                 <Label>Archivo XLS / XLSX / CSV</Label>
                 <div className="mt-1 border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
@@ -819,14 +837,21 @@ export default function ImportConnecteam() {
                         </div>
                       </TableCell>
                       <TableCell className="px-2" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost" size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          disabled={deletingImportId === imp.id}
-                          onClick={() => { setPendingDeleteImportId(imp.id); setDeletePasswordOpen(true); }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {(() => {
+                          const impPeriod = periods.find(p => p.id === imp.period_id);
+                          const isImpPeriodClosed = impPeriod?.status === "closed";
+                          return (
+                            <Button
+                              variant="ghost" size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              disabled={deletingImportId === imp.id || isImpPeriodClosed}
+                              title={isImpPeriodClosed ? "No se puede eliminar: periodo cerrado" : "Eliminar importación"}
+                              onClick={() => { setPendingDeleteImportId(imp.id); setDeletePasswordOpen(true); }}
+                            >
+                              {isImpPeriodClosed ? <Lock className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                     {expandedImport === imp.id && (
