@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
@@ -530,14 +532,11 @@ export default function Employees() {
   );
 
   return (
-    <div>
-      <div className="page-header flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="page-title">Empleados</h1>
-            <p className="page-subtitle">Empleados ({filtered.length}/{employees.length}) · Gestiona los empleados de nómina</p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="page-title">Empleados</h1>
+          <p className="page-subtitle">{filtered.length} de {employees.length} empleados</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
@@ -860,69 +859,78 @@ export default function Employees() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10"></TableHead>
+              <TableHead className="w-12"></TableHead>
               <TableHead>Nombre</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Teléfono</TableHead>
+              <TableHead className="hidden sm:table-cell">Email</TableHead>
+              <TableHead className="hidden sm:table-cell">Teléfono</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay empleados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-12">
+                <Users className="h-8 w-8 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No hay empleados</p>
+              </TableCell></TableRow>
             ) : (
-              filtered.map((e) => {
-                const initials = `${(e.first_name?.[0] ?? "").toUpperCase()}${(e.last_name?.[0] ?? "").toUpperCase()}`;
-                const hue = ((e.first_name?.charCodeAt(0) ?? 0) * 37 + (e.last_name?.charCodeAt(0) ?? 0) * 17) % 360;
-                return (
-                <TableRow key={e.id} className={`${!e.is_active ? "opacity-50" : ""} group`}>
-                  <TableCell>
-                    <div
-                      className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground"
-                      style={{ backgroundColor: `hsl(${hue}, 55%, 55%)` }}
-                    >
-                      {initials}
-                    </div>
+              filtered.map((e) => (
+                <TableRow key={e.id} className={`${!e.is_active ? "opacity-40" : ""} group hover:bg-accent/50 transition-colors`}>
+                  <TableCell className="py-3">
+                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} size="md" />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-3">
                     <button
                       onClick={() => openDetailSheet(e)}
                       className="text-left hover:text-primary transition-colors"
                     >
-                      <span className="font-medium">{e.first_name} {e.last_name}</span>
+                      <span className="text-sm font-semibold">{e.first_name} {e.last_name}</span>
                       {e.employee_role && (
-                        <span className="block text-xs text-muted-foreground">{e.employee_role}</span>
+                        <span className="block text-xs text-muted-foreground mt-0.5">{e.employee_role}</span>
                       )}
+                      {/* Show contact info inline on mobile */}
+                      <div className="sm:hidden mt-1 space-y-0.5">
+                        {e.email && (
+                          <span className="block text-[11px] text-muted-foreground truncate max-w-[200px]">{e.email}</span>
+                        )}
+                        {e.phone_number && (
+                          <span className="block text-[11px] text-muted-foreground">{e.phone_number}</span>
+                        )}
+                      </div>
                     </button>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell py-3">
                     {e.email ? (
-                      <a href={`mailto:${e.email}`} className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1.5">
-                        <Mail className="h-3 w-3" />{e.email}
+                      <a href={`mailto:${e.email}`} className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
+                        <Mail className="h-3.5 w-3.5 shrink-0" /><span className="truncate max-w-[180px]">{e.email}</span>
                       </a>
                     ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
+                      <span className="text-sm text-muted-foreground/40">—</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell py-3">
                     {e.phone_number ? (
-                      <a href={`tel:${e.phone_number}`} className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1.5">
-                        <Phone className="h-3 w-3" />{e.phone_number}
+                      <a href={`tel:${e.phone_number}`} className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
+                        <Phone className="h-3.5 w-3.5 shrink-0" />{e.phone_number}
                       </a>
                     ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
+                      <span className="text-sm text-muted-foreground/40">—</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <span className={e.is_active ? "earning-badge" : "deduction-badge"}>
+                  <TableCell className="py-3">
+                    <span className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+                      e.is_active
+                        ? "bg-earning/10 text-earning"
+                        : "bg-muted text-muted-foreground"
+                    )}>
                       {e.is_active ? "Activo" : "Inactivo"}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-3">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -941,8 +949,7 @@ export default function Employees() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-                );
-              })
+              ))
             )}
           </TableBody>
         </Table>
@@ -950,64 +957,66 @@ export default function Employees() {
 
       {/* Detail + Edit Sheet */}
       <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); } }}>
-        <SheetContent className="w-[400px] sm:w-[540px]">
-          <SheetHeader>
-            <div className="flex items-center justify-between pr-6">
-              <div>
-                <SheetTitle>{viewEmployee?.first_name} {viewEmployee?.last_name}</SheetTitle>
-                <SheetDescription>
-                  {viewEmployee?.employee_role ?? "Sin rol asignado"} · {viewEmployee?.is_active ? "Activo" : "Inactivo"}
+        <SheetContent className="w-[400px] sm:w-[540px] p-0">
+          <SheetHeader className="p-6 pb-4 border-b">
+            <div className="flex items-center gap-4 pr-6">
+              <EmployeeAvatar
+                firstName={viewEmployee?.first_name ?? ""}
+                lastName={viewEmployee?.last_name ?? ""}
+                size="lg"
+              />
+              <div className="flex-1 min-w-0">
+                <SheetTitle className="text-lg">{viewEmployee?.first_name} {viewEmployee?.last_name}</SheetTitle>
+                <SheetDescription className="flex items-center gap-2 mt-0.5">
+                  {viewEmployee?.employee_role ?? "Sin rol"}
+                  <span className={cn(
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
+                    viewEmployee?.is_active ? "bg-earning/10 text-earning" : "bg-muted text-muted-foreground"
+                  )}>
+                    {viewEmployee?.is_active ? "Activo" : "Inactivo"}
+                  </span>
                 </SheetDescription>
               </div>
               <Button
                 variant={isEditing ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
-                  if (isEditing) {
-                    handleSaveFromSheet();
-                  } else {
-                    setIsEditing(true);
-                  }
+                  if (isEditing) { handleSaveFromSheet(); } else { setIsEditing(true); }
                 }}
                 disabled={loading}
+                className="shrink-0"
               >
                 {isEditing ? (loading ? "Guardando..." : "Guardar") : <><Pencil className="h-3 w-3 mr-1.5" />Editar</>}
               </Button>
             </div>
           </SheetHeader>
-          <ScrollArea className="h-[calc(100vh-120px)] mt-4 pr-4">
-            {isEditing && (
-              <div className="mb-3 flex justify-end">
-                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
-                  <X className="h-3 w-3 mr-1" />Cancelar
-                </Button>
-              </div>
-            )}
-            <div className="space-y-1">
-              {visibleFields.filter(f => !f.hidden).map(f => (
-                <div key={f.key} className="flex justify-between items-center py-2 border-b border-border/50 gap-3">
-                  <span className="text-xs text-muted-foreground shrink-0 w-28">{f.label}</span>
-                  {isEditing ? (
-                    <Input
-                      value={form[f.key] ?? ""}
-                      onChange={ev => setForm(prev => ({ ...prev, [f.key]: ev.target.value }))}
-                      className="h-7 text-sm flex-1"
-                    />
-                  ) : (
-                    <span className="text-sm font-medium text-right max-w-[60%] break-words">
-                      {viewEmployee?.[f.key] || "—"}
-                    </span>
-                  )}
+          <ScrollArea className="h-[calc(100vh-140px)]">
+            <div className="p-6 pt-4">
+              {isEditing && (
+                <div className="mb-3 flex justify-end">
+                  <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
+                    <X className="h-3 w-3 mr-1" />Cancelar
+                  </Button>
                 </div>
+              )}
+              <div className="space-y-0.5">
+                {visibleFields.filter(f => !f.hidden).map(f => (
+                  <div key={f.key} className="flex justify-between items-center py-2.5 border-b border-border/40 gap-3">
+                    <span className="text-xs text-muted-foreground shrink-0 w-28">{f.label}</span>
+                    {isEditing ? (
+                      <Input
+                        value={form[f.key] ?? ""}
+                        onChange={ev => setForm(prev => ({ ...prev, [f.key]: ev.target.value }))}
+                        className="h-8 text-sm flex-1"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium text-right max-w-[60%] break-words">
+                        {viewEmployee?.[f.key] || <span className="text-muted-foreground/40">—</span>}
+                      </span>
+                    )}
+                  </div>
               ))}
-              <Separator className="my-3" />
-              <div className="flex justify-between py-2">
-                <span className="text-xs text-muted-foreground">Estado</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${viewEmployee?.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                  {viewEmployee?.is_active ? "Activo" : "Inactivo"}
-                </span>
-              </div>
-              <div className="flex gap-2 pt-4">
+              <div className="flex gap-2 pt-6">
                 <Button
                   variant="outline"
                   size="sm"
@@ -1025,6 +1034,7 @@ export default function Employees() {
                   <Trash2 className="h-3 w-3 mr-1.5" />Eliminar
                 </Button>
               </div>
+            </div>
             </div>
           </ScrollArea>
         </SheetContent>
