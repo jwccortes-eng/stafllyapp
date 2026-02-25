@@ -15,17 +15,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, MoreHorizontal, Pencil, Building2, Plus, Users } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid, FlaskConical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import CompanyUsersDialog from "@/components/CompanyUsersDialog";
+import CompanyModulesDialog from "@/components/CompanyModulesDialog";
 
 interface CompanyRecord {
   id: string;
   name: string;
   slug: string;
   is_active: boolean;
+  is_sandbox: boolean;
   created_at: string;
   user_count?: number;
 }
@@ -41,12 +43,13 @@ export default function CompaniesPage() {
   const [formSlug, setFormSlug] = useState("");
   const [loading, setLoading] = useState(false);
   const [usersCompany, setUsersCompany] = useState<CompanyRecord | null>(null);
+  const [modulesCompany, setModulesCompany] = useState<CompanyRecord | null>(null);
   const { toast } = useToast();
 
   const fetchCompanies = async () => {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, slug, is_active, created_at")
+      .select("id, name, slug, is_active, is_sandbox, created_at")
       .order("name");
 
     if (!data) return;
@@ -146,10 +149,22 @@ export default function CompaniesPage() {
           <h1 className="page-title">Empresas</h1>
           <p className="page-subtitle">Gestiona tus unidades de negocio</p>
         </div>
-        <Button onClick={() => { setCreateOpen(true); setFormName(""); setFormSlug(""); }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva empresa
-        </Button>
+        <div className="flex gap-2">
+          {!companies.some(c => c.is_sandbox) && (
+            <Button variant="outline" onClick={async () => {
+              const { error } = await supabase.from("companies").insert({ name: "Sandbox", slug: "sandbox", is_sandbox: true } as any);
+              if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+              else { toast({ title: "Sandbox creado" }); fetchCompanies(); refetch(); }
+            }}>
+              <FlaskConical className="h-4 w-4 mr-2" />
+              Crear Sandbox
+            </Button>
+          )}
+          <Button onClick={() => { setCreateOpen(true); setFormName(""); setFormSlug(""); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva empresa
+          </Button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -216,7 +231,12 @@ export default function CompaniesPage() {
             ) : (
               filtered.map(c => (
                 <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {c.name}
+                      {c.is_sandbox && <Badge variant="outline" className="text-[10px]"><FlaskConical className="h-3 w-3 mr-1" />Sandbox</Badge>}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{c.slug}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{c.user_count} usuarios</Badge>
@@ -239,6 +259,9 @@ export default function CompaniesPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUsersCompany(c)}>
                           <Users className="h-4 w-4 mr-2" />Usuarios
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setModulesCompany(c)}>
+                          <LayoutGrid className="h-4 w-4 mr-2" />Módulos
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleActive(c)}>
                           {c.is_active ? "Desactivar" : "Activar"}
@@ -306,6 +329,15 @@ export default function CompaniesPage() {
         open={!!usersCompany}
         onOpenChange={(v) => { if (!v) setUsersCompany(null); }}
         onUpdated={fetchCompanies}
+      />
+
+      {/* Company Modules Dialog */}
+      <CompanyModulesDialog
+        companyId={modulesCompany?.id ?? null}
+        companyName={modulesCompany?.name ?? ""}
+        isSandbox={modulesCompany?.is_sandbox ?? false}
+        open={!!modulesCompany}
+        onOpenChange={(v) => { if (!v) setModulesCompany(null); }}
       />
     </div>
   );

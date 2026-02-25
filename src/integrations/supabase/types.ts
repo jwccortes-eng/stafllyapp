@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          is_sandbox: boolean
           name: string
           slug: string
           updated_at: string
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_sandbox?: boolean
           name: string
           slug: string
           updated_at?: string
@@ -35,11 +37,47 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_sandbox?: boolean
           name?: string
           slug?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      company_modules: {
+        Row: {
+          activated_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          module: string
+        }
+        Insert: {
+          activated_at?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          module: string
+        }
+        Update: {
+          activated_at?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          module?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_modules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_users: {
         Row: {
