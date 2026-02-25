@@ -9,6 +9,7 @@ import { Plus, Lock, Unlock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { format, addDays, nextWednesday, previousWednesday, isWednesday } from "date-fns";
+import { useCompany } from "@/hooks/useCompany";
 
 interface PayPeriod {
   id: string;
@@ -19,6 +20,7 @@ interface PayPeriod {
 }
 
 export default function PayPeriods() {
+  const { selectedCompanyId } = useCompany();
   const [periods, setPeriods] = useState<PayPeriod[]>([]);
   const [open, setOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -26,11 +28,12 @@ export default function PayPeriods() {
   const { toast } = useToast();
 
   const fetchPeriods = async () => {
-    const { data } = await supabase.from("pay_periods").select("*").order("start_date", { ascending: false });
+    if (!selectedCompanyId) return;
+    const { data } = await supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId).order("start_date", { ascending: false });
     setPeriods((data as PayPeriod[]) ?? []);
   };
 
-  useEffect(() => { fetchPeriods(); }, []);
+  useEffect(() => { fetchPeriods(); }, [selectedCompanyId]);
 
   const suggestNextWednesday = () => {
     const today = new Date();
@@ -46,6 +49,7 @@ export default function PayPeriods() {
     const { error } = await supabase.from("pay_periods").insert({
       start_date: format(start, "yyyy-MM-dd"),
       end_date: format(end, "yyyy-MM-dd"),
+      company_id: selectedCompanyId,
     });
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
