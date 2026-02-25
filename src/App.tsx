@@ -17,6 +17,7 @@ import ImportConnecteam from "./pages/admin/ImportConnecteam";
 import Concepts from "./pages/admin/Concepts";
 import Movements from "./pages/admin/Movements";
 import PeriodSummary from "./pages/admin/PeriodSummary";
+import EmployeePeriodDetail from "./pages/admin/EmployeePeriodDetail";
 import Reports from "./pages/admin/Reports";
 import UsersPage from "./pages/admin/Users";
 import CompaniesPage from "./pages/admin/Companies";
@@ -49,6 +50,7 @@ function App() {
                 <Route path="concepts" element={<Concepts />} />
                 <Route path="movements" element={<Movements />} />
                 <Route path="summary" element={<PeriodSummary />} />
+                <Route path="summary/detail" element={<EmployeePeriodDetail />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="companies" element={<CompaniesPage />} />
