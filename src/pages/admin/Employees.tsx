@@ -33,7 +33,13 @@ import { getUserFriendlyError } from "@/lib/error-helpers";
 import { parseConnecteamFile, type ParsedEmployee } from "@/lib/connecteam-parser";
 import { safeRead, safeSheetToJson } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
+import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
+
+// Fields that only owner/admin can see - hidden from managers
+const SENSITIVE_FIELD_KEYS = new Set([
+  "access_pin", "driver_licence", "has_car", "country_code", "english_level",
+]);
 
 // All Connecteam fields in Excel order
 const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean; hidden?: boolean }[] = [
@@ -84,6 +90,8 @@ interface UpdateDiff {
 
 export default function Employees() {
   const { selectedCompanyId } = useCompany();
+  const { role } = useAuth();
+  const isPrivileged = role === 'owner' || role === 'admin';
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
@@ -498,9 +506,13 @@ export default function Employees() {
     setLoading(false);
   };
 
+  const visibleFields = CONNECTEAM_FIELDS.filter(f =>
+    isPrivileged || !SENSITIVE_FIELD_KEYS.has(f.key)
+  );
+
   const EmployeeForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
     <form onSubmit={onSubmit} className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-      {CONNECTEAM_FIELDS.map(f => (
+      {visibleFields.map(f => (
         <div key={f.key}>
           <Label className="text-xs">{f.label} {f.required && <span className="text-destructive">*</span>}</Label>
           <Input
@@ -970,7 +982,7 @@ export default function Employees() {
               </div>
             )}
             <div className="space-y-1">
-              {CONNECTEAM_FIELDS.filter(f => !f.hidden).map(f => (
+              {visibleFields.filter(f => !f.hidden).map(f => (
                 <div key={f.key} className="flex justify-between items-center py-2 border-b border-border/50 gap-3">
                   <span className="text-xs text-muted-foreground shrink-0 w-28">{f.label}</span>
                   {isEditing ? (
