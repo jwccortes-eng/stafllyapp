@@ -18,6 +18,7 @@ interface AuthContextType {
   role: AppRole;
   employeeId: string | null;
   employeeActive: boolean;
+  fullName: string | null;
   loading: boolean;
   permissions: ModulePermission[];
   signOut: () => Promise<void>;
@@ -30,6 +31,7 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   employeeId: null,
   employeeActive: true,
+  fullName: null,
   loading: true,
   permissions: [],
   signOut: async () => {},
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [employeeActive, setEmployeeActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
+  const [fullName, setFullName] = useState<string | null>(null);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -55,6 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const newRole = (roleData?.role as AppRole) ?? null;
       setRole(newRole);
+
+      // Fetch full name from profiles
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', userId)
+        .maybeSingle();
+      setFullName(profileData?.full_name ?? null);
 
       // Fetch module permissions for managers
       if (newRole === 'manager') {
@@ -132,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, employeeId, employeeActive, loading, permissions, signOut, hasModuleAccess }}>
+    <AuthContext.Provider value={{ user, session, role, employeeId, employeeActive, fullName, loading, permissions, signOut, hasModuleAccess }}>
       {children}
     </AuthContext.Provider>
   );

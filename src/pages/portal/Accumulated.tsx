@@ -18,10 +18,30 @@ export default function Accumulated() {
   const { employeeId } = useAuth();
   const [periods, setPeriods] = useState<PeriodAccum[]>([]);
   const [loading, setLoading] = useState(true);
+  const [empName, setEmpName] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [currentPeriod, setCurrentPeriod] = useState<{ start_date: string; end_date: string; status: string; published_at: string | null } | null>(null);
 
   useEffect(() => {
     if (!employeeId) return;
     async function load() {
+      // Fetch employee info
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("first_name, last_name, company_id")
+        .eq("id", employeeId)
+        .maybeSingle();
+      if (empData) {
+        setEmpName(`${empData.first_name} ${empData.last_name}`);
+        const { data: comp } = await supabase.from("companies").select("name").eq("id", empData.company_id).maybeSingle();
+        setCompanyName(comp?.name ?? null);
+        const { data: latestPeriod } = await supabase.from("pay_periods")
+          .select("start_date, end_date, status, published_at")
+          .eq("company_id", empData.company_id)
+          .order("start_date", { ascending: false }).limit(1).maybeSingle();
+        setCurrentPeriod(latestPeriod ?? null);
+      }
+
       const { data: publishedPeriods } = await supabase
         .from("pay_periods").select("id, start_date, end_date")
         .not("published_at", "is", null).order("start_date", { ascending: false });
@@ -71,6 +91,21 @@ export default function Accumulated() {
     return reversed.map(p => { running += p.total; return { ...p, accumulated: running }; }).reverse();
   }, [periods]);
 
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Buenos días";
+    if (h < 18) return "Buenas tardes";
+    return "Buenas noches";
+  }, []);
+
+  const periodStatusLabel = currentPeriod
+    ? currentPeriod.published_at
+      ? { label: "Publicado", cls: "bg-primary/10 text-primary" }
+      : currentPeriod.status === "open"
+        ? { label: "Abierto", cls: "bg-earning/10 text-earning" }
+        : { label: "Cerrado", cls: "bg-warning/10 text-warning" }
+    : null;
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -79,6 +114,7 @@ export default function Accumulated() {
     );
   }
 
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -86,7 +122,20 @@ export default function Accumulated() {
         <Link to="/portal" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3">
           <ArrowLeft className="h-4 w-4" /> Volver
         </Link>
-        <h1 className="text-2xl font-bold font-heading tracking-tight">Acumulado Histórico</h1>
+        <h1 className="text-2xl font-bold font-heading tracking-tight">
+          {empName ? `${greeting}, ${empName}` : "Acumulado Histórico"}
+        </h1>
+        {companyName && <p className="text-sm text-muted-foreground mt-0.5">{companyName}</p>}
+        {currentPeriod && periodStatusLabel && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-muted-foreground">
+              {currentPeriod.start_date} → {currentPeriod.end_date}
+            </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${periodStatusLabel.cls}`}>
+              {periodStatusLabel.label}
+            </span>
+          </div>
+        )}
         <p className="text-sm text-muted-foreground mt-1">Tu total ganado a lo largo del tiempo</p>
       </div>
 

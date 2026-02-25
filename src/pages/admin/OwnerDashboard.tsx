@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, DollarSign, FileSpreadsheet, TrendingUp, TrendingDown, BarChart3, CalendarIcon, X, UserMinus, Crown, Download } from "lucide-react";
+import { Building2, Users, DollarSign, FileSpreadsheet, TrendingUp, TrendingDown, BarChart3, CalendarIcon, X, UserMinus, Crown, Download, Sparkles } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line,
@@ -62,6 +63,7 @@ const CHART_COLORS = [
 type GroupMode = "period" | "month" | "year";
 
 export default function OwnerDashboard() {
+  const { fullName } = useAuth();
   const [companies, setCompanies] = useState<CompanyStats[]>([]);
   const [companyNames, setCompanyNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -332,11 +334,24 @@ export default function OwnerDashboard() {
     URL.revokeObjectURL(url);
   };
 
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Buenos días";
+    if (h < 18) return "Buenas tardes";
+    return "Buenas noches";
+  }, []);
+
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Vista global</h1>
-        <p className="page-subtitle">Resumen consolidado de todas las empresas</p>
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <span className="text-sm text-muted-foreground">{greeting}</span>
+        </div>
+        <h1 className="page-title">{fullName ? `${greeting}, ${fullName}` : "Vista global"}</h1>
+        <p className="page-subtitle">
+          {selectedCompanyFilter !== "all" ? selectedCompanyFilter : "Todas las empresas"} · Resumen consolidado
+        </p>
       </div>
 
       {loading ? (
