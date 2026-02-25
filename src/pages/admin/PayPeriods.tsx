@@ -5,12 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff } from "lucide-react";
+import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff, ChevronDown, ChevronRight, FileSpreadsheet, RefreshCw, Clock, CheckCircle2, AlertCircle, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { format, addDays, nextWednesday, isWednesday } from "date-fns";
+import { format, addDays, nextWednesday, isWednesday, formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 import { useCompany } from "@/hooks/useCompany";
+import { useNavigate } from "react-router-dom";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PayPeriod {
   id: string;
@@ -19,6 +23,16 @@ interface PayPeriod {
   status: string;
   closed_at: string | null;
   published_at: string | null;
+}
+
+interface ImportInfo {
+  id: string;
+  file_name: string;
+  status: string;
+  row_count: number | null;
+  created_at: string;
+  imported_by: string | null;
+  error_message: string | null;
 }
 
 export default function PayPeriods() {
@@ -32,7 +46,11 @@ export default function PayPeriods() {
   const [generatingYear, setGeneratingYear] = useState(false);
   const [pendingToggle, setPendingToggle] = useState<PayPeriod | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [expandedPeriods, setExpandedPeriods] = useState<Set<string>>(new Set());
+  const [importsMap, setImportsMap] = useState<Record<string, ImportInfo[]>>({});
+  const [loadingImports, setLoadingImports] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const fetchPeriods = async () => {
     if (!selectedCompanyId) return;
@@ -41,6 +59,32 @@ export default function PayPeriods() {
   };
 
   useEffect(() => { fetchPeriods(); }, [selectedCompanyId]);
+
+  const fetchImportsForPeriod = async (periodId: string) => {
+    if (importsMap[periodId]) return; // Already loaded
+    setLoadingImports(prev => new Set(prev).add(periodId));
+    const { data } = await supabase
+      .from("imports")
+      .select("id, file_name, status, row_count, created_at, imported_by, error_message")
+      .eq("period_id", periodId)
+      .eq("company_id", selectedCompanyId!)
+      .order("created_at", { ascending: false });
+    setImportsMap(prev => ({ ...prev, [periodId]: (data as ImportInfo[]) ?? [] }));
+    setLoadingImports(prev => { const next = new Set(prev); next.delete(periodId); return next; });
+  };
+
+  const toggleExpand = (periodId: string) => {
+    setExpandedPeriods(prev => {
+      const next = new Set(prev);
+      if (next.has(periodId)) {
+        next.delete(periodId);
+      } else {
+        next.add(periodId);
+        fetchImportsForPeriod(periodId);
+      }
+      return next;
+    });
+  };
 
   const suggestNextWednesday = () => {
     const today = new Date();
@@ -72,46 +116,27 @@ export default function PayPeriods() {
   const handleGenerateYear = async () => {
     if (!selectedCompanyId) return;
     setGeneratingYear(true);
-
-    // Find first Wednesday of the year
-    let d = new Date(yearValue, 0, 1); // Jan 1
-    while (d.getDay() !== 3) { // 3 = Wednesday
-      d = addDays(d, 1);
-    }
-
+    let d = new Date(yearValue, 0, 1);
+    while (d.getDay() !== 3) { d = addDays(d, 1); }
     const rows: { start_date: string; end_date: string; company_id: string }[] = [];
     while (d.getFullYear() === yearValue) {
       const end = addDays(d, 6);
-      rows.push({
-        start_date: format(d, "yyyy-MM-dd"),
-        end_date: format(end, "yyyy-MM-dd"),
-        company_id: selectedCompanyId,
-      });
+      rows.push({ start_date: format(d, "yyyy-MM-dd"), end_date: format(end, "yyyy-MM-dd"), company_id: selectedCompanyId });
       d = addDays(d, 7);
     }
-
-    // Insert in batches to avoid issues
     let created = 0;
     let skipped = 0;
     for (let i = 0; i < rows.length; i += 20) {
       const batch = rows.slice(i, i + 20);
       const { error, data } = await supabase.from("pay_periods").insert(batch).select();
       if (error) {
-        // Likely duplicate — try one by one
         for (const row of batch) {
           const { error: singleErr } = await supabase.from("pay_periods").insert(row);
-          if (singleErr) skipped++;
-          else created++;
+          if (singleErr) skipped++; else created++;
         }
-      } else {
-        created += (data?.length ?? batch.length);
-      }
+      } else { created += (data?.length ?? batch.length); }
     }
-
-    toast({
-      title: `${created} periodos creados`,
-      description: skipped > 0 ? `${skipped} ya existían y fueron omitidos` : `Año ${yearValue} completo`,
-    });
+    toast({ title: `${created} periodos creados`, description: skipped > 0 ? `${skipped} ya existían y fueron omitidos` : `Año ${yearValue} completo` });
     setYearOpen(false);
     fetchPeriods();
     setGeneratingYear(false);
@@ -150,6 +175,27 @@ export default function PayPeriods() {
       toast({ title: isPublished ? "Publicación retirada" : "Periodo publicado — visible para empleados" });
       fetchPeriods();
     }
+  };
+
+  const getImportStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed": return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+      case "error": return <AlertCircle className="h-4 w-4 text-destructive" />;
+      default: return <Clock className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getImportStatusLabel = (status: string) => {
+    switch (status) {
+      case "completed": return "Completada";
+      case "error": return "Error";
+      case "pending": return "Pendiente";
+      default: return status;
+    }
+  };
+
+  const handleReimport = (periodId: string) => {
+    navigate(`/admin/import?period=${periodId}`);
   };
 
   return (
@@ -215,6 +261,7 @@ export default function PayPeriods() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10"></TableHead>
               <TableHead>Inicio</TableHead>
               <TableHead>Fin</TableHead>
               <TableHead>Estado</TableHead>
@@ -225,43 +272,158 @@ export default function PayPeriods() {
           </TableHeader>
           <TableBody>
             {periods.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay periodos</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No hay periodos</TableCell></TableRow>
             ) : (
-              periods.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.start_date}</TableCell>
-                  <TableCell>{p.end_date}</TableCell>
-                  <TableCell>
-                    <span className={p.status === "open" ? "earning-badge" : "deduction-badge"}>
-                      {p.status === "open" ? "Abierto" : "Cerrado"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {p.published_at ? (
-                      <span className="earning-badge">Publicado</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">No publicado</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => requestToggle(p)} title={p.status === "open" ? "Cerrar periodo" : "Reabrir periodo"}>
-                        {p.status === "open" ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => togglePublish(p)}
-                        title={p.published_at ? "Retirar publicación" : "Publicar para empleados"}
-                        disabled={p.status === "open"}
-                      >
-                        {p.published_at ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Send className="h-4 w-4 text-primary" />}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              periods.map((p) => {
+                const isExpanded = expandedPeriods.has(p.id);
+                const imports = importsMap[p.id];
+                const isLoadingImports = loadingImports.has(p.id);
+                const hasImports = imports && imports.length > 0;
+
+                return (
+                  <Collapsible key={p.id} open={isExpanded} onOpenChange={() => toggleExpand(p.id)} asChild>
+                    <>
+                      <TableRow className="group cursor-pointer hover:bg-muted/50" onClick={() => toggleExpand(p.id)}>
+                        <TableCell className="w-10">
+                          <CollapsibleTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </Button>
+                          </CollapsibleTrigger>
+                        </TableCell>
+                        <TableCell className="font-medium">{p.start_date}</TableCell>
+                        <TableCell>{p.end_date}</TableCell>
+                        <TableCell>
+                          <span className={p.status === "open" ? "earning-badge" : "deduction-badge"}>
+                            {p.status === "open" ? "Abierto" : "Cerrado"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {p.published_at ? (
+                            <span className="earning-badge">Publicado</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No publicado</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" onClick={() => requestToggle(p)}>
+                                    {p.status === "open" ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{p.status === "open" ? "Cerrar periodo" : "Reabrir periodo"}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => togglePublish(p)}
+                                    disabled={p.status === "open"}
+                                  >
+                                    {p.published_at ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Send className="h-4 w-4 text-primary" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{p.published_at ? "Retirar publicación" : "Publicar para empleados"}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+
+                      <CollapsibleContent asChild>
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                          <TableCell colSpan={7} className="p-0">
+                            <div className="px-6 py-4 border-t border-border/50">
+                              {isLoadingImports ? (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                  Cargando importaciones...
+                                </div>
+                              ) : !hasImports ? (
+                                <div className="flex items-center justify-between py-2">
+                                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                    <FileSpreadsheet className="h-5 w-5 text-muted-foreground/50" />
+                                    <span>Sin importaciones para este periodo</span>
+                                  </div>
+                                  {p.status === "open" && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleReimport(p.id)}
+                                    >
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      Importar archivo
+                                    </Button>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-medium">Importaciones ({imports.length})</h4>
+                                    {p.status === "open" && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleReimport(p.id)}
+                                      >
+                                        <RefreshCw className="h-4 w-4 mr-2" />
+                                        Reimportar
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <div className="space-y-2">
+                                    {imports.map((imp) => (
+                                      <div
+                                        key={imp.id}
+                                        className="flex items-center justify-between rounded-lg border border-border/60 bg-background px-4 py-3"
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          {getImportStatusIcon(imp.status)}
+                                          <div>
+                                            <p className="text-sm font-medium flex items-center gap-2">
+                                              <FileSpreadsheet className="h-3.5 w-3.5 text-muted-foreground" />
+                                              {imp.file_name}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                              {formatDistanceToNow(new Date(imp.created_at), { addSuffix: true, locale: es })}
+                                              {imp.row_count != null && ` · ${imp.row_count} filas`}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                            imp.status === "completed" ? "bg-emerald-500/10 text-emerald-600" :
+                                            imp.status === "error" ? "bg-destructive/10 text-destructive" :
+                                            "bg-muted text-muted-foreground"
+                                          }`}>
+                                            {getImportStatusLabel(imp.status)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {imports.some(i => i.error_message) && (
+                                    <div className="text-xs text-destructive bg-destructive/5 rounded-md px-3 py-2">
+                                      {imports.find(i => i.error_message)?.error_message}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </CollapsibleContent>
+                    </>
+                  </Collapsible>
+                );
+              })
             )}
           </TableBody>
         </Table>
