@@ -62,6 +62,8 @@ export type Database = {
           entity_type: string
           id: string
           ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
           user_id: string
         }
         Insert: {
@@ -73,6 +75,8 @@ export type Database = {
           entity_type: string
           id?: string
           ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
           user_id: string
         }
         Update: {
@@ -84,6 +88,8 @@ export type Database = {
           entity_type?: string
           id?: string
           ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
           user_id?: string
         }
         Relationships: [
@@ -2071,6 +2077,18 @@ export type Database = {
           _details?: Json
           _entity_id?: string
           _entity_type: string
+        }
+        Returns: undefined
+      }
+      log_activity_detailed: {
+        Args: {
+          _action: string
+          _company_id?: string
+          _details?: Json
+          _entity_id?: string
+          _entity_type: string
+          _new_data?: Json
+          _old_data?: Json
         }
         Returns: undefined
       }
