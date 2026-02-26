@@ -6,11 +6,14 @@ import {
   Upload, Tags, BarChart3, ArrowRight, TrendingUp,
   Zap, Clock, Sparkles, Megaphone, Pin, AlertCircle,
   MessageCircle, ChevronRight, Activity, Heart, ThumbsUp,
+  AlertTriangle,
 } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { usePayrollConfig, calculateOverdue, DAY_NAMES, type PeriodOverdueInfo } from "@/hooks/usePayrollConfig";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -76,6 +79,7 @@ function useAnimatedNumber(target: number, duration = 800) {
 export default function AdminDashboard() {
   const { selectedCompanyId, selectedCompany, isModuleActive } = useCompany();
   const { role, hasModuleAccess, fullName } = useAuth();
+  const { config: payrollConfig, currentWeek } = usePayrollConfig();
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({
     totalEmployees: 0,
@@ -91,6 +95,8 @@ export default function AdminDashboard() {
   const [chartData, setChartData] = useState<PeriodChartData[]>([]);
   const [feedAnnouncements, setFeedAnnouncements] = useState<FeedAnnouncement[]>([]);
   const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
+  const [overdueInfos, setOverdueInfos] = useState<PeriodOverdueInfo[]>([]);
+  const [periodSummary, setPeriodSummary] = useState({ open: 0, closed: 0, published: 0 });
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -212,7 +218,28 @@ export default function AdminDashboard() {
     fetchStats();
     fetchChartData();
     fetchFeed();
-  }, [selectedCompanyId]);
+
+    // Fetch all periods for overdue detection
+    async function fetchOverdueInfo() {
+      const { data: allPeriods } = await supabase
+        .from("pay_periods")
+        .select("id, start_date, end_date, status")
+        .eq("company_id", selectedCompanyId!)
+        .order("start_date", { ascending: false })
+        .limit(20);
+
+      if (allPeriods && allPeriods.length > 0) {
+        const infos = allPeriods.map(p => calculateOverdue(p, payrollConfig));
+        setOverdueInfos(infos.filter(i => i.isOverdue));
+        setPeriodSummary({
+          open: allPeriods.filter(p => p.status === "open").length,
+          closed: allPeriods.filter(p => p.status === "closed").length,
+          published: allPeriods.filter(p => p.status === "published").length,
+        });
+      }
+    }
+    fetchOverdueInfo();
+  }, [selectedCompanyId, payrollConfig]);
 
   /* period progress */
   const periodProgress = useMemo(() => {
@@ -271,7 +298,7 @@ export default function AdminDashboard() {
               {fullName ? `${greeting}, ${fullName}` : "Dashboard"}
             </h1>
             <p className="text-sm opacity-80 mt-1">
-              {selectedCompany?.name ?? "Selecciona una empresa"} · Nómina semanal
+              {selectedCompany?.name ?? "Selecciona una empresa"} · Nómina semanal ({DAY_NAMES[payrollConfig.payroll_week_start_day].slice(0, 3)} → {DAY_NAMES[payrollConfig.expected_close_day].slice(0, 3)})
             </p>
           </div>
 
@@ -301,7 +328,52 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ── KPI Cards ── */}
+      {/* ── Overdue Banner ── */}
+      {overdueInfos.length > 0 && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <h3 className="text-sm font-bold text-destructive">
+              {overdueInfos.length} periodo{overdueInfos.length > 1 ? "s" : ""} con atraso
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {overdueInfos.map(info => (
+              <div
+                key={info.periodId}
+                className="flex items-center justify-between bg-card rounded-xl px-4 py-2.5 border border-destructive/10 cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate("/admin/periods")}
+              >
+                <div className="flex items-center gap-3">
+                  <Badge variant="destructive" className="text-[10px]">
+                    {info.overdueDays}d atraso
+                  </Badge>
+                  <span className="text-sm font-medium">{info.startDate} → {info.endDate}</span>
+                </div>
+                <span className="text-xs text-muted-foreground capitalize">{info.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Period Status Summary ── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Badge variant="outline" className="gap-1.5 text-xs py-1 px-3 border-earning/30 text-earning">
+          <span className="h-1.5 w-1.5 rounded-full bg-earning" />
+          {periodSummary.open} abierto{periodSummary.open !== 1 ? "s" : ""}
+        </Badge>
+        <Badge variant="outline" className="gap-1.5 text-xs py-1 px-3 border-warning/30 text-warning">
+          <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+          {periodSummary.closed} cerrado{periodSummary.closed !== 1 ? "s" : ""}
+        </Badge>
+        <Badge variant="outline" className="gap-1.5 text-xs py-1 px-3 border-primary/30 text-primary">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          {periodSummary.published} publicado{periodSummary.published !== 1 ? "s" : ""}
+        </Badge>
+      </div>
+
+
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (

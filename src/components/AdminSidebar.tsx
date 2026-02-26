@@ -44,6 +44,7 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/admin/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/admin/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { to: "/admin/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
+  { to: "/admin/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
   // ── Programación ──
   { to: "/admin/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Programación" },
   { to: "/admin/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Programación" },
