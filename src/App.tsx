@@ -42,6 +42,8 @@ import Automations from "./pages/admin/Automations";
 import MonetizationReport from "./pages/admin/MonetizationReport";
 import ShiftRequests from "./pages/admin/ShiftRequests";
 import PayrollSettings from "./pages/admin/PayrollSettings";
+import Pricing from "./pages/admin/Pricing";
+import Billing from "./pages/admin/Billing";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -104,6 +106,8 @@ function App() {
                 <Route path="automations" element={<Automations />} />
                 <Route path="payroll-settings" element={<PayrollSettings />} />
                 <Route path="monetization" element={<MonetizationReport />} />
+                <Route path="pricing" element={<Pricing />} />
+                <Route path="billing" element={<Billing />} />
               </Route>
 
               {/* Employee portal routes */}
