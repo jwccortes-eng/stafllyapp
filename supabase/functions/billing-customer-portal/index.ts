@@ -1,3 +1,4 @@
+import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -12,6 +13,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      return new Response(
+        JSON.stringify({ error: "Stripe no está configurado" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -26,9 +35,8 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -36,7 +44,6 @@ Deno.serve(async (req) => {
     }
 
     const { companyId } = await req.json();
-
     if (!companyId) {
       return new Response(
         JSON.stringify({ error: "companyId is required" }),
@@ -44,22 +51,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    // TODO: Replace with real Stripe Customer Portal session
-    // const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!);
-    // const { data: sub } = await supabase.from("subscriptions").select("stripe_customer_id").eq("company_id", companyId).single();
-    // const session = await stripe.billingPortal.sessions.create({
-    //   customer: sub.stripe_customer_id,
-    //   return_url: `${origin}/admin/billing`,
-    // });
-    // return new Response(JSON.stringify({ url: session.url }), { ... });
+    // Get stripe_customer_id from subscriptions table
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("stripe_customer_id")
+      .eq("company_id", companyId)
+      .maybeSingle();
 
-    console.log(`[billing-customer-portal] Stub called for company=${companyId}`);
+    if (!sub?.stripe_customer_id) {
+      return new Response(
+        JSON.stringify({ error: "No hay suscripción activa para esta empresa" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    const origin = req.headers.get("origin") || "https://staflyapp.lovable.app";
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: sub.stripe_customer_id,
+      return_url: `${origin}/admin/billing`,
+    });
+
+    console.log(`[billing-customer-portal] Portal session created for company=${companyId}`);
 
     return new Response(
-      JSON.stringify({
-        stub: true,
-        message: "Customer portal stub — connect Stripe keys to activate",
-      }),
+      JSON.stringify({ url: session.url }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

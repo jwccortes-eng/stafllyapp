@@ -59,7 +59,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Return default free plan if no subscription exists
     const subscription = data ?? {
       plan: "free",
       status: "active",
@@ -68,8 +67,6 @@ Deno.serve(async (req) => {
       current_period_end: null,
       cancel_at_period_end: false,
     };
-
-    console.log(`[billing-subscription-status] company=${companyId}, plan=${subscription.plan}`);
 
     return new Response(JSON.stringify({ subscription }), {
       status: 200,
