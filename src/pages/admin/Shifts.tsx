@@ -11,12 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2 } from "lucide-react";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 
 import { WeekView } from "@/components/shifts/WeekView";
 import { MonthView } from "@/components/shifts/MonthView";
+import { EmployeeView } from "@/components/shifts/EmployeeView";
+import { ClientView } from "@/components/shifts/ClientView";
 import { ShiftDetailDialog } from "@/components/shifts/ShiftDetailDialog";
 import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
@@ -387,75 +389,82 @@ export default function Shifts() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Turnos</h1>
-          <p className="text-muted-foreground text-sm">Programa y gestiona los turnos de trabajo</p>
+          <h1 className="text-xl font-semibold tracking-tight">Turnos</h1>
+          <p className="text-muted-foreground text-xs">Programa y gestiona los turnos de trabajo</p>
         </div>
         <div className="flex items-center gap-2">
           <Tabs value={viewMode} onValueChange={v => setViewMode(v as ViewMode)}>
-            <TabsList className="h-8">
-              <TabsTrigger value="week" className="text-xs gap-1 px-2">
+            <TabsList className="h-8 bg-muted/50 backdrop-blur-sm">
+              <TabsTrigger value="week" className="text-[11px] gap-1 px-2 data-[state=active]:bg-background">
                 <LayoutGrid className="h-3 w-3" /> Semana
               </TabsTrigger>
-              <TabsTrigger value="month" className="text-xs gap-1 px-2">
+              <TabsTrigger value="month" className="text-[11px] gap-1 px-2 data-[state=active]:bg-background">
                 <CalendarDays className="h-3 w-3" /> Mes
+              </TabsTrigger>
+              <TabsTrigger value="employee" className="text-[11px] gap-1 px-2 data-[state=active]:bg-background">
+                <Users className="h-3 w-3" /> Empleados
+              </TabsTrigger>
+              <TabsTrigger value="client" className="text-[11px] gap-1 px-2 data-[state=active]:bg-background">
+                <Building2 className="h-3 w-3" /> Clientes
               </TabsTrigger>
             </TabsList>
           </Tabs>
           {canEdit && (
             <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nuevo turno</Button>
+                <Button size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1" /> Nuevo turno</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-                <DialogHeader><DialogTitle>Nuevo turno</DialogTitle></DialogHeader>
-                <div className="space-y-4">
+              <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto p-5">
+                <DialogHeader><DialogTitle className="text-base font-semibold">Nuevo turno</DialogTitle></DialogHeader>
+                <div className="space-y-3">
                   <div>
-                    <Label>Título *</Label>
-                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Turno mañana" />
+                    <Label className="text-xs text-muted-foreground">Nombre del turno</Label>
+                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Turno mañana" className="h-9 text-sm" />
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div><Label>Fecha *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-                    <div><Label>Inicio</Label><Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} /></div>
-                    <div><Label>Fin</Label><Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} /></div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div><Label className="text-xs text-muted-foreground">Fecha</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-sm" /></div>
+                    <div><Label className="text-xs text-muted-foreground">Entrada</Label><Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="h-9 text-sm" /></div>
+                    <div><Label className="text-xs text-muted-foreground">Salida</Label><Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="h-9 text-sm" /></div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label>Cliente</Label>
+                      <Label className="text-xs text-muted-foreground">Cliente</Label>
                       <Select value={clientId || "none"} onValueChange={v => setClientId(v === "none" ? "" : v)}>
-                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Ninguno</SelectItem>
+                          <SelectItem value="none">Sin asignar</SelectItem>
                           {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label>Ubicación</Label>
+                      <Label className="text-xs text-muted-foreground">Ubicación</Label>
                       <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
-                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Ninguna</SelectItem>
+                          <SelectItem value="none">Sin asignar</SelectItem>
                           {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><Label>Plazas</Label><Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" /></div>
-                    <div className="flex items-center gap-2 pt-6">
+                  <div className="grid grid-cols-2 gap-2 items-end">
+                    <div><Label className="text-xs text-muted-foreground">Plazas disponibles</Label><Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm" /></div>
+                    <div className="flex items-center gap-2 h-9">
                       <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="claimable" />
-                      <Label htmlFor="claimable" className="text-sm">Reclamable por empleados</Label>
+                      <Label htmlFor="claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
                     </div>
                   </div>
-                  <div><Label>Notas</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} /></div>
+                  <div><Label className="text-xs text-muted-foreground">Notas adicionales</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none" /></div>
                   <div>
-                    <Label>Asignar empleados</Label>
-                    <div className="border rounded-lg max-h-40 overflow-y-auto p-2 mt-1 space-y-1">
+                    <Label className="text-xs text-muted-foreground">Asignar empleados</Label>
+                    <div className="border rounded-lg max-h-36 overflow-y-auto p-2 mt-1 space-y-0.5">
                       {employees.map(emp => (
-                        <label key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer text-sm">
+                        <label key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer text-xs">
                           <Checkbox checked={selectedEmployees.includes(emp.id)} onCheckedChange={() => toggleEmployee(emp.id)} />
                           {emp.first_name} {emp.last_name}
                         </label>
@@ -463,8 +472,8 @@ export default function Shifts() {
                       {employees.length === 0 && <p className="text-xs text-muted-foreground p-2">No hay empleados activos</p>}
                     </div>
                   </div>
-                  <Button onClick={handleCreate} disabled={saving || !title.trim() || !date} className="w-full">
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                  <Button onClick={handleCreate} disabled={saving || !title.trim() || !date} className="w-full h-9 text-sm">
+                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
                     Crear turno
                   </Button>
                 </div>
@@ -475,40 +484,61 @@ export default function Shifts() {
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" onClick={navigateBack}>
-          <ChevronLeft className="h-4 w-4" />
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigateBack}>
+          <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
-        <span className="text-sm font-medium capitalize">{navLabel}</span>
-        <Button variant="outline" size="icon" onClick={navigateForward}>
-          <ChevronRight className="h-4 w-4" />
+        <span className="text-xs font-medium capitalize min-w-[140px] text-center">{navLabel}</span>
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigateForward}>
+          <ChevronRight className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="sm" onClick={navigateToday}>Hoy</Button>
+        <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={navigateToday}>Hoy</Button>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : viewMode === "week" ? (
-        <WeekView
-          weekDays={weekDays}
-          shifts={shifts}
-          assignments={assignments}
-          locations={locations}
-          onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
-          onDropOnShift={handleDropOnShift}
-        />
-      ) : (
-        <MonthView
-          currentMonth={currentMonth}
-          shifts={shifts}
-          assignments={assignments}
-          locations={locations}
-          onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
-          onDropOnShift={handleDropOnShift}
-        />
-      )}
+      {/* Content */}
+      <div className="rounded-xl bg-gradient-to-br from-muted/30 via-background to-muted/20 border border-border/30 p-4 min-h-[400px]">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : viewMode === "week" ? (
+          <WeekView
+            weekDays={weekDays}
+            shifts={shifts}
+            assignments={assignments}
+            locations={locations}
+            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onDropOnShift={handleDropOnShift}
+          />
+        ) : viewMode === "month" ? (
+          <MonthView
+            currentMonth={currentMonth}
+            shifts={shifts}
+            assignments={assignments}
+            locations={locations}
+            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onDropOnShift={handleDropOnShift}
+          />
+        ) : viewMode === "employee" ? (
+          <EmployeeView
+            employees={employees}
+            shifts={shifts}
+            assignments={assignments}
+            locations={locations}
+            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onDropOnShift={handleDropOnShift}
+          />
+        ) : (
+          <ClientView
+            clients={clients}
+            shifts={shifts}
+            assignments={assignments}
+            locations={locations}
+            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onDropOnShift={handleDropOnShift}
+          />
+        )}
+      </div>
 
       <ShiftDetailDialog
         shift={selectedShift}

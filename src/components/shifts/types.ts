@@ -22,4 +22,4 @@ export interface Assignment {
 export interface SelectOption { id: string; name: string; }
 export interface Employee { id: string; first_name: string; last_name: string; }
 
-export type ViewMode = "week" | "month";
+export type ViewMode = "week" | "month" | "employee" | "client";
