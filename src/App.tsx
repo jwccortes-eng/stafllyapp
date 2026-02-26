@@ -50,6 +50,7 @@ import MyAnnouncements from "./pages/portal/MyAnnouncements";
 import EmployeeDashboard from "./pages/portal/EmployeeDashboard";
 import PortalResources from "./pages/portal/PortalResources";
 import PortalProfile from "./pages/portal/PortalProfile";
+import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/install" element={<Install />} />
               <Route path="/auth" element={<Auth />} />
 
               {/* Admin routes */}
