@@ -9,7 +9,7 @@ const links = [
   { to: "/portal", icon: Home, label: "Inicio", end: true },
   { to: "/portal/payments", icon: Wallet, label: "Pagos" },
   { to: "/portal/shifts", icon: Clock, label: "Turnos" },
-  { to: "/portal/announcements", icon: Megaphone, label: "Anuncios" },
+  { to: "/portal/announcements", icon: Megaphone, label: "Feed" },
 ];
 
 export default function EmployeeLayout() {
