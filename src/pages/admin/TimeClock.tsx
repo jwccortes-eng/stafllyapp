@@ -5,16 +5,16 @@ import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Clock, Play, Square, Loader2, ChevronLeft, ChevronRight,
-  Search, CheckCircle2, Timer, Pencil,
+  Search, CheckCircle2, Timer, Pencil, Hash,
 } from "lucide-react";
 import { format, differenceInMinutes, startOfWeek, addDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -29,9 +29,12 @@ interface TimeEntry {
   notes: string | null;
   status: string;
   approved_by: string | null;
+  scheduled_shifts?: { id: string; shift_code: string | null; title: string } | null;
 }
 
 interface Employee { id: string; first_name: string; last_name: string; }
+
+interface AvailableShift { id: string; shift_code: string | null; title: string; date: string; start_time: string; end_time: string; }
 
 export default function TimeClock() {
   const { role, hasModuleAccess, employeeId } = useAuth();
@@ -46,12 +49,21 @@ export default function TimeClock() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [clockingIn, setClockingIn] = useState(false);
+
+  // Clock-in shift selection
+  const [clockInOpen, setClockInOpen] = useState(false);
+  const [availableShifts, setAvailableShifts] = useState<AvailableShift[]>([]);
+  const [selectedShiftId, setSelectedShiftId] = useState<string>("none");
+  const [loadingShifts, setLoadingShifts] = useState(false);
+
+  // Edit dialog
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editClockIn, setEditClockIn] = useState("");
   const [editClockOut, setEditClockOut] = useState("");
   const [editBreak, setEditBreak] = useState("0");
   const [editNotes, setEditNotes] = useState("");
+  const [editShiftId, setEditShiftId] = useState<string>("none");
   const [editSaving, setEditSaving] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -59,7 +71,7 @@ export default function TimeClock() {
     setLoading(true);
     const weekEnd = addDays(weekStart, 7);
     const [entriesRes, empsRes] = await Promise.all([
-      supabase.from("time_entries").select("*").eq("company_id", selectedCompanyId)
+      supabase.from("time_entries").select("*, scheduled_shifts(id, shift_code, title)").eq("company_id", selectedCompanyId)
         .gte("clock_in", weekStart.toISOString())
         .lt("clock_in", weekEnd.toISOString())
         .order("clock_in", { ascending: false }),
@@ -68,9 +80,8 @@ export default function TimeClock() {
     setEntries((entriesRes.data ?? []) as TimeEntry[]);
     setEmployees((empsRes.data ?? []) as Employee[]);
 
-    // Check if current employee has active entry
     if (employeeId) {
-      const { data: active } = await supabase.from("time_entries").select("*")
+      const { data: active } = await supabase.from("time_entries").select("*, scheduled_shifts(id, shift_code, title)")
         .eq("employee_id", employeeId).is("clock_out", null).limit(1).maybeSingle();
       setActiveEntry(active as TimeEntry | null);
     }
@@ -79,16 +90,62 @@ export default function TimeClock() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Load available shifts for today when opening clock-in dialog
+  const openClockInDialog = async () => {
+    if (!employeeId || !selectedCompanyId) return;
+    setClockInOpen(true);
+    setLoadingShifts(true);
+    setSelectedShiftId("none");
+    const today = format(new Date(), "yyyy-MM-dd");
+    // Get shifts assigned to this employee for today
+    const { data: assignments } = await supabase
+      .from("shift_assignments")
+      .select("shift_id, scheduled_shifts(id, shift_code, title, date, start_time, end_time)")
+      .eq("employee_id", employeeId)
+      .eq("company_id", selectedCompanyId)
+      .eq("status", "confirmed");
+    
+    const shifts: AvailableShift[] = [];
+    (assignments ?? []).forEach((a: any) => {
+      const s = a.scheduled_shifts;
+      if (s && s.date === today) {
+        shifts.push({ id: s.id, shift_code: s.shift_code, title: s.title, date: s.date, start_time: s.start_time, end_time: s.end_time });
+      }
+    });
+
+    // Also get unassigned/claimable shifts for today
+    const { data: openShifts } = await supabase
+      .from("scheduled_shifts")
+      .select("id, shift_code, title, date, start_time, end_time")
+      .eq("company_id", selectedCompanyId)
+      .eq("date", today)
+      .eq("status", "published");
+    
+    (openShifts ?? []).forEach((s: any) => {
+      if (!shifts.find(x => x.id === s.id)) {
+        shifts.push(s);
+      }
+    });
+
+    setAvailableShifts(shifts);
+    if (shifts.length === 1) setSelectedShiftId(shifts[0].id);
+    setLoadingShifts(false);
+  };
+
   const handleClockIn = async () => {
     if (!employeeId || !selectedCompanyId) return;
     setClockingIn(true);
-    const { error } = await supabase.from("time_entries").insert({
+    const insertData: any = {
       company_id: selectedCompanyId,
       employee_id: employeeId,
       clock_in: new Date().toISOString(),
-    } as any);
+    };
+    if (selectedShiftId && selectedShiftId !== "none") {
+      insertData.shift_id = selectedShiftId;
+    }
+    const { error } = await supabase.from("time_entries").insert(insertData);
     if (error) toast.error(error.message);
-    else { toast.success("Entrada registrada"); loadData(); }
+    else { toast.success("Entrada registrada"); setClockInOpen(false); loadData(); }
     setClockingIn(false);
   };
 
@@ -118,6 +175,7 @@ export default function TimeClock() {
     setEditClockOut(entry.clock_out ? format(new Date(entry.clock_out), "yyyy-MM-dd'T'HH:mm") : "");
     setEditBreak(String(entry.break_minutes ?? 0));
     setEditNotes(entry.notes ?? "");
+    setEditShiftId(entry.shift_id ?? "none");
     setEditOpen(true);
   };
 
@@ -129,6 +187,7 @@ export default function TimeClock() {
       clock_out: editClockOut ? new Date(editClockOut).toISOString() : null,
       break_minutes: parseInt(editBreak) || 0,
       notes: editNotes.trim() || null,
+      shift_id: editShiftId && editShiftId !== "none" ? editShiftId : null,
     };
     const { error } = await supabase.from("time_entries").update(updates).eq("id", editEntry.id);
     if (error) toast.error(error.message);
@@ -159,10 +218,10 @@ export default function TimeClock() {
     let total = 0;
     entries.forEach(e => {
       if (e.clock_out) {
-        total += differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - e.break_minutes;
+        total += differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0);
       }
     });
-    return (total / 60).toFixed(1);
+    return (Math.max(0, total) / 60).toFixed(1);
   }, [entries]);
 
   return (
@@ -184,7 +243,14 @@ export default function TimeClock() {
             <div className="flex-1">
               {activeEntry ? (
                 <div>
-                  <p className="text-sm font-medium">Entrada activa desde {format(new Date(activeEntry.clock_in), "HH:mm")}</p>
+                  <p className="text-sm font-medium">
+                    Entrada activa desde {format(new Date(activeEntry.clock_in), "HH:mm")}
+                    {activeEntry.scheduled_shifts?.shift_code && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        <Hash className="h-3 w-3 mr-0.5" />{activeEntry.scheduled_shifts.shift_code}
+                      </Badge>
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground">Duración: {getDuration(activeEntry)}</p>
                 </div>
               ) : (
@@ -197,7 +263,7 @@ export default function TimeClock() {
                 Marcar salida
               </Button>
             ) : (
-              <Button onClick={handleClockIn} disabled={clockingIn}>
+              <Button onClick={openClockInDialog} disabled={clockingIn}>
                 {clockingIn ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Play className="h-4 w-4 mr-1" />}
                 Marcar entrada
               </Button>
@@ -257,6 +323,7 @@ export default function TimeClock() {
             <TableHeader>
               <TableRow>
                 <TableHead>Empleado</TableHead>
+                <TableHead>Turno</TableHead>
                 <TableHead>Entrada</TableHead>
                 <TableHead>Salida</TableHead>
                 <TableHead>Duración</TableHead>
@@ -268,6 +335,15 @@ export default function TimeClock() {
               {filtered.map(entry => (
                 <TableRow key={entry.id}>
                   <TableCell className="font-medium">{getEmployeeName(entry.employee_id)}</TableCell>
+                  <TableCell className="text-sm">
+                    {entry.scheduled_shifts?.shift_code ? (
+                      <Badge variant="outline" className="font-mono">
+                        <Hash className="h-3 w-3 mr-0.5" />{entry.scheduled_shifts.shift_code}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm">{format(new Date(entry.clock_in), "dd/MM HH:mm")}</TableCell>
                   <TableCell className="text-sm">
                     {entry.clock_out ? format(new Date(entry.clock_out), "dd/MM HH:mm") : (
@@ -298,7 +374,7 @@ export default function TimeClock() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     <Timer className="h-8 w-8 mx-auto mb-2 opacity-40" />
                     No hay registros esta semana
                   </TableCell>
@@ -308,6 +384,46 @@ export default function TimeClock() {
           </Table>
         </div>
       )}
+
+      {/* Clock-In Dialog — select shift */}
+      <Dialog open={clockInOpen} onOpenChange={setClockInOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Marcar entrada</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Vincular a turno (opcional)</Label>
+              {loadingShifts ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando turnos...
+                </div>
+              ) : availableShifts.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">No hay turnos disponibles para hoy</p>
+              ) : (
+                <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Sin turno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin turno</SelectItem>
+                    {availableShifts.map(s => (
+                      <SelectItem key={s.id} value={s.id}>
+                        <span className="font-mono text-xs mr-1">#{s.shift_code}</span> {s.title} ({s.start_time}–{s.end_time})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <Button onClick={handleClockIn} disabled={clockingIn} className="w-full">
+              {clockingIn ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+              Confirmar entrada
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Entry Dialog */}
       <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) setEditEntry(null); }}>
         <DialogContent className="max-w-sm">
@@ -315,6 +431,20 @@ export default function TimeClock() {
             <DialogTitle>Editar entrada</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <Label>Turno vinculado</Label>
+              <Input
+                value={editShiftId === "none" ? "" : editShiftId}
+                onChange={e => setEditShiftId(e.target.value || "none")}
+                placeholder="ID del turno (opcional)"
+                className="font-mono text-xs"
+              />
+              {editEntry?.scheduled_shifts?.shift_code && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Actual: #{editEntry.scheduled_shifts.shift_code} — {editEntry.scheduled_shifts.title}
+                </p>
+              )}
+            </div>
             <div>
               <Label>Entrada</Label>
               <Input type="datetime-local" value={editClockIn} onChange={e => setEditClockIn(e.target.value)} />
