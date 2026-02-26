@@ -11,10 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2 } from "lucide-react";
-import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth } from "date-fns";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar } from "lucide-react";
+import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 
+import { DayView } from "@/components/shifts/DayView";
 import { WeekView } from "@/components/shifts/WeekView";
 import { MonthView } from "@/components/shifts/MonthView";
 import { EmployeeView } from "@/components/shifts/EmployeeView";
@@ -57,7 +58,8 @@ export default function Shifts() {
   const [locations, setLocations] = useState<SelectOption[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
+  const [currentDay, setCurrentDay] = useState(() => new Date());
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
 
@@ -92,7 +94,10 @@ export default function Shifts() {
     setLoading(true);
 
     let dateFrom: string, dateTo: string;
-    if (viewMode === "week") {
+    if (viewMode === "day") {
+      dateFrom = format(currentDay, "yyyy-MM-dd");
+      dateTo = dateFrom;
+    } else if (viewMode === "week") {
       dateFrom = format(weekStart, "yyyy-MM-dd");
       dateTo = format(addDays(weekStart, 6), "yyyy-MM-dd");
     } else {
@@ -115,7 +120,7 @@ export default function Shifts() {
     setLocations((locsRes.data ?? []) as SelectOption[]);
     setEmployees((empsRes.data ?? []) as Employee[]);
     setLoading(false);
-  }, [selectedCompanyId, weekStart, currentMonth, viewMode]);
+  }, [selectedCompanyId, weekStart, currentMonth, currentDay, viewMode]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -369,21 +374,26 @@ export default function Shifts() {
     );
   };
 
-  const navLabel = viewMode === "week"
-    ? `${format(weekStart, "d MMM", { locale: es })} — ${format(addDays(weekStart, 6), "d MMM yyyy", { locale: es })}`
-    : format(currentMonth, "MMMM yyyy", { locale: es });
+  const navLabel = viewMode === "day"
+    ? format(currentDay, "EEEE d 'de' MMMM yyyy", { locale: es })
+    : viewMode === "week"
+      ? `${format(weekStart, "d MMM", { locale: es })} — ${format(addDays(weekStart, 6), "d MMM yyyy", { locale: es })}`
+      : format(currentMonth, "MMMM yyyy", { locale: es });
 
   const navigateBack = () => {
-    if (viewMode === "week") setWeekStart(d => addDays(d, -7));
+    if (viewMode === "day") setCurrentDay(d => subDays(d, 1));
+    else if (viewMode === "week") setWeekStart(d => addDays(d, -7));
     else setCurrentMonth(d => addMonths(d, -1));
   };
 
   const navigateForward = () => {
-    if (viewMode === "week") setWeekStart(d => addDays(d, 7));
+    if (viewMode === "day") setCurrentDay(d => addDays(d, 1));
+    else if (viewMode === "week") setWeekStart(d => addDays(d, 7));
     else setCurrentMonth(d => addMonths(d, 1));
   };
 
   const navigateToday = () => {
+    setCurrentDay(new Date());
     setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
     setCurrentMonth(new Date());
   };
@@ -399,6 +409,9 @@ export default function Shifts() {
         <div className="flex items-center gap-2">
           <Tabs value={viewMode} onValueChange={v => setViewMode(v as ViewMode)}>
             <TabsList className="h-8 bg-muted/50 backdrop-blur-sm">
+              <TabsTrigger value="day" className="text-[11px] gap-1 px-2 data-[state=active]:bg-background">
+                <Calendar className="h-3 w-3" /> Día
+              </TabsTrigger>
               <TabsTrigger value="week" className="text-[11px] gap-1 px-2 data-[state=active]:bg-background">
                 <LayoutGrid className="h-3 w-3" /> Semana
               </TabsTrigger>
@@ -501,12 +514,23 @@ export default function Shifts() {
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
+        ) : viewMode === "day" ? (
+          <DayView
+            currentDay={currentDay}
+            shifts={shifts}
+            assignments={assignments}
+            locations={locations}
+            clients={clients}
+            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onDropOnShift={handleDropOnShift}
+          />
         ) : viewMode === "week" ? (
           <WeekView
             weekDays={weekDays}
             shifts={shifts}
             assignments={assignments}
             locations={locations}
+            clients={clients}
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
           />
@@ -516,6 +540,7 @@ export default function Shifts() {
             shifts={shifts}
             assignments={assignments}
             locations={locations}
+            clients={clients}
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
           />
@@ -525,6 +550,7 @@ export default function Shifts() {
             shifts={shifts}
             assignments={assignments}
             locations={locations}
+            clients={clients}
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
           />
