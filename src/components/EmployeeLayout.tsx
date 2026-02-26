@@ -50,9 +50,9 @@ export default function EmployeeLayout() {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-[100dvh] bg-background flex flex-col">
         {/* Minimal top bar */}
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b">
+        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b shrink-0">
           <div className="flex items-center justify-between px-5 h-14">
             <span className="text-base font-bold font-heading tracking-tight text-foreground">Staffly</span>
             <button onClick={signOut} className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" aria-label="Cerrar sesión">
@@ -61,12 +61,12 @@ export default function EmployeeLayout() {
           </div>
         </header>
 
-        <main className="px-5 py-4 animate-fade-in">
+        <main className="flex-1 overflow-y-auto px-5 py-4 pb-24 animate-fade-in">
           <Outlet />
         </main>
 
         {/* Bottom navigation — Instagram-style tabs */}
-        <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/80 backdrop-blur-lg border-t safe-area-bottom">
+        <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/80 backdrop-blur-lg border-t pb-[env(safe-area-inset-bottom)]">
           <div className="flex items-center justify-around h-16 px-2">
             {links.map((link) => {
               const isActive = link.end ? location.pathname === link.to : location.pathname.startsWith(link.to);
