@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import {
   Wallet, Clock, Megaphone, CalendarDays,
   MapPin, ArrowRight, AlertCircle, Pin,
@@ -60,6 +61,7 @@ export default function EmployeeDashboard() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [nextShift, setNextShift] = useState<NextShift | null>(null);
   const [estimatedPay, setEstimatedPay] = useState<number | null>(null);
+  const [periodInfo, setPeriodInfo] = useState<{ status: string; startDate: string; endDate: string } | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [reactions, setReactions] = useState<Record<string, ReactionCount[]>>({});
   const [loading, setLoading] = useState(true);
@@ -111,6 +113,7 @@ export default function EmployeeDashboard() {
     // Period & estimated pay
     if (periodRes.data) {
       const p = periodRes.data;
+      setPeriodInfo({ status: p.status, startDate: p.start_date, endDate: p.end_date });
       const [bpRes, movRes] = await Promise.all([
         supabase.from("period_base_pay").select("base_total_pay")
           .eq("employee_id", employeeId!).eq("period_id", p.id).maybeSingle(),
@@ -296,6 +299,36 @@ export default function EmployeeDashboard() {
           </Link>
         )}
       </div>
+
+      {/* Period info */}
+      {periodInfo && (
+        <div className="rounded-xl border bg-card px-4 py-3 flex items-center gap-3">
+          <div className={cn(
+            "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+            periodInfo.status === "open" ? "bg-earning/10" :
+            periodInfo.status === "closed" ? "bg-warning/10" : "bg-primary/10"
+          )}>
+            <CalendarDays className={cn("h-4 w-4",
+              periodInfo.status === "open" ? "text-earning" :
+              periodInfo.status === "closed" ? "text-warning" : "text-primary"
+            )} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-muted-foreground font-medium">Periodo actual</p>
+            <p className="text-xs font-semibold">{periodInfo.startDate} → {periodInfo.endDate}</p>
+          </div>
+          <Badge variant="outline" className={cn("text-[10px] shrink-0",
+            periodInfo.status === "open" ? "border-earning/30 text-earning" :
+            periodInfo.status === "closed" ? "border-warning/30 text-warning" : "border-primary/30 text-primary"
+          )}>
+            <span className={cn("h-1.5 w-1.5 rounded-full mr-1",
+              periodInfo.status === "open" ? "bg-earning" :
+              periodInfo.status === "closed" ? "bg-warning" : "bg-primary"
+            )} />
+            {periodInfo.status === "open" ? "Abierto" : periodInfo.status === "closed" ? "Cerrado" : "Publicado"}
+          </Badge>
+        </div>
+      )}
 
       {/* Feed header */}
       <div className="flex items-center gap-2 pt-1">

@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, DollarSign, FileSpreadsheet, TrendingUp, TrendingDown, BarChart3, CalendarIcon, X, UserMinus, Crown, Download, Sparkles } from "lucide-react";
+import { Building2, Users, DollarSign, FileSpreadsheet, TrendingUp, TrendingDown, BarChart3, CalendarIcon, X, UserMinus, Crown, Download, Sparkles, Clock } from "lucide-react";
+import { PeriodStatusBanner } from "@/components/ui/period-status-banner";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line,
@@ -342,16 +343,23 @@ export default function OwnerDashboard() {
   }, []);
 
   return (
-    <div>
-      <div className="page-header">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <span className="text-sm text-muted-foreground">{greeting}</span>
+    <div className="space-y-6">
+      {/* Hero greeting */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-6 md:p-8 text-primary-foreground">
+        <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute bottom-0 left-1/3 h-24 w-24 rounded-full bg-white/5 blur-xl" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="h-5 w-5 opacity-80" />
+            <span className="text-sm font-medium opacity-80">{greeting}</span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold font-heading tracking-tight">
+            {fullName ? `${greeting}, ${fullName}` : "Vista global"}
+          </h1>
+          <p className="text-sm opacity-80 mt-1">
+            {selectedCompanyFilter !== "all" ? selectedCompanyFilter : "Todas las empresas"} · Resumen consolidado
+          </p>
         </div>
-        <h1 className="page-title">{fullName ? `${greeting}, ${fullName}` : "Vista global"}</h1>
-        <p className="page-subtitle">
-          {selectedCompanyFilter !== "all" ? selectedCompanyFilter : "Todas las empresas"} · Resumen consolidado
-        </p>
       </div>
 
       {loading ? (
@@ -366,19 +374,31 @@ export default function OwnerDashboard() {
       ) : (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {summaryCards.map((card) => (
-              <Card key={card.title} className="stat-card">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
-                  <card.icon className={`h-5 w-5 ${card.color}`} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold font-heading">{card.value}</div>
-                </CardContent>
-              </Card>
+              <div key={card.title} className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+                <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-primary/5 -translate-y-6 translate-x-6 group-hover:scale-150 transition-transform duration-500" />
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{card.title}</span>
+                    <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center transition-colors", `bg-${card.color.replace('text-', '')}/10`)}>
+                      <card.icon className={cn("h-5 w-5", card.color)} />
+                    </div>
+                  </div>
+                  <p className="text-3xl font-bold font-heading text-foreground">{card.value}</p>
+                </div>
+              </div>
             ))}
           </div>
+
+          {/* Period Status from companies */}
+          {companies.length > 0 && (
+            <PeriodStatusBanner
+              open={companies.filter(c => c.period_status === "open").length}
+              closed={companies.filter(c => c.period_status === "closed").length}
+              published={companies.filter(c => c.period_status === "published").length}
+            />
+          )}
 
           {/* Filters Row */}
           {allTrendData.length > 0 && (
