@@ -57,6 +57,27 @@ export function ShiftCard({
   const color = getClientColor(shift.client_id, clientIds);
   const badges = getStatusBadges(shift, assignmentCount);
 
+  const handleDragStart = (e: React.DragEvent) => {
+    // Store whether Alt key is held for duplicate mode
+    e.dataTransfer.setData("application/shift-action", e.altKey ? "duplicate" : "move");
+    e.dataTransfer.setData("application/shift-data", JSON.stringify({
+      shiftId: shift.id,
+      title: shift.title,
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      slots: shift.slots,
+      client_id: shift.client_id,
+      location_id: shift.location_id,
+      notes: shift.notes,
+      claimable: shift.claimable,
+      status: shift.status,
+    }));
+    if (e.altKey) {
+      e.dataTransfer.effectAllowed = "copy";
+    }
+    onDragStart?.(e);
+  };
+
   return (
     <Card
       className={cn(
@@ -66,7 +87,7 @@ export function ShiftCard({
         draggable && "hover:ring-1 hover:ring-primary/30"
       )}
       draggable={draggable}
-      onDragStart={onDragStart}
+      onDragStart={handleDragStart}
       onClick={onClick}
     >
       <CardContent className={cn("p-2.5", compact && "p-1.5")}>
