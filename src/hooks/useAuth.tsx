@@ -156,7 +156,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // Force clear state even if signOut fails (e.g. expired token)
+      console.error("Sign out error:", err);
+    }
+    // Always clear local state
+    setUser(null);
+    setSession(null);
+    setRole(null);
+    setEmployeeId(null);
+    setPermissions([]);
+    setActionPermissions([]);
+    setFullName(null);
   };
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
