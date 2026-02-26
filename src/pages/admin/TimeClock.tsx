@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Clock, Play, Square, Loader2, ChevronLeft, ChevronRight,
-  Search, CheckCircle2, Timer,
+  Search, CheckCircle2, Timer, Pencil,
 } from "lucide-react";
 import { format, differenceInMinutes, startOfWeek, addDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -43,6 +46,13 @@ export default function TimeClock() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [clockingIn, setClockingIn] = useState(false);
+  const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editClockIn, setEditClockIn] = useState("");
+  const [editClockOut, setEditClockOut] = useState("");
+  const [editBreak, setEditBreak] = useState("0");
+  const [editNotes, setEditNotes] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!selectedCompanyId) return;
@@ -102,6 +112,30 @@ export default function TimeClock() {
     else { toast.success("Entrada aprobada"); loadData(); }
   };
 
+  const openEditEntry = (entry: TimeEntry) => {
+    setEditEntry(entry);
+    setEditClockIn(format(new Date(entry.clock_in), "yyyy-MM-dd'T'HH:mm"));
+    setEditClockOut(entry.clock_out ? format(new Date(entry.clock_out), "yyyy-MM-dd'T'HH:mm") : "");
+    setEditBreak(String(entry.break_minutes ?? 0));
+    setEditNotes(entry.notes ?? "");
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editEntry) return;
+    setEditSaving(true);
+    const updates: Record<string, any> = {
+      clock_in: new Date(editClockIn).toISOString(),
+      clock_out: editClockOut ? new Date(editClockOut).toISOString() : null,
+      break_minutes: parseInt(editBreak) || 0,
+      notes: editNotes.trim() || null,
+    };
+    const { error } = await supabase.from("time_entries").update(updates).eq("id", editEntry.id);
+    if (error) toast.error(error.message);
+    else { toast.success("Entrada actualizada"); setEditOpen(false); setEditEntry(null); loadData(); }
+    setEditSaving(false);
+  };
+
   const getEmployeeName = (id: string) => {
     const emp = employees.find(e => e.id === id);
     return emp ? `${emp.first_name} ${emp.last_name}` : "—";
@@ -109,9 +143,9 @@ export default function TimeClock() {
 
   const getDuration = (entry: TimeEntry) => {
     const end = entry.clock_out ? new Date(entry.clock_out) : new Date();
-    const mins = differenceInMinutes(end, new Date(entry.clock_in)) - entry.break_minutes;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
+    const totalMins = Math.max(0, differenceInMinutes(end, new Date(entry.clock_in)) - (entry.break_minutes ?? 0));
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
     return `${h}h ${m}m`;
   };
 
@@ -248,11 +282,16 @@ export default function TimeClock() {
                   </TableCell>
                   {canApprove && (
                     <TableCell>
-                      {entry.status !== "approved" && entry.clock_out && (
-                        <Button variant="ghost" size="icon" onClick={() => handleApprove(entry.id)}>
-                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEditEntry(entry)}>
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                      )}
+                        {entry.status !== "approved" && entry.clock_out && (
+                          <Button variant="ghost" size="icon" onClick={() => handleApprove(entry.id)}>
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -269,6 +308,36 @@ export default function TimeClock() {
           </Table>
         </div>
       )}
+      {/* Edit Entry Dialog */}
+      <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) setEditEntry(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar entrada</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Entrada</Label>
+              <Input type="datetime-local" value={editClockIn} onChange={e => setEditClockIn(e.target.value)} />
+            </div>
+            <div>
+              <Label>Salida</Label>
+              <Input type="datetime-local" value={editClockOut} onChange={e => setEditClockOut(e.target.value)} />
+            </div>
+            <div>
+              <Label>Minutos de break</Label>
+              <Input type="number" value={editBreak} onChange={e => setEditBreak(e.target.value)} min="0" />
+            </div>
+            <div>
+              <Label>Notas</Label>
+              <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} />
+            </div>
+            <Button onClick={handleSaveEdit} disabled={editSaving || !editClockIn} className="w-full">
+              {editSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Guardar cambios
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
