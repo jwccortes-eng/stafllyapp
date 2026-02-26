@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays } from "lucide-react";
+import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useSearchParams } from "react-router-dom";
 
 interface TimeEntry {
   id: string;
@@ -21,12 +22,18 @@ interface TimeEntry {
 export default function PortalClock() {
   const { employeeId } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const shiftIdParam = searchParams.get("shiftId");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
+  const [shiftInfo, setShiftInfo] = useState<{
+    id: string; title: string; start_time: string; end_time: string;
+    location_name?: string; client_name?: string;
+  } | null>(null);
 
   // Live clock tick
   useEffect(() => {
@@ -71,6 +78,28 @@ export default function PortalClock() {
     loadData();
   }, [loadData]);
 
+  // Load shift info when shiftId param is present
+  useEffect(() => {
+    if (!shiftIdParam) { setShiftInfo(null); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("scheduled_shifts")
+        .select("id, title, start_time, end_time, locations (name), clients (name)")
+        .eq("id", shiftIdParam)
+        .maybeSingle();
+      if (data) {
+        setShiftInfo({
+          id: data.id,
+          title: data.title,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          location_name: (data.locations as any)?.name,
+          client_name: (data.clients as any)?.name,
+        });
+      }
+    })();
+  }, [shiftIdParam]);
+
   const handleClockIn = async () => {
     if (!employeeId || !companyId) return;
     setActing(true);
@@ -80,9 +109,13 @@ export default function PortalClock() {
         company_id: companyId,
         clock_in: new Date().toISOString(),
         status: "pending",
+        shift_id: shiftInfo?.id ?? null,
       });
       if (error) throw error;
-      toast({ title: "Entrada registrada", description: "Tu hora de entrada fue registrada correctamente." });
+      toast({ title: "Entrada registrada", description: shiftInfo ? `Fichaje vinculado a: ${shiftInfo.title}` : "Tu hora de entrada fue registrada correctamente." });
+      // Clear shift param after successful clock-in
+      if (shiftIdParam) setSearchParams({}, { replace: true });
+      setShiftInfo(null);
       await loadData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message ?? "No se pudo registrar la entrada.", variant: "destructive" });
@@ -199,6 +232,32 @@ export default function PortalClock() {
           )}
         </div>
       </div>
+
+      {/* Linked shift info card */}
+      {shiftInfo && !isClockedIn && (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Turno seleccionado</p>
+          <p className="text-sm font-bold text-foreground">{shiftInfo.title}</p>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {shiftInfo.start_time.slice(0, 5)} – {shiftInfo.end_time.slice(0, 5)}
+            </span>
+            {shiftInfo.location_name && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {shiftInfo.location_name}
+              </span>
+            )}
+            {shiftInfo.client_name && (
+              <span className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                {shiftInfo.client_name}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Clock in/out button */}
       <Button

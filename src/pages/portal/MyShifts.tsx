@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown } from "lucide-react";
+import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isBefore, startOfDay, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface ShiftAssignment {
   id: string;
@@ -42,6 +43,7 @@ interface ClaimableShift {
 
 export default function MyShifts() {
   const { employeeId } = useAuth();
+  const navigate = useNavigate();
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [claimable, setClaimable] = useState<ClaimableShift[]>([]);
   const [loading, setLoading] = useState(true);
@@ -329,6 +331,18 @@ export default function MyShifts() {
               Rechazar
             </Button>
           </div>
+        )}
+
+        {/* Clock In button for confirmed today shifts */}
+        {a.status === "confirmed" && isTodayShift && (
+          <Button
+            size="sm"
+            className="w-full h-10 text-sm gap-2 font-bold"
+            onClick={() => navigate(`/portal/clock?shiftId=${a.shift.id}`)}
+          >
+            <LogIn className="h-4 w-4" />
+            Marcar Entrada
+          </Button>
         )}
       </div>
     );
