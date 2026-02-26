@@ -66,6 +66,7 @@ const ACTION_GROUPS = [
     icon: Settings,
     actions: [
       { key: "configurar_empresa", label: "Configurar empresa" },
+      { key: "configurar_nomina", label: "Configurar nómina (ciclo/cierre)" },
     ],
   },
 ];
