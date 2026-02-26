@@ -55,7 +55,7 @@ export default function EmployeeLayout() {
         {/* Minimal top bar */}
         <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-2xl border-b border-border/40 shrink-0">
           <div className="flex items-center justify-between px-5 h-12">
-            <span className="text-[15px] font-bold font-heading tracking-tight text-foreground">STAFLY</span>
+            <span className="text-[15px] font-bold font-heading tracking-tight text-foreground">Staffly</span>
             <LogoutConfirmDialog onConfirm={signOut}>
               <button className="p-2 -mr-1 rounded-full text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all active:scale-90" aria-label="Cerrar sesión">
                 <LogOut className="h-[18px] w-[18px]" />
@@ -113,7 +113,7 @@ export default function EmployeeLayout() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-6 h-16">
-          <span className="text-lg font-bold font-heading tracking-tight text-foreground">STAFLY</span>
+          <span className="text-lg font-bold font-heading tracking-tight text-foreground">Staffly</span>
           <nav className="flex items-center gap-1">
             {links.map((link) => {
               const isActive = link.end ? location.pathname === link.to : location.pathname.startsWith(link.to);

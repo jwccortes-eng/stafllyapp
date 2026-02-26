@@ -1,3 +1,4 @@
+import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,9 +34,9 @@ const stats = [
   { value: "∞", label: "Empleados soportados" },
 ];
 
-export default function Landing() {
+const Landing = React.forwardRef<HTMLDivElement>(function Landing(_props, ref) {
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div ref={ref} className="min-h-screen bg-background overflow-hidden">
       {/* Nav */}
       <header className="fixed top-0 inset-x-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/40">
         <div className="container flex items-center justify-between h-16">
@@ -44,7 +45,7 @@ export default function Landing() {
               <ClockIcon className="h-5 w-5 text-primary" />
             </div>
             <span className="font-heading font-bold text-xl tracking-tight text-foreground">
-              STAFLY
+              Staffly
             </span>
           </div>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -94,12 +95,12 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Hero image — STAFLY devices mockup */}
+          {/* Hero image — Staffly devices mockup */}
           <div className="mt-16 relative max-w-5xl mx-auto">
             <div className="absolute inset-x-10 -bottom-8 h-40 bg-primary opacity-[0.08] blur-3xl rounded-full" />
             <img
               src={stafflyHero}
-              alt="STAFLY — Plataforma de gestión de personal en todos los dispositivos"
+              alt="Staffly — Plataforma de gestión de personal en todos los dispositivos"
               className="w-full h-auto relative z-10"
               loading="eager"
             />
@@ -151,7 +152,7 @@ export default function Landing() {
               ))}
             </div>
             <blockquote className="font-heading text-xl sm:text-2xl font-semibold leading-relaxed text-foreground">
-              "STAFLY nos ha permitido optimizar la programación de turnos y gestionar 
+              "Staffly nos ha permitido optimizar la programación de turnos y gestionar 
               horas de nómina de forma automatizada. Ahorramos tiempo y mejoramos 
               la productividad."
             </blockquote>
@@ -217,15 +218,17 @@ export default function Landing() {
                 <ClockIcon className="h-4 w-4 text-primary" />
               </div>
               <span className="font-heading font-bold text-lg text-foreground">
-                STAFLY
+                Staffly
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} STAFLY · staflyapps.com
+              © {new Date().getFullYear()} Staffly · staflyapps.com
             </p>
           </div>
         </div>
       </footer>
     </div>
   );
-}
+});
+
+export default Landing;
