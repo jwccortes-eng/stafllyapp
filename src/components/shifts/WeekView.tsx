@@ -10,11 +10,12 @@ interface WeekViewProps {
   shifts: Shift[];
   assignments: Assignment[];
   locations: SelectOption[];
+  clients: SelectOption[];
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
 }
 
-export function WeekView({ weekDays, shifts, assignments, locations, onShiftClick, onDropOnShift }: WeekViewProps) {
+export function WeekView({ weekDays, shifts, assignments, locations, clients, onShiftClick, onDropOnShift }: WeekViewProps) {
   const getShiftsForDay = (day: Date) =>
     shifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
 
@@ -22,6 +23,8 @@ export function WeekView({ weekDays, shifts, assignments, locations, onShiftClic
     assignments.filter(a => a.shift_id === shiftId).length;
 
   const getLocationName = (id: string | null) => locations.find(l => l.id === id)?.name;
+  const getClientName = (id: string | null) => clients.find(c => c.id === id)?.name;
+  const clientIds = clients.map(c => c.id);
 
   return (
     <div className="grid grid-cols-7 gap-2">
@@ -54,7 +57,10 @@ export function WeekView({ weekDays, shifts, assignments, locations, onShiftClic
                     shift={shift}
                     assignmentCount={getAssignmentCount(shift.id)}
                     locationName={getLocationName(shift.location_id)}
+                    clientName={getClientName(shift.client_id)}
+                    clientIds={clientIds}
                     onClick={() => onShiftClick(shift)}
+                    compact
                   />
                 </div>
               ))}
