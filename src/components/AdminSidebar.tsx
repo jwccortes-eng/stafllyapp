@@ -81,6 +81,9 @@ const OWNER_LINKS: LinkDef[] = [
   { to: "/admin/global", icon: Globe, label: "Vista global", module: null, section: "Administración" },
   { to: "/admin/companies", icon: Building2, label: "Empresas", module: null, section: "Administración" },
   { to: "/admin/users", icon: Shield, label: "Usuarios", module: null, section: "Administración" },
+  { to: "/admin/onboarding", icon: Users, label: "Onboarding", module: null, section: "Administración" },
+  { to: "/admin/activity", icon: CalendarDays, label: "Actividad", module: null, section: "Administración" },
+  { to: "/admin/settings", icon: Settings2, label: "Plataforma", module: null, section: "Administración" },
 ];
 
 interface Customization {

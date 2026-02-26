@@ -32,6 +32,9 @@ import Shifts from "./pages/admin/Shifts";
 import TimeClock from "./pages/admin/TimeClock";
 import Announcements from "./pages/admin/Announcements";
 import InternalChat from "./pages/admin/InternalChat";
+import PlatformSettings from "./pages/admin/PlatformSettings";
+import ActivityLog from "./pages/admin/ActivityLog";
+import OnboardingWizard from "./pages/admin/OnboardingWizard";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -77,6 +80,9 @@ function App() {
                 <Route path="timeclock" element={<TimeClock />} />
                 <Route path="announcements" element={<Announcements />} />
                 <Route path="chat" element={<InternalChat />} />
+                <Route path="settings" element={<PlatformSettings />} />
+                <Route path="activity" element={<ActivityLog />} />
+                <Route path="onboarding" element={<OnboardingWizard />} />
               </Route>
 
               {/* Employee portal routes */}
