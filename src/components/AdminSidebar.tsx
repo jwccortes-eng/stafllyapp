@@ -48,6 +48,7 @@ const ALL_LINKS: LinkDef[] = [
   // ── Programación ──
   { to: "/admin/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Programación" },
   { to: "/admin/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Programación" },
+  { to: "/admin/shift-requests", icon: MessageSquare, label: "Solicitudes", module: "shifts", section: "Programación" },
   { to: "/admin/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Programación" },
   // ── Equipo ──
   { to: "/admin/employees", icon: Users, label: "Empleados", module: "employees", section: "Equipo" },

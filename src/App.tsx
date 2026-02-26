@@ -40,6 +40,7 @@ import Permissions from "./pages/admin/Permissions";
 import CompanyConfig from "./pages/admin/CompanyConfig";
 import Automations from "./pages/admin/Automations";
 import MonetizationReport from "./pages/admin/MonetizationReport";
+import ShiftRequests from "./pages/admin/ShiftRequests";
 import PayrollSettings from "./pages/admin/PayrollSettings";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
@@ -84,6 +85,7 @@ function App() {
                 <Route path="clients" element={<Clients />} />
                 <Route path="locations" element={<Locations />} />
                 <Route path="shifts" element={<Shifts />} />
+                <Route path="shift-requests" element={<ShiftRequests />} />
                 <Route path="timeclock" element={<TimeClock />} />
                 <Route path="today" element={<TodayView />} />
                 <Route path="announcements" element={<Announcements />} />
