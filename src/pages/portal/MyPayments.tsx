@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import {
-  DollarSign, TrendingUp, TrendingDown, ChevronDown,
-  CalendarDays, BarChart3, Wallet, Clock, Loader2,
+  TrendingUp, TrendingDown, ChevronDown,
+  CalendarDays, BarChart3, Wallet, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +28,54 @@ interface MovementDetail {
   note: string | null;
 }
 
+/* ─── Mini sparkline bar chart ─── */
+function PaymentTrendChart({ payments }: { payments: PaymentRow[] }) {
+  const last = [...payments].reverse().slice(-8);
+  if (last.length < 2) return null;
+  const max = Math.max(...last.map(p => p.total_final_pay), 1);
+  const prev = last.length >= 2 ? last[last.length - 2].total_final_pay : 0;
+  const current = last[last.length - 1].total_final_pay;
+  const diff = prev > 0 ? ((current - prev) / prev) * 100 : 0;
+  const isUp = diff >= 0;
+
+  return (
+    <div className="rounded-2xl bg-card border p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tendencia de pagos</p>
+        <div className={cn(
+          "flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full",
+          isUp ? "text-earning bg-earning/10" : "text-deduction bg-deduction/10"
+        )}>
+          {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+          {Math.abs(diff).toFixed(1)}%
+        </div>
+      </div>
+      <div className="flex items-end gap-1.5 h-16">
+        {last.map((p, i) => {
+          const h = Math.max(4, (p.total_final_pay / max) * 100);
+          const isLast = i === last.length - 1;
+          return (
+            <div key={p.period_id} className="flex-1 flex flex-col items-center gap-1">
+              <div
+                className={cn(
+                  "w-full rounded-t-md transition-all",
+                  isLast ? "bg-primary" : "bg-primary/20"
+                )}
+                style={{ height: `${h}%` }}
+                title={`$${p.total_final_pay.toFixed(2)}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex justify-between text-[9px] text-muted-foreground">
+        <span>{last[0].start_date.slice(5)}</span>
+        <span>{last[last.length - 1].start_date.slice(5)}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function MyPayments() {
   const { employeeId } = useAuth();
   const [payments, setPayments] = useState<PaymentRow[]>([]);
@@ -35,9 +83,6 @@ export default function MyPayments() {
   const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null);
   const [periodDetails, setPeriodDetails] = useState<Record<string, MovementDetail[]>>({});
   const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
-  const [empName, setEmpName] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState<string | null>(null);
-  const [currentPeriod, setCurrentPeriod] = useState<{ start_date: string; end_date: string; status: string; published_at: string | null } | null>(null);
 
   const loadPeriodDetails = useCallback(async (periodId: string) => {
     if (periodDetails[periodId]) return;
@@ -75,65 +120,25 @@ export default function MyPayments() {
   useEffect(() => {
     if (!employeeId) return;
     async function load() {
-      // Fetch employee name and company
-      const { data: empData } = await supabase
-        .from("employees")
-        .select("first_name, last_name, company_id")
-        .eq("id", employeeId)
-        .maybeSingle();
-      if (empData) {
-        setEmpName(`${empData.first_name} ${empData.last_name}`);
-        const { data: comp } = await supabase
-          .from("companies")
-          .select("name")
-          .eq("id", empData.company_id)
-          .maybeSingle();
-        setCompanyName(comp?.name ?? null);
-
-        // Fetch current (latest) period for the company
-        const { data: latestPeriod } = await supabase
-          .from("pay_periods")
-          .select("start_date, end_date, status, published_at")
-          .eq("company_id", empData.company_id)
-          .order("start_date", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        setCurrentPeriod(latestPeriod ?? null);
-      }
-      const { data, error } = await supabase
-        .from("period_base_pay")
-        .select(
-          `
-            period_id,
-            base_total_pay
-          `
-        )
-        .eq("employee_id", employeeId);
-
-      if (error) {
-        console.error("Error fetching payments:", error);
-        setLoading(false);
-        return;
-      }
       const { data: publishedPeriods } = await supabase
         .from("pay_periods")
         .select("id, start_date, end_date")
         .not("published_at", "is", null)
         .order("start_date", { ascending: false });
 
-      const publishedIds = new Set((publishedPeriods ?? []).map((p: any) => p.id));
+      const publishedIds = (publishedPeriods ?? []).map((p: any) => p.id);
       const periodMap = new Map<string, { start_date: string; end_date: string }>();
       (publishedPeriods ?? []).forEach((p: any) => periodMap.set(p.id, { start_date: p.start_date, end_date: p.end_date }));
 
-      if (publishedIds.size === 0) {
+      if (publishedIds.length === 0) {
         setPayments([]);
         setLoading(false);
         return;
       }
 
       const [bpRes, movRes] = await Promise.all([
-        supabase.from("period_base_pay").select("period_id, base_total_pay").eq("employee_id", employeeId).in("period_id", Array.from(publishedIds)),
-        supabase.from("movements").select("period_id, total_value, concepts(category)").eq("employee_id", employeeId).in("period_id", Array.from(publishedIds)),
+        supabase.from("period_base_pay").select("period_id, base_total_pay").eq("employee_id", employeeId).in("period_id", publishedIds),
+        supabase.from("movements").select("period_id, total_value, concepts(category)").eq("employee_id", employeeId).in("period_id", publishedIds),
       ]);
 
       const paymentMap = new Map<string, PaymentRow>();
@@ -175,13 +180,6 @@ export default function MyPayments() {
   const accumulated = useMemo(() => payments.reduce((s, r) => s + r.total_final_pay, 0), [payments]);
   const latestPayment = payments[0] ?? null;
 
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Buenos días";
-    if (h < 18) return "Buenas tardes";
-    return "Buenas noches";
-  })();
-
   if (loading) {
     return (
       <div className="space-y-4">
@@ -190,45 +188,24 @@ export default function MyPayments() {
     );
   }
 
-  const periodStatusLabel = currentPeriod
-    ? currentPeriod.published_at
-      ? { label: "Publicado", cls: "bg-primary/10 text-primary" }
-      : currentPeriod.status === "open"
-        ? { label: "Abierto", cls: "bg-earning/10 text-earning" }
-        : { label: "Cerrado", cls: "bg-warning/10 text-warning" }
-    : null;
-
   return (
-    <div className="space-y-8">
-      {/* Greeting + summary */}
+    <div className="space-y-6">
+      {/* Header */}
       <div>
-        <p className="text-sm text-muted-foreground">{greeting}</p>
-        <h1 className="text-2xl font-bold font-heading tracking-tight mt-1">
-          {empName ? `${greeting}, ${empName}` : "Mis Pagos"}
-        </h1>
-        {companyName && <p className="text-sm text-muted-foreground mt-0.5">{companyName}</p>}
-        {currentPeriod && periodStatusLabel && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-muted-foreground">
-              {currentPeriod.start_date} → {currentPeriod.end_date}
-            </span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${periodStatusLabel.cls}`}>
-              {periodStatusLabel.label}
-            </span>
-          </div>
-        )}
+        <h1 className="text-2xl font-bold font-heading tracking-tight">Nómina</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Tu historial de pagos y tendencia</p>
       </div>
 
-      {/* Big number card */}
+      {/* Latest payment hero */}
       {latestPayment && (
-        <div className="rounded-2xl bg-card border p-6">
+        <div className="rounded-2xl bg-card border p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Último pago</p>
-              <p className="text-3xl font-bold font-heading mt-2 tracking-tight">
+              <p className="text-3xl font-bold font-heading mt-1.5 tracking-tight tabular-nums">
                 ${latestPayment.total_final_pay.toFixed(2)}
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {latestPayment.start_date} → {latestPayment.end_date}
               </p>
             </div>
@@ -239,17 +216,20 @@ export default function MyPayments() {
         </div>
       )}
 
+      {/* Payment trend chart — MOVED HERE */}
+      <PaymentTrendChart payments={payments} />
+
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-card border p-4 text-center">
           <p className="text-xs text-muted-foreground font-medium">Acumulado</p>
-          <p className="text-lg font-bold font-heading mt-1">${accumulated.toFixed(0)}</p>
+          <p className="text-lg font-bold font-heading mt-1 tabular-nums">${accumulated.toFixed(0)}</p>
         </div>
         <div className="rounded-2xl bg-card border p-4 text-center">
           <p className="text-xs text-muted-foreground font-medium">Semanas</p>
           <p className="text-lg font-bold font-heading mt-1">{payments.length}</p>
         </div>
-        <Link to="/portal/accumulated" className="rounded-2xl bg-card border p-4 text-center hover:bg-accent transition-colors group">
+        <Link to="/portal/accumulated" className="rounded-2xl bg-card border p-4 text-center hover:bg-accent/50 transition-colors group">
           <p className="text-xs text-muted-foreground font-medium">Historial</p>
           <BarChart3 className="h-5 w-5 text-primary mx-auto mt-2 group-hover:scale-110 transition-transform" />
         </Link>
@@ -311,7 +291,6 @@ export default function MyPayments() {
                           </div>
                         ) : (
                           <>
-                            {/* Summary row */}
                             <div className="grid grid-cols-4 gap-2">
                               <div className="rounded-xl bg-muted/50 p-2.5 text-center">
                                 <p className="text-[10px] text-muted-foreground">Base</p>
@@ -331,7 +310,6 @@ export default function MyPayments() {
                               </div>
                             </div>
 
-                            {/* Movement details */}
                             {extras.length > 0 && (
                               <div>
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-earning mb-1.5">Extras</p>
