@@ -34,9 +34,9 @@ const stats = [
   { value: "∞", label: "Empleados soportados" },
 ];
 
-const Landing = React.forwardRef<HTMLDivElement>(function Landing(_props, ref) {
+export default function Landing() {
   return (
-    <div ref={ref} className="min-h-screen bg-background overflow-hidden">
+    <div className="min-h-screen bg-background overflow-hidden">
       {/* Nav */}
       <header className="fixed top-0 inset-x-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/40">
         <div className="container flex items-center justify-between h-16">
@@ -229,6 +229,4 @@ const Landing = React.forwardRef<HTMLDivElement>(function Landing(_props, ref) {
       </footer>
     </div>
   );
-});
-
-export default Landing;
+}
