@@ -43,6 +43,7 @@ import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
 import MyShifts from "./pages/portal/MyShifts";
 import MyAnnouncements from "./pages/portal/MyAnnouncements";
+import EmployeeDashboard from "./pages/portal/EmployeeDashboard";
 
 const queryClient = new QueryClient();
 
@@ -93,7 +94,8 @@ function App() {
 
               {/* Employee portal routes */}
               <Route path="/portal" element={<EmployeeLayout />}>
-                <Route index element={<MyPayments />} />
+                <Route index element={<EmployeeDashboard />} />
+                <Route path="payments" element={<MyPayments />} />
                 <Route path="week/:periodId" element={<WeekDetail />} />
                 <Route path="accumulated" element={<Accumulated />} />
                 <Route path="shifts" element={<MyShifts />} />

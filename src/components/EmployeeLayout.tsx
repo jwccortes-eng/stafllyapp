@@ -1,15 +1,15 @@
 import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
-import { CalendarDays, BarChart3, LogOut, User, Megaphone, Clock } from "lucide-react";
+import { CalendarDays, BarChart3, LogOut, User, Megaphone, Clock, Home, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import EmployeeChatWidget from "@/components/EmployeeChatWidget";
 
 const links = [
-  { to: "/portal", icon: CalendarDays, label: "Mis Pagos" },
+  { to: "/portal", icon: Home, label: "Inicio", end: true },
+  { to: "/portal/payments", icon: Wallet, label: "Pagos" },
   { to: "/portal/shifts", icon: Clock, label: "Turnos" },
   { to: "/portal/announcements", icon: Megaphone, label: "Anuncios" },
-  { to: "/portal/accumulated", icon: BarChart3, label: "Acumulado" },
 ];
 
 export default function EmployeeLayout() {
@@ -71,7 +71,7 @@ export default function EmployeeLayout() {
         <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/80 backdrop-blur-lg border-t">
           <div className="flex items-center justify-center gap-2 h-16 px-4">
             {links.map((link) => {
-              const isActive = location.pathname === link.to;
+              const isActive = link.end ? location.pathname === link.to : location.pathname.startsWith(link.to);
               return (
                 <NavLink
                   key={link.to}
@@ -104,7 +104,7 @@ export default function EmployeeLayout() {
           <span className="text-lg font-bold font-heading tracking-tight text-foreground">PayrollWeekly</span>
           <nav className="flex items-center gap-1">
             {links.map((link) => {
-              const isActive = location.pathname === link.to;
+              const isActive = link.end ? location.pathname === link.to : location.pathname.startsWith(link.to);
               return (
                 <NavLink
                   key={link.to}
