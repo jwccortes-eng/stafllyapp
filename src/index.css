@@ -148,7 +148,7 @@
 
 @layer components {
   .stat-card {
-    @apply bg-card rounded-xl border p-5 shadow-sm transition-shadow hover:shadow-md;
+    @apply bg-card rounded-2xl border p-5 shadow-xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
   }
 
   .page-header {
@@ -165,15 +165,23 @@
   }
 
   .data-table-wrapper {
-    @apply bg-card rounded-xl border shadow-sm overflow-hidden;
+    @apply bg-card rounded-2xl border shadow-xs overflow-hidden;
   }
 
   .earning-badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-earning-bg text-earning;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-earning/15 text-earning;
   }
 
   .deduction-badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-deduction-bg text-deduction;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-deduction/15 text-deduction;
+  }
+
+  .warning-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-warning/15 text-warning;
+  }
+
+  .info-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/15 text-primary;
   }
 
   /* Glass morphism utility */
@@ -190,6 +198,17 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Required field asterisk */
+  .required-mark::after {
+    content: " *";
+    @apply text-destructive;
+  }
+
+  /* Section divider */
+  .section-divider {
+    @apply border-t border-border/50 my-6;
   }
 }
 
