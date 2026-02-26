@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, CalendarDays, Upload, DollarSign, FileSpreadsheet,
   BarChart3, Users, Tags, Smartphone, ContactRound, Globe, Building2,
-  Shield, Menu, X, LogOut, Moon, Sun,
+  Shield, Menu, X, LogOut, Moon, Sun, Clock, MapPin, Megaphone, MessageCircle,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +27,12 @@ const ALL_MOBILE_LINKS = [
   { to: "/admin/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/admin/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { to: "/admin/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
+  { to: "/admin/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
+  { to: "/admin/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
+  { to: "/admin/clients", icon: Building2, label: "Clientes", module: "clients", section: "Operaciones" },
+  { to: "/admin/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Operaciones" },
+  { to: "/admin/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
+  { to: "/admin/chat", icon: MessageCircle, label: "Chat", module: null, section: "Comunicación" },
   { to: "/admin/employees", icon: Users, label: "Empleados", module: "employees", section: "Catálogos" },
   { to: "/admin/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Catálogos" },
   { to: "/admin/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Catálogos" },
