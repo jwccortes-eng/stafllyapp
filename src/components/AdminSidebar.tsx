@@ -27,6 +27,10 @@ import {
   MessageSquare,
   Check,
   X,
+  Clock,
+  MapPin,
+  Megaphone,
+  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -58,6 +62,14 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/admin/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/admin/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { to: "/admin/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
+  // Operaciones
+  { to: "/admin/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
+  { to: "/admin/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
+  { to: "/admin/clients", icon: Building2, label: "Clientes", module: "clients", section: "Operaciones" },
+  { to: "/admin/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Operaciones" },
+  // Comunicación
+  { to: "/admin/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
+  { to: "/admin/chat", icon: MessageCircle, label: "Chat", module: null, section: "Comunicación" },
   // Catálogos
   { to: "/admin/employees", icon: Users, label: "Empleados", module: "employees", section: "Catálogos" },
   { to: "/admin/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Catálogos" },

@@ -26,6 +26,12 @@ import CompaniesPage from "./pages/admin/Companies";
 import OwnerDashboard from "./pages/admin/OwnerDashboard";
 import InviteEmployees from "./pages/admin/InviteEmployees";
 import Directory from "./pages/admin/Directory";
+import Clients from "./pages/admin/Clients";
+import Locations from "./pages/admin/Locations";
+import Shifts from "./pages/admin/Shifts";
+import TimeClock from "./pages/admin/TimeClock";
+import Announcements from "./pages/admin/Announcements";
+import InternalChat from "./pages/admin/InternalChat";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -63,6 +69,12 @@ function App() {
                 <Route path="global" element={<OwnerDashboard />} />
                 <Route path="invite" element={<InviteEmployees />} />
                 <Route path="directory" element={<Directory />} />
+                <Route path="clients" element={<Clients />} />
+                <Route path="locations" element={<Locations />} />
+                <Route path="shifts" element={<Shifts />} />
+                <Route path="timeclock" element={<TimeClock />} />
+                <Route path="announcements" element={<Announcements />} />
+                <Route path="chat" element={<InternalChat />} />
               </Route>
 
               {/* Employee portal routes */}
