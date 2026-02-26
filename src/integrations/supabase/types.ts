@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_permissions: {
+        Row: {
+          action: string
+          company_id: string
+          created_at: string
+          granted: boolean
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          company_id: string
+          created_at?: string
+          granted?: boolean
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          company_id?: string
+          created_at?: string
+          granted?: boolean
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_permissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_log: {
         Row: {
           action: string
@@ -1169,6 +1207,44 @@ export type Database = {
           },
         ]
       }
+      role_templates: {
+        Row: {
+          actions: string[]
+          company_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+        }
+        Insert: {
+          actions?: string[]
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+        }
+        Update: {
+          actions?: string[]
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_reports: {
         Row: {
           company_id: string
@@ -1850,7 +1926,20 @@ export type Database = {
       }
     }
     Functions: {
+      apply_role_template: {
+        Args: {
+          _company_id: string
+          _replace?: boolean
+          _template_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
+      has_action_permission: {
+        Args: { _action: string; _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_company_role: {
         Args: { _company_id: string; _role: string; _user_id: string }
         Returns: boolean
