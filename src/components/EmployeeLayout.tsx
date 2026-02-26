@@ -7,7 +7,8 @@ import EmployeeChatWidget from "@/components/EmployeeChatWidget";
 
 const links = [
   { to: "/portal", icon: Home, label: "Inicio", end: true },
-  { to: "/portal/shifts", icon: Clock, label: "Turnos" },
+  { to: "/portal/clock", icon: Clock, label: "Reloj" },
+  { to: "/portal/shifts", icon: CalendarDays, label: "Turnos" },
   { to: "/portal/resources", icon: Grid3X3, label: "Recursos" },
   { to: "/portal/profile", icon: User, label: "Perfil" },
 ];

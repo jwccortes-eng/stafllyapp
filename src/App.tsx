@@ -50,6 +50,7 @@ import MyAnnouncements from "./pages/portal/MyAnnouncements";
 import EmployeeDashboard from "./pages/portal/EmployeeDashboard";
 import PortalResources from "./pages/portal/PortalResources";
 import PortalProfile from "./pages/portal/PortalProfile";
+import PortalClock from "./pages/portal/PortalClock";
 import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
@@ -113,6 +114,7 @@ function App() {
                 <Route path="shifts" element={<MyShifts />} />
                 <Route path="announcements" element={<MyAnnouncements />} />
                 <Route path="resources" element={<PortalResources />} />
+                <Route path="clock" element={<PortalClock />} />
                 <Route path="profile" element={<PortalProfile />} />
               </Route>
 
