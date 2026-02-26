@@ -465,6 +465,36 @@ export default function Shifts() {
     } catch { /* ignore invalid drag data */ }
   };
 
+  const handleDuplicateToDay = async (shiftData: any, targetDate: string) => {
+    if (!canEdit || !selectedCompanyId) return;
+    // Don't duplicate to the same date with same time
+    const { error, data: newShift } = await supabase.from("scheduled_shifts").insert({
+      company_id: selectedCompanyId,
+      title: shiftData.title,
+      date: targetDate,
+      start_time: shiftData.start_time,
+      end_time: shiftData.end_time,
+      slots: shiftData.slots ?? 1,
+      client_id: shiftData.client_id || null,
+      location_id: shiftData.location_id || null,
+      notes: shiftData.notes || null,
+      claimable: shiftData.claimable ?? false,
+      status: "draft",
+      created_by: user?.id,
+    } as any).select("id").single();
+
+    if (error) { toast.error(error.message); return; }
+
+    if (newShift) {
+      await logShiftActivity("duplicar_turno", newShift.id, null, {
+        title: shiftData.title, date: targetDate, source_shift: shiftData.shiftId,
+      });
+    }
+
+    toast.success(`Turno duplicado al ${new Date(targetDate + "T12:00:00").toLocaleDateString("es", { weekday: "short", day: "numeric", month: "short" })}`);
+    loadData();
+  };
+
   const toggleEmployee = (id: string) => {
     setSelectedEmployees(prev =>
       prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
@@ -645,6 +675,7 @@ export default function Shifts() {
             clients={clients}
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
+            onDuplicateToDay={handleDuplicateToDay}
           />
         ) : viewMode === "week" ? (
           weekViewMode === "job" ? (
@@ -667,6 +698,7 @@ export default function Shifts() {
               clients={clients}
               onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
               onDropOnShift={handleDropOnShift}
+              onDuplicateToDay={handleDuplicateToDay}
             />
           )
         ) : viewMode === "month" ? (

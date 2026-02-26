@@ -11,9 +11,10 @@ interface DayViewProps {
   clients: SelectOption[];
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
+  onDuplicateToDay?: (shiftData: any, targetDate: string) => void;
 }
 
-export function DayView({ currentDay, shifts, assignments, locations, clients, onShiftClick, onDropOnShift }: DayViewProps) {
+export function DayView({ currentDay, shifts, assignments, locations, clients, onShiftClick, onDropOnShift, onDuplicateToDay }: DayViewProps) {
   const dayShifts = shifts
     .filter(s => isSameDay(new Date(s.date + "T00:00:00"), currentDay))
     .sort((a, b) => a.start_time.localeCompare(b.start_time));
@@ -91,6 +92,7 @@ export function DayView({ currentDay, shifts, assignments, locations, clients, o
                   clientName={clients.find(c => c.id === shift.client_id)?.name}
                   clientIds={clientIds}
                   onClick={() => onShiftClick(shift)}
+                  draggable
                 />
               </div>
             ))}
