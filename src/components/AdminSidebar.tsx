@@ -37,29 +37,23 @@ interface LinkDef {
 }
 
 const ALL_LINKS: LinkDef[] = [
-  // ── Inicio ──
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
-  // ── Nómina ──
   { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
   { to: "/app/import", icon: Upload, label: "Importar horas", module: "import", section: "Nómina" },
   { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/app/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { to: "/app/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
   { to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
-  // ── Programación ──
   { to: "/app/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Programación" },
   { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Programación" },
   { to: "/app/shift-requests", icon: MessageSquare, label: "Solicitudes", module: "shifts", section: "Programación" },
   { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Programación" },
-  // ── Equipo ──
   { to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Equipo" },
   { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Equipo" },
   { to: "/app/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Equipo" },
   { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Equipo" },
-  // ── Clientes ──
   { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Clientes" },
   { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Clientes" },
-  // ── Comunicación ──
   { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
   { to: "/app/chat", icon: MessageCircle, label: "Chat interno", module: null, section: "Comunicación" },
 ];
@@ -237,8 +231,8 @@ export default function AdminSidebar() {
               "relative flex items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-200 flex-1 min-w-0",
               collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2",
               active
-                ? "bg-primary/10 text-primary font-semibold shadow-sm"
-                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                ? "bg-primary/10 text-primary font-semibold"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
             )}
           >
             {active && (
@@ -246,7 +240,7 @@ export default function AdminSidebar() {
             )}
             <link.icon className={cn(
               "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
-              active ? "text-primary" : "text-muted-foreground/70 group-hover/link:text-sidebar-foreground"
+              active ? "text-primary" : "text-muted-foreground/60 group-hover/link:text-sidebar-foreground"
             )} />
             {!collapsed && (
               <div className="min-w-0 flex-1">
@@ -324,7 +318,7 @@ export default function AdminSidebar() {
     if (collapsed) {
       return (
         <div key={section.label} className="space-y-0.5">
-          <div className="border-t border-sidebar-border/50 my-2" />
+          <div className="border-t border-sidebar-border/40 my-2" />
           {section.links.map(l => renderLink(l, section.links))}
         </div>
       );
@@ -335,11 +329,11 @@ export default function AdminSidebar() {
     return (
       <Collapsible key={section.label} open={isOpen} onOpenChange={() => toggleSection(section.label)}>
         <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 group-hover/section:text-muted-foreground transition-colors">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 group-hover/section:text-muted-foreground transition-colors">
             {section.label}
           </span>
           <ChevronDown className={cn(
-            "h-3 w-3 text-muted-foreground/40 transition-transform duration-300 ease-in-out",
+            "h-3 w-3 text-muted-foreground/30 transition-transform duration-300 ease-in-out",
             isOpen && "rotate-180"
           )} />
         </CollapsibleTrigger>
@@ -353,37 +347,36 @@ export default function AdminSidebar() {
   return (
     <aside className={cn(
       "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
-      "bg-sidebar/80 backdrop-blur-xl border-r border-sidebar-border/50",
-      "shadow-[1px_0_20px_-5px_hsl(var(--sidebar-border)/0.3)]",
+      "bg-card border-r border-border/60",
       collapsed ? "w-[60px]" : "w-[250px]"
     )}>
       {/* Header */}
       <div className={cn(
-        "flex items-center border-b border-sidebar-border/50 shrink-0",
-        collapsed ? "px-2 py-4 justify-center" : "px-4 py-4 gap-3"
+        "flex items-center shrink-0",
+        collapsed ? "px-2 py-5 justify-center" : "px-4 py-5 gap-3"
       )}>
         <div className="relative">
           <div className={cn(
             "shrink-0 rounded-xl bg-primary/10 flex items-center justify-center transition-all duration-300",
             collapsed ? "h-8 w-8" : "h-9 w-9"
           )}>
-            <img src="/favicon.png" alt="stafly" className={cn("object-contain", collapsed ? "h-5 w-5" : "h-6 w-6")} />
+            <img src="/favicon.png" alt="stafly" className={cn("object-contain", collapsed ? "h-5 w-5" : "h-5 w-5")} />
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-earning border-2 border-sidebar" />
+          <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-earning border-2 border-card" />
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-sidebar-foreground leading-tight truncate font-heading">stafly</p>
-            <p className="text-[10px] text-muted-foreground/60 leading-tight">{roleLabel}</p>
+            <p className="text-sm font-bold text-foreground leading-tight truncate font-heading">stafly</p>
+            <p className="text-[10px] text-muted-foreground leading-tight">{roleLabel}</p>
           </div>
         )}
       </div>
 
       {/* Company selector */}
       {companies.length > 1 && !collapsed && (
-        <div className="px-3 py-2.5 border-b border-sidebar-border/50">
+        <div className="px-3 pb-3">
           <Select value={selectedCompanyId ?? ""} onValueChange={setSelectedCompanyId}>
-            <SelectTrigger className="h-8 text-xs bg-sidebar-accent/30 border-sidebar-border/50 rounded-xl hover:bg-sidebar-accent/50 transition-colors">
+            <SelectTrigger className="h-8 text-xs bg-muted/50 border-border/50 rounded-xl hover:bg-muted transition-colors">
               <SelectValue placeholder="Empresa" />
             </SelectTrigger>
             <SelectContent>
@@ -395,15 +388,17 @@ export default function AdminSidebar() {
         </div>
       )}
 
+      {/* Separator */}
+      <div className="border-t border-border/40 mx-3" />
+
       {/* Navigation */}
       <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto scrollbar-thin">
         {visibleSections.map(renderSection)}
-
         {visibleOwnerLinks.length > 0 && renderSection({ label: "Administración", links: visibleOwnerLinks })}
       </nav>
 
       {/* Footer */}
-      <div className="px-2 py-2.5 border-t border-sidebar-border/50 space-y-0.5 shrink-0">
+      <div className="px-2 py-2.5 border-t border-border/40 space-y-0.5 shrink-0">
         {/* Edit mode */}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
@@ -414,7 +409,7 @@ export default function AdminSidebar() {
                 collapsed ? "justify-center px-2 py-2" : "px-3 py-2",
                 editMode
                   ? "bg-primary/10 text-primary"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               )}
             >
               <Settings2 className="h-[18px] w-[18px]" />
@@ -430,7 +425,7 @@ export default function AdminSidebar() {
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className={cn(
-                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-200 w-full",
+                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-200 w-full",
                 collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
               )}
             >
@@ -447,7 +442,7 @@ export default function AdminSidebar() {
             <button
               onClick={() => setCollapsed(!collapsed)}
               className={cn(
-                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-200 w-full",
+                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-200 w-full",
                 collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
               )}
             >
@@ -465,7 +460,7 @@ export default function AdminSidebar() {
               <LogoutConfirmDialog onConfirm={signOut}>
                 <button
                   className={cn(
-                    "flex items-center gap-3 rounded-xl text-[13px] font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-all duration-200 w-full",
+                    "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 w-full",
                     collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
                   )}
                 >
