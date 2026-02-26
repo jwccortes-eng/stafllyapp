@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Search, Building2, Loader2, Trash2, RotateCcw, Pencil } from "lucide-react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Client {
   id: string;
@@ -198,14 +200,9 @@ export default function Clients() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <PageSkeleton variant="table" />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <Building2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>No se encontraron clientes</p>
-        </div>
+        <EmptyState icon={Building2} title="No se encontraron clientes" description={search ? "Intenta con otro término" : "Agrega tu primer cliente"} />
       ) : (
         <div className="border rounded-lg overflow-hidden">
           <Table>

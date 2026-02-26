@@ -18,6 +18,8 @@ import {
   Clock, Play, Square, Loader2, ChevronLeft, ChevronRight,
   Search, CheckCircle2, Timer, Pencil, Hash,
 } from "lucide-react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { format, differenceInMinutes, startOfWeek, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -364,9 +366,7 @@ export default function TimeClock() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <PageSkeleton variant="table" />
       ) : (
         <div className="border rounded-lg overflow-hidden">
           <Table>
@@ -424,9 +424,8 @@ export default function TimeClock() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    <Timer className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                    No hay registros esta semana
+                  <TableCell colSpan={7} className="p-0">
+                    <EmptyState icon={Timer} title="No hay registros esta semana" description="Las entradas y salidas aparecerán aquí" compact />
                   </TableCell>
                 </TableRow>
               )}

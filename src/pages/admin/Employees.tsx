@@ -29,6 +29,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown } from "lucide-react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
@@ -96,6 +98,7 @@ export default function Employees() {
   const { role } = useAuth();
   const isPrivileged = role === 'owner' || role === 'admin';
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [filterRole, setFilterRole] = useState<string>("all");
@@ -129,6 +132,7 @@ export default function Employees() {
     if (!selectedCompanyId) return;
     const { data } = await supabase.from("employees").select("*").eq("company_id", selectedCompanyId).order("first_name");
     setEmployees((data as EmployeeRecord[]) ?? []);
+    setInitialLoading(false);
   };
 
   useEffect(() => { fetchEmployees(); }, [selectedCompanyId]);
@@ -867,10 +871,11 @@ export default function Employees() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-12">
-                <Users className="h-8 w-8 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">No hay empleados</p>
+            {initialLoading ? (
+              <TableRow><TableCell colSpan={6} className="p-0"><PageSkeleton variant="table" className="border-0 shadow-none p-4" /></TableCell></TableRow>
+            ) : filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={6} className="p-0">
+                <EmptyState icon={Users} title="No hay empleados" description={search ? "Intenta con otro término de búsqueda" : "Agrega tu primer empleado para comenzar"} compact />
               </TableCell></TableRow>
             ) : (
               filtered.map((e) => (
