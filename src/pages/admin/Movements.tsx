@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, ArrowUpDown, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, ArrowUpDown, TrendingUp, TrendingDown, DollarSign, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
@@ -69,6 +69,10 @@ export default function Movements() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [passwordConfirmOpen, setPasswordConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [editMovement, setEditMovement] = useState<Movement | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ quantity: "", rate: "", total_value: "", note: "" });
+  const [editSaving, setEditSaving] = useState(false);
 
   const selectedPeriod = periods.find(p => p.id === filterPeriod);
   const isPeriodClosed = selectedPeriod?.status === "closed";
@@ -161,6 +165,31 @@ export default function Movements() {
     setPendingDeleteId(null);
     fetchMovements(filterPeriod);
     toast({ title: "Novedad eliminada" });
+  };
+
+  const openEditMovement = (m: Movement) => {
+    setEditMovement(m);
+    setEditForm({
+      quantity: m.quantity?.toString() ?? "",
+      rate: m.rate?.toString() ?? "",
+      total_value: m.total_value.toString(),
+      note: m.note ?? "",
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditMovement = async () => {
+    if (!editMovement) return;
+    setEditSaving(true);
+    const { error } = await supabase.from("movements").update({
+      quantity: editForm.quantity ? parseFloat(editForm.quantity) : null,
+      rate: editForm.rate ? parseFloat(editForm.rate) : null,
+      total_value: parseFloat(editForm.total_value) || 0,
+      note: editForm.note.trim() || null,
+    }).eq("id", editMovement.id);
+    if (error) toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+    else { toast({ title: "Novedad actualizada" }); setEditOpen(false); setEditMovement(null); fetchMovements(filterPeriod); }
+    setEditSaving(false);
   };
 
   // --- Bulk Import Logic (unchanged) ---
@@ -476,9 +505,14 @@ export default function Movements() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-32 truncate">{m.note ?? ""}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => requestDelete(m.id)} className="opacity-0 group-hover:opacity-100 text-deduction hover:text-deduction transition-opacity" disabled={isPeriodClosed}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" onClick={() => openEditMovement(m)} disabled={isPeriodClosed}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => requestDelete(m.id)} className="text-deduction hover:text-deduction" disabled={isPeriodClosed}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   </TooltipTrigger>
@@ -513,6 +547,29 @@ export default function Movements() {
       </AlertDialog>
 
       <PasswordConfirmDialog open={passwordConfirmOpen} onOpenChange={setPasswordConfirmOpen} title="Eliminar novedad" description="Confirma tu contraseña para eliminar." onConfirm={executeDelete} />
+
+      {/* Edit Movement Dialog */}
+      <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) setEditMovement(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar novedad</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {editMovement?.employees?.first_name} {editMovement?.employees?.last_name} — {editMovement?.concepts?.name}
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Cantidad</Label><Input type="number" step="0.01" value={editForm.quantity} onChange={e => setEditForm(f => ({ ...f, quantity: e.target.value }))} /></div>
+              <div><Label>Tarifa</Label><Input type="number" step="0.01" value={editForm.rate} onChange={e => setEditForm(f => ({ ...f, rate: e.target.value }))} /></div>
+            </div>
+            <div><Label>Total</Label><Input type="number" step="0.01" value={editForm.total_value} onChange={e => setEditForm(f => ({ ...f, total_value: e.target.value }))} required /></div>
+            <div><Label>Nota</Label><Textarea value={editForm.note} onChange={e => setEditForm(f => ({ ...f, note: e.target.value }))} rows={2} /></div>
+            <Button onClick={handleEditMovement} disabled={editSaving} className="w-full">
+              {editSaving ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
