@@ -1222,6 +1222,8 @@ export type Database = {
           created_at: string
           end_date: string
           id: string
+          paid_at: string | null
+          paid_by: string | null
           published_at: string | null
           start_date: string
           status: string
@@ -1232,6 +1234,8 @@ export type Database = {
           created_at?: string
           end_date: string
           id?: string
+          paid_at?: string | null
+          paid_by?: string | null
           published_at?: string | null
           start_date: string
           status?: string
@@ -1242,6 +1246,8 @@ export type Database = {
           created_at?: string
           end_date?: string
           id?: string
+          paid_at?: string | null
+          paid_by?: string | null
           published_at?: string | null
           start_date?: string
           status?: string

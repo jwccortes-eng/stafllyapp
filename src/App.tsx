@@ -51,6 +51,7 @@ import EmployeeDashboard from "./pages/portal/EmployeeDashboard";
 import PortalResources from "./pages/portal/PortalResources";
 import PortalProfile from "./pages/portal/PortalProfile";
 import PortalClock from "./pages/portal/PortalClock";
+import PayStub from "./pages/portal/PayStub";
 import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
@@ -115,6 +116,7 @@ function App() {
                 <Route path="announcements" element={<MyAnnouncements />} />
                 <Route path="resources" element={<PortalResources />} />
                 <Route path="clock" element={<PortalClock />} />
+                <Route path="paystub/:periodId" element={<PayStub />} />
                 <Route path="profile" element={<PortalProfile />} />
               </Route>
 

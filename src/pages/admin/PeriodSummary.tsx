@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon } from "lucide-react";
+import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,7 @@ function findCurrentWeekPeriod(periods: Period[]): string {
   return past?.id ?? "";
 }
 
-interface Period { id: string; start_date: string; end_date: string; status: string; }
+interface Period { id: string; start_date: string; end_date: string; status: string; paid_at: string | null; }
 interface SummaryRow {
   employee_id: string;
   first_name: string;
@@ -46,6 +47,7 @@ type PayFilter = "all" | "with_extras" | "with_deductions" | "zero_base";
 
 export default function PeriodSummary() {
   const { selectedCompanyId } = useCompany();
+  const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("periodId") ?? "");
@@ -56,6 +58,7 @@ export default function PeriodSummary() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
@@ -78,7 +81,7 @@ export default function PeriodSummary() {
 
   useEffect(() => {
     if (!selectedCompanyId) return;
-    supabase.from("pay_periods").select("id, start_date, end_date, status").eq("company_id", selectedCompanyId).order("start_date", { ascending: false }).then(({ data }) => {
+    supabase.from("pay_periods").select("id, start_date, end_date, status, paid_at").eq("company_id", selectedCompanyId).order("start_date", { ascending: false }).then(({ data }) => {
       const all = (data as Period[]) ?? [];
       setPeriods(all);
       // Auto-select current week if no period is selected
@@ -230,9 +233,40 @@ export default function PeriodSummary() {
             <p className="page-subtitle">Consolidación: base + extras − deducciones</p>
           </div>
           {rows.length > 0 && (
-            <Button variant="outline" size="sm" onClick={exportCSV}>
-              <Download className="h-4 w-4 mr-1.5" />Exportar
-            </Button>
+            <div className="flex items-center gap-2">
+              {selectedPeriodObj && (selectedPeriodObj.status === "closed" || selectedPeriodObj.status === "published") && !selectedPeriodObj.paid_at && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={markingPaid}
+                  onClick={async () => {
+                    setMarkingPaid(true);
+                    const { error } = await supabase
+                      .from("pay_periods")
+                      .update({ status: "paid", paid_at: new Date().toISOString() } as any)
+                      .eq("id", selectedPeriod);
+                    if (error) {
+                      toast({ title: "Error", description: error.message, variant: "destructive" });
+                    } else {
+                      toast({ title: "Periodo marcado como pagado" });
+                      setPeriods(prev => prev.map(p => p.id === selectedPeriod ? { ...p, status: "paid", paid_at: new Date().toISOString() } : p));
+                    }
+                    setMarkingPaid(false);
+                  }}
+                >
+                  {markingPaid ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
+                  Marcar como Pagado
+                </Button>
+              )}
+              {selectedPeriodObj?.paid_at && (
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded-full">
+                  ✓ Pagado el {new Date(selectedPeriodObj.paid_at).toLocaleDateString("es")}
+                </span>
+              )}
+              <Button variant="outline" size="sm" onClick={exportCSV}>
+                <Download className="h-4 w-4 mr-1.5" />Exportar
+              </Button>
+            </div>
           )}
         </div>
 
