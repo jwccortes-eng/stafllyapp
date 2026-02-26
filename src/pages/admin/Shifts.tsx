@@ -531,6 +531,13 @@ export default function Shifts() {
     setCurrentMonth(new Date());
   };
 
+  const handleAddShiftFromCalendar = (targetDate: string) => {
+    if (!canEdit) return;
+    resetForm();
+    setDate(targetDate);
+    setCreateOpen(true);
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -699,6 +706,7 @@ export default function Shifts() {
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
             onDuplicateToDay={handleDuplicateToDay}
+            onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
           />
         ) : viewMode === "week" ? (
           weekViewMode === "job" ? (
@@ -722,6 +730,7 @@ export default function Shifts() {
               onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
               onDropOnShift={handleDropOnShift}
               onDuplicateToDay={handleDuplicateToDay}
+              onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
             />
           )
         ) : viewMode === "month" ? (
@@ -734,6 +743,7 @@ export default function Shifts() {
             employees={employees}
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
+            onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
           />
         ) : viewMode === "employee" ? (
           <EmployeeView

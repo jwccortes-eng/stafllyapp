@@ -2,6 +2,7 @@ import { isSameDay } from "date-fns";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
 import { ShiftCard } from "./ShiftCard";
 import type { Shift, Assignment, SelectOption } from "./types";
 
@@ -14,9 +15,10 @@ interface WeekViewProps {
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
   onDuplicateToDay?: (shiftData: any, targetDate: string) => void;
+  onAddShift?: (date: string) => void;
 }
 
-export function WeekView({ weekDays, shifts, assignments, locations, clients, onShiftClick, onDropOnShift, onDuplicateToDay }: WeekViewProps) {
+export function WeekView({ weekDays, shifts, assignments, locations, clients, onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift }: WeekViewProps) {
   const getShiftsForDay = (day: Date) =>
     shifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
 
@@ -98,8 +100,16 @@ export function WeekView({ weekDays, shifts, assignments, locations, clients, on
                   />
                 </div>
               ))}
-              {dayShifts.length === 0 && (
+              {dayShifts.length === 0 && !onAddShift && (
                 <p className="text-[10px] text-muted-foreground/50 text-center pt-4">—</p>
+              )}
+              {onAddShift && (
+                <button
+                  onClick={() => onAddShift(format(day, "yyyy-MM-dd"))}
+                  className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/60 hover:text-primary hover:bg-primary/5 rounded py-1 mt-1 transition-colors"
+                >
+                  <Plus className="h-3 w-3" /> Agregar
+                </button>
               )}
             </div>
           </div>
