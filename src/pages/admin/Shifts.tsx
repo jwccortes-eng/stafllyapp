@@ -18,7 +18,30 @@ import { es } from "date-fns/locale";
 import { WeekView } from "@/components/shifts/WeekView";
 import { MonthView } from "@/components/shifts/MonthView";
 import { ShiftDetailDialog } from "@/components/shifts/ShiftDetailDialog";
+import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
+
+// Fields that affect ALL assigned employees (broadcast notification)
+const BROADCAST_FIELDS = ["date", "start_time", "end_time", "location_id", "client_id"];
+
+function getChangedFields(oldShift: Shift, updates: Partial<Shift>): { field: string; old: any; new: any }[] {
+  const changes: { field: string; old: any; new: any }[] = [];
+  for (const [key, val] of Object.entries(updates)) {
+    const oldVal = (oldShift as any)[key];
+    const normalizedOld = oldVal === undefined || oldVal === null ? null : String(oldVal);
+    const normalizedNew = val === undefined || val === null ? null : String(val);
+    if (normalizedOld !== normalizedNew) {
+      changes.push({ field: key, old: oldVal, new: val });
+    }
+  }
+  return changes;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  title: "Título", date: "Fecha", start_time: "Hora inicio", end_time: "Hora fin",
+  slots: "Plazas", client_id: "Cliente", location_id: "Ubicación",
+  notes: "Notas", claimable: "Reclamable", status: "Estado",
+};
 
 export default function Shifts() {
   const { role, hasModuleAccess, user } = useAuth();
@@ -40,7 +63,11 @@ export default function Shifts() {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Form
+  // Edit dialog
+  const [editShift, setEditShift] = useState<Shift | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+
+  // Create form
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("08:00");
@@ -96,6 +123,49 @@ export default function Shifts() {
     setClaimable(false); setSelectedEmployees([]);
   };
 
+  // --- Notification helper ---
+  const sendShiftNotifications = async (
+    shiftId: string,
+    shiftTitle: string,
+    type: string,
+    notifTitle: string,
+    notifBody: string,
+    recipientEmployeeIds: string[],
+    metadata: Record<string, any> = {}
+  ) => {
+    if (recipientEmployeeIds.length === 0 || !selectedCompanyId) return;
+    const notifications = recipientEmployeeIds.map(eid => ({
+      company_id: selectedCompanyId,
+      recipient_id: eid,
+      recipient_type: "employee",
+      type,
+      title: notifTitle,
+      body: notifBody,
+      metadata: { shift_id: shiftId, shift_title: shiftTitle, ...metadata },
+      created_by: user?.id,
+    }));
+    await supabase.from("notifications").insert(notifications as any);
+  };
+
+  // --- Audit helper ---
+  const logShiftActivity = async (
+    action: string,
+    shiftId: string,
+    oldData?: any,
+    newData?: any,
+    details?: any
+  ) => {
+    await supabase.rpc("log_activity_detailed", {
+      _action: action,
+      _entity_type: "scheduled_shift",
+      _entity_id: shiftId,
+      _company_id: selectedCompanyId,
+      _details: details || {},
+      _old_data: oldData || null,
+      _new_data: newData || null,
+    });
+  };
+
   const handleCreate = async () => {
     if (!title.trim() || !date || !selectedCompanyId) return;
     setSaving(true);
@@ -120,8 +190,97 @@ export default function Shifts() {
       await supabase.from("shift_assignments").insert(assigns as any);
     }
 
+    if (shift) {
+      await logShiftActivity("crear_turno", shift.id, null, { title: title.trim(), date, start_time: startTime, end_time: endTime });
+    }
+
     toast.success("Turno creado");
     setSaving(false); setCreateOpen(false); resetForm(); loadData();
+  };
+
+  const handleEditShift = async (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => {
+    const changes = getChangedFields(oldShift, updates);
+    if (changes.length === 0) { toast.info("Sin cambios"); return; }
+
+    const { error } = await supabase.from("scheduled_shifts")
+      .update(updates as any)
+      .eq("id", shiftId);
+    if (error) { toast.error(error.message); return; }
+
+    // Log audit
+    const oldData: Record<string, any> = {};
+    const newData: Record<string, any> = {};
+    changes.forEach(c => { oldData[c.field] = c.old; newData[c.field] = c.new; });
+    await logShiftActivity("editar_turno", shiftId, oldData, newData, {
+      changed_fields: changes.map(c => c.field),
+    });
+
+    // Determine if broadcast or personal notification
+    const isBroadcast = changes.some(c => BROADCAST_FIELDS.includes(c.field));
+    const shiftAssigns = assignments.filter(a => a.shift_id === shiftId);
+    const affectedEmployeeIds = shiftAssigns.map(a => a.employee_id);
+
+    if (affectedEmployeeIds.length > 0) {
+      const changeDescription = changes
+        .map(c => `${FIELD_LABELS[c.field] || c.field}: ${c.old ?? "—"} → ${c.new ?? "—"}`)
+        .join(", ");
+
+      if (isBroadcast) {
+        // Notify ALL assigned employees
+        await sendShiftNotifications(
+          shiftId,
+          updates.title || oldShift.title,
+          "shift_change",
+          `Turno modificado: ${updates.title || oldShift.title}`,
+          `Se actualizó: ${changeDescription}`,
+          affectedEmployeeIds,
+          { changes, broadcast: true }
+        );
+      } else {
+        // Personal notification only (title, notes, slots, claimable changes)
+        await sendShiftNotifications(
+          shiftId,
+          updates.title || oldShift.title,
+          "shift_change",
+          `Turno actualizado: ${updates.title || oldShift.title}`,
+          `Cambio menor: ${changeDescription}`,
+          affectedEmployeeIds,
+          { changes, broadcast: false }
+        );
+      }
+    }
+
+    toast.success("Turno actualizado");
+    // Update selected shift in detail dialog
+    setSelectedShift(prev => prev?.id === shiftId ? { ...prev, ...updates } as Shift : prev);
+    loadData();
+  };
+
+  const handlePublishShift = async (shift: Shift) => {
+    const { error } = await supabase.from("scheduled_shifts")
+      .update({ status: "published" } as any)
+      .eq("id", shift.id);
+    if (error) { toast.error(error.message); return; }
+
+    await logShiftActivity("publicar_turno", shift.id, { status: shift.status }, { status: "published" });
+
+    // Notify all assigned employees
+    const shiftAssigns = assignments.filter(a => a.shift_id === shift.id);
+    const employeeIds = shiftAssigns.map(a => a.employee_id);
+
+    await sendShiftNotifications(
+      shift.id,
+      shift.title,
+      "shift_published",
+      `Turno publicado: ${shift.title}`,
+      `Tu turno "${shift.title}" del ${shift.date} (${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}) ha sido publicado.`,
+      employeeIds,
+      { broadcast: true }
+    );
+
+    toast.success("Turno publicado y empleados notificados");
+    setSelectedShift(prev => prev?.id === shift.id ? { ...prev, status: "published" } : prev);
+    loadData();
   };
 
   const handleAddEmployees = async (shiftId: string, employeeIds: string[]) => {
@@ -131,13 +290,50 @@ export default function Shifts() {
     }));
     const { error } = await supabase.from("shift_assignments").insert(assigns as any);
     if (error) { toast.error(error.message); return; }
+
+    const shift = shifts.find(s => s.id === shiftId);
+    await logShiftActivity("asignar_empleados", shiftId, null, { employee_ids: employeeIds }, {
+      count: employeeIds.length,
+    });
+
+    // Notify newly assigned employees
+    if (shift) {
+      await sendShiftNotifications(
+        shiftId,
+        shift.title,
+        "shift_assigned",
+        `Asignado a turno: ${shift.title}`,
+        `Has sido asignado al turno "${shift.title}" del ${shift.date} (${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}).`,
+        employeeIds
+      );
+    }
+
     toast.success(`${employeeIds.length} empleado(s) asignados`);
     loadData();
   };
 
   const handleRemoveAssignment = async (assignmentId: string) => {
+    const assignment = assignments.find(a => a.id === assignmentId);
     const { error } = await supabase.from("shift_assignments").delete().eq("id", assignmentId);
     if (error) { toast.error(error.message); return; }
+
+    if (assignment) {
+      const shift = shifts.find(s => s.id === assignment.shift_id);
+      await logShiftActivity("remover_empleado", assignment.shift_id,
+        { employee_id: assignment.employee_id }, null
+      );
+      if (shift) {
+        await sendShiftNotifications(
+          assignment.shift_id,
+          shift.title,
+          "shift_unassigned",
+          `Removido del turno: ${shift.title}`,
+          `Has sido removido del turno "${shift.title}" del ${shift.date}.`,
+          [assignment.employee_id]
+        );
+      }
+    }
+
     toast.success("Empleado removido del turno");
     loadData();
   };
@@ -149,11 +345,9 @@ export default function Shifts() {
       const { assignmentId, employeeId, fromShiftId } = data;
       if (fromShiftId === targetShiftId) return;
 
-      // Check if already assigned to target
       const existing = assignments.find(a => a.shift_id === targetShiftId && a.employee_id === employeeId);
       if (existing) { toast.error("Ya está asignado a este turno"); return; }
 
-      // Move: delete old, create new
       await supabase.from("shift_assignments").delete().eq("id", assignmentId);
       await supabase.from("shift_assignments").insert({
         company_id: selectedCompanyId!,
@@ -327,6 +521,17 @@ export default function Shifts() {
         canEdit={canEdit}
         onAddEmployees={handleAddEmployees}
         onRemoveAssignment={handleRemoveAssignment}
+        onEdit={(s) => { setEditShift(s); setEditOpen(true); }}
+        onPublish={handlePublishShift}
+      />
+
+      <ShiftEditDialog
+        shift={editShift}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        clients={clients}
+        locations={locations}
+        onSave={handleEditShift}
       />
     </div>
   );
