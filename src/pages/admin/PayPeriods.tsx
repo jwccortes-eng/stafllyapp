@@ -12,6 +12,7 @@ import { format, addDays, nextWednesday, isWednesday, formatDistanceToNow } from
 import { es } from "date-fns/locale";
 import { useCompany } from "@/hooks/useCompany";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -302,11 +303,19 @@ export default function PayPeriods() {
                 const imports = importsMap[p.id];
                 const isLoadingImports = loadingImports.has(p.id);
                 const hasImports = imports && imports.length > 0;
+                const today = new Date().toISOString().slice(0, 10);
+                const isCurrentWeek = p.start_date <= today && p.end_date >= today;
 
                 return (
                   <Collapsible key={p.id} open={isExpanded} onOpenChange={() => toggleExpand(p.id)} asChild>
                     <>
-                      <TableRow className="group cursor-pointer hover:bg-muted/50" onClick={() => toggleExpand(p.id)}>
+                      <TableRow
+                        className={cn(
+                          "group cursor-pointer hover:bg-muted/50",
+                          isCurrentWeek && "bg-primary/5 ring-1 ring-inset ring-primary/20"
+                        )}
+                        onClick={() => toggleExpand(p.id)}
+                      >
                         <TableCell className="w-10">
                           <CollapsibleTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -314,7 +323,10 @@ export default function PayPeriods() {
                             </Button>
                           </CollapsibleTrigger>
                         </TableCell>
-                        <TableCell className="font-medium">{p.start_date}</TableCell>
+                        <TableCell className="font-medium">
+                          {isCurrentWeek && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mr-2" />}
+                          {p.start_date}
+                        </TableCell>
                         <TableCell>{p.end_date}</TableCell>
                         <TableCell>
                           <span className={p.status === "open" ? "earning-badge" : "deduction-badge"}>

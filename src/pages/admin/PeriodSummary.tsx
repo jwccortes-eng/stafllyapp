@@ -244,11 +244,15 @@ export default function PeriodSummary() {
                 <SelectValue placeholder="Seleccionar periodo" />
               </SelectTrigger>
               <SelectContent>
-                {periods.map(p => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.start_date} → {p.end_date} {p.status === "closed" ? "🔒" : ""}
-                  </SelectItem>
-                ))}
+                {periods.map(p => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  const isCurrent = p.start_date <= today && p.end_date >= today;
+                  return (
+                    <SelectItem key={p.id} value={p.id} className={isCurrent ? "font-semibold text-primary" : ""}>
+                      {isCurrent ? "● " : ""}{p.start_date} → {p.end_date} {p.status === "closed" ? "🔒" : ""}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
