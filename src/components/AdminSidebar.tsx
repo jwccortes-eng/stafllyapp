@@ -8,7 +8,7 @@ import {
   BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2, Globe,
   PanelLeftClose, PanelLeft, Smartphone, Moon, Sun, Settings2,
   GripVertical, MessageSquare, Check, X, Clock, MapPin, Megaphone,
-  MessageCircle, ChevronDown,
+  MessageCircle, ChevronDown, ScanEye,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -46,6 +46,7 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/admin/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
   { to: "/admin/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
   // ── Programación ──
+  { to: "/admin/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Programación" },
   { to: "/admin/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Programación" },
   { to: "/admin/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Programación" },
   // ── Equipo ──

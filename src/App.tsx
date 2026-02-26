@@ -30,6 +30,7 @@ import Clients from "./pages/admin/Clients";
 import Locations from "./pages/admin/Locations";
 import Shifts from "./pages/admin/Shifts";
 import TimeClock from "./pages/admin/TimeClock";
+import TodayView from "./pages/admin/TodayView";
 import Announcements from "./pages/admin/Announcements";
 import InternalChat from "./pages/admin/InternalChat";
 import PlatformSettings from "./pages/admin/PlatformSettings";
@@ -84,6 +85,7 @@ function App() {
                 <Route path="locations" element={<Locations />} />
                 <Route path="shifts" element={<Shifts />} />
                 <Route path="timeclock" element={<TimeClock />} />
+                <Route path="today" element={<TodayView />} />
                 <Route path="announcements" element={<Announcements />} />
                 <Route path="chat" element={<InternalChat />} />
                 <Route path="settings" element={<PlatformSettings />} />
