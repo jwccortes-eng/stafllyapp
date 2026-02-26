@@ -224,7 +224,7 @@ export default function AdminLayout() {
     <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); localStorage.setItem("sidebar-collapsed", String(v)); } }}>
       <div className="min-h-screen bg-background">
         <AdminSidebar />
-        <main className={cn("transition-all duration-200 p-6 lg:p-8 animate-fade-in", collapsed ? "ml-14" : "ml-60")}>
+        <main className={cn("transition-all duration-300 ease-in-out p-6 lg:p-8 animate-fade-in", collapsed ? "ml-[60px]" : "ml-[250px]")}>
           <Outlet />
         </main>
       </div>
