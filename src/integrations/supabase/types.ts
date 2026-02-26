@@ -2296,6 +2296,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
+      consolidate_period_base_pay: {
+        Args: { _company_id: string; _period_id: string }
+        Returns: Json
+      }
       has_action_permission: {
         Args: { _action: string; _company_id: string; _user_id: string }
         Returns: boolean
