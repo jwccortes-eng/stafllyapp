@@ -201,7 +201,7 @@ export default function EmployeePeriodDetail() {
   return (
     <div>
       <div className="page-header">
-        <Link to={`/admin/summary?periodId=${periodId}`}>
+        <Link to={`/app/summary?periodId=${periodId}`}>
           <Button variant="ghost" size="sm" className="mb-2 -ml-2">
             <ArrowLeft className="h-4 w-4 mr-1" /> Volver al resumen
           </Button>

@@ -49,7 +49,7 @@ export default function Billing() {
             <ExternalLink className="h-4 w-4 mr-1" />
             Portal de cliente
           </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate("/admin/pricing")} className="press-scale">
+          <Button variant="outline" size="sm" onClick={() => navigate("/app/pricing")} className="press-scale">
             Ver planes <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         </div>

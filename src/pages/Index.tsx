@@ -11,7 +11,7 @@ export default function Index() {
     if (loading) return;
     if (!user) return;
     if (role === "admin" || role === "owner" || role === "manager") {
-      navigate("/admin");
+      navigate("/app");
     } else if (role === "employee") {
       navigate("/portal");
     }

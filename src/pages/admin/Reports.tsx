@@ -11,7 +11,7 @@ export default function Reports() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link to="/admin/summary">
+        <Link to="/app/summary">
           <Card className="stat-card cursor-pointer hover:border-primary/30">
             <CardHeader className="flex flex-row items-center gap-3">
               <FileSpreadsheet className="h-8 w-8 text-primary" />
@@ -25,7 +25,7 @@ export default function Reports() {
           </Card>
         </Link>
 
-        <Link to="/admin/reports/employee">
+        <Link to="/app/reports/employee">
           <Card className="stat-card cursor-pointer hover:border-primary/30">
             <CardHeader className="flex flex-row items-center gap-3">
               <UserCheck className="h-8 w-8 text-primary" />
@@ -39,7 +39,7 @@ export default function Reports() {
           </Card>
         </Link>
 
-        <Link to="/admin/directory">
+        <Link to="/app/directory">
           <Card className="stat-card cursor-pointer hover:border-primary/30">
             <CardHeader className="flex flex-row items-center gap-3">
               <Users className="h-8 w-8 text-earning" />
@@ -53,7 +53,7 @@ export default function Reports() {
           </Card>
         </Link>
 
-        <Link to="/admin/movements">
+        <Link to="/app/movements">
           <Card className="stat-card cursor-pointer hover:border-primary/30">
             <CardHeader className="flex flex-row items-center gap-3">
               <BarChart3 className="h-8 w-8 text-warning" />

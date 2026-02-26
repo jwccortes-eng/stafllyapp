@@ -527,7 +527,7 @@ export default function PeriodSummary() {
                         >
                           <TableCell>
                             <Link
-                              to={`/admin/summary/detail?employeeId=${r.employee_id}&periodId=${selectedPeriod}`}
+                              to={`/app/summary/detail?employeeId=${r.employee_id}&periodId=${selectedPeriod}`}
                               className="flex items-center gap-2.5 group-hover:text-primary transition-colors"
                             >
                               <EmployeeAvatar firstName={r.first_name} lastName={r.last_name} size="sm" />

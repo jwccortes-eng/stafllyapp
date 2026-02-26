@@ -219,7 +219,7 @@ export default function PayPeriods() {
   };
 
   const handleReimport = (periodId: string) => {
-    navigate(`/admin/import?period=${periodId}`);
+    navigate(`/app/import?period=${periodId}`);
   };
 
   return (
