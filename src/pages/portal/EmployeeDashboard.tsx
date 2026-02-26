@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import {
-  Wallet, Clock, Megaphone, BarChart3, CalendarDays,
-  MapPin, ChevronRight, ArrowUpRight, AlertCircle,
+  Wallet, Clock, Megaphone, CalendarDays,
+  MapPin, ChevronRight, AlertCircle, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
@@ -29,11 +29,8 @@ interface RecentAnnouncement {
 export default function EmployeeDashboard() {
   const { employeeId } = useAuth();
   const [empName, setEmpName] = useState("");
-  const [companyName, setCompanyName] = useState("");
   const [nextShift, setNextShift] = useState<NextShift | null>(null);
   const [estimatedPay, setEstimatedPay] = useState<number | null>(null);
-  const [periodLabel, setPeriodLabel] = useState("");
-  const [periodStatus, setPeriodStatus] = useState<{ label: string; cls: string } | null>(null);
   const [announcements, setAnnouncements] = useState<RecentAnnouncement[]>([]);
   const [upcomingShifts, setUpcomingShifts] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -41,7 +38,6 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     if (!employeeId) return;
     async function load() {
-      // 1. Employee info
       const { data: emp } = await supabase
         .from("employees")
         .select("first_name, last_name, company_id")
@@ -51,12 +47,9 @@ export default function EmployeeDashboard() {
 
       setEmpName(`${emp.first_name} ${emp.last_name}`);
       const companyId = emp.company_id;
-
-      // Parallel fetches
       const today = new Date().toISOString().split("T")[0];
 
-      const [compRes, periodRes, assignRes, annRes] = await Promise.all([
-        supabase.from("companies").select("name").eq("id", companyId).maybeSingle(),
+      const [periodRes, assignRes, annRes] = await Promise.all([
         supabase.from("pay_periods").select("id, start_date, end_date, status, published_at")
           .eq("company_id", companyId).order("start_date", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("shift_assignments").select(`
@@ -70,21 +63,9 @@ export default function EmployeeDashboard() {
           .order("published_at", { ascending: false }).limit(3),
       ]);
 
-      setCompanyName(compRes.data?.name ?? "");
-
-      // Period
+      // Period & estimated pay
       if (periodRes.data) {
         const p = periodRes.data;
-        setPeriodLabel(`${p.start_date} → ${p.end_date}`);
-        if (p.published_at) {
-          setPeriodStatus({ label: "Publicado", cls: "bg-primary/10 text-primary" });
-        } else if (p.status === "open") {
-          setPeriodStatus({ label: "Abierto", cls: "bg-earning/10 text-earning" });
-        } else {
-          setPeriodStatus({ label: "Cerrado", cls: "bg-warning/10 text-warning" });
-        }
-
-        // Estimated pay for current period
         const [bpRes, movRes] = await Promise.all([
           supabase.from("period_base_pay").select("base_total_pay")
             .eq("employee_id", employeeId!).eq("period_id", p.id).maybeSingle(),
@@ -115,7 +96,6 @@ export default function EmployeeDashboard() {
         });
       }
 
-      // Announcements
       setAnnouncements((annRes.data ?? []) as RecentAnnouncement[]);
       setLoading(false);
     }
@@ -139,54 +119,43 @@ export default function EmployeeDashboard() {
   if (loading) {
     return (
       <div className="space-y-4">
-        {[1, 2, 3, 4].map(i => <div key={i} className="h-24 animate-pulse bg-muted rounded-2xl" />)}
+        {[1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse bg-muted rounded-2xl" />)}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold font-heading tracking-tight">
-          {greeting}, {empName.split(" ")[0]}
+    <div className="space-y-5">
+      {/* Greeting */}
+      <div className="pt-1">
+        <p className="text-muted-foreground text-sm">
+          {greeting} 👋
+        </p>
+        <h1 className="text-2xl font-bold font-heading tracking-tight mt-0.5">
+          {empName.split(" ")[0]}
         </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">{companyName}</p>
-        {periodLabel && periodStatus && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-muted-foreground">{periodLabel}</span>
-            <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold", periodStatus.cls)}>
-              {periodStatus.label}
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Estimated pay card */}
+      {/* Hero pay card — gradient */}
       {estimatedPay !== null && (
-        <div className="rounded-2xl bg-card border p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Pago estimado</p>
-              <p className="text-3xl font-bold font-heading mt-1.5 tracking-tight">
+        <Link to="/portal/payments" className="block">
+          <div className="rounded-2xl bg-gradient-to-br from-primary to-[hsl(243_75%_45%)] p-5 text-primary-foreground relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(243_75%_70%/0.3),transparent_60%)]" />
+            <div className="relative">
+              <p className="text-xs font-medium opacity-80 uppercase tracking-wider">Pago estimado</p>
+              <p className="text-3xl font-bold font-heading mt-1 tracking-tight tabular-nums">
                 ${estimatedPay.toFixed(2)}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-1">Periodo actual</p>
-            </div>
-            <div className="h-14 w-14 rounded-2xl bg-primary/8 flex items-center justify-center">
-              <Wallet className="h-7 w-7 text-primary" />
+              <p className="text-[11px] opacity-70 mt-1">Periodo actual</p>
+              <div className="flex items-center gap-1 mt-3 text-xs font-medium opacity-90">
+                Ver nómina <ArrowRight className="h-3 w-3" />
+              </div>
             </div>
           </div>
-          <Link
-            to="/portal/payments"
-            className="flex items-center gap-1 text-xs font-medium text-primary mt-3 hover:underline"
-          >
-            Ver historial de pagos <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        </div>
+        </Link>
       )}
 
-      {/* Next shift */}
+      {/* Next shift card */}
       {nextShift ? (
         <Link to="/portal/shifts" className="block">
           <div className={cn(
@@ -194,9 +163,9 @@ export default function EmployeeDashboard() {
             isToday(parseISO(nextShift.date)) && "ring-2 ring-primary/30"
           )}>
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Próximo turno</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Próximo turno</p>
               {isToday(parseISO(nextShift.date)) && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground">HOY</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground animate-pulse">HOY</span>
               )}
             </div>
             <p className="text-sm font-semibold">{nextShift.title}</p>
@@ -225,23 +194,25 @@ export default function EmployeeDashboard() {
         </div>
       )}
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <Link to="/portal/shifts" className="rounded-2xl bg-card border p-4 text-center hover:bg-accent transition-colors">
-          <Clock className="h-5 w-5 text-primary mx-auto" />
-          <p className="text-lg font-bold font-heading mt-1">{upcomingShifts}</p>
-          <p className="text-[10px] text-muted-foreground">Turnos</p>
+      {/* Quick actions grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <Link to="/portal/payments" className="rounded-2xl bg-card border p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors group">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Wallet className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Nómina</p>
+            <p className="text-[10px] text-muted-foreground">Pagos y detalle</p>
+          </div>
         </Link>
-        <Link to="/portal/payments" className="rounded-2xl bg-card border p-4 text-center hover:bg-accent transition-colors">
-          <Wallet className="h-5 w-5 text-primary mx-auto" />
-          <p className="text-lg font-bold font-heading mt-1">
-            {estimatedPay !== null ? `$${(estimatedPay / 1000).toFixed(1)}k` : "—"}
-          </p>
-          <p className="text-[10px] text-muted-foreground">Pagos</p>
-        </Link>
-        <Link to="/portal/accumulated" className="rounded-2xl bg-card border p-4 text-center hover:bg-accent transition-colors">
-          <BarChart3 className="h-5 w-5 text-primary mx-auto" />
-          <p className="text-[10px] text-muted-foreground mt-2">Acumulado</p>
+        <Link to="/portal/shifts" className="rounded-2xl bg-card border p-4 flex items-center gap-3 hover:bg-accent/50 transition-colors group">
+          <div className="h-10 w-10 rounded-xl bg-accent flex items-center justify-center shrink-0">
+            <Clock className="h-5 w-5 text-accent-foreground" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Turnos</p>
+            <p className="text-[10px] text-muted-foreground">{upcomingShifts} próximos</p>
+          </div>
         </Link>
       </div>
 
@@ -251,10 +222,10 @@ export default function EmployeeDashboard() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Megaphone className="h-3.5 w-3.5" />
-              Anuncios recientes
+              Últimas novedades
             </h2>
             <Link to="/portal/announcements" className="text-xs text-primary font-medium hover:underline">
-              Ver todos
+              Ver feed
             </Link>
           </div>
           <div className="space-y-2">
@@ -262,7 +233,7 @@ export default function EmployeeDashboard() {
               <Link
                 key={a.id}
                 to="/portal/announcements"
-                className="flex items-center gap-3 rounded-2xl border bg-card p-3.5 hover:bg-accent transition-colors"
+                className="flex items-center gap-3 rounded-2xl border bg-card p-3.5 hover:bg-accent/50 transition-colors"
               >
                 {a.priority === "urgent" && (
                   <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
