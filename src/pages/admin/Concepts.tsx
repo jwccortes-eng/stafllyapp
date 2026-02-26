@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -214,9 +214,8 @@ export default function Concepts() {
     submitLabel: string;
   }) => (
     <form onSubmit={onSubmit} className="space-y-3">
-      <div><Label>Nombre</Label><Input value={values.name} onChange={e => onChange({ ...values, name: e.target.value })} required /></div>
-      <div>
-        <Label>Categoría</Label>
+      <FormField label="Nombre" required><Input value={values.name} onChange={e => onChange({ ...values, name: e.target.value })} required /></FormField>
+      <FormField label="Categoría">
         <Select value={values.category} onValueChange={v => onChange({ ...values, category: v })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -224,9 +223,8 @@ export default function Concepts() {
             <SelectItem value="deduction">Deducción (resta)</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-      <div>
-        <Label>Modo de cálculo</Label>
+      </FormField>
+      <FormField label="Modo de cálculo">
         <Select value={values.calc_mode} onValueChange={v => onChange({ ...values, calc_mode: v })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -235,13 +233,12 @@ export default function Concepts() {
             <SelectItem value="hybrid">Híbrido</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </FormField>
       <div className="grid grid-cols-2 gap-3">
-        <div><Label>Unidad</Label><Input value={values.unit_label} onChange={e => onChange({ ...values, unit_label: e.target.value })} /></div>
-        <div><Label>Tarifa default</Label><Input type="number" step="0.01" value={values.default_rate} onChange={e => onChange({ ...values, default_rate: e.target.value })} /></div>
+        <FormField label="Unidad"><Input value={values.unit_label} onChange={e => onChange({ ...values, unit_label: e.target.value })} /></FormField>
+        <FormField label="Tarifa default"><Input type="number" step="0.01" value={values.default_rate} onChange={e => onChange({ ...values, default_rate: e.target.value })} /></FormField>
       </div>
-      <div>
-        <Label>Fuente tarifa</Label>
+      <FormField label="Fuente tarifa">
         <Select value={values.rate_source} onValueChange={v => onChange({ ...values, rate_source: v })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -249,7 +246,7 @@ export default function Concepts() {
             <SelectItem value="per_employee">Por empleado</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </FormField>
       <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
     </form>
   );

@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form-field";
+import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
 } from "@/components/ui/dialog";
@@ -518,15 +519,15 @@ export default function Employees() {
   const EmployeeForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
     <form onSubmit={onSubmit} className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
       {visibleFields.map(f => (
-        <div key={f.key}>
-          <Label className="text-xs">{f.label} {f.required && <span className="text-destructive">*</span>}</Label>
+        <FormField key={f.key} label={f.label} required={f.required} htmlFor={`emp-${f.key}`}>
           <Input
+            id={`emp-${f.key}`}
             value={form[f.key] ?? ""}
             onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
             required={f.required}
             className="h-8 text-sm"
           />
-        </div>
+        </FormField>
       ))}
       <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
     </form>
@@ -781,11 +782,11 @@ export default function Employees() {
 
       <div className="data-table-wrapper">
         <div className="p-4 border-b space-y-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar por nombre, email o teléfono..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-            </div>
+          <DataTableToolbar
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Buscar por nombre, email o teléfono..."
+          >
             <Button
               variant={filtersOpen || activeFilterCount > 0 ? "secondary" : "outline"}
               size="sm"
@@ -805,12 +806,11 @@ export default function Employees() {
                 <X className="h-3 w-3 mr-1" />Limpiar
               </Button>
             )}
-          </div>
+          </DataTableToolbar>
 
           {filtersOpen && (
             <div className="flex gap-3 flex-wrap animate-in slide-in-from-top-2 duration-200">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Estado</Label>
+              <FormField label="Estado" className="space-y-1">
                 <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
                   <SelectTrigger className="w-[140px] h-8 text-xs">
                     <SelectValue />
@@ -821,10 +821,9 @@ export default function Employees() {
                     <SelectItem value="inactive">Inactivos</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
               {uniqueRoles.length > 0 && (
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Rol</Label>
+                <FormField label="Rol" className="space-y-1">
                   <Select value={filterRole} onValueChange={setFilterRole}>
                     <SelectTrigger className="w-[160px] h-8 text-xs">
                       <SelectValue />
@@ -836,11 +835,10 @@ export default function Employees() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
               )}
               {uniqueGroups.length > 0 && (
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Grupo</Label>
+                <FormField label="Grupo" className="space-y-1">
                   <Select value={filterGroup} onValueChange={setFilterGroup}>
                     <SelectTrigger className="w-[160px] h-8 text-xs">
                       <SelectValue />
@@ -852,7 +850,7 @@ export default function Employees() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
               )}
             </div>
           )}
