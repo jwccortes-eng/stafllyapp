@@ -8,11 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2 } from "lucide-react";
+import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
+import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
 
 interface ShiftDetailDialogProps {
@@ -29,6 +33,7 @@ interface ShiftDetailDialogProps {
   onEdit: (shift: Shift) => void;
   onPublish: (shift: Shift) => void;
   onSave?: (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => Promise<void>;
+  onRequestAction?: () => void;
 }
 
 function calcHours(start: string, end: string): string {
@@ -43,10 +48,22 @@ function calcHours(start: string, end: string): string {
   return m > 0 ? `${h}h ${String(m).padStart(2, "0")}m` : `${h}h`;
 }
 
+interface ShiftRequestItem {
+  id: string;
+  employee_id: string;
+  status: string;
+  message: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  employee: { first_name: string; last_name: string };
+}
+
 export function ShiftDetailDialog({
   shift, open, onOpenChange, assignments, employees, locations, clients,
-  canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave,
+  canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
 }: ShiftDetailDialogProps) {
+  const { user } = useAuth();
+  const { selectedCompanyId } = useCompany();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [tab, setTab] = useState("details");
@@ -64,6 +81,104 @@ export function ShiftDetailDialog({
   const [claimable, setClaimable] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Shift requests state
+  const [requests, setRequests] = useState<ShiftRequestItem[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [processingReqId, setProcessingReqId] = useState<string | null>(null);
+  const [rejectReqId, setRejectReqId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const loadRequests = useCallback(async () => {
+    if (!shift) return;
+    setLoadingRequests(true);
+    const { data } = await supabase
+      .from("shift_requests")
+      .select("id, employee_id, status, message, rejection_reason, created_at, employees!inner(first_name, last_name)")
+      .eq("shift_id", shift.id)
+      .order("created_at", { ascending: true });
+    setRequests((data ?? []).map((r: any) => ({
+      id: r.id, employee_id: r.employee_id, status: r.status,
+      message: r.message, rejection_reason: r.rejection_reason, created_at: r.created_at,
+      employee: { first_name: r.employees.first_name, last_name: r.employees.last_name },
+    })));
+    setLoadingRequests(false);
+  }, [shift]);
+
+  const handleApproveRequest = async (req: ShiftRequestItem) => {
+    if (!shift || !selectedCompanyId) return;
+    setProcessingReqId(req.id);
+
+    // Check slot availability
+    const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
+    const maxSlots = shift.slots ?? 1;
+    const approvedRequests = requests.filter(r => r.status === "approved" && r.id !== req.id).length;
+    if (shiftAssignments.length + approvedRequests >= maxSlots) {
+      toast.error("No hay plazas disponibles");
+      setProcessingReqId(null);
+      return;
+    }
+
+    // Create assignment
+    const { error: assignErr } = await supabase.from("shift_assignments").insert({
+      company_id: selectedCompanyId,
+      shift_id: shift.id,
+      employee_id: req.employee_id,
+      status: "confirmed",
+    } as any);
+    if (assignErr) { toast.error(assignErr.message); setProcessingReqId(null); return; }
+
+    // Update request status
+    await supabase.from("shift_requests")
+      .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any)
+      .eq("id", req.id);
+
+    // Notify employee
+    await supabase.from("notifications").insert({
+      company_id: selectedCompanyId,
+      recipient_id: req.employee_id,
+      recipient_type: "employee",
+      type: "shift_request_approved",
+      title: "✅ Solicitud aprobada",
+      body: `Tu solicitud para "${shift.title}" fue aprobada. ¡Estás asignado!`,
+      metadata: { shift_id: shift.id },
+      created_by: user?.id,
+    } as any);
+
+    toast.success(`${req.employee.first_name} aprobado y asignado`);
+    setProcessingReqId(null);
+    await loadRequests();
+    onRequestAction?.();
+  };
+
+  const handleRejectRequest = async () => {
+    if (!rejectReqId || !shift || !selectedCompanyId) return;
+    const req = requests.find(r => r.id === rejectReqId);
+    if (!req) return;
+    setProcessingReqId(rejectReqId);
+
+    await supabase.from("shift_requests")
+      .update({ status: "rejected", rejection_reason: rejectReason.trim() || null, reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any)
+      .eq("id", rejectReqId);
+
+    await supabase.from("notifications").insert({
+      company_id: selectedCompanyId,
+      recipient_id: req.employee_id,
+      recipient_type: "employee",
+      type: "shift_request_rejected",
+      title: "❌ Solicitud rechazada",
+      body: `Tu solicitud para "${shift.title}" fue rechazada.${rejectReason.trim() ? ` Motivo: ${rejectReason.trim()}` : ""}`,
+      metadata: { shift_id: shift.id },
+      created_by: user?.id,
+    } as any);
+
+    toast.success("Solicitud rechazada");
+    setProcessingReqId(null);
+    setRejectReqId(null);
+    setRejectReason("");
+    await loadRequests();
+    onRequestAction?.();
+  };
+
   useEffect(() => {
     if (shift && open) {
       setTitle(shift.title);
@@ -77,8 +192,9 @@ export function ShiftDetailDialog({
       setClaimable(shift.claimable);
       setEditing(false);
       setTab("details");
+      loadRequests();
     }
-  }, [shift, open]);
+  }, [shift, open, loadRequests]);
 
   if (!shift) return null;
 
@@ -146,14 +262,27 @@ export function ShiftDetailDialog({
                 value="details"
                 className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
               >
-                Detalles del turno
+                Detalles
               </TabsTrigger>
               <TabsTrigger
                 value="team"
                 className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
               >
-                Equipo ({shiftAssignments.length})
+                Equipo ({shiftAssignments.length}/{shift.slots ?? 1})
               </TabsTrigger>
+              {requests.length > 0 && (
+                <TabsTrigger
+                  value="requests"
+                  className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
+                >
+                  Solicitudes
+                  {requests.filter(r => r.status === "pending").length > 0 && (
+                    <Badge className="h-4 min-w-4 px-1 text-[9px] bg-amber-500 text-white">
+                      {requests.filter(r => r.status === "pending").length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )}
             </TabsList>
           </Tabs>
         </div>
@@ -285,7 +414,7 @@ export function ShiftDetailDialog({
                 )}
               </div>
             </div>
-          ) : (
+          ) : tab === "team" ? (
             /* Team tab */
             <div className="space-y-3">
               {/* Employee chips */}
@@ -375,10 +504,112 @@ export function ShiftDetailDialog({
                 </p>
               )}
             </div>
-          )}
+          ) : tab === "requests" ? (
+            /* Requests tab */
+            <div className="space-y-3">
+              {loadingRequests ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : requests.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-8">Sin solicitudes</p>
+              ) : (
+                <>
+                  {/* Capacity summary */}
+                  <div className="rounded-lg bg-muted/40 p-3 text-center">
+                    <p className="text-lg font-bold tabular-nums">
+                      {shiftAssignments.length} <span className="text-muted-foreground text-sm font-normal">/ {shift.slots ?? 1}</span>
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">plazas ocupadas</p>
+                  </div>
+
+                  {requests.map(req => {
+                    const isFull = shiftAssignments.length >= (shift.slots ?? 1);
+                    return (
+                      <div key={req.id} className="rounded-lg border bg-card p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <EmployeeAvatar firstName={req.employee.first_name} lastName={req.employee.last_name} size="sm" />
+                            <div>
+                              <p className="text-xs font-semibold">{req.employee.first_name} {req.employee.last_name}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {format(parseISO(req.created_at), "d MMM HH:mm", { locale: es })}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className={cn("text-[10px]",
+                            req.status === "pending" && "bg-amber-500/10 text-amber-600 border-amber-500/30",
+                            req.status === "approved" && "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+                            req.status === "rejected" && "bg-red-500/10 text-red-600 border-red-500/30"
+                          )}>
+                            {req.status === "pending" ? "Pendiente" : req.status === "approved" ? "Aprobada" : "Rechazada"}
+                          </Badge>
+                        </div>
+
+                        {req.message && (
+                          <p className="text-[11px] text-muted-foreground bg-muted/30 rounded px-2 py-1">"{req.message}"</p>
+                        )}
+
+                        {req.rejection_reason && req.status === "rejected" && (
+                          <p className="text-[11px] text-destructive flex items-center gap-1">
+                            <XCircle className="h-3 w-3" /> {req.rejection_reason}
+                          </p>
+                        )}
+
+                        {req.status === "pending" && canEdit && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <Button
+                              size="sm"
+                              className="h-7 text-[11px] gap-1"
+                              onClick={() => handleApproveRequest(req)}
+                              disabled={processingReqId === req.id || isFull}
+                            >
+                              {processingReqId === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                              {isFull ? "Sin plazas" : "Aprobar"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[11px] gap-1 text-destructive hover:text-destructive"
+                              onClick={() => { setRejectReqId(req.id); setRejectReason(""); }}
+                              disabled={processingReqId === req.id}
+                            >
+                              <XCircle className="h-3 w-3" />
+                              Rechazar
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          ) : null}
         </div>
 
-        {/* Footer actions */}
+        {/* Reject request dialog */}
+        {rejectReqId && (
+          <div className="absolute inset-0 z-50 bg-background/80 flex items-center justify-center p-6">
+            <div className="bg-card border rounded-xl p-4 w-full max-w-sm space-y-3 shadow-lg">
+              <p className="text-sm font-semibold">Rechazar solicitud</p>
+              <Textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="Motivo del rechazo (opcional)..."
+                rows={3}
+                className="text-sm resize-none"
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => { setRejectReqId(null); setRejectReason(""); }}>Cancelar</Button>
+                <Button variant="destructive" size="sm" onClick={handleRejectRequest} disabled={processingReqId === rejectReqId}>
+                  {processingReqId === rejectReqId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                  Rechazar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         {canEdit && (
           <div className="px-5 py-3 border-t border-border/40 bg-muted/20 flex items-center gap-2">
             {shift.status !== "published" && (

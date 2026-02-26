@@ -841,6 +841,7 @@ export default function Shifts() {
         onEdit={(s) => { setEditShift(s); setEditOpen(true); }}
         onPublish={handlePublishShift}
         onSave={handleEditShift}
+        onRequestAction={loadData}
       />
 
       <ShiftEditDialog
