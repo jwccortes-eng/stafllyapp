@@ -25,6 +25,7 @@ import logoQS from "@/assets/logo-quality-staff.png";
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 
 interface LinkDef {
   to: string;
@@ -460,21 +461,22 @@ export default function AdminSidebar() {
         </Tooltip>
 
         {/* Sign out */}
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <button
-              onClick={signOut}
-              className={cn(
-                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-all duration-200 w-full",
-                collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
-              )}
-            >
-              <LogOut className="h-[18px] w-[18px]" />
-              {!collapsed && "Cerrar sesión"}
-            </button>
-          </TooltipTrigger>
-          {collapsed && <TooltipContent side="right" className="text-xs">Cerrar sesión</TooltipContent>}
-        </Tooltip>
+        <LogoutConfirmDialog onConfirm={signOut}>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button
+                className={cn(
+                  "flex items-center gap-3 rounded-xl text-[13px] font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-all duration-200 w-full",
+                  collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
+                )}
+              >
+                <LogOut className="h-[18px] w-[18px]" />
+                {!collapsed && "Cerrar sesión"}
+              </button>
+            </TooltipTrigger>
+            {collapsed && <TooltipContent side="right" className="text-xs">Cerrar sesión</TooltipContent>}
+          </Tooltip>
+        </LogoutConfirmDialog>
       </div>
     </aside>
   );

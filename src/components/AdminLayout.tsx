@@ -13,6 +13,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "next-themes";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 
 const SidebarContext = createContext<{ collapsed: boolean; setCollapsed: (v: boolean) => void }>({ collapsed: false, setCollapsed: () => {} });
 
@@ -169,13 +170,14 @@ export default function AdminLayout() {
                     {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                     {theme === "dark" ? "Modo claro" : "Modo oscuro"}
                   </button>
-                  <button
-                    onClick={() => { signOut(); setSheetOpen(false); }}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 w-full transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Cerrar sesión
-                  </button>
+                  <LogoutConfirmDialog onConfirm={() => { signOut(); setSheetOpen(false); }}>
+                    <button
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 w-full transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Cerrar sesión
+                    </button>
+                  </LogoutConfirmDialog>
                 </div>
               </SheetContent>
             </Sheet>
