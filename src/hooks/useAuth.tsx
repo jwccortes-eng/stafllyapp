@@ -159,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      // Force clear state even if signOut fails (e.g. expired token)
       console.error("Sign out error:", err);
     }
     // Always clear local state
@@ -170,6 +169,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPermissions([]);
     setActionPermissions([]);
     setFullName(null);
+    // Force redirect to auth page
+    window.location.href = "/auth";
   };
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
