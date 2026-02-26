@@ -22,9 +22,11 @@ const ALL_MODULES = [
   { key: "concepts", label: "Conceptos", icon: Tags, group: "Catálogos" },
   { key: "invite", label: "Invitar", icon: Smartphone, group: "Catálogos" },
   { key: "shifts", label: "Turnos", icon: CalendarDays, group: "Operaciones" },
+  { key: "timeclock", label: "Reloj", icon: CalendarDays, group: "Operaciones" },
   { key: "clients", label: "Clientes", icon: Users, group: "Operaciones" },
   { key: "locations", label: "Ubicaciones", icon: MapPin, group: "Operaciones" },
   { key: "announcements", label: "Anuncios", icon: Megaphone, group: "Comunicación" },
+  { key: "chat", label: "Chat Interno", icon: Megaphone, group: "Comunicación" },
 ];
 
 interface ModuleRow {
