@@ -60,6 +60,7 @@ const OWNER_LINKS: LinkDef[] = [
   { to: "/admin/users", icon: Shield, label: "Usuarios", module: null, section: "Administración" },
   { to: "/admin/onboarding", icon: Users, label: "Onboarding", module: null, section: "Administración" },
   { to: "/admin/activity", icon: CalendarDays, label: "Actividad", module: null, section: "Administración" },
+  { to: "/admin/company-config", icon: Settings2, label: "Config Empresa", module: null, section: "Administración" },
   { to: "/admin/permissions", icon: Shield, label: "Permisos", module: null, section: "Administración" },
   { to: "/admin/settings", icon: Settings2, label: "Plataforma", module: null, section: "Administración" },
 ];
