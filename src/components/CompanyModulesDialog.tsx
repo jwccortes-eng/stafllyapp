@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   CalendarDays, Upload, DollarSign, FileSpreadsheet, BarChart3,
-  Users, Tags, Smartphone, Copy, Loader2,
+  Users, Tags, Smartphone, Copy, Loader2, MapPin, Megaphone,
 } from "lucide-react";
 
 const ALL_MODULES = [
@@ -21,6 +21,10 @@ const ALL_MODULES = [
   { key: "employees", label: "Empleados", icon: Users, group: "Catálogos" },
   { key: "concepts", label: "Conceptos", icon: Tags, group: "Catálogos" },
   { key: "invite", label: "Invitar", icon: Smartphone, group: "Catálogos" },
+  { key: "shifts", label: "Turnos", icon: CalendarDays, group: "Operaciones" },
+  { key: "clients", label: "Clientes", icon: Users, group: "Operaciones" },
+  { key: "locations", label: "Ubicaciones", icon: MapPin, group: "Operaciones" },
+  { key: "announcements", label: "Anuncios", icon: Megaphone, group: "Comunicación" },
 ];
 
 interface ModuleRow {
