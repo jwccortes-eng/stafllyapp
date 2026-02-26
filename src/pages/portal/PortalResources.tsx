@@ -26,7 +26,7 @@ export default function PortalResources() {
           <Link
             key={r.to}
             to={r.to}
-            className="flex items-center gap-4 rounded-2xl border bg-card p-4 hover:bg-accent/50 transition-all duration-200 active:scale-[0.98] shadow-sm"
+            className="flex items-center gap-4 rounded-2xl border bg-card p-4 hover:bg-accent/50 transition-all duration-200 press-scale shadow-sm hover-lift"
           >
             <div className={cn("h-11 w-11 rounded-xl flex items-center justify-center shrink-0", r.color)}>
               <r.icon className="h-5 w-5" />

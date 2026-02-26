@@ -2,8 +2,9 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { CreditCard, Calendar, ArrowRight } from "lucide-react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CreditCard, Calendar, ArrowRight, Receipt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -22,12 +23,7 @@ export default function Billing() {
   const navigate = useNavigate();
 
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-40 w-full" />
-      </div>
-    );
+    return <PageSkeleton variant="detail" />;
   }
 
   const statusInfo = statusLabels[subscription?.status ?? ""] ?? { label: "Sin suscripción", variant: "outline" as const };
@@ -39,7 +35,7 @@ export default function Billing() {
           <h1 className="text-xl font-bold font-heading tracking-tight">Facturación</h1>
           <p className="text-xs text-muted-foreground mt-1">Gestión de plan y suscripción</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate("/admin/pricing")}>
+        <Button variant="outline" size="sm" onClick={() => navigate("/admin/pricing")} className="press-scale">
           Ver planes <ArrowRight className="h-4 w-4 ml-1" />
         </Button>
       </div>
@@ -47,7 +43,7 @@ export default function Billing() {
       {!isActive && <UpgradeBanner />}
 
       {/* Current plan card */}
-      <Card>
+      <Card className="hover-lift">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Plan actual</CardTitle>
@@ -77,16 +73,19 @@ export default function Billing() {
         </CardContent>
       </Card>
 
-      {/* Payment history placeholder */}
+      {/* Payment history */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Historial de pagos</CardTitle>
           <CardDescription>Los pagos aparecerán aquí cuando Stripe esté conectado</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground/50 text-sm">
-            Sin registros aún
-          </div>
+          <EmptyState
+            icon={Receipt}
+            title="Sin registros aún"
+            description="El historial de pagos se mostrará aquí una vez que la pasarela esté activa."
+            compact
+          />
         </CardContent>
       </Card>
     </div>
