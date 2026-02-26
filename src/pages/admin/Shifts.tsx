@@ -199,6 +199,33 @@ export default function Shifts() {
 
     if (shift) {
       await logShiftActivity("crear_turno", shift.id, null, { title: title.trim(), date, start_time: startTime, end_time: endTime });
+
+      // If claimable, notify ALL active employees in the company
+      if (claimable) {
+        const { data: activeEmps } = await supabase
+          .from("employees")
+          .select("id")
+          .eq("company_id", selectedCompanyId)
+          .eq("is_active", true);
+
+        const allEmpIds = (activeEmps ?? []).map(e => e.id);
+        // Exclude already-assigned employees
+        const assignedSet = new Set(selectedEmployees);
+        const claimRecipients = allEmpIds.filter(id => !assignedSet.has(id));
+
+        if (claimRecipients.length > 0) {
+          const dateLabel = new Date(date + "T12:00:00").toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" });
+          await sendShiftNotifications(
+            shift.id,
+            title.trim(),
+            "shift_claimable",
+            "🙋 Turno disponible para reclamar",
+            `"${title.trim()}" el ${dateLabel} (${startTime.slice(0, 5)}–${endTime.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+            claimRecipients,
+            { claimable: true }
+          );
+        }
+      }
     }
 
     toast.success("Turno creado");
@@ -257,6 +284,28 @@ export default function Shifts() {
       }
     }
 
+    // If shift just became claimable, notify all active employees
+    const becameClaimable = changes.some(c => c.field === "claimable" && c.new === true);
+    if (becameClaimable && selectedCompanyId) {
+      const { data: activeEmps } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("company_id", selectedCompanyId)
+        .eq("is_active", true);
+      const assignedSet = new Set(affectedEmployeeIds);
+      const claimRecipients = (activeEmps ?? []).map(e => e.id).filter(id => !assignedSet.has(id));
+      if (claimRecipients.length > 0) {
+        const shiftTitle = updates.title || oldShift.title;
+        const dateLabel = new Date(oldShift.date + "T12:00:00").toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" });
+        await sendShiftNotifications(
+          shiftId, shiftTitle, "shift_claimable",
+          "🙋 Turno disponible para reclamar",
+          `"${shiftTitle}" el ${dateLabel} (${oldShift.start_time.slice(0, 5)}–${oldShift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+          claimRecipients, { claimable: true }
+        );
+      }
+    }
+
     toast.success("Turno actualizado");
     // Update selected shift in detail dialog
     setSelectedShift(prev => prev?.id === shiftId ? { ...prev, ...updates } as Shift : prev);
@@ -284,6 +333,26 @@ export default function Shifts() {
       employeeIds,
       { broadcast: true }
     );
+
+    // If claimable, also notify all other active employees
+    if (shift.claimable && selectedCompanyId) {
+      const { data: activeEmps } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("company_id", selectedCompanyId)
+        .eq("is_active", true);
+      const assignedSet = new Set(employeeIds);
+      const claimRecipients = (activeEmps ?? []).map(e => e.id).filter(id => !assignedSet.has(id));
+      if (claimRecipients.length > 0) {
+        const dateLabel = new Date(shift.date + "T12:00:00").toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" });
+        await sendShiftNotifications(
+          shift.id, shift.title, "shift_claimable",
+          "🙋 Turno disponible para reclamar",
+          `"${shift.title}" el ${dateLabel} (${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+          claimRecipients, { claimable: true }
+        );
+      }
+    }
 
     toast.success("Turno publicado y empleados notificados");
     setSelectedShift(prev => prev?.id === shift.id ? { ...prev, status: "published" } : prev);
