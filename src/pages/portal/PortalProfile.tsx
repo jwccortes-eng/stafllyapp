@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 
 interface EmployeeProfile {
   first_name: string;
@@ -73,22 +74,22 @@ export default function PortalProfile() {
   return (
     <div className="space-y-6">
       {/* Profile header */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-6 text-primary-foreground relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(243_75%_70%/0.3),transparent_60%)]" />
+      <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-6 text-primary-foreground relative overflow-hidden shadow-md">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(200_85%_65%/0.4),transparent_60%)]" />
         <div className="relative flex items-center gap-4">
           <EmployeeAvatar
             firstName={profile.first_name}
             lastName={profile.last_name}
             size="lg"
-            className="border-2 border-white/30"
+            className="border-2 border-white/30 shadow-lg"
           />
           <div className="min-w-0">
-            <h1 className="text-xl font-bold font-heading tracking-tight">
+            <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">
               {profile.first_name} {profile.last_name}
             </h1>
-            <p className="text-sm opacity-80">{companyName}</p>
+            <p className="text-sm opacity-80 mt-0.5">{companyName}</p>
             {profile.employee_role && (
-              <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full bg-white/20 font-medium">
+              <span className="inline-block mt-2 text-[10px] px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm">
                 {profile.employee_role}
               </span>
             )}
@@ -143,27 +144,30 @@ export default function PortalProfile() {
           <Link
             key={item.to}
             to={item.to}
-            className="flex items-center gap-3.5 rounded-2xl border bg-card p-4 hover:bg-accent/50 transition-colors active:scale-[0.98]"
+            className="flex items-center gap-3.5 rounded-2xl border bg-card p-4 hover:bg-accent/50 transition-all duration-200 active:scale-[0.98] shadow-sm"
           >
-            <item.icon className="h-5 w-5 text-muted-foreground" />
+            <div className="h-10 w-10 rounded-xl bg-primary/8 flex items-center justify-center">
+              <item.icon className="h-[18px] w-[18px] text-primary/70" />
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold">{item.label}</p>
               <p className="text-[10px] text-muted-foreground">{item.description}</p>
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
           </Link>
         ))}
       </div>
 
       {/* Logout */}
-      <Button
-        variant="outline"
-        className="w-full h-11 text-sm gap-2 text-destructive hover:text-destructive"
-        onClick={signOut}
-      >
-        <LogOut className="h-4 w-4" />
-        Cerrar sesión
-      </Button>
+      <LogoutConfirmDialog onConfirm={signOut}>
+        <Button
+          variant="outline"
+          className="w-full h-11 text-sm gap-2 text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/5"
+        >
+          <LogOut className="h-4 w-4" />
+          Cerrar sesión
+        </Button>
+      </LogoutConfirmDialog>
     </div>
   );
 }

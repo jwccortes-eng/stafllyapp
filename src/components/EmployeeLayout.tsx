@@ -53,12 +53,12 @@ export default function EmployeeLayout() {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col">
         {/* Minimal top bar */}
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b shrink-0">
-          <div className="flex items-center justify-between px-5 h-14">
-            <span className="text-base font-bold font-heading tracking-tight text-foreground">Staffly</span>
+        <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-2xl border-b border-border/40 shrink-0">
+          <div className="flex items-center justify-between px-5 h-12">
+            <span className="text-[15px] font-bold font-heading tracking-tight text-foreground">Staffly</span>
             <LogoutConfirmDialog onConfirm={signOut}>
-              <button className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" aria-label="Cerrar sesión">
-                <LogOut className="h-4.5 w-4.5" />
+              <button className="p-2 -mr-1 rounded-full text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all active:scale-90" aria-label="Cerrar sesión">
+                <LogOut className="h-[18px] w-[18px]" />
               </button>
             </LogoutConfirmDialog>
           </div>
@@ -68,9 +68,9 @@ export default function EmployeeLayout() {
           <Outlet />
         </main>
 
-        {/* Bottom navigation — Instagram-style tabs */}
-        <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/80 backdrop-blur-lg border-t pb-[env(safe-area-inset-bottom)]">
-          <div className="flex items-center justify-around h-16 px-2">
+        {/* Bottom navigation — native iOS-style tabs */}
+        <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/90 backdrop-blur-2xl border-t border-border/40 pb-[env(safe-area-inset-bottom)]">
+          <div className="flex items-center justify-around h-[60px] px-1">
             {links.map((link) => {
               const isActive = link.end ? location.pathname === link.to : location.pathname.startsWith(link.to);
               return (
@@ -78,14 +78,25 @@ export default function EmployeeLayout() {
                   key={link.to}
                   to={link.to}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all min-w-[60px]",
+                    "relative flex flex-col items-center justify-center gap-0.5 py-1 min-w-[56px] transition-all duration-200 active:scale-90",
                     isActive
                       ? "text-primary"
-                      : "text-muted-foreground"
+                      : "text-muted-foreground/60"
                   )}
                 >
-                  <link.icon className={cn("h-5 w-5", isActive && "text-primary")} />
-                  <span className={cn("text-[10px]", isActive && "font-semibold")}>{link.label}</span>
+                  <div className={cn(
+                    "flex items-center justify-center h-7 w-7 rounded-full transition-all duration-300",
+                    isActive && "bg-primary/12 scale-110"
+                  )}>
+                    <link.icon className={cn("h-[20px] w-[20px] transition-all duration-200", isActive && "text-primary")} strokeWidth={isActive ? 2.2 : 1.8} />
+                  </div>
+                  <span className={cn(
+                    "text-[10px] leading-tight transition-all duration-200",
+                    isActive ? "font-semibold text-primary" : "font-medium"
+                  )}>{link.label}</span>
+                  {isActive && (
+                    <span className="absolute -bottom-0.5 h-[3px] w-5 rounded-full bg-primary animate-scale-in" />
+                  )}
                 </NavLink>
               );
             })}

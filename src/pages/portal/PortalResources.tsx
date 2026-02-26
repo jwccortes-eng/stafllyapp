@@ -14,10 +14,10 @@ export default function PortalResources() {
   const { fullName } = useAuth();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold font-heading tracking-tight">Recursos</h1>
-        <p className="text-sm text-muted-foreground mt-1">Herramientas y opciones disponibles</p>
+        <h1 className="text-xl font-bold font-heading tracking-tight">Recursos</h1>
+        <p className="text-xs text-muted-foreground mt-1">Herramientas y opciones disponibles</p>
       </div>
 
       {/* Resource grid */}
@@ -26,23 +26,23 @@ export default function PortalResources() {
           <Link
             key={r.to}
             to={r.to}
-            className="flex items-center gap-4 rounded-2xl border bg-card p-4 hover:bg-accent/50 transition-colors active:scale-[0.98]"
+            className="flex items-center gap-4 rounded-2xl border bg-card p-4 hover:bg-accent/50 transition-all duration-200 active:scale-[0.98] shadow-sm"
           >
             <div className={cn("h-11 w-11 rounded-xl flex items-center justify-center shrink-0", r.color)}>
               <r.icon className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground">{r.label}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{r.description}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{r.description}</p>
             </div>
           </Link>
         ))}
       </div>
 
       {/* Help section */}
-      <div className="rounded-2xl border bg-muted/30 p-4 text-center space-y-2">
-        <HelpCircle className="h-6 w-6 text-muted-foreground/40 mx-auto" />
-        <p className="text-xs text-muted-foreground">¿Necesitas ayuda? Contacta a tu administrador</p>
+      <div className="rounded-2xl border bg-muted/20 p-5 text-center space-y-2">
+        <HelpCircle className="h-6 w-6 text-muted-foreground/30 mx-auto" />
+        <p className="text-xs text-muted-foreground/70">¿Necesitas ayuda? Contacta a tu administrador</p>
       </div>
     </div>
   );

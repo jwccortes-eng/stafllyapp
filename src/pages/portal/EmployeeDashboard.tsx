@@ -8,6 +8,7 @@ import {
   ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { format, parseISO, isToday, isTomorrow, formatDistanceToNow, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -218,26 +219,37 @@ export default function EmployeeDashboard() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Greeting */}
-      <div className="pt-1">
-        <p className="text-muted-foreground text-sm">{greeting} 👋</p>
-        <h1 className="text-2xl font-bold font-heading tracking-tight mt-0.5">
-          {empName.split(" ")[0]}
-        </h1>
+    <div className="space-y-6">
+      {/* Greeting with avatar */}
+      <div className="flex items-center gap-3.5 pt-1">
+        <EmployeeAvatar
+          firstName={empName.split(" ")[0] || ""}
+          lastName={empName.split(" ").slice(1).join(" ") || ""}
+          size="md"
+          className="ring-2 ring-primary/20 shadow-sm"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted-foreground/70 font-medium">{greeting} 👋</p>
+          <h1 className="text-xl font-bold font-heading tracking-tight leading-tight mt-0.5">
+            {empName.split(" ")[0]}
+          </h1>
+        </div>
       </div>
 
       {/* Hero cards row: pay + next shift */}
       <div className="grid grid-cols-2 gap-3">
         {/* Pay card */}
         {estimatedPay !== null && (
-          <Link to="/portal/payments" className="block">
-            <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-4 text-primary-foreground relative overflow-hidden h-full">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(243_75%_70%/0.3),transparent_60%)]" />
+          <Link to="/portal/payments" className="block group">
+            <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-4 text-primary-foreground relative overflow-hidden h-full shadow-md transition-transform duration-200 active:scale-[0.97]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(200_85%_65%/0.4),transparent_60%)]" />
               <div className="relative">
-                <p className="text-[10px] font-medium opacity-80 uppercase tracking-wider">Pago estimado</p>
-                <p className="text-xl font-bold font-heading mt-1 tabular-nums">${estimatedPay.toFixed(2)}</p>
-                <div className="flex items-center gap-1 mt-2 text-[10px] font-medium opacity-80">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Wallet className="h-3.5 w-3.5 opacity-80" />
+                  <p className="text-[10px] font-semibold opacity-80 uppercase tracking-wider">Pago estimado</p>
+                </div>
+                <p className="text-[22px] font-bold font-heading tabular-nums leading-none">${estimatedPay.toFixed(2)}</p>
+                <div className="flex items-center gap-1 mt-3 text-[10px] font-medium opacity-70 group-hover:opacity-100 transition-opacity">
                   Ver nómina <ArrowRight className="h-2.5 w-2.5" />
                 </div>
               </div>
@@ -247,34 +259,37 @@ export default function EmployeeDashboard() {
 
         {/* Next shift card */}
         {nextShift ? (
-          <Link to="/portal/shifts" className="block">
+          <Link to="/portal/shifts" className="block group">
             <div className={cn(
-              "rounded-2xl border bg-card p-4 h-full flex flex-col justify-between",
-              isToday(parseISO(nextShift.date)) && "ring-2 ring-primary/30"
+              "rounded-2xl border bg-card p-4 h-full flex flex-col justify-between shadow-sm transition-all duration-200 active:scale-[0.97]",
+              isToday(parseISO(nextShift.date)) && "ring-2 ring-primary/20 border-primary/20"
             )}>
               <div>
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Próximo turno</p>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-semibold">Próximo turno</p>
+                  </div>
                   {isToday(parseISO(nextShift.date)) && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground animate-pulse">HOY</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground">HOY</span>
                   )}
                 </div>
-                <p className="text-sm font-semibold mt-1">{nextShift.title}</p>
+                <p className="text-sm font-semibold leading-snug">{nextShift.title}</p>
               </div>
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-2">
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-2.5">
                 <Clock className="h-3 w-3" />
                 {nextShift.start_time?.slice(0, 5)} – {nextShift.end_time?.slice(0, 5)}
               </div>
             </div>
           </Link>
         ) : estimatedPay === null ? null : (
-          <Link to="/portal/shifts" className="block">
-            <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4 flex flex-col items-center justify-center h-full gap-2 hover:bg-primary/10 transition-colors active:scale-[0.98]">
-              <CalendarDays className="h-5 w-5 text-primary" />
-              <p className="text-[10px] text-primary font-semibold text-center leading-tight">
+          <Link to="/portal/shifts" className="block group">
+            <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 p-4 flex flex-col items-center justify-center h-full gap-2 transition-all duration-200 active:scale-[0.97]">
+              <CalendarDays className="h-5 w-5 text-primary/70" />
+              <p className="text-[10px] text-primary/80 font-semibold text-center leading-tight">
                 Sin turnos hoy
               </p>
-              <span className="text-[9px] text-primary/70 font-medium flex items-center gap-0.5">
+              <span className="text-[9px] text-primary/60 font-medium flex items-center gap-0.5 group-hover:text-primary transition-colors">
                 Ver disponibles <ArrowRight className="h-2.5 w-2.5" />
               </span>
             </div>
@@ -283,9 +298,10 @@ export default function EmployeeDashboard() {
       </div>
 
       {/* Feed header */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 pt-1">
         <Megaphone className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Muro</h2>
+        <h2 className="text-[13px] font-semibold text-foreground tracking-tight">Muro</h2>
+        <div className="flex-1 h-px bg-border/60 ml-1" />
       </div>
 
       {/* Feed/Wall */}

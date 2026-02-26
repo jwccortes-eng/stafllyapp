@@ -261,8 +261,8 @@ export default function MyShifts() {
       <div
         key={a.id}
         className={cn(
-          "rounded-2xl border bg-card p-4 space-y-3 transition-all",
-          isTodayShift && "ring-2 ring-primary/30 shadow-sm"
+          "rounded-2xl border bg-card p-4 space-y-3 transition-all duration-200 shadow-sm active:scale-[0.98]",
+          isTodayShift && "ring-2 ring-primary/20 border-primary/20 shadow-md"
         )}
       >
         <div className="flex items-start justify-between">
@@ -337,7 +337,7 @@ export default function MyShifts() {
   const renderClaimable = (s: ClaimableShift) => {
     const spotsLeft = s.slots ? s.slots - s.assignedCount : null;
     return (
-      <div key={s.id} className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4 space-y-3">
+      <div key={s.id} className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 p-4 space-y-3 transition-all duration-200 active:scale-[0.98]">
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">{s.title}</p>
@@ -382,10 +382,10 @@ export default function MyShifts() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold font-heading tracking-tight">Mis Turnos</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <h1 className="text-xl font-bold font-heading tracking-tight">Mis Turnos</h1>
+        <p className="text-xs text-muted-foreground mt-1">
           {upcoming.length} próximo{upcoming.length !== 1 ? "s" : ""} · {past.length} pasado{past.length !== 1 ? "s" : ""}
         </p>
       </div>
