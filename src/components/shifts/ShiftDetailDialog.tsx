@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { Clock, MapPin, Users, Trash2, UserPlus } from "lucide-react";
+import { Clock, MapPin, Users, Trash2, UserPlus, Pencil, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -21,11 +21,13 @@ interface ShiftDetailDialogProps {
   canEdit: boolean;
   onAddEmployees: (shiftId: string, employeeIds: string[]) => void;
   onRemoveAssignment: (assignmentId: string) => void;
+  onEdit: (shift: Shift) => void;
+  onPublish: (shift: Shift) => void;
 }
 
 export function ShiftDetailDialog({
   shift, open, onOpenChange, assignments, employees, locations, clients,
-  canEdit, onAddEmployees, onRemoveAssignment,
+  canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish,
 }: ShiftDetailDialogProps) {
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -56,14 +58,39 @@ export function ShiftDetailDialog({
     rejected: "text-deduction",
   };
 
+  const statusBadgeVariant = shift.status === "published"
+    ? "default" as const
+    : "secondary" as const;
+
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); } }}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg">{shift.title}</DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-lg flex-1">{shift.title}</DialogTitle>
+            <Badge variant={statusBadgeVariant} className="capitalize">
+              {shift.status}
+            </Badge>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Action buttons */}
+          {canEdit && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => onEdit(shift)} className="flex-1">
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                Editar
+              </Button>
+              {shift.status !== "published" && (
+                <Button size="sm" onClick={() => onPublish(shift)} className="flex-1">
+                  <Send className="h-3.5 w-3.5 mr-1" />
+                  Publicar
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Info */}
           <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">

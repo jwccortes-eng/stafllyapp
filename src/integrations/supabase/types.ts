@@ -1122,6 +1122,56 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          metadata: Json | null
+          read_at: string | null
+          recipient_id: string
+          recipient_type: string
+          title: string
+          type: string
+        }
+        Insert: {
+          body?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id: string
+          recipient_type?: string
+          title: string
+          type?: string
+        }
+        Update: {
+          body?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id?: string
+          recipient_type?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pay_periods: {
         Row: {
           closed_at: string | null
