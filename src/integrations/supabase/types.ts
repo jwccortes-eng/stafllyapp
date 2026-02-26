@@ -182,6 +182,79 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_log: {
+        Row: {
+          company_id: string
+          details: Json | null
+          id: string
+          rule_key: string
+          status: string
+          triggered_at: string
+        }
+        Insert: {
+          company_id: string
+          details?: Json | null
+          id?: string
+          rule_key: string
+          status?: string
+          triggered_at?: string
+        }
+        Update: {
+          company_id?: string
+          details?: Json | null
+          id?: string
+          rule_key?: string
+          status?: string
+          triggered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          company_id: string
+          config: Json
+          enabled: boolean
+          id: string
+          rule_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          config?: Json
+          enabled?: boolean
+          id?: string
+          rule_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          config?: Json
+          enabled?: boolean
+          id?: string
+          rule_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
