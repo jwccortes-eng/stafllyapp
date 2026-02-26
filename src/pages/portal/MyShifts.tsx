@@ -418,9 +418,29 @@ export default function MyShifts() {
       )}
 
       {assignments.length === 0 && claimable.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground">
-          <CalendarDays className="h-8 w-8 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">No tienes turnos asignados</p>
+        <div className="text-center py-12 space-y-4">
+          <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <CalendarDays className="h-7 w-7 text-primary" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">Sin turnos asignados</p>
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+              Aún no tienes turnos programados. Cuando haya turnos disponibles para solicitar, aparecerán aquí automáticamente.
+            </p>
+          </div>
+          <p className="text-[10px] text-muted-foreground/70">
+            Contacta a tu supervisor si crees que deberías tener turnos asignados.
+          </p>
+        </div>
+      )}
+
+      {assignments.length === 0 && claimable.length > 0 && (
+        <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-5 text-center space-y-2">
+          <HandMetal className="h-6 w-6 text-primary mx-auto" />
+          <p className="text-sm font-semibold text-foreground">¡Hay turnos disponibles!</p>
+          <p className="text-xs text-muted-foreground">
+            No tienes turnos asignados, pero puedes solicitar los turnos abiertos de arriba.
+          </p>
         </div>
       )}
 
