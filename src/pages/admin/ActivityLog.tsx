@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import DiffViewer from "@/components/audit/DiffViewer";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,8 @@ interface LogEntry {
   entity_type: string;
   entity_id: string | null;
   details: any;
+  old_data: any;
+  new_data: any;
   created_at: string;
   // joined
   user_email?: string;
@@ -278,7 +281,8 @@ export default function ActivityLog() {
                             </>
                           )}
                         </div>
-                        {log.details && Object.keys(log.details).length > 0 && (
+                        <DiffViewer oldData={log.old_data} newData={log.new_data} />
+                        {log.details && Object.keys(log.details).length > 0 && !log.old_data && !log.new_data && (
                           <pre className="text-[10px] text-muted-foreground/60 mt-1 bg-muted/50 rounded px-2 py-1 overflow-hidden max-h-16">
                             {JSON.stringify(log.details, null, 2)}
                           </pre>
