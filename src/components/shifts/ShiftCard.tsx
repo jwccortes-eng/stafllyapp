@@ -2,7 +2,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Shift, Assignment, SelectOption } from "./types";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import type { Shift } from "./types";
 
 interface ShiftCardProps {
   shift: Shift;
@@ -12,15 +14,18 @@ interface ShiftCardProps {
   compact?: boolean;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
+  showDate?: boolean;
 }
 
 export function ShiftCard({
-  shift, assignmentCount, locationName, onClick, compact, draggable, onDragStart,
+  shift, assignmentCount, locationName, onClick, compact, draggable, onDragStart, showDate,
 }: ShiftCardProps) {
+  const statusLabel = shift.status === "published" ? "publicado" : shift.status === "draft" ? "borrador" : shift.status;
+
   return (
     <Card
       className={cn(
-        "cursor-pointer hover:shadow-md transition-all group",
+        "cursor-pointer hover:shadow-md transition-all group border-border/40",
         draggable && "hover:ring-1 hover:ring-primary/30"
       )}
       draggable={draggable}
@@ -36,6 +41,11 @@ export function ShiftCard({
             <p className={cn("font-semibold truncate", compact ? "text-[10px]" : "text-xs")}>
               {shift.title}
             </p>
+            {showDate && (
+              <p className="text-[10px] text-muted-foreground capitalize">
+                {format(parseISO(shift.date), "EEE d MMM", { locale: es })}
+              </p>
+            )}
             <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
               <Clock className="h-3 w-3 shrink-0" />
               {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
@@ -49,10 +59,10 @@ export function ShiftCard({
               <Users className="h-3 w-3 text-muted-foreground" />
               <span className="text-[10px]">{assignmentCount}/{shift.slots ?? 1}</span>
               <Badge
-                variant={shift.status === "open" ? "default" : "secondary"}
+                variant={shift.status === "published" ? "default" : "secondary"}
                 className="text-[9px] px-1 py-0 ml-auto"
               >
-                {shift.status}
+                {statusLabel}
               </Badge>
             </div>
           </div>
