@@ -64,27 +64,27 @@ export function ShiftDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); } }}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto p-5">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="text-lg flex-1">{shift.title}</DialogTitle>
-            <Badge variant={statusBadgeVariant} className="capitalize">
-              {shift.status}
+            <DialogTitle className="text-base font-semibold flex-1">{shift.title}</DialogTitle>
+            <Badge variant={statusBadgeVariant} className="capitalize text-[10px] px-2 py-0.5">
+              {shift.status === "published" ? "publicado" : shift.status === "draft" ? "borrador" : shift.status}
             </Badge>
           </div>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Action buttons */}
           {canEdit && (
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => onEdit(shift)} className="flex-1">
-                <Pencil className="h-3.5 w-3.5 mr-1" />
+              <Button variant="outline" size="sm" onClick={() => onEdit(shift)} className="flex-1 h-8 text-xs">
+                <Pencil className="h-3 w-3 mr-1" />
                 Editar
               </Button>
               {shift.status !== "published" && (
-                <Button size="sm" onClick={() => onPublish(shift)} className="flex-1">
-                  <Send className="h-3.5 w-3.5 mr-1" />
+                <Button size="sm" onClick={() => onPublish(shift)} className="flex-1 h-8 text-xs">
+                  <Send className="h-3 w-3 mr-1" />
                   Publicar
                 </Button>
               )}
@@ -92,21 +92,21 @@ export function ShiftDetailDialog({
           )}
 
           {/* Info */}
-          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              📅 {format(parseISO(shift.date), "EEEE d MMM yyyy", { locale: es })}
+              📅 {format(parseISO(shift.date), "EEE d MMM", { locale: es })}
             </span>
             <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3 w-3" />
               {shift.start_time.slice(0, 5)} – {shift.end_time.slice(0, 5)}
             </span>
           </div>
 
           {(location || client) && (
-            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
               {location && (
                 <span className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" /> {location.name}
+                  <MapPin className="h-3 w-3" /> {location.name}
                 </span>
               )}
               {client && <span>🏢 {client.name}</span>}
@@ -114,35 +114,35 @@ export function ShiftDetailDialog({
           )}
 
           {shift.notes && (
-            <p className="text-sm bg-muted/50 rounded-xl px-3 py-2">{shift.notes}</p>
+            <p className="text-xs bg-muted/40 rounded-lg px-3 py-2 text-muted-foreground">{shift.notes}</p>
           )}
 
           {/* Assigned employees */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold flex items-center gap-1">
-                <Users className="h-4 w-4" />
-                Empleados asignados ({shiftAssignments.length}/{shift.slots ?? 1})
+            <div className="flex items-center justify-between mb-1.5">
+              <h3 className="text-xs font-medium flex items-center gap-1 text-muted-foreground">
+                <Users className="h-3.5 w-3.5" />
+                Asignados ({shiftAssignments.length}/{shift.slots ?? 1})
               </h3>
               {canEdit && (
-                <Button variant="ghost" size="sm" onClick={() => setShowAddPanel(!showAddPanel)}>
-                  <UserPlus className="h-3.5 w-3.5 mr-1" />
+                <Button variant="ghost" size="sm" onClick={() => setShowAddPanel(!showAddPanel)} className="h-7 text-xs px-2">
+                  <UserPlus className="h-3 w-3 mr-1" />
                   Agregar
                 </Button>
               )}
             </div>
 
             {shiftAssignments.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-3 text-center">Sin empleados asignados</p>
+              <p className="text-xs text-muted-foreground py-2 text-center">Sin asignaciones aún</p>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {shiftAssignments.map(a => {
                   const emp = employees.find(e => e.id === a.employee_id);
                   if (!emp) return null;
                   return (
                     <div
                       key={a.id}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent/50 group"
+                      className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-accent/50 group"
                       draggable={canEdit}
                       onDragStart={(e) => {
                         e.dataTransfer.setData("application/assignment", JSON.stringify({
@@ -154,16 +154,16 @@ export function ShiftDetailDialog({
                       }}
                     >
                       <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" />
-                      <span className="text-sm flex-1">{emp.first_name} {emp.last_name}</span>
-                      <span className={cn("text-[10px] font-medium capitalize", statusColors[a.status] || "text-muted-foreground")}>
-                        {a.status}
+                      <span className="text-xs flex-1">{emp.first_name} {emp.last_name}</span>
+                      <span className={cn("text-[10px] capitalize", statusColors[a.status] || "text-muted-foreground")}>
+                        {a.status === "confirmed" ? "ok" : a.status === "pending" ? "pendiente" : a.status}
                       </span>
                       {canEdit && (
                         <button
                           onClick={() => onRemoveAssignment(a.id)}
                           className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3 w-3" />
                         </button>
                       )}
                     </div>
@@ -175,14 +175,14 @@ export function ShiftDetailDialog({
 
           {/* Add employees panel */}
           {showAddPanel && (
-            <div className="border rounded-lg p-3 space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground">Selecciona empleados</p>
-              <div className="max-h-40 overflow-y-auto space-y-1">
+            <div className="border rounded-lg p-2.5 space-y-2">
+              <p className="text-[11px] font-medium text-muted-foreground">Seleccionar empleados</p>
+              <div className="max-h-36 overflow-y-auto space-y-0.5">
                 {unassigned.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-2 text-center">Todos asignados</p>
                 ) : (
                   unassigned.map(emp => (
-                    <label key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer text-sm">
+                    <label key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer text-xs">
                       <Checkbox
                         checked={selected.includes(emp.id)}
                         onCheckedChange={() => toggleEmployee(emp.id)}
@@ -194,7 +194,7 @@ export function ShiftDetailDialog({
                 )}
               </div>
               {selected.length > 0 && (
-                <Button size="sm" onClick={handleAdd} className="w-full">
+                <Button size="sm" onClick={handleAdd} className="w-full h-8 text-xs">
                   Asignar {selected.length} empleado{selected.length > 1 ? "s" : ""}
                 </Button>
               )}
