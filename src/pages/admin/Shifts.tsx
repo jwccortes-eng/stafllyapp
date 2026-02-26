@@ -553,6 +553,7 @@ export default function Shifts() {
         onRemoveAssignment={handleRemoveAssignment}
         onEdit={(s) => { setEditShift(s); setEditOpen(true); }}
         onPublish={handlePublishShift}
+        onSave={handleEditShift}
       />
 
       <ShiftEditDialog
