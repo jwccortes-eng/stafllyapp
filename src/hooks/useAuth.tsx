@@ -12,6 +12,11 @@ interface ModulePermission {
   can_delete: boolean;
 }
 
+interface ActionPermission {
+  action: string;
+  granted: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -21,8 +26,10 @@ interface AuthContextType {
   fullName: string | null;
   loading: boolean;
   permissions: ModulePermission[];
+  actionPermissions: ActionPermission[];
   signOut: () => Promise<void>;
   hasModuleAccess: (module: string, permission: 'view' | 'edit' | 'delete') => boolean;
+  hasActionPermission: (action: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -34,8 +41,10 @@ const AuthContext = createContext<AuthContextType>({
   fullName: null,
   loading: true,
   permissions: [],
+  actionPermissions: [],
   signOut: async () => {},
   hasModuleAccess: () => false,
+  hasActionPermission: () => false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -46,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [employeeActive, setEmployeeActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
+  const [actionPermissions, setActionPermissions] = useState<ActionPermission[]>([]);
   const [fullName, setFullName] = useState<string | null>(null);
 
   const fetchUserData = async (userId: string) => {
@@ -74,8 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .select('module, can_view, can_edit, can_delete')
           .eq('user_id', userId);
         setPermissions((permsData as ModulePermission[]) ?? []);
+        // Also fetch action permissions for managers
+        const { data: actionPermsData } = await supabase
+          .from('action_permissions')
+          .select('action, granted')
+          .eq('user_id', userId);
+        setActionPermissions((actionPermsData as ActionPermission[]) ?? []);
       } else {
         setPermissions([]);
+        setActionPermissions([]);
       }
 
       if (newRole === 'employee') {
@@ -95,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole(null);
       setEmployeeId(null);
       setPermissions([]);
+      setActionPermissions([]);
     }
   };
 
@@ -142,8 +160,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
+  const hasActionPermission = (action: string): boolean => {
+    if (role === 'owner' || role === 'admin') return true;
+    if (role === 'manager') {
+      const perm = actionPermissions.find(p => p.action === action);
+      return perm?.granted ?? false;
+    }
+    return false;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, role, employeeId, employeeActive, fullName, loading, permissions, signOut, hasModuleAccess }}>
+    <AuthContext.Provider value={{ user, session, role, employeeId, employeeActive, fullName, loading, permissions, actionPermissions, signOut, hasModuleAccess, hasActionPermission }}>
       {children}
     </AuthContext.Provider>
   );

@@ -35,6 +35,7 @@ import InternalChat from "./pages/admin/InternalChat";
 import PlatformSettings from "./pages/admin/PlatformSettings";
 import ActivityLog from "./pages/admin/ActivityLog";
 import OnboardingWizard from "./pages/admin/OnboardingWizard";
+import Permissions from "./pages/admin/Permissions";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -83,6 +84,7 @@ function App() {
                 <Route path="settings" element={<PlatformSettings />} />
                 <Route path="activity" element={<ActivityLog />} />
                 <Route path="onboarding" element={<OnboardingWizard />} />
+                <Route path="permissions" element={<Permissions />} />
               </Route>
 
               {/* Employee portal routes */}
