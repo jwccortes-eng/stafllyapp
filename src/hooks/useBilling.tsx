@@ -22,16 +22,15 @@ export function useCreateCheckoutSession() {
       return data as { url?: string; stub?: boolean; message?: string };
     },
     onSuccess: (data) => {
-      if (data?.stub) {
-        toast({
-          title: "Modo demo",
-          description: "Conecta las llaves de Stripe para activar pagos reales.",
-        });
-        return;
-      }
       if (data?.url) {
         window.location.href = data.url;
+        return;
       }
+      toast({
+        title: "Error",
+        description: "No se recibió URL de checkout. Verifica la configuración de Stripe.",
+        variant: "destructive",
+      });
     },
     onError: () => {
       toast({
@@ -61,16 +60,15 @@ export function useOpenCustomerPortal() {
       return data as { url?: string; stub?: boolean; message?: string };
     },
     onSuccess: (data) => {
-      if (data?.stub) {
-        toast({
-          title: "Modo demo",
-          description: "El portal de cliente se habilitará cuando Stripe esté conectado.",
-        });
-        return;
-      }
       if (data?.url) {
         window.location.href = data.url;
+        return;
       }
+      toast({
+        title: "Error",
+        description: "No se pudo abrir el portal. Asegúrate de tener una suscripción activa.",
+        variant: "destructive",
+      });
     },
     onError: () => {
       toast({

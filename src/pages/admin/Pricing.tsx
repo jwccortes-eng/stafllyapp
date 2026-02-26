@@ -35,7 +35,7 @@ const plans = [
       "API externa",
       "Soporte prioritario",
     ],
-    priceId: "PRICE_PRO_MONTHLY", // TODO: Replace with real Stripe Price ID
+    priceId: "price_1T5C9xK7PYTRtWks5cRmmPtJ",
   },
   {
     id: "enterprise",
@@ -50,7 +50,7 @@ const plans = [
       "Integraciones personalizadas",
       "SLA garantizado",
     ],
-    priceId: "PRICE_ENTERPRISE_MONTHLY", // TODO: Replace with real Stripe Price ID
+    priceId: "price_1T5CAJK7PYTRtWksY7nUGqB5",
   },
 ];
 
