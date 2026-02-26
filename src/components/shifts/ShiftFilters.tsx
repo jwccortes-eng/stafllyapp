@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, UserX, EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { SelectOption } from "./types";
 
 export interface ShiftFilterState {
@@ -31,6 +31,10 @@ export function ShiftFilters({ filters, onChange, clients }: ShiftFiltersProps) 
 
   const update = (partial: Partial<ShiftFilterState>) => onChange({ ...filters, ...partial });
 
+  const toggleQuickFilter = (key: keyof ShiftFilterState, value: string) => {
+    update({ [key]: filters[key] === value ? "" : value });
+  };
+
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {/* Filter label */}
@@ -53,7 +57,35 @@ export function ShiftFilters({ filters, onChange, clients }: ShiftFiltersProps) 
         />
       </div>
 
-      {/* Client/Job */}
+      {/* Quick toggle: Unassigned */}
+      <Button
+        variant={filters.assignedStatus === "unassigned" ? "default" : "outline"}
+        size="sm"
+        className={cn(
+          "h-7 text-xs px-2.5 gap-1.5",
+          filters.assignedStatus === "unassigned" && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        )}
+        onClick={() => toggleQuickFilter("assignedStatus", "unassigned")}
+      >
+        <UserX className="h-3 w-3" />
+        Sin asignar
+      </Button>
+
+      {/* Quick toggle: Unpublished / Draft */}
+      <Button
+        variant={filters.publishStatus === "draft" ? "default" : "outline"}
+        size="sm"
+        className={cn(
+          "h-7 text-xs px-2.5 gap-1.5",
+          filters.publishStatus === "draft" && "bg-warning text-warning-foreground hover:bg-warning/90"
+        )}
+        onClick={() => toggleQuickFilter("publishStatus", "draft")}
+      >
+        <EyeOff className="h-3 w-3" />
+        Borrador
+      </Button>
+
+      {/* Client/Job select */}
       <Select value={filters.clientId || "all"} onValueChange={v => update({ clientId: v === "all" ? "" : v })}>
         <SelectTrigger className="h-7 text-xs w-[140px]">
           <SelectValue placeholder="Todos los clientes" />
@@ -61,30 +93,6 @@ export function ShiftFilters({ filters, onChange, clients }: ShiftFiltersProps) 
         <SelectContent>
           <SelectItem value="all">Todos los clientes</SelectItem>
           {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
-
-      {/* Assigned / Unassigned */}
-      <Select value={filters.assignedStatus || "all"} onValueChange={v => update({ assignedStatus: v === "all" ? "" : v })}>
-        <SelectTrigger className="h-7 text-xs w-[140px]">
-          <SelectValue placeholder="Asignación" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          <SelectItem value="assigned">Asignados</SelectItem>
-          <SelectItem value="unassigned">Sin asignar</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {/* Published / Draft */}
-      <Select value={filters.publishStatus || "all"} onValueChange={v => update({ publishStatus: v === "all" ? "" : v })}>
-        <SelectTrigger className="h-7 text-xs w-[120px]">
-          <SelectValue placeholder="Estado" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          <SelectItem value="published">Publicados</SelectItem>
-          <SelectItem value="draft">Borrador</SelectItem>
         </SelectContent>
       </Select>
 
