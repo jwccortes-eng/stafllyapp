@@ -2,7 +2,9 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form-field";
+import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
+
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
@@ -322,17 +324,15 @@ export default function Movements() {
               </DialogHeader>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <Label>Periodo destino</Label>
+                  <FormField label="Periodo destino" className="flex-1">
                     <div className="text-sm font-medium mt-1">
                       {periods.find(p => p.id === filterPeriod) ? `${periods.find(p => p.id === filterPeriod)!.start_date} → ${periods.find(p => p.id === filterPeriod)!.end_date}` : "Sin periodo"}
                     </div>
-                  </div>
+                  </FormField>
                 </div>
-                <div>
-                  <Label htmlFor="import-file">Archivo Excel o CSV</Label>
+                <FormField label="Archivo Excel o CSV" htmlFor="import-file">
                   <Input id="import-file" type="file" accept=".xlsx,.xls,.csv" onChange={handleImportFile} disabled={importing || !filterPeriod} className="mt-1" />
-                </div>
+                </FormField>
                 {importing && <div className="text-center py-4 text-muted-foreground">Procesando...</div>}
                 {importResults && (
                   <div className="space-y-3">
@@ -371,8 +371,7 @@ export default function Movements() {
             <DialogContent>
               <DialogHeader><DialogTitle>Registrar novedad</DialogTitle></DialogHeader>
               <form onSubmit={handleCreate} className="space-y-3">
-                <div>
-                  <Label>Empleado</Label>
+                <FormField label="Empleado">
                   <Popover open={employeePopoverOpen} onOpenChange={setEmployeePopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
@@ -397,8 +396,8 @@ export default function Movements() {
                       </Command>
                     </PopoverContent>
                   </Popover>
-                </div>
-                <div><Label>Periodo</Label>
+                </FormField>
+                <FormField label="Periodo">
                   <Select value={form.period_id || filterPeriod} onValueChange={v => setForm(f => ({ ...f, period_id: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{periods.map(p => {
@@ -407,21 +406,21 @@ export default function Movements() {
                       return <SelectItem key={p.id} value={p.id} className={isCurr ? "font-semibold text-primary" : ""}>{isCurr ? "● " : ""}{p.start_date} → {p.end_date}</SelectItem>;
                     })}</SelectContent>
                   </Select>
-                </div>
-                <div><Label>Concepto</Label>
+                </FormField>
+                <FormField label="Concepto">
                   <Select value={form.concept_id} onValueChange={v => setForm(f => ({ ...f, concept_id: v }))}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar concepto" /></SelectTrigger>
                     <SelectContent>{concepts.map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.category})</SelectItem>)}</SelectContent>
                   </Select>
-                </div>
+                </FormField>
                 {selectedConcept && selectedConcept.calc_mode !== "manual_value" && (
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label>Cantidad</Label><Input type="number" step="0.01" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} /></div>
-                    <div><Label>Tarifa</Label><Input type="number" step="0.01" value={form.rate} onChange={e => setForm(f => ({ ...f, rate: e.target.value }))} /></div>
+                    <FormField label="Cantidad"><Input type="number" step="0.01" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} /></FormField>
+                    <FormField label="Tarifa"><Input type="number" step="0.01" value={form.rate} onChange={e => setForm(f => ({ ...f, rate: e.target.value }))} /></FormField>
                   </div>
                 )}
-                <div><Label>Total</Label><Input type="number" step="0.01" value={form.total_value} onChange={e => setForm(f => ({ ...f, total_value: e.target.value }))} required /></div>
-                <div><Label>Nota</Label><Textarea value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} rows={2} /></div>
+                <FormField label="Total"><Input type="number" step="0.01" value={form.total_value} onChange={e => setForm(f => ({ ...f, total_value: e.target.value }))} required /></FormField>
+                <FormField label="Nota"><Textarea value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} rows={2} /></FormField>
                 <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : "Registrar"}</Button>
               </form>
             </DialogContent>
@@ -452,10 +451,12 @@ export default function Movements() {
             })}</SelectContent>
           </Select>
         </div>
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar empleado o concepto..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-9" />
-        </div>
+        <DataTableToolbar
+          search={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Buscar empleado o concepto..."
+          className="flex-1"
+        />
       </div>
 
       {/* KPI Cards */}
@@ -569,11 +570,11 @@ export default function Movements() {
               {editMovement?.employees?.first_name} {editMovement?.employees?.last_name} — {editMovement?.concepts?.name}
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Cantidad</Label><Input type="number" step="0.01" value={editForm.quantity} onChange={e => setEditForm(f => ({ ...f, quantity: e.target.value }))} /></div>
-              <div><Label>Tarifa</Label><Input type="number" step="0.01" value={editForm.rate} onChange={e => setEditForm(f => ({ ...f, rate: e.target.value }))} /></div>
+              <FormField label="Cantidad"><Input type="number" step="0.01" value={editForm.quantity} onChange={e => setEditForm(f => ({ ...f, quantity: e.target.value }))} /></FormField>
+              <FormField label="Tarifa"><Input type="number" step="0.01" value={editForm.rate} onChange={e => setEditForm(f => ({ ...f, rate: e.target.value }))} /></FormField>
             </div>
-            <div><Label>Total</Label><Input type="number" step="0.01" value={editForm.total_value} onChange={e => setEditForm(f => ({ ...f, total_value: e.target.value }))} required /></div>
-            <div><Label>Nota</Label><Textarea value={editForm.note} onChange={e => setEditForm(f => ({ ...f, note: e.target.value }))} rows={2} /></div>
+            <FormField label="Total"><Input type="number" step="0.01" value={editForm.total_value} onChange={e => setEditForm(f => ({ ...f, total_value: e.target.value }))} required /></FormField>
+            <FormField label="Nota"><Textarea value={editForm.note} onChange={e => setEditForm(f => ({ ...f, note: e.target.value }))} rows={2} /></FormField>
             <Button onClick={handleEditMovement} disabled={editSaving} className="w-full">
               {editSaving ? "Guardando..." : "Guardar cambios"}
             </Button>
