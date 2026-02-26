@@ -91,7 +91,7 @@ export default function PlatformSettings() {
           <Settings className="h-6 w-6" />
           Configuración de Plataforma
         </h1>
-        <p className="page-subtitle">Configura branding, límites y funcionalidades de Stafly</p>
+        <p className="page-subtitle">Configura branding, límites y funcionalidades de Staffly</p>
       </div>
 
       <Tabs defaultValue="branding" className="space-y-6">
