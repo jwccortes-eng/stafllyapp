@@ -192,3 +192,42 @@
     background-clip: text;
   }
 }
+
+/* Micro-interaction utilities */
+@layer utilities {
+  .hover-lift {
+    @apply transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .press-scale {
+    @apply transition-transform duration-150 active:scale-[0.97];
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.2s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite linear;
+    background-size: 200% 100%;
+  }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}

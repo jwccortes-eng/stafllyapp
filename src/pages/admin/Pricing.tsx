@@ -96,18 +96,19 @@ export default function Pricing() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-        {plans.map((p) => {
+        {plans.map((p, idx) => {
           const isCurrent = currentPlan === p.id;
           return (
             <Card
               key={p.id}
               className={cn(
-                "flex flex-col relative",
-                p.popular && "border-primary shadow-md"
+                "flex flex-col relative hover-lift press-scale animate-slide-up",
+                p.popular && "border-primary shadow-md ring-1 ring-primary/20"
               )}
+              style={{ animationDelay: `${idx * 80}ms`, animationFillMode: 'backwards' }}
             >
               {p.popular && (
-                <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 shadow-sm">
                   Más popular
                 </Badge>
               )}
@@ -120,9 +121,9 @@ export default function Pricing() {
                 </div>
               </CardHeader>
               <CardContent className="flex-1">
-                <ul className="space-y-2">
+                <ul className="space-y-2.5">
                   {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
+                    <li key={f} className="flex items-start gap-2.5 text-sm">
                       <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                       <span>{f}</span>
                     </li>
