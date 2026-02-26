@@ -35,7 +35,7 @@ const DEVELOPMENT_PHASES = [
 ];
 
 const SUBSCRIPTION_COSTS = [
-  { item: "Lovable Pro (mensual)", cost: 20, months: 12, total: 240 },
+  { item: "Plataforma Pro (mensual)", cost: 20, months: 12, total: 240 },
   { item: "Dominio personalizado", cost: 0, months: 0, total: 15 },
 ];
 

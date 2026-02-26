@@ -25,8 +25,8 @@ export default defineConfig(({ mode }) => ({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
       manifest: {
-        name: "Staffly — Gestión de personal",
-        short_name: "Staffly",
+        name: "STAFLY",
+        short_name: "STAFLY",
         description: "Gestión de personal inteligente — Turnos y pagos en un solo lugar",
         theme_color: "#6236FF",
         background_color: "#0D0D12",

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Download, Smartphone, CheckCircle2, Apple, ArrowRight } from "lucide-react";
-import logoQS from "@/assets/logo-quality-staff.png";
+import { Clock } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -48,7 +48,7 @@ export default function Install() {
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
         <div className="text-center space-y-4 max-w-sm">
           <CheckCircle2 className="h-16 w-16 text-primary mx-auto" />
-          <h1 className="text-2xl font-bold font-heading">¡Ya estás usando Staffly!</h1>
+          <h1 className="text-2xl font-bold font-heading">¡Ya estás usando STAFLY!</h1>
           <p className="text-muted-foreground">La app está instalada y funcionando correctamente.</p>
           <Button asChild className="rounded-full px-8">
             <Link to="/auth">Iniciar sesión <ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -63,16 +63,18 @@ export default function Install() {
       <div className="max-w-sm w-full space-y-8 text-center">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5">
-          <img src={logoQS} alt="Staffly" className="h-12 object-contain" />
+          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Clock className="h-6 w-6 text-primary" />
+          </div>
           <span className="font-heading font-bold text-2xl tracking-tight text-foreground">
-            Staff<span className="text-primary">ly</span>
+            STAFLY
           </span>
         </div>
 
         <div className="space-y-3">
           <h1 className="text-3xl font-bold font-heading tracking-tight">Descarga la app</h1>
           <p className="text-muted-foreground">
-            Instala Staffly en tu teléfono para acceder rápidamente a turnos, pagos y más.
+            Instala STAFLY en tu teléfono para acceder rápidamente a turnos, pagos y más.
           </p>
         </div>
 
@@ -92,12 +94,12 @@ export default function Install() {
                 <span className="font-semibold">¡Instalada correctamente!</span>
               </div>
               <Button asChild className="w-full rounded-full h-12">
-                <Link to="/auth">Abrir Staffly <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link to="/auth">Abrir STAFLY <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </div>
           ) : deferredPrompt ? (
             <Button onClick={handleInstall} className="w-full rounded-full h-12 text-base gap-2 shadow-lg">
-              <Download className="h-5 w-5" /> Instalar Staffly
+              <Download className="h-5 w-5" /> Instalar STAFLY
             </Button>
           ) : isIOS ? (
             <div className="space-y-4">

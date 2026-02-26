@@ -5,8 +5,8 @@ import {
   ArrowRight, Megaphone, Smartphone, CheckCircle2, Zap, Star,
   MessageSquare, Globe, ChevronRight,
 } from "lucide-react";
-import logoQS from "@/assets/logo-quality-staff.png";
 import stafflyHero from "@/assets/staffly-hero.png";
+import { Clock as ClockIcon } from "lucide-react";
 
 const features = [
   {
@@ -40,9 +40,11 @@ export default function Landing() {
       <header className="fixed top-0 inset-x-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/40">
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <img src={logoQS} alt="Staffly" className="h-9 object-contain" />
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <ClockIcon className="h-5 w-5 text-primary" />
+            </div>
             <span className="font-heading font-bold text-xl tracking-tight text-foreground">
-              Staff<span className="text-primary">ly</span>
+              STAFLY
             </span>
           </div>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -92,12 +94,12 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Hero image — Staffly devices mockup */}
+          {/* Hero image — STAFLY devices mockup */}
           <div className="mt-16 relative max-w-5xl mx-auto">
             <div className="absolute inset-x-10 -bottom-8 h-40 bg-primary opacity-[0.08] blur-3xl rounded-full" />
             <img
               src={stafflyHero}
-              alt="Staffly — Plataforma de gestión de personal en todos los dispositivos"
+              alt="STAFLY — Plataforma de gestión de personal en todos los dispositivos"
               className="w-full h-auto relative z-10"
               loading="eager"
             />
@@ -149,7 +151,7 @@ export default function Landing() {
               ))}
             </div>
             <blockquote className="font-heading text-xl sm:text-2xl font-semibold leading-relaxed text-foreground">
-              "Staffly nos ha permitido optimizar la programación de turnos y gestionar 
+              "STAFLY nos ha permitido optimizar la programación de turnos y gestionar 
               horas de nómina de forma automatizada. Ahorramos tiempo y mejoramos 
               la productividad."
             </blockquote>
@@ -211,13 +213,15 @@ export default function Landing() {
         <div className="container">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
-              <img src={logoQS} alt="Staffly" className="h-7 object-contain" />
+              <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                <ClockIcon className="h-4 w-4 text-primary" />
+              </div>
               <span className="font-heading font-bold text-lg text-foreground">
-                Staff<span className="text-primary">ly</span>
+                STAFLY
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Staffly. Todos los derechos reservados.
+              © {new Date().getFullYear()} STAFLY · staflyapps.com
             </p>
           </div>
         </div>
