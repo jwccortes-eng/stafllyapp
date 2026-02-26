@@ -17,11 +17,14 @@ import { es } from "date-fns/locale";
 
 import { DayView } from "@/components/shifts/DayView";
 import { WeekView } from "@/components/shifts/WeekView";
+import { WeekByJobView } from "@/components/shifts/WeekByJobView";
 import { MonthView } from "@/components/shifts/MonthView";
 import { EmployeeView } from "@/components/shifts/EmployeeView";
 import { ClientView } from "@/components/shifts/ClientView";
 import { ShiftDetailDialog } from "@/components/shifts/ShiftDetailDialog";
 import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
+import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
+import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 
 // Fields that affect ALL assigned employees (broadcast notification)
@@ -58,9 +61,11 @@ export default function Shifts() {
   const [locations, setLocations] = useState<SelectOption[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("day");
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [weekViewMode, setWeekViewMode] = useState<"grid" | "job">("job");
   const [currentDay, setCurrentDay] = useState(() => new Date());
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [filters, setFilters] = useState<ShiftFilterState>(EMPTY_FILTERS);
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
 
   // Detail dialog
@@ -83,6 +88,29 @@ export default function Shifts() {
   const [claimable, setClaimable] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Filtered shifts
+  const filteredShifts = useMemo(() => {
+    let result = shifts;
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(s => s.title.toLowerCase().includes(q));
+    }
+    if (filters.clientId) {
+      result = result.filter(s => s.client_id === filters.clientId);
+    }
+    if (filters.assignedStatus === "assigned") {
+      result = result.filter(s => assignments.some(a => a.shift_id === s.id));
+    } else if (filters.assignedStatus === "unassigned") {
+      result = result.filter(s => !assignments.some(a => a.shift_id === s.id));
+    }
+    if (filters.publishStatus === "published") {
+      result = result.filter(s => s.status === "published");
+    } else if (filters.publishStatus === "draft") {
+      result = result.filter(s => s.status !== "published");
+    }
+    return result;
+  }, [shifts, assignments, filters]);
 
   const weekDays = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -565,16 +593,41 @@ export default function Shifts() {
         </div>
       </div>
 
+      {/* Filters */}
+      <ShiftFilters filters={filters} onChange={setFilters} clients={clients} />
+
       {/* Navigation */}
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigateBack}>
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </Button>
-        <span className="text-xs font-medium capitalize min-w-[140px] text-center">{navLabel}</span>
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigateForward}>
-          <ChevronRight className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={navigateToday}>Hoy</Button>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigateBack}>
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Button>
+          <span className="text-xs font-medium capitalize min-w-[140px] text-center">{navLabel}</span>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigateForward}>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={navigateToday}>Hoy</Button>
+        </div>
+        {viewMode === "week" && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant={weekViewMode === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 text-[10px] px-2"
+              onClick={() => setWeekViewMode("grid")}
+            >
+              <LayoutGrid className="h-3 w-3 mr-1" /> Grid
+            </Button>
+            <Button
+              variant={weekViewMode === "job" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 text-[10px] px-2"
+              onClick={() => setWeekViewMode("job")}
+            >
+              <Building2 className="h-3 w-3 mr-1" /> Por cliente
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -586,7 +639,7 @@ export default function Shifts() {
         ) : viewMode === "day" ? (
           <DayView
             currentDay={currentDay}
-            shifts={shifts}
+            shifts={filteredShifts}
             assignments={assignments}
             locations={locations}
             clients={clients}
@@ -594,29 +647,43 @@ export default function Shifts() {
             onDropOnShift={handleDropOnShift}
           />
         ) : viewMode === "week" ? (
-          <WeekView
-            weekDays={weekDays}
-            shifts={shifts}
-            assignments={assignments}
-            locations={locations}
-            clients={clients}
-            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
-            onDropOnShift={handleDropOnShift}
-          />
+          weekViewMode === "job" ? (
+            <WeekByJobView
+              weekDays={weekDays}
+              shifts={filteredShifts}
+              assignments={assignments}
+              locations={locations}
+              clients={clients}
+              employees={employees}
+              onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+              onDropOnShift={handleDropOnShift}
+            />
+          ) : (
+            <WeekView
+              weekDays={weekDays}
+              shifts={filteredShifts}
+              assignments={assignments}
+              locations={locations}
+              clients={clients}
+              onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+              onDropOnShift={handleDropOnShift}
+            />
+          )
         ) : viewMode === "month" ? (
           <MonthView
             currentMonth={currentMonth}
-            shifts={shifts}
+            shifts={filteredShifts}
             assignments={assignments}
             locations={locations}
             clients={clients}
+            employees={employees}
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
           />
         ) : viewMode === "employee" ? (
           <EmployeeView
             employees={employees}
-            shifts={shifts}
+            shifts={filteredShifts}
             assignments={assignments}
             locations={locations}
             clients={clients}
@@ -626,7 +693,7 @@ export default function Shifts() {
         ) : (
           <ClientView
             clients={clients}
-            shifts={shifts}
+            shifts={filteredShifts}
             assignments={assignments}
             locations={locations}
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
@@ -634,6 +701,9 @@ export default function Shifts() {
           />
         )}
       </div>
+
+      {/* Weekly Summary */}
+      <WeeklySummaryBar shifts={filteredShifts} assignments={assignments} />
 
       <ShiftDetailDialog
         shift={selectedShift}
