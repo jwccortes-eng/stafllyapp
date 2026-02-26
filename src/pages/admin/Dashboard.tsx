@@ -97,7 +97,7 @@ export default function AdminDashboard() {
   const [feedAnnouncements, setFeedAnnouncements] = useState<FeedAnnouncement[]>([]);
   const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
   const [overdueInfos, setOverdueInfos] = useState<PeriodOverdueInfo[]>([]);
-  const [periodSummary, setPeriodSummary] = useState({ open: 0, closed: 0, published: 0 });
+  const [periodSummary, setPeriodSummary] = useState({ open: 0, closed: 0, published: 0, paid: 0 });
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -224,7 +224,7 @@ export default function AdminDashboard() {
     async function fetchOverdueInfo() {
       const { data: allPeriods } = await supabase
         .from("pay_periods")
-        .select("id, start_date, end_date, status")
+        .select("id, start_date, end_date, status, paid_at, published_at")
         .eq("company_id", selectedCompanyId!)
         .order("start_date", { ascending: false })
         .limit(20);
@@ -235,7 +235,8 @@ export default function AdminDashboard() {
         setPeriodSummary({
           open: allPeriods.filter(p => p.status === "open").length,
           closed: allPeriods.filter(p => p.status === "closed").length,
-          published: allPeriods.filter(p => p.status === "published").length,
+          published: allPeriods.filter(p => !!p.published_at).length,
+          paid: allPeriods.filter(p => !!(p as any).paid_at).length,
         });
       }
     }
@@ -334,6 +335,7 @@ export default function AdminDashboard() {
         open={periodSummary.open}
         closed={periodSummary.closed}
         published={periodSummary.published}
+        paid={periodSummary.paid}
         overdueCount={overdueInfos.length}
         overdueDays={overdueInfos.length > 0 ? Math.max(...overdueInfos.map(i => i.overdueDays)) : undefined}
         onOverdueClick={overdueInfos.length > 0 ? () => navigate("/admin/periods") : undefined}
