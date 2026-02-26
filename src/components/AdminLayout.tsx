@@ -9,6 +9,7 @@ import {
   LayoutDashboard, CalendarDays, Upload, DollarSign, FileSpreadsheet,
   BarChart3, Users, Tags, Smartphone, ContactRound, Globe, Building2,
   Shield, Menu, X, LogOut, Moon, Sun, Clock, MapPin, Megaphone, MessageCircle,
+  Bell,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,7 +47,6 @@ const OWNER_MOBILE_LINKS = [
   { to: "/app/users", icon: Shield, label: "Usuarios", module: null, section: "Administración" },
 ];
 
-// Bottom bar shows first 4 + "more"
 const BOTTOM_BAR_KEYS = ["/app", "/app/movements", "/app/summary", "/app/employees"];
 
 export default function AdminLayout() {
@@ -101,86 +101,88 @@ export default function AdminLayout() {
     return (
       <div className="min-h-screen bg-background pb-16">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-card border-b shadow-sm">
+        <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-lg border-b border-border/50">
           <div className="flex items-center justify-between px-4 h-14">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div className="h-7 w-7 rounded-xl bg-primary/10 flex items-center justify-center">
                 <img src="/favicon.png" alt="stafly" className="h-4 w-4 object-contain" />
               </div>
-              <span className="text-sm font-bold font-heading">stafly</span>
+              <span className="text-sm font-bold font-heading text-foreground">stafly</span>
             </div>
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-              <SheetTrigger asChild>
-                <button className="p-2 rounded-lg hover:bg-accent transition-colors">
-                  <Menu className="h-5 w-5" />
-                </button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-72 p-0 flex flex-col h-full">
-                <SheetHeader className="p-4 border-b shrink-0">
-                  <SheetTitle className="text-sm font-heading">Menú</SheetTitle>
-                </SheetHeader>
-                {/* Company selector */}
-                {companies.length > 1 && (
-                  <div className="px-4 py-3 border-b">
-                    <Select value={selectedCompanyId ?? ""} onValueChange={(v) => { setSelectedCompanyId(v); }}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Empresa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-                  {Array.from(sections.entries()).map(([label, links]) => (
-                    <div key={label}>
-                      <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-                      <div className="space-y-0.5">
-                        {links.map(link => {
-                          const active = isActive(link.to, link.end);
-                          return (
-                            <NavLink
-                              key={link.to}
-                              to={link.to}
-                              onClick={() => setSheetOpen(false)}
-                              className={cn(
-                                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                                active
-                                  ? "bg-primary/10 text-primary font-semibold"
-                                  : "text-foreground hover:bg-accent"
-                              )}
-                            >
-                              <link.icon className={cn("h-4 w-4", active && "text-primary")} />
-                              {link.label}
-                            </NavLink>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </nav>
-                <div className="border-t p-3 space-y-1 shrink-0">
-                  <button
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent w-full transition-colors"
-                  >
-                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    {theme === "dark" ? "Modo claro" : "Modo oscuro"}
+            <div className="flex items-center gap-1">
+              <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                <SheetTrigger asChild>
+                  <button className="p-2 rounded-xl hover:bg-muted transition-colors">
+                    <Menu className="h-5 w-5 text-muted-foreground" />
                   </button>
-                  <LogoutConfirmDialog onConfirm={() => { signOut(); setSheetOpen(false); }}>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-72 p-0 flex flex-col h-full">
+                  <SheetHeader className="p-4 border-b border-border/50 shrink-0">
+                    <SheetTitle className="text-sm font-heading font-bold">Menú</SheetTitle>
+                  </SheetHeader>
+                  {/* Company selector */}
+                  {companies.length > 1 && (
+                    <div className="px-4 py-3 border-b border-border/50">
+                      <Select value={selectedCompanyId ?? ""} onValueChange={(v) => { setSelectedCompanyId(v); }}>
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Empresa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+                    {Array.from(sections.entries()).map(([label, links]) => (
+                      <div key={label}>
+                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">{label}</p>
+                        <div className="space-y-0.5">
+                          {links.map(link => {
+                            const active = isActive(link.to, link.end);
+                            return (
+                              <NavLink
+                                key={link.to}
+                                to={link.to}
+                                onClick={() => setSheetOpen(false)}
+                                className={cn(
+                                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                                  active
+                                    ? "bg-primary/10 text-primary font-semibold"
+                                    : "text-foreground hover:bg-muted"
+                                )}
+                              >
+                                <link.icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+                                {link.label}
+                              </NavLink>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </nav>
+                  <div className="border-t border-border/50 p-3 space-y-1 shrink-0">
                     <button
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 w-full transition-colors"
+                      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted w-full transition-colors"
                     >
-                      <LogOut className="h-4 w-4" />
-                      Cerrar sesión
+                      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                      {theme === "dark" ? "Modo claro" : "Modo oscuro"}
                     </button>
-                  </LogoutConfirmDialog>
-                </div>
-              </SheetContent>
-            </Sheet>
+                    <LogoutConfirmDialog onConfirm={() => { signOut(); setSheetOpen(false); }}>
+                      <button
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 w-full transition-colors"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Cerrar sesión
+                      </button>
+                    </LogoutConfirmDialog>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </header>
 
@@ -190,7 +192,7 @@ export default function AdminLayout() {
         </main>
 
         {/* Bottom navigation */}
-        <nav className="fixed bottom-0 inset-x-0 z-30 bg-card border-t shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+        <nav className="fixed bottom-0 inset-x-0 z-30 bg-card/80 backdrop-blur-lg border-t border-border/50">
           <div className="flex items-stretch h-16">
             {bottomLinks.map(link => {
               const active = isActive(link.to, link.end);
@@ -226,7 +228,10 @@ export default function AdminLayout() {
     <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); localStorage.setItem("sidebar-collapsed", String(v)); } }}>
       <div className="min-h-screen bg-background">
         <AdminSidebar />
-        <main className={cn("transition-all duration-300 ease-in-out p-6 lg:p-8 animate-fade-in", collapsed ? "ml-[60px]" : "ml-[250px]")}>
+        <main className={cn(
+          "transition-all duration-300 ease-in-out p-6 lg:p-8 animate-fade-in",
+          collapsed ? "ml-[60px]" : "ml-[250px]"
+        )}>
           <Outlet />
         </main>
       </div>
