@@ -401,7 +401,11 @@ export default function Movements() {
                 <div><Label>Periodo</Label>
                   <Select value={form.period_id || filterPeriod} onValueChange={v => setForm(f => ({ ...f, period_id: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{periods.map(p => <SelectItem key={p.id} value={p.id}>{p.start_date} → {p.end_date}</SelectItem>)}</SelectContent>
+                    <SelectContent>{periods.map(p => {
+                      const today2 = new Date().toISOString().slice(0, 10);
+                      const isCurr = p.start_date <= today2 && p.end_date >= today2;
+                      return <SelectItem key={p.id} value={p.id} className={isCurr ? "font-semibold text-primary" : ""}>{isCurr ? "● " : ""}{p.start_date} → {p.end_date}</SelectItem>;
+                    })}</SelectContent>
                   </Select>
                 </div>
                 <div><Label>Concepto</Label>
@@ -437,9 +441,15 @@ export default function Movements() {
         <div className="max-w-[220px]">
           <Select value={filterPeriod} onValueChange={setFilterPeriod}>
             <SelectTrigger className="h-9"><SelectValue placeholder="Filtrar por periodo" /></SelectTrigger>
-            <SelectContent>{periods.map(p => (
-              <SelectItem key={p.id} value={p.id}>{p.start_date} → {p.end_date}{p.status === "closed" ? " 🔒" : ""}</SelectItem>
-            ))}</SelectContent>
+            <SelectContent>{periods.map(p => {
+              const today = new Date().toISOString().slice(0, 10);
+              const isCurrent = p.start_date <= today && p.end_date >= today;
+              return (
+                <SelectItem key={p.id} value={p.id} className={isCurrent ? "font-semibold text-primary" : ""}>
+                  {isCurrent ? "● " : ""}{p.start_date} → {p.end_date}{p.status === "closed" ? " 🔒" : ""}
+                </SelectItem>
+              );
+            })}</SelectContent>
           </Select>
         </div>
         <div className="relative flex-1 max-w-sm">
