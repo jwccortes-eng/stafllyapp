@@ -287,65 +287,116 @@ export default function Concepts() {
         </div>
       </div>
 
-      <div className="data-table-wrapper">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Cálculo</TableHead>
-              <TableHead>Unidad</TableHead>
-              <TableHead>Tarifa</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {concepts.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No hay conceptos</TableCell></TableRow>
-            ) : (
-              concepts.map(c => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell>
-                    <span className={c.category === "extra" ? "earning-badge" : "deduction-badge"}>
-                      {c.category === "extra" ? "Extra" : "Deducción"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-xs">{c.calc_mode.replace(/_/g, " ")}</TableCell>
-                  <TableCell className="text-xs">{c.unit_label}</TableCell>
-                  <TableCell className="font-mono text-xs">{c.default_rate ? `$${c.default_rate}` : "—"}</TableCell>
-                  <TableCell>
-                    <span className={c.is_active ? "earning-badge" : "deduction-badge"}>
-                      {c.is_active ? "Activo" : "Inactivo"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(c)}>
-                          <Pencil className="h-4 w-4 mr-2" />Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleActive(c)}>
-                          <ToggleLeft className="h-4 w-4 mr-2" />{c.is_active ? "Desactivar" : "Activar"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(c)}>
-                          <Trash2 className="h-4 w-4 mr-2" />Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      {/* Active concepts */}
+      <div>
+        <h2 className="text-sm font-semibold text-foreground mb-2">Activos ({concepts.filter(c => c.is_active).length})</h2>
+        <div className="data-table-wrapper">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Categoría</TableHead>
+                <TableHead>Cálculo</TableHead>
+                <TableHead>Unidad</TableHead>
+                <TableHead>Tarifa</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {concepts.filter(c => c.is_active).length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay conceptos activos</TableCell></TableRow>
+              ) : (
+                concepts.filter(c => c.is_active).map(c => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell>
+                      <span className={c.category === "extra" ? "earning-badge" : "deduction-badge"}>
+                        {c.category === "extra" ? "Extra" : "Deducción"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs">{c.calc_mode.replace(/_/g, " ")}</TableCell>
+                    <TableCell className="text-xs">{c.unit_label}</TableCell>
+                    <TableCell className="font-mono text-xs">{c.default_rate ? `$${c.default_rate}` : "—"}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(c)}>
+                            <Pencil className="h-4 w-4 mr-2" />Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleActive(c)}>
+                            <ToggleLeft className="h-4 w-4 mr-2" />Desactivar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(c)}>
+                            <Trash2 className="h-4 w-4 mr-2" />Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
+
+      {/* Inactive concepts */}
+      {concepts.filter(c => !c.is_active).length > 0 && (
+        <div className="mt-6 opacity-70">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Inactivos ({concepts.filter(c => !c.is_active).length})</h2>
+          <div className="data-table-wrapper">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Cálculo</TableHead>
+                  <TableHead>Unidad</TableHead>
+                  <TableHead>Tarifa</TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {concepts.filter(c => !c.is_active).map(c => (
+                  <TableRow key={c.id} className="opacity-60">
+                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell>
+                      <span className={c.category === "extra" ? "earning-badge" : "deduction-badge"}>
+                        {c.category === "extra" ? "Extra" : "Deducción"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs">{c.calc_mode.replace(/_/g, " ")}</TableCell>
+                    <TableCell className="text-xs">{c.unit_label}</TableCell>
+                    <TableCell className="font-mono text-xs">{c.default_rate ? `$${c.default_rate}` : "—"}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleToggleActive(c)}>
+                            <ToggleLeft className="h-4 w-4 mr-2" />Activar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(c)}>
+                            <Trash2 className="h-4 w-4 mr-2" />Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
