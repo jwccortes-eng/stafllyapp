@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import EmployeeChatWidget from "@/components/EmployeeChatWidget";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 
 const links = [
   { to: "/portal", icon: Home, label: "Inicio", end: true },
@@ -55,9 +56,11 @@ export default function EmployeeLayout() {
         <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b shrink-0">
           <div className="flex items-center justify-between px-5 h-14">
             <span className="text-base font-bold font-heading tracking-tight text-foreground">Staffly</span>
-            <button onClick={signOut} className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" aria-label="Cerrar sesión">
-              <LogOut className="h-4.5 w-4.5" />
-            </button>
+            <LogoutConfirmDialog onConfirm={signOut}>
+              <button className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" aria-label="Cerrar sesión">
+                <LogOut className="h-4.5 w-4.5" />
+              </button>
+            </LogoutConfirmDialog>
           </div>
         </header>
 
