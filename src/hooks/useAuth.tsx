@@ -60,14 +60,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
+      const { data: roleRows, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      if (roleError) throw roleError;
+
+      const rolePriority: AppRole[] = ["owner", "admin", "manager", "employee", null];
+      const availableRoles = new Set((roleRows ?? []).map((row) => row.role as Exclude<AppRole, null>));
+      let resolvedRole = rolePriority.find(
+        (candidate) => candidate && availableRoles.has(candidate)
+      ) ?? null;
+
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("id, is_active")
+        .eq("user_id", userId)
         .maybeSingle();
-      
-      const newRole = (roleData?.role as AppRole) ?? null;
-      setRole(newRole);
+
+      if (!resolvedRole && empData?.id) {
+        resolvedRole = "employee";
+      }
+
+      setRole(resolvedRole);
 
       // Fetch full name from profiles
       const { data: profileData } = await supabase
@@ -78,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFullName(profileData?.full_name ?? null);
 
       // Fetch module permissions for managers
-      if (newRole === 'manager') {
+      if (resolvedRole === 'manager') {
         const { data: permsData } = await supabase
           .from('module_permissions')
           .select('module, can_view, can_edit, can_delete')
@@ -95,14 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setActionPermissions([]);
       }
 
-      if (newRole === 'employee') {
-        const { data: empData } = await supabase
-          .from('employees')
-          .select('id, is_active')
-          .eq('user_id', userId)
-          .maybeSingle();
-        setEmployeeId(empData?.id ?? null);
-        setEmployeeActive(empData?.is_active ?? false);
+      if (empData?.id) {
+        setEmployeeId(empData.id);
+        setEmployeeActive(empData.is_active ?? false);
       } else {
         setEmployeeId(null);
         setEmployeeActive(true);

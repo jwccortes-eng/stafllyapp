@@ -52,7 +52,14 @@ export default function MyShifts() {
   const { toast } = useToast();
 
   const load = async () => {
-    if (!employeeId) return;
+    if (!employeeId) {
+      setAssignments([]);
+      setClaimable([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
 
     // Fetch employee company
     const { data: emp } = await supabase

@@ -111,6 +111,29 @@ async function resetRateLimit(adminClient: any, phone: string): Promise<void> {
     .eq("phone_number", phone);
 }
 
+async function ensureEmployeeRole(adminClient: any, userId: string): Promise<void> {
+  const { data: existingRoles, error: roleLookupError } = await adminClient
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .limit(1);
+
+  if (roleLookupError) {
+    console.error("Error checking user role:", roleLookupError.message);
+    return;
+  }
+
+  if (!existingRoles || existingRoles.length === 0) {
+    const { error: insertRoleError } = await adminClient
+      .from("user_roles")
+      .insert({ user_id: userId, role: "employee" });
+
+    if (insertRoleError) {
+      console.error("Error assigning employee role:", insertRoleError.message);
+    }
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -209,6 +232,9 @@ Deno.serve(async (req) => {
       } else {
         await adminClient.auth.admin.updateUserById(employee.user_id, { password: pin });
       }
+
+      // Ensure role exists for employee portal access
+      await ensureEmployeeRole(adminClient, employee.user_id);
 
       // Sign in the employee
       const { data: signInData, error: signInError } = await adminClient.auth.signInWithPassword({
