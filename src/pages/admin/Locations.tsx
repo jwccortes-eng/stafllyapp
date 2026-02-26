@@ -181,10 +181,10 @@ export default function Locations() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Cliente</Label>
-                    <Select value={clientId} onValueChange={setClientId}>
+                    <Select value={clientId || "none"} onValueChange={v => setClientId(v === "none" ? "" : v)}>
                       <SelectTrigger><SelectValue placeholder="Sin cliente" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sin cliente</SelectItem>
+                        <SelectItem value="none">Sin cliente</SelectItem>
                         {clients.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}

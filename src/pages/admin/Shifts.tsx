@@ -230,20 +230,20 @@ export default function Shifts() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label>Cliente</Label>
-                      <Select value={clientId} onValueChange={setClientId}>
+                      <Select value={clientId || "none"} onValueChange={v => setClientId(v === "none" ? "" : v)}>
                         <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Ninguno</SelectItem>
+                          <SelectItem value="none">Ninguno</SelectItem>
                           {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
                       <Label>Ubicación</Label>
-                      <Select value={locationId} onValueChange={setLocationId}>
+                      <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
                         <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Ninguna</SelectItem>
+                          <SelectItem value="none">Ninguna</SelectItem>
                           {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
