@@ -92,8 +92,8 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-3">
-          <img src={logoQS} alt="Quality Staff" className="h-16 mx-auto object-contain" />
-          <CardTitle className="text-xl font-heading">Quality Staff</CardTitle>
+          <img src={logoQS} alt="Staffly" className="h-16 mx-auto object-contain" />
+          <CardTitle className="text-xl font-heading">Staffly</CardTitle>
           <CardDescription>
             {isLogin
               ? isPhone

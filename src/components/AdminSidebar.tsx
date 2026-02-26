@@ -349,7 +349,7 @@ export default function AdminSidebar() {
         <div className="relative">
           <img
             src={logoQS}
-            alt="Quality Staff"
+            alt="Staffly"
             className={cn(
               "shrink-0 object-contain transition-all duration-300",
               collapsed ? "h-8 w-8" : "h-9"
@@ -359,7 +359,7 @@ export default function AdminSidebar() {
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-sidebar-foreground leading-tight truncate">Stafly</p>
+            <p className="text-xs font-semibold text-sidebar-foreground leading-tight truncate">Staffly</p>
             <p className="text-[10px] text-muted-foreground/60 leading-tight">{roleLabel}</p>
           </div>
         )}
