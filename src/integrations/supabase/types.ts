@@ -2230,6 +2230,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_conversation_member: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_global_owner: { Args: { _user_id: string }; Returns: boolean }
       log_activity: {
         Args: {
