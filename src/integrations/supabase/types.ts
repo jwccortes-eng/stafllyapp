@@ -304,6 +304,38 @@ export type Database = {
           },
         ]
       }
+      billing_events: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          payload_json: Json
+          type: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          payload_json?: Json
+          type: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          payload_json?: Json
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
@@ -1911,6 +1943,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          cancel_at_period_end: boolean
           company_id: string
           created_at: string
           current_period_end: string | null
@@ -1922,6 +1955,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cancel_at_period_end?: boolean
           company_id: string
           created_at?: string
           current_period_end?: string | null
@@ -1933,6 +1967,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cancel_at_period_end?: boolean
           company_id?: string
           created_at?: string
           current_period_end?: string | null

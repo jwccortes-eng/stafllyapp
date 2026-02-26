@@ -11,3 +11,15 @@ verify_jwt = false
 
 [functions.external-api]
 verify_jwt = false
+
+[functions.billing-checkout]
+verify_jwt = false
+
+[functions.billing-webhook]
+verify_jwt = false
+
+[functions.billing-subscription-status]
+verify_jwt = false
+
+[functions.billing-customer-portal]
+verify_jwt = false

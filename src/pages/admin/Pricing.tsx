@@ -3,9 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useCompany } from "@/hooks/useCompany";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { useCreateCheckoutSession } from "@/hooks/useBilling";
 import { cn } from "@/lib/utils";
 
 const plans = [
@@ -21,7 +19,7 @@ const plans = [
       "Turnos y reloj",
       "Anuncios",
     ],
-    priceId: null, // Free, no Stripe price
+    priceId: null,
   },
   {
     id: "pro",
@@ -58,34 +56,11 @@ const plans = [
 
 export default function Pricing() {
   const { plan: currentPlan, isLoading } = useSubscription();
-  const { selectedCompanyId } = useCompany();
+  const checkoutMutation = useCreateCheckoutSession();
 
-  const handleCheckout = async (priceId: string | null) => {
+  const handleCheckout = (priceId: string | null) => {
     if (!priceId) return;
-    if (!selectedCompanyId) {
-      toast({ title: "Error", description: "Selecciona una empresa primero", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase.functions.invoke("billing-checkout", {
-        body: { priceId, companyId: selectedCompanyId },
-      });
-
-      if (error) throw error;
-
-      if (data?.stub) {
-        toast({
-          title: "Modo demo",
-          description: "Conecta las llaves de Stripe para activar pagos reales.",
-        });
-        return;
-      }
-
-      // TODO: redirect to data.url when Stripe is connected
-    } catch (err) {
-      toast({ title: "Error", description: "No se pudo iniciar el checkout", variant: "destructive" });
-    }
+    checkoutMutation.mutate({ priceId });
   };
 
   return (
@@ -134,10 +109,10 @@ export default function Pricing() {
                 <Button
                   className="w-full"
                   variant={isCurrent ? "outline" : p.popular ? "default" : "secondary"}
-                  disabled={isCurrent || isLoading}
+                  disabled={isCurrent || isLoading || checkoutMutation.isPending}
                   onClick={() => handleCheckout(p.priceId)}
                 >
-                  {isCurrent ? "Plan actual" : "Seleccionar"}
+                  {isCurrent ? "Plan actual" : checkoutMutation.isPending ? "Procesando…" : "Seleccionar"}
                 </Button>
               </CardFooter>
             </Card>
