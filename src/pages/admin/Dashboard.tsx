@@ -1,18 +1,20 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CalendarDays, Users, DollarSign, FileSpreadsheet,
   Upload, Tags, BarChart3, ArrowRight, TrendingUp,
-  Zap, Clock, Sparkles,
+  Zap, Clock, Sparkles, Megaphone, Pin, AlertCircle,
+  MessageCircle, ChevronRight, Activity, Heart, ThumbsUp,
 } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface Stats {
   totalEmployees: number;
@@ -30,6 +32,26 @@ interface PeriodChartData {
   base: number;
   extras: number;
   deducciones: number;
+}
+
+interface FeedAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  priority: string;
+  pinned: boolean;
+  published_at: string;
+  media_urls: any[];
+  reaction_count: number;
+}
+
+interface ActivityItem {
+  id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  created_at: string;
+  details: any;
 }
 
 /* ─── animated counter hook ─── */
@@ -67,6 +89,8 @@ export default function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<PeriodChartData[]>([]);
+  const [feedAnnouncements, setFeedAnnouncements] = useState<FeedAnnouncement[]>([]);
+  const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -143,8 +167,51 @@ export default function AdminDashboard() {
       setChartData(chart);
     }
 
+    async function fetchFeed() {
+      const [annRes, actRes] = await Promise.all([
+        supabase.from("announcements")
+          .select("id, title, body, priority, pinned, published_at, media_urls")
+          .eq("company_id", selectedCompanyId!)
+          .not("published_at", "is", null)
+          .is("deleted_at", null)
+          .order("published_at", { ascending: false })
+          .limit(5),
+        supabase.from("activity_log")
+          .select("id, action, entity_type, entity_id, created_at, details")
+          .eq("company_id", selectedCompanyId!)
+          .order("created_at", { ascending: false })
+          .limit(8),
+      ]);
+
+      const anns = (annRes.data ?? []) as any[];
+      // Get reaction counts
+      if (anns.length > 0) {
+        const annIds = anns.map(a => a.id);
+        const { data: reactions } = await supabase
+          .from("announcement_reactions")
+          .select("announcement_id")
+          .in("announcement_id", annIds);
+        
+        const countMap: Record<string, number> = {};
+        (reactions ?? []).forEach(r => {
+          countMap[r.announcement_id] = (countMap[r.announcement_id] || 0) + 1;
+        });
+        
+        setFeedAnnouncements(anns.map(a => ({
+          ...a,
+          media_urls: Array.isArray(a.media_urls) ? a.media_urls : [],
+          reaction_count: countMap[a.id] || 0,
+        })));
+      } else {
+        setFeedAnnouncements([]);
+      }
+
+      setActivityItems((actRes.data ?? []) as ActivityItem[]);
+    }
+
     fetchStats();
     fetchChartData();
+    fetchFeed();
   }, [selectedCompanyId]);
 
   /* period progress */
@@ -368,6 +435,158 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* ── Social Feed: Two columns ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Announcements Feed */}
+        <div className="lg:col-span-3">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Megaphone className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold font-heading">Feed de comunicados</h2>
+            </div>
+            <Link to="/admin/announcements" className="text-xs text-primary font-medium hover:underline">
+              Ver todos
+            </Link>
+          </div>
+
+          {feedAnnouncements.length === 0 ? (
+            <Card className="rounded-2xl">
+              <CardContent className="py-10 text-center text-muted-foreground">
+                <Megaphone className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No hay comunicados publicados</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {feedAnnouncements.map(a => {
+                const mediaList = a.media_urls.filter(Boolean);
+                const isVideo = (url: string) => /\.(mp4|webm|mov)(\\?|$)/i.test(url);
+                return (
+                  <Card key={a.id} className={cn(
+                    "rounded-2xl overflow-hidden transition-all hover:shadow-md",
+                    a.pinned && "ring-1 ring-primary/20",
+                    a.priority === "urgent" && "border-destructive/30"
+                  )}>
+                    {a.priority === "urgent" && (
+                      <div className="bg-destructive/10 px-4 py-1.5 flex items-center gap-2">
+                        <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                        <span className="text-[11px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
+                      </div>
+                    )}
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            {a.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
+                            <h3 className="text-sm font-semibold">{a.title}</h3>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: es })}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-foreground/80 line-clamp-2">{a.body}</p>
+                      
+                      {/* Media thumbnails */}
+                      {mediaList.length > 0 && (
+                        <div className="flex gap-2">
+                          {mediaList.slice(0, 3).map((url: string, i: number) => (
+                            <div key={i} className="h-16 w-16 rounded-lg overflow-hidden bg-muted shrink-0">
+                              {isVideo(url) ? (
+                                <div className="h-full w-full flex items-center justify-center bg-muted">
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              ) : (
+                                <img src={url} alt="" className="h-full w-full object-cover" />
+                              )}
+                            </div>
+                          ))}
+                          {mediaList.length > 3 && (
+                            <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
+                              +{mediaList.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Reactions summary */}
+                      <div className="flex items-center gap-3 pt-1">
+                        {a.reaction_count > 0 && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <ThumbsUp className="h-3 w-3" />
+                            {a.reaction_count} reacciones
+                          </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Activity Feed */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-warning" />
+              <h2 className="text-base font-semibold font-heading">Actividad reciente</h2>
+            </div>
+            <Link to="/admin/activity" className="text-xs text-primary font-medium hover:underline">
+              Ver todo
+            </Link>
+          </div>
+
+          <Card className="rounded-2xl">
+            <CardContent className="p-0">
+              {activityItems.length === 0 ? (
+                <div className="py-10 text-center text-muted-foreground">
+                  <Activity className="h-6 w-6 mx-auto mb-2 opacity-30" />
+                  <p className="text-xs">Sin actividad reciente</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {activityItems.map(item => {
+                    const actionLabels: Record<string, string> = {
+                      create: "creó", update: "actualizó", delete: "eliminó",
+                      insert: "agregó", import: "importó", publish: "publicó",
+                    };
+                    const entityLabels: Record<string, string> = {
+                      employee: "empleado", movement: "novedad", period: "periodo",
+                      concept: "concepto", shift: "turno", announcement: "anuncio",
+                      import: "importación", client: "cliente", location: "ubicación",
+                    };
+                    const actionLabel = actionLabels[item.action] || item.action;
+                    const entityLabel = entityLabels[item.entity_type] || item.entity_type;
+
+                    return (
+                      <div key={item.id} className="px-4 py-3 hover:bg-accent/30 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <Activity className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-foreground">
+                              <span className="font-medium capitalize">{actionLabel}</span>
+                              {" "}un{" "}
+                              <span className="font-medium">{entityLabel}</span>
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
