@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Pin, Megaphone, Image, Link2, X, Loader2, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, Pin, Megaphone, Image, Link2, X, Loader2, ExternalLink, Upload, Film } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -36,6 +36,7 @@ export default function Announcements() {
   const { selectedCompanyId } = useCompany();
   const isAdmin = role === "owner" || role === "admin" || hasModuleAccess("announcements", "edit");
   const canDelete = role === "owner" || role === "admin" || hasModuleAccess("announcements", "delete");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,8 @@ export default function Announcements() {
   const [publishNow, setPublishNow] = useState(true);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkLabel, setLinkLabel] = useState("");
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -84,6 +87,7 @@ export default function Announcements() {
   const resetForm = () => {
     setTitle(""); setBody(""); setPriority("normal"); setPinned(false);
     setPublishNow(true); setLinkUrl(""); setLinkLabel(""); setEditing(null);
+    setMediaUrls([]);
   };
 
   const openEdit = (a: Announcement) => {
@@ -95,8 +99,46 @@ export default function Announcements() {
     setPublishNow(!!a.published_at);
     setLinkUrl(a.link_url ?? "");
     setLinkLabel(a.link_label ?? "");
+    setMediaUrls(Array.isArray(a.media_urls) ? a.media_urls.filter(Boolean) : []);
     setDialogOpen(true);
   };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !selectedCompanyId) return;
+    setUploading(true);
+
+    const newUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
+      const path = `${selectedCompanyId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+      const { error } = await supabase.storage
+        .from("announcement-media")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+
+      if (error) {
+        toast.error(`Error subiendo ${file.name}: ${error.message}`);
+        continue;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("announcement-media")
+        .getPublicUrl(path);
+
+      newUrls.push(urlData.publicUrl);
+    }
+
+    setMediaUrls(prev => [...prev, ...newUrls]);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeMedia = (index: number) => {
+    setMediaUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const isVideo = (url: string) => /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url);
 
   const handleSave = async () => {
     if (!title.trim() || !selectedCompanyId || !user) return;
@@ -110,12 +152,13 @@ export default function Announcements() {
       published_at: publishNow ? new Date().toISOString() : null,
       link_url: linkUrl.trim() || null,
       link_label: linkLabel.trim() || null,
+      media_urls: mediaUrls.length > 0 ? mediaUrls : null,
       created_by: user.id,
     };
 
     if (editing) {
       const { created_by, ...updatePayload } = payload;
-      const { error } = await supabase.from("announcements").update(updatePayload).eq("id", editing.id);
+      const { error } = await supabase.from("announcements").update(updatePayload as any).eq("id", editing.id);
       if (error) toast.error(error.message);
       else toast.success("Anuncio actualizado");
     } else {
@@ -167,48 +210,69 @@ export default function Announcements() {
         </div>
       ) : (
         <div className="space-y-3">
-          {announcements.map(a => (
-            <Card key={a.id} className={a.pinned ? "border-primary/30 bg-primary/5" : ""}>
-              <CardContent className="py-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {a.pinned && <Pin className="h-3.5 w-3.5 text-primary" />}
-                      <h3 className="font-semibold">{a.title}</h3>
-                      <Badge variant={priorityColor(a.priority)} className="text-[10px]">{a.priority}</Badge>
-                      {!a.published_at && <Badge variant="outline" className="text-[10px]">Borrador</Badge>}
-                    </div>
-                    {a.body && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{a.body}</p>}
-                    {a.link_url && (
-                      <a href={a.link_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2">
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        {a.link_label || a.link_url}
-                      </a>
-                    )}
-                    <p className="text-[11px] text-muted-foreground mt-2">{format(new Date(a.created_at), "dd/MM/yyyy HH:mm")}</p>
-                  </div>
-                  {isAdmin && (
-                    <div className="flex gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      {canDelete && (
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(a.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+          {announcements.map(a => {
+            const mediaList = Array.isArray(a.media_urls) ? a.media_urls.filter(Boolean) : [];
+            return (
+              <Card key={a.id} className={a.pinned ? "border-primary/30 bg-primary/5" : ""}>
+                <CardContent className="py-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {a.pinned && <Pin className="h-3.5 w-3.5 text-primary" />}
+                        <h3 className="font-semibold">{a.title}</h3>
+                        <Badge variant={priorityColor(a.priority)} className="text-[10px]">{a.priority}</Badge>
+                        {!a.published_at && <Badge variant="outline" className="text-[10px]">Borrador</Badge>}
+                      </div>
+                      {a.body && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{a.body}</p>}
+
+                      {/* Media preview */}
+                      {mediaList.length > 0 && (
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {mediaList.map((url, i) => (
+                            <div key={i} className="relative">
+                              {isVideo(url) ? (
+                                <div className="w-24 h-20 rounded-lg bg-muted flex items-center justify-center">
+                                  <Film className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                              ) : (
+                                <img src={url} alt="" className="w-24 h-20 rounded-lg object-cover" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       )}
+
+                      {a.link_url && (
+                        <a href={a.link_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          {a.link_label || a.link_url}
+                        </a>
+                      )}
+                      <p className="text-[11px] text-muted-foreground mt-2">{format(new Date(a.created_at), "dd/MM/yyyy HH:mm")}</p>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    {isAdmin && (
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {canDelete && (
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteId(a.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar anuncio" : "Nuevo anuncio"}</DialogTitle>
           </DialogHeader>
@@ -221,6 +285,58 @@ export default function Announcements() {
               <Label>Contenido</Label>
               <Textarea value={body} onChange={e => setBody(e.target.value)} rows={4} placeholder="Escribe el contenido..." />
             </div>
+
+            {/* Media uploads */}
+            <div>
+              <Label>Fotos y Videos</Label>
+              <div className="mt-1.5">
+                {mediaUrls.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mb-2">
+                    {mediaUrls.map((url, i) => (
+                      <div key={i} className="relative group">
+                        {isVideo(url) ? (
+                          <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center">
+                            <Film className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        ) : (
+                          <img src={url} alt="" className="w-20 h-20 rounded-lg object-cover" />
+                        )}
+                        <button
+                          onClick={() => removeMedia(i)}
+                          className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-1" />
+                  )}
+                  {uploading ? "Subiendo..." : "Subir archivos"}
+                </Button>
+                <p className="text-[11px] text-muted-foreground mt-1">Fotos (JPG, PNG) y videos (MP4, MOV)</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Prioridad</Label>
