@@ -147,7 +147,8 @@ export default function InternalChat() {
     selectConvo(convo.id);
   };
 
-  const getConvoName = (convo: Conversation) => {
+  const getConvoName = (convo: Conversation | undefined) => {
+    if (!convo) return "Conversación";
     if (convo.name) return convo.name;
     const convoMembers = members.filter(m => m.conversation_id === convo.id && m.user_id !== userId);
     if (convoMembers.length === 0) return "Yo";
