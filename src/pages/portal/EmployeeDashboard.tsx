@@ -65,7 +65,19 @@ export default function EmployeeDashboard() {
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
 
   const loadFeed = useCallback(async () => {
-    if (!employeeId) return;
+    if (!employeeId) {
+      setEmpName("");
+      setCompanyId(null);
+      setNextShift(null);
+      setEstimatedPay(null);
+      setAnnouncements([]);
+      setReactions({});
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
     const { data: emp } = await supabase
       .from("employees")
       .select("first_name, last_name, company_id")
