@@ -23,6 +23,16 @@
     --popover-foreground: 222 47% 11%;
 
     --primary: 213 90% 52%;
+    --primary-glow: 200 85% 55%;
+
+    --accent-warm: 32 95% 52%;
+    --accent-warm-foreground: 0 0% 100%;
+
+    --status-open: 213 90% 52%;
+    --status-closed: 220 10% 60%;
+    --status-published: 213 70% 45%;
+    --status-paid: 160 60% 40%;
+    --status-overdue: 32 95% 52%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 214 14% 96%;

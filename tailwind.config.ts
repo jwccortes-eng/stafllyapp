@@ -100,6 +100,10 @@ export default {
   				DEFAULT: 'hsl(var(--warning))',
   				foreground: 'hsl(var(--warning-foreground))'
   			},
+  			'accent-warm': {
+  				DEFAULT: 'hsl(var(--accent-warm))',
+  				foreground: 'hsl(var(--accent-warm-foreground))'
+  			},
   			earning: {
   				DEFAULT: 'hsl(var(--earning))',
   				foreground: 'hsl(var(--earning-foreground))',
