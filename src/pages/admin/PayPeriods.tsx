@@ -1,17 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff, ChevronDown, ChevronRight, FileSpreadsheet, RefreshCw, Clock, CheckCircle2, AlertCircle, Upload } from "lucide-react";
+import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff, ChevronDown, ChevronRight, FileSpreadsheet, RefreshCw, Clock, CheckCircle2, AlertCircle, Upload, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { format, addDays, nextWednesday, isWednesday, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useCompany } from "@/hooks/useCompany";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -37,6 +38,7 @@ interface ImportInfo {
 
 export default function PayPeriods() {
   const { selectedCompanyId } = useCompany();
+  const { role, hasActionPermission } = useAuth();
   const [periods, setPeriods] = useState<PayPeriod[]>([]);
   const [open, setOpen] = useState(false);
   const [yearOpen, setYearOpen] = useState(false);
@@ -59,6 +61,27 @@ export default function PayPeriods() {
   };
 
   useEffect(() => { fetchPeriods(); }, [selectedCompanyId]);
+
+  // Determine which period can be opened next (sequential rule)
+  const canOpenPeriodId = useMemo(() => {
+    if (periods.length === 0) return null;
+    // Periods are sorted desc by start_date; reverse for chronological order
+    const sorted = [...periods].sort((a, b) => a.start_date.localeCompare(b.start_date));
+    // If first period is closed and no period is open, it can be opened
+    // General rule: the first closed period whose predecessor is also closed (or doesn't exist)
+    const openPeriod = sorted.find(p => p.status === "open");
+    if (openPeriod) return null; // Already one open — no other can be opened
+    for (const p of sorted) {
+      if (p.status === "closed") {
+        const idx = sorted.indexOf(p);
+        const prev = idx > 0 ? sorted[idx - 1] : null;
+        if (!prev || prev.status === "closed") return p.id;
+      }
+    }
+    return null;
+  }, [periods]);
+
+  const canReopen = hasActionPermission("reabrir_periodo");
 
   const fetchImportsForPeriod = async (periodId: string) => {
     if (importsMap[periodId]) return; // Already loaded
@@ -308,16 +331,50 @@ export default function PayPeriods() {
                         <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>
                         <TableCell>
                           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={() => requestToggle(p)}>
-                                    {p.status === "open" ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>{p.status === "open" ? "Cerrar periodo" : "Reabrir periodo"}</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            {p.status === "open" ? (
+                              /* Close period — always allowed for admins */
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => requestToggle(p)}>
+                                      <Lock className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Cerrar periodo</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : canOpenPeriodId === p.id ? (
+                              /* Open next sequential period */
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => requestToggle(p)}>
+                                      <Unlock className="h-4 w-4 text-primary" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Abrir periodo (siguiente en secuencia)</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              /* Reopen — requires reabrir_periodo permission */
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => requestToggle(p)}
+                                      disabled={!canReopen}
+                                    >
+                                      <ShieldAlert className="h-4 w-4 text-warning" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {canReopen ? "Reabrir periodo (requiere privilegios)" : "Sin permiso para reabrir periodos"}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -432,10 +489,12 @@ export default function PayPeriods() {
       <PasswordConfirmDialog
         open={passwordOpen}
         onOpenChange={setPasswordOpen}
-        title={pendingToggle?.status === "open" ? "Cerrar periodo" : "Reabrir periodo"}
+        title={pendingToggle?.status === "open" ? "Cerrar periodo" : (canOpenPeriodId === pendingToggle?.id ? "Abrir periodo" : "Reabrir periodo")}
         description={pendingToggle?.status === "open"
           ? "Cerrar un periodo bloquea la creación y eliminación de novedades e importaciones. Confirma tu contraseña para continuar."
-          : "Reabrir un periodo permite modificar datos nuevamente. Confirma tu contraseña para continuar."}
+          : canOpenPeriodId === pendingToggle?.id
+            ? "Este es el siguiente periodo en secuencia. Confirma tu contraseña para abrirlo."
+            : "Reabrir un periodo fuera de secuencia requiere privilegios especiales. Confirma tu contraseña para continuar."}
         onConfirm={toggleStatus}
       />
     </div>
