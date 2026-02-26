@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { useSidebarCollapsed } from "./AdminLayout";
-import logoQS from "@/assets/logo-quality-staff.png";
+
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
@@ -363,19 +363,17 @@ export default function AdminSidebar() {
         collapsed ? "px-2 py-4 justify-center" : "px-4 py-4 gap-3"
       )}>
         <div className="relative">
-          <img
-            src={logoQS}
-            alt="Staffly"
-            className={cn(
-              "shrink-0 object-contain transition-all duration-300",
-              collapsed ? "h-8 w-8" : "h-9"
-            )}
-          />
+          <div className={cn(
+            "shrink-0 rounded-lg bg-primary/10 flex items-center justify-center transition-all duration-300",
+            collapsed ? "h-8 w-8" : "h-9 w-9"
+          )}>
+            <Clock className={cn("text-primary", collapsed ? "h-4 w-4" : "h-5 w-5")} />
+          </div>
           <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-earning border-2 border-sidebar" />
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-sidebar-foreground leading-tight truncate">Staffly</p>
+            <p className="text-xs font-semibold text-sidebar-foreground leading-tight truncate">STAFLY</p>
             <p className="text-[10px] text-muted-foreground/60 leading-tight">{roleLabel}</p>
           </div>
         )}

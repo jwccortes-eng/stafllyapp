@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User } from "lucide-react";
-import logoQS from "@/assets/logo-quality-staff.png";
+import { Clock } from "lucide-react";
 
 function isPhoneNumber(value: string): boolean {
   const cleaned = value.replace(/[\s\-\(\)\+]/g, "");
@@ -89,9 +89,11 @@ export default function Auth() {
         <div className="bg-card rounded-2xl shadow-xl border border-border/50 px-8 py-10 space-y-6">
           {/* Logo & Title */}
           <div className="flex flex-col items-center gap-3">
-            <img src={logoQS} alt="Quality Staff" className="h-14 object-contain" />
+            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Clock className="h-7 w-7 text-primary" />
+            </div>
             <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-              Staffly
+              STAFLY
             </h1>
             <p className="text-sm text-muted-foreground">
               {isLogin
@@ -215,7 +217,7 @@ export default function Auth() {
 
         {/* Footer */}
         <p className="text-center text-[11px] text-muted-foreground/50 mt-6">
-          Quality Staff by Keury · Staffly
+          © {new Date().getFullYear()} STAFLY · staflyapps.com
         </p>
       </div>
     </div>
