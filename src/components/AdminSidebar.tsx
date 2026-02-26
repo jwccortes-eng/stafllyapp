@@ -373,7 +373,7 @@ export default function AdminSidebar() {
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-sidebar-foreground leading-tight truncate">STAFLY</p>
+            <p className="text-xs font-semibold text-sidebar-foreground leading-tight truncate">Staffly</p>
             <p className="text-[10px] text-muted-foreground/60 leading-tight">{roleLabel}</p>
           </div>
         )}

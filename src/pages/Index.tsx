@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "./Landing";
 
-const Index = () => {
+const Index = React.forwardRef<HTMLDivElement>(function Index(_props, ref) {
   const { user, role, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -19,7 +19,7 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div ref={ref} className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="mt-4 text-muted-foreground text-sm">Cargando...</p>
@@ -31,6 +31,6 @@ const Index = () => {
   if (!user) return <Landing />;
 
   return null;
-};
+});
 
 export default Index;
