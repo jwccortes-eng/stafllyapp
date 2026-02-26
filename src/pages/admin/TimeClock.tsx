@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,9 +38,41 @@ interface Employee { id: string; first_name: string; last_name: string; }
 
 interface AvailableShift { id: string; shift_code: string | null; title: string; date: string; start_time: string; end_time: string; }
 
+function ClockInShiftSelector({ loadingShifts, availableShifts, selectedShiftId, setSelectedShiftId }: {
+  loadingShifts: boolean; availableShifts: AvailableShift[]; selectedShiftId: string; setSelectedShiftId: (v: string) => void;
+}) {
+  return (
+    <div>
+      <Label>Vincular a turno (opcional)</Label>
+      {loadingShifts ? (
+        <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Cargando turnos...
+        </div>
+      ) : availableShifts.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2">No hay turnos disponibles para hoy</p>
+      ) : (
+        <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
+          <SelectTrigger className="mt-1">
+            <SelectValue placeholder="Sin turno" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Sin turno</SelectItem>
+            {availableShifts.map(s => (
+              <SelectItem key={s.id} value={s.id}>
+                <span className="font-mono text-xs mr-1">#{s.shift_code}</span> {s.title} ({s.start_time}–{s.end_time})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
+  );
+}
+
 export default function TimeClock() {
   const { role, hasModuleAccess, employeeId } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const isMobile = useIsMobile();
   const isAdmin = role === "owner" || role === "admin" || hasModuleAccess("shifts", "view");
   const canApprove = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
 
@@ -96,68 +130,84 @@ export default function TimeClock() {
     setClockInOpen(true);
     setLoadingShifts(true);
     setSelectedShiftId("none");
-    const today = format(new Date(), "yyyy-MM-dd");
-    // Get shifts assigned to this employee for today
-    const { data: assignments } = await supabase
-      .from("shift_assignments")
-      .select("shift_id, scheduled_shifts(id, shift_code, title, date, start_time, end_time)")
-      .eq("employee_id", employeeId)
-      .eq("company_id", selectedCompanyId)
-      .eq("status", "confirmed");
-    
-    const shifts: AvailableShift[] = [];
-    (assignments ?? []).forEach((a: any) => {
-      const s = a.scheduled_shifts;
-      if (s && s.date === today) {
-        shifts.push({ id: s.id, shift_code: s.shift_code, title: s.title, date: s.date, start_time: s.start_time, end_time: s.end_time });
-      }
-    });
+    try {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const { data: assignments } = await supabase
+        .from("shift_assignments")
+        .select("shift_id, scheduled_shifts(id, shift_code, title, date, start_time, end_time)")
+        .eq("employee_id", employeeId)
+        .eq("company_id", selectedCompanyId)
+        .eq("status", "confirmed");
+      
+      const shifts: AvailableShift[] = [];
+      (assignments ?? []).forEach((a: any) => {
+        const s = a.scheduled_shifts;
+        if (s && s.date === today) {
+          shifts.push({ id: s.id, shift_code: s.shift_code, title: s.title, date: s.date, start_time: s.start_time, end_time: s.end_time });
+        }
+      });
 
-    // Also get unassigned/claimable shifts for today
-    const { data: openShifts } = await supabase
-      .from("scheduled_shifts")
-      .select("id, shift_code, title, date, start_time, end_time")
-      .eq("company_id", selectedCompanyId)
-      .eq("date", today)
-      .eq("status", "published");
-    
-    (openShifts ?? []).forEach((s: any) => {
-      if (!shifts.find(x => x.id === s.id)) {
-        shifts.push(s);
-      }
-    });
+      const { data: openShifts } = await supabase
+        .from("scheduled_shifts")
+        .select("id, shift_code, title, date, start_time, end_time")
+        .eq("company_id", selectedCompanyId)
+        .eq("date", today)
+        .eq("status", "published");
+      
+      (openShifts ?? []).forEach((s: any) => {
+        if (!shifts.find(x => x.id === s.id)) {
+          shifts.push(s);
+        }
+      });
 
-    setAvailableShifts(shifts);
-    if (shifts.length === 1) setSelectedShiftId(shifts[0].id);
-    setLoadingShifts(false);
+      setAvailableShifts(shifts);
+      if (shifts.length === 1) setSelectedShiftId(shifts[0].id);
+    } catch (error) {
+      console.error("Error loading shifts:", error);
+      toast.error("Error al cargar turnos");
+    } finally {
+      setLoadingShifts(false);
+    }
   };
 
   const handleClockIn = async () => {
     if (!employeeId || !selectedCompanyId) return;
     setClockingIn(true);
-    const insertData: any = {
-      company_id: selectedCompanyId,
-      employee_id: employeeId,
-      clock_in: new Date().toISOString(),
-    };
-    if (selectedShiftId && selectedShiftId !== "none") {
-      insertData.shift_id = selectedShiftId;
+    try {
+      const insertData: any = {
+        company_id: selectedCompanyId,
+        employee_id: employeeId,
+        clock_in: new Date().toISOString(),
+      };
+      if (selectedShiftId && selectedShiftId !== "none") {
+        insertData.shift_id = selectedShiftId;
+      }
+      const { error } = await supabase.from("time_entries").insert(insertData);
+      if (error) toast.error(error.message);
+      else { toast.success("Entrada registrada"); setClockInOpen(false); loadData(); }
+    } catch (error) {
+      console.error("Error clocking in:", error);
+      toast.error("Error inesperado al marcar entrada");
+    } finally {
+      setClockingIn(false);
     }
-    const { error } = await supabase.from("time_entries").insert(insertData);
-    if (error) toast.error(error.message);
-    else { toast.success("Entrada registrada"); setClockInOpen(false); loadData(); }
-    setClockingIn(false);
   };
 
   const handleClockOut = async () => {
     if (!activeEntry) return;
     setClockingIn(true);
-    const { error } = await supabase.from("time_entries").update({
-      clock_out: new Date().toISOString(),
-    }).eq("id", activeEntry.id);
-    if (error) toast.error(error.message);
-    else { toast.success("Salida registrada"); setActiveEntry(null); loadData(); }
-    setClockingIn(false);
+    try {
+      const { error } = await supabase.from("time_entries").update({
+        clock_out: new Date().toISOString(),
+      }).eq("id", activeEntry.id);
+      if (error) toast.error(error.message);
+      else { toast.success("Salida registrada"); setActiveEntry(null); loadData(); }
+    } catch (error) {
+      console.error("Error clocking out:", error);
+      toast.error("Error inesperado al marcar salida");
+    } finally {
+      setClockingIn(false);
+    }
   };
 
   const handleApprove = async (id: string) => {
@@ -385,44 +435,48 @@ export default function TimeClock() {
         </div>
       )}
 
-      {/* Clock-In Dialog — select shift */}
-      <Dialog open={clockInOpen} onOpenChange={setClockInOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Marcar entrada</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Vincular a turno (opcional)</Label>
-              {loadingShifts ? (
-                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando turnos...
-                </div>
-              ) : availableShifts.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-2">No hay turnos disponibles para hoy</p>
-              ) : (
-                <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Sin turno" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin turno</SelectItem>
-                    {availableShifts.map(s => (
-                      <SelectItem key={s.id} value={s.id}>
-                        <span className="font-mono text-xs mr-1">#{s.shift_code}</span> {s.title} ({s.start_time}–{s.end_time})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+      {/* Clock-In — Drawer on mobile, Dialog on desktop */}
+      {isMobile ? (
+        <Drawer open={clockInOpen} onOpenChange={setClockInOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Marcar entrada</DrawerTitle>
+            </DrawerHeader>
+            <div className="space-y-4 px-4 pb-6">
+              <ClockInShiftSelector
+                loadingShifts={loadingShifts}
+                availableShifts={availableShifts}
+                selectedShiftId={selectedShiftId}
+                setSelectedShiftId={setSelectedShiftId}
+              />
+              <Button onClick={handleClockIn} disabled={clockingIn} className="w-full" size="lg">
+                {clockingIn ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+                Confirmar entrada
+              </Button>
             </div>
-            <Button onClick={handleClockIn} disabled={clockingIn} className="w-full">
-              {clockingIn ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Play className="h-4 w-4 mr-1" />}
-              Confirmar entrada
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={clockInOpen} onOpenChange={setClockInOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Marcar entrada</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <ClockInShiftSelector
+                loadingShifts={loadingShifts}
+                availableShifts={availableShifts}
+                selectedShiftId={selectedShiftId}
+                setSelectedShiftId={setSelectedShiftId}
+              />
+              <Button onClick={handleClockIn} disabled={clockingIn} className="w-full">
+                {clockingIn ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+                Confirmar entrada
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Edit Entry Dialog */}
       <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) setEditEntry(null); }}>
