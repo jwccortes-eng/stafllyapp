@@ -268,12 +268,17 @@ export default function EmployeeDashboard() {
             </div>
           </Link>
         ) : estimatedPay === null ? null : (
-          <div className="rounded-2xl border bg-card p-4 flex items-center justify-center">
-            <div className="text-center">
-              <Clock className="h-5 w-5 text-muted-foreground/40 mx-auto mb-1" />
-              <p className="text-[10px] text-muted-foreground">Sin turnos</p>
+          <Link to="/portal/shifts" className="block">
+            <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4 flex flex-col items-center justify-center h-full gap-2 hover:bg-primary/10 transition-colors active:scale-[0.98]">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              <p className="text-[10px] text-primary font-semibold text-center leading-tight">
+                Sin turnos hoy
+              </p>
+              <span className="text-[9px] text-primary/70 font-medium flex items-center gap-0.5">
+                Ver disponibles <ArrowRight className="h-2.5 w-2.5" />
+              </span>
             </div>
-          </div>
+          </Link>
         )}
       </div>
 
