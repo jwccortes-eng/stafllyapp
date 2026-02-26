@@ -5,11 +5,12 @@ import { useCompany } from "@/hooks/useCompany";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Search, Clock, Eye, EyeOff } from "lucide-react";
+import { Loader2, Search, Clock, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { format, differenceInMinutes, differenceInSeconds } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
 
 interface TimeEntry {
   id: string;
@@ -45,6 +46,7 @@ export default function TodayView() {
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(true);
   const [now, setNow] = useState(new Date());
+  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
 
   // Live clock for active entries
   useEffect(() => {
@@ -211,7 +213,11 @@ export default function TodayView() {
             </div>
           ) : (
             visibleRows.map(emp => (
-              <div key={emp.id} className="flex items-center gap-3 px-4 py-3">
+              <div
+                key={emp.id}
+                className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors active:bg-muted/60"
+                onClick={() => setSelectedEmpId(emp.id)}
+              >
                 {/* Avatar */}
                 <EmployeeAvatar
                   firstName={emp.first_name}
@@ -255,25 +261,30 @@ export default function TodayView() {
                 </div>
 
                 {/* Hours / status */}
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 flex items-center gap-1.5">
                   {emp.isClockedIn || emp.totalMinutes > 0 ? (
                     <span className={`text-sm font-mono font-semibold ${emp.isClockedIn ? "text-emerald-600" : "text-foreground"}`}>
                       {formatDuration(emp.totalMinutes)}
                     </span>
                   ) : (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">Total:</span>
-                      <Badge variant="secondary" className="text-[11px] font-mono px-1.5">
-                        --
-                      </Badge>
-                    </div>
+                    <Badge variant="secondary" className="text-[11px] font-mono px-1.5">
+                      --
+                    </Badge>
                   )}
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" />
                 </div>
               </div>
             ))
           )}
         </div>
       )}
+
+      <EmployeeDayDetailDrawer
+        employee={employeeRows.find(e => e.id === selectedEmpId) ?? null}
+        open={!!selectedEmpId}
+        onOpenChange={o => { if (!o) setSelectedEmpId(null); }}
+        now={now}
+      />
     </div>
   );
 }
