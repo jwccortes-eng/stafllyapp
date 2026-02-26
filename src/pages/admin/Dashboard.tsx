@@ -446,35 +446,8 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ── Payment Trend Chart ── */}
-      {chartData.length > 0 && (
-        <Card className="rounded-2xl">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base font-semibold font-heading">Tendencia de pagos por periodo</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-                  <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} />
-                  <RechartsTooltip
-                    contentStyle={{ borderRadius: "0.75rem", border: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--card))", fontSize: 12 }}
-                    formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === "base" ? "Base" : name === "extras" ? "Extras" : "Deducciones"]}
-                  />
-                  <Bar dataKey="base" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="base" />
-                  <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[4, 4, 0, 0]} name="extras" />
-                  <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="deducciones" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
+
 
       {/* ── Quick Actions ── */}
       {quickActions.length > 0 && (
@@ -508,7 +481,36 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ── Social Feed: Two columns ── */}
+      {/* ── Chart + Social Feed ── */}
+      {chartData.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base font-semibold font-heading">Tendencia de pagos por periodo</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                  <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} />
+                  <RechartsTooltip
+                    contentStyle={{ borderRadius: "0.75rem", border: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--card))", fontSize: 12 }}
+                    formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === "base" ? "Base" : name === "extras" ? "Extras" : "Deducciones"]}
+                  />
+                  <Bar dataKey="base" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="base" />
+                  <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[4, 4, 0, 0]} name="extras" />
+                  <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="deducciones" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Announcements Feed */}
         <div className="lg:col-span-3">
