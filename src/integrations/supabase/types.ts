@@ -61,7 +61,6 @@ export type Database = {
           entity_id: string | null
           entity_type: string
           id: string
-          ip_address: string | null
           new_data: Json | null
           old_data: Json | null
           user_id: string
@@ -74,7 +73,6 @@ export type Database = {
           entity_id?: string | null
           entity_type: string
           id?: string
-          ip_address?: string | null
           new_data?: Json | null
           old_data?: Json | null
           user_id: string
@@ -87,7 +85,6 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string
           id?: string
-          ip_address?: string | null
           new_data?: Json | null
           old_data?: Json | null
           user_id?: string
@@ -1587,7 +1584,6 @@ export type Database = {
           created_at: string
           fields_accessed: string[]
           id: string
-          ip_address: string | null
           record_id: string | null
           table_name: string
           user_id: string
@@ -1597,7 +1593,6 @@ export type Database = {
           created_at?: string
           fields_accessed: string[]
           id?: string
-          ip_address?: string | null
           record_id?: string | null
           table_name: string
           user_id: string
@@ -1607,7 +1602,6 @@ export type Database = {
           created_at?: string
           fields_accessed?: string[]
           id?: string
-          ip_address?: string | null
           record_id?: string | null
           table_name?: string
           user_id?: string
