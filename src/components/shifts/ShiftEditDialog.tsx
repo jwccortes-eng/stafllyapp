@@ -6,7 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Save } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Loader2, Save, CalendarIcon } from "lucide-react";
+import { format, parse } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import type { Shift, SelectOption } from "./types";
 
 interface ShiftEditDialogProps {
@@ -31,6 +36,7 @@ export function ShiftEditDialog({
   const [notes, setNotes] = useState("");
   const [claimable, setClaimable] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   useEffect(() => {
     if (shift && open) {
@@ -83,7 +89,22 @@ export function ShiftEditDialog({
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-xs text-muted-foreground">Fecha</Label>
-              <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-sm" />
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full h-9 text-sm justify-start font-normal", !date && "text-muted-foreground")}>
+                    <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                    {date ? format(parse(date, "yyyy-MM-dd", new Date()), "d MMM yyyy", { locale: es }) : "Seleccionar"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date ? parse(date, "yyyy-MM-dd", new Date()) : undefined}
+                    onSelect={d => { if (d) { setDate(format(d, "yyyy-MM-dd")); setDatePickerOpen(false); } }}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Entrada</Label>

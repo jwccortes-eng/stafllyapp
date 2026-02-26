@@ -11,9 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar } from "lucide-react";
-import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays } from "date-fns";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarWidget } from "@/components/ui/calendar";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 import { DayView } from "@/components/shifts/DayView";
 import { WeekView } from "@/components/shifts/WeekView";
@@ -88,6 +92,8 @@ export default function Shifts() {
   const [claimable, setClaimable] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
@@ -566,7 +572,25 @@ export default function Shifts() {
                     <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Turno mañana" className="h-9 text-sm" />
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <div><Label className="text-xs text-muted-foreground">Fecha</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-sm" /></div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Fecha</Label>
+                      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className={cn("w-full h-9 text-sm justify-start font-normal", !date && "text-muted-foreground")}>
+                            <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                            {date ? format(parse(date, "yyyy-MM-dd", new Date()), "d MMM yyyy", { locale: es }) : "Seleccionar"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarWidget
+                            mode="single"
+                            selected={date ? parse(date, "yyyy-MM-dd", new Date()) : undefined}
+                            onSelect={d => { if (d) { setDate(format(d, "yyyy-MM-dd")); setDatePickerOpen(false); } }}
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                     <div><Label className="text-xs text-muted-foreground">Entrada</Label><Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="h-9 text-sm" /></div>
                     <div><Label className="text-xs text-muted-foreground">Salida</Label><Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="h-9 text-sm" /></div>
                   </div>
@@ -612,9 +636,8 @@ export default function Shifts() {
                       {employees.length === 0 && <p className="text-xs text-muted-foreground p-2">No hay empleados activos</p>}
                     </div>
                   </div>
-                  <Button onClick={handleCreate} disabled={saving || !title.trim() || !date} className="w-full h-9 text-sm">
-                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-                    Crear turno
+                  <Button onClick={() => setConfirmOpen(true)} disabled={saving || !title.trim() || !date} className="w-full h-9 text-sm">
+                    Revisar y crear turno
                   </Button>
                 </div>
               </DialogContent>
@@ -736,6 +759,63 @@ export default function Shifts() {
 
       {/* Weekly Summary */}
       <WeeklySummaryBar shifts={filteredShifts} assignments={assignments} />
+
+      {/* Pre-submit confirmation */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4 text-primary" /> Confirmar nuevo turno
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <div className="rounded-lg border bg-muted/40 p-3 space-y-1">
+                  <p><span className="font-medium">Turno:</span> {title || "—"}</p>
+                  <p><span className="font-medium">Fecha:</span> {date ? format(parse(date, "yyyy-MM-dd", new Date()), "EEEE d 'de' MMMM yyyy", { locale: es }) : "—"}</p>
+                  <p><span className="font-medium">Horario:</span> {startTime} – {endTime}</p>
+                  <p><span className="font-medium">Cliente:</span> {clients.find(c => c.id === clientId)?.name || "Sin asignar"}</p>
+                  <p><span className="font-medium">Ubicación:</span> {locations.find(l => l.id === locationId)?.name || "Sin asignar"}</p>
+                  <p><span className="font-medium">Plazas:</span> {slots}</p>
+                  <p><span className="font-medium">Empleados:</span> {selectedEmployees.length > 0 ? `${selectedEmployees.length} seleccionados` : "Ninguno"}</p>
+                  {claimable && <p><span className="font-medium">Reclamable:</span> Sí</p>}
+                  {notes && <p><span className="font-medium">Notas:</span> {notes}</p>}
+                </div>
+                {/* Warnings */}
+                {(() => {
+                  const warnings: string[] = [];
+                  if (startTime >= endTime) warnings.push("La hora de entrada es igual o posterior a la de salida.");
+                  if (selectedEmployees.length === 0) warnings.push("No se asignaron empleados.");
+                  if (!clientId) warnings.push("No se asignó un cliente.");
+                  if (!locationId) warnings.push("No se asignó una ubicación.");
+                  const slotsNum = parseInt(slots) || 1;
+                  if (selectedEmployees.length > slotsNum) warnings.push(`Se asignaron ${selectedEmployees.length} empleados pero solo hay ${slotsNum} plaza(s).`);
+                  if (date && new Date(date + "T00:00:00") < new Date(new Date().toDateString())) warnings.push("La fecha es anterior a hoy.");
+                  return warnings.length > 0 ? (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                      {warnings.map((w, i) => (
+                        <p key={i} className="flex items-start gap-1.5 text-xs text-destructive">
+                          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {w}
+                        </p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Sin advertencias detectadas.
+                    </p>
+                  );
+                })()}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver a editar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCreate} disabled={saving}>
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              Confirmar y crear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ShiftDetailDialog
         shift={selectedShift}
