@@ -26,7 +26,7 @@ export default function UpgradeBanner({ feature }: UpgradeBannerProps) {
           Actualiza tu plan para acceder a herramientas avanzadas.
         </p>
       </div>
-      <Button size="sm" onClick={() => navigate("/admin/billing")}>
+      <Button size="sm" onClick={() => navigate("/app/billing")}>
         Upgrade
       </Button>
     </div>

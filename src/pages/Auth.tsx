@@ -33,7 +33,7 @@ export default function Auth() {
     if (role === "employee") {
       navigate("/portal");
     } else if (role === "admin" || role === "owner" || role === "manager") {
-      navigate("/admin");
+      navigate("/app");
     }
   }, [user, role, authLoading, navigate]);
 

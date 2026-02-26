@@ -379,7 +379,7 @@ export default function OnboardingWizard() {
                 Crear otra empresa
               </Button>
               <Button asChild className="gap-2">
-                <a href="/admin/companies">
+                <a href="/app/companies">
                   Ver empresas <ArrowRight className="h-4 w-4" />
                 </a>
               </Button>

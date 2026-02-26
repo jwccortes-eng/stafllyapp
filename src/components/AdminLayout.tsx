@@ -22,32 +22,32 @@ export function useSidebarCollapsed() {
 }
 
 const ALL_MOBILE_LINKS = [
-  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
-  { to: "/admin/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
-  { to: "/admin/import", icon: Upload, label: "Importar horas", module: "import", section: "Nómina" },
-  { to: "/admin/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
-  { to: "/admin/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
-  { to: "/admin/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
-  { to: "/admin/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Programación" },
-  { to: "/admin/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Programación" },
-  { to: "/admin/employees", icon: Users, label: "Empleados", module: "employees", section: "Equipo" },
-  { to: "/admin/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Equipo" },
-  { to: "/admin/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Equipo" },
-  { to: "/admin/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Equipo" },
-  { to: "/admin/clients", icon: Building2, label: "Clientes", module: "clients", section: "Clientes" },
-  { to: "/admin/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Clientes" },
-  { to: "/admin/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
-  { to: "/admin/chat", icon: MessageCircle, label: "Chat interno", module: null, section: "Comunicación" },
+  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
+  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
+  { to: "/app/import", icon: Upload, label: "Importar horas", module: "import", section: "Nómina" },
+  { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
+  { to: "/app/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
+  { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Programación" },
+  { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Programación" },
+  { to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Equipo" },
+  { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Equipo" },
+  { to: "/app/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Equipo" },
+  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Equipo" },
+  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Clientes" },
+  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Clientes" },
+  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
+  { to: "/app/chat", icon: MessageCircle, label: "Chat interno", module: null, section: "Comunicación" },
 ];
 
 const OWNER_MOBILE_LINKS = [
-  { to: "/admin/global", icon: Globe, label: "Vista global", module: null, section: "Administración" },
-  { to: "/admin/companies", icon: Building2, label: "Empresas", module: null, section: "Administración" },
-  { to: "/admin/users", icon: Shield, label: "Usuarios", module: null, section: "Administración" },
+  { to: "/app/global", icon: Globe, label: "Vista global", module: null, section: "Administración" },
+  { to: "/app/companies", icon: Building2, label: "Empresas", module: null, section: "Administración" },
+  { to: "/app/users", icon: Shield, label: "Usuarios", module: null, section: "Administración" },
 ];
 
 // Bottom bar shows first 4 + "more"
-const BOTTOM_BAR_KEYS = ["/admin", "/admin/movements", "/admin/summary", "/admin/employees"];
+const BOTTOM_BAR_KEYS = ["/app", "/app/movements", "/app/summary", "/app/employees"];
 
 export default function AdminLayout() {
   const { user, role, loading, signOut, hasModuleAccess } = useAuth();
@@ -104,10 +104,10 @@ export default function AdminLayout() {
         <header className="sticky top-0 z-30 bg-card border-b shadow-sm">
           <div className="flex items-center justify-between px-4 h-14">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground text-xs font-bold">PW</span>
+              <div className="h-7 w-7 rounded-xl bg-primary/10 flex items-center justify-center">
+                <img src="/favicon.png" alt="stafly" className="h-4 w-4 object-contain" />
               </div>
-              <span className="text-sm font-bold font-heading">Payroll Weekly</span>
+              <span className="text-sm font-bold font-heading">stafly</span>
             </div>
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger asChild>

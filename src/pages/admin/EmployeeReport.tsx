@@ -178,7 +178,7 @@ export default function EmployeeReport() {
   return (
     <div>
       <div className="page-header">
-        <Link to="/admin/reports">
+        <Link to="/app/reports">
           <Button variant="ghost" size="sm" className="mb-2 -ml-2">
             <ArrowLeft className="h-4 w-4 mr-1" /> Volver a reportes
           </Button>
@@ -344,7 +344,7 @@ export default function EmployeeReport() {
                     <TableCell className="text-right font-mono text-sm text-deduction">−${p.deductions_total.toFixed(2)}</TableCell>
                     <TableCell className="text-right font-mono text-sm font-bold">${p.total_final_pay.toFixed(2)}</TableCell>
                     <TableCell>
-                      <Link to={`/admin/summary/detail?employeeId=${selectedEmployee}&periodId=${p.period_id}`}>
+                      <Link to={`/app/summary/detail?employeeId=${selectedEmployee}&periodId=${p.period_id}`}>
                         <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>
                       </Link>
                     </TableCell>

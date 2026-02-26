@@ -74,7 +74,7 @@ function App() {
               <Route path="/auth" element={<Auth />} />
 
               {/* Admin routes */}
-              <Route path="/admin" element={<AdminLayout />}>
+              <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="employees" element={<Employees />} />
                 <Route path="periods" element={<PayPeriods />} />

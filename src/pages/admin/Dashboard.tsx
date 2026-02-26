@@ -273,12 +273,12 @@ export default function AdminDashboard() {
   }, []);
 
   const quickActions = [
-    { label: "Importar horas", icon: Upload, to: "/admin/import", module: "import", description: "Sube el archivo de Connecteam", accent: "from-primary to-primary/70" },
-    { label: "Agregar novedad", icon: DollarSign, to: "/admin/movements", module: "movements", description: "Extras, deducciones y ajustes", accent: "from-warning to-warning/70" },
-    { label: "Ver resumen", icon: FileSpreadsheet, to: "/admin/summary", module: "summary", description: "Resumen del periodo actual", accent: "from-earning to-earning/70" },
-    { label: "Empleados", icon: Users, to: "/admin/employees", module: "employees", description: "Gestión de empleados", accent: "from-primary to-primary/70" },
-    { label: "Conceptos", icon: Tags, to: "/admin/concepts", module: "concepts", description: "Configura conceptos de pago", accent: "from-deduction to-deduction/70" },
-    { label: "Reportes", icon: BarChart3, to: "/admin/reports", module: "reports", description: "Genera y guarda reportes", accent: "from-primary to-primary/70" },
+    { label: "Importar horas", icon: Upload, to: "/app/import", module: "import", description: "Sube el archivo de Connecteam", accent: "from-primary to-primary/70" },
+    { label: "Agregar novedad", icon: DollarSign, to: "/app/movements", module: "movements", description: "Extras, deducciones y ajustes", accent: "from-warning to-warning/70" },
+    { label: "Ver resumen", icon: FileSpreadsheet, to: "/app/summary", module: "summary", description: "Resumen del periodo actual", accent: "from-earning to-earning/70" },
+    { label: "Empleados", icon: Users, to: "/app/employees", module: "employees", description: "Gestión de empleados", accent: "from-primary to-primary/70" },
+    { label: "Conceptos", icon: Tags, to: "/app/concepts", module: "concepts", description: "Configura conceptos de pago", accent: "from-deduction to-deduction/70" },
+    { label: "Reportes", icon: BarChart3, to: "/app/reports", module: "reports", description: "Genera y guarda reportes", accent: "from-primary to-primary/70" },
   ].filter(a => canAccess(a.module));
 
   /* ─── render ─── */
@@ -338,7 +338,7 @@ export default function AdminDashboard() {
         paid={periodSummary.paid}
         overdueCount={overdueInfos.length}
         overdueDays={overdueInfos.length > 0 ? Math.max(...overdueInfos.map(i => i.overdueDays)) : undefined}
-        onOverdueClick={overdueInfos.length > 0 ? () => navigate("/admin/periods") : undefined}
+        onOverdueClick={overdueInfos.length > 0 ? () => navigate("/app/periods") : undefined}
       />
 
 
@@ -487,7 +487,7 @@ export default function AdminDashboard() {
               <Megaphone className="h-4 w-4 text-primary" />
               <h2 className="text-base font-semibold font-heading">Feed de comunicados</h2>
             </div>
-            <Link to="/admin/announcements" className="text-xs text-primary font-medium hover:underline">
+            <Link to="/app/announcements" className="text-xs text-primary font-medium hover:underline">
               Ver todos
             </Link>
           </div>
@@ -576,7 +576,7 @@ export default function AdminDashboard() {
               <Activity className="h-4 w-4 text-warning" />
               <h2 className="text-base font-semibold font-heading">Actividad reciente</h2>
             </div>
-            <Link to="/admin/activity" className="text-xs text-primary font-medium hover:underline">
+            <Link to="/app/activity" className="text-xs text-primary font-medium hover:underline">
               Ver todo
             </Link>
           </div>

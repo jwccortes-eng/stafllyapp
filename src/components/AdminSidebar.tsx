@@ -38,43 +38,43 @@ interface LinkDef {
 
 const ALL_LINKS: LinkDef[] = [
   // ── Inicio ──
-  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
+  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
   // ── Nómina ──
-  { to: "/admin/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
-  { to: "/admin/import", icon: Upload, label: "Importar horas", module: "import", section: "Nómina" },
-  { to: "/admin/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
-  { to: "/admin/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
-  { to: "/admin/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
-  { to: "/admin/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
+  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
+  { to: "/app/import", icon: Upload, label: "Importar horas", module: "import", section: "Nómina" },
+  { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
+  { to: "/app/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
+  { to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
   // ── Programación ──
-  { to: "/admin/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Programación" },
-  { to: "/admin/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Programación" },
-  { to: "/admin/shift-requests", icon: MessageSquare, label: "Solicitudes", module: "shifts", section: "Programación" },
-  { to: "/admin/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Programación" },
+  { to: "/app/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Programación" },
+  { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Programación" },
+  { to: "/app/shift-requests", icon: MessageSquare, label: "Solicitudes", module: "shifts", section: "Programación" },
+  { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Programación" },
   // ── Equipo ──
-  { to: "/admin/employees", icon: Users, label: "Empleados", module: "employees", section: "Equipo" },
-  { to: "/admin/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Equipo" },
-  { to: "/admin/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Equipo" },
-  { to: "/admin/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Equipo" },
+  { to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Equipo" },
+  { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Equipo" },
+  { to: "/app/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Equipo" },
+  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Equipo" },
   // ── Clientes ──
-  { to: "/admin/clients", icon: Building2, label: "Clientes", module: "clients", section: "Clientes" },
-  { to: "/admin/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Clientes" },
+  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Clientes" },
+  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Clientes" },
   // ── Comunicación ──
-  { to: "/admin/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
-  { to: "/admin/chat", icon: MessageCircle, label: "Chat interno", module: null, section: "Comunicación" },
+  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
+  { to: "/app/chat", icon: MessageCircle, label: "Chat interno", module: null, section: "Comunicación" },
 ];
 
 const OWNER_LINKS: LinkDef[] = [
-  { to: "/admin/global", icon: Globe, label: "Vista global", module: null, section: "Administración" },
-  { to: "/admin/companies", icon: Building2, label: "Empresas", module: null, section: "Administración" },
-  { to: "/admin/users", icon: Shield, label: "Usuarios", module: null, section: "Administración" },
-  { to: "/admin/onboarding", icon: Users, label: "Onboarding", module: null, section: "Administración" },
-  { to: "/admin/activity", icon: CalendarDays, label: "Actividad", module: null, section: "Administración" },
-  { to: "/admin/company-config", icon: Settings2, label: "Config Empresa", module: null, section: "Administración" },
-  { to: "/admin/automations", icon: CalendarDays, label: "Automatizar", module: null, section: "Administración" },
-  { to: "/admin/permissions", icon: Shield, label: "Permisos", module: null, section: "Administración" },
-  { to: "/admin/monetization", icon: DollarSign, label: "Inversión", module: null, section: "Administración" },
-  { to: "/admin/settings", icon: Settings2, label: "Plataforma", module: null, section: "Administración" },
+  { to: "/app/global", icon: Globe, label: "Vista global", module: null, section: "Administración" },
+  { to: "/app/companies", icon: Building2, label: "Empresas", module: null, section: "Administración" },
+  { to: "/app/users", icon: Shield, label: "Usuarios", module: null, section: "Administración" },
+  { to: "/app/onboarding", icon: Users, label: "Onboarding", module: null, section: "Administración" },
+  { to: "/app/activity", icon: CalendarDays, label: "Actividad", module: null, section: "Administración" },
+  { to: "/app/company-config", icon: Settings2, label: "Config Empresa", module: null, section: "Administración" },
+  { to: "/app/automations", icon: CalendarDays, label: "Automatizar", module: null, section: "Administración" },
+  { to: "/app/permissions", icon: Shield, label: "Permisos", module: null, section: "Administración" },
+  { to: "/app/monetization", icon: DollarSign, label: "Inversión", module: null, section: "Administración" },
+  { to: "/app/settings", icon: Settings2, label: "Plataforma", module: null, section: "Administración" },
 ];
 
 interface Customization {
@@ -364,16 +364,16 @@ export default function AdminSidebar() {
       )}>
         <div className="relative">
           <div className={cn(
-            "shrink-0 rounded-lg bg-primary/10 flex items-center justify-center transition-all duration-300",
+            "shrink-0 rounded-xl bg-primary/10 flex items-center justify-center transition-all duration-300",
             collapsed ? "h-8 w-8" : "h-9 w-9"
           )}>
-            <Clock className={cn("text-primary", collapsed ? "h-4 w-4" : "h-5 w-5")} />
+            <img src="/favicon.png" alt="stafly" className={cn("object-contain", collapsed ? "h-5 w-5" : "h-6 w-6")} />
           </div>
           <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-earning border-2 border-sidebar" />
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-sidebar-foreground leading-tight truncate">STAFLY</p>
+            <p className="text-sm font-bold text-sidebar-foreground leading-tight truncate font-heading">stafly</p>
             <p className="text-[10px] text-muted-foreground/60 leading-tight">{roleLabel}</p>
           </div>
         )}
