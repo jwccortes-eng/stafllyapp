@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
-import { CalendarDays, BarChart3, LogOut, User } from "lucide-react";
+import { CalendarDays, BarChart3, LogOut, User, Megaphone, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -7,6 +7,8 @@ import EmployeeChatWidget from "@/components/EmployeeChatWidget";
 
 const links = [
   { to: "/portal", icon: CalendarDays, label: "Mis Pagos" },
+  { to: "/portal/shifts", icon: Clock, label: "Turnos" },
+  { to: "/portal/announcements", icon: Megaphone, label: "Anuncios" },
   { to: "/portal/accumulated", icon: BarChart3, label: "Acumulado" },
 ];
 

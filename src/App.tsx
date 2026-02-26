@@ -35,6 +35,8 @@ import InternalChat from "./pages/admin/InternalChat";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
+import MyShifts from "./pages/portal/MyShifts";
+import MyAnnouncements from "./pages/portal/MyAnnouncements";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +84,8 @@ function App() {
                 <Route index element={<MyPayments />} />
                 <Route path="week/:periodId" element={<WeekDetail />} />
                 <Route path="accumulated" element={<Accumulated />} />
+                <Route path="shifts" element={<MyShifts />} />
+                <Route path="announcements" element={<MyAnnouncements />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
