@@ -32,10 +32,12 @@ interface Announcement {
 }
 
 export default function Announcements() {
-  const { user, role, hasModuleAccess } = useAuth();
+  const { user, role, hasModuleAccess, hasActionPermission } = useAuth();
   const { selectedCompanyId } = useCompany();
-  const isAdmin = role === "owner" || role === "admin" || hasModuleAccess("announcements", "edit");
-  const canDelete = role === "owner" || role === "admin" || hasModuleAccess("announcements", "delete");
+  const isAdmin = role === "owner" || role === "admin" || hasModuleAccess("announcements", "edit") || hasActionPermission("publicar_anuncio");
+  const canEdit = role === "owner" || role === "admin" || hasModuleAccess("announcements", "edit") || hasActionPermission("editar_anuncio");
+  const canDelete = role === "owner" || role === "admin" || hasModuleAccess("announcements", "delete") || hasActionPermission("eliminar_anuncio");
+  const canPin = role === "owner" || role === "admin" || hasActionPermission("fijar_anuncio");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -350,10 +352,12 @@ export default function Announcements() {
                 </Select>
               </div>
               <div className="space-y-3 pt-6">
-                <div className="flex items-center gap-2">
-                  <Switch checked={pinned} onCheckedChange={setPinned} id="pinned" />
-                  <Label htmlFor="pinned" className="text-sm">Fijar arriba</Label>
-                </div>
+                {canPin && (
+                  <div className="flex items-center gap-2">
+                    <Switch checked={pinned} onCheckedChange={setPinned} id="pinned" />
+                    <Label htmlFor="pinned" className="text-sm">Fijar arriba</Label>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Switch checked={publishNow} onCheckedChange={setPublishNow} id="publish" />
                   <Label htmlFor="publish" className="text-sm">Publicar ahora</Label>

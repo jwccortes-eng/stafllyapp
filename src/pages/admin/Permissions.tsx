@@ -52,6 +52,16 @@ const ACTION_GROUPS = [
     ],
   },
   {
+    label: "Comunicación / Feed",
+    icon: Users,
+    actions: [
+      { key: "publicar_anuncio", label: "Publicar en el feed" },
+      { key: "editar_anuncio", label: "Editar publicaciones" },
+      { key: "eliminar_anuncio", label: "Eliminar publicaciones" },
+      { key: "fijar_anuncio", label: "Fijar publicaciones" },
+    ],
+  },
+  {
     label: "Configuración",
     icon: Settings,
     actions: [
