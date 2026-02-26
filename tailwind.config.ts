@@ -14,16 +14,18 @@ export default {
   	},
   	extend: {
   		fontFamily: {
-  			heading: [
-  				'Space Grotesk',
-  				'sans-serif'
-  			],
-  			body: [
-  				'DM Sans',
-  				'sans-serif'
-  			],
-  			sans: [
-  				'Space Grotesk',
+			heading: [
+				'Outfit',
+				'Space Grotesk',
+				'sans-serif'
+			],
+			body: [
+				'Inter',
+				'sans-serif'
+			],
+			sans: [
+				'Outfit',
+				'Space Grotesk',
   				'ui-sans-serif',
   				'system-ui',
   				'-apple-system',
