@@ -94,7 +94,7 @@ export default function AdminSidebar() {
   const [noteValue, setNoteValue] = useState("");
   const [dragItem, setDragItem] = useState<string | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["Inicio", "Nómina", "Programación", "Equipo", "Clientes", "Comunicación", "Administración"]));
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user?.id) return;
@@ -304,6 +304,20 @@ export default function AdminSidebar() {
     return linkContent;
   };
 
+  // Auto-open section with active route on mount/route change
+  useEffect(() => {
+    const activeSection = [...visibleSections, ...(visibleOwnerLinks.length > 0 ? [{ label: "Administración", links: visibleOwnerLinks }] : [])]
+      .find(s => s.links.some(l => isActive(l.to, l.end)));
+    if (activeSection) {
+      setOpenSections(prev => {
+        if (prev.has(activeSection.label)) return prev;
+        const next = new Set(prev);
+        next.add(activeSection.label);
+        return next;
+      });
+    }
+  }, [location.pathname]);
+
   const renderSection = (section: { label: string; links: LinkDef[] }) => {
     if (collapsed) {
       return (
@@ -315,20 +329,19 @@ export default function AdminSidebar() {
     }
 
     const isOpen = openSections.has(section.label);
-    const hasActive = section.links.some(l => isActive(l.to, l.end));
 
     return (
-      <Collapsible key={section.label} open={isOpen || hasActive} onOpenChange={() => toggleSection(section.label)}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section">
+      <Collapsible key={section.label} open={isOpen} onOpenChange={() => toggleSection(section.label)}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 group-hover/section:text-muted-foreground transition-colors">
             {section.label}
           </span>
           <ChevronDown className={cn(
-            "h-3 w-3 text-muted-foreground/40 transition-transform duration-200",
-            (isOpen || hasActive) && "rotate-180"
+            "h-3 w-3 text-muted-foreground/40 transition-transform duration-300 ease-in-out",
+            isOpen && "rotate-180"
           )} />
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-0.5 mt-0.5">
+        <CollapsibleContent className="space-y-0.5 mt-0.5 overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
           {section.links.map(l => renderLink(l, section.links))}
         </CollapsibleContent>
       </Collapsible>
