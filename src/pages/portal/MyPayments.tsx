@@ -340,12 +340,20 @@ export default function MyPayments() {
                               <p className="text-xs text-muted-foreground text-center py-2">Sin movimientos adicionales</p>
                             )}
 
-                            <Link
-                              to={`/portal/week/${p.period_id}`}
-                              className="block text-center text-xs font-medium text-primary hover:underline pt-1"
-                            >
-                              Ver detalle completo →
-                            </Link>
+                            <div className="flex items-center justify-center gap-4 pt-1">
+                              <Link
+                                to={`/portal/paystub/${p.period_id}`}
+                                className="text-xs font-medium text-primary hover:underline"
+                              >
+                                Ver recibo de pago →
+                              </Link>
+                              <Link
+                                to={`/portal/week/${p.period_id}`}
+                                className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                              >
+                                Ver turnos y horas →
+                              </Link>
+                            </div>
                           </>
                         )}
                       </div>
