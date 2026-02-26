@@ -93,7 +93,7 @@ export default function Auth() {
               <Clock className="h-7 w-7 text-primary" />
             </div>
             <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-              Staffly
+              STAFLY
             </h1>
             <p className="text-sm text-muted-foreground">
               {isLogin
@@ -217,7 +217,7 @@ export default function Auth() {
 
         {/* Footer */}
         <p className="text-center text-[11px] text-muted-foreground/50 mt-6">
-          © {new Date().getFullYear()} Staffly · staflyapps.com
+          © {new Date().getFullYear()} STAFLY · staflyapps.com
         </p>
       </div>
     </div>

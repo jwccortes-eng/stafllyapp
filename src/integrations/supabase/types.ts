@@ -724,6 +724,39 @@ export type Database = {
           },
         ]
       }
+      demo_requests: {
+        Row: {
+          company: string
+          created_at: string
+          email: string | null
+          employee_count: string | null
+          id: string
+          name: string
+          phone: string | null
+          source: string | null
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          email?: string | null
+          employee_count?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          source?: string | null
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          email?: string | null
+          employee_count?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          source?: string | null
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           access_pin: string | null

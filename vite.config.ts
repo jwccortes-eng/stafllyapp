@@ -27,9 +27,9 @@ export default defineConfig(({ mode }) => ({
       manifest: {
         name: "STAFLY",
         short_name: "STAFLY",
-        description: "Gestión de personal inteligente — Turnos y pagos en un solo lugar",
-        theme_color: "#6236FF",
-        background_color: "#0D0D12",
+        description: "Turnos, asistencia y nómina semanal — Scheduling, time tracking & weekly payroll",
+        theme_color: "#1a7de8",
+        background_color: "#f5f6fa",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
