@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2 } from "lucide-react";
+import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isBefore, startOfDay, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface ShiftAssignment {
@@ -44,6 +46,9 @@ export default function MyShifts() {
   const [claimable, setClaimable] = useState<ClaimableShift[]>([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
+  const [responding, setResponding] = useState<string | null>(null);
+  const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   const { toast } = useToast();
 
   const load = async () => {
@@ -175,6 +180,45 @@ export default function MyShifts() {
     setClaiming(null);
   };
 
+  const acceptAssignment = async (assignmentId: string) => {
+    setResponding(assignmentId);
+    const { error } = await supabase
+      .from("shift_assignments")
+      .update({ status: "confirmed", responded_at: new Date().toISOString() } as any)
+      .eq("id", assignmentId);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "¡Turno aceptado!", description: "Has confirmado tu asignación" });
+      await load();
+    }
+    setResponding(null);
+  };
+
+  const rejectAssignment = async () => {
+    if (!rejectDialogId) return;
+    setResponding(rejectDialogId);
+    const { error } = await supabase
+      .from("shift_assignments")
+      .update({
+        status: "rejected",
+        responded_at: new Date().toISOString(),
+        rejection_reason: rejectReason.trim() || null,
+      } as any)
+      .eq("id", rejectDialogId);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Turno rechazado", description: "Se notificará al administrador" });
+      await load();
+    }
+    setResponding(null);
+    setRejectDialogId(null);
+    setRejectReason("");
+  };
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -253,6 +297,31 @@ export default function MyShifts() {
 
         {a.shift.notes && (
           <p className="text-xs text-muted-foreground bg-muted/50 rounded-xl px-3 py-2 leading-relaxed">{a.shift.notes}</p>
+        )}
+
+        {/* Accept/Reject buttons for pending assignments */}
+        {a.status === "pending" && (
+          <div className="flex items-center gap-2 pt-1">
+            <Button
+              size="sm"
+              className="flex-1 h-9 text-xs gap-1.5"
+              onClick={() => acceptAssignment(a.id)}
+              disabled={responding === a.id}
+            >
+              {responding === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />}
+              Aceptar turno
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 h-9 text-xs gap-1.5 text-destructive hover:text-destructive"
+              onClick={() => { setRejectDialogId(a.id); setRejectReason(""); }}
+              disabled={responding === a.id}
+            >
+              <ThumbsDown className="h-3.5 w-3.5" />
+              Rechazar
+            </Button>
+          </div>
         )}
       </div>
     );
@@ -347,6 +416,36 @@ export default function MyShifts() {
           <p className="text-sm">No tienes turnos asignados</p>
         </div>
       )}
+
+      {/* Reject assignment dialog */}
+      <Dialog open={!!rejectDialogId} onOpenChange={o => { if (!o) { setRejectDialogId(null); setRejectReason(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">Rechazar turno</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Indica opcionalmente el motivo por el que no puedes tomar este turno.
+            </p>
+            <Textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Motivo (opcional)..."
+              rows={3}
+              className="text-sm resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" size="sm" onClick={rejectAssignment} disabled={responding === rejectDialogId}>
+              {responding === rejectDialogId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Rechazar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

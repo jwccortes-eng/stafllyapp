@@ -48,6 +48,8 @@ import Accumulated from "./pages/portal/Accumulated";
 import MyShifts from "./pages/portal/MyShifts";
 import MyAnnouncements from "./pages/portal/MyAnnouncements";
 import EmployeeDashboard from "./pages/portal/EmployeeDashboard";
+import PortalResources from "./pages/portal/PortalResources";
+import PortalProfile from "./pages/portal/PortalProfile";
 
 const queryClient = new QueryClient();
 
@@ -108,6 +110,8 @@ function App() {
                 <Route path="accumulated" element={<Accumulated />} />
                 <Route path="shifts" element={<MyShifts />} />
                 <Route path="announcements" element={<MyAnnouncements />} />
+                <Route path="resources" element={<PortalResources />} />
+                <Route path="profile" element={<PortalProfile />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

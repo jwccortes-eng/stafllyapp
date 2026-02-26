@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
-import { CalendarDays, BarChart3, LogOut, User, Megaphone, Clock, Home, Wallet } from "lucide-react";
+import { CalendarDays, BarChart3, LogOut, User, Megaphone, Clock, Home, Wallet, Package, Grid3X3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -7,9 +7,9 @@ import EmployeeChatWidget from "@/components/EmployeeChatWidget";
 
 const links = [
   { to: "/portal", icon: Home, label: "Inicio", end: true },
-  { to: "/portal/payments", icon: Wallet, label: "Pagos" },
   { to: "/portal/shifts", icon: Clock, label: "Turnos" },
-  { to: "/portal/announcements", icon: Megaphone, label: "Feed" },
+  { to: "/portal/resources", icon: Grid3X3, label: "Recursos" },
+  { to: "/portal/profile", icon: User, label: "Perfil" },
 ];
 
 export default function EmployeeLayout() {
@@ -52,14 +52,8 @@ export default function EmployeeLayout() {
       <div className="min-h-screen bg-background pb-20">
         {/* Minimal top bar */}
         <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b">
-          <div className="flex items-center justify-between px-5 h-14">
-            <span className="text-base font-bold font-heading tracking-tight text-foreground">PayrollWeekly</span>
-            <button
-              onClick={signOut}
-              className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+          <div className="flex items-center justify-center px-5 h-14">
+            <span className="text-base font-bold font-heading tracking-tight text-foreground">Staffly</span>
           </div>
         </header>
 
@@ -67,9 +61,9 @@ export default function EmployeeLayout() {
           <Outlet />
         </main>
 
-        {/* Bottom navigation — clean pill style */}
-        <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/80 backdrop-blur-lg border-t">
-          <div className="flex items-center justify-center gap-2 h-16 px-4">
+        {/* Bottom navigation — Instagram-style tabs */}
+        <nav className="fixed bottom-0 inset-x-0 z-30 bg-background/80 backdrop-blur-lg border-t safe-area-bottom">
+          <div className="flex items-center justify-around h-16 px-2">
             {links.map((link) => {
               const isActive = link.end ? location.pathname === link.to : location.pathname.startsWith(link.to);
               return (
@@ -77,14 +71,14 @@ export default function EmployeeLayout() {
                   key={link.to}
                   to={link.to}
                   className={cn(
-                    "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all",
+                    "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all min-w-[60px]",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      ? "text-primary"
+                      : "text-muted-foreground"
                   )}
                 >
-                  <link.icon className="h-4 w-4" />
-                  {link.label}
+                  <link.icon className={cn("h-5 w-5", isActive && "text-primary")} />
+                  <span className={cn("text-[10px]", isActive && "font-semibold")}>{link.label}</span>
                 </NavLink>
               );
             })}
@@ -101,7 +95,7 @@ export default function EmployeeLayout() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-6 h-16">
-          <span className="text-lg font-bold font-heading tracking-tight text-foreground">PayrollWeekly</span>
+          <span className="text-lg font-bold font-heading tracking-tight text-foreground">Staffly</span>
           <nav className="flex items-center gap-1">
             {links.map((link) => {
               const isActive = link.end ? location.pathname === link.to : location.pathname.startsWith(link.to);
@@ -121,13 +115,6 @@ export default function EmployeeLayout() {
                 </NavLink>
               );
             })}
-            <button
-              onClick={signOut}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-all ml-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Salir
-            </button>
           </nav>
         </div>
       </header>
