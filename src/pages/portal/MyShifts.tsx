@@ -145,7 +145,21 @@ export default function MyShifts() {
 
     if (!emp) { setClaiming(null); return; }
 
-    const { error } = await supabase.from("shift_assignments").insert({
+    // Check if already requested
+    const { data: existing } = await supabase
+      .from("shift_requests")
+      .select("id")
+      .eq("shift_id", shiftId)
+      .eq("employee_id", employeeId)
+      .maybeSingle();
+
+    if (existing) {
+      toast({ title: "Ya solicitaste este turno", description: "Tu solicitud está siendo revisada", variant: "destructive" });
+      setClaiming(null);
+      return;
+    }
+
+    const { error } = await supabase.from("shift_requests").insert({
       shift_id: shiftId,
       employee_id: employeeId,
       company_id: emp.company_id,
@@ -155,7 +169,7 @@ export default function MyShifts() {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "¡Turno reclamado!", description: "Tu solicitud está pendiente de aprobación" });
+      toast({ title: "¡Solicitud enviada!", description: "Te notificaremos cuando sea revisada por un administrador" });
       await load();
     }
     setClaiming(null);
@@ -282,9 +296,9 @@ export default function MyShifts() {
           disabled={claiming === s.id}
         >
           {claiming === s.id ? (
-            <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Reclamando...</>
+            <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Enviando solicitud...</>
           ) : (
-            <><HandMetal className="h-3.5 w-3.5 mr-1.5" />Reclamar turno</>
+            <><HandMetal className="h-3.5 w-3.5 mr-1.5" />Solicitar turno</>
           )}
         </Button>
       </div>
