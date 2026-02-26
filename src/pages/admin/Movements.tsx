@@ -14,6 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, ArrowUpDown, TrendingUp, TrendingDown, DollarSign, Pencil } from "lucide-react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
@@ -490,8 +492,12 @@ export default function Movements() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-16">No hay novedades en este periodo</TableCell></TableRow>
+            {movements.length === 0 && !filterPeriod ? (
+              <TableRow><TableCell colSpan={8} className="p-0"><PageSkeleton variant="table" className="border-0 shadow-none p-4" /></TableCell></TableRow>
+            ) : filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={8} className="p-0">
+                <EmptyState icon={DollarSign} title="No hay novedades" description="Agrega extras o deducciones en este periodo" compact />
+              </TableCell></TableRow>
             ) : (
               filtered.map(m => (
                 <Tooltip key={m.id}>
