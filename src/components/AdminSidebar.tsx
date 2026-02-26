@@ -69,6 +69,7 @@ const OWNER_LINKS: LinkDef[] = [
   { to: "/admin/company-config", icon: Settings2, label: "Config Empresa", module: null, section: "Administración" },
   { to: "/admin/automations", icon: CalendarDays, label: "Automatizar", module: null, section: "Administración" },
   { to: "/admin/permissions", icon: Shield, label: "Permisos", module: null, section: "Administración" },
+  { to: "/admin/monetization", icon: DollarSign, label: "Inversión", module: null, section: "Administración" },
   { to: "/admin/settings", icon: Settings2, label: "Plataforma", module: null, section: "Administración" },
 ];
 

@@ -38,6 +38,7 @@ import OnboardingWizard from "./pages/admin/OnboardingWizard";
 import Permissions from "./pages/admin/Permissions";
 import CompanyConfig from "./pages/admin/CompanyConfig";
 import Automations from "./pages/admin/Automations";
+import MonetizationReport from "./pages/admin/MonetizationReport";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -90,6 +91,7 @@ function App() {
                 <Route path="permissions" element={<Permissions />} />
                 <Route path="company-config" element={<CompanyConfig />} />
                 <Route path="automations" element={<Automations />} />
+                <Route path="monetization" element={<MonetizationReport />} />
               </Route>
 
               {/* Employee portal routes */}
