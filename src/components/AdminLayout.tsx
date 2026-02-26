@@ -115,8 +115,8 @@ export default function AdminLayout() {
                   <Menu className="h-5 w-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-72 p-0">
-                <SheetHeader className="p-4 border-b">
+              <SheetContent side="right" className="w-72 p-0 flex flex-col h-full">
+                <SheetHeader className="p-4 border-b shrink-0">
                   <SheetTitle className="text-sm font-heading">Menú</SheetTitle>
                 </SheetHeader>
                 {/* Company selector */}
@@ -162,7 +162,7 @@ export default function AdminLayout() {
                     </div>
                   ))}
                 </nav>
-                <div className="border-t p-3 space-y-1">
+                <div className="border-t p-3 space-y-1 shrink-0">
                   <button
                     onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent w-full transition-colors"
