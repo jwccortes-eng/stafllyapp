@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2 } from "lucide-react";
+import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
+import { useAuth } from "@/hooks/useAuth";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, parseISO } from "date-fns";
@@ -47,6 +48,7 @@ type PayFilter = "all" | "with_extras" | "with_deductions" | "zero_base";
 
 export default function PeriodSummary() {
   const { selectedCompanyId } = useCompany();
+  const { user, hasActionPermission } = useAuth();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [periods, setPeriods] = useState<Period[]>([]);
@@ -59,8 +61,11 @@ export default function PeriodSummary() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState(false);
+  const [consolidating, setConsolidating] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  const canConsolidate = hasActionPermission("aprobar_nomina");
 
   // When date range changes, find matching period(s) - for now select the first match
   useEffect(() => {
@@ -232,8 +237,43 @@ export default function PeriodSummary() {
             <h1 className="page-title">Resumen del periodo</h1>
             <p className="page-subtitle">Consolidación: base + extras − deducciones</p>
           </div>
-          {rows.length > 0 && (
-            <div className="flex items-center gap-2">
+          {selectedPeriod && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Consolidate clock button */}
+              {canConsolidate && selectedPeriodObj && selectedPeriodObj.status === "open" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={consolidating}
+                  onClick={async () => {
+                    if (!selectedCompanyId) return;
+                    setConsolidating(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke("payroll-consolidate", {
+                        body: { company_id: selectedCompanyId, period_id: selectedPeriod },
+                      });
+                      if (error) throw error;
+                      if (data?.error) throw new Error(data.error);
+                      toast({
+                        title: "Horas consolidadas",
+                        description: `${data.consolidated_employees} empleado(s) actualizados. ${data.skipped_import_employees} con import CSV preservados.`,
+                      });
+                      // Reload summary data
+                      setSelectedPeriod(prev => {
+                        // Trigger re-fetch by toggling
+                        setTimeout(() => setSelectedPeriod(selectedPeriod), 50);
+                        return "";
+                      });
+                    } catch (err: any) {
+                      toast({ title: "Error al consolidar", description: err.message, variant: "destructive" });
+                    }
+                    setConsolidating(false);
+                  }}
+                >
+                  {consolidating ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Clock className="h-4 w-4 mr-1.5" />}
+                  Consolidar horas desde reloj
+                </Button>
+              )}
               {selectedPeriodObj && (selectedPeriodObj.status === "closed" || selectedPeriodObj.status === "published") && !selectedPeriodObj.paid_at && (
                 <Button
                   variant="default"

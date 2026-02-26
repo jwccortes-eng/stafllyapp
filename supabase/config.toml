@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.billing-customer-portal]
 verify_jwt = false
+
+[functions.payroll-consolidate]
+verify_jwt = false
