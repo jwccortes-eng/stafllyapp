@@ -1,5 +1,7 @@
 import { isSameDay, format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ShiftCard } from "./ShiftCard";
 import type { Shift, Assignment, SelectOption } from "./types";
 
@@ -12,9 +14,10 @@ interface DayViewProps {
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
   onDuplicateToDay?: (shiftData: any, targetDate: string) => void;
+  onAddShift?: (date: string) => void;
 }
 
-export function DayView({ currentDay, shifts, assignments, locations, clients, onShiftClick, onDropOnShift, onDuplicateToDay }: DayViewProps) {
+export function DayView({ currentDay, shifts, assignments, locations, clients, onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift }: DayViewProps) {
   const dayShifts = shifts
     .filter(s => isSameDay(new Date(s.date + "T00:00:00"), currentDay))
     .sort((a, b) => a.start_time.localeCompare(b.start_time));
@@ -56,6 +59,16 @@ export function DayView({ currentDay, shifts, assignments, locations, clients, o
         <p className="text-xs text-muted-foreground mt-1">
           {dayShifts.length} turno{dayShifts.length !== 1 ? "s" : ""} programado{dayShifts.length !== 1 ? "s" : ""}
         </p>
+        {onAddShift && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 h-7 text-[11px] gap-1"
+            onClick={() => onAddShift(format(currentDay, "yyyy-MM-dd"))}
+          >
+            <Plus className="h-3 w-3" /> Agregar turno
+          </Button>
+        )}
       </div>
 
       {timeGroups.length === 0 && (

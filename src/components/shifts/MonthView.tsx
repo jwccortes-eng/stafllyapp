@@ -1,7 +1,7 @@
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Users } from "lucide-react";
+import { Users, Plus } from "lucide-react";
 import { getClientColor } from "./types";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
@@ -14,9 +14,10 @@ interface MonthViewProps {
   employees: Employee[];
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
+  onAddShift?: (date: string) => void;
 }
 
-export function MonthView({ currentMonth, shifts, assignments, locations, clients, employees, onShiftClick, onDropOnShift }: MonthViewProps) {
+export function MonthView({ currentMonth, shifts, assignments, locations, clients, employees, onShiftClick, onDropOnShift, onAddShift }: MonthViewProps) {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -115,11 +116,19 @@ export function MonthView({ currentMonth, shifts, assignments, locations, client
                   )}
                 </div>
                 <div className="space-y-0.5">
-                  {dayShifts.slice(0, 4).map(renderShiftPill)}
-                  {dayShifts.length > 4 && (
+                  {dayShifts.slice(0, 3).map(renderShiftPill)}
+                  {dayShifts.length > 3 && (
                     <p className="text-[9px] text-primary font-medium text-center cursor-pointer hover:underline">
-                      +{dayShifts.length - 4} más
+                      +{dayShifts.length - 3} más
                     </p>
+                  )}
+                  {onAddShift && inMonth && (
+                    <button
+                      onClick={() => onAddShift(format(day, "yyyy-MM-dd"))}
+                      className="w-full flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground/50 hover:text-primary hover:bg-primary/5 rounded py-0.5 transition-colors"
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                    </button>
                   )}
                 </div>
               </div>
