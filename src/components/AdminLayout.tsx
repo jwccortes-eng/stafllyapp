@@ -21,22 +21,22 @@ export function useSidebarCollapsed() {
 }
 
 const ALL_MOBILE_LINKS = [
-  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Nómina" },
+  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
   { to: "/admin/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
-  { to: "/admin/import", icon: Upload, label: "Importar", module: "import", section: "Nómina" },
+  { to: "/admin/import", icon: Upload, label: "Importar horas", module: "import", section: "Nómina" },
   { to: "/admin/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/admin/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { to: "/admin/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
-  { to: "/admin/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
-  { to: "/admin/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
-  { to: "/admin/clients", icon: Building2, label: "Clientes", module: "clients", section: "Operaciones" },
-  { to: "/admin/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Operaciones" },
+  { to: "/admin/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Programación" },
+  { to: "/admin/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Programación" },
+  { to: "/admin/employees", icon: Users, label: "Empleados", module: "employees", section: "Equipo" },
+  { to: "/admin/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Equipo" },
+  { to: "/admin/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Equipo" },
+  { to: "/admin/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Equipo" },
+  { to: "/admin/clients", icon: Building2, label: "Clientes", module: "clients", section: "Clientes" },
+  { to: "/admin/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Clientes" },
   { to: "/admin/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
-  { to: "/admin/chat", icon: MessageCircle, label: "Chat", module: null, section: "Comunicación" },
-  { to: "/admin/employees", icon: Users, label: "Empleados", module: "employees", section: "Catálogos" },
-  { to: "/admin/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Catálogos" },
-  { to: "/admin/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Catálogos" },
-  { to: "/admin/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Catálogos" },
+  { to: "/admin/chat", icon: MessageCircle, label: "Chat interno", module: null, section: "Comunicación" },
 ];
 
 const OWNER_MOBILE_LINKS = [
