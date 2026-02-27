@@ -18,6 +18,7 @@ import mascotHero from "@/assets/stafly-mascot-hero.png";
 import mascotWave from "@/assets/stafly-mascot-wave.png";
 import mascotPaid from "@/assets/stafly-mascot-paid.png";
 import heroMockup from "@/assets/stafly-hero.png";
+import staflyAppIcon from "@/assets/stafly-app-icon.png";
 
 /* ───────── i18n ───────── */
 const i18n = {
@@ -241,9 +242,7 @@ export default function Landing() {
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-card/90 backdrop-blur-xl shadow-xs border-b border-border/30" : "bg-transparent"}`}>
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-sm font-heading">S</span>
-            </div>
+            <img src={staflyAppIcon} alt="stafly" className="h-8 w-8" />
             <span className="font-heading font-bold text-xl tracking-tight text-foreground">stafly</span>
           </div>
 

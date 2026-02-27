@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import EmployeeChatWidget from "@/components/EmployeeChatWidget";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
-// Logo handled inline
+import staflyAppIcon from "@/assets/stafly-app-icon.png";
 
 const links = [
   { to: "/portal", icon: Home, label: "Inicio", end: true },
@@ -57,9 +57,7 @@ export default function EmployeeLayout() {
         <header className="sticky top-0 z-30 shrink-0 bg-card/95 backdrop-blur-2xl border-b border-border/50 shadow-2xs">
           <div className="flex items-center justify-between px-5 h-14">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
-                <span className="text-white font-bold text-xs font-heading">S</span>
-              </div>
+              <img src={staflyAppIcon} alt="stafly" className="h-7 w-7" />
               <span className="text-[15px] font-bold font-heading tracking-tight text-foreground">stafly</span>
             </div>
             <LogoutConfirmDialog onConfirm={signOut}>
@@ -119,9 +117,7 @@ export default function EmployeeLayout() {
       <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-xl border-b border-border/50 shadow-2xs">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-sm font-heading">S</span>
-            </div>
+            <img src={staflyAppIcon} alt="stafly" className="h-8 w-8" />
             <span className="text-lg font-bold font-heading tracking-tight text-foreground">stafly</span>
           </div>
           <nav className="flex items-center gap-1">
