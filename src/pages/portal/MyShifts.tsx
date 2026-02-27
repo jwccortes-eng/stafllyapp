@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown, LogIn } from "lucide-react";
+import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown, LogIn, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import staflyMascotWave from "@/assets/stafly-mascot-wave.png";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { PortalShiftDetailDrawer } from "@/components/portal/PortalShiftDetailDrawer";
 
 interface ShiftAssignment {
   id: string;
@@ -25,6 +26,9 @@ interface ShiftAssignment {
     notes: string | null;
     status: string;
     slots: number | null;
+    shift_code?: string | null;
+    meeting_point?: string | null;
+    special_instructions?: string | null;
     location?: { name: string } | null;
     client?: { name: string } | null;
   };
@@ -53,6 +57,7 @@ export default function MyShifts() {
   const [responding, setResponding] = useState<string | null>(null);
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [selectedShift, setSelectedShift] = useState<ShiftAssignment | null>(null);
   const { toast } = useToast();
 
   const load = async () => {
@@ -80,7 +85,7 @@ export default function MyShifts() {
       .select(`
         id, status,
         scheduled_shifts!inner (
-          id, title, date, start_time, end_time, notes, status, slots,
+          id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions,
           locations (name),
           clients (name)
         )
@@ -100,6 +105,9 @@ export default function MyShifts() {
         notes: a.scheduled_shifts.notes,
         status: a.scheduled_shifts.status,
         slots: a.scheduled_shifts.slots,
+        shift_code: a.scheduled_shifts.shift_code,
+        meeting_point: a.scheduled_shifts.meeting_point,
+        special_instructions: a.scheduled_shifts.special_instructions,
         location: a.scheduled_shifts.locations,
         client: a.scheduled_shifts.clients,
       },
@@ -265,9 +273,10 @@ export default function MyShifts() {
       <div
         key={a.id}
         className={cn(
-          "rounded-2xl border bg-card p-4 space-y-3 transition-all duration-200 shadow-sm active:scale-[0.98]",
+          "rounded-2xl border bg-card p-4 space-y-3 transition-all duration-200 shadow-sm active:scale-[0.98] cursor-pointer",
           isTodayShift && "ring-2 ring-primary/20 border-primary/20 shadow-md"
         )}
+        onClick={() => setSelectedShift(a)}
       >
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
@@ -285,6 +294,7 @@ export default function MyShifts() {
             <StatusIcon className="h-3.5 w-3.5" />
             {cfg.label}
           </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-1 shrink-0" />
         </div>
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -312,7 +322,7 @@ export default function MyShifts() {
 
         {/* Accept/Reject buttons for pending assignments */}
         {a.status === "pending" && (
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
             <Button
               size="sm"
               className="flex-1 h-9 text-xs gap-1.5"
@@ -337,14 +347,16 @@ export default function MyShifts() {
 
         {/* Clock In button for confirmed today shifts */}
         {a.status === "confirmed" && isTodayShift && (
-          <Button
-            size="sm"
-            className="w-full h-10 text-sm gap-2 font-bold"
-            onClick={() => navigate(`/portal/clock?shiftId=${a.shift.id}`)}
-          >
-            <LogIn className="h-4 w-4" />
-            Marcar Entrada
-          </Button>
+          <div onClick={e => e.stopPropagation()}>
+            <Button
+              size="sm"
+              className="w-full h-10 text-sm gap-2 font-bold"
+              onClick={() => navigate(`/portal/clock?shiftId=${a.shift.id}`)}
+            >
+              <LogIn className="h-4 w-4" />
+              Marcar Entrada
+            </Button>
+          </div>
         )}
       </div>
     );
@@ -457,6 +469,14 @@ export default function MyShifts() {
           </p>
         </div>
       )}
+
+      {/* Shift detail drawer */}
+      <PortalShiftDetailDrawer
+        shift={selectedShift?.shift ?? null}
+        assignmentStatus={selectedShift?.status}
+        open={!!selectedShift}
+        onOpenChange={o => { if (!o) setSelectedShift(null); }}
+      />
 
       {/* Reject assignment dialog */}
       <Dialog open={!!rejectDialogId} onOpenChange={o => { if (!o) { setRejectDialogId(null); setRejectReason(""); } }}>
