@@ -1,28 +1,23 @@
 project_id = "jplhtputzixwqarqlrth"
 
-[functions.admin-reset-password]
-verify_jwt = false
-
-[functions.employee-auth]
-verify_jwt = false
-
-[functions.employee-chat]
-verify_jwt = false
-
-[functions.external-api]
-verify_jwt = false
-
-[functions.billing-checkout]
-verify_jwt = false
-
-[functions.billing-webhook]
-verify_jwt = false
-
-[functions.billing-subscription-status]
-verify_jwt = false
-
-[functions.billing-customer-portal]
-verify_jwt = false
-
-[functions.payroll-consolidate]
-verify_jwt = false
+[functions]
+  [functions.admin-reset-password]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.billing-checkout]
+    verify_jwt = false
+  [functions.billing-customer-portal]
+    verify_jwt = false
+  [functions.billing-subscription-status]
+    verify_jwt = false
+  [functions.billing-webhook]
+    verify_jwt = false
+  [functions.employee-auth]
+    verify_jwt = false
+  [functions.employee-chat]
+    verify_jwt = false
+  [functions.external-api]
+    verify_jwt = false
+  [functions.payroll-consolidate]
+    verify_jwt = false
