@@ -270,9 +270,17 @@ export default function Shifts() {
       meeting_point: meetingPoint.trim() || null,
       special_instructions: specialInstructions.trim() || null,
       created_by: user?.id,
-    } as any).select("id").single();
+    } as any).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); setSaving(false); return; }
+
+    // Update title to include the auto-generated shift code
+    if (shift?.shift_code) {
+      const code = String(shift.shift_code).padStart(4, "0");
+      await supabase.from("scheduled_shifts")
+        .update({ title: `#${code} ${title.trim()}` } as any)
+        .eq("id", shift.id);
+    }
 
     if (selectedEmployees.length > 0 && shift) {
       const assigns = selectedEmployees.map(eid => ({
@@ -537,9 +545,18 @@ export default function Shifts() {
       claimable: shiftData.claimable ?? false,
       status: "draft",
       created_by: user?.id,
-    } as any).select("id").single();
+    } as any).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); return; }
+
+    // Update title to include the auto-generated shift code
+    if (newShift?.shift_code) {
+      const originalTitle = shiftData.title.replace(/^#\d{4}\s*/, ""); // strip old code if duplicating
+      const code = String(newShift.shift_code).padStart(4, "0");
+      await supabase.from("scheduled_shifts")
+        .update({ title: `#${code} ${originalTitle}` } as any)
+        .eq("id", newShift.id);
+    }
 
     if (newShift) {
       await logShiftActivity("duplicar_turno", newShift.id, null, {
