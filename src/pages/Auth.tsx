@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User } from "lucide-react";
-import { Clock } from "lucide-react";
+import staflyIsotipo from "@/assets/stafly-isotipo.png";
 
 function isPhoneNumber(value: string): boolean {
   const cleaned = value.replace(/[\s\-\(\)\+]/g, "");
@@ -89,9 +89,7 @@ export default function Auth() {
         <div className="bg-card rounded-2xl shadow-xl border border-border/50 px-8 py-10 space-y-6">
           {/* Logo & Title */}
           <div className="flex flex-col items-center gap-3">
-            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Clock className="h-7 w-7 text-primary" />
-            </div>
+            <img src={staflyIsotipo} alt="stafly" className="h-14 w-14 drop-shadow-md" />
             <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
               stafly
             </h1>
@@ -188,7 +186,7 @@ export default function Auth() {
             {/* Submit */}
             <Button
               type="submit"
-              className="w-full h-12 text-base font-semibold shadow-md"
+              className="w-full h-12 text-base font-semibold shadow-md rounded-full gradient-primary text-white hover:shadow-lg transition-all"
               disabled={loading}
             >
               {loading ? (
