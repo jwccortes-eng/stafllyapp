@@ -10,6 +10,12 @@ export interface Shift {
   location_id: string | null;
   notes: string | null;
   claimable: boolean;
+  shift_code?: string | null;
+}
+
+export function formatShiftCode(code: string | null | undefined): string {
+  if (!code) return "—";
+  return code.padStart(4, "0");
 }
 
 export interface Assignment {

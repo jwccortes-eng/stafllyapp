@@ -1,4 +1,5 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeCombobox } from "./EmployeeCombobox";
-import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle } from "lucide-react";
+import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
@@ -19,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
+import { formatShiftCode } from "./types";
 
 interface ShiftDetailDialogProps {
   shift: Shift | null;
@@ -89,6 +92,8 @@ export function ShiftDetailDialog({
   const [processingReqId, setProcessingReqId] = useState<string | null>(null);
   const [rejectReqId, setRejectReqId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [removeConfirm, setRemoveConfirm] = useState<{ assignmentId: string; employeeName: string } | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const loadRequests = useCallback(async () => {
     if (!shift) return;
@@ -237,20 +242,56 @@ export function ShiftDetailDialog({
   };
 
   const statusColors: Record<string, string> = {
-    confirmed: "text-earning", pending: "text-warning", rejected: "text-destructive",
+    confirmed: "text-earning", pending: "text-warning", rejected: "text-destructive", review: "text-primary",
+  };
+
+  const statusIcons: Record<string, React.ReactNode> = {
+    confirmed: <ShieldCheck className="h-3.5 w-3.5 text-earning" />,
+    pending: <ShieldQuestion className="h-3.5 w-3.5 text-warning" />,
+    rejected: <ShieldX className="h-3.5 w-3.5 text-destructive" />,
+    review: <ShieldQuestion className="h-3.5 w-3.5 text-primary" />,
+  };
+
+  const statusLabels: Record<string, string> = {
+    confirmed: "Aceptado", pending: "Pendiente", rejected: "Rechazado", review: "En revisión",
+  };
+
+  const handleChangeAssignmentStatus = async (assignmentId: string, newStatus: string) => {
+    setUpdatingStatus(assignmentId);
+    const { error } = await supabase.from("shift_assignments")
+      .update({ status: newStatus } as any)
+      .eq("id", assignmentId);
+    if (error) { toast.error(error.message); }
+    else { toast.success(`Estado actualizado a ${statusLabels[newStatus] || newStatus}`); }
+    setUpdatingStatus(null);
+    onRequestAction?.();
+  };
+
+  const handleConfirmRemove = () => {
+    if (!removeConfirm) return;
+    onRemoveAssignment(removeConfirm.assignmentId);
+    setRemoveConfirm(null);
   };
 
   const statusLabel = shift.status === "published" ? "publicado" : shift.status === "draft" ? "borrador" : shift.status;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); setEditing(false); } }}>
       <DialogContent className="max-w-md p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="px-5 pt-4 pb-3 border-b border-border/40">
+         <div className="px-5 pt-4 pb-3 border-b border-border/40">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-muted-foreground capitalize">
-              {format(parseISO(shift.date), "EEEE, d 'de' MMMM yyyy", { locale: es })}
-            </p>
+            <div className="flex items-center gap-2">
+              {shift.shift_code && (
+                <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5">
+                  #{formatShiftCode(shift.shift_code)}
+                </span>
+              )}
+              <p className="text-xs text-muted-foreground capitalize">
+                {format(parseISO(shift.date), "EEEE, d 'de' MMMM yyyy", { locale: es })}
+              </p>
+            </div>
             <Badge
               variant={shift.status === "published" ? "default" : "secondary"}
               className="text-[10px] px-2 py-0.5 capitalize"
@@ -419,16 +460,22 @@ export function ShiftDetailDialog({
           ) : tab === "team" ? (
             /* Team tab */
             <div className="space-y-3">
-              {/* Employee chips */}
+              {/* Employee list with status management */}
               {shiftAssignments.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="space-y-1.5">
                   {shiftAssignments.map(a => {
                     const emp = employees.find(e => e.id === a.employee_id);
                     if (!emp) return null;
                     return (
                       <div
                         key={a.id}
-                        className="flex items-center gap-1.5 bg-muted/60 rounded-full pl-1 pr-2 py-1 text-xs group"
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors",
+                          a.status === "confirmed" && "border-earning/20 bg-earning/5",
+                          a.status === "rejected" && "border-destructive/20 bg-destructive/5",
+                          a.status === "review" && "border-primary/20 bg-primary/5",
+                          a.status === "pending" && "border-warning/20 bg-warning/5",
+                        )}
                         draggable={canEdit}
                         onDragStart={(e) => {
                           e.dataTransfer.setData("application/assignment", JSON.stringify({
@@ -438,16 +485,63 @@ export function ShiftDetailDialog({
                         }}
                       >
                         <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" />
-                        <span className="font-medium">{emp.first_name} {emp.last_name}</span>
-                        <span className={cn("text-[10px] capitalize", statusColors[a.status] || "text-muted-foreground")}>
-                          {a.status === "confirmed" ? "✓" : a.status === "pending" ? "⏳" : a.status}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold truncate">{emp.first_name} {emp.last_name}</p>
+                        </div>
+                        {/* Status dropdown */}
+                        {canEdit ? (
+                          <Select
+                            value={a.status}
+                            onValueChange={(v) => handleChangeAssignmentStatus(a.id, v)}
+                            disabled={updatingStatus === a.id}
+                          >
+                            <SelectTrigger className={cn(
+                              "h-7 w-[120px] text-[10px] font-semibold border-0 gap-1",
+                              a.status === "confirmed" && "text-earning bg-earning/10",
+                              a.status === "rejected" && "text-destructive bg-destructive/10",
+                              a.status === "review" && "text-primary bg-primary/10",
+                              a.status === "pending" && "text-warning bg-warning/10",
+                            )}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="confirmed">
+                                <span className="flex items-center gap-1.5 text-earning font-semibold">
+                                  <ShieldCheck className="h-3 w-3" /> Aceptado
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="rejected">
+                                <span className="flex items-center gap-1.5 text-destructive font-semibold">
+                                  <ShieldX className="h-3 w-3" /> Rechazado
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="review">
+                                <span className="flex items-center gap-1.5 text-primary font-semibold">
+                                  <ShieldQuestion className="h-3 w-3" /> En revisión
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="pending">
+                                <span className="flex items-center gap-1.5 text-warning font-semibold">
+                                  <ShieldQuestion className="h-3 w-3" /> Pendiente
+                                </span>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className={cn("text-[10px] font-semibold flex items-center gap-1", statusColors[a.status])}>
+                            {statusIcons[a.status]}
+                            {statusLabels[a.status] || a.status}
+                          </span>
+                        )}
                         {canEdit && (
                           <button
-                            onClick={() => onRemoveAssignment(a.id)}
-                            className="ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                            onClick={() => setRemoveConfirm({
+                              assignmentId: a.id,
+                              employeeName: `${emp.first_name} ${emp.last_name}`,
+                            })}
+                            className="text-muted-foreground/40 hover:text-destructive transition-colors p-1 rounded-lg hover:bg-destructive/10"
                           >
-                            <X className="h-3 w-3" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </div>
@@ -469,10 +563,31 @@ export function ShiftDetailDialog({
                 {canEdit && (
                   <Button variant="ghost" size="sm" onClick={() => setShowAddPanel(!showAddPanel)} className="h-7 text-xs px-2 text-primary">
                     <UserPlus className="h-3 w-3 mr-1" />
-                    Agregar empleados
+                    Agregar
                   </Button>
                 )}
               </div>
+
+              {/* Claimable toggle */}
+              {canEdit && (
+                <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="h-3.5 w-3.5 text-primary" />
+                    <div>
+                      <p className="text-[11px] font-semibold">Permitir reclamo</p>
+                      <p className="text-[9px] text-muted-foreground">Empleados podrán solicitar este turno</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={shift.claimable}
+                    onCheckedChange={async (checked) => {
+                      if (onSave) {
+                        await onSave(shift.id, { claimable: checked }, shift);
+                      }
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Add panel */}
               {showAddPanel && (
@@ -644,5 +759,26 @@ export function ShiftDetailDialog({
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Remove assignment confirmation */}
+    <AlertDialog open={!!removeConfirm} onOpenChange={(o) => { if (!o) setRemoveConfirm(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-base">
+            <Trash2 className="h-4 w-4 text-destructive" /> Confirmar eliminación
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            ¿Estás seguro de remover a <strong>{removeConfirm?.employeeName}</strong> de este turno? Esta acción no se puede deshacer.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmRemove} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+            Sí, remover
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

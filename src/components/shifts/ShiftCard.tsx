@@ -1,11 +1,10 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, GripVertical, MapPin } from "lucide-react";
+import { Clock, Users, GripVertical, MapPin, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, parseISO, isPast, startOfDay } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Shift } from "./types";
-import { getClientColor } from "./types";
+import { getClientColor, formatShiftCode } from "./types";
 
 interface ShiftCardProps {
   shift: Shift;
@@ -20,12 +19,6 @@ interface ShiftCardProps {
   showDate?: boolean;
 }
 
-function isToday(dateStr: string) {
-  const today = new Date();
-  const d = parseISO(dateStr);
-  return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
-}
-
 type StatusBadge = { label: string; variant: "destructive" | "warning" | "secondary" | "default" | "outline" };
 
 function getStatusBadges(shift: Shift, assignmentCount: number): StatusBadge[] {
@@ -33,19 +26,17 @@ function getStatusBadges(shift: Shift, assignmentCount: number): StatusBadge[] {
   const totalSlots = shift.slots ?? 1;
 
   if (assignmentCount === 0) {
-    badges.push({ label: "Unassigned", variant: "destructive" });
+    badges.push({ label: "Sin asignar", variant: "destructive" });
   } else if (assignmentCount < totalSlots) {
-    badges.push({ label: `${totalSlots - assignmentCount} open`, variant: "warning" });
+    badges.push({ label: `${totalSlots - assignmentCount} vacante${totalSlots - assignmentCount > 1 ? "s" : ""}`, variant: "warning" });
   }
 
   if (shift.status !== "published") {
-    badges.push({ label: "Unpublished", variant: "secondary" });
+    badges.push({ label: "Borrador", variant: "secondary" });
   }
 
-  // Check for unconfirmed (pending) assignments — would need assignment statuses
-  // For now we show "published" as confirmed
   if (shift.status === "published" && assignmentCount > 0 && badges.length === 0) {
-    badges.push({ label: "Confirmed", variant: "default" });
+    badges.push({ label: "Listo", variant: "default" });
   }
 
   return badges;
@@ -58,92 +49,89 @@ export function ShiftCard({
   const badges = getStatusBadges(shift, assignmentCount);
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Store whether Alt key is held for duplicate mode
     e.dataTransfer.setData("application/shift-action", e.altKey ? "duplicate" : "move");
     e.dataTransfer.setData("application/shift-data", JSON.stringify({
-      shiftId: shift.id,
-      title: shift.title,
-      start_time: shift.start_time,
-      end_time: shift.end_time,
-      slots: shift.slots,
-      client_id: shift.client_id,
-      location_id: shift.location_id,
-      notes: shift.notes,
-      claimable: shift.claimable,
-      status: shift.status,
+      shiftId: shift.id, title: shift.title, start_time: shift.start_time,
+      end_time: shift.end_time, slots: shift.slots, client_id: shift.client_id,
+      location_id: shift.location_id, notes: shift.notes, claimable: shift.claimable, status: shift.status,
     }));
-    if (e.altKey) {
-      e.dataTransfer.effectAllowed = "copy";
-    }
+    if (e.altKey) e.dataTransfer.effectAllowed = "copy";
     onDragStart?.(e);
   };
 
   return (
-    <Card
+    <div
       className={cn(
-        "cursor-pointer hover:shadow-md transition-all group border-l-[4px] overflow-hidden",
+        "cursor-pointer hover:shadow-md transition-all group border-l-[3px] rounded-lg overflow-hidden bg-card/80 backdrop-blur-sm border border-border/40",
         color.border,
-        color.bg,
         draggable && "hover:ring-1 hover:ring-primary/30"
       )}
       draggable={draggable}
       onDragStart={handleDragStart}
       onClick={onClick}
     >
-      <CardContent className={cn("p-2.5", compact && "p-1.5")}>
+      <div className={cn("px-2.5 py-2", compact && "px-2 py-1.5")}>
         <div className="flex items-start gap-1.5">
           {draggable && (
-            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <GripVertical className="h-3 w-3 text-muted-foreground/30 mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
           )}
-          <div className="min-w-0 flex-1 space-y-1">
-            {/* Title row */}
-            <p className={cn("font-semibold truncate leading-tight", compact ? "text-[10px]" : "text-xs")}>
-              {shift.title}
-            </p>
-
-            {/* Client name */}
-            {clientName && (
-              <p className={cn("text-[10px] font-medium truncate", color.text)}>
-                {clientName}
+          <div className="min-w-0 flex-1 space-y-0.5">
+            {/* Title + code */}
+            <div className="flex items-center gap-1.5">
+              {shift.shift_code && (
+                <span className="text-[9px] font-mono font-bold text-primary/70 bg-primary/8 rounded px-1 py-px shrink-0">
+                  #{formatShiftCode(shift.shift_code)}
+                </span>
+              )}
+              <p className={cn("font-semibold truncate leading-tight", compact ? "text-[10px]" : "text-[11px]")}>
+                {shift.title}
               </p>
-            )}
+            </div>
+
+            {/* Time + client inline */}
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-0.5 shrink-0">
+                <Clock className="h-2.5 w-2.5" />
+                {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
+              </span>
+              {clientName && (
+                <span className={cn("truncate font-medium", color.text)}>
+                  {clientName}
+                </span>
+              )}
+            </div>
 
             {/* Date (when shown) */}
             {showDate && (
-              <p className="text-[10px] text-muted-foreground capitalize">
+              <p className="text-[9px] text-muted-foreground/70 capitalize">
                 {format(parseISO(shift.date), "EEE d MMM", { locale: es })}
               </p>
             )}
 
-            {/* Time */}
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="h-3 w-3 shrink-0" />
-              <span>{shift.start_time.slice(0, 5)} – {shift.end_time.slice(0, 5)}</span>
-            </div>
-
             {/* Location */}
             {locationName && (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <MapPin className="h-3 w-3 shrink-0" />
+              <div className="flex items-center gap-0.5 text-[9px] text-muted-foreground/70">
+                <MapPin className="h-2.5 w-2.5 shrink-0" />
                 <span className="truncate">{locationName}</span>
               </div>
             )}
 
             {/* Footer: slots + badges */}
-            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-              <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                <Users className="h-3 w-3" />
-                <span>{assignmentCount}/{shift.slots ?? 1}</span>
-              </div>
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground tabular-nums">
+                <Users className="h-2.5 w-2.5" />
+                {assignmentCount}/{shift.slots ?? 1}
+              </span>
               {badges.map((b, i) => (
                 <Badge
                   key={i}
                   variant={b.variant as any}
                   className={cn(
-                    "text-[8px] px-1.5 py-0 h-4 font-semibold uppercase tracking-wide",
-                    b.variant === "warning" && "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30",
-                    b.variant === "destructive" && "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30",
-                    b.variant === "default" && "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+                    "text-[7px] px-1 py-0 h-3.5 font-bold uppercase tracking-wider leading-none",
+                    b.variant === "warning" && "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0",
+                    b.variant === "destructive" && "bg-red-500/15 text-red-600 dark:text-red-400 border-0",
+                    b.variant === "default" && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-0",
+                    b.variant === "secondary" && "bg-muted/60 text-muted-foreground border-0",
                   )}
                 >
                   {b.label}
@@ -152,7 +140,7 @@ export function ShiftCard({
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
