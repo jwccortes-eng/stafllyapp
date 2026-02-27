@@ -9,8 +9,9 @@ import {
   LayoutDashboard, CalendarDays, Upload, DollarSign, FileSpreadsheet,
   BarChart3, Users, Tags, Smartphone, ContactRound, Globe, Building2,
   Shield, Menu, X, LogOut, Moon, Sun, Clock, MapPin, Megaphone, MessageCircle,
-  Bell,
+  Bell, Inbox,
 } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "next-themes";
@@ -40,6 +41,7 @@ const ALL_MOBILE_LINKS = [
   { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Clientes" },
   { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
   { to: "/app/chat", icon: MessageCircle, label: "Chat interno", module: null, section: "Comunicación" },
+  { to: "/app/requests", icon: Inbox, label: "Solicitudes", module: null, section: "Gestión" },
 ];
 
 const OWNER_MOBILE_LINKS = [
@@ -107,6 +109,7 @@ export default function AdminLayout() {
               <img src={staflyLogo} alt="stafly" className="h-7 w-auto" style={{ imageRendering: "auto" }} />
             </div>
             <div className="flex items-center gap-1">
+              <NotificationBell />
               <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
                 <SheetTrigger asChild>
                   <button className="p-2 rounded-xl hover:bg-muted/40 transition-colors active:scale-95">
