@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import heroMockup from "@/assets/stafly-hero.png";
 import staflyLogo from "@/assets/stafly-logo.png";
+import staflyIcon from "@/assets/stafly-isotipo.png";
 
 /* ───────── i18n ───────── */
 const i18n = {
@@ -240,7 +240,8 @@ export default function Landing() {
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-card/90 backdrop-blur-xl shadow-xs border-b border-border/30" : "bg-transparent"}`}>
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <img src={staflyLogo} alt="stafly" className="h-10 w-auto" style={{ imageRendering: "auto" }} />
+            <img src={staflyIcon} alt="stafly" className="h-8 w-8 sm:hidden" />
+            <img src={staflyLogo} alt="stafly" className="h-8 w-auto hidden sm:block" style={{ imageRendering: "auto" }} />
           </div>
 
           <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -348,12 +349,7 @@ export default function Landing() {
               </div>
             </div>
 
-            <div className="relative hidden lg:block">
-              <div className="absolute -inset-6 bg-primary/[0.03] rounded-3xl blur-3xl" />
-              <div className="relative">
-                <img src={heroMockup} alt="stafly Dashboard" className="w-full h-auto rounded-2xl shadow-xl border border-border/20" loading="eager" />
-              </div>
-            </div>
+            {/* Hero mockup hidden — pending high-quality asset */}
           </div>
         </div>
       </section>
@@ -588,8 +584,9 @@ export default function Landing() {
       <footer className="border-t border-border/20 py-10">
         <div className="container">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2.5">
-              <img src={staflyLogo} alt="stafly" className="h-7 w-auto" style={{ imageRendering: "auto" }} />
+            <div className="flex items-center gap-2">
+              <img src={staflyIcon} alt="stafly" className="h-7 w-7" />
+              <span className="font-heading font-bold text-sm text-foreground">stafly</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">{c.footer.privacy}</a>
