@@ -41,6 +41,7 @@ import CompanyConfig from "./pages/admin/CompanyConfig";
 import Automations from "./pages/admin/Automations";
 import MonetizationReport from "./pages/admin/MonetizationReport";
 import SystemHealth from "./pages/admin/SystemHealth";
+import Implementations from "./pages/admin/Implementations";
 import ShiftRequests from "./pages/admin/ShiftRequests";
 import PayrollSettings from "./pages/admin/PayrollSettings";
 import Pricing from "./pages/admin/Pricing";
@@ -110,6 +111,7 @@ function App() {
                 <Route path="pricing" element={<Pricing />} />
                 <Route path="billing" element={<Billing />} />
                 <Route path="system-health" element={<SystemHealth />} />
+                <Route path="implementations" element={<Implementations />} />
               </Route>
 
               {/* Employee portal routes */}
