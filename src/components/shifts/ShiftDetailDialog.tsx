@@ -12,6 +12,7 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeCombobox } from "./EmployeeCombobox";
 import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell, Smartphone } from "lucide-react";
+import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
@@ -41,6 +42,8 @@ interface ShiftDetailDialogProps {
   onPublish: (shift: Shift) => void;
   onSave?: (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => Promise<void>;
   onRequestAction?: () => void;
+  availabilityConfigs?: AvailabilityConfig[];
+  availabilityOverrides?: AvailabilityOverride[];
 }
 
 function calcHours(start: string, end: string): string {
@@ -68,6 +71,7 @@ interface ShiftRequestItem {
 export function ShiftDetailDialog({
   shift, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
+  availabilityConfigs = [], availabilityOverrides = [],
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
   const { selectedCompanyId } = useCompany();
@@ -613,6 +617,9 @@ export function ShiftDetailDialog({
                     shiftEnd={shift.end_time.slice(0, 5)}
                     maxHeight="160px"
                     showChips={false}
+                    availabilityConfigs={availabilityConfigs}
+                    availabilityOverrides={availabilityOverrides}
+                    availabilityBlockMode="warning"
                   />
                   {selected.length > 0 && (
                     <Button size="sm" onClick={handleAdd} className="w-full h-8 text-xs">

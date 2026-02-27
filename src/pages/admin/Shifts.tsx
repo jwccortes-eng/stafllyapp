@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useEmployeeAvailability } from "@/hooks/useEmployeeAvailability";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -199,6 +200,18 @@ export default function Shifts() {
   }, [selectedCompanyId, weekStart, currentMonth, currentDay, viewMode]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Availability data for the current view range
+  const availDateFrom = viewMode === "day" ? format(currentDay, "yyyy-MM-dd")
+    : viewMode === "week" ? format(weekStart, "yyyy-MM-dd")
+    : format(startOfMonth(currentMonth), "yyyy-MM-dd");
+  const availDateTo = viewMode === "day" ? format(currentDay, "yyyy-MM-dd")
+    : viewMode === "week" ? format(addDays(weekStart, 6), "yyyy-MM-dd")
+    : format(endOfMonth(currentMonth), "yyyy-MM-dd");
+  const { configs: availConfigs, overrides: availOverrides } = useEmployeeAvailability({
+    dateFrom: availDateFrom,
+    dateTo: availDateTo,
+  });
 
   const resetForm = () => {
     setTitle(""); setDate(""); setStartTime("08:00"); setEndTime("17:00");
@@ -769,6 +782,9 @@ export default function Shifts() {
                         shiftStart={startTime}
                         shiftEnd={endTime}
                         maxHeight="150px"
+                        availabilityConfigs={availConfigs}
+                        availabilityOverrides={availOverrides}
+                        availabilityBlockMode="warning"
                       />
                     </div>
                   </div>
@@ -986,6 +1002,8 @@ export default function Shifts() {
         onPublish={handlePublishShift}
         onSave={handleEditShift}
         onRequestAction={loadData}
+        availabilityConfigs={availConfigs}
+        availabilityOverrides={availOverrides}
       />
 
       <ShiftEditDialog
