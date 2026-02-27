@@ -26,6 +26,7 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
+import staflyAppIcon from "@/assets/stafly-app-icon.png";
 
 interface LinkDef {
   to: string;
@@ -355,14 +356,7 @@ export default function AdminSidebar() {
         "flex items-center shrink-0",
         collapsed ? "px-2 py-5 justify-center" : "px-4 py-5 gap-3"
       )}>
-        <div className="relative">
-          <div className={cn(
-            "shrink-0 rounded-xl gradient-primary flex items-center justify-center shadow-sm transition-all duration-300",
-            collapsed ? "h-8 w-8" : "h-9 w-9"
-          )}>
-            <span className={cn("text-white font-bold font-heading", collapsed ? "text-sm" : "text-base")}>S</span>
-          </div>
-        </div>
+        <img src={staflyAppIcon} alt="stafly" className={cn("shrink-0 transition-all duration-300", collapsed ? "h-8 w-8" : "h-9 w-9")} />
         {!collapsed && (
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-foreground leading-tight truncate font-heading">stafly</p>
