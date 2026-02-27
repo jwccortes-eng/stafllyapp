@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import EmployeeChatWidget from "@/components/EmployeeChatWidget";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
-import staflyAppIcon from "@/assets/stafly-app-icon.png";
+import staflyLogo from "@/assets/stafly-logo.png";
 
 const links = [
   { to: "/portal", icon: Home, label: "Inicio", end: true },
@@ -57,8 +57,7 @@ export default function EmployeeLayout() {
         <header className="sticky top-0 z-30 shrink-0 bg-card/95 backdrop-blur-2xl border-b border-border/50 shadow-2xs">
           <div className="flex items-center justify-between px-5 h-14">
             <div className="flex items-center gap-2">
-              <img src={staflyAppIcon} alt="stafly" className="h-7 w-7" />
-              <span className="text-[15px] font-bold font-heading tracking-tight text-foreground">stafly</span>
+              <img src={staflyLogo} alt="stafly" className="h-8 w-auto" style={{ imageRendering: "auto" }} />
             </div>
             <LogoutConfirmDialog onConfirm={signOut}>
               <button className="p-2 -mr-1 rounded-xl text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all active:scale-90" aria-label="Cerrar sesión">
@@ -117,8 +116,7 @@ export default function EmployeeLayout() {
       <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-xl border-b border-border/50 shadow-2xs">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-2.5">
-            <img src={staflyAppIcon} alt="stafly" className="h-8 w-8" />
-            <span className="text-lg font-bold font-heading tracking-tight text-foreground">stafly</span>
+            <img src={staflyLogo} alt="stafly" className="h-9 w-auto" style={{ imageRendering: "auto" }} />
           </div>
           <nav className="flex items-center gap-1">
             {links.map((link) => {

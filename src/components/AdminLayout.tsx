@@ -15,7 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "next-themes";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
-import staflyAppIcon from "@/assets/stafly-app-icon.png";
+import staflyLogo from "@/assets/stafly-logo.png";
 
 const SidebarContext = createContext<{ collapsed: boolean; setCollapsed: (v: boolean) => void }>({ collapsed: false, setCollapsed: () => {} });
 
@@ -105,8 +105,7 @@ export default function AdminLayout() {
         <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-lg border-b border-border/50">
           <div className="flex items-center justify-between px-4 h-14">
             <div className="flex items-center gap-2.5">
-              <img src={staflyAppIcon} alt="stafly" className="h-7 w-7" />
-              <span className="text-sm font-bold font-heading text-foreground">stafly</span>
+              <img src={staflyLogo} alt="stafly" className="h-8 w-auto" style={{ imageRendering: "auto" }} />
             </div>
             <div className="flex items-center gap-1">
               <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
