@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import staflyIsotipo from "@/assets/stafly-isotipo.png";
+import mascotHero from "@/assets/stafly-mascot-hero.png";
 import mascotWave from "@/assets/stafly-mascot-wave.png";
 import mascotPaid from "@/assets/stafly-mascot-paid.png";
 import heroMockup from "@/assets/stafly-hero.png";
@@ -241,7 +241,9 @@ export default function Landing() {
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-card/90 backdrop-blur-xl shadow-xs border-b border-border/30" : "bg-transparent"}`}>
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <img src={staflyIsotipo} alt="stafly" className="h-8 w-8" />
+            <div className="h-8 w-8 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
+              <span className="text-white font-bold text-sm font-heading">S</span>
+            </div>
             <span className="font-heading font-bold text-xl tracking-tight text-foreground">stafly</span>
           </div>
 
@@ -596,7 +598,9 @@ export default function Landing() {
         <div className="container">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
-              <img src={staflyIsotipo} alt="stafly" className="h-7 w-7" />
+              <div className="h-7 w-7 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
+                <span className="text-white font-bold text-xs font-heading">S</span>
+              </div>
               <span className="font-heading font-bold text-lg text-foreground">stafly</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">

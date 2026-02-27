@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User } from "lucide-react";
-import mascotHero from "@/assets/mascot-3d-hero.png";
+import mascotHero from "@/assets/stafly-mascot-hero.png";
 
 function isPhoneNumber(value: string): boolean {
   const cleaned = value.replace(/[\s\-\(\)\+]/g, "");
@@ -89,7 +89,7 @@ export default function Auth() {
         <div className="bg-card rounded-2xl shadow-xl border border-border/50 px-8 py-10 space-y-6">
           {/* Logo & Title */}
           <div className="flex flex-col items-center gap-3">
-            <img src={mascotHero} alt="stafly mascot" className="h-24 w-24 drop-shadow-lg" />
+            <img src={mascotHero} alt="stafly mascot" className="h-20 w-20 drop-shadow-lg" />
             <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
               stafly
             </h1>

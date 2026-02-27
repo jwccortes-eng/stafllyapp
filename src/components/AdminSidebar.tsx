@@ -357,12 +357,11 @@ export default function AdminSidebar() {
       )}>
         <div className="relative">
           <div className={cn(
-            "shrink-0 rounded-xl bg-primary/10 flex items-center justify-center transition-all duration-300",
+            "shrink-0 rounded-xl gradient-primary flex items-center justify-center shadow-sm transition-all duration-300",
             collapsed ? "h-8 w-8" : "h-9 w-9"
           )}>
-            <img src="/favicon.png" alt="stafly" className={cn("object-contain", collapsed ? "h-5 w-5" : "h-5 w-5")} />
+            <span className={cn("text-white font-bold font-heading", collapsed ? "text-sm" : "text-base")}>S</span>
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-earning border-2 border-card" />
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
