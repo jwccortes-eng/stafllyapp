@@ -84,6 +84,9 @@ export default function MyPayments() {
   const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null);
   const [periodDetails, setPeriodDetails] = useState<Record<string, MovementDetail[]>>({});
   const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
+  const [empName, setEmpName] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [currentPeriod, setCurrentPeriod] = useState<{ start_date: string; end_date: string; status: string; published_at: string | null } | null>(null);
 
   const loadPeriodDetails = useCallback(async (periodId: string) => {
     if (periodDetails[periodId]) return;
@@ -121,6 +124,25 @@ export default function MyPayments() {
   useEffect(() => {
     if (!employeeId) return;
     async function load() {
+      // Fetch employee info for greeting
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("first_name, last_name, company_id")
+        .eq("id", employeeId)
+        .maybeSingle();
+      if (empData) {
+        setEmpName(`${empData.first_name} ${empData.last_name}`);
+        const [compRes, periodRes] = await Promise.all([
+          supabase.from("companies").select("name").eq("id", empData.company_id).maybeSingle(),
+          supabase.from("pay_periods")
+            .select("start_date, end_date, status, published_at")
+            .eq("company_id", empData.company_id)
+            .order("start_date", { ascending: false }).limit(1).maybeSingle(),
+        ]);
+        setCompanyName(compRes.data?.name ?? null);
+        setCurrentPeriod(periodRes.data ?? null);
+      }
+
       const { data: publishedPeriods } = await supabase
         .from("pay_periods")
         .select("id, start_date, end_date")
@@ -181,6 +203,21 @@ export default function MyPayments() {
   const accumulated = useMemo(() => payments.reduce((s, r) => s + r.total_final_pay, 0), [payments]);
   const latestPayment = payments[0] ?? null;
 
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Buenos días";
+    if (h < 18) return "Buenas tardes";
+    return "Buenas noches";
+  }, []);
+
+  const periodStatusLabel = currentPeriod
+    ? currentPeriod.published_at
+      ? { label: "Publicado", cls: "bg-primary/10 text-primary" }
+      : currentPeriod.status === "open"
+        ? { label: "Abierto", cls: "bg-earning/10 text-earning" }
+        : { label: "Cerrado", cls: "bg-warning/10 text-warning" }
+    : null;
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -193,8 +230,21 @@ export default function MyPayments() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold font-heading tracking-tight">Nómina</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Tu historial de pagos y tendencia</p>
+        <h1 className="text-2xl font-bold font-heading tracking-tight">
+          {empName ? `${greeting}, ${empName}` : "Nómina"}
+        </h1>
+        {companyName && <p className="text-sm text-muted-foreground mt-0.5">{companyName}</p>}
+        {currentPeriod && periodStatusLabel && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-muted-foreground">
+              {currentPeriod.start_date} → {currentPeriod.end_date}
+            </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${periodStatusLabel.cls}`}>
+              {periodStatusLabel.label}
+            </span>
+          </div>
+        )}
+        <p className="text-sm text-muted-foreground mt-1">Tu historial de pagos y tendencia</p>
       </div>
 
       {/* Latest payment hero */}
