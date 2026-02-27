@@ -10,6 +10,7 @@ import {
   GripVertical, MessageSquare, Check, X, Clock, MapPin, Megaphone,
   MessageCircle, ChevronDown, ScanEye, Activity,
 } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,7 @@ const OWNER_LINKS: LinkDef[] = [
   { to: "/app/monetization", icon: DollarSign, label: "Inversión", module: null, section: "Administración" },
   { to: "/app/settings", icon: Settings2, label: "Plataforma", module: null, section: "Administración" },
   { to: "/app/system-health", icon: Activity, label: "Cuadro de control", module: null, section: "Administración" },
+  { to: "/app/implementations", icon: ListChecks, label: "Implementaciones", module: null, section: "Administración" },
 ];
 
 interface Customization {
