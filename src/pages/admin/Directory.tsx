@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Phone, MessageSquare, Mail, Users, MessageCircle, Filter } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useCompany } from "@/hooks/useCompany";
 
 interface DirectoryEntry {
@@ -56,17 +57,12 @@ export default function Directory() {
 
   return (
     <div>
-      <div className="page-header flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="page-title">Directorio</h1>
-            <p className="page-subtitle">
-              {filtered.length} empleados activos
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        variant="1"
+        icon={Users}
+        title="Directorio"
+        subtitle={`${filtered.length} empleados activos`}
+      />
 
       {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">

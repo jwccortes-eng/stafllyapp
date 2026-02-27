@@ -18,6 +18,7 @@ import {
   Clock, Play, Square, Loader2, ChevronLeft, ChevronRight,
   Search, CheckCircle2, Timer, Pencil, Hash, XCircle, AlertTriangle,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -307,12 +308,11 @@ export default function TimeClock() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Reloj de Tiempo</h1>
-          <p className="text-muted-foreground text-sm">Registra entradas y salidas</p>
-        </div>
-      </div>
+      <PageHeader
+        variant="3"
+        title="Reloj de Tiempo"
+        subtitle="Registra entradas y salidas"
+      />
 
       {/* Quick clock in/out for employees */}
       {employeeId && (

@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, ArrowUpDown, TrendingUp, TrendingDown, DollarSign, Pencil } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
@@ -309,12 +310,12 @@ export default function Movements() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Novedades</h1>
-          <p className="page-subtitle">Extras y deducciones por periodo</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        variant="2"
+        title="Novedades"
+        subtitle="Extras y deducciones por periodo"
+        badge="Semanal"
+        rightSlot={<div className="flex gap-2">
           <Dialog open={importOpen} onOpenChange={(o) => { setImportOpen(o); if (!o) setImportResults(null); }}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" disabled={isPeriodClosed}><Upload className="h-4 w-4 mr-1.5" />Importar</Button>
@@ -427,8 +428,8 @@ export default function Movements() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+        </div>}
+      />
 
       {isPeriodClosed && (
         <div className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">

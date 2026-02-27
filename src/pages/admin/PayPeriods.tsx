@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff, ChevronDown, ChevronRight, FileSpreadsheet, RefreshCw, Clock, CheckCircle2, AlertCircle, Upload, ShieldAlert } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { format, addDays, nextWednesday, isWednesday, formatDistanceToNow } from "date-fns";
@@ -224,12 +225,12 @@ export default function PayPeriods() {
 
   return (
     <div>
-      <div className="page-header flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Periodos de pago</h1>
-          <p className="page-subtitle">Miércoles a Martes — ciclo semanal</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        variant="2"
+        title="Periodos de pago"
+        subtitle="Miércoles a Martes — ciclo semanal"
+        badge="Semanal"
+        rightSlot={<div className="flex gap-2">
           <Dialog open={yearOpen} onOpenChange={setYearOpen}>
             <DialogTrigger asChild>
               <Button variant="outline"><CalendarPlus className="h-4 w-4 mr-2" />Generar año</Button>
@@ -278,8 +279,8 @@ export default function PayPeriods() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+        </div>}
+      />
 
       <div className="data-table-wrapper">
         <Table>

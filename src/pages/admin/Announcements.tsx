@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Pin, Megaphone, Image, Link2, X, Loader2, ExternalLink, Upload, Film } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -189,17 +190,17 @@ export default function Announcements() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Anuncios</h1>
-          <p className="text-muted-foreground text-sm">Comunicados internos para tu equipo</p>
-        </div>
-        {isAdmin && (
+      <PageHeader
+        variant="1"
+        icon={Megaphone}
+        title="Anuncios"
+        subtitle="Comunicados internos para tu equipo"
+        rightSlot={isAdmin ? (
           <Button size="sm" onClick={() => { resetForm(); setDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" /> Nuevo anuncio
           </Button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-16">

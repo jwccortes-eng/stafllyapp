@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, MoreHorizontal, Pencil, Trash2, ToggleLeft, Upload, Download } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useCompany } from "@/hooks/useCompany";
@@ -253,12 +254,11 @@ export default function Concepts() {
 
   return (
     <div>
-      <div className="page-header flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Conceptos</h1>
-          <p className="page-subtitle">Extras y deducciones dinámicas</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        variant="3"
+        title="Conceptos"
+        subtitle="Extras y deducciones dinámicas"
+        rightSlot={<div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={() => {
             const template = [
               { nombre: "Bono productividad", categoría: "extra", cálculo: "quantity_x_rate", unidad: "unidades", tarifa: 50, fuente_tarifa: "concept_default" },
@@ -281,8 +281,8 @@ export default function Concepts() {
               <ConceptForm values={form} onChange={setForm} onSubmit={handleCreate} submitLabel="Crear" />
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+        </div>}
+      />
 
       {/* Active concepts */}
       <div>

@@ -1,14 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, FileSpreadsheet, Users, UserCheck } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function Reports() {
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Reportes</h1>
-        <p className="page-subtitle">Acceso rápido a vistas y exportaciones</p>
-      </div>
+      <PageHeader variant="4" eyebrow="ANÁLISIS" title="Reportes" subtitle="Acceso rápido a vistas y exportaciones" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Link to="/app/summary">
