@@ -147,8 +147,13 @@ export default function Locations() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Ubicaciones</h1>
-          <p className="text-muted-foreground text-sm">Gestiona las ubicaciones de trabajo</p>
+          <div className="flex items-center gap-2 mb-0.5">
+            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <MapPin className="h-4 w-4 text-primary" />
+            </div>
+            <h1 className="page-title">Ubicaciones</h1>
+          </div>
+          <p className="text-muted-foreground/60 text-xs ml-10">Gestiona las ubicaciones de trabajo</p>
         </div>
         {canEdit && (
           <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) resetForm(); }}>
@@ -226,12 +231,13 @@ export default function Locations() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <MapPin className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>No se encontraron ubicaciones</p>
+        <div className="text-center py-16 text-muted-foreground/50">
+          <MapPin className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          <p className="text-sm font-medium">No se encontraron ubicaciones</p>
+          <p className="text-xs mt-1">{search ? "Intenta con otro término" : "Agrega tu primera ubicación"}</p>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="data-table-wrapper">
           <Table>
             <TableHeader>
               <TableRow>

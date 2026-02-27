@@ -139,8 +139,13 @@ export default function Clients() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
-          <p className="text-muted-foreground text-sm">Gestiona los clientes de tu empresa</p>
+          <div className="flex items-center gap-2 mb-0.5">
+            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Building2 className="h-4 w-4 text-primary" />
+            </div>
+            <h1 className="page-title">Clientes</h1>
+          </div>
+          <p className="text-muted-foreground/60 text-xs ml-10">Gestiona los clientes de tu empresa</p>
         </div>
         {canEdit && (
           <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) resetForm(); }}>
@@ -204,7 +209,7 @@ export default function Clients() {
       ) : filtered.length === 0 ? (
         <EmptyState icon={Building2} title="No se encontraron clientes" description={search ? "Intenta con otro término" : "Agrega tu primer cliente"} />
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="data-table-wrapper">
           <Table>
             <TableHeader>
               <TableRow>

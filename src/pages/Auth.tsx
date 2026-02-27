@@ -84,9 +84,9 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[hsl(220,40%,97%)]">
+    <div className="min-h-screen flex bg-background">
       {/* Left — Branding panel (desktop) */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden items-center justify-center bg-gradient-to-br from-[hsl(220,60%,98%)] via-[hsl(215,50%,95%)] to-[hsl(220,45%,92%)]">
+      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden items-center justify-center bg-gradient-to-br from-secondary via-background to-muted">
         {/* Subtle decorative shapes */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-16 right-16 w-80 h-80 rounded-full bg-primary/[0.04] blur-3xl" />

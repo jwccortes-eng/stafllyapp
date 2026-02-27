@@ -154,30 +154,50 @@ export default function TodayView() {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Hoy</h1>
-        <p className="text-muted-foreground text-xs">
+        <div className="flex items-center gap-2 mb-0.5">
+          <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Clock className="h-4 w-4 text-primary" />
+          </div>
+          <h1 className="page-title">Hoy</h1>
+        </div>
+        <p className="text-muted-foreground/60 text-xs ml-10">
           {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card>
+        <Card className="border-border/30 shadow-sm rounded-2xl">
           <CardContent className="pt-4 pb-3 px-4">
-            <div className="text-2xl font-bold text-primary">{activeCount}</div>
-            <p className="text-[11px] text-muted-foreground">Activos ahora</p>
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <Clock className="h-3.5 w-3.5 text-emerald-500" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-foreground">{activeCount}</div>
+            <p className="text-[11px] text-muted-foreground/60">Activos ahora</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-border/30 shadow-sm rounded-2xl">
           <CardContent className="pt-4 pb-3 px-4">
-            <div className="text-2xl font-bold">{scheduledCount}</div>
-            <p className="text-[11px] text-muted-foreground">Programados</p>
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="h-7 w-7 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
+                <Eye className="h-3.5 w-3.5 text-sky-500" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-foreground">{scheduledCount}</div>
+            <p className="text-[11px] text-muted-foreground/60">Programados</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-border/30 shadow-sm rounded-2xl">
           <CardContent className="pt-4 pb-3 px-4">
-            <div className="text-2xl font-bold">{employees.length}</div>
-            <p className="text-[11px] text-muted-foreground">Total empleados</p>
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="h-7 w-7 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                <Search className="h-3.5 w-3.5 text-violet-500" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-foreground">{employees.length}</div>
+            <p className="text-[11px] text-muted-foreground/60">Total empleados</p>
           </CardContent>
         </Card>
       </div>
@@ -205,7 +225,7 @@ export default function TodayView() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="divide-y divide-border rounded-xl border bg-card overflow-hidden">
+        <div className="divide-y divide-border/30 rounded-2xl border border-border/30 bg-card shadow-sm overflow-hidden">
           {visibleRows.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Clock className="h-8 w-8 mx-auto mb-2 opacity-40" />
