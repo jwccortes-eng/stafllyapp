@@ -16,8 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Clock, Play, Square, Loader2, ChevronLeft, ChevronRight,
-  Search, CheckCircle2, Timer, Pencil, Hash,
+  Search, CheckCircle2, Timer, Pencil, Hash, XCircle, AlertTriangle,
 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { format, differenceInMinutes, startOfWeek, addDays } from "date-fns";
@@ -101,6 +102,12 @@ export default function TimeClock() {
   const [editNotes, setEditNotes] = useState("");
   const [editShiftId, setEditShiftId] = useState<string>("none");
   const [editSaving, setEditSaving] = useState(false);
+
+  // Reject dialog
+  const [rejectEntry, setRejectEntry] = useState<TimeEntry | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!selectedCompanyId) return;
@@ -221,6 +228,24 @@ export default function TimeClock() {
     else { toast.success("Entrada aprobada"); loadData(); }
   };
 
+  const openRejectDialog = (entry: TimeEntry) => {
+    setRejectEntry(entry);
+    setRejectReason("");
+    setRejectOpen(true);
+  };
+
+  const handleReject = async () => {
+    if (!rejectEntry) return;
+    setRejecting(true);
+    const { error } = await supabase.from("time_entries").update({
+      status: "rejected",
+      notes: rejectReason.trim() ? `[Rechazado] ${rejectReason.trim()}` : "[Rechazado]",
+    }).eq("id", rejectEntry.id);
+    if (error) toast.error(error.message);
+    else { toast.success("Entrada rechazada"); setRejectOpen(false); setRejectEntry(null); loadData(); }
+    setRejecting(false);
+  };
+
   const openEditEntry = (entry: TimeEntry) => {
     setEditEntry(entry);
     setEditClockIn(format(new Date(entry.clock_in), "yyyy-MM-dd'T'HH:mm"));
@@ -241,6 +266,10 @@ export default function TimeClock() {
       notes: editNotes.trim() || null,
       shift_id: editShiftId && editShiftId !== "none" ? editShiftId : null,
     };
+    // If entry was rejected, reset to pending so it can be re-approved after correction
+    if (editEntry.status === "rejected") {
+      updates.status = "pending";
+    }
     const { error } = await supabase.from("time_entries").update(updates).eq("id", editEntry.id);
     if (error) toast.error(error.message);
     else { toast.success("Entrada actualizada"); setEditOpen(false); setEditEntry(null); loadData(); }
@@ -402,19 +431,33 @@ export default function TimeClock() {
                   </TableCell>
                   <TableCell className="text-sm">{getDuration(entry)}</TableCell>
                   <TableCell>
-                    <Badge variant={entry.status === "approved" ? "default" : "secondary"}>
-                      {entry.status === "approved" ? "Aprobado" : "Pendiente"}
+                    <Badge variant={
+                      entry.status === "approved" ? "default" :
+                      entry.status === "rejected" ? "destructive" : "secondary"
+                    }>
+                      {entry.status === "approved" ? "Aprobado" :
+                       entry.status === "rejected" ? "Rechazado" : "Pendiente"}
                     </Badge>
+                    {entry.status === "rejected" && entry.notes?.startsWith("[Rechazado]") && (
+                      <p className="text-xs text-destructive mt-0.5 max-w-[160px] truncate" title={entry.notes.replace("[Rechazado] ", "")}>
+                        {entry.notes.replace("[Rechazado] ", "")}
+                      </p>
+                    )}
                   </TableCell>
                   {canApprove && (
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEditEntry(entry)}>
+                        <Button variant="ghost" size="icon" onClick={() => openEditEntry(entry)} title="Editar">
                           <Pencil className="h-4 w-4" />
                         </Button>
                         {entry.status !== "approved" && entry.clock_out && (
-                          <Button variant="ghost" size="icon" onClick={() => handleApprove(entry.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleApprove(entry.id)} title="Aprobar">
                             <CheckCircle2 className="h-4 w-4 text-primary" />
+                          </Button>
+                        )}
+                        {entry.status !== "rejected" && entry.status !== "approved" && entry.clock_out && (
+                          <Button variant="ghost" size="icon" onClick={() => openRejectDialog(entry)} title="Rechazar">
+                            <XCircle className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
                       </div>
@@ -521,6 +564,48 @@ export default function TimeClock() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Reject Entry AlertDialog */}
+      <AlertDialog open={rejectOpen} onOpenChange={(o) => { setRejectOpen(o); if (!o) setRejectEntry(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Rechazar fichaje
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {rejectEntry && (
+                <span>
+                  Fichaje de <strong>{getEmployeeName(rejectEntry.employee_id)}</strong> del{" "}
+                  {format(new Date(rejectEntry.clock_in), "dd/MM HH:mm")}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Motivo del rechazo</Label>
+              <Textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="Ej: Horario incorrecto, turno no asignado..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReject}
+              disabled={rejecting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {rejecting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Confirmar rechazo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
