@@ -90,7 +90,6 @@ export default function AdminLayout() {
   const ownerLinks = role === 'owner' ? OWNER_MOBILE_LINKS : [];
   const bottomLinks = BOTTOM_BAR_KEYS.map(k => visibleLinks.find(l => l.to === k)).filter(Boolean) as typeof ALL_MOBILE_LINKS;
 
-  // Group links by section for sheet
   const sections = new Map<string, typeof ALL_MOBILE_LINKS>();
   for (const l of visibleLinks) {
     if (!sections.has(l.section)) sections.set(l.section, []);
@@ -101,28 +100,31 @@ export default function AdminLayout() {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background pb-16">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-lg border-b border-border/50">
+        {/* Top bar (Premium glassmorphism) */}
+        <header className="sticky top-0 z-30 bg-card/85 backdrop-blur-xl border-b border-border/30">
           <div className="flex items-center justify-between px-4 h-14">
             <div className="flex items-center gap-2.5">
-              <img src={staflyLogo} alt="stafly" className="h-8 w-auto" style={{ imageRendering: "auto" }} />
+              <img src={staflyLogo} alt="stafly" className="h-7 w-auto" style={{ imageRendering: "auto" }} />
             </div>
             <div className="flex items-center gap-1">
               <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
                 <SheetTrigger asChild>
-                  <button className="p-2 rounded-xl hover:bg-muted transition-colors">
+                  <button className="p-2 rounded-xl hover:bg-muted/40 transition-colors active:scale-95">
                     <Menu className="h-5 w-5 text-muted-foreground" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-72 p-0 flex flex-col h-full">
-                  <SheetHeader className="p-4 border-b border-border/50 shrink-0">
-                    <SheetTitle className="text-sm font-heading font-bold">Menú</SheetTitle>
+                <SheetContent side="right" className="w-[280px] p-0 flex flex-col h-full border-l border-border/30">
+                  <SheetHeader className="p-4 border-b border-border/30 shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <img src={staflyLogo} alt="stafly" className="h-6 w-auto" style={{ imageRendering: "auto" }} />
+                      <SheetTitle className="text-sm font-heading font-bold">Menú</SheetTitle>
+                    </div>
                   </SheetHeader>
                   {/* Company selector */}
                   {companies.length > 1 && (
-                    <div className="px-4 py-3 border-b border-border/50">
+                    <div className="px-4 py-3 border-b border-border/30">
                       <Select value={selectedCompanyId ?? ""} onValueChange={(v) => { setSelectedCompanyId(v); }}>
-                        <SelectTrigger className="h-9 text-xs">
+                        <SelectTrigger className="h-9 text-xs rounded-xl bg-muted/30 border-border/30">
                           <SelectValue placeholder="Empresa" />
                         </SelectTrigger>
                         <SelectContent>
@@ -136,7 +138,7 @@ export default function AdminLayout() {
                   <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
                     {Array.from(sections.entries()).map(([label, links]) => (
                       <div key={label}>
-                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">{label}</p>
+                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">{label}</p>
                         <div className="space-y-0.5">
                           {links.map(link => {
                             const active = isActive(link.to, link.end);
@@ -146,13 +148,13 @@ export default function AdminLayout() {
                                 to={link.to}
                                 onClick={() => setSheetOpen(false)}
                                 className={cn(
-                                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all",
                                   active
-                                    ? "bg-primary/10 text-primary font-semibold"
-                                    : "text-foreground hover:bg-muted"
+                                    ? "bg-primary/8 text-primary font-semibold"
+                                    : "text-foreground/70 hover:bg-muted/30 hover:text-foreground"
                                 )}
                               >
-                                <link.icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+                                <link.icon className={cn("h-[18px] w-[18px]", active ? "text-primary" : "text-muted-foreground/50")} />
                                 {link.label}
                               </NavLink>
                             );
@@ -161,19 +163,19 @@ export default function AdminLayout() {
                       </div>
                     ))}
                   </nav>
-                  <div className="border-t border-border/50 p-3 space-y-1 shrink-0">
+                  <div className="border-t border-border/30 p-3 space-y-0.5 shrink-0">
                     <button
                       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted w-full transition-colors"
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-muted-foreground/60 hover:bg-muted/30 hover:text-foreground w-full transition-all"
                     >
-                      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                      {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
                       {theme === "dark" ? "Modo claro" : "Modo oscuro"}
                     </button>
                     <LogoutConfirmDialog onConfirm={() => { signOut(); setSheetOpen(false); }}>
                       <button
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 w-full transition-colors"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-destructive/70 hover:bg-destructive/8 hover:text-destructive w-full transition-all"
                       >
-                        <LogOut className="h-4 w-4" />
+                        <LogOut className="h-[18px] w-[18px]" />
                         Cerrar sesión
                       </button>
                     </LogoutConfirmDialog>
@@ -189,9 +191,9 @@ export default function AdminLayout() {
           <Outlet />
         </main>
 
-        {/* Bottom navigation */}
-        <nav className="fixed bottom-0 inset-x-0 z-30 bg-card/80 backdrop-blur-lg border-t border-border/50">
-          <div className="flex items-stretch h-16">
+        {/* Bottom navigation (Premium glassmorphism) */}
+        <nav className="fixed bottom-0 inset-x-0 z-30 bg-card/85 backdrop-blur-xl border-t border-border/30">
+          <div className="flex items-stretch h-16 safe-area-bottom">
             {bottomLinks.map(link => {
               const active = isActive(link.to, link.end);
               return (
@@ -199,20 +201,27 @@ export default function AdminLayout() {
                   key={link.to}
                   to={link.to}
                   className={cn(
-                    "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors",
-                    active ? "text-primary" : "text-muted-foreground"
+                    "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-all active:scale-90",
+                    active ? "text-primary" : "text-muted-foreground/50"
                   )}
                 >
-                  <link.icon className={cn("h-5 w-5", active && "text-primary")} />
-                  {link.label}
+                  <div className={cn(
+                    "flex items-center justify-center rounded-xl h-8 w-8 transition-all",
+                    active && "bg-primary/8"
+                  )}>
+                    <link.icon className={cn("h-[18px] w-[18px]", active && "text-primary")} />
+                  </div>
+                  <span className={cn(active && "font-semibold")}>{link.label}</span>
                 </NavLink>
               );
             })}
             <button
               onClick={() => setSheetOpen(true)}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-muted-foreground"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-muted-foreground/50 active:scale-90 transition-transform"
             >
-              <Menu className="h-5 w-5" />
+              <div className="flex items-center justify-center rounded-xl h-8 w-8">
+                <Menu className="h-[18px] w-[18px]" />
+              </div>
               Más
             </button>
           </div>
