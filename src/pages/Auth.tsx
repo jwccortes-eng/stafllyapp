@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User } from "lucide-react";
-import staflyAppIcon from "@/assets/stafly-app-icon.png";
-import mascotOfficial from "@/assets/stafly-mascot-official.png";
+import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck } from "lucide-react";
+import staflyLogo from "@/assets/stafly-logo.png";
+import mascotChecklist from "@/assets/stafly-mascot-checklist.png";
 
 function isPhoneNumber(value: string): boolean {
   const cleaned = value.replace(/[\s\-\(\)\+]/g, "");
@@ -84,70 +84,104 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Left — Branding panel (desktop only) */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden items-center justify-center gradient-primary">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-white/20 blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
+    <div className="min-h-screen flex bg-[hsl(220,40%,97%)]">
+      {/* Left — Branding panel (desktop) */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden items-center justify-center bg-gradient-to-br from-[hsl(220,60%,98%)] via-[hsl(215,50%,95%)] to-[hsl(220,45%,92%)]">
+        {/* Subtle decorative shapes */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-16 right-16 w-80 h-80 rounded-full bg-primary/[0.04] blur-3xl" />
+          <div className="absolute bottom-24 left-12 w-64 h-64 rounded-full bg-primary/[0.06] blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/[0.02] blur-3xl" />
         </div>
-        <div className="relative z-10 flex flex-col items-center text-center px-12 max-w-lg">
-          <img src={mascotOfficial} alt="stafly mascot" className="h-56 w-56 drop-shadow-2xl mb-8 animate-fade-in" />
-          <h2 className="text-3xl font-bold font-heading text-white mb-3 leading-tight">
+
+        <div className="relative z-10 flex flex-col items-center text-center px-16 max-w-md">
+          {/* 3D Mascot — Soft Premium */}
+          <img
+            src={mascotChecklist}
+            alt="stafly mascot"
+            className="h-64 w-auto drop-shadow-xl mb-10 select-none"
+            draggable={false}
+            style={{ imageRendering: "auto" }}
+          />
+
+          <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
             Control semanal de tu equipo, sin estrés.
           </h2>
-          <p className="text-white/80 text-base leading-relaxed">
-            Turnos, clock-in/out con ubicación, nómina semanal, reportes y permisos. Todo en una app.
+          <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
+            Turnos, clock-in/out con ubicación, nómina semanal y reportes. Todo en una app diseñada para tu operación.
           </p>
-          <div className="flex items-center gap-2 mt-6 text-white/60 text-xs">
-            <Lock className="h-3.5 w-3.5" />
-            <span>Acceso seguro por roles</span>
+
+          <div className="flex items-center gap-6 mt-8">
+            {[
+              "Turnos inteligentes",
+              "Nómina automática",
+              "Reportes al instante",
+            ].map((feature) => (
+              <div key={feature} className="flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-primary/60" />
+                <span className="text-xs text-muted-foreground/70 font-medium">{feature}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Right — Login form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-8">
-        <div className="w-full max-w-sm">
-          <div className="bg-card rounded-2xl shadow-xl border border-border/50 px-8 py-10 space-y-6">
-            {/* Logo & Title */}
-            <div className="flex flex-col items-center gap-3">
-              <img src={staflyAppIcon} alt="stafly" className="h-16 w-16 drop-shadow-lg" />
-              <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-                stafly
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
+        <div className="w-full max-w-[380px]">
+          {/* Logo */}
+          <div className="flex flex-col items-center mb-10">
+            <img
+              src={staflyLogo}
+              alt="stafly"
+              className="h-20 w-auto select-none"
+              draggable={false}
+              style={{ imageRendering: "auto" }}
+            />
+          </div>
+
+          {/* Card */}
+          <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+            <div className="text-center">
+              <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
+                {isLogin
+                  ? isPhone
+                    ? "Acceso empleado"
+                    : "Bienvenido de vuelta"
+                  : "Crear cuenta"}
               </h1>
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="text-sm text-muted-foreground mt-1">
                 {isLogin
                   ? isPhone
                     ? "Ingresa tu teléfono y PIN"
                     : "Inicia sesión con tu email"
-                  : "Crea una nueva cuenta"}
+                  : "Completa los datos para registrarte"}
               </p>
             </div>
 
             {/* Phone mode indicator */}
             {isPhone && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/15">
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-primary/[0.06] border border-primary/10">
                 <Phone className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs text-primary font-medium">Modo empleado detectado</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Full name (signup only) */}
               {!isLogin && !isPhone && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-sm font-semibold text-foreground">
+                <div className="space-y-1.5">
+                  <Label htmlFor="fullName" className="text-xs font-semibold text-foreground/80">
                     Nombre completo
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                     <Input
                       id="fullName"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Tu nombre completo"
-                      className="pl-10 h-12 bg-muted/40 border-border/60 rounded-xl focus:bg-card transition-colors"
+                      className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors"
                       required={!isLogin}
                     />
                   </div>
@@ -155,15 +189,15 @@ export default function Auth() {
               )}
 
               {/* Identifier */}
-              <div className="space-y-2">
-                <Label htmlFor="identifier" className="text-sm font-semibold text-foreground">
+              <div className="space-y-1.5">
+                <Label htmlFor="identifier" className="text-xs font-semibold text-foreground/80">
                   {isPhone ? "Teléfono" : "Email o Teléfono"}
                 </Label>
                 <div className="relative">
                   {isPhone ? (
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                   ) : (
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                   )}
                   <Input
                     id="identifier"
@@ -171,26 +205,26 @@ export default function Auth() {
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder="tu@email.com o número de teléfono"
-                    className="pl-10 h-12 bg-muted/40 border-border/60 rounded-xl focus:bg-card transition-colors"
+                    className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors"
                     required
                   />
                 </div>
               </div>
 
               {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-semibold text-foreground">
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs font-semibold text-foreground/80">
                   {isPhone ? "PIN de acceso" : "Contraseña"}
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={isPhone ? "PIN de 6 dígitos" : "••••••••"}
-                    className="pl-10 pr-11 h-12 bg-muted/40 border-border/60 rounded-xl focus:bg-card transition-colors"
+                    className="pl-9 pr-10 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors"
                     required
                     minLength={isPhone ? 4 : 6}
                     maxLength={isPhone ? 6 : undefined}
@@ -198,7 +232,7 @@ export default function Auth() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-muted-foreground/60 hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-lg text-muted-foreground/40 hover:text-foreground transition-colors"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -209,11 +243,11 @@ export default function Auth() {
               {/* Submit */}
               <Button
                 type="submit"
-                className="w-full h-12 text-base font-semibold shadow-md rounded-full gradient-primary text-white hover:shadow-lg transition-all"
+                className="w-full h-11 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all mt-2"
                 disabled={loading}
               >
                 {loading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : isLogin || isPhone ? (
                   "Iniciar sesión"
                 ) : (
@@ -222,15 +256,9 @@ export default function Auth() {
               </Button>
             </form>
 
-            {/* Secure access note */}
-            <div className="flex items-center justify-center gap-1.5 text-muted-foreground/50 text-[11px]">
-              <Lock className="h-3 w-3" />
-              <span>Acceso seguro por roles</span>
-            </div>
-
             {/* Toggle login/signup */}
             {!isPhone && (
-              <div className="text-center">
+              <div className="text-center pt-1">
                 <button
                   type="button"
                   onClick={() => setIsLogin(!isLogin)}
@@ -243,9 +271,10 @@ export default function Auth() {
           </div>
 
           {/* Footer */}
-          <p className="text-center text-[11px] text-muted-foreground/50 mt-6">
-            © {new Date().getFullYear()} stafly · staflyapps.com
-          </p>
+          <div className="flex items-center justify-center gap-1.5 mt-8 text-muted-foreground/40">
+            <Lock className="h-3 w-3" />
+            <span className="text-[11px]">Acceso seguro · staflyapps.com</span>
+          </div>
         </div>
       </div>
     </div>
