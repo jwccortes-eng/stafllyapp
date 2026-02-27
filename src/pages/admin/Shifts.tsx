@@ -83,7 +83,7 @@ export default function Shifts() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<SelectOption[]>([]);
-  const [locations, setLocations] = useState<SelectOption[]>([]);
+  const [locations, setLocations] = useState<(SelectOption & { address?: string; client_id?: string | null })[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
@@ -126,6 +126,8 @@ export default function Shifts() {
   const [locationId, setLocationId] = useState("");
   const [notes, setNotes] = useState("");
   const [claimable, setClaimable] = useState(false);
+  const [meetingPoint, setMeetingPoint] = useState("");
+  const [specialInstructions, setSpecialInstructions] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -181,13 +183,13 @@ export default function Shifts() {
         .is("deleted_at", null).order("start_time"),
       supabase.from("shift_assignments").select("*").eq("company_id", selectedCompanyId),
       supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
-      supabase.from("locations").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
+      supabase.from("locations").select("id, name, address, client_id").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId).eq("is_active", true),
     ]);
     setShifts((shiftsRes.data ?? []) as Shift[]);
     setAssignments((assignRes.data ?? []) as Assignment[]);
     setClients((clientsRes.data ?? []) as SelectOption[]);
-    setLocations((locsRes.data ?? []) as SelectOption[]);
+    setLocations((locsRes.data ?? []) as any[]);
     setEmployees((empsRes.data ?? []) as Employee[]);
     setLoading(false);
   }, [selectedCompanyId, weekStart, currentMonth, currentDay, viewMode]);
@@ -198,6 +200,16 @@ export default function Shifts() {
     setTitle(""); setDate(""); setStartTime("08:00"); setEndTime("17:00");
     setSlots("1"); setClientId(""); setLocationId(""); setNotes("");
     setClaimable(false); setSelectedEmployees([]);
+    setMeetingPoint(""); setSpecialInstructions("");
+  };
+
+  // Auto-fill meeting point from client's location address
+  const handleClientChange = (newClientId: string) => {
+    setClientId(newClientId === "none" ? "" : newClientId);
+    if (newClientId && newClientId !== "none") {
+      const loc = locations.find(l => l.client_id === newClientId && l.address);
+      if (loc?.address) setMeetingPoint(loc.address);
+    }
   };
 
   // --- Notification helper ---
@@ -255,6 +267,8 @@ export default function Shifts() {
       location_id: locationId || null,
       notes: notes.trim() || null,
       claimable,
+      meeting_point: meetingPoint.trim() || null,
+      special_instructions: specialInstructions.trim() || null,
       created_by: user?.id,
     } as any).select("id").single();
 
@@ -645,7 +659,7 @@ export default function Shifts() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <Label className="text-xs text-muted-foreground">Cliente</Label>
-                      <Select value={clientId || "none"} onValueChange={v => setClientId(v === "none" ? "" : v)}>
+                      <Select value={clientId || "none"} onValueChange={handleClientChange}>
                         <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Sin asignar</SelectItem>
@@ -672,6 +686,17 @@ export default function Shifts() {
                     </div>
                   </div>
                   <div><Label className="text-xs text-muted-foreground">Notas adicionales</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none" /></div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">📍 Dirección / Punto de encuentro</Label>
+                    <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm" />
+                    {meetingPoint && clientId && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Autocompletada desde la ubicación del cliente. Puedes editarla.</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">📋 Instrucciones adicionales</Label>
+                    <Textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} rows={2} placeholder="Ej: Llevar uniforme negro, llegar 15 min antes..." className="text-sm resize-none" />
+                  </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Asignar empleados</Label>
                     <div className="mt-1">
