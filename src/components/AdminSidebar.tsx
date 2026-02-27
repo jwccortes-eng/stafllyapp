@@ -8,7 +8,7 @@ import {
   BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2, Globe,
   PanelLeftClose, PanelLeft, Smartphone, Moon, Sun, Settings2,
   GripVertical, MessageSquare, Check, X, Clock, MapPin, Megaphone,
-  MessageCircle, ChevronDown, ScanEye,
+  MessageCircle, ChevronDown, ScanEye, Activity,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -71,6 +71,7 @@ const OWNER_LINKS: LinkDef[] = [
   { to: "/app/permissions", icon: Shield, label: "Permisos", module: null, section: "Administración" },
   { to: "/app/monetization", icon: DollarSign, label: "Inversión", module: null, section: "Administración" },
   { to: "/app/settings", icon: Settings2, label: "Plataforma", module: null, section: "Administración" },
+  { to: "/app/system-health", icon: Activity, label: "Cuadro de control", module: null, section: "Administración" },
 ];
 
 interface Customization {

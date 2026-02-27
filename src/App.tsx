@@ -40,6 +40,7 @@ import Permissions from "./pages/admin/Permissions";
 import CompanyConfig from "./pages/admin/CompanyConfig";
 import Automations from "./pages/admin/Automations";
 import MonetizationReport from "./pages/admin/MonetizationReport";
+import SystemHealth from "./pages/admin/SystemHealth";
 import ShiftRequests from "./pages/admin/ShiftRequests";
 import PayrollSettings from "./pages/admin/PayrollSettings";
 import Pricing from "./pages/admin/Pricing";
@@ -108,6 +109,7 @@ function App() {
                 <Route path="monetization" element={<MonetizationReport />} />
                 <Route path="pricing" element={<Pricing />} />
                 <Route path="billing" element={<Billing />} />
+                <Route path="system-health" element={<SystemHealth />} />
               </Route>
 
               {/* Employee portal routes */}
