@@ -757,6 +757,88 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_tickets: {
+        Row: {
+          assigned_to: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          employee_id: string
+          id: string
+          priority: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          source: string
+          source_entity_id: string | null
+          source_entity_type: string | null
+          status: string
+          subject: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          employee_id: string
+          id?: string
+          priority?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source?: string
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          status?: string
+          subject: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          employee_id?: string
+          id?: string
+          priority?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source?: string
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          status?: string
+          subject?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_tickets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_tickets_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_tickets_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           access_pin: string | null
@@ -2183,6 +2265,57 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_notes: {
+        Row: {
+          author_id: string
+          author_type: string
+          company_id: string
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          note_type: string
+          ticket_id: string
+        }
+        Insert: {
+          author_id: string
+          author_type?: string
+          company_id: string
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          note_type?: string
+          ticket_id: string
+        }
+        Update: {
+          author_id?: string
+          author_type?: string
+          company_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          note_type?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_notes_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "employee_tickets"
             referencedColumns: ["id"]
           },
         ]

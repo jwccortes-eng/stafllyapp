@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import EmployeeChatWidget from "@/components/EmployeeChatWidget";
+import NotificationBell from "@/components/NotificationBell";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import staflyLogo from "@/assets/stafly-logo.png";
 
@@ -59,11 +60,14 @@ export default function EmployeeLayout() {
             <div className="flex items-center gap-2">
               <img src={staflyLogo} alt="stafly" className="h-8 w-auto" style={{ imageRendering: "auto" }} />
             </div>
-            <LogoutConfirmDialog onConfirm={signOut}>
-              <button className="p-2 -mr-1 rounded-xl text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all active:scale-90" aria-label="Cerrar sesión">
-                <LogOut className="h-[18px] w-[18px]" />
-              </button>
-            </LogoutConfirmDialog>
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <LogoutConfirmDialog onConfirm={signOut}>
+                <button className="p-2 -mr-1 rounded-xl text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all active:scale-90" aria-label="Cerrar sesión">
+                  <LogOut className="h-[18px] w-[18px]" />
+                </button>
+              </LogoutConfirmDialog>
+            </div>
           </div>
         </header>
 
