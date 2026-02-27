@@ -578,17 +578,17 @@ export default function ImportConnecteam() {
               </Select>
             </div>
             {selectedPeriod && isPeriodClosed && (
-              <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-                <Lock className="h-4 w-4 text-amber-600 shrink-0" />
-                <p className="text-sm text-amber-700 dark:text-amber-400">
+              <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
+                <Lock className="h-4 w-4 text-warning shrink-0" />
+                <p className="text-sm text-warning-foreground dark:text-warning">
                   <strong>Periodo cerrado.</strong> No se pueden importar datos en un periodo cerrado.
                 </p>
               </div>
             )}
             {selectedPeriod && !isPeriodClosed && periodHasImport && (
-              <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
-                <p className="text-sm text-amber-700 dark:text-amber-400">
+              <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
+                <AlertCircle className="h-4 w-4 text-warning shrink-0" />
+                <p className="text-sm text-warning-foreground dark:text-warning">
                   <strong>Este periodo ya tiene una importación.</strong> Elimina la importación existente desde el historial antes de importar un nuevo archivo.
                 </p>
               </div>
@@ -740,7 +740,7 @@ export default function ImportConnecteam() {
                             placeholder="Apellido"
                           />
                           {isEmpty && <span className="text-[10px] text-destructive whitespace-nowrap">Vacío</span>}
-                          {isDuplicate && !isEmpty && <span className="text-[10px] text-amber-600 whitespace-nowrap">Duplicado</span>}
+                          {isDuplicate && !isEmpty && <span className="text-[10px] text-warning whitespace-nowrap">Duplicado</span>}
                           <Button
                             size="icon"
                             variant="ghost"
@@ -760,7 +760,7 @@ export default function ImportConnecteam() {
                     {(hasEmpty || hasDuplicates) && (
                       <div className="mt-2 space-y-0.5">
                         {hasEmpty && <p className="text-[11px] text-destructive">⚠ Hay nombres vacíos. Se omitirán al crear.</p>}
-                        {hasDuplicates && <p className="text-[11px] text-amber-600">⚠ Hay nombres duplicados. Corrígelos o elimínalos antes de crear.</p>}
+                        {hasDuplicates && <p className="text-[11px] text-warning">⚠ Hay nombres duplicados. Corrígelos o elimínalos antes de crear.</p>}
                       </div>
                     )}
                     <div className="flex items-center justify-between mt-3">

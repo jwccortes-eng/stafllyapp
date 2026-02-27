@@ -203,7 +203,7 @@ export default function PayPeriods() {
 
   const getImportStatusIcon = (status: string) => {
     switch (status) {
-      case "completed": return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+      case "completed": return <CheckCircle2 className="h-4 w-4 text-earning" />;
       case "error": return <AlertCircle className="h-4 w-4 text-destructive" />;
       default: return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
@@ -468,7 +468,7 @@ export default function PayPeriods() {
                                         </div>
                                         <div className="flex items-center gap-3">
                                           <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                            imp.status === "completed" ? "bg-emerald-500/10 text-emerald-600" :
+                                            imp.status === "completed" ? "bg-earning/10 text-earning" :
                                             imp.status === "error" ? "bg-destructive/10 text-destructive" :
                                             "bg-muted text-muted-foreground"
                                           }`}>

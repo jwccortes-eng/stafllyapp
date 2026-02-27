@@ -235,7 +235,7 @@ export function ShiftDetailDialog({
   };
 
   const statusColors: Record<string, string> = {
-    confirmed: "text-emerald-600", pending: "text-amber-500", rejected: "text-red-500",
+    confirmed: "text-earning", pending: "text-warning", rejected: "text-destructive",
   };
 
   const statusLabel = shift.status === "published" ? "publicado" : shift.status === "draft" ? "borrador" : shift.status;
@@ -277,7 +277,7 @@ export function ShiftDetailDialog({
                 >
                   Solicitudes
                   {requests.filter(r => r.status === "pending").length > 0 && (
-                    <Badge className="h-4 min-w-4 px-1 text-[9px] bg-amber-500 text-white">
+                    <Badge className="h-4 min-w-4 px-1 text-[9px] bg-warning text-warning-foreground">
                       {requests.filter(r => r.status === "pending").length}
                     </Badge>
                   )}
@@ -538,9 +538,9 @@ export function ShiftDetailDialog({
                             </div>
                           </div>
                           <Badge variant="outline" className={cn("text-[10px]",
-                            req.status === "pending" && "bg-amber-500/10 text-amber-600 border-amber-500/30",
-                            req.status === "approved" && "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
-                            req.status === "rejected" && "bg-red-500/10 text-red-600 border-red-500/30"
+                            req.status === "pending" && "bg-warning/10 text-warning border-warning/30",
+                            req.status === "approved" && "bg-earning/10 text-earning border-earning/30",
+                            req.status === "rejected" && "bg-destructive/10 text-destructive border-destructive/30"
                           )}>
                             {req.status === "pending" ? "Pendiente" : req.status === "approved" ? "Aprobada" : "Rechazada"}
                           </Badge>
