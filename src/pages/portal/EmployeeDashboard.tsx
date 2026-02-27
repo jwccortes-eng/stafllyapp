@@ -13,7 +13,7 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { format, parseISO, isToday, isTomorrow, formatDistanceToNow, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import staflyMascot from "@/assets/stafly-mascot-checklist.png";
+import staflyMascot from "@/assets/stafly-mascot-3d.png";
 
 // --- Types (unchanged) ---
 interface PayPeriod {
@@ -29,6 +29,7 @@ interface Employee {
   first_name: string;
   last_name: string;
   company_id: string;
+  avatar_url: string | null;
 }
 
 interface ScheduledShift {
@@ -127,6 +128,7 @@ const priorityConfig: Record<string, { cls: string; bgCls: string; label: string
 export default function EmployeeDashboard() {
   const { employeeId } = useAuth();
   const [empName, setEmpName] = useState("");
+  const [empAvatar, setEmpAvatar] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [nextShift, setNextShift] = useState<NextShift | null>(null);
   const [estimatedPay, setEstimatedPay] = useState<number | null>(null);
@@ -142,9 +144,10 @@ export default function EmployeeDashboard() {
       setAnnouncements([]); setReactions({}); setLoading(false); return;
     }
     setLoading(true);
-    const { data: emp } = await supabase.from("employees").select("first_name, last_name, company_id").eq("id", employeeId).maybeSingle();
+    const { data: emp } = await supabase.from("employees").select("first_name, last_name, company_id, avatar_url").eq("id", employeeId).maybeSingle();
     if (!emp) { setLoading(false); return; }
     setEmpName(`${emp.first_name} ${emp.last_name}`);
+    setEmpAvatar(emp.avatar_url);
     setCompanyId(emp.company_id);
     const today = new Date().toISOString().split("T")[0];
 
@@ -241,12 +244,12 @@ export default function EmployeeDashboard() {
       <div className="rounded-2xl gradient-primary p-5 text-primary-foreground relative overflow-hidden shadow-lg">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,hsl(212_100%_73%/0.4),transparent_55%)]" />
         <div className="relative flex items-center gap-3.5">
-          <EmployeeAvatar firstName={firstName} lastName={lastName} size="md" className="ring-2 ring-white/30 shadow-lg" />
+          <EmployeeAvatar firstName={firstName} lastName={lastName} avatarUrl={empAvatar} size="lg" className="ring-2 ring-white/30 shadow-lg" />
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-medium opacity-80">{greeting}</p>
             <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">{firstName}</h1>
           </div>
-          <img src={staflyMascot} alt="" className="h-16 w-16 object-contain opacity-90 drop-shadow-lg -mr-1" style={{ imageRendering: "auto" }} />
+          <img src={staflyMascot} alt="" className="h-20 w-20 object-contain opacity-90 drop-shadow-xl -mr-1" style={{ imageRendering: "auto" }} />
         </div>
       </div>
 

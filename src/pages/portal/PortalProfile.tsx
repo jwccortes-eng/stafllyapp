@@ -1,15 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   User, Mail, Phone, MapPin, CalendarDays, Wallet,
-  ChevronRight, LogOut, Shield, BarChart3,
+  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmployeeProfile {
   first_name: string;
@@ -20,20 +21,25 @@ interface EmployeeProfile {
   start_date: string | null;
   groups: string | null;
   tags: string | null;
+  avatar_url: string | null;
 }
 
 export default function PortalProfile() {
   const { employeeId, signOut } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [companyName, setCompanyName] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!employeeId) return;
     async function load() {
       const { data } = await supabase
         .from("employees")
-        .select("first_name, last_name, email, phone_number, employee_role, start_date, groups, tags, company_id")
+        .select("first_name, last_name, email, phone_number, employee_role, start_date, groups, tags, company_id, avatar_url")
         .eq("id", employeeId)
         .maybeSingle();
 
@@ -46,6 +52,53 @@ export default function PortalProfile() {
     }
     load();
   }, [employeeId]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !employeeId) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Error", description: "Solo se permiten imágenes.", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Error", description: "La imagen no puede exceder 5MB.", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${employeeId}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("employee-avatars")
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("employee-avatars")
+        .getPublicUrl(path);
+
+      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from("employees")
+        .update({ avatar_url: avatarUrl })
+        .eq("id", employeeId);
+
+      if (updateError) throw updateError;
+
+      setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
+      toast({ title: "Foto actualizada" });
+    } catch (err: any) {
+      toast({ title: "Error al subir foto", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -73,16 +126,47 @@ export default function PortalProfile() {
 
   return (
     <div className="space-y-6">
+      {/* Back button */}
+      <button
+        onClick={() => navigate("/portal")}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Volver
+      </button>
+
       {/* Profile header */}
       <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-6 text-primary-foreground relative overflow-hidden shadow-md">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(200_85%_65%/0.4),transparent_60%)]" />
         <div className="relative flex items-center gap-4">
-          <EmployeeAvatar
-            firstName={profile.first_name}
-            lastName={profile.last_name}
-            size="lg"
-            className="border-2 border-white/30 shadow-lg"
-          />
+          {/* Avatar with upload */}
+          <div className="relative group">
+            <EmployeeAvatar
+              firstName={profile.first_name}
+              lastName={profile.last_name}
+              avatarUrl={profile.avatar_url}
+              size="xl"
+              className="border-2 border-white/30 shadow-lg"
+            />
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+            >
+              {uploading ? (
+                <Loader2 className="h-5 w-5 text-white animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5 text-white" />
+              )}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
+          </div>
           <div className="min-w-0">
             <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">
               {profile.first_name} {profile.last_name}

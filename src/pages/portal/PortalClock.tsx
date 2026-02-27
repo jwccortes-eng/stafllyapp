@@ -1,15 +1,16 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users, AlertCircle, FileText, Hash } from "lucide-react";
+import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users, AlertCircle, FileText, Hash, ArrowLeft, ShieldAlert } from "lucide-react";
 import staflyMascotChecklist from "@/assets/stafly-mascot-checklist.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useNavigate } from "react-router-dom";
 
 interface TimeEntry {
   id: string;
@@ -31,9 +32,50 @@ interface TodayShift {
   client_name?: string;
 }
 
+/** Check if current time is at or after the shift start_time (tolerance = 0 min) */
+function isClockInAllowed(shift: TodayShift): { allowed: boolean; message: string } {
+  const now = new Date();
+  const [h, m] = shift.start_time.split(":").map(Number);
+  const shiftStart = new Date();
+  shiftStart.setHours(h, m, 0, 0);
+
+  if (now < shiftStart) {
+    const diffMin = Math.ceil((shiftStart.getTime() - now.getTime()) / 60000);
+    return {
+      allowed: false,
+      message: `Faltan ${diffMin} min para el inicio del turno (${shift.start_time.slice(0, 5)}). No puedes fichar antes de la hora programada.`,
+    };
+  }
+  return { allowed: true, message: "" };
+}
+
+/** Check if clock-out is within shift schedule. If outside, returns review required. */
+function isClockOutWithinSchedule(shift: TodayShift | null): { withinSchedule: boolean; message: string } {
+  if (!shift) return { withinSchedule: true, message: "" };
+
+  const now = new Date();
+  const [eh, em] = shift.end_time.split(":").map(Number);
+  const shiftEnd = new Date();
+  shiftEnd.setHours(eh, em, 0, 0);
+
+  const [sh, sm] = shift.start_time.split(":").map(Number);
+  const shiftStart = new Date();
+  shiftStart.setHours(sh, sm, 0, 0);
+
+  // If clock-out is before shift start or after shift end → needs review
+  if (now < shiftStart || now > shiftEnd) {
+    return {
+      withinSchedule: false,
+      message: `La salida está fuera del horario programado (${shift.start_time.slice(0, 5)} - ${shift.end_time.slice(0, 5)}). Se generará una solicitud de revisión.`,
+    };
+  }
+  return { withinSchedule: true, message: "" };
+}
+
 export default function PortalClock() {
   const { employeeId } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
@@ -45,11 +87,19 @@ export default function PortalClock() {
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
   const [sendingRequest, setSendingRequest] = useState(false);
+  const [clockInBlocked, setClockInBlocked] = useState<string | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Re-check clock-in eligibility when selected shift or time changes
+  useEffect(() => {
+    if (!selectedShift) { setClockInBlocked(null); return; }
+    const check = isClockInAllowed(selectedShift);
+    setClockInBlocked(check.allowed ? null : check.message);
+  }, [selectedShift, now]);
 
   const loadData = useCallback(async () => {
     if (!employeeId) { setLoading(false); return; }
@@ -80,7 +130,6 @@ export default function PortalClock() {
     setTodayEntries(list);
     setActiveEntry(list.find((e) => !e.clock_out) ?? null);
 
-    // Map shifts
     const mappedShifts: TodayShift[] = (shiftsRes.data ?? []).map((sa: any) => ({
       id: sa.scheduled_shifts.id,
       title: sa.scheduled_shifts.title,
@@ -92,7 +141,6 @@ export default function PortalClock() {
     }));
     setTodayShifts(mappedShifts);
 
-    // Auto-select if only one shift
     if (mappedShifts.length === 1 && !list.find(e => !e.clock_out)) {
       setSelectedShift(mappedShifts[0]);
     }
@@ -104,6 +152,14 @@ export default function PortalClock() {
 
   const handleClockIn = async () => {
     if (!employeeId || !companyId || !selectedShift) return;
+
+    // Final validation
+    const check = isClockInAllowed(selectedShift);
+    if (!check.allowed) {
+      toast({ title: "No permitido", description: check.message, variant: "destructive" });
+      return;
+    }
+
     setActing(true);
     try {
       const { error } = await supabase.from("time_entries").insert({
@@ -121,13 +177,48 @@ export default function PortalClock() {
   };
 
   const handleClockOut = async () => {
-    if (!activeEntry) return;
+    if (!activeEntry || !companyId || !employeeId) return;
+
+    // Find the shift associated with the active entry
+    const activeShift = todayShifts.find(s => s.id === activeEntry.shift_id) ?? null;
+    const scheduleCheck = isClockOutWithinSchedule(activeShift);
+
     setActing(true);
     try {
-      const { error } = await supabase.from("time_entries")
-        .update({ clock_out: new Date().toISOString() }).eq("id", activeEntry.id);
-      if (error) throw error;
-      toast({ title: "Salida registrada" });
+      const clockOutTime = new Date().toISOString();
+
+      if (!scheduleCheck.withinSchedule) {
+        // Clock-out outside schedule → mark as "pending" and create a review ticket
+        const { error } = await supabase.from("time_entries")
+          .update({ clock_out: clockOutTime, status: "pending", notes: `⚠️ Salida fuera de horario programado. ${scheduleCheck.message}` })
+          .eq("id", activeEntry.id);
+        if (error) throw error;
+
+        // Create a ticket for admin review
+        await supabase.from("employee_tickets").insert({
+          company_id: companyId,
+          employee_id: employeeId,
+          subject: "Salida fuera de horario programado",
+          description: `Clock-out registrado a las ${format(new Date(), "HH:mm")} fuera del horario del turno "${activeShift?.title ?? "N/A"}" (${activeShift?.start_time?.slice(0, 5) ?? "?"} - ${activeShift?.end_time?.slice(0, 5) ?? "?"}). Requiere revisión antes de consolidar.`,
+          type: "time_adjustment",
+          source: "auto",
+          priority: "medium",
+          status: "new",
+          source_entity_type: "time_entry",
+          source_entity_id: activeEntry.id,
+        });
+
+        toast({
+          title: "Salida registrada (en revisión)",
+          description: "Tu salida está fuera del horario programado. Se generó una solicitud de revisión.",
+        });
+      } else {
+        const { error } = await supabase.from("time_entries")
+          .update({ clock_out: clockOutTime }).eq("id", activeEntry.id);
+        if (error) throw error;
+        toast({ title: "Salida registrada" });
+      }
+
       await loadData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message ?? "No se pudo registrar.", variant: "destructive" });
@@ -192,6 +283,15 @@ export default function PortalClock() {
 
   return (
     <div className="space-y-5">
+      {/* Back button */}
+      <button
+        onClick={() => navigate("/portal")}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors -mb-2"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Volver
+      </button>
+
       {/* Current time */}
       <div className="text-center space-y-0.5">
         <p className="text-4xl font-bold font-heading tracking-tight tabular-nums text-foreground">
@@ -238,6 +338,7 @@ export default function PortalClock() {
                 {todayShifts.map(s => {
                   const isSelected = selectedShift?.id === s.id;
                   const alreadyClockedShift = todayEntries.some(e => e.shift_id === s.id);
+                  const timeCheck = isClockInAllowed(s);
                   return (
                     <button
                       key={s.id}
@@ -261,6 +362,12 @@ export default function PortalClock() {
                         </div>
                         {alreadyClockedShift && (
                           <span className="text-[9px] font-semibold text-earning">Completado</span>
+                        )}
+                        {!alreadyClockedShift && !timeCheck.allowed && (
+                          <span className="text-[9px] font-semibold text-warning flex items-center gap-0.5">
+                            <ShieldAlert className="h-2.5 w-2.5" />
+                            No disponible aún
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-1">
@@ -300,6 +407,14 @@ export default function PortalClock() {
         </>
       )}
 
+      {/* Clock-in blocked warning */}
+      {!isClockedIn && clockInBlocked && selectedShift && (
+        <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 flex items-start gap-2.5">
+          <ShieldAlert className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+          <p className="text-[11px] text-warning font-medium leading-relaxed">{clockInBlocked}</p>
+        </div>
+      )}
+
       {/* Clock in/out button */}
       {isClockedIn ? (
         <Button
@@ -312,7 +427,7 @@ export default function PortalClock() {
       ) : (
         <Button
           onClick={handleClockIn}
-          disabled={acting || !companyId || !selectedShift}
+          disabled={acting || !companyId || !selectedShift || !!clockInBlocked}
           className="w-full h-16 rounded-2xl text-lg font-bold gap-3 shadow-xl transition-all active:scale-[0.95] gradient-primary text-white hover:shadow-2xl disabled:opacity-50"
         >
           {acting ? <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <><LogIn className="h-5 w-5" /> Marcar Entrada</>}
