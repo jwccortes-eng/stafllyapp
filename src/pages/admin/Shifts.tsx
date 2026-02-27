@@ -124,6 +124,9 @@ export default function Shifts() {
   const [slots, setSlots] = useState("1");
   const [clientId, setClientId] = useState("");
   const [locationId, setLocationId] = useState("");
+  const [newClientName, setNewClientName] = useState("");
+  const [addingClient, setAddingClient] = useState(false);
+  const [showAddClient, setShowAddClient] = useState(false);
   const [notes, setNotes] = useState("");
   const [claimable, setClaimable] = useState(false);
   const [meetingPoint, setMeetingPoint] = useState("");
@@ -201,6 +204,25 @@ export default function Shifts() {
     setSlots("1"); setClientId(""); setLocationId(""); setNotes("");
     setClaimable(false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions("");
+  };
+
+  // Quick-add client inline
+  const handleQuickAddClient = async () => {
+    if (!newClientName.trim() || !selectedCompanyId) return;
+    setAddingClient(true);
+    const { data, error } = await supabase.from("clients").insert({
+      company_id: selectedCompanyId,
+      name: newClientName.trim(),
+    } as any).select("id").single();
+    if (error) { toast.error(error.message); setAddingClient(false); return; }
+    if (data) {
+      setClients(prev => [...prev, { id: data.id, name: newClientName.trim() }]);
+      setClientId(data.id);
+      toast.success(`Cliente "${newClientName.trim()}" creado`);
+    }
+    setNewClientName("");
+    setAddingClient(false);
+    setShowAddClient(false);
   };
 
   // Auto-fill meeting point from client's location address
@@ -676,13 +698,37 @@ export default function Shifts() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <Label className="text-xs text-muted-foreground">Cliente</Label>
-                      <Select value={clientId || "none"} onValueChange={handleClientChange}>
-                        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-1">
+                        <Select value={clientId || "none"} onValueChange={handleClientChange}>
+                          <SelectTrigger className="h-9 text-sm flex-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sin asignar</SelectItem>
+                            {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Popover open={showAddClient} onOpenChange={setShowAddClient}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar cliente">
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-3" align="end">
+                            <p className="text-xs font-medium mb-2">Nuevo cliente</p>
+                            <div className="flex gap-1.5">
+                              <Input
+                                value={newClientName}
+                                onChange={e => setNewClientName(e.target.value)}
+                                placeholder="Nombre del cliente"
+                                className="h-8 text-sm"
+                                onKeyDown={e => e.key === "Enter" && handleQuickAddClient()}
+                              />
+                              <Button size="sm" className="h-8 px-3 text-xs" onClick={handleQuickAddClient} disabled={addingClient || !newClientName.trim()}>
+                                {addingClient ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
+                              </Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Ubicación</Label>
