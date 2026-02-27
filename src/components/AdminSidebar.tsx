@@ -51,6 +51,7 @@ const ALL_LINKS: LinkDef[] = [
   // Operaciones
   { to: "/app/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Operaciones" },
   { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
+  { to: "/app/import-schedule", icon: Upload, label: "Importar Turnos", module: "shifts", section: "Operaciones" },
   { to: "/app/shift-requests", icon: MessageSquare, label: "Solicitudes turno", module: "shifts", section: "Operaciones", badge: "shift_requests" },
   { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
   // Gestión
