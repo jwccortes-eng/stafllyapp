@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -59,6 +60,25 @@ export default function Shifts() {
   const { selectedCompanyId } = useCompany();
   const canEdit = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isInitialized = useRef(false);
+
+  // Parse URL params on mount
+  const initialDate = useMemo(() => {
+    const d = searchParams.get("date");
+    if (d) {
+      const parsed = parse(d, "yyyy-MM-dd", new Date());
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    return new Date();
+  }, []); // only on mount
+
+  const initialView = useMemo(() => {
+    const v = searchParams.get("view");
+    if (v && ["day", "week", "month", "employee", "client"].includes(v)) return v as ViewMode;
+    return "week" as ViewMode;
+  }, []);
+
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,12 +86,27 @@ export default function Shifts() {
   const [locations, setLocations] = useState<SelectOption[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [weekViewMode, setWeekViewMode] = useState<"grid" | "job">("job");
-  const [currentDay, setCurrentDay] = useState(() => new Date());
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [currentDay, setCurrentDay] = useState(() => initialDate);
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(initialDate, { weekStartsOn: 1 }));
   const [filters, setFilters] = useState<ShiftFilterState>(EMPTY_FILTERS);
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => initialDate);
+
+  // Sync state → URL (after initialization)
+  useEffect(() => {
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      return;
+    }
+    const refDate = viewMode === "day" ? currentDay
+      : viewMode === "week" ? weekStart
+      : currentMonth;
+    setSearchParams(
+      { date: format(refDate, "yyyy-MM-dd"), view: viewMode },
+      { replace: true }
+    );
+  }, [viewMode, currentDay, weekStart, currentMonth]);
 
   // Detail dialog
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
