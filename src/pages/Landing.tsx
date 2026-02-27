@@ -15,9 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import mascotHero from "@/assets/stafly-mascot-checklist.png";
-import mascotWave from "@/assets/stafly-mascot-wave.png";
-import mascotPaid from "@/assets/stafly-mascot-paid.png";
 import heroMockup from "@/assets/stafly-hero.png";
 import staflyLogo from "@/assets/stafly-logo.png";
 
@@ -253,7 +250,7 @@ export default function Landing() {
             <a href="#seguridad" className="hover:text-foreground transition-colors">{c.nav.security}</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-xl hover:bg-muted">
               <Globe className="h-4 w-4" />
               <span className="font-medium">{lang === "es" ? "EN" : "ES"}</span>
@@ -263,7 +260,7 @@ export default function Landing() {
             </Button>
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="rounded-full px-6 h-9 text-sm font-semibold gradient-primary text-white shadow-sm hover:shadow-md transition-all">
+                <Button className="rounded-full px-4 sm:px-6 h-8 sm:h-9 text-xs sm:text-sm font-semibold gradient-primary text-white shadow-sm hover:shadow-md transition-all">
                   {c.ctaPrimary}
                 </Button>
               </DialogTrigger>
@@ -272,7 +269,7 @@ export default function Landing() {
                 <DemoForm lang={lang} />
               </DialogContent>
             </Dialog>
-            <button className="lg:hidden p-2 rounded-xl hover:bg-muted transition-colors" onClick={() => setMobileMenu(!mobileMenu)}>
+            <button className="lg:hidden p-2 rounded-xl hover:bg-muted transition-colors shrink-0" onClick={() => setMobileMenu(!mobileMenu)}>
               {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
@@ -289,6 +286,9 @@ export default function Landing() {
               ].map(item => (
                 <a key={item.href} href={item.href} onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-xl hover:bg-muted transition-colors">{item.label}</a>
               ))}
+              <Link to="/auth" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-xl hover:bg-muted transition-colors text-primary">
+                {c.login}
+              </Link>
               <button onClick={() => { setLang(lang === "es" ? "en" : "es"); setMobileMenu(false); }} className="flex items-center gap-2 text-sm py-2.5 px-3 text-muted-foreground w-full rounded-xl hover:bg-muted transition-colors">
                 <Globe className="h-4 w-4" /> {lang === "es" ? "English" : "Español"}
               </button>
@@ -352,7 +352,6 @@ export default function Landing() {
               <div className="absolute -inset-6 bg-primary/[0.03] rounded-3xl blur-3xl" />
               <div className="relative">
                 <img src={heroMockup} alt="stafly Dashboard" className="w-full h-auto rounded-2xl shadow-xl border border-border/20" loading="eager" />
-                <img src={mascotHero} alt="stafly mascot" className="absolute -bottom-10 -left-10 h-40 w-40 drop-shadow-xl hidden sm:block" />
               </div>
             </div>
           </div>
@@ -566,9 +565,9 @@ export default function Landing() {
                       <DemoForm lang={lang} />
                     </DialogContent>
                   </Dialog>
-                  <Dialog>
+                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="lg" variant="outline" className="rounded-xl h-12 px-8 border-white/25 text-white hover:bg-white/10">
+                      <Button size="lg" variant="outline" className="rounded-xl h-12 px-8 border-2 border-white/60 text-white hover:bg-white/20 font-semibold backdrop-blur-sm">
                         {c.ctaSecondary}
                       </Button>
                     </DialogTrigger>
@@ -579,7 +578,7 @@ export default function Landing() {
                   </Dialog>
                 </div>
               </div>
-              <img src={mascotPaid} alt="stafly mascot celebrating" className="h-44 w-44 drop-shadow-2xl hidden md:block" />
+              {/* Mascot removed - background clashes with gradient */}
             </div>
           </div>
         </div>
@@ -590,7 +589,7 @@ export default function Landing() {
         <div className="container">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
-              <img src={staflyLogo} alt="stafly" className="h-9 w-auto" style={{ imageRendering: "auto" }} />
+              <img src={staflyLogo} alt="stafly" className="h-7 w-auto" style={{ imageRendering: "auto" }} />
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">{c.footer.privacy}</a>
