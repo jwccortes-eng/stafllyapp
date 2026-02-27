@@ -17,6 +17,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import staflyMascot from "@/assets/stafly-mascot-checklist.png";
 
 /* ─── Types ─── */
 interface Role {
@@ -121,50 +122,53 @@ function useAnimatedNumber(target: number, duration = 800) {
   return value;
 }
 
-/* ─── Stat Card ─── */
+/* ─── Stat Card (Premium) ─── */
 function StatCard({ label, value, subtitle, icon: Icon, color }: {
   label: string; value: string | number; subtitle: string;
   icon: any; color: "primary" | "warning" | "deduction" | "earning";
 }) {
   const colorMap = {
-    primary: { bg: "bg-primary/8", text: "text-primary", icon: "text-primary" },
-    warning: { bg: "bg-warning/8", text: "text-warning", icon: "text-warning" },
-    deduction: { bg: "bg-deduction/8", text: "text-deduction", icon: "text-deduction" },
-    earning: { bg: "bg-earning/8", text: "text-earning", icon: "text-earning" },
+    primary: { bg: "bg-primary/8", text: "text-primary", icon: "text-primary", ring: "ring-primary/10" },
+    warning: { bg: "bg-warning/8", text: "text-warning", icon: "text-warning", ring: "ring-warning/10" },
+    deduction: { bg: "bg-deduction/8", text: "text-deduction", icon: "text-deduction", ring: "ring-deduction/10" },
+    earning: { bg: "bg-earning/8", text: "text-earning", icon: "text-earning", ring: "ring-earning/10" },
   };
   const c = colorMap[color];
 
   return (
-    <div className="stat-card group">
+    <div className="group relative bg-card rounded-2xl border border-border/60 p-5 shadow-2xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 overflow-hidden">
+      {/* Subtle top accent line */}
+      <div className={cn("absolute top-0 left-4 right-4 h-[2px] rounded-b-full opacity-40", c.bg.replace('/8', ''))} />
+      
       <div className="flex items-center gap-3 mb-3">
-        <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center", c.bg)}>
-          <Icon className={cn("h-4.5 w-4.5", c.icon)} />
+        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center ring-1", c.bg, c.ring)}>
+          <Icon className={cn("h-[18px] w-[18px]", c.icon)} />
         </div>
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
       </div>
-      <p className={cn("text-2xl md:text-3xl font-bold font-heading tabular-nums", c.text)}>{value}</p>
-      <p className="text-[11px] text-muted-foreground mt-1">{subtitle}</p>
+      <p className={cn("text-2xl md:text-3xl font-bold font-heading tabular-nums leading-none", c.text)}>{value}</p>
+      <p className="text-[11px] text-muted-foreground/70 mt-1.5">{subtitle}</p>
     </div>
   );
 }
 
-/* ─── Quick Action ─── */
-function QuickAction({ label, description, icon: Icon, to, accent, index, navigate }: {
-  label: string; description: string; icon: any; to: string; accent: string; index: number; navigate: (to: string) => void;
+/* ─── Quick Action (Premium) ─── */
+function QuickAction({ label, description, icon: Icon, to, accent, navigate }: {
+  label: string; description: string; icon: any; to: string; accent: string; navigate: (to: string) => void;
 }) {
   return (
     <button
       onClick={() => navigate(to)}
-      className="group flex items-center gap-3.5 p-3.5 rounded-xl border border-border bg-card hover:border-primary/20 hover:shadow-sm transition-all duration-200 text-left press-scale"
+      className="group flex items-center gap-3.5 p-3.5 rounded-xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-sm transition-all duration-200 text-left press-scale"
     >
-      <div className={cn("h-10 w-10 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0 shadow-2xs", accent)}>
-        <Icon className="h-4.5 w-4.5 text-white" />
+      <div className={cn("h-10 w-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-2xs transition-transform duration-200 group-hover:scale-105", accent)}>
+        <Icon className="h-[18px] w-[18px] text-primary-foreground" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-foreground">{label}</p>
-        <p className="text-[11px] text-muted-foreground truncate">{description}</p>
+        <p className="text-[13px] font-semibold text-foreground">{label}</p>
+        <p className="text-[11px] text-muted-foreground/70 truncate">{description}</p>
       </div>
-      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
     </button>
   );
 }
@@ -322,44 +326,62 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* ── Hero ── */}
-      <div className="relative rounded-2xl border border-border bg-card p-5 md:p-7 overflow-hidden">
-        {/* Subtle decorative gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-warning/[0.02]" />
+      {/* ── Hero (Premium M365 Style) ── */}
+      <div className="relative rounded-2xl border border-border/50 bg-card overflow-hidden">
+        {/* Background gradient layers */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-earning/[0.03]" />
+        <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-primary/[0.03] blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-earning/[0.04] blur-3xl" />
 
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary/60" />
-              {greeting}
-            </p>
-            <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight mt-1 text-foreground">
-              {fullName || "Dashboard"}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {selectedCompany?.name ?? "Selecciona una empresa"} · {DAY_NAMES[payrollConfig.payroll_week_start_day].slice(0, 3)} → {DAY_NAMES[payrollConfig.expected_close_day].slice(0, 3)}
-            </p>
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5 p-6 md:p-8">
+          {/* Left: Greeting */}
+          <div className="flex items-start gap-4 flex-1">
+            {/* Mascot - flat style for admin */}
+            <div className="hidden md:flex shrink-0">
+              <img
+                src={staflyMascot}
+                alt="stafly"
+                className="h-16 w-16 object-contain drop-shadow-sm"
+                style={{ imageRendering: "auto" }}
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mb-1">
+                <Sparkles className="h-3.5 w-3.5 text-primary/50" />
+                {greeting}
+              </p>
+              <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
+                {fullName || "Dashboard"}
+              </h1>
+              <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1">
+                  {selectedCompany?.name ?? "Selecciona una empresa"}
+                </span>
+                <span className="text-border">·</span>
+                <span className="tabular-nums">{DAY_NAMES[payrollConfig.payroll_week_start_day].slice(0, 3)} → {DAY_NAMES[payrollConfig.expected_close_day].slice(0, 3)}</span>
+              </p>
+            </div>
           </div>
 
-          {/* Period pill */}
+          {/* Right: Period pill (Premium card) */}
           {stats.activePeriod && (
-            <div className="flex flex-col gap-2 min-w-[200px] p-3.5 rounded-xl border border-border bg-background/60">
+            <div className="flex flex-col gap-2.5 min-w-[220px] p-4 rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Periodo</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Periodo activo</span>
                 <span className={cn(
-                  "text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1",
+                  "text-[10px] px-2.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-1.5",
                   statusColor === 'earning' && "bg-earning/10 text-earning",
                   statusColor === 'warning' && "bg-warning/10 text-warning",
                   statusColor === 'primary' && "bg-primary/10 text-primary",
                 )}>
-                  <span className={cn("h-1.5 w-1.5 rounded-full", `bg-${statusColor}`)} />
+                  <span className={cn("h-1.5 w-1.5 rounded-full animate-pulse", `bg-${statusColor}`)} />
                   {statusLabel}
                 </span>
               </div>
-              <p className="text-xs font-semibold text-foreground tabular-nums">{stats.activePeriod}</p>
-              <div className="flex items-center gap-2">
-                <Progress value={periodProgress} className="h-1 flex-1 bg-muted [&>div]:bg-primary" />
-                <span className="text-[10px] text-muted-foreground tabular-nums">{periodProgress}%</span>
+              <p className="text-[13px] font-semibold text-foreground tabular-nums">{stats.activePeriod}</p>
+              <div className="flex items-center gap-2.5">
+                <Progress value={periodProgress} className="h-1.5 flex-1 bg-muted/60 [&>div]:bg-primary [&>div]:rounded-full rounded-full" />
+                <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium">{periodProgress}%</span>
               </div>
             </div>
           )}
@@ -380,7 +402,7 @@ export default function AdminDashboard() {
       {/* ── KPIs ── */}
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-28 animate-pulse bg-muted rounded-2xl" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 animate-pulse bg-muted/50 rounded-2xl" />)}
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -399,19 +421,21 @@ export default function AdminDashboard() {
             <h2 className="text-sm font-semibold font-heading text-foreground">Accesos rápidos</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            {quickActions.map((action, i) => (
-              <QuickAction key={action.to} {...action} index={i} navigate={navigate} />
+            {quickActions.map((action) => (
+              <QuickAction key={action.to} {...action} navigate={navigate} />
             ))}
           </div>
         </div>
       )}
 
-      {/* ── Chart ── */}
+      {/* ── Chart (Premium) ── */}
       {chartData.length > 0 && (
-        <Card className="rounded-2xl shadow-2xs">
+        <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
           <CardHeader className="pb-2 px-5 pt-5">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
+              <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
+                <TrendingUp className="h-3.5 w-3.5 text-primary" />
+              </div>
               <CardTitle className="text-sm font-semibold font-heading">Tendencia de pagos</CardTitle>
             </div>
           </CardHeader>
@@ -419,16 +443,23 @@ export default function AdminDashboard() {
             <div className="h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 5, right: 8, left: 8, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} className="fill-muted-foreground" axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} axisLine={false} tickLine={false} />
                   <RechartsTooltip
-                    contentStyle={{ borderRadius: "0.75rem", border: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--card))", fontSize: 11, boxShadow: "var(--shadow-md)" }}
+                    contentStyle={{
+                      borderRadius: "0.75rem",
+                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "hsl(var(--card))",
+                      fontSize: 11,
+                      boxShadow: "var(--shadow-md)",
+                      padding: "8px 12px",
+                    }}
                     formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === "base" ? "Base" : name === "extras" ? "Extras" : "Deducciones"]}
                   />
-                  <Bar dataKey="base" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="base" />
-                  <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[4, 4, 0, 0]} name="extras" />
-                  <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="deducciones" />
+                  <Bar dataKey="base" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} name="base" />
+                  <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[6, 6, 0, 0]} name="extras" />
+                  <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} name="deducciones" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -436,25 +467,30 @@ export default function AdminDashboard() {
         </Card>
       )}
 
-      {/* ── Feed + Activity ── */}
+      {/* ── Feed + Activity (Premium) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         {/* Announcements */}
         <div className="lg:col-span-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Megaphone className="h-3.5 w-3.5 text-primary" />
+              <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
+                <Megaphone className="h-3.5 w-3.5 text-primary" />
+              </div>
               <h2 className="text-sm font-semibold font-heading">Comunicados</h2>
             </div>
-            <Link to="/app/announcements" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5">
-              Ver todos <ChevronRight className="h-3 w-3" />
+            <Link to="/app/announcements" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
+              Ver todos <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
 
           {feedAnnouncements.length === 0 ? (
-            <Card className="rounded-2xl shadow-2xs">
-              <CardContent className="py-10 text-center text-muted-foreground">
-                <Megaphone className="h-7 w-7 mx-auto mb-2 opacity-20" />
-                <p className="text-xs">No hay comunicados publicados</p>
+            <Card className="rounded-2xl shadow-2xs border-border/50">
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                  <Megaphone className="h-5 w-5 opacity-30" />
+                </div>
+                <p className="text-xs font-medium">No hay comunicados publicados</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">Los comunicados aparecerán aquí</p>
               </CardContent>
             </Card>
           ) : (
@@ -463,39 +499,39 @@ export default function AdminDashboard() {
                 const mediaList = a.media_urls.filter(Boolean);
                 return (
                   <Card key={a.id} className={cn(
-                    "rounded-xl shadow-2xs overflow-hidden transition-all hover:shadow-xs",
-                    a.pinned && "border-primary/15",
-                    a.priority === "urgent" && "border-destructive/25"
+                    "rounded-xl shadow-2xs overflow-hidden transition-all hover:shadow-xs border-border/50",
+                    a.pinned && "border-primary/20",
+                    a.priority === "urgent" && "border-destructive/30"
                   )}>
                     {a.priority === "urgent" && (
-                      <div className="bg-destructive/8 px-4 py-1.5 flex items-center gap-1.5">
+                      <div className="bg-destructive/6 px-4 py-1.5 flex items-center gap-1.5 border-b border-destructive/10">
                         <AlertTriangle className="h-3 w-3 text-destructive" />
                         <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
                       </div>
                     )}
-                    <CardContent className="p-3.5 space-y-2">
+                    <CardContent className="p-4 space-y-2">
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             {a.pinned && <Pin className="h-2.5 w-2.5 text-primary shrink-0" />}
                             <h3 className="text-[13px] font-semibold text-foreground leading-snug">{a.title}</h3>
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-[10px] text-muted-foreground/60 mt-0.5">
                             {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: es })}
                           </p>
                         </div>
                       </div>
-                      <p className="text-xs text-foreground/75 line-clamp-2 leading-relaxed">{a.body}</p>
+                      <p className="text-xs text-foreground/70 line-clamp-2 leading-relaxed">{a.body}</p>
 
                       {mediaList.length > 0 && (
                         <div className="flex gap-1.5">
                           {mediaList.slice(0, 3).map((url: string, i: number) => (
-                            <div key={i} className="h-14 w-14 rounded-lg overflow-hidden bg-muted shrink-0">
+                            <div key={i} className="h-14 w-14 rounded-lg overflow-hidden bg-muted/50 shrink-0 ring-1 ring-border/30">
                               <img src={url} alt="" className="h-full w-full object-cover" />
                             </div>
                           ))}
                           {mediaList.length > 3 && (
-                            <div className="h-14 w-14 rounded-lg bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+                            <div className="h-14 w-14 rounded-lg bg-muted/40 flex items-center justify-center text-[10px] font-semibold text-muted-foreground ring-1 ring-border/30">
                               +{mediaList.length - 3}
                             </div>
                           )}
@@ -503,7 +539,7 @@ export default function AdminDashboard() {
                       )}
 
                       {a.reaction_count > 0 && (
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground pt-0.5">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 pt-0.5">
                           <ThumbsUp className="h-2.5 w-2.5" />
                           {a.reaction_count} reacciones
                         </div>
@@ -520,23 +556,27 @@ export default function AdminDashboard() {
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Activity className="h-3.5 w-3.5 text-warning" />
+              <div className="h-7 w-7 rounded-lg bg-warning/8 flex items-center justify-center">
+                <Activity className="h-3.5 w-3.5 text-warning" />
+              </div>
               <h2 className="text-sm font-semibold font-heading">Actividad reciente</h2>
             </div>
-            <Link to="/app/activity" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5">
-              Ver todo <ChevronRight className="h-3 w-3" />
+            <Link to="/app/activity" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
+              Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
 
-          <Card className="rounded-2xl shadow-2xs">
+          <Card className="rounded-2xl shadow-2xs border-border/50">
             <CardContent className="p-0">
               {activityItems.length === 0 ? (
-                <div className="py-10 text-center text-muted-foreground">
-                  <Activity className="h-6 w-6 mx-auto mb-2 opacity-20" />
-                  <p className="text-[11px]">Sin actividad reciente</p>
+                <div className="py-12 text-center text-muted-foreground">
+                  <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
+                    <Activity className="h-4 w-4 opacity-30" />
+                  </div>
+                  <p className="text-[11px] font-medium">Sin actividad reciente</p>
                 </div>
               ) : (
-                <div className="divide-y divide-border/50">
+                <div className="divide-y divide-border/30">
                   {activityItems.map(item => {
                     const actionLabels: Record<string, string> = {
                       create: "creó", update: "actualizó", delete: "eliminó",
@@ -549,18 +589,18 @@ export default function AdminDashboard() {
                     };
 
                     return (
-                      <div key={item.id} className="px-3.5 py-2.5 hover:bg-accent/30 transition-colors">
-                        <div className="flex items-start gap-2.5">
-                          <div className="h-6 w-6 rounded-full bg-primary/8 flex items-center justify-center shrink-0 mt-0.5">
-                            <Activity className="h-3 w-3 text-primary" />
+                      <div key={item.id} className="px-4 py-3 hover:bg-accent/20 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="h-7 w-7 rounded-lg bg-primary/6 flex items-center justify-center shrink-0 mt-0.5">
+                            <Activity className="h-3 w-3 text-primary/70" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[11px] text-foreground">
-                              <span className="font-medium capitalize">{actionLabels[item.action] || item.action}</span>
+                            <p className="text-[11px] text-foreground leading-relaxed">
+                              <span className="font-semibold capitalize">{actionLabels[item.action] || item.action}</span>
                               {" "}un{" "}
                               <span className="font-medium">{entityLabels[item.entity_type] || item.entity_type}</span>
                             </p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                            <p className="text-[10px] text-muted-foreground/50 mt-0.5">
                               {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}
                             </p>
                           </div>
@@ -577,4 +617,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
