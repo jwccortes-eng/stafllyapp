@@ -104,8 +104,8 @@ export default function AdminLayout() {
         <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-lg border-b border-border/50">
           <div className="flex items-center justify-between px-4 h-14">
             <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-xl bg-primary/10 flex items-center justify-center">
-                <img src="/favicon.png" alt="stafly" className="h-4 w-4 object-contain" />
+              <div className="h-7 w-7 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
+                <span className="text-white font-bold text-xs font-heading">S</span>
               </div>
               <span className="text-sm font-bold font-heading text-foreground">stafly</span>
             </div>
