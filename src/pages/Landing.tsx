@@ -307,7 +307,7 @@ export default function Landing() {
         <div className="container relative">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="max-w-xl">
-              <h1 className="font-heading text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight leading-[1.1] text-foreground">
+              <h1 className="font-heading text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight leading-[1.1] text-foreground">
                 {c.hero.h1}
               </h1>
               <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
@@ -348,7 +348,7 @@ export default function Landing() {
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative hidden lg:block">
               <div className="absolute -inset-6 bg-primary/[0.03] rounded-3xl blur-3xl" />
               <div className="relative">
                 <img src={heroMockup} alt="stafly Dashboard" className="w-full h-auto rounded-2xl shadow-xl border border-border/20" loading="eager" />
