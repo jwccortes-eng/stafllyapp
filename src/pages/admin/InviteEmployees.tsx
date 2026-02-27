@@ -21,7 +21,7 @@ interface Employee {
 }
 
 export default function InviteEmployees() {
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +29,7 @@ export default function InviteEmployees() {
   const [showQR, setShowQR] = useState<string | null>(null);
   const [generatingPin, setGeneratingPin] = useState<string | null>(null);
 
+  const companyName = selectedCompany?.name ?? "stafly";
   const portalUrl = `${window.location.origin}/auth`;
 
   useEffect(() => {
@@ -70,7 +71,7 @@ export default function InviteEmployees() {
   const buildInviteMessage = (emp: Employee) => {
     const name = `${emp.first_name} ${emp.last_name}`;
     const pin = emp.access_pin ?? "[pendiente]";
-    return `Hola ${name}, ya puedes acceder a tu portal de pagos.\n\n📱 Ingresa aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n🔑 Tu PIN: ${pin}\n\nDescarga la app desde tu navegador para un acceso más rápido.`;
+    return `¡Hola ${name}! 👋\n\nTe damos la bienvenida a *${companyName}* en stafly, tu portal de pagos y gestión laboral.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n🔑 Tu PIN: ${pin}\n\n💡 Tip: Guarda este enlace en tu pantalla de inicio para un acceso más rápido.\n\n— Equipo ${companyName}`;
   };
 
   const shareWhatsApp = (emp: Employee) => {
@@ -110,8 +111,8 @@ export default function InviteEmployees() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Invitar Empleados</h1>
-        <p className="page-subtitle">Comparte el acceso al portal de pagos con tus empleados</p>
+        <h1 className="page-title">Invitar Empleados — {companyName}</h1>
+        <p className="page-subtitle">Comparte el acceso al portal de {companyName} con tus empleados</p>
       </div>
 
       {/* General link + QR */}
@@ -120,7 +121,7 @@ export default function InviteEmployees() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Smartphone className="h-4 w-4 text-primary" />
-              Link del portal
+              Link del portal — {companyName}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -131,7 +132,7 @@ export default function InviteEmployees() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Los empleados ingresan con su número de teléfono y PIN
+              Los empleados de <strong>{companyName}</strong> ingresan con su número de teléfono y PIN
             </p>
           </CardContent>
         </Card>
