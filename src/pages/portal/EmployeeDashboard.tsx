@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import {
   Wallet, Clock, Megaphone, CalendarDays,
-  MapPin, ArrowRight, AlertCircle, Pin,
+  ArrowRight, Pin,
   ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,73 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { format, parseISO, isToday, isTomorrow, formatDistanceToNow, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+
+interface PayPeriod {
+  id: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  published_at: string;
+}
+
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  company_id: string;
+}
+
+interface ScheduledShift {
+  id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  locations: Location | null;
+}
+
+interface ShiftAssignment {
+  id: string;
+  employee_id: string;
+  scheduled_shift_id: string;
+  status: string;
+  scheduled_shifts: ScheduledShift;
+}
+
+interface Location {
+  id: string;
+  name: string;
+}
+
+interface PeriodBasePay {
+  id: string;
+  employee_id: string;
+  period_id: string;
+  base_total_pay: number;
+}
+
+interface Movement {
+  id: string;
+  employee_id: string;
+  period_id: string;
+  concept_id: string;
+  total_value: number;
+  concepts: Concept | null;
+}
+
+interface Concept {
+  id: string;
+  name: string;
+  category: string;
+}
+
+interface AnnouncementReaction {
+  id: string;
+  announcement_id: string;
+  employee_id: string;
+  emoji: string;
+}
 
 interface NextShift {
   title: string;
@@ -49,9 +116,9 @@ const EMOJI_OPTIONS = [
 ];
 
 const priorityConfig: Record<string, { cls: string; bgCls: string; label: string; icon: any }> = {
-  urgent: { cls: "text-destructive", bgCls: "bg-destructive/10", label: "Urgente", icon: AlertTriangle },
-  high: { cls: "text-warning", bgCls: "bg-warning/10", label: "Importante", icon: Bell },
-  important: { cls: "text-warning", bgCls: "bg-warning/10", label: "Importante", icon: Bell },
+  urgent: { cls: "text-destructive", bgCls: "bg-destructive/8", label: "Urgente", icon: AlertTriangle },
+  high: { cls: "text-warning", bgCls: "bg-warning/8", label: "Importante", icon: Bell },
+  important: { cls: "text-warning", bgCls: "bg-warning/8", label: "Importante", icon: Bell },
   normal: { cls: "text-muted-foreground", bgCls: "bg-muted", label: "Normal", icon: Megaphone },
 };
 
@@ -110,7 +177,6 @@ export default function EmployeeDashboard() {
         .limit(20),
     ]);
 
-    // Period & estimated pay
     if (periodRes.data) {
       const p = periodRes.data;
       setPeriodInfo({ status: p.status, startDate: p.start_date, endDate: p.end_date });
@@ -129,7 +195,6 @@ export default function EmployeeDashboard() {
       setEstimatedPay(base + extras - deductions);
     }
 
-    // Next shift
     const shifts = (assignRes.data ?? []) as any[];
     if (shifts.length > 0) {
       const s = shifts[0].scheduled_shifts;
@@ -139,7 +204,6 @@ export default function EmployeeDashboard() {
       });
     }
 
-    // Announcements with reactions
     const anns = (annRes.data as Announcement[]) ?? [];
     setAnnouncements(anns);
 
@@ -171,7 +235,6 @@ export default function EmployeeDashboard() {
 
   useEffect(() => { loadFeed(); }, [loadFeed]);
 
-  // Realtime
   useEffect(() => {
     if (!companyId) return;
     const channel = supabase
@@ -221,38 +284,34 @@ export default function EmployeeDashboard() {
     );
   }
 
+  const firstName = empName.split(" ")[0] || "";
+  const lastName = empName.split(" ").slice(1).join(" ") || "";
+
   return (
-    <div className="space-y-6">
-      {/* Greeting with avatar */}
-      <div className="flex items-center gap-3.5 pt-1">
-        <EmployeeAvatar
-          firstName={empName.split(" ")[0] || ""}
-          lastName={empName.split(" ").slice(1).join(" ") || ""}
-          size="md"
-          className="ring-2 ring-primary/20 shadow-sm"
-        />
+    <div className="space-y-5">
+      {/* ── Greeting ── */}
+      <div className="flex items-center gap-3">
+        <EmployeeAvatar firstName={firstName} lastName={lastName} size="md" className="ring-2 ring-primary/15 shadow-2xs" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground/70 font-medium">{greeting} 👋</p>
-          <h1 className="text-xl font-bold font-heading tracking-tight leading-tight mt-0.5">
-            {empName.split(" ")[0]}
-          </h1>
+          <p className="text-[11px] text-muted-foreground font-medium">{greeting} 👋</p>
+          <h1 className="text-lg font-bold font-heading tracking-tight leading-tight">{firstName}</h1>
         </div>
       </div>
 
-      {/* Hero cards row: pay + next shift */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Pay card */}
+      {/* ── Hero cards: pay + next shift ── */}
+      <div className="grid grid-cols-2 gap-2.5">
+        {/* Pay */}
         {estimatedPay !== null && (
           <Link to="/portal/payments" className="block group">
-            <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-4 text-primary-foreground relative overflow-hidden h-full shadow-md transition-transform duration-200 active:scale-[0.97]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(200_85%_65%/0.4),transparent_60%)]" />
+            <div className="rounded-xl bg-gradient-to-br from-primary to-primary/70 p-4 text-primary-foreground relative overflow-hidden h-full shadow-sm press-scale">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(212_100%_73%/0.3),transparent_60%)]" />
               <div className="relative">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Wallet className="h-3.5 w-3.5 opacity-80" />
-                  <p className="text-[10px] font-semibold opacity-80 uppercase tracking-wider">Pago estimado</p>
+                  <Wallet className="h-3.5 w-3.5 opacity-70" />
+                  <p className="text-[10px] font-semibold opacity-70 uppercase tracking-wider">Pago estimado</p>
                 </div>
-                <p className="text-[22px] font-bold font-heading tabular-nums leading-none">${estimatedPay.toFixed(2)}</p>
-                <div className="flex items-center gap-1 mt-3 text-[10px] font-medium opacity-70 group-hover:opacity-100 transition-opacity">
+                <p className="text-xl font-bold font-heading tabular-nums leading-none">${estimatedPay.toFixed(2)}</p>
+                <div className="flex items-center gap-1 mt-2.5 text-[10px] font-medium opacity-60 group-hover:opacity-100 transition-opacity">
                   Ver nómina <ArrowRight className="h-2.5 w-2.5" />
                 </div>
               </div>
@@ -260,26 +319,26 @@ export default function EmployeeDashboard() {
           </Link>
         )}
 
-        {/* Next shift card */}
+        {/* Next shift */}
         {nextShift ? (
           <Link to="/portal/shifts" className="block group">
             <div className={cn(
-              "rounded-2xl border bg-card p-4 h-full flex flex-col justify-between shadow-sm transition-all duration-200 active:scale-[0.97]",
-              isToday(parseISO(nextShift.date)) && "ring-2 ring-primary/20 border-primary/20"
+              "rounded-xl border bg-card p-4 h-full flex flex-col justify-between shadow-2xs press-scale",
+              isToday(parseISO(nextShift.date)) && "ring-1 ring-primary/15 border-primary/15"
             )}>
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
-                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/60" />
-                    <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-semibold">Próximo turno</p>
+                    <CalendarDays className="h-3 w-3 text-muted-foreground/50" />
+                    <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-semibold">Próximo turno</p>
                   </div>
                   {isToday(parseISO(nextShift.date)) && (
                     <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground">HOY</span>
                   )}
                 </div>
-                <p className="text-sm font-semibold leading-snug">{nextShift.title}</p>
+                <p className="text-[13px] font-semibold leading-snug text-foreground">{nextShift.title}</p>
               </div>
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-2.5">
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-2">
                 <Clock className="h-3 w-3" />
                 {nextShift.start_time?.slice(0, 5)} – {nextShift.end_time?.slice(0, 5)}
               </div>
@@ -287,12 +346,10 @@ export default function EmployeeDashboard() {
           </Link>
         ) : estimatedPay === null ? null : (
           <Link to="/portal/shifts" className="block group">
-            <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 p-4 flex flex-col items-center justify-center h-full gap-2 transition-all duration-200 active:scale-[0.97]">
-              <CalendarDays className="h-5 w-5 text-primary/70" />
-              <p className="text-[10px] text-primary/80 font-semibold text-center leading-tight">
-                Sin turnos hoy
-              </p>
-              <span className="text-[9px] text-primary/60 font-medium flex items-center gap-0.5 group-hover:text-primary transition-colors">
+            <div className="rounded-xl border border-dashed border-primary/20 bg-primary/[0.03] p-4 flex flex-col items-center justify-center h-full gap-1.5 press-scale">
+              <CalendarDays className="h-5 w-5 text-primary/50" />
+              <p className="text-[10px] text-primary/70 font-semibold text-center leading-tight">Sin turnos hoy</p>
+              <span className="text-[9px] text-primary/50 font-medium flex items-center gap-0.5">
                 Ver disponibles <ArrowRight className="h-2.5 w-2.5" />
               </span>
             </div>
@@ -300,26 +357,26 @@ export default function EmployeeDashboard() {
         )}
       </div>
 
-      {/* Period info */}
+      {/* ── Period info ── */}
       {periodInfo && (
-        <div className="rounded-xl border bg-card px-4 py-3 flex items-center gap-3">
+        <div className="rounded-xl border bg-card px-3.5 py-2.5 flex items-center gap-2.5">
           <div className={cn(
-            "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-            periodInfo.status === "open" ? "bg-earning/10" :
-            periodInfo.status === "closed" ? "bg-warning/10" : "bg-primary/10"
+            "h-7 w-7 rounded-lg flex items-center justify-center shrink-0",
+            periodInfo.status === "open" ? "bg-earning/8" :
+            periodInfo.status === "closed" ? "bg-warning/8" : "bg-primary/8"
           )}>
-            <CalendarDays className={cn("h-4 w-4",
+            <CalendarDays className={cn("h-3.5 w-3.5",
               periodInfo.status === "open" ? "text-earning" :
               periodInfo.status === "closed" ? "text-warning" : "text-primary"
             )} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] text-muted-foreground font-medium">Periodo actual</p>
-            <p className="text-xs font-semibold">{periodInfo.startDate} → {periodInfo.endDate}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">Periodo actual</p>
+            <p className="text-[11px] font-semibold tabular-nums">{periodInfo.startDate} → {periodInfo.endDate}</p>
           </div>
-          <Badge variant="outline" className={cn("text-[10px] shrink-0",
-            periodInfo.status === "open" ? "border-earning/30 text-earning" :
-            periodInfo.status === "closed" ? "border-warning/30 text-warning" : "border-primary/30 text-primary"
+          <Badge variant="outline" className={cn("text-[9px] shrink-0 h-5",
+            periodInfo.status === "open" ? "border-earning/20 text-earning" :
+            periodInfo.status === "closed" ? "border-warning/20 text-warning" : "border-primary/20 text-primary"
           )}>
             <span className={cn("h-1.5 w-1.5 rounded-full mr-1",
               periodInfo.status === "open" ? "bg-earning" :
@@ -330,21 +387,21 @@ export default function EmployeeDashboard() {
         </div>
       )}
 
-      {/* Feed header */}
+      {/* ── Feed header ── */}
       <div className="flex items-center gap-2 pt-1">
-        <Megaphone className="h-4 w-4 text-primary" />
-        <h2 className="text-[13px] font-semibold text-foreground tracking-tight">Muro</h2>
-        <div className="flex-1 h-px bg-border/60 ml-1" />
+        <Megaphone className="h-3.5 w-3.5 text-primary" />
+        <h2 className="text-xs font-semibold text-foreground tracking-tight">Muro</h2>
+        <div className="flex-1 h-px bg-border/50 ml-1" />
       </div>
 
-      {/* Feed/Wall */}
+      {/* ── Feed ── */}
       {announcements.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Megaphone className="h-8 w-8 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">No hay publicaciones aún</p>
+        <div className="text-center py-10 text-muted-foreground">
+          <Megaphone className="h-7 w-7 mx-auto mb-2 opacity-20" />
+          <p className="text-xs">No hay publicaciones aún</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {announcements.map(a => {
             const pCfg = priorityConfig[a.priority] || priorityConfig.normal;
             const PriorityIcon = pCfg.icon;
@@ -356,59 +413,58 @@ export default function EmployeeDashboard() {
               <article
                 key={a.id}
                 className={cn(
-                  "rounded-2xl border bg-card overflow-hidden transition-all",
-                  a.pinned && "ring-1 ring-primary/20",
-                  a.priority === "urgent" && "border-destructive/30"
+                  "rounded-xl border bg-card overflow-hidden transition-all",
+                  a.pinned && "border-primary/10",
+                  a.priority === "urgent" && "border-destructive/20"
                 )}
               >
                 {a.priority === "urgent" && (
-                  <div className="bg-destructive/10 px-4 py-1.5 flex items-center gap-2">
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                    <span className="text-[11px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
+                  <div className="bg-destructive/6 px-3.5 py-1.5 flex items-center gap-1.5">
+                    <AlertTriangle className="h-3 w-3 text-destructive" />
+                    <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
                   </div>
                 )}
 
-                <div className="p-4 space-y-3">
+                <div className="p-3.5 space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {a.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
-                        <h3 className="text-sm font-semibold text-foreground">{a.title}</h3>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {a.pinned && <Pin className="h-2.5 w-2.5 text-primary shrink-0" />}
+                        <h3 className="text-[13px] font-semibold text-foreground leading-snug">{a.title}</h3>
                         {fresh && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground shrink-0 animate-pulse">
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground shrink-0">
                             NUEVO
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: es })}
                       </p>
                     </div>
                     {(a.priority === "high" || a.priority === "important") && (
-                      <span className={cn("flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0", pCfg.cls, pCfg.bgCls)}>
-                        <PriorityIcon className="h-3 w-3" />
+                      <span className={cn("flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-semibold shrink-0", pCfg.cls, pCfg.bgCls)}>
+                        <PriorityIcon className="h-2.5 w-2.5" />
                         {pCfg.label}
                       </span>
                     )}
                   </div>
 
-                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{a.body}</p>
+                  <p className="text-xs text-foreground/75 leading-relaxed whitespace-pre-wrap">{a.body}</p>
 
                   {/* Media */}
                   {mediaList.length > 0 && (
-                    <div className={cn("grid gap-2", mediaList.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+                    <div className={cn("grid gap-1.5", mediaList.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
                       {mediaList.map((url, i) => (
-                        <div key={i} className="relative rounded-xl overflow-hidden bg-muted">
+                        <div key={i} className="relative rounded-lg overflow-hidden bg-muted">
                           {isVideo(url) ? (
-                            <video src={url} controls preload="metadata" className="w-full max-h-64 object-cover rounded-xl">
+                            <video src={url} controls preload="metadata" className="w-full max-h-56 object-cover rounded-lg">
                               Tu navegador no soporta video.
                             </video>
                           ) : (
                             <img
-                              src={url}
-                              alt=""
-                              className={cn("w-full object-cover rounded-xl cursor-pointer transition-transform hover:scale-[1.02]",
-                                mediaList.length === 1 ? "max-h-80" : "max-h-48"
+                              src={url} alt=""
+                              className={cn("w-full object-cover rounded-lg cursor-pointer transition-transform hover:scale-[1.02]",
+                                mediaList.length === 1 ? "max-h-72" : "max-h-44"
                               )}
                               loading="lazy"
                               onClick={() => setExpandedMedia(expandedMedia === url ? null : url)}
@@ -427,17 +483,17 @@ export default function EmployeeDashboard() {
 
                   {a.link_url && (
                     <a href={a.link_url} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline bg-primary/5 px-3 py-1.5 rounded-lg">
+                      className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline bg-primary/5 px-2.5 py-1.5 rounded-lg">
                       <ExternalLink className="h-3 w-3" />
                       {a.link_label || "Ver más"}
                     </a>
                   )}
 
                   {/* Reactions */}
-                  <div className="flex items-center gap-1 pt-1 border-t border-border/50">
+                  <div className="flex items-center gap-1 pt-1 border-t border-border/40">
                     {annReactions.map(r => (
                       <button key={r.emoji} onClick={() => toggleReaction(a.id, r.emoji)}
-                        className={cn("flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-all",
+                        className={cn("flex items-center gap-1 text-[11px] px-2 py-1 rounded-full transition-all",
                           r.reacted ? "bg-primary/10 text-primary font-semibold" : "bg-muted text-muted-foreground hover:bg-accent"
                         )}>
                         <span>{r.emoji}</span><span>{r.count}</span>
@@ -448,7 +504,7 @@ export default function EmployeeDashboard() {
                         if (annReactions.find(r => r.emoji === opt.emoji)) return null;
                         return (
                           <button key={opt.emoji} onClick={() => toggleReaction(a.id, opt.emoji)}
-                            className="p-1.5 rounded-full text-muted-foreground/50 hover:text-foreground hover:bg-accent transition-all" title={opt.label}>
+                            className="p-1.5 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-accent transition-all" title={opt.label}>
                             <span className="text-sm">{opt.emoji}</span>
                           </button>
                         );

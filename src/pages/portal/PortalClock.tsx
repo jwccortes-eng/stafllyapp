@@ -202,19 +202,19 @@ export default function PortalClock() {
         className={cn(
           "rounded-2xl p-6 text-center relative overflow-hidden transition-colors",
           isClockedIn
-            ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white"
-            : "bg-gradient-to-br from-muted to-muted/60 text-foreground"
+            ? "bg-gradient-to-br from-earning to-earning/80 text-earning-foreground"
+            : "bg-card border text-foreground"
         )}
       >
         {isClockedIn && (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.15),transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,hsl(0_0%_100%/0.12),transparent_60%)]" />
         )}
         <div className="relative space-y-3">
           <div className="flex items-center justify-center gap-2">
             <div
               className={cn(
                 "h-3 w-3 rounded-full",
-                isClockedIn ? "bg-white animate-pulse" : "bg-muted-foreground/40"
+                isClockedIn ? "bg-earning-foreground animate-pulse" : "bg-muted-foreground/30"
               )}
             />
             <span className="text-sm font-semibold uppercase tracking-wider">
@@ -317,14 +317,14 @@ export default function PortalClock() {
                   key={entry.id}
                   className={cn(
                     "rounded-2xl border bg-card p-4 flex items-center gap-3",
-                    isActive && "border-emerald-500/30 bg-emerald-500/5"
+                    isActive && "border-earning/20 bg-earning/5"
                   )}
                 >
                   <div
                     className={cn(
                       "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
                       isActive
-                        ? "bg-emerald-500/10 text-emerald-600"
+                        ? "bg-earning/10 text-earning"
                         : "bg-muted text-muted-foreground"
                     )}
                   >
@@ -344,7 +344,7 @@ export default function PortalClock() {
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       {isActive ? (
-                        <span className="text-emerald-600 font-medium">En curso</span>
+                        <span className="text-earning font-medium">En curso</span>
                       ) : (
                         getDuration(entry)
                       )}
@@ -353,11 +353,11 @@ export default function PortalClock() {
                   <span
                     className={cn(
                       "text-[10px] px-2 py-0.5 rounded-full font-medium",
-                      entry.status === "approved"
-                        ? "bg-emerald-500/10 text-emerald-600"
+                    entry.status === "approved"
+                        ? "bg-earning/10 text-earning"
                         : entry.status === "rejected"
                         ? "bg-destructive/10 text-destructive"
-                        : "bg-amber-500/10 text-amber-600"
+                        : "bg-warning/10 text-warning"
                     )}
                   >
                     {entry.status === "approved"
