@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CalendarDays, Users, DollarSign, FileSpreadsheet,
   Upload, Tags, BarChart3, ArrowRight, TrendingUp,
-  Zap, Clock, Sparkles, Megaphone, Pin, AlertCircle,
-  ChevronRight, Activity, ThumbsUp, AlertTriangle,
+  Zap, Clock, Sparkles, Megaphone, Pin, AlertTriangle,
+  ChevronRight, Activity, ThumbsUp, Plus,
+  Inbox, MapPin, Building2, MessageCircle,
 } from "lucide-react";
 import { PeriodStatusBanner } from "@/components/ui/period-status-banner";
 import { useCompany } from "@/hooks/useCompany";
@@ -13,95 +14,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePayrollConfig, calculateOverdue, DAY_NAMES, type PeriodOverdueInfo } from "@/hooks/usePayrollConfig";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import staflyMascot from "@/assets/stafly-mascot-checklist.png";
-
-/* ─── Types ─── */
-interface Role {
-  id: string;
-  name: string;
-  permissions: string[];
-}
-
-interface Module {
-  id: string;
-  name: string;
-  roles: Role[];
-}
-
-interface Company {
-  id: string;
-  name: string;
-  modules: Module[];
-}
-
-interface User {
-  id: string;
-  email: string;
-  fullName: string;
-  company: Company;
-  role: Role;
-}
-
-interface AuthContextType {
-  user: User | null;
-  session: any | null;
-  isLoading: boolean;
-  signIn: (data: any) => Promise<any>;
-  signOut: () => Promise<void>;
-  role: string | undefined;
-  hasModuleAccess: (module: string, permission: string) => boolean;
-  fullName: string | undefined;
-}
-
-interface CompanyContextType {
-  selectedCompanyId: string | null;
-  selectedCompany: Company | null;
-  isModuleActive: (module: string) => boolean;
-  isLoading: boolean;
-  setCompany: (companyId: string) => void;
-}
-
-interface Stats {
-  totalEmployees: number;
-  activePeriod: string | null;
-  periodStatus: string | null;
-  totalImports: number;
-  totalMovements: number;
-  periodTotal: number;
-  periodStartDate: string | null;
-  periodEndDate: string | null;
-}
-
-interface PeriodChartData {
-  label: string;
-  base: number;
-  extras: number;
-  deducciones: number;
-}
-
-interface FeedAnnouncement {
-  id: string;
-  title: string;
-  body: string;
-  priority: string;
-  pinned: boolean;
-  published_at: string;
-  media_urls: any[];
-  reaction_count: number;
-}
-
-interface ActivityItem {
-  id: string;
-  action: string;
-  entity_type: string;
-  entity_id: string | null;
-  created_at: string;
-  details: any;
-}
 
 /* ─── animated counter hook ─── */
 function useAnimatedNumber(target: number, duration = 800) {
@@ -109,12 +26,11 @@ function useAnimatedNumber(target: number, duration = 800) {
   useEffect(() => {
     if (target === 0) { setValue(0); return; }
     const start = performance.now();
-    const from = 0;
     const step = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(from + (target - from) * eased));
+      setValue(Math.round((target) * eased));
       if (progress < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -122,29 +38,66 @@ function useAnimatedNumber(target: number, duration = 800) {
   return value;
 }
 
-/* ─── Stat Card (Premium) ─── */
-function StatCard({ label, value, subtitle, icon: Icon, color }: {
+/* ─── Sparkline Mini ─── */
+function Sparkline({ data, color = "hsl(var(--primary))" }: { data: number[]; color?: string }) {
+  if (data.length < 2) return null;
+  const chartData = data.map((v, i) => ({ v, i }));
+  return (
+    <div className="h-8 w-20">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+          <defs>
+            <linearGradient id={`spark-${color.replace(/[^a-z0-9]/gi, '')}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="v"
+            stroke={color}
+            strokeWidth={1.5}
+            fill={`url(#spark-${color.replace(/[^a-z0-9]/gi, '')})`}
+            dot={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/* ─── KPI Card (Premium with sparkline) ─── */
+function KpiStatCard({ label, value, subtitle, icon: Icon, color, sparkData, onClick }: {
   label: string; value: string | number; subtitle: string;
   icon: any; color: "primary" | "warning" | "deduction" | "earning";
+  sparkData?: number[];
+  onClick?: () => void;
 }) {
   const colorMap = {
-    primary: { bg: "bg-primary/8", text: "text-primary", icon: "text-primary", ring: "ring-primary/10" },
-    warning: { bg: "bg-warning/8", text: "text-warning", icon: "text-warning", ring: "ring-warning/10" },
-    deduction: { bg: "bg-deduction/8", text: "text-deduction", icon: "text-deduction", ring: "ring-deduction/10" },
-    earning: { bg: "bg-earning/8", text: "text-earning", icon: "text-earning", ring: "ring-earning/10" },
+    primary: { bg: "bg-primary/8", text: "text-primary", icon: "text-primary", ring: "ring-primary/10", spark: "hsl(var(--primary))" },
+    warning: { bg: "bg-warning/8", text: "text-warning", icon: "text-warning", ring: "ring-warning/10", spark: "hsl(var(--warning))" },
+    deduction: { bg: "bg-deduction/8", text: "text-deduction", icon: "text-deduction", ring: "ring-deduction/10", spark: "hsl(var(--destructive))" },
+    earning: { bg: "bg-earning/8", text: "text-earning", icon: "text-earning", ring: "ring-earning/10", spark: "hsl(var(--earning))" },
   };
   const c = colorMap[color];
 
   return (
-    <div className="group relative bg-card rounded-2xl border border-border/60 p-5 shadow-2xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 overflow-hidden">
-      {/* Subtle top accent line */}
+    <div
+      onClick={onClick}
+      className={cn(
+        "group relative bg-card rounded-2xl border border-border/60 p-5 shadow-2xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 overflow-hidden",
+        onClick && "cursor-pointer"
+      )}
+    >
       <div className={cn("absolute top-0 left-4 right-4 h-[2px] rounded-b-full opacity-40", c.bg.replace('/8', ''))} />
-      
-      <div className="flex items-center gap-3 mb-3">
-        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center ring-1", c.bg, c.ring)}>
-          <Icon className={cn("h-[18px] w-[18px]", c.icon)} />
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3 mb-3">
+          <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center ring-1", c.bg, c.ring)}>
+            <Icon className={cn("h-[18px] w-[18px]", c.icon)} />
+          </div>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
         </div>
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        {sparkData && sparkData.length > 1 && <Sparkline data={sparkData} color={c.spark} />}
       </div>
       <p className={cn("text-2xl md:text-3xl font-bold font-heading tabular-nums leading-none", c.text)}>{value}</p>
       <p className="text-[11px] text-muted-foreground/70 mt-1.5">{subtitle}</p>
@@ -152,14 +105,14 @@ function StatCard({ label, value, subtitle, icon: Icon, color }: {
   );
 }
 
-/* ─── Quick Action (Premium) ─── */
+/* ─── Quick Action (Grid) ─── */
 function QuickAction({ label, description, icon: Icon, to, accent, navigate }: {
   label: string; description: string; icon: any; to: string; accent: string; navigate: (to: string) => void;
 }) {
   return (
     <button
       onClick={() => navigate(to)}
-      className="group flex items-center gap-3.5 p-3.5 rounded-xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-sm transition-all duration-200 text-left press-scale"
+      className="group flex items-center gap-3.5 p-3.5 rounded-xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-sm transition-all duration-200 text-left active:scale-[0.98]"
     >
       <div className={cn("h-10 w-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-2xs transition-transform duration-200 group-hover:scale-105", accent)}>
         <Icon className="h-[18px] w-[18px] text-primary-foreground" />
@@ -173,32 +126,75 @@ function QuickAction({ label, description, icon: Icon, to, accent, navigate }: {
   );
 }
 
+/* ─── Activity Item renderer ─── */
+function ActivityRow({ item }: { item: any }) {
+  const actionLabels: Record<string, string> = {
+    create: "creó", update: "actualizó", delete: "eliminó",
+    insert: "agregó", import: "importó", publish: "publicó",
+  };
+  const entityLabels: Record<string, string> = {
+    employee: "empleado", movement: "novedad", period: "periodo",
+    concept: "concepto", shift: "turno", announcement: "anuncio",
+    import: "importación", client: "cliente", location: "ubicación",
+  };
+  const iconMap: Record<string, any> = {
+    employee: Users, movement: DollarSign, period: CalendarDays,
+    shift: Clock, announcement: Megaphone, import: Upload,
+    client: Building2, location: MapPin, concept: Tags,
+  };
+  const IconComp = iconMap[item.entity_type] || Activity;
+
+  return (
+    <div className="px-4 py-3 hover:bg-accent/20 transition-colors">
+      <div className="flex items-start gap-3">
+        <div className="h-7 w-7 rounded-lg bg-primary/6 flex items-center justify-center shrink-0 mt-0.5">
+          <IconComp className="h-3 w-3 text-primary/70" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] text-foreground leading-relaxed">
+            <span className="font-semibold capitalize">{actionLabels[item.action] || item.action}</span>
+            {" "}un{" "}
+            <span className="font-medium">{entityLabels[item.entity_type] || item.entity_type}</span>
+          </p>
+          <p className="text-[10px] text-muted-foreground/50 mt-0.5">
+            {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { selectedCompanyId, selectedCompany, isModuleActive } = useCompany();
   const { role, hasModuleAccess, fullName } = useAuth();
   const { config: payrollConfig, currentWeek } = usePayrollConfig();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<Stats>({
-    totalEmployees: 0, activePeriod: null, periodStatus: null,
+  const [stats, setStats] = useState({
+    totalEmployees: 0, activePeriod: null as string | null, periodStatus: null as string | null,
     totalImports: 0, totalMovements: 0, periodTotal: 0,
-    periodStartDate: null, periodEndDate: null,
+    periodStartDate: null as string | null, periodEndDate: null as string | null,
+    pendingTickets: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [chartData, setChartData] = useState<PeriodChartData[]>([]);
-  const [feedAnnouncements, setFeedAnnouncements] = useState<FeedAnnouncement[]>([]);
-  const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [feedAnnouncements, setFeedAnnouncements] = useState<any[]>([]);
+  const [activityItems, setActivityItems] = useState<any[]>([]);
   const [overdueInfos, setOverdueInfos] = useState<PeriodOverdueInfo[]>([]);
   const [periodSummary, setPeriodSummary] = useState({ open: 0, closed: 0, published: 0, paid: 0 });
+  const [sparkEmployees, setSparkEmployees] = useState<number[]>([]);
+  const [sparkPayments, setSparkPayments] = useState<number[]>([]);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
     setLoading(true);
     async function fetchStats() {
-      const [empRes, periodRes, impRes, movRes] = await Promise.all([
+      const [empRes, periodRes, impRes, movRes, ticketsRes] = await Promise.all([
         supabase.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", selectedCompanyId!),
         supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId!).order("start_date", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("imports").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!),
         supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!),
+        supabase.from("employee_tickets").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).in("status", ["new", "in_progress"]),
       ]);
 
       let periodTotal = 0;
@@ -217,6 +213,7 @@ export default function AdminDashboard() {
         periodTotal: Math.round(periodTotal * 100) / 100,
         periodStartDate: periodRes.data?.start_date ?? null,
         periodEndDate: periodRes.data?.end_date ?? null,
+        pendingTickets: ticketsRes.count ?? 0,
       });
       setLoading(false);
     }
@@ -225,7 +222,7 @@ export default function AdminDashboard() {
       const { data: periods } = await supabase
         .from("pay_periods").select("id, start_date, end_date")
         .eq("company_id", selectedCompanyId!).order("start_date", { ascending: true }).limit(8);
-      if (!periods || periods.length === 0) { setChartData([]); return; }
+      if (!periods || periods.length === 0) { setChartData([]); setSparkPayments([]); return; }
 
       const periodIds = periods.map(p => p.id);
       const [baseRes, movRes] = await Promise.all([
@@ -233,12 +230,14 @@ export default function AdminDashboard() {
         supabase.from("movements").select("period_id, total_value, concept_id, concepts(category)").in("period_id", periodIds),
       ]);
 
-      setChartData(periods.map(p => {
+      const mapped = periods.map(p => {
         const base = (baseRes.data ?? []).filter(bp => bp.period_id === p.id).reduce((s, bp) => s + Number(bp.base_total_pay || 0), 0);
         const extras = (movRes.data ?? []).filter((m: any) => m.period_id === p.id && m.concepts?.category === "extra").reduce((s, m) => s + Number(m.total_value || 0), 0);
         const deducciones = (movRes.data ?? []).filter((m: any) => m.period_id === p.id && m.concepts?.category === "deduction").reduce((s, m) => s + Math.abs(Number(m.total_value || 0)), 0);
         return { label: format(parseISO(p.start_date), "dd MMM", { locale: es }), base: Math.round(base), extras: Math.round(extras), deducciones: Math.round(deducciones) };
-      }));
+      });
+      setChartData(mapped);
+      setSparkPayments(mapped.map(d => d.base + d.extras));
     }
 
     async function fetchFeed() {
@@ -247,7 +246,7 @@ export default function AdminDashboard() {
           .eq("company_id", selectedCompanyId!).not("published_at", "is", null).is("deleted_at", null)
           .order("published_at", { ascending: false }).limit(5),
         supabase.from("activity_log").select("id, action, entity_type, entity_id, created_at, details")
-          .eq("company_id", selectedCompanyId!).order("created_at", { ascending: false }).limit(8),
+          .eq("company_id", selectedCompanyId!).order("created_at", { ascending: false }).limit(10),
       ]);
 
       const anns = (annRes.data ?? []) as any[];
@@ -260,12 +259,30 @@ export default function AdminDashboard() {
       } else {
         setFeedAnnouncements([]);
       }
-      setActivityItems((actRes.data ?? []) as ActivityItem[]);
+      setActivityItems(actRes.data ?? []);
     }
 
     fetchStats();
     fetchChartData();
     fetchFeed();
+
+    // Spark data for employees (monthly count of last 6 months - simplified)
+    supabase.from("employees").select("created_at")
+      .eq("company_id", selectedCompanyId!).eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (!data || data.length === 0) return;
+        // Group by month for sparkline
+        const months: Record<string, number> = {};
+        data.forEach(e => {
+          const m = format(parseISO(e.created_at), "yyyy-MM");
+          months[m] = (months[m] || 0) + 1;
+        });
+        // Cumulative
+        const keys = Object.keys(months).sort().slice(-6);
+        let cum = data.filter(e => format(parseISO(e.created_at), "yyyy-MM") < (keys[0] || "")).length;
+        setSparkEmployees(keys.map(k => { cum += months[k]; return cum; }));
+      });
 
     async function fetchOverdueInfo() {
       const { data: allPeriods } = await supabase.from("pay_periods")
@@ -326,24 +343,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* ── Hero (Premium M365 Style) ── */}
+      {/* ── Hero ── */}
       <div className="relative rounded-2xl border border-border/50 bg-card overflow-hidden">
-        {/* Background gradient layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-earning/[0.03]" />
         <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-primary/[0.03] blur-3xl" />
         <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-earning/[0.04] blur-3xl" />
 
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5 p-6 md:p-8">
-          {/* Left: Greeting */}
           <div className="flex items-start gap-4 flex-1">
-            {/* Mascot - flat style for admin */}
             <div className="hidden md:flex shrink-0">
-              <img
-                src={staflyMascot}
-                alt="stafly"
-                className="h-16 w-16 object-contain drop-shadow-sm"
-                style={{ imageRendering: "auto" }}
-              />
+              <img src={staflyMascot} alt="stafly" className="h-16 w-16 object-contain drop-shadow-sm" style={{ imageRendering: "auto" }} />
             </div>
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mb-1">
@@ -354,16 +363,13 @@ export default function AdminDashboard() {
                 {fullName || "Dashboard"}
               </h1>
               <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1">
-                  {selectedCompany?.name ?? "Selecciona una empresa"}
-                </span>
+                <span>{selectedCompany?.name ?? "Selecciona una empresa"}</span>
                 <span className="text-border">·</span>
                 <span className="tabular-nums">{DAY_NAMES[payrollConfig.payroll_week_start_day].slice(0, 3)} → {DAY_NAMES[payrollConfig.expected_close_day].slice(0, 3)}</span>
               </p>
             </div>
           </div>
 
-          {/* Right: Period pill (Premium card) */}
           {stats.activePeriod && (
             <div className="flex flex-col gap-2.5 min-w-[220px] p-4 rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-2xs">
               <div className="flex items-center justify-between">
@@ -399,17 +405,35 @@ export default function AdminDashboard() {
         onOverdueClick={overdueInfos.length > 0 ? () => navigate("/app/periods") : undefined}
       />
 
-      {/* ── KPIs ── */}
+      {/* ── KPIs with sparklines ── */}
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map(i => <div key={i} className="h-32 animate-pulse bg-muted/50 rounded-2xl" />)}
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard label="Empleados" value={animEmployees} subtitle="activos en nómina" icon={Users} color="primary" />
-          <StatCard label="Pago base" value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle="periodo actual" icon={DollarSign} color="warning" />
-          <StatCard label="Novedades" value={animMovements} subtitle="registradas en total" icon={FileSpreadsheet} color="deduction" />
-          <StatCard label="Importaciones" value={stats.totalImports} subtitle="archivos procesados" icon={TrendingUp} color="earning" />
+          <KpiStatCard
+            label="Empleados" value={animEmployees} subtitle="activos en nómina"
+            icon={Users} color="primary" sparkData={sparkEmployees}
+            onClick={() => navigate("/app/employees")}
+          />
+          <KpiStatCard
+            label="Pago base"
+            value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+            subtitle="periodo actual" icon={DollarSign} color="warning"
+            sparkData={sparkPayments}
+            onClick={() => navigate("/app/summary")}
+          />
+          <KpiStatCard
+            label="Novedades" value={animMovements} subtitle="registradas en total"
+            icon={FileSpreadsheet} color="deduction"
+            onClick={() => navigate("/app/movements")}
+          />
+          <KpiStatCard
+            label="Pendientes" value={stats.pendingTickets} subtitle="solicitudes abiertas"
+            icon={Inbox} color="earning"
+            onClick={() => navigate("/app/requests")}
+          />
         </div>
       )}
 
@@ -428,7 +452,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ── Chart (Premium) ── */}
+      {/* ── Chart ── */}
       {chartData.length > 0 && (
         <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
           <CardHeader className="pb-2 px-5 pt-5">
@@ -467,7 +491,7 @@ export default function AdminDashboard() {
         </Card>
       )}
 
-      {/* ── Feed + Activity (Premium) ── */}
+      {/* ── Feed + Activity ── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         {/* Announcements */}
         <div className="lg:col-span-3">
@@ -522,7 +546,6 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       <p className="text-xs text-foreground/70 line-clamp-2 leading-relaxed">{a.body}</p>
-
                       {mediaList.length > 0 && (
                         <div className="flex gap-1.5">
                           {mediaList.slice(0, 3).map((url: string, i: number) => (
@@ -537,7 +560,6 @@ export default function AdminDashboard() {
                           )}
                         </div>
                       )}
-
                       {a.reaction_count > 0 && (
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 pt-0.5">
                           <ThumbsUp className="h-2.5 w-2.5" />
@@ -552,7 +574,7 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Activity */}
+        {/* Activity Feed */}
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -577,37 +599,9 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className="divide-y divide-border/30">
-                  {activityItems.map(item => {
-                    const actionLabels: Record<string, string> = {
-                      create: "creó", update: "actualizó", delete: "eliminó",
-                      insert: "agregó", import: "importó", publish: "publicó",
-                    };
-                    const entityLabels: Record<string, string> = {
-                      employee: "empleado", movement: "novedad", period: "periodo",
-                      concept: "concepto", shift: "turno", announcement: "anuncio",
-                      import: "importación", client: "cliente", location: "ubicación",
-                    };
-
-                    return (
-                      <div key={item.id} className="px-4 py-3 hover:bg-accent/20 transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="h-7 w-7 rounded-lg bg-primary/6 flex items-center justify-center shrink-0 mt-0.5">
-                            <Activity className="h-3 w-3 text-primary/70" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[11px] text-foreground leading-relaxed">
-                              <span className="font-semibold capitalize">{actionLabels[item.action] || item.action}</span>
-                              {" "}un{" "}
-                              <span className="font-medium">{entityLabels[item.entity_type] || item.entity_type}</span>
-                            </p>
-                            <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-                              {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {activityItems.map(item => (
+                    <ActivityRow key={item.id} item={item} />
+                  ))}
                 </div>
               )}
             </CardContent>

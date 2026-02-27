@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { Navigate, Outlet, NavLink, useLocation } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
+import { CommandPalette } from "@/components/CommandPalette";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
@@ -238,6 +239,7 @@ export default function AdminLayout() {
     <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); localStorage.setItem("sidebar-collapsed", String(v)); } }}>
       <div className="min-h-screen bg-background">
         <AdminSidebar />
+        <CommandPalette />
         <main className={cn(
           "transition-all duration-300 ease-in-out p-6 lg:p-8 animate-fade-in",
           collapsed ? "ml-[60px]" : "ml-[250px]"
