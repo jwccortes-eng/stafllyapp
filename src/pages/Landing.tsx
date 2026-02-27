@@ -262,7 +262,7 @@ export default function Landing() {
             </Button>
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="rounded-xl px-5 h-9 text-sm font-semibold gradient-primary text-white shadow-sm hover:shadow-md transition-all">
+                <Button className="rounded-full px-6 h-9 text-sm font-semibold gradient-primary text-white shadow-sm hover:shadow-md transition-all">
                   {c.ctaPrimary}
                 </Button>
               </DialogTrigger>
@@ -315,7 +315,7 @@ export default function Landing() {
               <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button size="lg" className="rounded-xl px-8 h-13 text-base font-semibold gradient-primary text-white shadow-lg hover:shadow-xl transition-all press-scale">
+                    <Button size="lg" className="rounded-full px-10 h-13 text-base font-semibold gradient-primary text-white shadow-lg hover:shadow-xl transition-all press-scale">
                       {c.ctaPrimary} <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </DialogTrigger>
@@ -326,7 +326,7 @@ export default function Landing() {
                 </Dialog>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button size="lg" variant="outline" className="rounded-xl h-13 px-8 text-base">
+                    <Button size="lg" variant="outline" className="rounded-full h-13 px-10 text-base">
                       {c.ctaSecondary}
                     </Button>
                   </DialogTrigger>
