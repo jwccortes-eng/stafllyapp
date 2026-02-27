@@ -40,6 +40,7 @@ import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } fr
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
+import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
 
 // Fields that only owner/admin can see - hidden from managers
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -1021,6 +1022,21 @@ export default function Employees() {
                     )}
                   </div>
               ))}
+
+              {/* Availability Section */}
+              {viewEmployee && (
+                <div className="pt-4">
+                  <Separator className="mb-4" />
+                  <p className="text-xs font-semibold mb-3 flex items-center gap-1.5">
+                    📅 Disponibilidad
+                  </p>
+                  <EmployeeAvailabilitySection
+                    employeeId={viewEmployee.id}
+                    readOnly={!isEditing}
+                  />
+                </div>
+              )}
+
               <div className="flex gap-2 pt-6">
                 <Button
                   variant="outline"

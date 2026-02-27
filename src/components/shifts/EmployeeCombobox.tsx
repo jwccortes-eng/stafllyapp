@@ -3,26 +3,27 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { Search, AlertTriangle, X } from "lucide-react";
+import { Search, AlertTriangle, X, CalendarOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isEmployeeAvailable, type AvailabilityConfig, type AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import type { Employee, Shift, Assignment } from "./types";
 
 interface EmployeeComboboxProps {
   employees: Employee[];
   selected: string[];
   onToggle: (id: string) => void;
-  /** All shifts in current range — used for conflict detection */
   shifts?: Shift[];
-  /** All assignments — used for conflict detection */
   assignments?: Assignment[];
-  /** Date + time of the shift being created/edited */
   shiftDate?: string;
   shiftStart?: string;
   shiftEnd?: string;
-  /** Max height of the list */
   maxHeight?: string;
-  /** Show selected chips above search */
   showChips?: boolean;
+  /** Availability data */
+  availabilityConfigs?: AvailabilityConfig[];
+  availabilityOverrides?: AvailabilityOverride[];
+  /** 'hard' = block, 'warning' = allow with warning */
+  availabilityBlockMode?: "hard" | "warning";
 }
 
 interface ConflictInfo {
@@ -39,15 +40,12 @@ function getConflicts(
   assignments: Assignment[],
 ): ConflictInfo[] {
   if (!shiftDate || !shiftStart || !shiftEnd) return [];
-
   const empAssignments = assignments.filter(a => a.employee_id === employeeId);
   const empShiftIds = new Set(empAssignments.map(a => a.shift_id));
-
   return shifts
     .filter(s => {
       if (!empShiftIds.has(s.id)) return false;
       if (s.date !== shiftDate) return false;
-      // Time overlap check
       const sStart = s.start_time.slice(0, 5);
       const sEnd = s.end_time.slice(0, 5);
       return shiftStart < sEnd && shiftEnd > sStart;
@@ -69,6 +67,9 @@ export function EmployeeCombobox({
   shiftEnd,
   maxHeight = "180px",
   showChips = true,
+  availabilityConfigs = [],
+  availabilityOverrides = [],
+  availabilityBlockMode = "warning",
 }: EmployeeComboboxProps) {
   const [search, setSearch] = useState("");
 
@@ -92,7 +93,30 @@ export function EmployeeCombobox({
     return map;
   }, [employees, shiftDate, shiftStart, shiftEnd, shifts, assignments]);
 
+  // Availability check per employee for the shift date
+  const unavailableMap = useMemo(() => {
+    const map = new Map<string, string>(); // employeeId -> reason
+    if (!shiftDate || availabilityConfigs.length === 0) return map;
+    for (const emp of employees) {
+      const result = isEmployeeAvailable(emp.id, shiftDate, availabilityConfigs, availabilityOverrides);
+      if (!result.available) {
+        map.set(emp.id, result.reason || "No disponible");
+      }
+    }
+    return map;
+  }, [employees, shiftDate, availabilityConfigs, availabilityOverrides]);
+
   const selectedEmps = employees.filter(e => selected.includes(e.id));
+
+  const handleToggle = (id: string) => {
+    // If hard block and unavailable, don't allow selection
+    if (availabilityBlockMode === "hard" && unavailableMap.has(id) && !selected.includes(id)) {
+      return; // blocked
+    }
+    onToggle(id);
+  };
+
+  const unavailableCount = [...unavailableMap.keys()].filter(id => selected.includes(id)).length;
 
   return (
     <div className="space-y-2">
@@ -101,6 +125,7 @@ export function EmployeeCombobox({
         <div className="flex flex-wrap gap-1">
           {selectedEmps.map(emp => {
             const hasConflict = conflictMap.has(emp.id);
+            const isUnavailable = unavailableMap.has(emp.id);
             return (
               <Badge
                 key={emp.id}
@@ -108,12 +133,14 @@ export function EmployeeCombobox({
                 className={cn(
                   "text-[11px] gap-1 pl-1 pr-1.5 py-0.5 cursor-pointer hover:bg-destructive/10 transition-colors",
                   hasConflict && "border-warning/50 bg-warning/10 text-warning",
+                  isUnavailable && !hasConflict && "border-destructive/50 bg-destructive/10 text-destructive",
                 )}
                 onClick={() => onToggle(emp.id)}
               >
                 <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" className="h-4 w-4 text-[7px]" />
                 {emp.first_name} {emp.last_name.charAt(0)}.
-                {hasConflict && <AlertTriangle className="h-3 w-3" />}
+                {isUnavailable && <CalendarOff className="h-3 w-3" />}
+                {hasConflict && !isUnavailable && <AlertTriangle className="h-3 w-3" />}
                 <X className="h-3 w-3 opacity-60" />
               </Badge>
             );
@@ -146,26 +173,38 @@ export function EmployeeCombobox({
             const isSelected = selected.includes(emp.id);
             const conflicts = conflictMap.get(emp.id);
             const hasConflict = !!conflicts && conflicts.length > 0;
+            const unavailableReason = unavailableMap.get(emp.id);
+            const isUnavailable = !!unavailableReason;
+            const isHardBlocked = isUnavailable && availabilityBlockMode === "hard" && !isSelected;
 
             return (
               <label
                 key={emp.id}
                 className={cn(
-                  "flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs transition-colors",
+                  "flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors",
+                  isHardBlocked ? "cursor-not-allowed opacity-40" : "cursor-pointer",
                   isSelected ? "bg-primary/5" : "hover:bg-accent",
                   hasConflict && "bg-warning/5",
+                  isUnavailable && !hasConflict && !isSelected && "bg-destructive/5",
                 )}
               >
                 <Checkbox
                   checked={isSelected}
-                  onCheckedChange={() => onToggle(emp.id)}
+                  onCheckedChange={() => handleToggle(emp.id)}
+                  disabled={isHardBlocked}
                 />
                 <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <span className="font-medium">
+                  <span className={cn("font-medium", isUnavailable && !isSelected && "text-muted-foreground")}>
                     {emp.first_name} {emp.last_name}
                   </span>
-                  {hasConflict && (
+                  {isUnavailable && (
+                    <p className="text-[10px] text-destructive flex items-center gap-1 mt-0.5">
+                      <CalendarOff className="h-3 w-3 shrink-0" />
+                      {unavailableReason}
+                    </p>
+                  )}
+                  {hasConflict && !isUnavailable && (
                     <p className="text-[10px] text-warning flex items-center gap-1 mt-0.5">
                       <AlertTriangle className="h-3 w-3 shrink-0" />
                       Conflicto: {conflicts![0].shiftTitle} ({conflicts![0].time})
@@ -188,9 +227,21 @@ export function EmployeeCombobox({
                 · {[...conflictMap.keys()].filter(id => selected.includes(id)).length} con conflicto
               </span>
             )}
+            {unavailableCount > 0 && (
+              <span className="text-destructive ml-1">
+                · {unavailableCount} no disponible{unavailableCount !== 1 ? "s" : ""}
+              </span>
+            )}
           </>
         ) : (
-          <>{employees.length} disponibles</>
+          <>
+            {employees.length} disponibles
+            {unavailableMap.size > 0 && shiftDate && (
+              <span className="text-destructive ml-1">
+                · {unavailableMap.size} no disponible{unavailableMap.size !== 1 ? "s" : ""}
+              </span>
+            )}
+          </>
         )}
       </p>
     </div>
