@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, FileText, Calendar, DollarSign, TrendingUp, TrendingDown, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, FileText, Calendar, DollarSign, TrendingUp, TrendingDown, CheckCircle2, Receipt } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
 interface MovementDetail {
@@ -90,19 +91,18 @@ export default function PayStub() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link to="/portal/payments" className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold font-heading tracking-tight">Recibo de Pago</h1>
-          <p className="text-xs text-muted-foreground">{period.start_date} → {period.end_date}</p>
-        </div>
-        <span className={cn("text-[10px] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider", statusColor)}>
-          {statusLabel}
-        </span>
-      </div>
+      <PageHeader
+        variant="2"
+        icon={Receipt}
+        title="Recibo de Pago"
+        subtitle={`${period.start_date} → ${period.end_date}`}
+        badge={statusLabel}
+        rightSlot={
+          <Link to="/portal/payments" className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       {/* Total hero */}
       <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-6 text-center">

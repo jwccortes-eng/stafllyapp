@@ -13,6 +13,7 @@ import { Loader2, CheckCircle2, XCircle, Clock, MapPin, Users, CalendarDays, Han
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface ShiftRequest {
   id: string;
@@ -213,16 +214,13 @@ export default function ShiftRequests() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-          <HandMetal className="h-5 w-5 text-primary" />
-          Solicitudes de turnos
-          {pendingCount > 0 && (
-            <Badge className="bg-amber-500 text-white text-xs">{pendingCount}</Badge>
-          )}
-        </h1>
-        <p className="text-muted-foreground text-xs">Aprueba o rechaza solicitudes de empleados para turnos reclamables</p>
-      </div>
+      <PageHeader
+        variant="1"
+        icon={HandMetal}
+        title="Solicitudes de turnos"
+        subtitle="Aprueba o rechaza solicitudes de empleados para turnos reclamables"
+        badge={pendingCount > 0 ? `${pendingCount} pendiente(s)` : undefined}
+      />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="h-8 bg-muted/50">

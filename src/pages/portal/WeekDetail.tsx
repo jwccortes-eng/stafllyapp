@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   ArrowLeft, DollarSign, TrendingUp, TrendingDown, Wallet, FileText,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface MovementDetail {
   id: string;
@@ -70,13 +71,15 @@ export default function WeekDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <Link to="/portal" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3">
           <ArrowLeft className="h-4 w-4" /> Volver
         </Link>
-        <h1 className="text-2xl font-bold font-heading tracking-tight">Detalle de Semana</h1>
-        <p className="text-sm text-muted-foreground mt-1">{periodLabel}</p>
+        <PageHeader
+          variant="3"
+          title="Detalle de Semana"
+          subtitle={periodLabel}
+        />
       </div>
 
       {/* Total card */}

@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { PageHeader } from "@/components/ui/page-header";
 
 type Status = "green" | "yellow" | "red";
 
@@ -257,32 +258,23 @@ export default function SystemHealth() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-            Cuadro de control
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Diagnóstico en tiempo real del estado de la plataforma
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">
-            Última revisión: {format(lastRefresh, "HH:mm:ss", { locale: es })}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={runChecks}
-            disabled={loading}
-            className="rounded-xl gap-2"
-          >
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            Refrescar
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        variant="5"
+        icon={Shield}
+        title="Cuadro de control"
+        subtitle="Diagnóstico en tiempo real del estado de la plataforma"
+        rightSlot={
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              Última revisión: {format(lastRefresh, "HH:mm:ss", { locale: es })}
+            </span>
+            <Button variant="outline" size="sm" onClick={runChecks} disabled={loading} className="rounded-xl gap-2">
+              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              Refrescar
+            </Button>
+          </div>
+        }
+      />
 
       {/* Overall Semaphore */}
       <Card className={cn("border-2 transition-all", overallConfig.border, overallConfig.bg)}>
