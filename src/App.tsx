@@ -29,6 +29,7 @@ import Directory from "./pages/admin/Directory";
 import Clients from "./pages/admin/Clients";
 import Locations from "./pages/admin/Locations";
 import Shifts from "./pages/admin/Shifts";
+import ImportSchedule from "./pages/admin/ImportSchedule";
 import TimeClock from "./pages/admin/TimeClock";
 import TodayView from "./pages/admin/TodayView";
 import Announcements from "./pages/admin/Announcements";
@@ -99,6 +100,7 @@ function App() {
                 <Route path="clients" element={<Clients />} />
                 <Route path="locations" element={<Locations />} />
                 <Route path="shifts" element={<Shifts />} />
+                <Route path="import-schedule" element={<ImportSchedule />} />
                 <Route path="shift-requests" element={<ShiftRequests />} />
                 <Route path="timeclock" element={<TimeClock />} />
                 <Route path="today" element={<TodayView />} />
