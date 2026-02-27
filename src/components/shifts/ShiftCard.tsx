@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, GripVertical, MapPin, Hash } from "lucide-react";
+import { Clock, Users, GripVertical, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -62,36 +62,36 @@ export function ShiftCard({
   return (
     <div
       className={cn(
-        "cursor-pointer hover:shadow-md transition-all group border-l-[3px] rounded-lg overflow-hidden bg-card/80 backdrop-blur-sm border border-border/40",
+        "cursor-pointer transition-all group border-l-[3px] rounded-xl overflow-hidden bg-white/80 dark:bg-card/80 border border-border/30 shadow-sm hover:shadow-md hover:-translate-y-px",
         color.border,
-        draggable && "hover:ring-1 hover:ring-primary/30"
+        draggable && "hover:ring-1 hover:ring-primary/20"
       )}
       draggable={draggable}
       onDragStart={handleDragStart}
       onClick={onClick}
     >
-      <div className={cn("px-2.5 py-2", compact && "px-2 py-1.5")}>
+      <div className={cn("px-3 py-2.5", compact && "px-2.5 py-2")}>
         <div className="flex items-start gap-1.5">
           {draggable && (
-            <GripVertical className="h-3 w-3 text-muted-foreground/30 mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/20 mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
           )}
-          <div className="min-w-0 flex-1 space-y-0.5">
+          <div className="min-w-0 flex-1 space-y-1">
             {/* Title + code */}
             <div className="flex items-center gap-1.5">
               {shift.shift_code && (
-                <span className="text-[9px] font-mono font-bold text-primary/70 bg-primary/8 rounded px-1 py-px shrink-0">
+                <span className="text-[9px] font-mono font-semibold text-primary/60 bg-primary/8 rounded-md px-1.5 py-0.5 shrink-0">
                   #{formatShiftCode(shift.shift_code)}
                 </span>
               )}
-              <p className={cn("font-semibold truncate leading-tight", compact ? "text-[10px]" : "text-[11px]")}>
+              <p className={cn("font-semibold truncate leading-tight", compact ? "text-[11px]" : "text-xs")}>
                 {shift.title}
               </p>
             </div>
 
             {/* Time + client inline */}
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-0.5 shrink-0">
-                <Clock className="h-2.5 w-2.5" />
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80">
+              <span className="flex items-center gap-1 shrink-0">
+                <Clock className="h-3 w-3" />
                 {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
               </span>
               {clientName && (
@@ -103,23 +103,23 @@ export function ShiftCard({
 
             {/* Date (when shown) */}
             {showDate && (
-              <p className="text-[9px] text-muted-foreground/70 capitalize">
+              <p className="text-[9px] text-muted-foreground/60 capitalize">
                 {format(parseISO(shift.date), "EEE d MMM", { locale: es })}
               </p>
             )}
 
             {/* Location */}
             {locationName && (
-              <div className="flex items-center gap-0.5 text-[9px] text-muted-foreground/70">
-                <MapPin className="h-2.5 w-2.5 shrink-0" />
+              <div className="flex items-center gap-1 text-[9px] text-muted-foreground/60">
+                <MapPin className="h-3 w-3 shrink-0" />
                 <span className="truncate">{locationName}</span>
               </div>
             )}
 
             {/* Footer: slots + badges */}
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground tabular-nums">
-                <Users className="h-2.5 w-2.5" />
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground/70 tabular-nums">
+                <Users className="h-3 w-3" />
                 {assignmentCount}/{shift.slots ?? 1}
               </span>
               {badges.map((b, i) => (
@@ -127,11 +127,11 @@ export function ShiftCard({
                   key={i}
                   variant={b.variant as any}
                   className={cn(
-                    "text-[7px] px-1 py-0 h-3.5 font-bold uppercase tracking-wider leading-none",
-                    b.variant === "warning" && "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0",
-                    b.variant === "destructive" && "bg-red-500/15 text-red-600 dark:text-red-400 border-0",
-                    b.variant === "default" && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-0",
-                    b.variant === "secondary" && "bg-muted/60 text-muted-foreground border-0",
+                    "text-[8px] px-1.5 py-0 h-4 font-semibold uppercase tracking-wide leading-none rounded-full",
+                    b.variant === "warning" && "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border-0",
+                    b.variant === "destructive" && "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 border-0",
+                    b.variant === "default" && "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 border-0",
+                    b.variant === "secondary" && "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-0",
                   )}
                 >
                   {b.label}

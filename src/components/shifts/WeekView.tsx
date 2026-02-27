@@ -31,7 +31,7 @@ export function WeekView({ weekDays, shifts, assignments, locations, clients, on
 
   const handleDayDrop = (e: React.DragEvent, day: Date) => {
     e.preventDefault();
-    e.currentTarget.classList.remove("ring-2", "ring-primary/40");
+    e.currentTarget.classList.remove("ring-2", "ring-primary/30", "bg-primary/5");
     const action = e.dataTransfer.getData("application/shift-action");
     const shiftDataStr = e.dataTransfer.getData("application/shift-data");
     const assignmentData = e.dataTransfer.getData("application/assignment");
@@ -45,39 +45,45 @@ export function WeekView({ weekDays, shifts, assignments, locations, clients, on
   };
 
   return (
-    <div className="grid grid-cols-7 gap-2">
+    <div className="grid grid-cols-7 gap-3">
       {weekDays.map(day => {
         const dayShifts = getShiftsForDay(day);
         const isToday = isSameDay(day, new Date());
         return (
           <div
             key={day.toISOString()}
-            className="min-h-[160px]"
+            className={cn(
+              "min-h-[170px] rounded-xl transition-colors",
+              isToday && "bg-primary/[0.03]"
+            )}
             onDragOver={e => {
               e.preventDefault();
               const action = e.dataTransfer.types.includes("application/shift-action") ? "shift" : "";
-              if (action) e.currentTarget.classList.add("ring-2", "ring-primary/40");
+              if (action) e.currentTarget.classList.add("ring-2", "ring-primary/30", "bg-primary/5");
             }}
-            onDragLeave={e => { e.currentTarget.classList.remove("ring-2", "ring-primary/40"); }}
+            onDragLeave={e => { e.currentTarget.classList.remove("ring-2", "ring-primary/30", "bg-primary/5"); }}
             onDrop={e => handleDayDrop(e, day)}
           >
             <div className={cn(
-              "text-center text-xs font-medium mb-2 py-1 rounded",
-              isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              "text-center text-xs font-medium mb-3 py-1.5 rounded-lg",
+              isToday ? "bg-primary/10 text-primary" : "text-muted-foreground/70"
             )}>
-              <div>{format(day, "EEE", { locale: es })}</div>
-              <div className="text-lg font-bold">{format(day, "d")}</div>
+              <div className="text-[10px] uppercase tracking-wider">{format(day, "EEE", { locale: es })}</div>
+              <div className={cn(
+                "text-lg font-bold mt-0.5",
+                isToday && "text-primary"
+              )}>{format(day, "d")}</div>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {dayShifts.map(shift => (
                 <div
                   key={shift.id}
-                  onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-2", "ring-primary/40", "rounded-lg"); }}
-                  onDragLeave={e => { e.currentTarget.classList.remove("ring-2", "ring-primary/40", "rounded-lg"); }}
+                  onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-2", "ring-primary/30", "rounded-xl"); }}
+                  onDragLeave={e => { e.currentTarget.classList.remove("ring-2", "ring-primary/30", "rounded-xl"); }}
                   onDrop={e => {
                     e.preventDefault();
                     e.stopPropagation();
-                    e.currentTarget.classList.remove("ring-2", "ring-primary/40", "rounded-lg");
+                    e.currentTarget.classList.remove("ring-2", "ring-primary/30", "rounded-xl");
                     const action = e.dataTransfer.getData("application/shift-action");
                     const shiftDataStr = e.dataTransfer.getData("application/shift-data");
                     if (action === "duplicate" && shiftDataStr && onDuplicateToDay) {
@@ -101,12 +107,12 @@ export function WeekView({ weekDays, shifts, assignments, locations, clients, on
                 </div>
               ))}
               {dayShifts.length === 0 && !onAddShift && (
-                <p className="text-[10px] text-muted-foreground/50 text-center pt-4">—</p>
+                <p className="text-[10px] text-muted-foreground/30 text-center pt-6">—</p>
               )}
               {onAddShift && (
                 <button
                   onClick={() => onAddShift(format(day, "yyyy-MM-dd"))}
-                  className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/60 hover:text-primary hover:bg-primary/5 rounded py-1 mt-1 transition-colors"
+                  className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/40 hover:text-primary hover:bg-primary/5 rounded-lg py-1.5 mt-1 transition-all"
                 >
                   <Plus className="h-3 w-3" /> Agregar
                 </button>

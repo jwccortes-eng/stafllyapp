@@ -25,23 +25,35 @@ export function WeeklySummaryBar({ shifts, assignments }: WeeklySummaryBarProps)
   const uniqueEmployees = new Set(assignments.map(a => a.employee_id)).size;
 
   return (
-    <div className="flex items-center justify-center gap-8 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm px-6 py-2.5">
+    <div className="flex items-center justify-center gap-6 rounded-2xl bg-white/70 dark:bg-card/60 border border-border/20 shadow-sm px-6 py-3">
       <div className="flex items-center gap-2 text-xs">
-        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-muted-foreground">Horas</span>
-        <span className="font-bold">{totalHours}</span>
+        <div className="h-7 w-7 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
+          <Clock className="h-3.5 w-3.5 text-sky-500" />
+        </div>
+        <div>
+          <span className="text-muted-foreground/60 text-[10px] block">Horas</span>
+          <span className="font-bold text-sm">{totalHours}</span>
+        </div>
       </div>
-      <div className="h-4 w-px bg-border" />
+      <div className="h-8 w-px bg-border/30" />
       <div className="flex items-center gap-2 text-xs">
-        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-muted-foreground">Turnos</span>
-        <span className="font-bold">{shifts.length}</span>
+        <div className="h-7 w-7 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+          <CalendarDays className="h-3.5 w-3.5 text-violet-500" />
+        </div>
+        <div>
+          <span className="text-muted-foreground/60 text-[10px] block">Turnos</span>
+          <span className="font-bold text-sm">{shifts.length}</span>
+        </div>
       </div>
-      <div className="h-4 w-px bg-border" />
+      <div className="h-8 w-px bg-border/30" />
       <div className="flex items-center gap-2 text-xs">
-        <Users className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-muted-foreground">Empleados</span>
-        <span className="font-bold">{uniqueEmployees}</span>
+        <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+          <Users className="h-3.5 w-3.5 text-emerald-500" />
+        </div>
+        <div>
+          <span className="text-muted-foreground/60 text-[10px] block">Empleados</span>
+          <span className="font-bold text-sm">{uniqueEmployees}</span>
+        </div>
       </div>
     </div>
   );
