@@ -201,10 +201,12 @@ export default function ImportConnecteam() {
   const handleDeleteImport = async (importId: string) => {
     setDeletingImportId(importId);
     try {
-      // Delete in order: shifts → period_base_pay → import_rows → imports
+      // Delete in order: shifts → period_base_pay → import_rows → imported overrides → imports
       await supabase.from("shifts").delete().eq("import_id", importId);
       await supabase.from("period_base_pay").delete().eq("import_id", importId);
       await supabase.from("import_rows").delete().eq("import_id", importId);
+      // Clean up imported availability overrides
+      await supabase.from("employee_availability_overrides").delete().eq("source", "import");
       await supabase.from("imports").delete().eq("id", importId);
 
       if (expandedImport === importId) {
@@ -428,6 +430,7 @@ export default function ImportConnecteam() {
 
       let matched = 0;
       let unmatched = 0;
+      let totalUnavailable = 0;
 
       for (const [key, rows] of Object.entries(employeeGroups)) {
         const [fn, ln] = key.split("|");
@@ -468,9 +471,31 @@ export default function ImportConnecteam() {
           import_id: importRecord.id,
         }, { onConflict: "employee_id,period_id" });
 
-        // Insert shifts
+        // Insert shifts & detect unavailability
+        const unavailableDates: string[] = [];
         for (const row of rows) {
           const shiftNum = row[reverseMap["Shift Number"] ?? "Shift Number"] ?? "";
+          const shiftType = (row[reverseMap["Type"] ?? "Type"] ?? "").trim().toLowerCase();
+          const startDateRaw = row[reverseMap["Start Date"] ?? "Start Date"] ?? "";
+
+          // Detect "Unavailable" type rows → create availability overrides
+          if (shiftType === "unavailable" || shiftType === "no disponible") {
+            if (startDateRaw) {
+              // Parse date: could be MM/DD/YYYY or YYYY-MM-DD
+              let isoDate = "";
+              const mdyMatch = startDateRaw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+              if (mdyMatch) {
+                isoDate = `${mdyMatch[3]}-${mdyMatch[1].padStart(2, "0")}-${mdyMatch[2].padStart(2, "0")}`;
+              } else if (/^\d{4}-\d{2}-\d{2}/.test(startDateRaw)) {
+                isoDate = startDateRaw.slice(0, 10);
+              }
+              if (isoDate && !unavailableDates.includes(isoDate)) {
+                unavailableDates.push(isoDate);
+              }
+            }
+            continue; // Don't insert as a regular shift
+          }
+
           if (!shiftNum && !row[reverseMap["Shift hours"] ?? "Shift hours"]) continue;
 
           await supabase.from("shifts").insert({
@@ -493,13 +518,32 @@ export default function ImportConnecteam() {
             manager_notes: row[reverseMap["Manager notes"] ?? ""] || null,
           });
         }
+
+        // Insert availability overrides for unavailable dates
+        if (unavailableDates.length > 0 && selectedCompanyId) {
+          const overrides = unavailableDates.map(d => ({
+            employee_id: emp.id,
+            company_id: selectedCompanyId,
+            date: d,
+            is_available: false,
+            reason: "Importado desde Connecteam",
+            source: "import",
+          }));
+          // Upsert to avoid duplicates
+          for (const ov of overrides) {
+            await supabase.from("employee_availability_overrides")
+              .upsert(ov as any, { onConflict: "employee_id,date" });
+          }
+          totalUnavailable += unavailableDates.length;
+        }
       }
 
       await supabase.from("imports").update({ status: "completed" }).eq("id", importRecord.id);
 
+      const unavailMsg = totalUnavailable > 0 ? `, ${totalUnavailable} indisponibilidades importadas` : "";
       setResult({
         success: true,
-        message: `Importación completada: ${matched} empleados procesados, ${unmatched} no encontrados.`,
+        message: `Importación completada: ${matched} empleados procesados, ${unmatched} no encontrados${unavailMsg}.`,
       });
       setStep(4);
       setPeriodHasImport(true);
