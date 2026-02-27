@@ -243,7 +243,7 @@ export default function EmployeeDashboard() {
         <div className="relative flex items-center gap-3.5">
           <EmployeeAvatar firstName={firstName} lastName={lastName} size="md" className="ring-2 ring-white/30 shadow-lg" />
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-medium opacity-80">{greeting} 👋</p>
+            <p className="text-[11px] font-medium opacity-80">{greeting}</p>
             <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">{firstName}</h1>
           </div>
           <img src={staflyMascot} alt="" className="h-16 w-16 object-contain opacity-90 drop-shadow-lg -mr-1" style={{ imageRendering: "auto" }} />
