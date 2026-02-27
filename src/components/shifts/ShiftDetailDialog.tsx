@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmployeeCombobox } from "./EmployeeCombobox";
 import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
@@ -27,6 +28,7 @@ interface ShiftDetailDialogProps {
   employees: Employee[];
   locations: SelectOption[];
   clients: SelectOption[];
+  allShifts?: Shift[];
   canEdit: boolean;
   onAddEmployees: (shiftId: string, employeeIds: string[]) => void;
   onRemoveAssignment: (assignmentId: string) => void;
@@ -59,7 +61,7 @@ interface ShiftRequestItem {
 }
 
 export function ShiftDetailDialog({
-  shift, open, onOpenChange, assignments, employees, locations, clients,
+  shift, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
@@ -476,19 +478,18 @@ export function ShiftDetailDialog({
               {showAddPanel && (
                 <div className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
                   <p className="text-[11px] font-medium text-muted-foreground">Seleccionar empleados</p>
-                  <div className="max-h-44 overflow-y-auto space-y-0.5">
-                    {unassigned.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-3 text-center">Todos los empleados están asignados</p>
-                    ) : (
-                      unassigned.map(emp => (
-                        <label key={emp.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent cursor-pointer text-xs">
-                          <Checkbox checked={selected.includes(emp.id)} onCheckedChange={() => toggleEmployee(emp.id)} />
-                          <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" />
-                          {emp.first_name} {emp.last_name}
-                        </label>
-                      ))
-                    )}
-                  </div>
+                  <EmployeeCombobox
+                    employees={unassigned}
+                    selected={selected}
+                    onToggle={toggleEmployee}
+                    shifts={allShifts}
+                    assignments={assignments}
+                    shiftDate={shift.date}
+                    shiftStart={shift.start_time.slice(0, 5)}
+                    shiftEnd={shift.end_time.slice(0, 5)}
+                    maxHeight="160px"
+                    showChips={false}
+                  />
                   {selected.length > 0 && (
                     <Button size="sm" onClick={handleAdd} className="w-full h-8 text-xs">
                       Asignar {selected.length} empleado{selected.length > 1 ? "s" : ""}

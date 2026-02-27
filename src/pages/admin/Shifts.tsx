@@ -29,6 +29,7 @@ import { ShiftDetailDialog } from "@/components/shifts/ShiftDetailDialog";
 import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
 import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
+import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 
 // Fields that affect ALL assigned employees (broadcast notification)
@@ -633,14 +634,18 @@ export default function Shifts() {
                   <div><Label className="text-xs text-muted-foreground">Notas adicionales</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none" /></div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Asignar empleados</Label>
-                    <div className="border rounded-lg max-h-36 overflow-y-auto p-2 mt-1 space-y-0.5">
-                      {employees.map(emp => (
-                        <label key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer text-xs">
-                          <Checkbox checked={selectedEmployees.includes(emp.id)} onCheckedChange={() => toggleEmployee(emp.id)} />
-                          {emp.first_name} {emp.last_name}
-                        </label>
-                      ))}
-                      {employees.length === 0 && <p className="text-xs text-muted-foreground p-2">No hay empleados activos</p>}
+                    <div className="mt-1">
+                      <EmployeeCombobox
+                        employees={employees}
+                        selected={selectedEmployees}
+                        onToggle={toggleEmployee}
+                        shifts={shifts}
+                        assignments={assignments}
+                        shiftDate={date}
+                        shiftStart={startTime}
+                        shiftEnd={endTime}
+                        maxHeight="150px"
+                      />
                     </div>
                   </div>
                   <Button onClick={() => setConfirmOpen(true)} disabled={saving || !title.trim() || !date} className="w-full h-9 text-sm">
@@ -800,6 +805,20 @@ export default function Shifts() {
                   const slotsNum = parseInt(slots) || 1;
                   if (selectedEmployees.length > slotsNum) warnings.push(`Se asignaron ${selectedEmployees.length} empleados pero solo hay ${slotsNum} plaza(s).`);
                   if (date && new Date(date + "T00:00:00") < new Date(new Date().toDateString())) warnings.push("La fecha es anterior a hoy.");
+                  // Conflict detection
+                  selectedEmployees.forEach(eid => {
+                    const empAssigns = assignments.filter(a => a.employee_id === eid);
+                    const empShiftIds = new Set(empAssigns.map(a => a.shift_id));
+                    const conflicting = shifts.filter(s => {
+                      if (!empShiftIds.has(s.id)) return false;
+                      if (s.date !== date) return false;
+                      return startTime < s.end_time.slice(0, 5) && endTime > s.start_time.slice(0, 5);
+                    });
+                    if (conflicting.length > 0) {
+                      const emp = employees.find(e => e.id === eid);
+                      warnings.push(`${emp?.first_name} ${emp?.last_name} tiene conflicto con "${conflicting[0].title}" (${conflicting[0].start_time.slice(0, 5)}–${conflicting[0].end_time.slice(0, 5)}).`);
+                    }
+                  });
                   return warnings.length > 0 ? (
                     <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
                       {warnings.map((w, i) => (
@@ -835,6 +854,7 @@ export default function Shifts() {
         employees={employees}
         locations={locations}
         clients={clients}
+        allShifts={shifts}
         canEdit={canEdit}
         onAddEmployees={handleAddEmployees}
         onRemoveAssignment={handleRemoveAssignment}
