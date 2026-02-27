@@ -81,6 +81,7 @@ const OWNER_LINKS: LinkDef[] = [
   { to: "/app/settings", icon: Settings2, label: "Plataforma", module: null, section: "Administración" },
   { to: "/app/system-health", icon: Activity, label: "Cuadro de control", module: null, section: "Administración" },
   { to: "/app/implementations", icon: ListChecks, label: "Implementaciones", module: null, section: "Administración" },
+  { to: "/app/leads", icon: Users, label: "Leads", module: null, section: "Administración" },
 ];
 
 // Section ordering for consistency
