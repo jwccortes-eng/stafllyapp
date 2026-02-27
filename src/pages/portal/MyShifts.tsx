@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown, LogIn } from "lucide-react";
+import staflyMascotWave from "@/assets/stafly-mascot-wave.png";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isBefore, startOfDay, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -432,14 +433,12 @@ export default function MyShifts() {
       )}
 
       {assignments.length === 0 && claimable.length === 0 && (
-        <div className="text-center py-12 space-y-4">
-          <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-            <CalendarDays className="h-7 w-7 text-primary" />
-          </div>
+        <div className="text-center py-12 space-y-3">
+          <img src={staflyMascotWave} alt="" className="h-20 w-20 mx-auto opacity-60 drop-shadow-md" />
           <div className="space-y-1">
             <p className="text-sm font-semibold text-foreground">Sin turnos asignados</p>
             <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
-              Aún no tienes turnos programados. Cuando haya turnos disponibles para solicitar, aparecerán aquí automáticamente.
+              Aún no tienes turnos programados. Cuando haya turnos disponibles, aparecerán aquí.
             </p>
           </div>
           <p className="text-[10px] text-muted-foreground/70">

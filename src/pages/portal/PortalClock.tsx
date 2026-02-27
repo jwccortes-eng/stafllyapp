@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users } from "lucide-react";
+import staflyMascotChecklist from "@/assets/stafly-mascot-checklist.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -264,10 +265,10 @@ export default function PortalClock() {
         onClick={isClockedIn ? handleClockOut : handleClockIn}
         disabled={acting || !companyId}
         className={cn(
-          "w-full h-16 rounded-2xl text-lg font-bold gap-3 shadow-lg transition-all active:scale-[0.97]",
+          "w-full h-20 rounded-2xl text-xl font-bold gap-3 shadow-xl transition-all active:scale-[0.95]",
           isClockedIn
             ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-            : "bg-primary hover:bg-primary/90 text-primary-foreground"
+            : "gradient-primary text-white hover:shadow-2xl"
         )}
       >
         {acting ? (
@@ -374,13 +375,11 @@ export default function PortalClock() {
       )}
 
       {todayEntries.length === 0 && !isClockedIn && (
-        <div className="text-center py-8 space-y-2">
-          <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center mx-auto">
-            <Clock className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <p className="text-sm text-muted-foreground">No hay registros hoy</p>
-          <p className="text-xs text-muted-foreground">
-            Presiona el botón para marcar tu entrada
+        <div className="text-center py-10 space-y-3">
+          <img src={staflyMascotChecklist} alt="" className="h-20 w-20 mx-auto opacity-60 drop-shadow-md" />
+          <p className="text-sm font-semibold text-foreground">No hay registros hoy</p>
+          <p className="text-xs text-muted-foreground max-w-[220px] mx-auto">
+            Presiona el botón de arriba para marcar tu entrada
           </p>
         </div>
       )}

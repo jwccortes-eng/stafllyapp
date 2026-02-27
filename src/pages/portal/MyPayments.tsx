@@ -7,6 +7,7 @@ import {
   CalendarDays, BarChart3, Wallet, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import staflyMascotPaid from "@/assets/stafly-mascot-paid.png";
 
 interface PaymentRow {
   period_id: string;
@@ -239,9 +240,10 @@ export default function MyPayments() {
       <div>
         <h2 className="text-sm font-semibold text-foreground mb-4">Historial de pagos</h2>
         {payments.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <CalendarDays className="h-8 w-8 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No hay pagos publicados aún</p>
+          <div className="text-center py-12 space-y-3">
+            <img src={staflyMascotPaid} alt="" className="h-20 w-20 mx-auto opacity-60 drop-shadow-md" />
+            <p className="text-sm font-semibold text-foreground">Sin pagos publicados</p>
+            <p className="text-xs text-muted-foreground">Tu historial de pagos aparecerá aquí cuando esté disponible.</p>
           </div>
         ) : (
           <div className="space-y-2">
