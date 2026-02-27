@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, FileText, Calendar, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, FileText, Calendar, DollarSign, TrendingUp, TrendingDown, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MovementDetail {
@@ -83,10 +83,10 @@ export default function PayStub() {
 
   const statusLabel = period.paid_at ? "Pagado" : period.status === "published" ? "Publicado" : period.status === "closed" ? "Cerrado" : "Abierto";
   const statusColor = period.paid_at
-    ? "bg-emerald-500/10 text-emerald-600"
+    ? "bg-earning/10 text-earning"
     : period.status === "published"
     ? "bg-primary/10 text-primary"
-    : "bg-amber-500/10 text-amber-600";
+    : "bg-warning/10 text-warning";
 
   return (
     <div className="space-y-6">
@@ -109,8 +109,8 @@ export default function PayStub() {
         <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total a Pagar</p>
         <p className="text-4xl font-bold font-heading mt-2 tracking-tight tabular-nums">${fmt(totalFinal)}</p>
         {period.paid_at && (
-          <p className="text-xs text-emerald-600 mt-2 font-medium">
-            ✓ Pagado el {new Date(period.paid_at).toLocaleDateString("es")}
+          <p className="text-xs text-earning mt-2 font-medium flex items-center gap-1">
+            <CheckCircle2 className="h-3.5 w-3.5" /> Pagado el {new Date(period.paid_at).toLocaleDateString("es")}
           </p>
         )}
       </div>

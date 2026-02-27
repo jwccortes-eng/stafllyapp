@@ -17,11 +17,13 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         success: "bg-earning text-earning-foreground shadow-sm hover:bg-earning/90",
         warning: "bg-warning text-warning-foreground shadow-sm hover:bg-warning/90",
+        pill: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow-md rounded-full",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-xl px-3",
         lg: "h-11 rounded-xl px-8",
+        xl: "h-12 rounded-xl px-8 text-base",
         xs: "h-7 rounded-lg px-2 text-xs",
         icon: "h-10 w-10",
       },

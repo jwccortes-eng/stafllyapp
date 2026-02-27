@@ -299,7 +299,7 @@ export default function PeriodSummary() {
                 </Button>
               )}
               {selectedPeriodObj?.paid_at && (
-                <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded-full">
+                <span className="text-xs font-semibold text-earning bg-earning/10 px-3 py-1.5 rounded-full">
                   ✓ Pagado el {new Date(selectedPeriodObj.paid_at).toLocaleDateString("es")}
                 </span>
               )}

@@ -233,7 +233,7 @@ export default function TodayView() {
 
                   {emp.isClockedIn && emp.activeEntry ? (
                     <div className="flex items-center gap-2 mt-0.5">
-                      <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-200 text-[10px] font-medium px-1.5 py-0">
+                      <Badge className="bg-earning/15 text-earning border-earning/20 text-[10px] font-medium px-1.5 py-0">
                         <Clock className="h-2.5 w-2.5 mr-0.5" />
                         Entrada registrada
                       </Badge>
@@ -263,7 +263,7 @@ export default function TodayView() {
                 {/* Hours / status */}
                 <div className="text-right shrink-0 flex items-center gap-1.5">
                   {emp.isClockedIn || emp.totalMinutes > 0 ? (
-                    <span className={`text-sm font-mono font-semibold ${emp.isClockedIn ? "text-emerald-600" : "text-foreground"}`}>
+                    <span className={`text-sm font-mono font-semibold ${emp.isClockedIn ? "text-earning" : "text-foreground"}`}>
                       {formatDuration(emp.totalMinutes)}
                     </span>
                   ) : (
