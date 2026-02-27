@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
-import { CalendarDays, LogOut, User, Clock, Home, Grid3X3 } from "lucide-react";
+import { CalendarDays, LogOut, User, Clock, Home, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,7 +12,7 @@ const links = [
   { to: "/portal", icon: Home, label: "Inicio", end: true },
   { to: "/portal/clock", icon: Clock, label: "Reloj" },
   { to: "/portal/shifts", icon: CalendarDays, label: "Turnos" },
-  { to: "/portal/resources", icon: Grid3X3, label: "Recursos" },
+  { to: "/portal/chat", icon: MessageSquare, label: "Chat" },
   { to: "/portal/profile", icon: User, label: "Perfil" },
 ];
 

@@ -59,6 +59,7 @@ import PortalResources from "./pages/portal/PortalResources";
 import PortalProfile from "./pages/portal/PortalProfile";
 import PortalClock from "./pages/portal/PortalClock";
 import PayStub from "./pages/portal/PayStub";
+import PortalChat from "./pages/portal/PortalChat";
 import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
@@ -131,6 +132,7 @@ function App() {
                 <Route path="resources" element={<PortalResources />} />
                 <Route path="clock" element={<PortalClock />} />
                 <Route path="paystub/:periodId" element={<PayStub />} />
+                <Route path="chat" element={<PortalChat />} />
                 <Route path="profile" element={<PortalProfile />} />
               </Route>
 
