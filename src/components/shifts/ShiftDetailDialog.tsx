@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeCombobox } from "./EmployeeCombobox";
-import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone } from "lucide-react";
+import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
@@ -22,6 +22,8 @@ import { useCompany } from "@/hooks/useCompany";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
 import { formatShiftCode } from "./types";
+import { SendNotificationDialog } from "./SendNotificationDialog";
+import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
 
 interface ShiftDetailDialogProps {
   shift: Shift | null;
@@ -94,6 +96,7 @@ export function ShiftDetailDialog({
   const [rejectReason, setRejectReason] = useState("");
   const [removeConfirm, setRemoveConfirm] = useState<{ assignmentId: string; employeeName: string } | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [notifyOpen, setNotifyOpen] = useState(false);
 
   const loadRequests = useCallback(async () => {
     if (!shift) return;
@@ -326,6 +329,12 @@ export function ShiftDetailDialog({
                   )}
                 </TabsTrigger>
               )}
+              <TabsTrigger
+                value="comments"
+                className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
+              >
+                <MessageSquare className="h-3 w-3" /> Comentarios
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -701,6 +710,8 @@ export function ShiftDetailDialog({
                 </>
               )}
             </div>
+          ) : tab === "comments" ? (
+            <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
           ) : null}
         </div>
 
@@ -734,7 +745,11 @@ export function ShiftDetailDialog({
                 Publicar
               </Button>
             )}
-            {!editing ? (
+              <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)} className="h-8 text-xs gap-1.5">
+                <Bell className="h-3 w-3" />
+                Notificar
+              </Button>
+              {!editing ? (
               <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="h-8 text-xs gap-1.5">
                 <Save className="h-3 w-3" />
                 Editar turno
@@ -779,6 +794,14 @@ export function ShiftDetailDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <SendNotificationDialog
+      open={notifyOpen}
+      onOpenChange={setNotifyOpen}
+      shift={shift}
+      assignments={assignments}
+      employees={employees}
+    />
     </>
   );
 }

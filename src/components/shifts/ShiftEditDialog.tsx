@@ -35,6 +35,8 @@ export function ShiftEditDialog({
   const [locationId, setLocationId] = useState("");
   const [notes, setNotes] = useState("");
   const [claimable, setClaimable] = useState(false);
+  const [meetingPoint, setMeetingPoint] = useState("");
+  const [specialInstructions, setSpecialInstructions] = useState("");
   const [saving, setSaving] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
@@ -49,6 +51,8 @@ export function ShiftEditDialog({
       setLocationId(shift.location_id || "");
       setNotes(shift.notes || "");
       setClaimable(shift.claimable);
+      setMeetingPoint((shift as any).meeting_point || "");
+      setSpecialInstructions((shift as any).special_instructions || "");
     }
   }, [shift, open]);
 
@@ -150,6 +154,14 @@ export function ShiftEditDialog({
           <div>
             <Label className="text-xs text-muted-foreground">Notas adicionales</Label>
             <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none" />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">📍 Punto de encuentro</Label>
+            <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Ej: Entrada principal..." className="h-9 text-sm" />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">📋 Instrucciones adicionales</Label>
+            <Textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} rows={2} placeholder="Ej: Llevar uniforme negro..." className="text-sm resize-none" />
           </div>
           <Button onClick={handleSave} disabled={saving || !title.trim() || !date} className="w-full h-9 text-sm">
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
