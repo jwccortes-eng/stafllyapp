@@ -757,6 +757,116 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_availability_config: {
+        Row: {
+          blocked_weekdays: number[]
+          company_id: string
+          created_at: string
+          default_available: boolean
+          employee_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          blocked_weekdays?: number[]
+          company_id: string
+          created_at?: string
+          default_available?: boolean
+          employee_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          blocked_weekdays?: number[]
+          company_id?: string
+          created_at?: string
+          default_available?: boolean
+          employee_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_availability_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_availability_config_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_availability_config_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_availability_overrides: {
+        Row: {
+          company_id: string
+          created_at: string
+          date: string
+          employee_id: string
+          id: string
+          is_available: boolean
+          reason: string | null
+          set_by: string | null
+          source: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          date: string
+          employee_id: string
+          id?: string
+          is_available?: boolean
+          reason?: string | null
+          set_by?: string | null
+          source?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          date?: string
+          employee_id?: string
+          id?: string
+          is_available?: boolean
+          reason?: string | null
+          set_by?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_availability_overrides_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_availability_overrides_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_availability_overrides_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_tickets: {
         Row: {
           assigned_to: string | null
