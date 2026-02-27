@@ -5,7 +5,8 @@ import { useCompany } from "@/hooks/useCompany";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Search, Clock, Eye, EyeOff, ChevronRight } from "lucide-react";
+import { Loader2, Search, Clock, Eye, EyeOff, ChevronRight, CalendarDays } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { format, differenceInMinutes, differenceInSeconds } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -153,17 +154,12 @@ export default function TodayView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-0.5">
-          <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Clock className="h-4 w-4 text-primary" />
-          </div>
-          <h1 className="page-title">Hoy</h1>
-        </div>
-        <p className="text-muted-foreground/60 text-xs ml-10">
-          {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
-        </p>
-      </div>
+      <PageHeader
+        variant="1"
+        icon={CalendarDays}
+        title="Hoy"
+        subtitle={format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">

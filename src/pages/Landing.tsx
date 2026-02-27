@@ -9,6 +9,7 @@ import {
   Lock, Send, Eye, Download,
   Menu, X, Star,
 } from "lucide-react";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -361,7 +362,7 @@ export default function Landing() {
       {/* ── GOODBYE TO CHAOS ── */}
       <section className="py-20 bg-card border-y border-border/20">
         <div className="container">
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-center mb-14">{c.chaos.title}</h2>
+          <SectionHeader eyebrow={lang === "es" ? "PRODUCTO" : "PRODUCT"} title={c.chaos.title} />
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <div className="rounded-2xl border border-destructive/15 bg-destructive/[0.02] p-7">
               <span className="text-[11px] font-bold uppercase tracking-widest text-destructive">{c.chaos.before}</span>
@@ -400,10 +401,7 @@ export default function Landing() {
       {/* ── MODULES ── */}
       <section className="py-20 sm:py-28" id="modulos">
         <div className="container">
-          <div className="text-center mb-14">
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold">{c.modules.title}</h2>
-            <p className="mt-2 text-muted-foreground">{c.modules.subtitle}</p>
-          </div>
+          <SectionHeader eyebrow={lang === "es" ? "MÓDULOS" : "MODULES"} title={c.modules.title} subtitle={c.modules.subtitle} />
           <div className="grid lg:grid-cols-[280px_1fr] gap-8 max-w-5xl mx-auto">
             <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
               {c.modules.tabs.map((tab, i) => (
@@ -448,10 +446,7 @@ export default function Landing() {
       {/* ── SECURITY ── */}
       <section className="py-20 bg-card border-y border-border/20" id="seguridad">
         <div className="container">
-          <div className="text-center mb-14">
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold">{c.security.title}</h2>
-            <p className="mt-2 text-muted-foreground text-sm">{c.security.subtitle}</p>
-          </div>
+          <SectionHeader eyebrow={lang === "es" ? "SEGURIDAD" : "SECURITY"} title={c.security.title} subtitle={c.security.subtitle} />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
             {c.security.cards.map((card, i) => (
               <div key={i} className="group bg-background rounded-2xl border border-border/30 p-6 hover-lift">
@@ -469,7 +464,7 @@ export default function Landing() {
       {/* ── TESTIMONIALS ── */}
       <section className="py-20">
         <div className="container">
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-center mb-14">{c.testimonials.title}</h2>
+          <SectionHeader eyebrow={lang === "es" ? "TESTIMONIOS" : "TESTIMONIALS"} title={c.testimonials.title} />
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {c.testimonials.items.map((t, i) => (
               <div key={i} className="bg-card rounded-2xl border border-border/30 p-6 shadow-xs hover-lift">
@@ -498,8 +493,7 @@ export default function Landing() {
       <section id="precios" className="py-20 bg-card border-y border-border/20">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold">{c.pricing.title}</h2>
-            <p className="mt-2 text-muted-foreground text-sm">{c.pricing.subtitle}</p>
+            <SectionHeader eyebrow={lang === "es" ? "PRECIOS" : "PRICING"} title={c.pricing.title} subtitle={c.pricing.subtitle} className="mb-0" />
             <div className="mt-5 inline-flex items-center bg-muted/50 rounded-xl p-1 border border-border/30">
               <button onClick={() => setIsAnnual(false)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${!isAnnual ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
                 {c.pricing.monthly}

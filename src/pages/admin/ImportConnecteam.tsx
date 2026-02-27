@@ -13,6 +13,7 @@ import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile } fr
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -513,15 +514,16 @@ export default function ImportConnecteam() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="page-title">Importar Connecteam</h1>
-          <p className="page-subtitle">Turnos y pagos desde archivos XLS, XLSX o CSV</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={downloadTemplate} className="shrink-0">
-          <Download className="h-4 w-4 mr-2" /> Plantilla
-        </Button>
-      </div>
+      <PageHeader
+        variant="3"
+        title="Importar Connecteam"
+        subtitle="Turnos y pagos desde archivos XLS, XLSX o CSV"
+        rightSlot={
+          <Button variant="outline" size="sm" onClick={downloadTemplate} className="shrink-0">
+            <Download className="h-4 w-4 mr-2" /> Plantilla
+          </Button>
+        }
+      />
 
       {/* Collapsible instructions */}
       <details className="rounded-2xl border bg-card group">

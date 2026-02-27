@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, Palette, ShieldCheck, Zap, Save } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface SettingsMap {
   branding: { platform_name: string; tagline: string; primary_color: string };
@@ -86,13 +87,12 @@ export default function PlatformSettings() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <Settings className="h-6 w-6" />
-          Configuración de Plataforma
-        </h1>
-        <p className="page-subtitle">Configura branding, límites y funcionalidades de STAFLY</p>
-      </div>
+      <PageHeader
+        variant="5"
+        icon={Settings}
+        title="Configuración de Plataforma"
+        subtitle="Configura branding, límites y funcionalidades de STAFLY"
+      />
 
       <Tabs defaultValue="branding" className="space-y-6">
         <TabsList>

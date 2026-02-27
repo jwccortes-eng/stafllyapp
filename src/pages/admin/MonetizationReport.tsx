@@ -10,6 +10,7 @@ import {
   Wallet, CreditCard, Zap, ArrowUpRight,
 } from "lucide-react";
 import { format } from "date-fns";
+import { PageHeader } from "@/components/ui/page-header";
 import { es } from "date-fns/locale";
 
 /* ── Investment data (estimated from project scope) ── */
@@ -75,18 +76,12 @@ export default function MonetizationReport() {
 
   return (
     <div className="space-y-6">
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <Wallet className="h-6 w-6" />
-          Reporte de Monetización e Inversión
-        </h1>
-        <p className="page-subtitle">
-          Análisis completo de costos de desarrollo e inversión — Solo visible para el propietario
-        </p>
-        <Badge variant="outline" className="mt-2">
-          Confidencial · {format(today, "dd MMMM yyyy", { locale: es })}
-        </Badge>
-      </div>
+      <PageHeader
+        variant="4"
+        eyebrow="ANÁLISIS"
+        title="Reporte de Monetización e Inversión"
+        subtitle="Análisis completo de costos de desarrollo e inversión — Solo visible para el propietario"
+      />
 
       {/* ── Summary KPIs ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

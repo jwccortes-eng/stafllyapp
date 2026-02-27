@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search, Download, CalendarIcon, X } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -183,11 +184,12 @@ export default function EmployeeReport() {
             <ArrowLeft className="h-4 w-4 mr-1" /> Volver a reportes
           </Button>
         </Link>
-        <h1 className="page-title flex items-center gap-2">
-          <User className="h-5 w-5 text-primary" />
-          Resumen por empleado
-        </h1>
-        <p className="page-subtitle">Historial de pagos y novedades de un empleado</p>
+        <PageHeader
+          variant="4"
+          eyebrow="ANÁLISIS"
+          title="Resumen por empleado"
+          subtitle="Historial de pagos y novedades de un empleado"
+        />
       </div>
 
       {/* Controls row */}

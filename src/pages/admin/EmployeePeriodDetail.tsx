@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Pencil, Save, X, Lock } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 
 interface ShiftRow {
@@ -200,28 +201,17 @@ export default function EmployeePeriodDetail() {
 
   return (
     <div>
-      <div className="page-header">
+      <div>
         <Link to={`/app/summary?periodId=${periodId}`}>
           <Button variant="ghost" size="sm" className="mb-2 -ml-2">
             <ArrowLeft className="h-4 w-4 mr-1" /> Volver al resumen
           </Button>
         </Link>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              {employee?.first_name} {employee?.last_name}
-            </h1>
-            <p className="page-subtitle">
-              Periodo: {period?.start_date} → {period?.end_date}
-              {isClosed && (
-                <span className="ml-2 inline-flex items-center gap-1 text-xs text-destructive font-medium">
-                  <Lock className="h-3 w-3" /> Cerrado
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          variant="3"
+          title={`${employee?.first_name} ${employee?.last_name}`}
+          subtitle={`Periodo: ${period?.start_date} → ${period?.end_date}${isClosed ? " · Cerrado" : ""}`}
+        />
       </div>
 
       {isClosed && (

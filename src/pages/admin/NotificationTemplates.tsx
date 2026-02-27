@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Plus, FileText, Pencil, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 const TRANSACTION_TYPES = [
   { value: "shift_assigned", label: "Asignación de turno" },
@@ -123,18 +124,16 @@ export default function NotificationTemplates() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            Plantillas de notificación
-          </h1>
-          <p className="text-muted-foreground text-xs">Mensajes predeterminados por tipo de transacción</p>
-        </div>
-        <Button size="sm" className="h-8 text-xs" onClick={openCreate}>
-          <Plus className="h-3.5 w-3.5 mr-1" /> Nueva plantilla
-        </Button>
-      </div>
+      <PageHeader
+        variant="3"
+        title="Plantillas de notificación"
+        subtitle="Mensajes predeterminados por tipo de transacción"
+        rightSlot={
+          <Button size="sm" className="h-8 text-xs" onClick={openCreate}>
+            <Plus className="h-3.5 w-3.5 mr-1" /> Nueva plantilla
+          </Button>
+        }
+      />
 
       {/* Variables hint */}
       <div className="rounded-lg bg-muted/30 border border-border/30 p-3">

@@ -17,6 +17,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Inbox, Search, Filter, MessageSquare, CheckCircle2, Clock, AlertCircle,
   User, ChevronRight, Send,
@@ -221,15 +222,12 @@ export default function Requests() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Inbox className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="page-title">Solicitudes</h1>
-          <p className="text-sm text-muted-foreground">Gestiona las solicitudes de tus empleados</p>
-        </div>
-      </div>
+      <PageHeader
+        variant="1"
+        icon={Inbox}
+        title="Solicitudes"
+        subtitle="Gestiona las solicitudes de tus empleados"
+      />
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

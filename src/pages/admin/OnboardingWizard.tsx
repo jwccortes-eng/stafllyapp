@@ -13,6 +13,7 @@ import {
   Building2, Users, LayoutGrid, UserPlus, CheckCircle2,
   ArrowRight, ArrowLeft, Sparkles, Rocket,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 const MODULE_OPTIONS = [
   { key: "periods", label: "Periodos de nómina", group: "Nómina" },
@@ -171,13 +172,12 @@ export default function OnboardingWizard() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="page-header text-center">
-        <h1 className="page-title flex items-center justify-center gap-2">
-          <Sparkles className="h-6 w-6 text-primary" />
-          Nueva Empresa
-        </h1>
-        <p className="page-subtitle">Configura una nueva empresa en 3 pasos</p>
-      </div>
+      <PageHeader
+        variant="3"
+        title="Nueva Empresa"
+        subtitle="Configura una nueva empresa en 3 pasos"
+        className="text-center"
+      />
 
       {/* Steps indicator */}
       <div className="flex items-center justify-center gap-2 mb-8">

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Megaphone, Pin, ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper, Play } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, parseISO, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -144,10 +145,12 @@ export default function MyAnnouncements() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-heading tracking-tight">Feed</h1>
-        <p className="text-sm text-muted-foreground mt-1">Comunicaciones y novedades de la empresa</p>
-      </div>
+      <PageHeader
+        variant="1"
+        icon={Megaphone}
+        title="Feed"
+        subtitle="Comunicaciones y novedades de la empresa"
+      />
 
       {announcements.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">

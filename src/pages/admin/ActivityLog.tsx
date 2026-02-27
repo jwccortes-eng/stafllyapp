@@ -13,6 +13,7 @@ import {
   Activity, User, Building2, Settings, FileSpreadsheet, Users, DollarSign,
   CalendarDays, Tags, Shield, Clock, Megaphone, Search, Filter,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -168,13 +169,12 @@ export default function ActivityLog() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <Activity className="h-6 w-6" />
-          Registro de Actividad
-        </h1>
-        <p className="page-subtitle">Historial de acciones realizadas en la plataforma</p>
-      </div>
+      <PageHeader
+        variant="5"
+        icon={Shield}
+        title="Registro de Actividad"
+        subtitle="Historial de acciones realizadas en la plataforma"
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-6">

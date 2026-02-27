@@ -142,7 +142,7 @@ export default function Auth() {
 
           {/* Card */}
           <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
-            <div className="text-center">
+            <div className="text-center space-y-1">
               <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
                 {isLogin
                   ? isPhone
@@ -150,12 +150,15 @@ export default function Auth() {
                     : "Bienvenido de vuelta"
                   : "Crear cuenta"}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground">
                 {isLogin
                   ? isPhone
                     ? "Ingresa tu teléfono y PIN"
                     : "Inicia sesión con tu email"
                   : "Completa los datos para registrarte"}
+              </p>
+              <p className="text-[10px] text-muted-foreground/60 flex items-center justify-center gap-1">
+                <ShieldCheck className="h-3 w-3" /> Acceso seguro por roles
               </p>
             </div>
 

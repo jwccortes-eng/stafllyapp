@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown, LogIn } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import staflyMascotWave from "@/assets/stafly-mascot-wave.png";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isBefore, startOfDay, isToday, isTomorrow } from "date-fns";
@@ -398,12 +399,12 @@ export default function MyShifts() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-xl font-bold font-heading tracking-tight">Mis Turnos</h1>
-        <p className="text-xs text-muted-foreground mt-1">
-          {upcoming.length} próximo{upcoming.length !== 1 ? "s" : ""} · {past.length} pasado{past.length !== 1 ? "s" : ""}
-        </p>
-      </div>
+      <PageHeader
+        variant="1"
+        icon={CalendarDays}
+        title="Mis Turnos"
+        subtitle={`${upcoming.length} próximo${upcoming.length !== 1 ? "s" : ""} · ${past.length} pasado${past.length !== 1 ? "s" : ""}`}
+      />
 
       {/* Claimable shifts */}
       {claimable.length > 0 && (

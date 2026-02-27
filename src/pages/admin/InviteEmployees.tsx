@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Copy, QrCode, MessageCircle, Send, Search, CheckCircle2, Smartphone } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect } from "react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Users } from "lucide-react";
 
 interface Employee {
   id: string;
@@ -113,10 +115,12 @@ export default function InviteEmployees() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Invitar Empleados — {companyName}</h1>
-        <p className="page-subtitle">Comparte el acceso al portal de {companyName} con tus empleados</p>
-      </div>
+      <PageHeader
+        variant="1"
+        icon={Users}
+        title={`Invitar Empleados — ${companyName}`}
+        subtitle={`Comparte el acceso al portal de ${companyName} con tus empleados`}
+      />
 
       {/* General link + QR */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
