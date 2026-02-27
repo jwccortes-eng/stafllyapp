@@ -14,6 +14,7 @@ import {
   Settings, MapPin, Clock, CalendarDays, DollarSign, Zap, Shield,
   Loader2, Save,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface SettingConfig {
   key: string;
@@ -197,17 +198,11 @@ export default function CompanyConfig() {
 
   return (
     <div>
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title flex items-center gap-2">
-              <Settings className="h-6 w-6" />
-              Configuración de Empresa
-            </h1>
-            <p className="page-subtitle">
-              {selectedCompany?.name ?? "Empresa"} — Parámetros operativos y reglas de negocio
-            </p>
-          </div>
+      <PageHeader
+        variant="3"
+        title="Configuración de Empresa"
+        subtitle={`${selectedCompany?.name ?? "Empresa"} — Parámetros operativos y reglas de negocio`}
+        rightSlot={
           <Button onClick={saveAll} disabled={saving || loading}>
             {saving ? (
               <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Guardando...</>
@@ -215,8 +210,8 @@ export default function CompanyConfig() {
               <><Save className="h-4 w-4 mr-2" /> Guardar todo</>
             )}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-20">

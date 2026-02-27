@@ -18,6 +18,7 @@ import {
   Zap, Bell, MapPin, Clock, CalendarDays, DollarSign, Shield, AlertTriangle,
   Loader2, Save, CheckCircle2, XCircle, History,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface RuleDef {
   key: string;
@@ -289,17 +290,11 @@ export default function Automations() {
 
   return (
     <div>
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title flex items-center gap-2">
-              <Zap className="h-6 w-6" />
-              Automatizaciones
-            </h1>
-            <p className="page-subtitle">
-              {selectedCompany?.name} — {enabledCount} de {RULES.length} reglas activas
-            </p>
-          </div>
+      <PageHeader
+        variant="3"
+        title="Automatizaciones"
+        subtitle={`${selectedCompany?.name} — ${enabledCount} de ${RULES.length} reglas activas`}
+        rightSlot={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowLog(!showLog)}>
               <History className="h-4 w-4 mr-1" />
@@ -313,8 +308,10 @@ export default function Automations() {
               )}
             </Button>
           </div>
-        </div>
-      </div>
+        }
+      />
+
+
 
       {loading ? (
         <div className="flex items-center justify-center py-20">

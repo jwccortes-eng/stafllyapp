@@ -6,6 +6,7 @@ import {
   TrendingUp, TrendingDown, ChevronDown,
   CalendarDays, BarChart3, Wallet, Loader2,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import staflyMascotPaid from "@/assets/stafly-mascot-paid.png";
 
@@ -229,23 +230,12 @@ export default function MyPayments() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold font-heading tracking-tight">
-          {empName ? `${greeting}, ${empName}` : "Nómina"}
-        </h1>
-        {companyName && <p className="text-sm text-muted-foreground mt-0.5">{companyName}</p>}
-        {currentPeriod && periodStatusLabel && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-muted-foreground">
-              {currentPeriod.start_date} → {currentPeriod.end_date}
-            </span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${periodStatusLabel.cls}`}>
-              {periodStatusLabel.label}
-            </span>
-          </div>
-        )}
-        <p className="text-sm text-muted-foreground mt-1">Tu historial de pagos y tendencia</p>
-      </div>
+      <PageHeader
+        variant="2"
+        title={empName ? `${greeting}, ${empName}` : "Nómina"}
+        subtitle="Tu historial de pagos y tendencia"
+        badge="Semanal"
+      />
 
       {/* Latest payment hero */}
       {latestPayment && (

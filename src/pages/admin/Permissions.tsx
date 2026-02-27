@@ -14,6 +14,7 @@ import {
   Shield, CalendarDays, Clock, DollarSign, Settings, Users,
   CheckCircle2, XCircle, Loader2, Zap,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 // All available actions grouped by category
 const ACTION_GROUPS = [
@@ -236,13 +237,12 @@ export default function Permissions() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <Shield className="h-6 w-6" />
-          Permisos Granulares
-        </h1>
-        <p className="page-subtitle">Controla las acciones específicas que cada manager puede realizar</p>
-      </div>
+      <PageHeader
+        variant="5"
+        icon={Shield}
+        title="Permisos Granulares"
+        subtitle="Controla las acciones específicas que cada manager puede realizar"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left: Manager selector + templates */}

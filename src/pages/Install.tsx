@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Download, Smartphone, CheckCircle2, Apple, ArrowRight } from "lucide-react";
-import { Clock } from "lucide-react";
+import { Download, Smartphone, CheckCircle2, Apple, ArrowRight, Clock } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -71,12 +71,12 @@ export default function Install() {
           </span>
         </div>
 
-        <div className="space-y-3">
-          <h1 className="text-3xl font-bold font-heading tracking-tight">Descarga la app</h1>
-          <p className="text-muted-foreground">
-            Instala STAFLY en tu teléfono para acceder rápidamente a turnos, pagos y más.
-          </p>
-        </div>
+        <PageHeader
+          variant="3"
+          title="Descarga la app"
+          subtitle="Instala STAFLY en tu teléfono para acceder rápidamente a turnos, pagos y más."
+          className="text-center"
+        />
 
         {/* Mockup icon */}
         <div className="flex justify-center">

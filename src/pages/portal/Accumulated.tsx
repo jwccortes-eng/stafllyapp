@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Wallet } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface PeriodAccum {
   period_id: string;
@@ -122,21 +123,12 @@ export default function Accumulated() {
         <Link to="/portal" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3">
           <ArrowLeft className="h-4 w-4" /> Volver
         </Link>
-        <h1 className="text-2xl font-bold font-heading tracking-tight">
-          {empName ? `${greeting}, ${empName}` : "Acumulado Histórico"}
-        </h1>
-        {companyName && <p className="text-sm text-muted-foreground mt-0.5">{companyName}</p>}
-        {currentPeriod && periodStatusLabel && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-muted-foreground">
-              {currentPeriod.start_date} → {currentPeriod.end_date}
-            </span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${periodStatusLabel.cls}`}>
-              {periodStatusLabel.label}
-            </span>
-          </div>
-        )}
-        <p className="text-sm text-muted-foreground mt-1">Tu total ganado a lo largo del tiempo</p>
+        <PageHeader
+          variant="2"
+          title={empName ? `${greeting}, ${empName}` : "Acumulado Histórico"}
+          subtitle="Tu total ganado a lo largo del tiempo"
+          badge="Semanal"
+        />
       </div>
 
       {/* Total card */}

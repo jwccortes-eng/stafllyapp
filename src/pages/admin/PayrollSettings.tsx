@@ -15,6 +15,7 @@ import {
   Settings, CalendarDays, Clock, AlertTriangle,
   Save, RotateCcw, Shield, Globe, Loader2,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 const TIMEZONES = [
   "America/New_York",
@@ -82,15 +83,11 @@ export default function PayrollSettings() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <Settings className="h-6 w-6" />
-          Configuración de Nómina
-        </h1>
-        <p className="page-subtitle">
-          Define el ciclo semanal de nómina, cierre esperado y reglas de atraso para {selectedCompany?.name}
-        </p>
-      </div>
+      <PageHeader
+        variant="3"
+        title="Configuración de Nómina"
+        subtitle={`Define el ciclo semanal de nómina, cierre esperado y reglas de atraso para ${selectedCompany?.name}`}
+      />
 
       {/* Week Configuration */}
       <Card className="rounded-2xl">

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { MessageCircle, Wallet, BarChart3, CalendarDays, FileText, Settings, HelpCircle, BookOpen } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
 const resources = [
@@ -15,10 +16,12 @@ export default function PortalResources() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-xl font-bold font-heading tracking-tight">Recursos</h1>
-        <p className="text-xs text-muted-foreground mt-1">Herramientas y opciones disponibles</p>
-      </div>
+      <PageHeader
+        variant="4"
+        eyebrow="SOPORTE"
+        title="Recursos"
+        subtitle="Herramientas y opciones disponibles"
+      />
 
       {/* Resource grid */}
       <div className="grid grid-cols-1 gap-2.5">

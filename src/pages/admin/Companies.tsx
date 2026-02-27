@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid, FlaskConical } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -159,28 +160,30 @@ export default function CompaniesPage() {
 
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Empresas</h1>
-          <p className="page-subtitle">Gestiona tus unidades de negocio</p>
-        </div>
-        <div className="flex gap-2">
-          {!companies.some(c => c.is_sandbox) && (
-            <Button variant="outline" onClick={async () => {
-              const { error } = await supabase.from("companies").insert({ name: "Sandbox", slug: "sandbox", is_sandbox: true } as any);
-              if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-              else { toast({ title: "Sandbox creado" }); fetchCompanies(); refetch(); }
-            }}>
-              <FlaskConical className="h-4 w-4 mr-2" />
-              Crear Sandbox
+      <PageHeader
+        variant="1"
+        icon={Building2}
+        title="Empresas"
+        subtitle="Gestiona tus unidades de negocio"
+        rightSlot={
+          <div className="flex gap-2">
+            {!companies.some(c => c.is_sandbox) && (
+              <Button variant="outline" onClick={async () => {
+                const { error } = await supabase.from("companies").insert({ name: "Sandbox", slug: "sandbox", is_sandbox: true } as any);
+                if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+                else { toast({ title: "Sandbox creado" }); fetchCompanies(); refetch(); }
+              }}>
+                <FlaskConical className="h-4 w-4 mr-2" />
+                Crear Sandbox
+              </Button>
+            )}
+            <Button onClick={() => { setCreateOpen(true); setFormName(""); setFormSlug(""); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva empresa
             </Button>
-          )}
-          <Button onClick={() => { setCreateOpen(true); setFormName(""); setFormSlug(""); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva empresa
-          </Button>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
