@@ -14,13 +14,17 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Shift, SelectOption } from "./types";
 
+interface LocationOption extends SelectOption {
+  address?: string;
+  client_id?: string | null;
+}
 interface ShiftEditDialogProps {
   shift: Shift | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clients: SelectOption[];
-  locations: SelectOption[];
-  onSave: (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => Promise<void>;
+  locations: LocationOption[];
+  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null }, oldShift: Shift) => Promise<void>;
 }
 
 export function ShiftEditDialog({
@@ -58,6 +62,15 @@ export function ShiftEditDialog({
 
   if (!shift) return null;
 
+  const handleClientChange = (v: string) => {
+    const newId = v === "none" ? "" : v;
+    setClientId(newId);
+    if (newId) {
+      const loc = locations.find(l => l.client_id === newId && l.address);
+      if (loc?.address) setMeetingPoint(loc.address);
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim() || !date) return;
     setSaving(true);
@@ -72,6 +85,8 @@ export function ShiftEditDialog({
         location_id: locationId || null,
         notes: notes.trim() || null,
         claimable,
+        meeting_point: meetingPoint.trim() || null,
+        special_instructions: specialInstructions.trim() || null,
       }, shift);
       onOpenChange(false);
     } finally {
@@ -122,7 +137,7 @@ export function ShiftEditDialog({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-xs text-muted-foreground">Cliente</Label>
-              <Select value={clientId || "none"} onValueChange={v => setClientId(v === "none" ? "" : v)}>
+              <Select value={clientId || "none"} onValueChange={handleClientChange}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin asignar</SelectItem>
@@ -156,8 +171,11 @@ export function ShiftEditDialog({
             <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none" />
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">📍 Punto de encuentro</Label>
-            <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Ej: Entrada principal..." className="h-9 text-sm" />
+            <Label className="text-xs text-muted-foreground">📍 Dirección / Punto de encuentro</Label>
+            <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm" />
+            {meetingPoint && clientId && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">Puedes editar la dirección manualmente.</p>
+            )}
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">📋 Instrucciones adicionales</Label>
