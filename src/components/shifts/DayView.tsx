@@ -1,6 +1,6 @@
 import { isSameDay, format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plus } from "lucide-react";
+import { Plus, Sunrise, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShiftCard } from "./ShiftCard";
 import type { Shift, Assignment, SelectOption } from "./types";
@@ -16,6 +16,12 @@ interface DayViewProps {
   onDuplicateToDay?: (shiftData: any, targetDate: string) => void;
   onAddShift?: (date: string) => void;
 }
+
+const TIME_GROUP_ICONS: Record<string, React.ReactNode> = {
+  "Mañana": <Sunrise className="h-3.5 w-3.5 text-amber-400" />,
+  "Tarde": <Sun className="h-3.5 w-3.5 text-orange-400" />,
+  "Noche": <Moon className="h-3.5 w-3.5 text-indigo-400" />,
+};
 
 export function DayView({ currentDay, shifts, assignments, locations, clients, onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift }: DayViewProps) {
   const dayShifts = shifts
@@ -47,23 +53,23 @@ export function DayView({ currentDay, shifts, assignments, locations, clients, o
   const timeGroups = ["Mañana", "Tarde", "Noche"].filter(g => grouped[g]?.length);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Day header */}
       <div className="text-center pb-2">
         <p className="text-lg font-semibold capitalize">
           {format(currentDay, "EEEE", { locale: es })}
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground/60">
           {format(currentDay, "d 'de' MMMM yyyy", { locale: es })}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground/40 mt-1">
           {dayShifts.length} turno{dayShifts.length !== 1 ? "s" : ""} programado{dayShifts.length !== 1 ? "s" : ""}
         </p>
         {onAddShift && (
           <Button
             variant="outline"
             size="sm"
-            className="mt-2 h-7 text-[11px] gap-1"
+            className="mt-3 h-8 text-xs gap-1.5 rounded-full border-dashed"
             onClick={() => onAddShift(format(currentDay, "yyyy-MM-dd"))}
           >
             <Plus className="h-3 w-3" /> Agregar turno
@@ -73,27 +79,28 @@ export function DayView({ currentDay, shifts, assignments, locations, clients, o
 
       {timeGroups.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-sm text-muted-foreground">No hay turnos programados para este día</p>
+          <p className="text-sm text-muted-foreground/40">No hay turnos programados para este día</p>
         </div>
       )}
 
       {timeGroups.map(group => (
         <div key={group}>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <div className="flex items-center gap-2 mb-3">
+            {TIME_GROUP_ICONS[group]}
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
               {group}
             </span>
-            <div className="flex-1 h-px bg-border/50" />
+            <div className="flex-1 h-px bg-border/30" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {grouped[group]!.map(shift => (
               <div
                 key={shift.id}
-                onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-2", "ring-primary/40", "rounded-lg"); }}
-                onDragLeave={e => { e.currentTarget.classList.remove("ring-2", "ring-primary/40", "rounded-lg"); }}
+                onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-2", "ring-primary/30", "rounded-xl"); }}
+                onDragLeave={e => { e.currentTarget.classList.remove("ring-2", "ring-primary/30", "rounded-xl"); }}
                 onDrop={e => {
                   e.preventDefault();
-                  e.currentTarget.classList.remove("ring-2", "ring-primary/40", "rounded-lg");
+                  e.currentTarget.classList.remove("ring-2", "ring-primary/30", "rounded-xl");
                   const data = e.dataTransfer.getData("application/assignment");
                   if (data) onDropOnShift(shift.id, data);
                 }}

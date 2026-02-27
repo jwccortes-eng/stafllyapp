@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -254,7 +254,7 @@ export default function Shifts() {
             shift.id,
             title.trim(),
             "shift_claimable",
-            "🙋 Turno disponible para reclamar",
+            "Turno disponible para reclamar",
             `"${title.trim()}" el ${dateLabel} (${startTime.slice(0, 5)}–${endTime.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
             claimRecipients,
             { claimable: true }
@@ -334,7 +334,7 @@ export default function Shifts() {
         const dateLabel = new Date(oldShift.date + "T12:00:00").toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" });
         await sendShiftNotifications(
           shiftId, shiftTitle, "shift_claimable",
-          "🙋 Turno disponible para reclamar",
+          "Turno disponible para reclamar",
           `"${shiftTitle}" el ${dateLabel} (${oldShift.start_time.slice(0, 5)}–${oldShift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
           claimRecipients, { claimable: true }
         );
@@ -382,7 +382,7 @@ export default function Shifts() {
         const dateLabel = new Date(shift.date + "T12:00:00").toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" });
         await sendShiftNotifications(
           shift.id, shift.title, "shift_claimable",
-          "🙋 Turno disponible para reclamar",
+          "Turno disponible para reclamar",
           `"${shift.title}" el ${dateLabel} (${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
           claimRecipients, { claimable: true }
         );
@@ -544,8 +544,13 @@ export default function Shifts() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Turnos</h1>
-          <p className="text-muted-foreground text-xs">Programa y gestiona los turnos de trabajo</p>
+          <div className="flex items-center gap-2 mb-0.5">
+            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-primary" />
+            </div>
+            <h1 className="text-xl font-semibold tracking-tight">Turnos</h1>
+          </div>
+          <p className="text-muted-foreground/60 text-xs ml-10">Programa y gestiona los turnos de trabajo</p>
         </div>
         <div className="flex items-center gap-2">
           <Tabs value={viewMode} onValueChange={v => setViewMode(v as ViewMode)}>
@@ -696,7 +701,7 @@ export default function Shifts() {
       </div>
 
       {/* Content */}
-      <div className="rounded-xl bg-gradient-to-br from-muted/30 via-background to-muted/20 border border-border/30 p-4 min-h-[400px]">
+      <div className="rounded-2xl bg-white/50 dark:bg-card/30 border border-border/20 shadow-sm p-5 min-h-[400px]">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
