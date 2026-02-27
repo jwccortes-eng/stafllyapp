@@ -1272,6 +1272,56 @@ export type Database = {
           },
         ]
       }
+      notification_templates: {
+        Row: {
+          body: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          subject: string
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          subject?: string
+          transaction_type: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          subject?: string
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string
@@ -1621,9 +1671,11 @@ export type Database = {
           end_time: string
           id: string
           location_id: string | null
+          meeting_point: string | null
           notes: string | null
           shift_code: string | null
           slots: number | null
+          special_instructions: string | null
           start_time: string
           status: string
           title: string
@@ -1640,9 +1692,11 @@ export type Database = {
           end_time: string
           id?: string
           location_id?: string | null
+          meeting_point?: string | null
           notes?: string | null
           shift_code?: string | null
           slots?: number | null
+          special_instructions?: string | null
           start_time: string
           status?: string
           title: string
@@ -1659,9 +1713,11 @@ export type Database = {
           end_time?: string
           id?: string
           location_id?: string | null
+          meeting_point?: string | null
           notes?: string | null
           shift_code?: string | null
           slots?: number | null
+          special_instructions?: string | null
           start_time?: string
           status?: string
           title?: string
@@ -1776,6 +1832,74 @@ export type Database = {
           },
           {
             foreignKeyName: "shift_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_comments: {
+        Row: {
+          attachments: Json | null
+          author_id: string
+          author_type: string
+          company_id: string
+          content: string
+          created_at: string
+          employee_id: string | null
+          id: string
+          shift_id: string
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json | null
+          author_id: string
+          author_type?: string
+          company_id: string
+          content?: string
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          shift_id: string
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json | null
+          author_id?: string
+          author_type?: string
+          company_id?: string
+          content?: string
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          shift_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_comments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_comments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_comments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_comments_shift_id_fkey"
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "scheduled_shifts"

@@ -44,6 +44,7 @@ import SystemHealth from "./pages/admin/SystemHealth";
 import Implementations from "./pages/admin/Implementations";
 import ShiftRequests from "./pages/admin/ShiftRequests";
 import PayrollSettings from "./pages/admin/PayrollSettings";
+import NotificationTemplates from "./pages/admin/NotificationTemplates";
 import Pricing from "./pages/admin/Pricing";
 import Billing from "./pages/admin/Billing";
 import MyPayments from "./pages/portal/MyPayments";
@@ -112,6 +113,7 @@ function App() {
                 <Route path="billing" element={<Billing />} />
                 <Route path="system-health" element={<SystemHealth />} />
                 <Route path="implementations" element={<Implementations />} />
+                <Route path="notification-templates" element={<NotificationTemplates />} />
               </Route>
 
               {/* Employee portal routes */}
