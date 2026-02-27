@@ -20,7 +20,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
-import staflyMascot from "@/assets/stafly-mascot-checklist.png";
+import staflyMascot from "@/assets/stafly-mascot-3d.png";
 
 /* ─── animated counter hook ─── */
 function useAnimatedNumber(target: number, duration = 800) {
@@ -552,7 +552,7 @@ export default function AdminDashboard() {
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5 p-6 md:p-8">
           <div className="flex items-start gap-4 flex-1">
             <div className="hidden md:flex shrink-0">
-              <img src={staflyMascot} alt="stafly" className="h-16 w-16 object-contain drop-shadow-sm" style={{ imageRendering: "auto" }} />
+              <img src={staflyMascot} alt="stafly" className="h-24 w-24 object-contain drop-shadow-xl" style={{ imageRendering: "auto" }} />
             </div>
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mb-1">

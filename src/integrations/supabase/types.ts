@@ -844,6 +844,7 @@ export type Database = {
           access_pin: string | null
           added_by: string | null
           added_via: string | null
+          avatar_url: string | null
           company_id: string
           connecteam_employee_id: string | null
           country_code: string | null
@@ -876,6 +877,7 @@ export type Database = {
           access_pin?: string | null
           added_by?: string | null
           added_via?: string | null
+          avatar_url?: string | null
           company_id?: string
           connecteam_employee_id?: string | null
           country_code?: string | null
@@ -908,6 +910,7 @@ export type Database = {
           access_pin?: string | null
           added_by?: string | null
           added_via?: string | null
+          avatar_url?: string | null
           company_id?: string
           connecteam_employee_id?: string | null
           country_code?: string | null
