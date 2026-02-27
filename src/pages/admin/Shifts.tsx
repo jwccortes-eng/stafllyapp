@@ -141,7 +141,7 @@ export default function Shifts() {
     }
 
     const [shiftsRes, assignRes, clientsRes, locsRes, empsRes] = await Promise.all([
-      supabase.from("scheduled_shifts").select("*").eq("company_id", selectedCompanyId)
+      supabase.from("scheduled_shifts").select("*, shift_code").eq("company_id", selectedCompanyId)
         .gte("date", dateFrom).lte("date", dateTo)
         .is("deleted_at", null).order("start_time"),
       supabase.from("shift_assignments").select("*").eq("company_id", selectedCompanyId),
