@@ -30,7 +30,10 @@ export default function InviteEmployees() {
   const [generatingPin, setGeneratingPin] = useState<string | null>(null);
 
   const companyName = selectedCompany?.name ?? "stafly";
-  const portalUrl = `${window.location.origin}/auth`;
+  const baseUrl = window.location.hostname.includes("lovableproject.com") || window.location.hostname.includes("localhost")
+    ? "https://staflyapp.lovable.app"
+    : window.location.origin;
+  const portalUrl = `${baseUrl}/auth`;
 
   useEffect(() => {
     if (!selectedCompanyId) return;
