@@ -48,6 +48,7 @@ import NotificationTemplates from "./pages/admin/NotificationTemplates";
 import Pricing from "./pages/admin/Pricing";
 import Billing from "./pages/admin/Billing";
 import Requests from "./pages/admin/Requests";
+import Leads from "./pages/admin/Leads";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -116,6 +117,7 @@ function App() {
                 <Route path="implementations" element={<Implementations />} />
                 <Route path="notification-templates" element={<NotificationTemplates />} />
                 <Route path="requests" element={<Requests />} />
+                <Route path="leads" element={<Leads />} />
               </Route>
 
               {/* Employee portal routes */}
