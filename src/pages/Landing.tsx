@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import mascotHero from "@/assets/stafly-mascot-hero.png";
+import mascotHero from "@/assets/stafly-mascot-official.png";
 import mascotWave from "@/assets/stafly-mascot-wave.png";
 import mascotPaid from "@/assets/stafly-mascot-paid.png";
 import heroMockup from "@/assets/stafly-hero.png";
@@ -352,7 +352,7 @@ export default function Landing() {
               <div className="absolute -inset-6 bg-primary/[0.03] rounded-3xl blur-3xl" />
               <div className="relative">
                 <img src={heroMockup} alt="stafly Dashboard" className="w-full h-auto rounded-2xl shadow-xl border border-border/20" loading="eager" />
-                <img src={mascotWave} alt="stafly mascot" className="absolute -bottom-10 -left-10 h-40 w-40 drop-shadow-xl hidden sm:block" />
+                <img src={mascotHero} alt="stafly mascot" className="absolute -bottom-10 -left-10 h-40 w-40 drop-shadow-xl hidden sm:block" />
               </div>
             </div>
           </div>
@@ -597,9 +597,7 @@ export default function Landing() {
         <div className="container">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
-                <span className="text-white font-bold text-xs font-heading">S</span>
-              </div>
+              <img src={staflyAppIcon} alt="stafly" className="h-7 w-7" />
               <span className="font-heading font-bold text-lg text-foreground">stafly</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">

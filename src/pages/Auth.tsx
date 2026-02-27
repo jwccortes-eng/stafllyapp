@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User } from "lucide-react";
-import mascotHero from "@/assets/stafly-mascot-hero.png";
 import staflyAppIcon from "@/assets/stafly-app-icon.png";
+import mascotOfficial from "@/assets/stafly-mascot-official.png";
 
 function isPhoneNumber(value: string): boolean {
   const cleaned = value.replace(/[\s\-\(\)\+]/g, "");
@@ -84,140 +84,169 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-sm">
-        {/* Card */}
-        <div className="bg-card rounded-2xl shadow-xl border border-border/50 px-8 py-10 space-y-6">
-          {/* Logo & Title */}
-          <div className="flex flex-col items-center gap-3">
-            <img src={staflyAppIcon} alt="stafly" className="h-16 w-16 drop-shadow-lg" />
-            <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-              stafly
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {isLogin
-                ? isPhone
-                  ? "Ingresa tu teléfono y PIN"
-                  : "Inicia sesión con tu email"
-                : "Crea una nueva cuenta"}
-            </p>
+    <div className="min-h-screen flex bg-background">
+      {/* Left — Branding panel (desktop only) */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden items-center justify-center gradient-primary">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-white/20 blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
+        </div>
+        <div className="relative z-10 flex flex-col items-center text-center px-12 max-w-lg">
+          <img src={mascotOfficial} alt="stafly mascot" className="h-56 w-56 drop-shadow-2xl mb-8 animate-fade-in" />
+          <h2 className="text-3xl font-bold font-heading text-white mb-3 leading-tight">
+            Control semanal de tu equipo, sin estrés.
+          </h2>
+          <p className="text-white/80 text-base leading-relaxed">
+            Turnos, clock-in/out con ubicación, nómina semanal, reportes y permisos. Todo en una app.
+          </p>
+          <div className="flex items-center gap-2 mt-6 text-white/60 text-xs">
+            <Lock className="h-3.5 w-3.5" />
+            <span>Acceso seguro por roles</span>
           </div>
+        </div>
+      </div>
 
-          {/* Phone mode indicator */}
-          {isPhone && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/15">
-              <Phone className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs text-primary font-medium">Modo empleado detectado</span>
+      {/* Right — Login form */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-8">
+        <div className="w-full max-w-sm">
+          <div className="bg-card rounded-2xl shadow-xl border border-border/50 px-8 py-10 space-y-6">
+            {/* Logo & Title */}
+            <div className="flex flex-col items-center gap-3">
+              <img src={staflyAppIcon} alt="stafly" className="h-16 w-16 drop-shadow-lg" />
+              <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+                stafly
+              </h1>
+              <p className="text-sm text-muted-foreground text-center">
+                {isLogin
+                  ? isPhone
+                    ? "Ingresa tu teléfono y PIN"
+                    : "Inicia sesión con tu email"
+                  : "Crea una nueva cuenta"}
+              </p>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Full name (signup only) */}
-            {!isLogin && !isPhone && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-sm font-semibold text-foreground">
-                  Nombre completo
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Tu nombre completo"
-                    className="pl-10 h-12 bg-muted/40 border-border/60 focus:bg-card transition-colors"
-                    required={!isLogin}
-                  />
-                </div>
+            {/* Phone mode indicator */}
+            {isPhone && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/15">
+                <Phone className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs text-primary font-medium">Modo empleado detectado</span>
               </div>
             )}
 
-            {/* Identifier */}
-            <div className="space-y-2">
-              <Label htmlFor="identifier" className="text-sm font-semibold text-foreground">
-                {isPhone ? "Teléfono" : "Email o Teléfono"}
-              </Label>
-              <div className="relative">
-                {isPhone ? (
-                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                ) : (
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                )}
-                <Input
-                  id="identifier"
-                  type="text"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="tu@email.com o número de teléfono"
-                  className="pl-10 h-12 bg-muted/40 border-border/60 focus:bg-card transition-colors"
-                  required
-                />
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Full name (signup only) */}
+              {!isLogin && !isPhone && (
+                <div className="space-y-2">
+                  <Label htmlFor="fullName" className="text-sm font-semibold text-foreground">
+                    Nombre completo
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                    <Input
+                      id="fullName"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Tu nombre completo"
+                      className="pl-10 h-12 bg-muted/40 border-border/60 rounded-xl focus:bg-card transition-colors"
+                      required={!isLogin}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Identifier */}
+              <div className="space-y-2">
+                <Label htmlFor="identifier" className="text-sm font-semibold text-foreground">
+                  {isPhone ? "Teléfono" : "Email o Teléfono"}
+                </Label>
+                <div className="relative">
+                  {isPhone ? (
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  ) : (
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  )}
+                  <Input
+                    id="identifier"
+                    type="text"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="tu@email.com o número de teléfono"
+                    className="pl-10 h-12 bg-muted/40 border-border/60 rounded-xl focus:bg-card transition-colors"
+                    required
+                  />
+                </div>
               </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-semibold text-foreground">
+                  {isPhone ? "PIN de acceso" : "Contraseña"}
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={isPhone ? "PIN de 6 dígitos" : "••••••••"}
+                    className="pl-10 pr-11 h-12 bg-muted/40 border-border/60 rounded-xl focus:bg-card transition-colors"
+                    required
+                    minLength={isPhone ? 4 : 6}
+                    maxLength={isPhone ? 6 : undefined}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-muted-foreground/60 hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit */}
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold shadow-md rounded-full gradient-primary text-white hover:shadow-lg transition-all"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : isLogin || isPhone ? (
+                  "Iniciar sesión"
+                ) : (
+                  "Crear cuenta"
+                )}
+              </Button>
+            </form>
+
+            {/* Secure access note */}
+            <div className="flex items-center justify-center gap-1.5 text-muted-foreground/50 text-[11px]">
+              <Lock className="h-3 w-3" />
+              <span>Acceso seguro por roles</span>
             </div>
 
-            {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-semibold text-foreground">
-                {isPhone ? "PIN de acceso" : "Contraseña"}
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={isPhone ? "PIN de 6 dígitos" : "••••••••"}
-                  className="pl-10 pr-11 h-12 bg-muted/40 border-border/60 focus:bg-card transition-colors"
-                  required
-                  minLength={isPhone ? 4 : 6}
-                  maxLength={isPhone ? 6 : undefined}
-                />
+            {/* Toggle login/signup */}
+            {!isPhone && (
+              <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground/60 hover:text-foreground transition-colors"
-                  tabIndex={-1}
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {isLogin ? "¿No tienes cuenta? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}
                 </button>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Submit */}
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-semibold shadow-md rounded-full gradient-primary text-white hover:shadow-lg transition-all"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : isLogin || isPhone ? (
-                "Iniciar sesión"
-              ) : (
-                "Crear cuenta"
-              )}
-            </Button>
-          </form>
-
-          {/* Toggle login/signup */}
-          {!isPhone && (
-            <div className="text-center pt-1">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-              >
-                {isLogin ? "¿No tienes cuenta? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}
-              </button>
-            </div>
-          )}
+          {/* Footer */}
+          <p className="text-center text-[11px] text-muted-foreground/50 mt-6">
+            © {new Date().getFullYear()} stafly · staflyapps.com
+          </p>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-[11px] text-muted-foreground/50 mt-6">
-          © {new Date().getFullYear()} stafly · staflyapps.com
-        </p>
       </div>
     </div>
   );
