@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("Query error:", error);
-      return json({ error: error.message }, 400);
+      return json({ error: "Error al consultar datos" }, 400);
     }
 
     return json({ data, count: data?.length ?? 0, resource, limit, offset }, 200);

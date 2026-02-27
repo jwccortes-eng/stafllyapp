@@ -155,8 +155,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Clean phone number
-      const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
+      // Clean phone number — strip everything except digits and leading +
+      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
 
       // Check rate limit BEFORE any database lookup
       const rateCheck = await checkRateLimit(adminClient, cleanPhone);
@@ -167,11 +167,11 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Find employee by phone number
+      // Find employee by phone number (use exact match only to prevent injection)
       const { data: employee, error: empError } = await adminClient
         .from("employees")
         .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id")
-        .or(`phone_number.eq.${cleanPhone},phone_number.ilike.%${cleanPhone}`)
+        .eq("phone_number", cleanPhone)
         .maybeSingle();
 
       if (empError || !employee) {
@@ -279,6 +279,18 @@ Deno.serve(async (req) => {
       if (!caller) {
         return new Response(JSON.stringify({ error: "No autorizado" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify caller is admin or owner
+      const { data: roleData } = await callerClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id);
+      const callerRoles = (roleData ?? []).map((r: any) => r.role);
+      if (!callerRoles.includes("owner") && !callerRoles.includes("admin")) {
+        return new Response(JSON.stringify({ error: "Solo admins pueden generar PINs" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 

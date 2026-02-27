@@ -171,7 +171,7 @@ ${JSON.stringify(movContext, null, 2)}`;
     });
   } catch (e) {
     console.error("employee-chat error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Error desconocido" }), {
+    return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

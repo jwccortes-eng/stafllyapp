@@ -87,7 +87,8 @@ Deno.serve(async (req) => {
     });
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      console.error("[admin-reset-password] Update error:", error.message);
+      return new Response(JSON.stringify({ error: "Error al actualizar la contraseña" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
