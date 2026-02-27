@@ -1,4 +1,5 @@
-import { Check } from "lucide-react";
+import { Check, Tag } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,10 +66,12 @@ export default function Pricing() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="text-center max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold font-heading tracking-tight">Planes y precios</h1>
-        <p className="text-muted-foreground mt-2">Elige el plan que mejor se adapte a tu operación</p>
-      </div>
+      <PageHeader
+        variant="4"
+        eyebrow="PLANES"
+        title="Planes y precios"
+        subtitle="Elige el plan que mejor se adapte a tu operación"
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         {plans.map((p, idx) => {

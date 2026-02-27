@@ -17,6 +17,7 @@ import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface ImplItem {
   id: string;
@@ -130,18 +131,12 @@ export default function Implementations() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-6 text-primary-foreground">
-        <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1">
-            <ListChecks className="h-5 w-5 opacity-80" />
-            <span className="text-sm font-medium opacity-80">Super Admin</span>
-          </div>
-          <h1 className="text-2xl font-bold font-heading">Tablero de Implementaciones</h1>
-          <p className="text-sm opacity-80 mt-1">Seguimiento cronológico de features, fixes y mejoras</p>
-        </div>
-      </div>
+      <PageHeader
+        variant="5"
+        icon={ListChecks}
+        title="Tablero de Implementaciones"
+        subtitle="Seguimiento cronológico de features, fixes y mejoras"
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

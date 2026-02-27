@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
+import { PageHeader } from "@/components/ui/page-header";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   active: { label: "Activa", variant: "default" },
@@ -33,27 +34,23 @@ export default function Billing() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold font-heading tracking-tight">Facturación</h1>
-          <p className="text-xs text-muted-foreground mt-1">Gestión de plan y suscripción</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => portalMutation.mutate()}
-            disabled={portalMutation.isPending}
-            className="press-scale"
-          >
-            <ExternalLink className="h-4 w-4 mr-1" />
-            Portal de cliente
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate("/app/pricing")} className="press-scale">
-            Ver planes <ArrowRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        variant="2"
+        icon={CreditCard}
+        title="Facturación"
+        subtitle="Gestión de plan y suscripción"
+        badge={subscription?.status === "active" ? "Activa" : ""}
+        rightSlot={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => portalMutation.mutate()} disabled={portalMutation.isPending} className="press-scale">
+              <ExternalLink className="h-4 w-4 mr-1" />Portal de cliente
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/app/pricing")} className="press-scale">
+              Ver planes <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        }
+      />
 
       {!isActive && <UpgradeBanner />}
 
