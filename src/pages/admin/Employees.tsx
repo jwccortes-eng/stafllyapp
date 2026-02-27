@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
@@ -539,12 +540,12 @@ export default function Employees() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="page-title">Empleados</h1>
-          <p className="page-subtitle">{filtered.length} de {employees.length} empleados</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
+      <PageHeader
+        variant="1"
+        icon={Users}
+        title="Empleados"
+        subtitle={`${filtered.length} de ${employees.length} empleados`}
+        rightSlot={<div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
             <Download className="h-4 w-4 mr-2" />Exportar Excel
           </Button>
@@ -781,8 +782,8 @@ export default function Employees() {
               <EmployeeForm onSubmit={handleCreate} submitLabel="Crear" />
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+        </div>}
+      />
 
       <div className="data-table-wrapper">
         <div className="p-4 border-b space-y-3">

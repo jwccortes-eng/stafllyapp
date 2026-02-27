@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Search, MapPin, Loader2, Trash2, RotateCcw, Pencil } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface Location {
   id: string;
@@ -145,17 +146,12 @@ export default function Locations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-0.5">
-            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <MapPin className="h-4 w-4 text-primary" />
-            </div>
-            <h1 className="page-title">Ubicaciones</h1>
-          </div>
-          <p className="text-muted-foreground/60 text-xs ml-10">Gestiona las ubicaciones de trabajo</p>
-        </div>
-        {canEdit && (
+      <PageHeader
+        variant="1"
+        icon={MapPin}
+        title="Ubicaciones"
+        subtitle="Gestiona las ubicaciones de trabajo"
+        rightSlot={canEdit ? (
           <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nueva ubicación</Button>
@@ -208,8 +204,8 @@ export default function Locations() {
               </div>
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">

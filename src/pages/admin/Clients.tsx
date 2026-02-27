@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Search, Building2, Loader2, Trash2, RotateCcw, Pencil } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -137,17 +138,12 @@ export default function Clients() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-0.5">
-            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Building2 className="h-4 w-4 text-primary" />
-            </div>
-            <h1 className="page-title">Clientes</h1>
-          </div>
-          <p className="text-muted-foreground/60 text-xs ml-10">Gestiona los clientes de tu empresa</p>
-        </div>
-        {canEdit && (
+      <PageHeader
+        variant="1"
+        icon={Building2}
+        title="Clientes"
+        subtitle="Gestiona los clientes de tu empresa"
+        rightSlot={canEdit ? (
           <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nuevo cliente</Button>
@@ -186,8 +182,8 @@ export default function Clients() {
               </div>
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">

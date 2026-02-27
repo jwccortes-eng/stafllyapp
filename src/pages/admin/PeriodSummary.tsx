@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2, Clock } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
@@ -232,12 +233,12 @@ export default function PeriodSummary() {
     <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Resumen del periodo</h1>
-            <p className="page-subtitle">Consolidación: base + extras − deducciones</p>
-          </div>
-          {selectedPeriod && (
+        <PageHeader
+          variant="2"
+          title="Resumen del periodo"
+          subtitle="Consolidación: base + extras − deducciones"
+          badge="Semanal"
+          rightSlot={selectedPeriod ? (
             <div className="flex items-center gap-2 flex-wrap">
               {/* Consolidate clock button */}
               {canConsolidate && selectedPeriodObj && selectedPeriodObj.status === "open" && (
@@ -258,9 +259,7 @@ export default function PeriodSummary() {
                         title: "Horas consolidadas",
                         description: `${data.consolidated_employees} empleado(s) actualizados. ${data.skipped_import_employees} con import CSV preservados.`,
                       });
-                      // Reload summary data
                       setSelectedPeriod(prev => {
-                        // Trigger re-fetch by toggling
                         setTimeout(() => setSelectedPeriod(selectedPeriod), 50);
                         return "";
                       });
@@ -307,8 +306,8 @@ export default function PeriodSummary() {
                 <Download className="h-4 w-4 mr-1.5" />Exportar
               </Button>
             </div>
-          )}
-        </div>
+          ) : undefined}
+        />
 
         {/* Period selector + date range */}
         <div className="flex flex-wrap items-center gap-2">

@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User, KeyRound, UserPlus } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useAuth } from "@/hooks/useAuth";
@@ -244,16 +245,16 @@ export default function UsersPage() {
 
   return (
     <div>
-      <div className="page-header flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Gestión de Usuarios</h1>
-          <p className="page-subtitle">Administra roles y permisos por módulo</p>
-        </div>
-        <Button onClick={() => setInviteOpen(true)} className="gap-2">
+      <PageHeader
+        variant="5"
+        icon={ShieldCheck}
+        title="Gestión de Usuarios"
+        subtitle="Administra roles y permisos por módulo"
+        rightSlot={<Button onClick={() => setInviteOpen(true)} className="gap-2">
           <UserPlus className="h-4 w-4" />
           Invitar Admin
-        </Button>
-      </div>
+        </Button>}
+      />
 
       {/* Role summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

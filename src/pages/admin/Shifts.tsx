@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
 import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -630,17 +631,12 @@ export default function Shifts() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-0.5">
-            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Clock className="h-4 w-4 text-primary" />
-            </div>
-            <h1 className="text-xl font-semibold tracking-tight">Turnos</h1>
-          </div>
-          <p className="text-muted-foreground/60 text-xs ml-10">Programa y gestiona los turnos de trabajo</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        variant="1"
+        icon={CalendarDays}
+        title="Turnos"
+        subtitle="Programa y gestiona los turnos de trabajo"
+        rightSlot={<div className="flex items-center gap-2">
           <Tabs value={viewMode} onValueChange={v => setViewMode(v as ViewMode)}>
             <TabsList className="h-8 bg-muted/50 backdrop-blur-sm">
               <TabsTrigger value="day" className="text-[11px] gap-1 px-2 data-[state=active]:bg-background">
@@ -783,8 +779,8 @@ export default function Shifts() {
               </DialogContent>
             </Dialog>
           )}
-        </div>
-      </div>
+        </div>}
+      />
 
       {/* Filters */}
       <ShiftFilters filters={filters} onChange={setFilters} clients={clients} />
