@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeCombobox } from "./EmployeeCombobox";
-import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell } from "lucide-react";
+import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
@@ -748,6 +748,36 @@ export function ShiftDetailDialog({
               <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)} className="h-8 text-xs gap-1.5">
                 <Bell className="h-3 w-3" />
                 Notificar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={async () => {
+                  const empIds = shiftAssignments.map(a => a.employee_id);
+                  if (empIds.length === 0) {
+                    toast.error("No hay empleados asignados a este turno.");
+                    return;
+                  }
+                  const { data } = await supabase
+                    .from("employees")
+                    .select("phone_number")
+                    .in("id", empIds)
+                    .not("phone_number", "is", null);
+                  const phones = (data ?? [])
+                    .map(e => e.phone_number)
+                    .filter((p): p is string => !!p && p.trim().length > 0);
+                  if (phones.length === 0) {
+                    toast.error("Ningún empleado asignado tiene número de teléfono registrado.");
+                    return;
+                  }
+                  const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
+                  const recipients = phones.join(",");
+                  window.open(`sms:${recipients}${separator}body=`, "_blank");
+                }}
+              >
+                <Smartphone className="h-3 w-3" />
+                SMS
               </Button>
               {!editing ? (
               <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="h-8 text-xs gap-1.5">
