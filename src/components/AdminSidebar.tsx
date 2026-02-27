@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/collapsible";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import staflyLogo from "@/assets/stafly-logo.png";
+import staflyIcon from "@/assets/stafly-isotipo.png";
 
 interface LinkDef {
   to: string;
@@ -224,7 +225,7 @@ export default function AdminSidebar() {
       >
         <div className="flex items-center gap-1">
           {editMode && !collapsed && (
-            <GripVertical className="h-3 w-3 text-muted-foreground/40 cursor-grab shrink-0" />
+            <GripVertical className="h-3 w-3 text-muted-foreground/30 cursor-grab shrink-0" />
           )}
           <NavLink
             to={link.to}
@@ -232,8 +233,8 @@ export default function AdminSidebar() {
               "relative flex items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-200 flex-1 min-w-0",
               collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2",
               active
-                ? "bg-primary/10 text-primary font-semibold"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                ? "bg-primary/8 text-primary font-semibold"
+                : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
             )}
           >
             {active && (
@@ -241,13 +242,13 @@ export default function AdminSidebar() {
             )}
             <link.icon className={cn(
               "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
-              active ? "text-primary" : "text-muted-foreground/60 group-hover/link:text-sidebar-foreground"
+              active ? "text-primary" : "text-muted-foreground/50 group-hover/link:text-sidebar-foreground"
             )} />
             {!collapsed && (
               <div className="min-w-0 flex-1">
                 <span className="block leading-tight">{link.label}</span>
                 {note && !editMode && (
-                  <span className="block text-[10px] text-muted-foreground/60 truncate leading-tight mt-0.5">{note}</span>
+                  <span className="block text-[10px] text-muted-foreground/50 truncate leading-tight mt-0.5">{note}</span>
                 )}
               </div>
             )}
@@ -255,10 +256,10 @@ export default function AdminSidebar() {
           {editMode && !collapsed && (
             <button
               onClick={(e) => { e.stopPropagation(); setEditingNote(link.to); setNoteValue(note); }}
-              className="p-1 rounded-lg hover:bg-sidebar-accent/60 shrink-0 opacity-0 group-hover/link:opacity-100 transition-opacity"
+              className="p-1 rounded-lg hover:bg-sidebar-accent/40 shrink-0 opacity-0 group-hover/link:opacity-100 transition-opacity"
               title="Editar nota"
             >
-              <MessageSquare className="h-3 w-3 text-muted-foreground/50" />
+              <MessageSquare className="h-3 w-3 text-muted-foreground/40" />
             </button>
           )}
         </div>
@@ -269,7 +270,7 @@ export default function AdminSidebar() {
               value={noteValue}
               onChange={e => setNoteValue(e.target.value)}
               placeholder="Agregar nota..."
-              className="h-6 text-[11px] bg-sidebar-accent/30 border-sidebar-border/50 rounded-lg"
+              className="h-6 text-[11px] bg-sidebar-accent/20 border-sidebar-border/30 rounded-lg"
               autoFocus
               onKeyDown={e => {
                 if (e.key === "Enter") saveNote(link.to);
@@ -301,7 +302,7 @@ export default function AdminSidebar() {
     return linkContent;
   };
 
-  // Auto-open section with active route on mount/route change
+  // Auto-open section with active route
   useEffect(() => {
     const activeSection = [...visibleSections, ...(visibleOwnerLinks.length > 0 ? [{ label: "Administración", links: visibleOwnerLinks }] : [])]
       .find(s => s.links.some(l => isActive(l.to, l.end)));
@@ -319,7 +320,7 @@ export default function AdminSidebar() {
     if (collapsed) {
       return (
         <div key={section.label} className="space-y-0.5">
-          <div className="border-t border-sidebar-border/40 my-2" />
+          <div className="border-t border-sidebar-border/30 my-2" />
           {section.links.map(l => renderLink(l, section.links))}
         </div>
       );
@@ -330,11 +331,11 @@ export default function AdminSidebar() {
     return (
       <Collapsible key={section.label} open={isOpen} onOpenChange={() => toggleSection(section.label)}>
         <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 group-hover/section:text-muted-foreground transition-colors">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 group-hover/section:text-muted-foreground/60 transition-colors">
             {section.label}
           </span>
           <ChevronDown className={cn(
-            "h-3 w-3 text-muted-foreground/30 transition-transform duration-300 ease-in-out",
+            "h-3 w-3 text-muted-foreground/25 transition-transform duration-300 ease-in-out",
             isOpen && "rotate-180"
           )} />
         </CollapsibleTrigger>
@@ -348,27 +349,36 @@ export default function AdminSidebar() {
   return (
     <aside className={cn(
       "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
-      "bg-card border-r border-border/60",
+      "bg-card border-r border-border/40",
       collapsed ? "w-[60px]" : "w-[250px]"
     )}>
       {/* Header */}
       <div className={cn(
-        "flex items-center shrink-0",
-        collapsed ? "px-2 py-5 justify-center" : "px-4 py-5 gap-3"
+        "flex items-center shrink-0 border-b border-border/30",
+        collapsed ? "px-2 py-4 justify-center" : "px-4 py-4 gap-3"
       )}>
-        <img src={staflyLogo} alt="stafly" className={cn("shrink-0 transition-all duration-300", collapsed ? "h-8 w-auto" : "h-9 w-auto")} style={{ imageRendering: "auto" }} />
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] text-muted-foreground leading-tight">{roleLabel}</p>
-          </div>
+        {collapsed ? (
+          <img src={staflyIcon} alt="stafly" className="h-8 w-8 shrink-0" style={{ imageRendering: "auto" }} />
+        ) : (
+          <>
+            <img src={staflyLogo} alt="stafly" className="h-8 w-auto shrink-0" style={{ imageRendering: "auto" }} />
+            <div className="min-w-0 flex-1">
+              <span className={cn(
+                "text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md",
+                role === 'owner' ? "bg-primary/8 text-primary" : "bg-muted text-muted-foreground"
+              )}>
+                {roleLabel}
+              </span>
+            </div>
+          </>
         )}
       </div>
 
       {/* Company selector */}
       {companies.length > 1 && !collapsed && (
-        <div className="px-3 pb-3">
+        <div className="px-3 py-3 border-b border-border/30">
           <Select value={selectedCompanyId ?? ""} onValueChange={setSelectedCompanyId}>
-            <SelectTrigger className="h-8 text-xs bg-muted/50 border-border/50 rounded-xl hover:bg-muted transition-colors">
+            <SelectTrigger className="h-8 text-xs bg-muted/30 border-border/30 rounded-xl hover:bg-muted/50 transition-colors">
               <SelectValue placeholder="Empresa" />
             </SelectTrigger>
             <SelectContent>
@@ -380,9 +390,6 @@ export default function AdminSidebar() {
         </div>
       )}
 
-      {/* Separator */}
-      <div className="border-t border-border/40 mx-3" />
-
       {/* Navigation */}
       <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto scrollbar-thin">
         {visibleSections.map(renderSection)}
@@ -390,7 +397,7 @@ export default function AdminSidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-2 py-2.5 border-t border-border/40 space-y-0.5 shrink-0">
+      <div className="px-2 py-2.5 border-t border-border/30 space-y-0.5 shrink-0">
         {/* Edit mode */}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
@@ -400,8 +407,8 @@ export default function AdminSidebar() {
                 "flex items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-200 w-full",
                 collapsed ? "justify-center px-2 py-2" : "px-3 py-2",
                 editMode
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  ? "bg-primary/8 text-primary"
+                  : "text-muted-foreground/60 hover:bg-muted/30 hover:text-foreground"
               )}
             >
               <Settings2 className="h-[18px] w-[18px]" />
@@ -417,7 +424,7 @@ export default function AdminSidebar() {
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className={cn(
-                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-200 w-full",
+                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground/60 hover:bg-muted/30 hover:text-foreground transition-all duration-200 w-full",
                 collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
               )}
             >
@@ -434,7 +441,7 @@ export default function AdminSidebar() {
             <button
               onClick={() => setCollapsed(!collapsed)}
               className={cn(
-                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-200 w-full",
+                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground/60 hover:bg-muted/30 hover:text-foreground transition-all duration-200 w-full",
                 collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
               )}
             >
@@ -452,7 +459,7 @@ export default function AdminSidebar() {
               <LogoutConfirmDialog onConfirm={signOut}>
                 <button
                   className={cn(
-                    "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 w-full",
+                    "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground/60 hover:bg-destructive/8 hover:text-destructive transition-all duration-200 w-full",
                     collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
                   )}
                 >
