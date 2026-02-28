@@ -194,6 +194,10 @@ export default function ImportSchedule() {
       if (!startTime || !endTime) continue;
 
       // Group key: same shift code + date + times + job
+      // Skip PAY RIDE and similar payroll-only "shifts"
+      const isPayrollConcept = /pay\s*ride|pagar\s*\d|tip\s*pool/i.test(shiftTitle) || /pay\s*ride|pagar\s*\d|tip\s*pool/i.test(job);
+      if (isPayrollConcept) continue;
+
       const groupKey = `${shiftTitle}|${isoDate}|${startTime}|${endTime}|${job}`;
 
       if (!groups[groupKey]) {
@@ -327,7 +331,24 @@ export default function ImportSchedule() {
       let unmatchedClientsSet = new Set<string>();
 
       // ── Process shifts in batches of 10 ──
+      // ── Fetch existing shifts for deduplication ──
+      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Verificando duplicados..." });
+      const existingShiftCodes = new Set<string>();
+      {
+        const { data: existingShifts } = await supabase
+          .from("scheduled_shifts")
+          .select("shift_code, date")
+          .eq("company_id", selectedCompanyId)
+          .is("deleted_at", null)
+          .gte("date", filterFrom || "1900-01-01")
+          .lte("date", filterTo || "2100-12-31");
+        (existingShifts ?? []).forEach(s => {
+          if (s.shift_code) existingShiftCodes.add(`${s.shift_code}|${s.date}`);
+        });
+      }
+
       const BATCH_SIZE = 10;
+      let skippedDuplicates = 0;
       for (let batchStart = 0; batchStart < filteredGroups.length; batchStart += BATCH_SIZE) {
         const batch = filteredGroups.slice(batchStart, batchStart + BATCH_SIZE);
 
@@ -337,8 +358,16 @@ export default function ImportSchedule() {
           phase: `Importando turnos ${batchStart + 1}-${Math.min(batchStart + BATCH_SIZE, filteredGroups.length)}...`,
         });
 
-        // Insert all shifts in this batch at once
-        const shiftPayloads = batch.map(group => {
+        // Filter out duplicates from this batch
+        const newBatch: typeof batch = [];
+        const shiftPayloads: any[] = [];
+        for (const group of batch) {
+          const dedupKey = group.shiftCode ? `${group.shiftCode}|${group.date}` : null;
+          if (dedupKey && existingShiftCodes.has(dedupKey)) {
+            skippedDuplicates++;
+            continue;
+          }
+
           const clientId = matchClient(group.job);
           if (clientId) matchedClients++;
           else if (group.job) unmatchedClientsSet.add(group.job);
@@ -349,7 +378,7 @@ export default function ImportSchedule() {
           if (group.subItem) title += ` - ${group.subItem}`;
           if (!title.trim()) title = "Turno importado";
 
-          return {
+          shiftPayloads.push({
             company_id: selectedCompanyId,
             title: title.trim(),
             date: group.date,
@@ -362,8 +391,12 @@ export default function ImportSchedule() {
             status: "open",
             slots: group.employees.length || 1,
             claimable: false,
-          };
-        });
+          });
+          newBatch.push(group);
+          if (dedupKey) existingShiftCodes.add(dedupKey);
+        }
+
+        if (shiftPayloads.length === 0) continue;
 
         const { data: insertedShifts, error: shiftErr } = await supabase
           .from("scheduled_shifts")
@@ -379,8 +412,8 @@ export default function ImportSchedule() {
 
         // Create assignments for each shift in the batch
         const assignmentPayloads: any[] = [];
-        for (let i = 0; i < batch.length; i++) {
-          const group = batch[i];
+        for (let i = 0; i < newBatch.length; i++) {
+          const group = newBatch[i];
           const shift = insertedShifts[i];
           if (!shift) continue;
 
@@ -482,10 +515,11 @@ export default function ImportSchedule() {
         ? ` · ${summaryData.unmatchedEmployees.length} empleados no encontrados`
         : "";
       const unavailMsg = totalUnavailable > 0 ? ` · ${totalUnavailable} indisponibilidades` : "";
+      const dupMsg = skippedDuplicates > 0 ? ` · ${skippedDuplicates} duplicados omitidos` : "";
 
       setResult({
         success: true,
-        message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}.`,
+        message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}${dupMsg}.`,
       });
       setStep(4);
     } catch (err: any) {
