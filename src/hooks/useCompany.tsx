@@ -7,6 +7,7 @@ interface Company {
   name: string;
   slug: string;
   is_active: boolean;
+  invite_code?: string;
 }
 
 interface CompanyContextType {
@@ -51,7 +52,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       // Owners see all companies
       const { data } = await supabase
         .from("companies")
-        .select("id, name, slug, is_active")
+        .select("id, name, slug, is_active, invite_code")
         .order("name");
       list = (data as Company[]) ?? [];
     } else {

@@ -341,20 +341,37 @@ export default function AdminSidebar() {
         <CommandPaletteTrigger collapsed={collapsed} />
       </div>
 
-      {/* Company selector */}
-      {companies.length > 1 && !collapsed && (
+      {/* Company selector / Company context */}
+      {!collapsed && (
         <div className="px-3 py-3 border-b border-border/30">
-          <Select value={selectedCompanyId ?? ""} onValueChange={(id) => setPendingCompanyId(id)}>
-            <SelectTrigger className="h-8 text-xs bg-muted/30 border-border/30 rounded-xl hover:bg-muted/50 transition-colors">
-              <SelectValue placeholder="Empresa" />
-            </SelectTrigger>
-            <SelectContent>
-              {companies.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {companies.length > 1 ? (
+            <Select value={selectedCompanyId ?? ""} onValueChange={(id) => setPendingCompanyId(id)}>
+              <SelectTrigger className="h-8 text-xs bg-muted/30 border-border/30 rounded-xl hover:bg-muted/50 transition-colors">
+                <SelectValue placeholder="Empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                {companies.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : companies.length === 1 ? (
+            <div className="flex items-center gap-2 px-1">
+              <Building2 className="h-4 w-4 text-primary/60 shrink-0" />
+              <span className="text-xs font-semibold text-foreground truncate">{companies[0].name}</span>
+            </div>
+          ) : null}
         </div>
+      )}
+      {collapsed && companies.length === 1 && (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <div className="px-2 py-3 border-b border-border/30 flex justify-center">
+              <Building2 className="h-4 w-4 text-primary/60" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="text-xs font-medium">{companies[0].name}</TooltipContent>
+        </Tooltip>
       )}
 
       {/* ── Navigation ── */}

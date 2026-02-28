@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid, FlaskConical } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid, FlaskConical, Copy, Check } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,6 +29,7 @@ interface CompanyRecord {
   slug: string;
   is_active: boolean;
   is_sandbox: boolean;
+  invite_code: string;
   created_at: string;
   user_count?: number;
   active_modules?: number;
@@ -47,12 +48,20 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(false);
   const [usersCompany, setUsersCompany] = useState<CompanyRecord | null>(null);
   const [modulesCompany, setModulesCompany] = useState<CompanyRecord | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const copyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    toast({ title: "Código copiado" });
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
 
   const fetchCompanies = async () => {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, slug, is_active, is_sandbox, created_at")
+      .select("id, name, slug, is_active, is_sandbox, invite_code, created_at")
       .order("name");
 
     if (!data) return;
@@ -233,6 +242,7 @@ export default function CompaniesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
+              <TableHead>Código</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Usuarios</TableHead>
               <TableHead>Módulos</TableHead>
@@ -243,7 +253,7 @@ export default function CompaniesPage() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                 <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                    No hay empresas
                 </TableCell>
               </TableRow>
@@ -255,6 +265,19 @@ export default function CompaniesPage() {
                       {c.name}
                       {c.is_sandbox && <Badge variant="outline" className="text-[10px]"><FlaskConical className="h-3 w-3 mr-1" />Sandbox</Badge>}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      onClick={() => copyCode(c.invite_code)}
+                      className="inline-flex items-center gap-1.5 font-mono text-xs bg-muted/50 hover:bg-muted px-2 py-1 rounded-lg transition-colors group"
+                    >
+                      <span className="tracking-wider">{c.invite_code}</span>
+                      {copiedCode === c.invite_code ? (
+                        <Check className="h-3 w-3 text-primary" />
+                      ) : (
+                        <Copy className="h-3 w-3 text-muted-foreground group-hover:text-foreground" />
+                      )}
+                    </button>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{c.slug}</TableCell>
                    <TableCell>
