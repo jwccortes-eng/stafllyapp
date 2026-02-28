@@ -23,6 +23,15 @@ const PREMIUM_FEATURES = [
 
 export type PremiumFeature = (typeof PREMIUM_FEATURES)[number];
 
+/** Plan limits: employees and admins per company */
+export const PLAN_LIMITS = {
+  free: { maxEmployees: 25, maxAdmins: 1, label: "Starter" },
+  pro: { maxEmployees: 100, maxAdmins: 3, label: "Pro" },
+  enterprise: { maxEmployees: Infinity, maxAdmins: Infinity, label: "Enterprise" },
+} as const;
+
+export type PlanId = keyof typeof PLAN_LIMITS;
+
 export function useSubscription() {
   const { selectedCompanyId } = useCompany();
 
@@ -42,12 +51,23 @@ export function useSubscription() {
   });
 
   const isActive = subscription?.status === "active" || subscription?.status === "trialing";
-  const isPremium = isActive && subscription?.plan !== "free";
+  const plan = (subscription?.plan ?? "free") as PlanId;
+  const isPremium = isActive && plan !== "free";
+  const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
   const canAccessFeature = (feature: PremiumFeature): boolean => {
-    // Free tier can access everything except premium features
     if (!PREMIUM_FEATURES.includes(feature)) return true;
     return isPremium;
+  };
+
+  /** Check if adding more employees would exceed the plan limit */
+  const canAddEmployees = (currentCount: number, adding = 1): boolean => {
+    return currentCount + adding <= limits.maxEmployees;
+  };
+
+  /** Check if adding more admins would exceed the plan limit */
+  const canAddAdmins = (currentCount: number, adding = 1): boolean => {
+    return currentCount + adding <= limits.maxAdmins;
   };
 
   return {
@@ -55,7 +75,10 @@ export function useSubscription() {
     isLoading,
     isActive,
     isPremium,
-    plan: subscription?.plan ?? "free",
+    plan,
+    limits,
     canAccessFeature,
+    canAddEmployees,
+    canAddAdmins,
   };
 }

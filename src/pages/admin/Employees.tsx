@@ -41,6 +41,8 @@ import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
+import { useSubscription } from "@/hooks/useSubscription";
+import UpgradeBanner from "@/components/billing/UpgradeBanner";
 
 // Fields that only owner/admin can see - hidden from managers
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -98,6 +100,7 @@ export default function Employees() {
   const { selectedCompanyId } = useCompany();
   const { role } = useAuth();
   const isPrivileged = role === 'owner' || role === 'admin';
+  const { canAddEmployees, limits, plan } = useSubscription();
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -138,6 +141,9 @@ export default function Employees() {
 
   useEffect(() => { fetchEmployees(); }, [selectedCompanyId]);
 
+  const activeEmployeeCount = employees.filter(e => e.is_active !== false).length;
+  const atEmployeeLimit = !canAddEmployees(activeEmployeeCount);
+
   const findCol = (row: Record<string, any>, candidates: string[]) => {
     const keys = Object.keys(row);
     for (const c of candidates) {
@@ -161,6 +167,10 @@ export default function Employees() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (atEmployeeLimit) {
+      toast({ title: "Límite alcanzado", description: `Tu plan ${limits.label} permite máximo ${limits.maxEmployees} empleados activos. Actualiza tu plan para agregar más.`, variant: "destructive" });
+      return;
+    }
     setLoading(true);
     const { error } = await supabase.from("employees").insert({ ...buildInsertData(form), company_id: selectedCompanyId } as any);
     if (error) {
@@ -772,14 +782,18 @@ export default function Employees() {
 
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />Nuevo empleado</Button>
+              <Button disabled={atEmployeeLimit}><Plus className="h-4 w-4 mr-2" />Nuevo empleado</Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Nuevo empleado</DialogTitle>
                 <DialogDescription>Ingresa los datos del nuevo empleado</DialogDescription>
               </DialogHeader>
-              <EmployeeForm onSubmit={handleCreate} submitLabel="Crear" />
+              {atEmployeeLimit ? (
+                <UpgradeBanner feature={`Límite de ${limits.maxEmployees} empleados alcanzado`} />
+              ) : (
+                <EmployeeForm onSubmit={handleCreate} submitLabel="Crear" />
+              )}
             </DialogContent>
           </Dialog>
         </div>}
