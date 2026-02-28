@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Users, Plus, UserX, Search } from "lucide-react";
+import { Users, Plus, UserX, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { getClientColor, CLIENT_COLORS } from "./types";
@@ -31,6 +31,15 @@ export function MonthView({
 }: MonthViewProps) {
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
   const [empSearch, setEmpSearch] = useState("");
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+
+  const toggleDay = (key: string) => {
+    setExpandedDays(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -111,10 +120,10 @@ export function MonthView({
             if (data) onDropOnShift(shift.id, data);
           }}
         >
-          <span className="font-semibold text-rose-600 dark:text-rose-400">
+          <span className="font-medium text-rose-500/80 dark:text-rose-400/70 italic">Vacante</span>
+          <span className="ml-1 text-rose-400/60 text-[9px]">
             {shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)}
           </span>
-          <span className="ml-1 text-rose-500/80 dark:text-rose-400/70 font-medium italic">Vacante</span>
         </div>
       );
     }
@@ -142,10 +151,10 @@ export function MonthView({
             if (data) onDropOnShift(shift.id, data);
           }}
         >
-          <span className={cn("font-semibold", color.text)}>
+          <span className="font-semibold text-foreground/90 truncate">{empName}</span>
+          <span className={cn("ml-1 text-[9px]", color.text)}>
             {shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)}
           </span>
-          <span className="ml-1 font-medium truncate text-foreground/80">{empName}</span>
         </div>
       );
     });
@@ -221,10 +230,12 @@ export function MonthView({
           {weeks.map((week, wi) => (
             <div key={wi} className="grid grid-cols-7 divide-x divide-border/20">
               {week.map(day => {
+                const dayKey = format(day, "yyyy-MM-dd");
                 const dayShifts = getShiftsForDay(day).sort((a, b) => a.start_time.localeCompare(b.start_time));
                 const isToday = isSameDay(day, new Date());
                 const inMonth = isSameMonth(day, currentMonth);
                 const unavailableCount = inMonth && !selectedEmpId ? getUnavailableCount(day) : 0;
+                const isExpanded = expandedDays.has(dayKey);
 
                 // Flatten: each shift with N assignments becomes N cards; unassigned = 1 card
                 const allCards: React.ReactNode[] = [];
@@ -239,8 +250,10 @@ export function MonthView({
                   }
                 });
 
-                const visibleCards = allCards.slice(0, MAX_VISIBLE);
+                const visibleCards = isExpanded ? allCards : allCards.slice(0, MAX_VISIBLE);
                 const remainingCount = allCards.length - MAX_VISIBLE;
+
+                const totalAssigns = dayShifts.reduce((sum, s) => sum + getAssignmentsForShift(s.id).length, 0);
 
                 return (
                   <div
@@ -259,21 +272,42 @@ export function MonthView({
                         isToday && "bg-primary text-primary-foreground font-bold",
                         !isToday && "text-muted-foreground/70"
                       )}>{format(day, "d")}</div>
-                      {unavailableCount > 0 && (
-                        <span className="text-[9px] font-semibold text-rose-500 flex items-center gap-0.5">
-                          <UserX className="h-2.5 w-2.5" />
-                          {unavailableCount}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {unavailableCount > 0 && (
+                          <span className="text-[9px] font-semibold text-rose-500 flex items-center gap-0.5">
+                            <UserX className="h-2.5 w-2.5" />
+                            {unavailableCount}
+                          </span>
+                        )}
+                        {totalAssigns > 0 && (
+                          <span className="text-[9px] font-semibold text-muted-foreground flex items-center gap-0.5">
+                            <Users className="h-2.5 w-2.5" />
+                            {totalAssigns}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Shift cards */}
                     <div className="space-y-[2px]">
                       {visibleCards}
                       {remainingCount > 0 && (
-                        <p className="text-[9px] text-primary font-semibold text-center cursor-pointer hover:underline py-0.5">
-                          +{remainingCount} más
-                        </p>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleDay(dayKey); }}
+                          className="w-full flex items-center justify-center gap-0.5 text-[9px] text-primary font-semibold hover:bg-primary/5 rounded-md py-0.5 transition-colors"
+                        >
+                          {isExpanded ? (
+                            <>
+                              <ChevronUp className="h-2.5 w-2.5" />
+                              Menos
+                            </>
+                          ) : (
+                            <>
+                              +{remainingCount} más
+                              <ChevronDown className="h-2.5 w-2.5" />
+                            </>
+                          )}
+                        </button>
                       )}
                       {onAddShift && inMonth && allCards.length === 0 && (
                         <button
