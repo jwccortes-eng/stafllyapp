@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import EmployeeChatWidget from "@/components/EmployeeChatWidget";
 import NotificationBell from "@/components/NotificationBell";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
-import staflyLogo from "@/assets/stafly-logo.png";
+import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { FloatingDock } from "@/components/navigation/FloatingDock";
 import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { EMPLOYEE_NAV_ITEMS, EMPLOYEE_DEFAULT_PINS } from "@/components/navigation/nav-items";
@@ -57,7 +57,7 @@ export default function EmployeeLayout() {
         <header className="sticky top-0 z-30 shrink-0 bg-card/95 backdrop-blur-2xl border-b border-border/50 shadow-2xs">
           <div className="flex items-center justify-between px-5 h-14">
             <div className="flex items-center gap-2">
-              <img src={staflyLogo} alt="stafly" className="h-8 w-auto" style={{ imageRendering: "auto" }} />
+              <StaflyLogo size={28} />
             </div>
             <div className="flex items-center gap-1">
               <NotificationBell />
@@ -98,9 +98,9 @@ export default function EmployeeLayout() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-xl border-b border-border/50 shadow-2xs">
-        <div className="max-w-3xl mx-auto flex items-center justify-between px-6 h-16">
+          <div className="max-w-3xl mx-auto flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-2.5">
-            <img src={staflyLogo} alt="stafly" className="h-9 w-auto" style={{ imageRendering: "auto" }} />
+            <StaflyLogo size={32} />
           </div>
           <div className="flex items-center gap-2">
             <NotificationBell />

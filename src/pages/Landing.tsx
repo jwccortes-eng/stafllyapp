@@ -15,27 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-/* ───────── Brand Logo (inline SVG, no PNG backgrounds) ───────── */
-function StaflyMark({ className = "h-8 w-8" }: { className?: string }) {
-  return (
-    <div className={`${className} rounded-xl bg-primary flex items-center justify-center shrink-0`}>
-      <svg viewBox="0 0 24 24" fill="none" className="h-[60%] w-[60%]" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 11l3 3L22 4" />
-        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-      </svg>
-    </div>
-  );
-}
-
-function StaflyLogo({ className = "" }: { className?: string }) {
-  return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <StaflyMark className="h-8 w-8" />
-      <span className="font-heading font-bold text-lg text-foreground tracking-tight">stafly</span>
-    </div>
-  );
-}
+import { StaflyMark, StaflyLogo } from "@/components/brand/StaflyBrand";
 
 /* ───────── i18n ───────── */
 const i18n = {
@@ -259,8 +239,8 @@ export default function Landing() {
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-card/90 backdrop-blur-xl shadow-xs border-b border-border/30" : "bg-transparent"}`}>
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <StaflyMark className="h-8 w-8 sm:hidden" />
-            <StaflyLogo className="hidden sm:flex" />
+            <div className="sm:hidden"><StaflyMark size={32} /></div>
+            <div className="hidden sm:flex"><StaflyLogo size={32} /></div>
           </div>
 
           <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -604,8 +584,7 @@ export default function Landing() {
         <div className="container">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <StaflyMark className="h-6 w-6" />
-              <span className="font-heading font-bold text-sm text-foreground">stafly</span>
+              <StaflyLogo size={24} />
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">{c.footer.privacy}</a>

@@ -26,8 +26,7 @@ import {
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { CommandPaletteTrigger } from "@/components/CommandPalette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import staflyLogo from "@/assets/stafly-logo.png";
-import staflyIcon from "@/assets/stafly-isotipo.png";
+import { StaflyLogo, StaflyMark } from "@/components/brand/StaflyBrand";
 
 interface LinkDef {
   to: string;
@@ -374,9 +373,9 @@ export default function AdminSidebar() {
         {/* Brand */}
         <div className={cn("flex items-center mb-1", collapsed ? "justify-center" : "px-3")}>
           {collapsed ? (
-            <img src={staflyIcon} alt="stafly" className="h-5 w-5 opacity-40" style={{ imageRendering: "auto" }} />
+            <StaflyMark size={20} className="opacity-40" />
           ) : (
-            <img src={staflyLogo} alt="stafly" className="h-5 w-auto opacity-40" style={{ imageRendering: "auto" }} />
+            <StaflyLogo size={20} muted />
           )}
         </div>
 

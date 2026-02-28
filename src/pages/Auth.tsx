@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck } from "lucide-react";
-import staflyLogo from "@/assets/stafly-logo.png";
+import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import mascotChecklist from "@/assets/stafly-mascot-checklist.png";
 
 function isPhoneNumber(value: string): boolean {
@@ -131,13 +131,7 @@ export default function Auth() {
         <div className="w-full max-w-[380px]">
           {/* Logo */}
           <div className="flex flex-col items-center mb-10">
-            <img
-              src={staflyLogo}
-              alt="stafly"
-              className="h-20 w-auto select-none"
-              draggable={false}
-              style={{ imageRendering: "auto" }}
-            />
+            <StaflyLogo size={48} />
           </div>
 
           {/* Card */}
