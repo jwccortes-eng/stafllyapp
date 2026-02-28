@@ -74,8 +74,9 @@ const ACTION_GROUPS = [
 
 const ALL_ACTIONS = ACTION_GROUPS.flatMap(g => g.actions.map(a => a.key));
 
-interface ManagerUser {
+interface CompanyUser {
   user_id: string;
+  role: string;
   full_name: string | null;
   email: string | null;
 }
@@ -91,51 +92,46 @@ interface RoleTemplate {
 export default function Permissions() {
   const { role } = useAuth();
   const { selectedCompanyId } = useCompany();
-  const [managers, setManagers] = useState<ManagerUser[]>([]);
+  const [managers, setManagers] = useState<CompanyUser[]>([]);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [templates, setTemplates] = useState<RoleTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Fetch managers and templates
+  // Fetch users for this company and templates
   useEffect(() => {
     if (!selectedCompanyId) return;
     setLoading(true);
+    setSelectedManager(null);
 
     const fetchData = async () => {
-      // Get managers from user_roles + company_users
+      // Get ALL users assigned to this company (admins + managers)
       const { data: companyUsers } = await supabase
         .from("company_users")
         .select("user_id, role")
         .eq("company_id", selectedCompanyId);
 
-      const managerUserIds = (companyUsers ?? [])
-        .filter(cu => cu.role === "manager")
-        .map(cu => cu.user_id);
+      const targetUsers = (companyUsers ?? []).filter(cu => 
+        cu.role === "manager" || cu.role === "admin"
+      );
 
-      // Also check user_roles for managers
-      const { data: roleUsers } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "manager");
-
-      const allManagerIds = [...new Set([
-        ...managerUserIds,
-        ...(roleUsers ?? []).map(r => r.user_id),
-      ])];
-
-      if (allManagerIds.length > 0) {
+      if (targetUsers.length > 0) {
+        const userIds = targetUsers.map(cu => cu.user_id);
         const { data: profiles } = await supabase
           .from("profiles")
           .select("user_id, full_name, email")
-          .in("user_id", allManagerIds);
+          .in("user_id", userIds);
 
-        setManagers((profiles ?? []).map(p => ({
-          user_id: p.user_id,
-          full_name: p.full_name,
-          email: p.email,
-        })));
+        setManagers(targetUsers.map(cu => {
+          const profile = profiles?.find(p => p.user_id === cu.user_id);
+          return {
+            user_id: cu.user_id,
+            role: cu.role,
+            full_name: profile?.full_name ?? null,
+            email: profile?.email ?? null,
+          };
+        }));
       } else {
         setManagers([]);
       }
@@ -249,9 +245,9 @@ export default function Permissions() {
         <div className="lg:col-span-1 space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Manager
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Usuario
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -262,17 +258,20 @@ export default function Permissions() {
                 </div>
               ) : managers.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No hay managers en esta empresa. Asigna el rol "manager" desde Usuarios.
+                  No hay admins ni managers en esta empresa. Asigna usuarios desde la gestión de empresas.
                 </p>
               ) : (
                 <Select value={selectedManager ?? ""} onValueChange={setSelectedManager}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar manager" />
+                    <SelectValue placeholder="Seleccionar usuario" />
                   </SelectTrigger>
                   <SelectContent>
                     {managers.map(m => (
                       <SelectItem key={m.user_id} value={m.user_id}>
-                        {m.full_name || m.email || "Sin nombre"}
+                        <span className="flex items-center gap-2">
+                          {m.full_name || m.email || "Sin nombre"}
+                          <Badge variant="outline" className="text-[10px] ml-1">{m.role}</Badge>
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
