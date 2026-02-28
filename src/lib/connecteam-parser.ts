@@ -21,8 +21,7 @@ const HEADER_MAP: Record<string, string> = {
   "english level": "english_level",
   "role": "employee_role",
   "qualify": "qualify",
-  "social security number": "social_security_number",
-  "verification ssn - ein": "verification_ssn_ein",
+  // SSN/EIN fields removed for security — no longer stored
   "recommended by?": "recommended_by",
   "direct manager": "direct_manager",
   "you have car?": "has_car",
