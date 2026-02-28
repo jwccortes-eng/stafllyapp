@@ -889,6 +889,8 @@ export default function Shifts() {
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
+            availabilityConfigs={availConfigs}
+            availabilityOverrides={availOverrides}
           />
         ) : viewMode === "employee" ? (
           <EmployeeView
