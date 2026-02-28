@@ -21,6 +21,7 @@ interface TimeEntry {
   clock_out: string | null;
   break_minutes: number;
   status: string;
+  notes: string | null;
   scheduled_shifts?: { id: string; title: string; start_time: string; end_time: string } | null;
 }
 
@@ -297,6 +298,7 @@ export default function TodayView() {
         open={!!selectedEmpId}
         onOpenChange={o => { if (!o) setSelectedEmpId(null); }}
         now={now}
+        onDataChanged={loadData}
       />
     </div>
   );
