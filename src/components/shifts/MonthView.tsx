@@ -21,26 +21,7 @@ interface MonthViewProps {
   availabilityOverrides?: AvailabilityOverride[];
 }
 
-// Deterministic color per employee name for visual distinction
-const EMPLOYEE_COLORS = [
-  { bg: "bg-sky-500", text: "text-white" },
-  { bg: "bg-emerald-500", text: "text-white" },
-  { bg: "bg-violet-500", text: "text-white" },
-  { bg: "bg-amber-500", text: "text-white" },
-  { bg: "bg-rose-500", text: "text-white" },
-  { bg: "bg-teal-500", text: "text-white" },
-  { bg: "bg-orange-500", text: "text-white" },
-  { bg: "bg-indigo-500", text: "text-white" },
-  { bg: "bg-pink-500", text: "text-white" },
-  { bg: "bg-cyan-500", text: "text-white" },
-  { bg: "bg-lime-600", text: "text-white" },
-  { bg: "bg-fuchsia-500", text: "text-white" },
-] as const;
-
-function getEmployeeColor(employeeId: string, allEmployeeIds: string[]) {
-  const idx = allEmployeeIds.indexOf(employeeId);
-  return EMPLOYEE_COLORS[idx >= 0 ? idx % EMPLOYEE_COLORS.length : 0];
-}
+// Use shared pastel palette from types.ts (same as other views)
 
 export function MonthView({
   currentMonth, shifts, assignments, locations, clients, employees,
@@ -62,7 +43,7 @@ export function MonthView({
   const getShiftsForDay = (day: Date) =>
     shifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
 
-  const allEmployeeIds = employees.map(e => e.id);
+  const clientIds = clients.map(c => c.id);
 
   const getAssignmentsForShift = (shiftId: string) =>
     assignments.filter(a => a.shift_id === shiftId);
@@ -106,33 +87,34 @@ export function MonthView({
       );
     }
 
-    // Render one card per assigned employee (Connecteam style)
+    // Render one card per assigned employee using pastel client colors (consistent with other views)
+    const color = getClientColor(shift.client_id, clientIds);
+
     return shiftAssigns.map(assign => {
       const emp = employees.find(e => e.id === assign.employee_id);
       const empName = emp ? `${emp.first_name} ${emp.last_name}`.trim() : "—";
-      const empColor = getEmployeeColor(assign.employee_id, allEmployeeIds);
 
       return (
         <div
           key={`${shift.id}-${assign.id}`}
           className={cn(
-            "rounded-md px-1.5 py-[3px] text-[10px] leading-tight cursor-pointer truncate transition-all hover:brightness-110 hover:shadow-sm",
-            empColor.bg, empColor.text,
+            "rounded-md px-1.5 py-[3px] text-[10px] leading-tight cursor-pointer truncate transition-all hover:shadow-sm border-l-2",
+            color.bg, color.border,
           )}
           onClick={() => onShiftClick(shift)}
-          onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-1", "ring-white/50"); }}
-          onDragLeave={e => { e.currentTarget.classList.remove("ring-1", "ring-white/50"); }}
+          onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-1", "ring-primary/30"); }}
+          onDragLeave={e => { e.currentTarget.classList.remove("ring-1", "ring-primary/30"); }}
           onDrop={e => {
             e.preventDefault();
-            e.currentTarget.classList.remove("ring-1", "ring-white/50");
+            e.currentTarget.classList.remove("ring-1", "ring-primary/30");
             const data = e.dataTransfer.getData("application/assignment");
             if (data) onDropOnShift(shift.id, data);
           }}
         >
-          <span className="font-semibold opacity-90">
+          <span className={cn("font-semibold", color.text)}>
             {shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)}
           </span>
-          <span className="ml-1 font-medium truncate">{empName}</span>
+          <span className="ml-1 font-medium truncate text-foreground/80">{empName}</span>
         </div>
       );
     });
