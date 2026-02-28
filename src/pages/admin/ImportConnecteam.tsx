@@ -393,7 +393,7 @@ export default function ImportConnecteam() {
         throw new Error(`El archivo tiene demasiadas filas (${allRows.length}). Máximo permitido: ${MAX_ROW_COUNT}`);
       }
       // Get employees for matching
-      const { data: employees } = await supabase.from("employees").select("id, first_name, last_name, verification_ssn_ein").eq("company_id", selectedCompanyId!);
+      const { data: employees } = await supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId!);
       const empList = employees ?? [];
 
       // Create import record

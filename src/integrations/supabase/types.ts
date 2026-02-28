@@ -976,12 +976,10 @@ export type Database = {
           phone_number: string | null
           qualify: string | null
           recommended_by: string | null
-          social_security_number: string | null
           start_date: string | null
           tags: string | null
           updated_at: string
           user_id: string | null
-          verification_ssn_ein: string | null
         }
         Insert: {
           access_pin?: string | null
@@ -1009,12 +1007,10 @@ export type Database = {
           phone_number?: string | null
           qualify?: string | null
           recommended_by?: string | null
-          social_security_number?: string | null
           start_date?: string | null
           tags?: string | null
           updated_at?: string
           user_id?: string | null
-          verification_ssn_ein?: string | null
         }
         Update: {
           access_pin?: string | null
@@ -1042,12 +1038,10 @@ export type Database = {
           phone_number?: string | null
           qualify?: string | null
           recommended_by?: string | null
-          social_security_number?: string | null
           start_date?: string | null
           tags?: string | null
           updated_at?: string
           user_id?: string | null
-          verification_ssn_ein?: string | null
         }
         Relationships: [
           {
