@@ -11,12 +11,10 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
 import {
   ChevronLeft, ChevronRight, Search, Timer, Download,
-  CheckCircle2, XCircle, AlertTriangle, Clock, FileSpreadsheet,
+  CheckCircle2, XCircle, AlertTriangle, Clock,
 } from "lucide-react";
 import { format, startOfWeek, addDays, differenceInMinutes, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -37,6 +35,7 @@ interface Employee {
   id: string;
   first_name: string;
   last_name: string;
+  avatar_url?: string | null;
 }
 
 const formatHours = (mins: number) => {
@@ -64,6 +63,7 @@ export function TimesheetView() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
 
   const weekDays = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -81,7 +81,7 @@ export function TimesheetView() {
         .lt("clock_in", weekEnd.toISOString())
         .order("clock_in", { ascending: true }),
       supabase.from("employees")
-        .select("id, first_name, last_name")
+        .select("id, first_name, last_name, avatar_url")
         .eq("company_id", selectedCompanyId)
         .eq("is_active", true)
         .order("first_name"),
@@ -140,6 +140,24 @@ export function TimesheetView() {
     const approved = filtered.filter(e => e.status === "approved").length;
     return { regularHours: (regularMins / 60).toFixed(1), breakHours: (breakMins / 60).toFixed(1), totalHours: (regularMins / 60).toFixed(1), pending, approved, total: filtered.length };
   }, [entries, statusFilter]);
+
+  // Build drawer-compatible employee data
+  const drawerEmployee = useMemo(() => {
+    if (!selectedEmpId) return null;
+    const emp = employees.find(e => e.id === selectedEmpId);
+    if (!emp) return null;
+    const empEntries = entries.filter(en => en.employee_id === selectedEmpId);
+    const activeEntry = empEntries.find(en => !en.clock_out);
+    const completedEntries = empEntries.filter(en => en.clock_out);
+    let totalMinutes = 0;
+    completedEntries.forEach(en => {
+      totalMinutes += Math.max(0, differenceInMinutes(new Date(en.clock_out!), new Date(en.clock_in)) - (en.break_minutes ?? 0));
+    });
+    if (activeEntry) {
+      totalMinutes += Math.max(0, differenceInMinutes(new Date(), new Date(activeEntry.clock_in)) - (activeEntry.break_minutes ?? 0));
+    }
+    return { ...emp, activeEntry, completedEntries, totalMinutes, isClockedIn: !!activeEntry };
+  }, [selectedEmpId, employees, entries]);
 
   // Bulk actions
   const handleBulkApprove = async () => {
@@ -311,9 +329,13 @@ export function TimesheetView() {
             </thead>
             <tbody>
               {rows.map(row => (
-                <tr key={row.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                <tr
+                  key={row.id}
+                  className="border-b border-border/20 hover:bg-muted/20 transition-colors cursor-pointer"
+                  onClick={() => setSelectedEmpId(row.id)}
+                >
                   {canApprove && (
-                    <td className="px-2 py-2">
+                    <td className="px-2 py-2" onClick={e => e.stopPropagation()}>
                       <Checkbox
                         checked={row.entryIds.every(id => selectedIds.has(id))}
                         onCheckedChange={() => toggleEmployee(row.entryIds)}
@@ -322,7 +344,7 @@ export function TimesheetView() {
                   )}
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <EmployeeAvatar firstName={row.first_name} lastName={row.last_name} className="h-7 w-7 text-[10px]" />
+                      <EmployeeAvatar firstName={row.first_name} lastName={row.last_name} avatarUrl={row.avatar_url} className="h-7 w-7 text-[10px]" />
                       <span className="font-medium text-sm truncate">{row.first_name} {row.last_name}</span>
                     </div>
                   </td>
@@ -379,6 +401,15 @@ export function TimesheetView() {
           </table>
         </div>
       )}
+
+      {/* Employee detail drawer */}
+      <EmployeeDayDetailDrawer
+        employee={drawerEmployee}
+        open={!!selectedEmpId}
+        onOpenChange={o => { if (!o) setSelectedEmpId(null); }}
+        now={new Date()}
+        onDataChanged={loadData}
+      />
     </div>
   );
 }

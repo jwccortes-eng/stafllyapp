@@ -11,6 +11,7 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
 import {
   ChevronLeft, ChevronRight, Search, Timer, Hash,
   CheckCircle2, XCircle, Clock, Play, Square,
@@ -31,7 +32,7 @@ interface TimeEntry {
   scheduled_shifts?: { id: string; shift_code: string | null; title: string; start_time: string; end_time: string } | null;
 }
 
-interface Employee { id: string; first_name: string; last_name: string; }
+interface Employee { id: string; first_name: string; last_name: string; avatar_url?: string | null; }
 
 export function DayDetailView() {
   const { role, hasModuleAccess } = useAuth();
@@ -45,6 +46,7 @@ export function DayDetailView() {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
@@ -60,7 +62,7 @@ export function DayDetailView() {
         .gte("clock_in", startOfDay).lte("clock_in", endOfDay)
         .order("clock_in", { ascending: true }),
       supabase.from("employees")
-        .select("id, first_name, last_name")
+        .select("id, first_name, last_name, avatar_url")
         .eq("company_id", selectedCompanyId).eq("is_active", true),
     ]);
     setEntries((entriesRes.data ?? []) as TimeEntry[]);
@@ -98,6 +100,24 @@ export function DayDetailView() {
 
   const activeCount = entries.filter(e => !e.clock_out).length;
   const totalAttendance = new Set(entries.map(e => e.employee_id)).size;
+
+  // Build drawer-compatible employee data
+  const drawerEmployee = useMemo(() => {
+    if (!selectedEmpId) return null;
+    const emp = employees.find(e => e.id === selectedEmpId);
+    if (!emp) return null;
+    const empEntries = entries.filter(en => en.employee_id === selectedEmpId);
+    const activeEntry = empEntries.find(en => !en.clock_out);
+    const completedEntries = empEntries.filter(en => en.clock_out);
+    let totalMinutes = 0;
+    completedEntries.forEach(en => {
+      totalMinutes += Math.max(0, differenceInMinutes(new Date(en.clock_out!), new Date(en.clock_in)) - (en.break_minutes ?? 0));
+    });
+    if (activeEntry) {
+      totalMinutes += Math.max(0, differenceInMinutes(new Date(), new Date(activeEntry.clock_in)) - (activeEntry.break_minutes ?? 0));
+    }
+    return { ...emp, activeEntry, completedEntries, totalMinutes, isClockedIn: !!activeEntry };
+  }, [selectedEmpId, employees, entries]);
 
   // Bulk actions
   const handleBulkApprove = async () => {
@@ -215,9 +235,13 @@ export function DayDetailView() {
               {filtered.map(entry => {
                 const emp = getEmp(entry.employee_id);
                 return (
-                  <tr key={entry.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={entry.id}
+                    className="border-b border-border/20 hover:bg-muted/20 transition-colors cursor-pointer"
+                    onClick={() => setSelectedEmpId(entry.employee_id)}
+                  >
                     {canApprove && (
-                      <td className="px-2 py-2">
+                      <td className="px-2 py-2" onClick={e => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedIds.has(entry.id)}
                           onCheckedChange={() => {
@@ -230,7 +254,7 @@ export function DayDetailView() {
                     )}
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
-                        {emp && <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} className="h-7 w-7 text-[10px]" />}
+                        {emp && <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} className="h-7 w-7 text-[10px]" />}
                         <span className="font-medium">{getEmpName(entry.employee_id)}</span>
                       </div>
                     </td>
@@ -266,6 +290,15 @@ export function DayDetailView() {
           </table>
         </div>
       )}
+
+      {/* Employee detail drawer */}
+      <EmployeeDayDetailDrawer
+        employee={drawerEmployee}
+        open={!!selectedEmpId}
+        onOpenChange={o => { if (!o) setSelectedEmpId(null); }}
+        now={new Date()}
+        onDataChanged={loadData}
+      />
     </div>
   );
 }
