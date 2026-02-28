@@ -4,6 +4,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Loader2, Search, Clock, Eye, EyeOff, ChevronRight, CalendarDays, Filter, LayoutGrid, X } from "lucide-react";
 import { format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
@@ -412,11 +413,11 @@ export default function TodayView() {
                   <Badge variant="outline" className="text-[10px] h-5 px-1.5">{rows.length}</Badge>
                 </div>
               )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
                 {rows.map(emp => (
                   <Card
                     key={emp.id}
-                    className={`relative overflow-hidden rounded-2xl border shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.97] ${
+                    className={`relative overflow-hidden rounded-xl border shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.97] ${
                       emp.isClockedIn
                         ? "border-emerald-500/40 ring-2 ring-emerald-500/20"
                         : emp.scheduled
@@ -433,45 +434,43 @@ export default function TodayView() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
-                          <span className="text-3xl font-bold text-primary/40">
-                            {emp.first_name[0]}{emp.last_name[0]}
-                          </span>
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/15 to-accent/10">
+                          <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="lg" />
                         </div>
                       )}
 
                       {emp.isClockedIn && (
-                        <div className="absolute top-2 right-2">
-                          <span className="relative flex h-3 w-3">
+                        <div className="absolute top-1.5 right-1.5">
+                          <span className="relative flex h-2.5 w-2.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                           </span>
                         </div>
                       )}
 
                       {(emp.isClockedIn || emp.totalMinutes > 0) && (
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 pb-1.5 pt-4">
-                          <span className={`text-sm font-mono font-bold ${emp.isClockedIn ? "text-emerald-300" : "text-white/90"}`}>
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-1.5 pb-1 pt-3">
+                          <span className={`text-[11px] font-mono font-bold ${emp.isClockedIn ? "text-emerald-300" : "text-white/90"}`}>
                             {formatDuration(emp.totalMinutes)}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    <CardContent className="p-2.5 space-y-1">
-                      <p className="text-xs font-semibold truncate">
-                        {emp.first_name} {emp.last_name}
+                    <CardContent className="p-1.5 space-y-0.5">
+                      <p className="text-[10px] font-semibold truncate leading-tight">
+                        {emp.first_name} {emp.last_name.charAt(0)}.
                       </p>
                       {emp.isClockedIn && emp.scheduled ? (
-                        <p className="text-[10px] text-muted-foreground truncate">
+                        <p className="text-[9px] text-muted-foreground truncate">
                           {emp.scheduled.client_name || emp.scheduled.title}
                         </p>
                       ) : emp.scheduled ? (
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {emp.scheduled.start_time.slice(0, 5)} – {emp.scheduled.end_time.slice(0, 5)}
+                        <p className="text-[9px] text-muted-foreground truncate">
+                          {emp.scheduled.start_time.slice(0, 5)}–{emp.scheduled.end_time.slice(0, 5)}
                         </p>
                       ) : (
-                        <p className="text-[10px] text-muted-foreground/50">Sin turno</p>
+                        <p className="text-[9px] text-muted-foreground/50">Sin turno</p>
                       )}
                     </CardContent>
                   </Card>
