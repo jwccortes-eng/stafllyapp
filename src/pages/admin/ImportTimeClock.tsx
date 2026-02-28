@@ -12,6 +12,9 @@ import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import { useCompany } from "@/hooks/useCompany";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
+import { useShiftCoverage, type CoverageSummary } from "@/hooks/useShiftCoverage";
+import { CoverageReport } from "@/components/shifts/CoverageReport";
+import { useAuth } from "@/hooks/useAuth";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = ".xls,.xlsx";
@@ -81,6 +84,7 @@ function isSummaryRow(row: Record<string, string>): boolean {
 
 export default function ImportTimeClock() {
   const { selectedCompanyId } = useCompany();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [workbook, setWorkbook] = useState<SafeWorkbook | null>(null);
@@ -94,6 +98,57 @@ export default function ImportTimeClock() {
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
+  const [coverageData, setCoverageData] = useState<CoverageSummary | null>(null);
+
+  // Inline coverage analysis (can't use hook inside callback)
+  const analyzeCoverageInline = async (compId: string, from: string, to: string): Promise<CoverageSummary | null> => {
+    try {
+      const { data: shifts } = await supabase
+        .from("scheduled_shifts").select("id, title, shift_code, date, client_id")
+        .eq("company_id", compId).is("deleted_at", null).gte("date", from).lte("date", to);
+      if (!shifts || shifts.length === 0) return null;
+      const shiftIds = shifts.map(s => s.id);
+      const [{ data: assignments }, { data: timeEntries }, { data: employees }] = await Promise.all([
+        supabase.from("shift_assignments").select("shift_id, employee_id, status").eq("company_id", compId).in("shift_id", shiftIds).in("status", ["accepted", "pending"]),
+        supabase.from("time_entries").select("shift_id, employee_id, clock_in, clock_out, status, break_minutes").eq("company_id", compId).in("shift_id", shiftIds).neq("status", "rejected"),
+        supabase.from("employees").select("id, first_name, last_name").eq("company_id", compId),
+      ]);
+      const empMap = new Map<string, string>();
+      (employees ?? []).forEach(e => empMap.set(e.id, `${e.first_name} ${e.last_name}`));
+      const items = shifts.map(shift => {
+        const sa = (assignments ?? []).filter(a => a.shift_id === shift.id);
+        const te = (timeEntries ?? []).filter(t => t.shift_id === shift.id);
+        const assignedSet = new Set(sa.map(a => a.employee_id));
+        const clockedSet = new Set(te.map(t => t.employee_id));
+        const assignedEmployees = sa.map(a => ({ id: a.employee_id, name: empMap.get(a.employee_id) ?? "?" }));
+        const clockedEmployees = te.map(t => {
+          let hours = 0;
+          if (t.clock_in && t.clock_out) {
+            hours = (new Date(t.clock_out).getTime() - new Date(t.clock_in).getTime()) / 3600000 - (t.break_minutes ?? 0) / 60;
+          }
+          return { id: t.employee_id, name: empMap.get(t.employee_id) ?? "?", hours: Math.round(hours * 100) / 100 };
+        });
+        const missingEmployees = assignedEmployees.filter(e => !clockedSet.has(e.id));
+        const extraEmployees = clockedEmployees.filter(e => !assignedSet.has(e.id));
+        const totalAssigned = assignedSet.size;
+        const totalClocked = clockedSet.size;
+        const coveragePercent = totalAssigned > 0 ? Math.round((Math.min(totalClocked, totalAssigned) / totalAssigned) * 100) : 100;
+        return {
+          shiftId: shift.id, shiftTitle: shift.title, shiftCode: shift.shift_code, date: shift.date,
+          clientId: shift.client_id, assignedEmployees, clockedEmployees, missingEmployees, extraEmployees,
+          coveragePercent, totalAssigned, totalClocked,
+        };
+      });
+      const fullyCovered = items.filter(i => i.coveragePercent >= 100 && i.missingEmployees.length === 0).length;
+      const uncovered = items.filter(i => i.totalClocked === 0 && i.totalAssigned > 0).length;
+      const totalA = items.reduce((s, i) => s + i.totalAssigned, 0);
+      const totalC = items.reduce((s, i) => s + Math.min(i.totalClocked, i.totalAssigned), 0);
+      return {
+        totalShifts: items.length, fullyCovered, partiallyCovered: items.length - fullyCovered - uncovered,
+        uncovered, overallPercent: totalA > 0 ? Math.round((totalC / totalA) * 100) : 100, items,
+      };
+    } catch { return null; }
+  };
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -297,6 +352,36 @@ export default function ImportTimeClock() {
         message: `Importación completada: ${totalEntries} registros de reloj, ${linkedShifts} vinculados a turnos${unmatchedMsg}${overlapMsg}.`,
       });
       setStep(4);
+
+      // Run coverage analysis after import
+      if (filterFrom && filterTo) {
+        const coverageAnalysis = await analyzeCoverageInline(selectedCompanyId, filterFrom, filterTo);
+        setCoverageData(coverageAnalysis);
+        setCoverageData(coverageAnalysis);
+
+        // Auto-create tickets for discrepancies
+        if (coverageAnalysis && user) {
+          const issues = coverageAnalysis.items.filter(i => i.missingEmployees.length > 0);
+          for (const item of issues) {
+            for (const emp of item.missingEmployees) {
+              try {
+                await supabase.from("employee_tickets").insert({
+                  company_id: selectedCompanyId,
+                  employee_id: emp.id,
+                  subject: `Fichaje faltante: ${item.shiftTitle} (${item.date})`,
+                  description: `El empleado ${emp.name} estaba programado en el turno "${item.shiftTitle}" el ${item.date} pero no registró fichaje de entrada/salida.`,
+                  type: "attendance",
+                  priority: "normal",
+                  source: "system",
+                  source_entity_type: "scheduled_shift",
+                  source_entity_id: item.shiftId,
+                  status: "new",
+                });
+              } catch { /* skip duplicates */ }
+            }
+          }
+        }
+      }
     } catch (err: any) {
       setResult({ success: false, message: getUserFriendlyError(err) });
       toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
@@ -313,6 +398,7 @@ export default function ImportTimeClock() {
     setResult(null);
     setSummary(null);
     setDateRange(null);
+    setCoverageData(null);
   };
 
   // Unique employees in filtered entries
@@ -546,6 +632,16 @@ export default function ImportTimeClock() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Coverage Report */}
+          {coverageData && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                📊 Análisis de cobertura (Programados vs. Fichados)
+              </h3>
+              <CoverageReport coverage={coverageData} />
+            </div>
           )}
 
           <Button variant="outline" onClick={reset}>

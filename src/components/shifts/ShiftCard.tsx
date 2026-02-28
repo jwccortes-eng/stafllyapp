@@ -1,10 +1,11 @@
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, GripVertical, MapPin } from "lucide-react";
+import { Clock, Users, GripVertical, MapPin, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Shift } from "./types";
 import { getClientColor, formatShiftCode } from "./types";
+import type { ShiftCoverageItem } from "@/hooks/useShiftCoverage";
 
 interface ShiftCardProps {
   shift: Shift;
@@ -17,6 +18,7 @@ interface ShiftCardProps {
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   showDate?: boolean;
+  coverageStatus?: { percent: number; missing: number; extra: number } | null;
 }
 
 type StatusBadge = { label: string; variant: "destructive" | "warning" | "secondary" | "default" | "outline" };
@@ -47,7 +49,7 @@ function getStatusBadges(shift: Shift, assignmentCount: number): StatusBadge[] {
 }
 
 export function ShiftCard({
-  shift, assignmentCount, locationName, clientName, clientIds = [], onClick, compact, draggable, onDragStart, showDate,
+  shift, assignmentCount, locationName, clientName, clientIds = [], onClick, compact, draggable, onDragStart, showDate, coverageStatus,
 }: ShiftCardProps) {
   const color = getClientColor(shift.client_id, clientIds);
   const badges = getStatusBadges(shift, assignmentCount);
@@ -141,6 +143,16 @@ export function ShiftCard({
                   {b.label}
                 </Badge>
               ))}
+              {/* Coverage badge */}
+              {coverageStatus && coverageStatus.percent < 100 && (
+                <Badge
+                  variant="outline"
+                  className="text-[8px] px-1.5 py-0 h-4 font-semibold uppercase tracking-wide leading-none rounded-full bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800"
+                >
+                  <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                  {coverageStatus.missing > 0 ? `${coverageStatus.missing} sin fichar` : `${coverageStatus.percent}%`}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
