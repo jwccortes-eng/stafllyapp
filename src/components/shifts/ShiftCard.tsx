@@ -31,8 +31,12 @@ function getStatusBadges(shift: Shift, assignmentCount: number): StatusBadge[] {
     badges.push({ label: `${totalSlots - assignmentCount} vacante${totalSlots - assignmentCount > 1 ? "s" : ""}`, variant: "warning" });
   }
 
-  if (shift.status !== "published") {
+  if (shift.status !== "published" && shift.status !== "locked") {
     badges.push({ label: "Borrador", variant: "secondary" });
+  }
+
+  if (shift.status === "locked") {
+    badges.push({ label: "Bloqueado", variant: "outline" });
   }
 
   if (shift.status === "published" && assignmentCount > 0 && badges.length === 0) {

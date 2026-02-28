@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Send } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -156,7 +156,9 @@ export default function Shifts() {
     if (filters.publishStatus === "published") {
       result = result.filter(s => s.status === "published");
     } else if (filters.publishStatus === "draft") {
-      result = result.filter(s => s.status !== "published");
+      result = result.filter(s => s.status !== "published" && s.status !== "locked");
+    } else if (filters.publishStatus === "locked") {
+      result = result.filter(s => s.status === "locked");
     }
     return result;
   }, [shifts, assignments, filters]);
@@ -487,6 +489,38 @@ export default function Shifts() {
     loadData();
   };
 
+  // --- Bulk publish all draft shifts in current view ---
+  const [bulkPublishing, setBulkPublishing] = useState(false);
+  const handlePublishAll = async () => {
+    const draftShifts = filteredShifts.filter(s => s.status !== "published" && s.status !== "locked");
+    if (draftShifts.length === 0) { toast.info("No hay turnos borrador para publicar"); return; }
+    setBulkPublishing(true);
+    const ids = draftShifts.map(s => s.id);
+    const { error } = await supabase.from("scheduled_shifts")
+      .update({ status: "published" } as any)
+      .in("id", ids);
+    if (error) { toast.error(error.message); setBulkPublishing(false); return; }
+    toast.success(`${ids.length} turno(s) publicados`);
+    setBulkPublishing(false);
+    loadData();
+  };
+
+  // --- Bulk lock all shifts in current view ---
+  const [bulkLocking, setBulkLocking] = useState(false);
+  const handleLockAll = async () => {
+    const unlocked = filteredShifts.filter(s => s.status !== "locked");
+    if (unlocked.length === 0) { toast.info("Todos los turnos ya están bloqueados"); return; }
+    setBulkLocking(true);
+    const ids = unlocked.map(s => s.id);
+    const { error } = await supabase.from("scheduled_shifts")
+      .update({ status: "locked" } as any)
+      .in("id", ids);
+    if (error) { toast.error(error.message); setBulkLocking(false); return; }
+    toast.success(`${ids.length} turno(s) bloqueados`);
+    setBulkLocking(false);
+    loadData();
+  };
+
   const handleAddEmployees = async (shiftId: string, employeeIds: string[]) => {
     if (!selectedCompanyId) return;
     const assigns = employeeIds.map(eid => ({
@@ -813,26 +847,53 @@ export default function Shifts() {
           </Button>
           <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={navigateToday}>Hoy</Button>
         </div>
-        {viewMode === "week" && (
-          <div className="flex items-center gap-1">
-            <Button
-              variant={weekViewMode === "grid" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 text-[10px] px-2"
-              onClick={() => setWeekViewMode("grid")}
-            >
-              <LayoutGrid className="h-3 w-3 mr-1" /> Grid
-            </Button>
-            <Button
-              variant={weekViewMode === "job" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 text-[10px] px-2"
-              onClick={() => setWeekViewMode("job")}
-            >
-              <Building2 className="h-3 w-3 mr-1" /> Por cliente
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-1">
+          {viewMode === "week" && (
+            <>
+              <Button
+                variant={weekViewMode === "grid" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 text-[10px] px-2"
+                onClick={() => setWeekViewMode("grid")}
+              >
+                <LayoutGrid className="h-3 w-3 mr-1" /> Grid
+              </Button>
+              <Button
+                variant={weekViewMode === "job" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 text-[10px] px-2"
+                onClick={() => setWeekViewMode("job")}
+              >
+                <Building2 className="h-3 w-3 mr-1" /> Por cliente
+              </Button>
+              <div className="w-px h-5 bg-border/40 mx-1" />
+            </>
+          )}
+          {canEdit && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-[10px] px-2.5 gap-1"
+                onClick={handlePublishAll}
+                disabled={bulkPublishing}
+              >
+                {bulkPublishing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                Publicar todos
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-[10px] px-2.5 gap-1 text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950/30"
+                onClick={handleLockAll}
+                disabled={bulkLocking}
+              >
+                {bulkLocking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
+                Bloquear
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Content */}
