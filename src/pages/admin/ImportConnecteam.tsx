@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight, Trash2, Download, Info, UserPlus, Lock } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, History, Users, Clock, ChevronDown, ChevronRight, Trash2, Download, Info, UserPlus, Lock, DollarSign } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
@@ -569,7 +570,15 @@ export default function ImportConnecteam() {
         }
       />
 
-      {/* Collapsible instructions */}
+      <div className="flex items-center gap-2">
+        <Link to="/app/import-extras">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <DollarSign className="h-4 w-4" />
+            Importar Pagos Adicionales
+          </Button>
+        </Link>
+      </div>
+
       <details className="rounded-2xl border bg-card group">
         <summary className="flex items-center gap-3 p-4 cursor-pointer text-sm font-medium text-foreground select-none">
           <Info className="h-4 w-4 text-primary shrink-0" />
