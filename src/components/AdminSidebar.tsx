@@ -27,6 +27,7 @@ import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { CommandPaletteTrigger } from "@/components/CommandPalette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StaflyLogo, StaflyMark } from "@/components/brand/StaflyBrand";
+import CompanyActionGuard from "@/components/CompanyActionGuard";
 
 interface LinkDef {
   to: string;
@@ -79,6 +80,7 @@ export default function AdminSidebar() {
 
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(["Operaciones", "Nómina", "Gestión"]));
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
+  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
   // Fetch badge counts
   useEffect(() => {
@@ -342,7 +344,7 @@ export default function AdminSidebar() {
       {/* Company selector */}
       {companies.length > 1 && !collapsed && (
         <div className="px-3 py-3 border-b border-border/30">
-          <Select value={selectedCompanyId ?? ""} onValueChange={setSelectedCompanyId}>
+          <Select value={selectedCompanyId ?? ""} onValueChange={(id) => setPendingCompanyId(id)}>
             <SelectTrigger className="h-8 text-xs bg-muted/30 border-border/30 rounded-xl hover:bg-muted/50 transition-colors">
               <SelectValue placeholder="Empresa" />
             </SelectTrigger>
@@ -433,6 +435,19 @@ export default function AdminSidebar() {
           {collapsed && <TooltipContent side="right" className="text-xs">Cerrar sesión</TooltipContent>}
         </Tooltip>
       </div>
+
+      {/* Company switch guard */}
+      <CompanyActionGuard
+        open={!!pendingCompanyId && pendingCompanyId !== selectedCompanyId}
+        onOpenChange={(v) => { if (!v) setPendingCompanyId(null); }}
+        title="Cambiar de empresa"
+        description="Estás a punto de cambiar el contexto a otra empresa. Confirma tu contraseña para continuar."
+        requirePassword
+        onConfirm={() => {
+          if (pendingCompanyId) setSelectedCompanyId(pendingCompanyId);
+          setPendingCompanyId(null);
+        }}
+      />
     </aside>
   );
 }

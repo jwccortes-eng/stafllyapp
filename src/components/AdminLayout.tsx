@@ -15,6 +15,7 @@ import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS } from "@/components/navigation/nav-items";
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
+import CompanyActionGuard from "@/components/CompanyActionGuard";
 
 const SidebarContext = createContext<{ collapsed: boolean; setCollapsed: (v: boolean) => void }>({ collapsed: false, setCollapsed: () => {} });
 
@@ -33,6 +34,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const { pinnedIds, togglePin, maxPins } = useNavPreferences(ADMIN_DEFAULT_PINS);
+  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
   // Badge counts
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
@@ -91,7 +93,7 @@ export default function AdminLayout() {
             </div>
             <div className="flex items-center gap-1">
               {companies.length > 1 && (
-                <Select value={selectedCompanyId ?? ""} onValueChange={setSelectedCompanyId}>
+                <Select value={selectedCompanyId ?? ""} onValueChange={(id) => setPendingCompanyId(id)}>
                   <SelectTrigger className="h-8 w-auto max-w-[130px] text-[11px] rounded-xl bg-muted/30 border-border/30">
                     <SelectValue placeholder="Empresa" />
                   </SelectTrigger>
@@ -129,6 +131,19 @@ export default function AdminLayout() {
           maxPins={maxPins}
           onSignOut={signOut}
           variant="admin"
+        />
+
+        {/* Company switch guard (mobile) */}
+        <CompanyActionGuard
+          open={!!pendingCompanyId && pendingCompanyId !== selectedCompanyId}
+          onOpenChange={(v) => { if (!v) setPendingCompanyId(null); }}
+          title="Cambiar de empresa"
+          description="Estás a punto de cambiar el contexto a otra empresa. Confirma tu contraseña para continuar."
+          requirePassword
+          onConfirm={() => {
+            if (pendingCompanyId) setSelectedCompanyId(pendingCompanyId);
+            setPendingCompanyId(null);
+          }}
         />
       </div>
     );
