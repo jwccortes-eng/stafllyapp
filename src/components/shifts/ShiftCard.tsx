@@ -70,7 +70,7 @@ export function ShiftCard({
         color.border,
         draggable && "hover:ring-1 hover:ring-primary/20"
       )}
-      draggable={draggable}
+      draggable={draggable && shift.status !== "locked"}
       onDragStart={handleDragStart}
       onClick={onClick}
     >
