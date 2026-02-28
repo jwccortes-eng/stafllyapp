@@ -13,11 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import {
   ChevronLeft, ChevronRight, Search, Timer, Download,
-  CheckCircle2, XCircle, AlertTriangle, FileText, CalendarIcon,
+  CheckCircle2, XCircle, AlertCircle, CalendarIcon, Filter,
 } from "lucide-react";
-import { format, startOfWeek, addDays, differenceInMinutes, isSameDay, parseISO, isWithinInterval, eachDayOfInterval } from "date-fns";
+import { format, startOfWeek, addDays, differenceInMinutes, parseISO, isWithinInterval, eachDayOfInterval, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,8 @@ const formatHours = (mins: number) => {
   return h % 1 === 0 ? String(h) : h.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 };
 
+const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
+
 export function TimesheetView() {
   const { role, hasModuleAccess } = useAuth();
   const { selectedCompanyId } = useCompany();
@@ -69,8 +72,12 @@ export function TimesheetView() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   // View mode & range
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [viewMode, setViewMode] = useState<ViewMode>("period");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
@@ -87,22 +94,18 @@ export function TimesheetView() {
       .then(({ data }) => {
         const periods = (data ?? []) as PayPeriod[];
         setPayPeriods(periods);
-        // Find current active period to set initial week
+        // Auto-select current period
         const now = new Date();
-        const current = periods.find(p => {
-          const s = parseISO(p.start_date);
-          const e = parseISO(p.end_date);
-          return isWithinInterval(now, { start: s, end: e });
-        });
-        if (current) {
-          // Set week to current week within the active period
-          setWeekStart(startOfWeek(now, { weekStartsOn: 1 }));
-        }
+        const current = periods.find(p =>
+          isWithinInterval(now, { start: parseISO(p.start_date), end: parseISO(p.end_date) })
+        );
+        if (current) setSelectedPeriodId(current.id);
+        else if (periods.length > 0) setSelectedPeriodId(periods[0].id);
       });
   }, [selectedCompanyId]);
 
-  // Compute effective date range based on view mode
-  const { rangeStart, rangeEnd, displayDays } = useMemo(() => {
+  // Compute effective date range
+  const { rangeStart, rangeEnd } = useMemo(() => {
     let start: Date;
     let end: Date;
 
@@ -123,8 +126,7 @@ export function TimesheetView() {
       end = addDays(weekStart, 6);
     }
 
-    const days = eachDayOfInterval({ start, end });
-    return { rangeStart: start, rangeEnd: end, displayDays: days };
+    return { rangeStart: start, rangeEnd: end };
   }, [viewMode, weekStart, selectedPeriodId, payPeriods, customFrom, customTo]);
 
   const loadData = useCallback(async () => {
@@ -147,12 +149,13 @@ export function TimesheetView() {
     setEntries((entriesRes.data ?? []) as TimeEntry[]);
     setEmployees((empsRes.data ?? []) as Employee[]);
     setSelectedIds(new Set());
+    setPage(1);
     setLoading(false);
   }, [selectedCompanyId, rangeStart, rangeEnd]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Build employee rows with daily hours
+  // Build employee summary rows
   const rows = useMemo(() => {
     const s = search.toLowerCase();
     return employees
@@ -163,32 +166,45 @@ export function TimesheetView() {
           ? empEntries
           : empEntries.filter(e => e.status === statusFilter);
 
-        const dailyMins: number[] = displayDays.map(day => {
-          let total = 0;
-          filteredEntries.forEach(e => {
-            if (isSameDay(new Date(e.clock_in), day) && e.clock_out) {
-              total += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
-            }
-          });
-          return total;
+        let totalMins = 0;
+        filteredEntries.forEach(e => {
+          if (e.clock_out) {
+            totalMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
+          }
         });
 
-        const dailyHasNotes: boolean[] = displayDays.map(day => {
-          return filteredEntries.some(e =>
-            isSameDay(new Date(e.clock_in), day) &&
-            (e.notes || e.status === "rejected" || !e.clock_out)
-          );
-        });
-
-        const totalMins = dailyMins.reduce((a, b) => a + b, 0);
-        const hasIssues = filteredEntries.some(e => e.status === "rejected" || (!e.clock_out && e.status !== "rejected"));
+        const pendingCount = empEntries.filter(e => e.status === "pending").length;
+        const approvedCount = empEntries.filter(e => e.status === "approved").length;
+        const rejectedCount = empEntries.filter(e => e.status === "rejected").length;
+        const openCount = empEntries.filter(e => !e.clock_out).length;
+        const hasIssues = rejectedCount > 0 || openCount > 0;
         const entryIds = filteredEntries.map(e => e.id);
 
-        return { ...emp, dailyMins, dailyHasNotes, totalMins, hasIssues, entryIds, entryCount: filteredEntries.length };
+        return {
+          ...emp,
+          totalMins,
+          totalHours: totalMins / 60,
+          pendingCount,
+          approvedCount,
+          rejectedCount,
+          openCount,
+          hasIssues,
+          entryIds,
+          entryCount: filteredEntries.length,
+        };
       })
-      .filter(r => r.entryCount > 0 || statusFilter === "all")
-      .sort((a, b) => b.totalMins - a.totalMins);
-  }, [employees, entries, search, displayDays, statusFilter]);
+      .filter(r => r.entryCount > 0)
+      .sort((a, b) => b.totalHours - a.totalHours);
+  }, [employees, entries, search, statusFilter]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+  const paginatedRows = rows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+  // Pending requests count
+  const pendingRequestsTotal = useMemo(() =>
+    entries.filter(e => e.status === "pending").length
+  , [entries]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -251,9 +267,14 @@ export function TimesheetView() {
   };
 
   const toggleSelectAll = () => {
-    const allIds = rows.flatMap(r => r.entryIds);
-    if (selectedIds.size === allIds.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(allIds));
+    const allIds = paginatedRows.flatMap(r => r.entryIds);
+    if (allIds.every(id => selectedIds.has(id))) {
+      const next = new Set(selectedIds);
+      allIds.forEach(id => next.delete(id));
+      setSelectedIds(next);
+    } else {
+      setSelectedIds(new Set([...selectedIds, ...allIds]));
+    }
   };
 
   const toggleEmployee = (entryIds: string[]) => {
@@ -267,14 +288,14 @@ export function TimesheetView() {
   const handleExport = async () => {
     try {
       const { writeExcelFile } = await import("@/lib/safe-xlsx");
-      const data = rows.map(r => {
-        const row: Record<string, any> = { Empleado: `${r.first_name} ${r.last_name}` };
-        displayDays.forEach((d, i) => {
-          row[format(d, "EEE dd/MM", { locale: es })] = r.dailyMins[i] > 0 ? Number(formatHours(r.dailyMins[i])) : "";
-        });
-        row["Total hours"] = Number(formatHours(r.totalMins));
-        return row;
-      });
+      const data = rows.map(r => ({
+        "Full name": `${r.first_name} ${r.last_name}`,
+        "Total hours": Number(formatHours(r.totalMins)),
+        "Paid time off": "--",
+        "Pending": r.pendingCount,
+        "Approved": r.approvedCount,
+        "Rejected": r.rejectedCount,
+      }));
       await writeExcelFile(data, "Timesheets", `timesheets_${format(rangeStart, "yyyy-MM-dd")}.xlsx`);
       toast.success("Archivo exportado");
     } catch (error) {
@@ -283,13 +304,132 @@ export function TimesheetView() {
     }
   };
 
-  const isToday = (day: Date) => isSameDay(day, new Date());
-
   const selectedPeriod = payPeriods.find(p => p.id === selectedPeriodId);
+
+  const getSubmissionLabel = (row: typeof rows[0]) => {
+    if (row.openCount > 0) return "Open";
+    if (row.pendingCount > 0) return "Open";
+    if (row.approvedCount > 0) return "Submitted";
+    return "Open";
+  };
+
+  const getApprovalLabel = (row: typeof rows[0]) => {
+    if (row.approvedCount === row.entryCount && row.entryCount > 0) return "Approved";
+    if (row.rejectedCount > 0) return "Rejected";
+    return "--";
+  };
 
   return (
     <div className="space-y-4">
-      {/* KPIs */}
+      {/* Toolbar Row 1: Search + Date navigation + Status filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Search */}
+        <div className="relative w-full sm:max-w-[220px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search" className="pl-9 h-9" />
+        </div>
+
+        {/* Filter icon */}
+        <Button variant="outline" size="icon" className="h-9 w-9">
+          <Filter className="h-4 w-4" />
+        </Button>
+
+        {/* Date range nav */}
+        {viewMode === "week" && (
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekStart(d => addDays(d, -7))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[140px] text-center">
+              {format(weekStart, "MM/dd")} - {format(addDays(weekStart, 6), "MM/dd")}
+            </span>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekStart(d => addDays(d, 7))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {viewMode === "period" && selectedPeriod && (
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+              const idx = payPeriods.findIndex(p => p.id === selectedPeriodId);
+              if (idx < payPeriods.length - 1) setSelectedPeriodId(payPeriods[idx + 1].id);
+            }}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[140px] text-center">
+              {format(parseISO(selectedPeriod.start_date), "MM/dd")} - {format(parseISO(selectedPeriod.end_date), "MM/dd")}
+            </span>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+              const idx = payPeriods.findIndex(p => p.id === selectedPeriodId);
+              if (idx > 0) setSelectedPeriodId(payPeriods[idx - 1].id);
+            }}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {viewMode === "custom" && (
+          <div className="flex items-center gap-1.5">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("h-9 text-xs gap-1.5", !customFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {customFrom ? format(customFrom, "MM/dd") : "From"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+            <span className="text-xs text-muted-foreground">–</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("h-9 text-xs gap-1.5", !customTo && "text-muted-foreground")}>
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {customTo ? format(customTo, "MM/dd") : "To"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customTo} onSelect={setCustomTo} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+
+        {/* Status filter */}
+        <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-9 w-[150px] text-sm">
+            <SelectValue placeholder="Status filter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Status filter</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Pending requests */}
+        {pendingRequestsTotal > 0 && (
+          <div className="flex items-center gap-1.5">
+            <Badge className="bg-primary text-primary-foreground rounded-full h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+              {pendingRequestsTotal}
+            </Badge>
+            <span className="text-sm font-medium text-primary">Pending requests</span>
+          </div>
+        )}
+
+        {/* Export */}
+        <Button variant="outline" size="sm" className="h-9 text-sm gap-1.5" onClick={handleExport}>
+          Export <ChevronRight className="h-3 w-3 rotate-90" />
+        </Button>
+      </div>
+
+      {/* KPI Summary */}
       <div className="flex flex-wrap items-baseline gap-3 text-sm">
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-bold font-mono">{kpis.regularHours}</span>
@@ -311,274 +451,164 @@ export function TimesheetView() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3">
-        {/* Row 1: View mode tabs + Date nav */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* View mode selector */}
-          <div className="flex items-center bg-muted/40 rounded-lg p-0.5 gap-0.5">
-            <Button
-              variant={viewMode === "week" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 text-xs px-3"
-              onClick={() => setViewMode("week")}
-            >
-              Semanal
-            </Button>
-            <Button
-              variant={viewMode === "period" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 text-xs px-3"
-              onClick={() => {
-                setViewMode("period");
-                if (!selectedPeriodId && payPeriods.length > 0) {
-                  // Select current active period or most recent
-                  const now = new Date();
-                  const current = payPeriods.find(p =>
-                    isWithinInterval(now, { start: parseISO(p.start_date), end: parseISO(p.end_date) })
-                  );
-                  setSelectedPeriodId((current ?? payPeriods[0]).id);
-                }
-              }}
-            >
-              Por Corte
-            </Button>
-            <Button
-              variant={viewMode === "custom" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 text-xs px-3"
-              onClick={() => setViewMode("custom")}
-            >
-              Rango
-            </Button>
-          </div>
-
-          {/* Navigation based on view mode */}
-          {viewMode === "week" && (
-            <div className="flex items-center gap-1.5">
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekStart(d => addDays(d, -7))}>
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </Button>
-              <span className="text-xs font-medium min-w-[140px] text-center">
-                {format(weekStart, "dd MMM", { locale: es })} – {format(addDays(weekStart, 6), "dd MMM yyyy", { locale: es })}
-              </span>
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekStart(d => addDays(d, 7))}>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
-
-          {viewMode === "period" && (
-            <Select value={selectedPeriodId ?? ""} onValueChange={setSelectedPeriodId}>
-              <SelectTrigger className="h-8 w-[260px] text-xs">
-                <SelectValue placeholder="Seleccionar corte..." />
-              </SelectTrigger>
-              <SelectContent>
-                {payPeriods.map(p => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {format(parseISO(p.start_date), "dd MMM", { locale: es })} – {format(parseISO(p.end_date), "dd MMM yyyy", { locale: es })}
-                    {p.status !== "open" && (
-                      <span className="ml-1.5 text-muted-foreground">({p.status})</span>
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          {viewMode === "custom" && (
-            <div className="flex items-center gap-1.5">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn("h-8 text-xs gap-1.5", !customFrom && "text-muted-foreground")}>
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    {customFrom ? format(customFrom, "dd/MM/yy") : "Desde"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={customFrom}
-                    onSelect={setCustomFrom}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-              <span className="text-xs text-muted-foreground">–</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn("h-8 text-xs gap-1.5", !customTo && "text-muted-foreground")}>
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    {customTo ? format(customTo, "dd/MM/yy") : "Hasta"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={customTo}
-                    onSelect={setCustomTo}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
-        </div>
-
-        {/* Row 2: Search, status filter, bulk, export */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar empleado..." className="pl-9 h-9" />
-          </div>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 w-[140px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los status</SelectItem>
-              <SelectItem value="pending">Pendientes</SelectItem>
-              <SelectItem value="approved">Aprobados</SelectItem>
-              <SelectItem value="rejected">Rechazados</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {canApprove && selectedIds.size > 0 && (
-            <div className="flex items-center gap-1.5">
-              <Badge variant="outline" className="text-xs">{selectedIds.size} sel.</Badge>
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleBulkApprove}>
-                <CheckCircle2 className="h-3 w-3" /> Aprobar
-              </Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-destructive" onClick={handleBulkReject}>
-                <XCircle className="h-3 w-3" /> Rechazar
-              </Button>
-            </div>
-          )}
-
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 ml-auto" onClick={handleExport}>
-            <Download className="h-3.5 w-3.5" /> Export
+      {/* Bulk actions */}
+      {canApprove && selectedIds.size > 0 && (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">{selectedIds.size} selected</Badge>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleBulkApprove}>
+            <CheckCircle2 className="h-3 w-3" /> Approve
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-destructive" onClick={handleBulkReject}>
+            <XCircle className="h-3 w-3" /> Reject
           </Button>
         </div>
-      </div>
+      )}
 
-      {/* Timesheet grid */}
+      {/* Data Table */}
       {loading ? (
         <PageSkeleton variant="table" />
       ) : rows.length === 0 ? (
-        <EmptyState icon={Timer} title="Sin fichajes en este período" description="No hay registros para el rango seleccionado" compact />
+        <EmptyState icon={Timer} title="No timesheets for this period" description="No records found for the selected range" compact />
       ) : (
         <div className="border rounded-xl overflow-hidden bg-card">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ minWidth: `${200 + displayDays.length * 75 + 90}px` }}>
-              <thead>
-                <tr className="border-b bg-muted/20">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                {canApprove && (
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={paginatedRows.length > 0 && paginatedRows.flatMap(r => r.entryIds).every(id => selectedIds.has(id))}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                )}
+                <TableHead className="min-w-[200px]">Full name</TableHead>
+                <TableHead className="text-center">Total hours</TableHead>
+                <TableHead className="text-center">Total pay</TableHead>
+                <TableHead className="text-center">Paid time off</TableHead>
+                <TableHead className="text-center">User submission</TableHead>
+                <TableHead className="text-center">Admin approval</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedRows.map(row => (
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer"
+                  onClick={() => setSelectedEmpId(row.id)}
+                >
                   {canApprove && (
-                    <th className="w-10 px-3 py-3 sticky left-0 bg-muted/20 z-10">
+                    <TableCell onClick={e => e.stopPropagation()}>
                       <Checkbox
-                        checked={selectedIds.size > 0 && selectedIds.size === rows.flatMap(r => r.entryIds).length}
-                        onCheckedChange={toggleSelectAll}
+                        checked={row.entryIds.every(id => selectedIds.has(id))}
+                        onCheckedChange={() => toggleEmployee(row.entryIds)}
                       />
-                    </th>
+                    </TableCell>
                   )}
-                  <th className={cn(
-                    "text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider min-w-[200px] sticky bg-muted/20 z-10",
-                    canApprove ? "left-10" : "left-0"
-                  )}>
-                    Empleado
-                  </th>
-                  <th className="text-center px-1 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider w-14">Issues</th>
-                  {displayDays.map(day => (
-                    <th
-                      key={day.toISOString()}
-                      className={`text-center px-2 py-3 min-w-[75px] ${isToday(day) ? "bg-primary/5" : ""}`}
-                    >
-                      <div className={`text-[11px] font-semibold uppercase tracking-wider ${isToday(day) ? "text-primary font-bold" : "text-muted-foreground"}`}>
-                        {format(day, "EEE", { locale: es })} {format(day, "d/M")}
+                  <TableCell>
+                    <div className="flex items-center gap-2.5">
+                      <EmployeeAvatar firstName={row.first_name} lastName={row.last_name} avatarUrl={row.avatar_url} size="md" />
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-sm">{row.first_name} {row.last_name}</span>
+                        {row.hasIssues && <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
                       </div>
-                    </th>
-                  ))}
-                  <th className="text-center px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider min-w-[80px]">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(row => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-border/20 hover:bg-muted/20 transition-colors cursor-pointer"
-                    onClick={() => setSelectedEmpId(row.id)}
-                  >
-                    {canApprove && (
-                      <td className="px-3 py-2.5 sticky left-0 bg-card z-10" onClick={e => e.stopPropagation()}>
-                        <Checkbox
-                          checked={row.entryIds.every(id => selectedIds.has(id))}
-                          onCheckedChange={() => toggleEmployee(row.entryIds)}
-                        />
-                      </td>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className="font-mono font-semibold text-sm">{row.totalMins > 0 ? formatHours(row.totalMins) : "--"}</span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className="text-sm text-muted-foreground">--</span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className="text-sm text-muted-foreground">--</span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="secondary" className="text-[11px] font-normal rounded-full px-3 bg-muted">
+                      {getSubmissionLabel(row)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {getApprovalLabel(row) === "Approved" ? (
+                      <Badge variant="secondary" className="text-[11px] font-normal rounded-full px-3 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        Approved
+                      </Badge>
+                    ) : getApprovalLabel(row) === "Rejected" ? (
+                      <Badge variant="secondary" className="text-[11px] font-normal rounded-full px-3 bg-destructive/10 text-destructive">
+                        Rejected
+                      </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">--</span>
                     )}
-                    <td className={cn(
-                      "px-3 py-2.5 sticky bg-card z-10",
-                      canApprove ? "left-10" : "left-0"
-                    )}>
-                      <div className="flex items-center gap-2.5">
-                        <EmployeeAvatar firstName={row.first_name} lastName={row.last_name} avatarUrl={row.avatar_url} size="md" />
-                        <span className="font-medium text-xs uppercase tracking-wide truncate">{row.first_name} {row.last_name}</span>
-                      </div>
-                    </td>
-                    <td className="text-center px-1 py-2.5">
-                      {row.hasIssues && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mx-auto" />}
-                    </td>
-                    {row.dailyMins.map((mins, i) => (
-                      <td
-                        key={i}
-                        className={`text-center px-2 py-2.5 ${isToday(displayDays[i]) ? "bg-primary/5" : ""}`}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                {canApprove && <TableCell />}
+                <TableCell className="font-semibold text-xs uppercase text-muted-foreground">Totals</TableCell>
+                <TableCell className="text-center">
+                  <span className="font-mono font-bold text-sm text-primary">
+                    {formatHours(rows.reduce((sum, r) => sum + r.totalMins, 0))}
+                  </span>
+                </TableCell>
+                <TableCell className="text-center text-sm text-muted-foreground">--</TableCell>
+                <TableCell className="text-center text-sm text-muted-foreground">--</TableCell>
+                <TableCell />
+                <TableCell />
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {rows.length > 0 && (
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-4">
+            {/* Page numbers */}
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+                .map((p, idx, arr) => {
+                  const prev = arr[idx - 1];
+                  const showEllipsis = prev && p - prev > 1;
+                  return (
+                    <span key={p} className="contents">
+                      {showEllipsis && <span className="text-xs text-muted-foreground px-1">…</span>}
+                      <Button
+                        variant={p === page ? "default" : "ghost"}
+                        size="icon"
+                        className={cn("h-8 w-8 text-xs", p === page && "pointer-events-none")}
+                        onClick={() => setPage(p)}
                       >
-                        {mins > 0 ? (
-                          <span className="inline-flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xs font-mono font-semibold bg-sky-100/80 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
-                            {formatHours(mins)}
-                            {row.dailyHasNotes[i] && (
-                              <FileText className="h-2.5 w-2.5 opacity-60" />
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/30 text-xs">--</span>
-                        )}
-                      </td>
-                    ))}
-                    <td className="text-center px-3 py-2.5">
-                      <span className="font-mono font-bold text-sm">{row.totalMins > 0 ? formatHours(row.totalMins) : "--"}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-muted/20 border-t">
-                  {canApprove && <td className="sticky left-0 bg-muted/20 z-10" />}
-                  <td className={cn(
-                    "px-3 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase sticky bg-muted/20 z-10",
-                    canApprove ? "left-10" : "left-0"
-                  )}>
-                    Totales
-                  </td>
-                  <td />
-                  {displayDays.map((day, i) => {
-                    const dayTotal = rows.reduce((sum, r) => sum + r.dailyMins[i], 0);
-                    return (
-                      <td key={i} className={`text-center px-2 py-2.5 ${isToday(day) ? "bg-primary/5" : ""}`}>
-                        <span className="font-mono font-bold text-xs">{dayTotal > 0 ? formatHours(dayTotal) : "--"}</span>
-                      </td>
-                    );
-                  })}
-                  <td className="text-center px-3 py-2.5">
-                    <span className="font-mono font-bold text-sm text-primary">
-                      {formatHours(rows.reduce((sum, r) => sum + r.totalMins, 0))}
+                        {p}
+                      </Button>
                     </span>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                  );
+                })}
+              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Rows per page:</span>
+            <Select value={String(rowsPerPage)} onValueChange={v => { setRowsPerPage(Number(v)); setPage(1); }}>
+              <SelectTrigger className="h-8 w-[65px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROWS_PER_PAGE_OPTIONS.map(n => (
+                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       )}
