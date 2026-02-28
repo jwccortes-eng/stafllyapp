@@ -5,12 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 import {
   LayoutDashboard, Users, CalendarDays, Upload, Tags, FileSpreadsheet,
-  BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2, Globe,
-  PanelLeftClose, PanelLeft, Smartphone, Moon, Sun, Settings2,
+  BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2,
+  PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
   MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
-  ScanEye, Activity, Star, Inbox,
+  ScanEye, Inbox, Wrench,
 } from "lucide-react";
-import { ListChecks } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
@@ -26,6 +25,7 @@ import {
 } from "@/components/ui/collapsible";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { CommandPaletteTrigger } from "@/components/CommandPalette";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import staflyLogo from "@/assets/stafly-logo.png";
 import staflyIcon from "@/assets/stafly-isotipo.png";
 
@@ -36,75 +36,50 @@ interface LinkDef {
   module: string | null;
   end?: boolean;
   section: string;
-  badge?: string; // key for badge count
+  badge?: string;
 }
 
+/* ── Simplified 3-group structure ── */
 const ALL_LINKS: LinkDef[] = [
+  // Inicio (always visible, no group header)
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
-  // Nómina
+
+  // Operaciones — scheduling, field ops, real-time
+  { to: "/app/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Operaciones" },
+  { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
+  { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
+  { to: "/app/shift-requests", icon: MessageSquare, label: "Solicitudes", module: "shifts", section: "Operaciones", badge: "shift_requests" },
+  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Operaciones" },
+  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Operaciones" },
+
+  // Nómina — payroll, imports, reports
   { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
   { to: "/app/import", icon: Upload, label: "Importar horas", module: "import", section: "Nómina" },
   { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/app/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { to: "/app/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
   { to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
-  // Operaciones
-  { to: "/app/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Operaciones" },
-  { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
-  { to: "/app/import-schedule", icon: Upload, label: "Importar Turnos", module: "shifts", section: "Operaciones" },
-  { to: "/app/import-timeclock", icon: Clock, label: "Importar Reloj", module: "shifts", section: "Operaciones" },
-  { to: "/app/shift-requests", icon: MessageSquare, label: "Solicitudes turno", module: "shifts", section: "Operaciones", badge: "shift_requests" },
-  { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
-  // Gestión
-  { to: "/app/requests", icon: Inbox, label: "Solicitudes", module: null, section: "Gestión", badge: "tickets" },
-  // Equipo
-  { to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Equipo" },
-  { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Equipo" },
-  { to: "/app/invite", icon: Smartphone, label: "Invitar", module: "employees", section: "Equipo" },
-  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Equipo" },
-  // Clientes
-  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Clientes" },
-  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Clientes" },
-  // Comunicación
-  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Comunicación" },
-  { to: "/app/chat", icon: MessageCircle, label: "Chat interno", module: null, section: "Comunicación" },
+
+  // Gestión — people, communication, requests
+  { to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Gestión" },
+  { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Gestión" },
+  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Gestión" },
+  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Gestión" },
+  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
+  { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Gestión", badge: "tickets" },
 ];
 
-const OWNER_LINKS: LinkDef[] = [
-  { to: "/app/global", icon: Globe, label: "Vista global", module: null, section: "Administración" },
-  { to: "/app/companies", icon: Building2, label: "Empresas", module: null, section: "Administración" },
-  { to: "/app/users", icon: Shield, label: "Usuarios", module: null, section: "Administración" },
-  { to: "/app/onboarding", icon: Users, label: "Onboarding", module: null, section: "Administración" },
-  { to: "/app/activity", icon: Activity, label: "Actividad", module: null, section: "Administración" },
-  { to: "/app/company-config", icon: Settings2, label: "Config Empresa", module: null, section: "Administración" },
-  { to: "/app/automations", icon: CalendarDays, label: "Automatizar", module: null, section: "Administración" },
-  { to: "/app/permissions", icon: Shield, label: "Permisos", module: null, section: "Administración" },
-  { to: "/app/monetization", icon: DollarSign, label: "Inversión", module: null, section: "Administración" },
-  { to: "/app/settings", icon: Settings2, label: "Plataforma", module: null, section: "Administración" },
-  { to: "/app/system-health", icon: Activity, label: "Cuadro de control", module: null, section: "Administración" },
-  { to: "/app/implementations", icon: ListChecks, label: "Implementaciones", module: null, section: "Administración" },
-  { to: "/app/leads", icon: Users, label: "Leads", module: null, section: "Administración" },
-];
-
-// Section ordering for consistency
-const SECTION_ORDER = ["Inicio", "Operaciones", "Nómina", "Gestión", "Equipo", "Clientes", "Comunicación", "Administración"];
+const SECTION_ORDER = ["Inicio", "Operaciones", "Nómina", "Gestión"];
 
 export default function AdminSidebar() {
-  const { signOut, role, hasModuleAccess, user } = useAuth();
+  const { signOut, role, hasModuleAccess, user, fullName } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
   const location = useLocation();
   const { collapsed, setCollapsed } = useSidebarCollapsed();
   const { theme, setTheme } = useTheme();
 
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["Operaciones", "Nómina", "Gestión"]));
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
-
-  // Load favorites from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem(`sidebar-favorites-${user?.id}`);
-    if (saved) setFavorites(JSON.parse(saved));
-  }, [user?.id]);
 
   // Fetch badge counts
   useEffect(() => {
@@ -126,14 +101,6 @@ export default function AdminSidebar() {
     return () => clearInterval(interval);
   }, [selectedCompanyId]);
 
-  const toggleFavorite = useCallback((to: string) => {
-    setFavorites(prev => {
-      const next = prev.includes(to) ? prev.filter(f => f !== to) : [...prev, to];
-      localStorage.setItem(`sidebar-favorites-${user?.id}`, JSON.stringify(next));
-      return next;
-    });
-  }, [user?.id]);
-
   const isLinkVisible = (module: string | null) => {
     if (!module) return true;
     if (!isModuleActive(module)) return false;
@@ -147,7 +114,15 @@ export default function AdminSidebar() {
     return location.pathname === to || location.pathname.startsWith(to + "/");
   };
 
-  const roleLabel = role === 'owner' ? 'Dueño' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Usuario';
+  // User identity display
+  const roleLabel = role === 'owner' ? 'Owner' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Usuario';
+  const roleBg = role === 'owner' ? 'bg-primary/10 text-primary' : role === 'admin' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground';
+  const userEmail = user?.email ?? null;
+  const userPhone = user?.phone ?? null;
+  const userIdentifier = userEmail || userPhone || '';
+  const initials = fullName
+    ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : userEmail ? userEmail[0].toUpperCase() : '?';
 
   const visibleSections = useMemo(() => {
     const sectionMap = new Map<string, LinkDef[]>();
@@ -163,21 +138,9 @@ export default function AdminSidebar() {
     return result;
   }, [role, selectedCompanyId]);
 
-  const visibleOwnerLinks = useMemo(() => {
-    if (role !== 'owner') return [];
-    return OWNER_LINKS;
-  }, [role]);
-
-  // Favorite links
-  const favoriteLinks = useMemo(() => {
-    const allLinks = [...ALL_LINKS, ...OWNER_LINKS];
-    return favorites.map(f => allLinks.find(l => l.to === f)).filter(Boolean) as LinkDef[];
-  }, [favorites]);
-
   // Auto-open section with active route
   useEffect(() => {
-    const allSections = [...visibleSections, ...(visibleOwnerLinks.length > 0 ? [{ label: "Administración", links: visibleOwnerLinks }] : [])];
-    const activeSection = allSections.find(s => s.links.some(l => isActive(l.to, l.end)));
+    const activeSection = visibleSections.find(s => s.links.some(l => isActive(l.to, l.end)));
     if (activeSection) {
       setOpenSections(prev => {
         if (prev.has(activeSection.label)) return prev;
@@ -189,6 +152,7 @@ export default function AdminSidebar() {
   }, [location.pathname]);
 
   const toggleSection = (label: string) => {
+    if (label === "Inicio") return; // never collapse
     setOpenSections(prev => {
       const next = new Set(prev);
       if (next.has(label)) next.delete(label);
@@ -197,9 +161,8 @@ export default function AdminSidebar() {
     });
   };
 
-  const renderLink = (link: LinkDef, showFavStar = true) => {
+  const renderLink = (link: LinkDef) => {
     const active = isActive(link.to, link.end);
-    const isFav = favorites.includes(link.to);
     const badge = link.badge ? badgeCounts[link.badge] : 0;
 
     const linkContent = (
@@ -222,7 +185,6 @@ export default function AdminSidebar() {
               "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
               active ? "text-primary" : "text-muted-foreground/50 group-hover/link:text-sidebar-foreground"
             )} />
-            {/* Badge dot on icon when collapsed */}
             {collapsed && badge > 0 && (
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
             )}
@@ -234,17 +196,6 @@ export default function AdminSidebar() {
                 <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive/10 text-destructive text-[10px] font-bold tabular-nums px-1">
                   {badge > 99 ? "99+" : badge}
                 </span>
-              )}
-              {showFavStar && !collapsed && (
-                <button
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); toggleFavorite(link.to); }}
-                  className={cn(
-                    "shrink-0 p-0.5 rounded-md transition-all",
-                    isFav ? "text-warning opacity-100" : "opacity-0 group-hover/link:opacity-60 hover:!opacity-100 text-muted-foreground/40"
-                  )}
-                >
-                  <Star className={cn("h-3 w-3", isFav && "fill-warning")} />
-                </button>
               )}
             </>
           )}
@@ -271,6 +222,15 @@ export default function AdminSidebar() {
   };
 
   const renderSection = (section: { label: string; links: LinkDef[] }) => {
+    // "Inicio" renders flat, no collapsible
+    if (section.label === "Inicio") {
+      return (
+        <div key="Inicio" className="space-y-0.5">
+          {section.links.map(l => renderLink(l))}
+        </div>
+      );
+    }
+
     if (collapsed) {
       return (
         <div key={section.label} className="space-y-0.5">
@@ -285,7 +245,7 @@ export default function AdminSidebar() {
 
     return (
       <Collapsible key={section.label} open={isOpen} onOpenChange={() => toggleSection(section.label)}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer mt-2">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 group-hover/section:text-muted-foreground/60 transition-colors">
             {section.label}
           </span>
@@ -314,20 +274,55 @@ export default function AdminSidebar() {
       "bg-card border-r border-border/40",
       collapsed ? "w-[60px]" : "w-[250px]"
     )}>
-      {/* Header */}
+      {/* ── User identity header ── */}
       <div className={cn(
         "flex items-center shrink-0 border-b border-border/30",
-        collapsed ? "px-2 py-4 justify-center" : "px-4 py-4 gap-3"
+        collapsed ? "px-2 py-3 justify-center" : "px-3 py-3 gap-3"
       )}>
         {collapsed ? (
-          <img src={staflyIcon} alt="stafly" className="h-8 w-8 shrink-0" style={{ imageRendering: "auto" }} />
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <div className="relative">
+                <Avatar className="h-8 w-8 border-2 border-primary/20">
+                  <AvatarFallback className="text-[11px] font-bold bg-primary/8 text-primary">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <span className={cn(
+                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
+                  role === 'owner' ? "bg-primary" : role === 'admin' ? "bg-accent-foreground" : "bg-muted-foreground"
+                )} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="text-xs">
+              <p className="font-semibold">{fullName || 'Usuario'}</p>
+              <p className="text-muted-foreground">{userIdentifier}</p>
+              <p className="mt-1 text-[10px] font-medium">{roleLabel}</p>
+            </TooltipContent>
+          </Tooltip>
         ) : (
           <>
-            <img src={staflyLogo} alt="stafly" className="h-8 w-auto shrink-0" style={{ imageRendering: "auto" }} />
-            <div className="min-w-0 flex-1">
+            <div className="relative shrink-0">
+              <Avatar className="h-9 w-9 border-2 border-primary/20">
+                <AvatarFallback className="text-[11px] font-bold bg-primary/8 text-primary">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
               <span className={cn(
-                "text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md",
-                role === 'owner' ? "bg-primary/8 text-primary" : "bg-muted text-muted-foreground"
+                "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
+                role === 'owner' ? "bg-primary" : role === 'admin' ? "bg-accent-foreground" : "bg-muted-foreground"
+              )} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-foreground truncate leading-tight">
+                {fullName || 'Usuario'}
+              </p>
+              <p className="text-[10px] text-muted-foreground/60 truncate leading-tight mt-0.5">
+                {userIdentifier}
+              </p>
+              <span className={cn(
+                "inline-block mt-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md",
+                roleBg
               )}>
                 {roleLabel}
               </span>
@@ -336,7 +331,7 @@ export default function AdminSidebar() {
         )}
       </div>
 
-      {/* Search trigger */}
+      {/* Search */}
       <div className={cn("shrink-0 border-b border-border/30", collapsed ? "px-2 py-2" : "px-3 py-2")}>
         <CommandPaletteTrigger collapsed={collapsed} />
       </div>
@@ -357,27 +352,30 @@ export default function AdminSidebar() {
         </div>
       )}
 
-      {/* Navigation */}
-      <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto scrollbar-thin">
-        {/* Favorites section */}
-        {favoriteLinks.length > 0 && !collapsed && (
-          <div className="mb-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5">
-              <Star className="h-3 w-3 text-warning fill-warning" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-warning/60">Favoritos</span>
-            </div>
-            <div className="space-y-0.5">
-              {favoriteLinks.map(l => renderLink(l, false))}
-            </div>
-          </div>
-        )}
-
+      {/* ── Navigation ── */}
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
         {visibleSections.map(renderSection)}
-        {visibleOwnerLinks.length > 0 && renderSection({ label: "Administración", links: visibleOwnerLinks })}
+
+        {/* Owner admin hub link */}
+        {role === 'owner' && (
+          <>
+            <div className="border-t border-sidebar-border/30 my-2" />
+            {renderLink({ to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "", end: true })}
+          </>
+        )}
       </nav>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <div className="px-2 py-2.5 border-t border-border/30 space-y-0.5 shrink-0">
+        {/* Brand */}
+        <div className={cn("flex items-center mb-1", collapsed ? "justify-center" : "px-3")}>
+          {collapsed ? (
+            <img src={staflyIcon} alt="stafly" className="h-5 w-5 opacity-40" style={{ imageRendering: "auto" }} />
+          ) : (
+            <img src={staflyLogo} alt="stafly" className="h-5 w-auto opacity-40" style={{ imageRendering: "auto" }} />
+          )}
+        </div>
+
         {/* Theme */}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
