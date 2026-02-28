@@ -42,8 +42,9 @@ serve(async (req) => {
     }
 
     const { data: isOwner } = await anonClient.rpc("is_global_owner", { _user_id: caller.id });
-    if (!isOwner) {
-      return new Response(JSON.stringify({ error: "Solo el Owner puede ejecutar esto" }), {
+    const { data: isAdmin } = await anonClient.rpc("has_role", { _user_id: caller.id, _role: "admin" });
+    if (!isOwner && !isAdmin) {
+      return new Response(JSON.stringify({ error: "Solo Owner o Admin puede ejecutar esto" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
