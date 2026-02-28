@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown, LogIn, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
-import staflyMascotWave from "@/assets/stafly-mascot-wave.png";
+import { StaflyMascot } from "@/components/brand/StaflyMascot";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isBefore, startOfDay, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -447,7 +447,7 @@ export default function MyShifts() {
 
       {assignments.length === 0 && claimable.length === 0 && (
         <div className="text-center py-12 space-y-3">
-          <img src={staflyMascotWave} alt="" className="h-20 w-20 mx-auto opacity-60 drop-shadow-md" />
+          <StaflyMascot variant="wave" size={80} className="mx-auto opacity-60" />
           <div className="space-y-1">
             <p className="text-sm font-semibold text-foreground">Sin turnos asignados</p>
             <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">

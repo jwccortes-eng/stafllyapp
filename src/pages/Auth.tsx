@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
-import mascotChecklist from "@/assets/stafly-mascot-checklist.png";
+import { StaflyMascot } from "@/components/brand/StaflyMascot";
 
 function isPhoneNumber(value: string): boolean {
   const cleaned = value.replace(/[\s\-\(\)\+]/g, "");
@@ -95,14 +95,8 @@ export default function Auth() {
         </div>
 
         <div className="relative z-10 flex flex-col items-center text-center px-16 max-w-md">
-          {/* 3D Mascot — Soft Premium */}
-          <img
-            src={mascotChecklist}
-            alt="stafly mascot"
-            className="h-64 w-auto drop-shadow-xl mb-10 select-none"
-            draggable={false}
-            style={{ imageRendering: "auto" }}
-          />
+          {/* Mascot */}
+          <StaflyMascot variant="checklist" size={200} className="drop-shadow-xl mb-10 select-none" />
 
           <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
             Control semanal de tu equipo, sin estrés.
