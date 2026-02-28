@@ -20,10 +20,8 @@ export interface NavItem {
 /* ── Admin / Manager nav items ── */
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
-  { id: "today", to: "/app/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Operaciones" },
   { id: "shifts", to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
   { id: "timeclock", to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
-  { id: "shift-requests", to: "/app/shift-requests", icon: MessageSquare, label: "Solicitudes", module: "shifts", section: "Operaciones", badge: "shift_requests" },
   { id: "clients", to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Operaciones" },
   { id: "locations", to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Operaciones" },
   { id: "periods", to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
@@ -45,7 +43,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "admin-hub", to: "/app/admin", icon: Wrench, label: "Admin", module: null, section: "Administración", roles: ["owner"] },
 ];
 
-export const ADMIN_DEFAULT_PINS = ["dashboard", "today", "shifts", "employees", "movements"];
+export const ADMIN_DEFAULT_PINS = ["dashboard", "shifts", "employees", "movements"];
 
 /* ── Employee portal nav items ── */
 export const EMPLOYEE_NAV_ITEMS: NavItem[] = [

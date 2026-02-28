@@ -16,8 +16,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Send, Upload } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -731,11 +732,26 @@ export default function Shifts() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          {canEdit && (
-            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => navigate("/app/import-schedule")}>
-              <Upload className="h-3.5 w-3.5 mr-1" /> Importar
-            </Button>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" className="h-8 text-xs">
+                <MoreHorizontal className="h-3.5 w-3.5 mr-1" /> Más
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => navigate("/app/today")}>
+                <ScanEye className="h-4 w-4 mr-2" /> Vista de hoy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/app/shift-requests")}>
+                <MessageSquare className="h-4 w-4 mr-2" /> Solicitudes
+              </DropdownMenuItem>
+              {canEdit && (
+                <DropdownMenuItem onClick={() => navigate("/app/import-schedule")}>
+                  <Upload className="h-4 w-4 mr-2" /> Importar horarios
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {canEdit && (
             <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild>
