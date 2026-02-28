@@ -112,6 +112,7 @@ export default function ImportSchedule() {
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
   const [deletePasswordOpen, setDeletePasswordOpen] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
 
   // Filter dates if the range is large
   const [filterFrom, setFilterFrom] = useState("");
@@ -242,9 +243,11 @@ export default function ImportSchedule() {
     if (!selectedCompanyId || filteredGroups.length === 0) return;
     setImporting(true);
     setResult(null);
+    setImportProgress({ current: 0, total: filteredGroups.length, phase: "Preparando..." });
 
     try {
       // Fetch employees and clients for matching
+      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Cargando maestros..." });
       const [{ data: employees }, { data: clients }] = await Promise.all([
         supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId),
         supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
@@ -252,14 +255,12 @@ export default function ImportSchedule() {
       const empList = employees ?? [];
       const clientList = clients ?? [];
 
-      // Build name→employee map (case-insensitive full name)
       const empMap = new Map<string, string>();
       empList.forEach(e => {
         empMap.set(`${e.first_name} ${e.last_name}`.toLowerCase(), e.id);
       });
 
-      // Build client name map - fuzzy match on the name part (e.g., "02 - ELY PRODUCCION" → match "ELY PRODUCCION")
-      const clientMap = new Map<string, string>(); // normalized name → id
+      const clientMap = new Map<string, string>();
       clientList.forEach(c => clientMap.set(c.name.toLowerCase(), c.id));
 
       const matchClient = (jobName: string): string | null => {
@@ -274,6 +275,7 @@ export default function ImportSchedule() {
       };
 
       // ── Auto-create unmatched clients ──
+      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Creando clientes nuevos..." });
       const allJobNames = new Set(filteredGroups.map(g => g.job).filter(Boolean));
       let createdClients = 0;
       for (const jobName of allJobNames) {
@@ -292,13 +294,13 @@ export default function ImportSchedule() {
       }
 
       // ── Auto-create unmatched employees ──
+      setImportProgress({ current: 0, total: filteredGroups.length, phase: "Creando empleados nuevos..." });
       const allEmpNames = new Set(filteredGroups.flatMap(g => g.employees));
       let createdEmployees = 0;
       for (const empName of allEmpNames) {
         if (empMap.has(empName.toLowerCase())) continue;
         const parsed = parseName(empName);
         if (!parsed) continue;
-        // Skip system/placeholder users like "SYSTEM 1"
         if (/^system\s/i.test(empName)) continue;
         const { data: newEmp } = await supabase.from("employees").insert({
           company_id: selectedCompanyId,
@@ -319,70 +321,108 @@ export default function ImportSchedule() {
       let matchedClients = 0;
       let unmatchedClientsSet = new Set<string>();
 
-      for (const group of filteredGroups) {
-        const clientId = matchClient(group.job);
-        if (clientId) matchedClients++;
-        else if (group.job) unmatchedClientsSet.add(group.job);
+      // ── Process shifts in batches of 10 ──
+      const BATCH_SIZE = 10;
+      for (let batchStart = 0; batchStart < filteredGroups.length; batchStart += BATCH_SIZE) {
+        const batch = filteredGroups.slice(batchStart, batchStart + BATCH_SIZE);
 
-        // Build title: "[shiftCode] Job - SubItem" or just job name
-        let title = "";
-        if (group.shiftCode) title += `#${group.shiftCode.padStart(4, "0")} `;
-        if (group.job) title += group.job;
-        if (group.subItem) title += ` - ${group.subItem}`;
-        if (!title.trim()) title = "Turno importado";
+        setImportProgress({
+          current: Math.min(batchStart + BATCH_SIZE, filteredGroups.length),
+          total: filteredGroups.length,
+          phase: `Importando turnos ${batchStart + 1}-${Math.min(batchStart + BATCH_SIZE, filteredGroups.length)}...`,
+        });
 
-        // Insert scheduled_shift
-        const { data: shift, error: shiftErr } = await supabase.from("scheduled_shifts").insert({
-          company_id: selectedCompanyId,
-          title: title.trim(),
-          date: group.date,
-          start_time: group.startTime,
-          end_time: group.endTime,
-          client_id: clientId,
-          notes: group.note || null,
-          meeting_point: group.address || null,
-          shift_code: group.shiftCode || null,
-          status: "open",
-          slots: group.employees.length || 1,
-          claimable: false,
-        }).select("id").single();
+        // Insert all shifts in this batch at once
+        const shiftPayloads = batch.map(group => {
+          const clientId = matchClient(group.job);
+          if (clientId) matchedClients++;
+          else if (group.job) unmatchedClientsSet.add(group.job);
 
-        if (shiftErr || !shift) {
-          console.error("Shift insert error:", shiftErr);
+          let title = "";
+          if (group.shiftCode) title += `#${group.shiftCode.padStart(4, "0")} `;
+          if (group.job) title += group.job;
+          if (group.subItem) title += ` - ${group.subItem}`;
+          if (!title.trim()) title = "Turno importado";
+
+          return {
+            company_id: selectedCompanyId,
+            title: title.trim(),
+            date: group.date,
+            start_time: group.startTime,
+            end_time: group.endTime,
+            client_id: clientId,
+            notes: group.note || null,
+            meeting_point: group.address || null,
+            shift_code: group.shiftCode || null,
+            status: "open",
+            slots: group.employees.length || 1,
+            claimable: false,
+          };
+        });
+
+        const { data: insertedShifts, error: shiftErr } = await supabase
+          .from("scheduled_shifts")
+          .insert(shiftPayloads)
+          .select("id");
+
+        if (shiftErr || !insertedShifts) {
+          console.error("Batch shift insert error:", shiftErr);
           continue;
         }
 
-        totalShifts++;
+        totalShifts += insertedShifts.length;
 
-        // Create assignments for each employee
-        for (const empName of group.employees) {
-          const empId = empMap.get(empName.toLowerCase());
-          if (!empId) {
-            unmatchedEmployeesSet.add(empName);
-            continue;
-          }
-          matchedEmployees++;
+        // Create assignments for each shift in the batch
+        const assignmentPayloads: any[] = [];
+        for (let i = 0; i < batch.length; i++) {
+          const group = batch[i];
+          const shift = insertedShifts[i];
+          if (!shift) continue;
 
-          const statusMap: Record<string, string> = { accept: "accepted", decline: "rejected" };
-          const assignStatus = statusMap[group.status?.toLowerCase()] ?? "accepted";
-
-          // Use try-catch per assignment to skip overlapping shifts
-          try {
-            await supabase.from("shift_assignments").insert({
+          for (const empName of group.employees) {
+            const empId = empMap.get(empName.toLowerCase());
+            if (!empId) {
+              unmatchedEmployeesSet.add(empName);
+              continue;
+            }
+            matchedEmployees++;
+            const statusMap: Record<string, string> = { accept: "accepted", decline: "rejected" };
+            const assignStatus = statusMap[group.status?.toLowerCase()] ?? "accepted";
+            assignmentPayloads.push({
               company_id: selectedCompanyId,
               shift_id: shift.id,
               employee_id: empId,
               status: assignStatus,
             });
-            totalAssignments++;
-          } catch (assignErr: any) {
-            // Overlap error from trigger — skip silently
-            console.warn("Assignment skipped (overlap?):", empName, assignErr?.message);
           }
         }
+
+        // Insert assignments in sub-batches to handle overlap errors gracefully
+        if (assignmentPayloads.length > 0) {
+          const { data: assignResult, error: assignErr } = await supabase
+            .from("shift_assignments")
+            .insert(assignmentPayloads)
+            .select("id");
+
+          if (assignErr) {
+            // If batch fails (overlap trigger), fall back to one-by-one
+            for (const payload of assignmentPayloads) {
+              try {
+                const { error } = await supabase.from("shift_assignments").insert(payload);
+                if (!error) totalAssignments++;
+              } catch { /* skip overlap */ }
+            }
+          } else {
+            totalAssignments += assignResult?.length ?? 0;
+          }
+        }
+
+        // Yield to UI thread
+        await new Promise(resolve => setTimeout(resolve, 30));
       }
 
       // Handle unavailability records
+      setImportProgress({ current: filteredGroups.length, total: filteredGroups.length, phase: "Procesando indisponibilidades..." });
       let totalUnavailable = 0;
       const filteredUnavail = unavailableRecords.filter(u => {
         if (filterFrom && u.date < filterFrom) return false;
@@ -390,23 +430,33 @@ export default function ImportSchedule() {
         return true;
       });
 
+      // Batch unavailability inserts
+      const unavailPayloads: any[] = [];
       for (const u of filteredUnavail) {
         const name = parseName(u.name);
         if (!name) continue;
         const empId = empMap.get(`${name.first} ${name.last}`.toLowerCase());
         if (!empId) continue;
+        unavailPayloads.push({
+          employee_id: empId,
+          company_id: selectedCompanyId,
+          date: u.date,
+          is_available: false,
+          reason: "Importado desde Connecteam (Schedule)",
+          source: "import",
+        });
+      }
 
-        try {
-          await supabase.from("employee_availability_overrides").upsert({
-            employee_id: empId,
-            company_id: selectedCompanyId,
-            date: u.date,
-            is_available: false,
-            reason: "Importado desde Connecteam (Schedule)",
-            source: "import",
-          } as any, { onConflict: "employee_id,date" });
-          totalUnavailable++;
-        } catch { /* skip */ }
+      if (unavailPayloads.length > 0) {
+        for (let i = 0; i < unavailPayloads.length; i += 50) {
+          const batch = unavailPayloads.slice(i, i + 50);
+          try {
+            const { data } = await supabase.from("employee_availability_overrides")
+              .upsert(batch as any, { onConflict: "employee_id,date" })
+              .select("id");
+            totalUnavailable += data?.length ?? batch.length;
+          } catch { /* skip */ }
+        }
       }
 
       const summaryData: ImportSummary = {
@@ -439,6 +489,7 @@ export default function ImportSchedule() {
     }
 
     setImporting(false);
+    setImportProgress(null);
   };
 
   return (
@@ -624,6 +675,22 @@ export default function ImportSchedule() {
               {importing ? "Importando…" : `Importar ${filteredGroups.length} turnos`}
             </Button>
           </div>
+
+          {/* Progress bar */}
+          {importProgress && (
+            <Card className="p-4 space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{importProgress.phase}</span>
+                <span className="tabular-nums">{importProgress.current} / {importProgress.total}</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${importProgress.total > 0 ? Math.round((importProgress.current / importProgress.total) * 100) : 0}%` }}
+                />
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
