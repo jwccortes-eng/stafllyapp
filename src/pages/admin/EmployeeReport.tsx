@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search, Download, CalendarIcon, X } from "lucide-react";
+import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search, Download, CalendarIcon, X, FileText } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Employee {
   id: string;
@@ -169,6 +171,93 @@ export default function EmployeeReport() {
     URL.revokeObjectURL(url);
   };
 
+  const exportPDF = () => {
+    if (!selectedEmp || filteredPeriods.length === 0) return;
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
+    const empName = `${selectedEmp.first_name} ${selectedEmp.last_name}`;
+    const rangeLabel = dateFrom && dateTo
+      ? `${format(dateFrom, "dd/MM/yyyy")} – ${format(dateTo, "dd/MM/yyyy")}`
+      : "Todos los periodos";
+
+    // Header
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Resumen por Empleado", 14, 18);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(`Empleado: ${empName}`, 14, 26);
+    doc.text(`Rango: ${rangeLabel}`, 14, 32);
+    doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 38);
+
+    // KPI boxes
+    const kpiY = 44;
+    const kpiW = 60;
+    const kpiH = 18;
+    const kpis = [
+      { label: "Base Total", value: `$${totalBase.toFixed(2)}`, color: [59, 130, 246] as [number, number, number] },
+      { label: "Extras", value: `+$${totalExtras.toFixed(2)}`, color: [34, 197, 94] as [number, number, number] },
+      { label: "Deducciones", value: `-$${totalDeductions.toFixed(2)}`, color: [239, 68, 68] as [number, number, number] },
+      { label: "Total Final", value: `$${totalFinal.toFixed(2)}`, color: [99, 102, 241] as [number, number, number] },
+    ];
+    kpis.forEach((k, i) => {
+      const x = 14 + i * (kpiW + 6);
+      doc.setFillColor(k.color[0], k.color[1], k.color[2]);
+      doc.roundedRect(x, kpiY, kpiW, kpiH, 2, 2, "F");
+      doc.setTextColor(255);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(k.label, x + 4, kpiY + 6);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text(k.value, x + 4, kpiY + 14);
+    });
+
+    // Table
+    doc.setTextColor(0);
+    autoTable(doc, {
+      startY: kpiY + kpiH + 8,
+      head: [["Semana", "Estado", "Base", "Extras", "Deducciones", "Total"]],
+      body: [
+        ...filteredPeriods.map(p => [
+          `${p.start_date} → ${p.end_date}`,
+          p.status === "open" ? "Abierto" : "Cerrado",
+          `$${p.base_total_pay.toFixed(2)}`,
+          `+$${p.extras_total.toFixed(2)}`,
+          `-$${p.deductions_total.toFixed(2)}`,
+          `$${p.total_final_pay.toFixed(2)}`,
+        ]),
+        [
+          { content: "TOTALES", colSpan: 2, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+          { content: `$${totalBase.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+          { content: `+$${totalExtras.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+          { content: `-$${totalDeductions.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+          { content: `$${totalFinal.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+        ],
+      ],
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [51, 51, 51], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [248, 248, 248] },
+      columnStyles: {
+        2: { halign: "right" },
+        3: { halign: "right", textColor: [34, 150, 70] },
+        4: { halign: "right", textColor: [200, 50, 50] },
+        5: { halign: "right", fontStyle: "bold" },
+      },
+    });
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`${filteredPeriods.length} periodos · Página ${i} de ${pageCount}`, 14, doc.internal.pageSize.height - 8);
+    }
+
+    doc.save(`reporte_${selectedEmp.first_name}_${selectedEmp.last_name}.pdf`);
+  };
+
   const clearDates = () => {
     setDateFrom(undefined);
     setDateTo(undefined);
@@ -283,9 +372,14 @@ export default function EmployeeReport() {
         )}
 
         {selectedEmployee && filteredPeriods.length > 0 && (
-          <Button variant="outline" size="sm" onClick={exportCSV}>
-            <Download className="h-4 w-4 mr-1" /> Exportar CSV
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={exportPDF}>
+              <FileText className="h-4 w-4 mr-1" /> Descargar PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-1" /> Exportar CSV
+            </Button>
+          </>
         )}
       </div>
 
