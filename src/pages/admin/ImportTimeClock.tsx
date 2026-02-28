@@ -46,21 +46,43 @@ interface ImportSummary {
 }
 
 /**
- * Parse "01/31/2026 Sat" + "08:00 AM" → Date
+ * Parse clock date from various formats:
+ * - ExcelJS Date stringified: "Sun Feb 08 2026 19:00:00 GMT-0500 (...)"
+ * - Original: "01/31/2026 Sat"
+ * - ISO strings
+ */
+function parseClockDate(dateVal: string): Date | null {
+  if (!dateVal?.trim()) return null;
+  const trimmed = dateVal.trim();
+
+  // Try MM/DD/YYYY format first
+  const parts = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (parts) {
+    return new Date(parseInt(parts[3], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  }
+
+  // Try JS Date.toString() or ISO format (ExcelJS outputs these)
+  const jsDate = new Date(trimmed);
+  if (!isNaN(jsDate.getTime())) {
+    return jsDate;
+  }
+
+  return null;
+}
+
+/**
+ * Combine a date value with a separate time string like "08:00 AM"
  */
 function parseClockTimestamp(dateStr: string, timeStr: string): Date | null {
-  if (!dateStr || !timeStr) return null;
-  // Extract the date part: "01/31/2026"
-  const dateParts = dateStr.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (!dateParts) return null;
+  const baseDate = parseClockDate(dateStr);
+  if (!baseDate) return null;
 
-  const month = parseInt(dateParts[1], 10);
-  const day = parseInt(dateParts[2], 10);
-  const year = parseInt(dateParts[3], 10);
+  // If no time string, use the date as-is (ExcelJS may embed time in the date)
+  if (!timeStr?.trim()) return baseDate;
 
   // Parse time: "08:00 AM"
   const timeParts = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!timeParts) return null;
+  if (!timeParts) return baseDate;
 
   let hours = parseInt(timeParts[1], 10);
   const minutes = parseInt(timeParts[2], 10);
@@ -69,7 +91,7 @@ function parseClockTimestamp(dateStr: string, timeStr: string): Date | null {
   if (ampm === "PM" && hours < 12) hours += 12;
   if (ampm === "AM" && hours === 12) hours = 0;
 
-  return new Date(year, month - 1, day, hours, minutes, 0);
+  return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes, 0);
 }
 
 /**
@@ -180,14 +202,6 @@ export default function ImportTimeClock() {
     const ws = getSheet(wb, sheetName);
     if (!ws) return;
     const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
-    console.log("[TimeClock Import] Total JSON rows:", json.length);
-    if (json.length > 0) {
-      console.log("[TimeClock Import] Column headers:", Object.keys(json[0]));
-      console.log("[TimeClock Import] First row sample:", JSON.stringify(json[0]).slice(0, 1000));
-      if (json.length > 1) {
-        console.log("[TimeClock Import] Second row sample:", JSON.stringify(json[1]).slice(0, 1000));
-      }
-    }
     if (json.length === 0) return;
 
     const parsed: ClockEntry[] = [];
@@ -205,12 +219,6 @@ export default function ImportTimeClock() {
       // The clock columns come after "Sub-job code"
       const startDateKey = findClockDateKey(row, "Start Date", true);
       const endDateKey = findClockDateKey(row, "End Date", true);
-      
-      if (parsed.length === 0) {
-        console.log("[TimeClock Import] startDateKey:", startDateKey, "value:", row[startDateKey]);
-        console.log("[TimeClock Import] endDateKey:", endDateKey, "value:", row[endDateKey]);
-        console.log("[TimeClock Import] In:", row["In"], "Out:", row["Out"]);
-      }
 
       const startDateRaw = row[startDateKey] ?? "";
       const inRaw = (row["In"] ?? "").trim();
