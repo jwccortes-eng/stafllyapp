@@ -417,6 +417,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          invite_code: string
           is_active: boolean
           is_sandbox: boolean
           name: string
@@ -426,6 +427,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          invite_code: string
           is_active?: boolean
           is_sandbox?: boolean
           name: string
@@ -435,6 +437,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          invite_code?: string
           is_active?: boolean
           is_sandbox?: boolean
           name?: string
