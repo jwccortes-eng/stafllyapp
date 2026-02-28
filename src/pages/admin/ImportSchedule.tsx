@@ -259,18 +259,58 @@ export default function ImportSchedule() {
       });
 
       // Build client name map - fuzzy match on the name part (e.g., "02 - ELY PRODUCCION" → match "ELY PRODUCCION")
+      const clientMap = new Map<string, string>(); // normalized name → id
+      clientList.forEach(c => clientMap.set(c.name.toLowerCase(), c.id));
+
       const matchClient = (jobName: string): string | null => {
         if (!jobName) return null;
         const jobLower = jobName.toLowerCase();
-        // Direct match
-        const direct = clientList.find(c => c.name.toLowerCase() === jobLower);
-        if (direct) return direct.id;
-        // Strip leading number prefix like "02 - "
+        if (clientMap.has(jobLower)) return clientMap.get(jobLower)!;
         const stripped = jobName.replace(/^\d+\s*[-–]\s*/, "").trim().toLowerCase();
-        const fuzzy = clientList.find(c => c.name.toLowerCase() === stripped || stripped.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(stripped));
-        if (fuzzy) return fuzzy.id;
+        for (const [key, id] of clientMap.entries()) {
+          if (key === stripped || stripped.includes(key) || key.includes(stripped)) return id;
+        }
         return null;
       };
+
+      // ── Auto-create unmatched clients ──
+      const allJobNames = new Set(filteredGroups.map(g => g.job).filter(Boolean));
+      let createdClients = 0;
+      for (const jobName of allJobNames) {
+        if (matchClient(jobName)) continue;
+        const cleanName = jobName.replace(/^\d+\s*[-–]\s*/, "").trim() || jobName;
+        const { data: newClient } = await supabase.from("clients").insert({
+          company_id: selectedCompanyId,
+          name: cleanName,
+          notes: `Creado automáticamente desde importación de Connecteam (original: "${jobName}")`,
+        } as any).select("id, name").single();
+        if (newClient) {
+          clientMap.set(cleanName.toLowerCase(), newClient.id);
+          clientMap.set(jobName.toLowerCase(), newClient.id);
+          createdClients++;
+        }
+      }
+
+      // ── Auto-create unmatched employees ──
+      const allEmpNames = new Set(filteredGroups.flatMap(g => g.employees));
+      let createdEmployees = 0;
+      for (const empName of allEmpNames) {
+        if (empMap.has(empName.toLowerCase())) continue;
+        const parsed = parseName(empName);
+        if (!parsed) continue;
+        // Skip system/placeholder users like "SYSTEM 1"
+        if (/^system\s/i.test(empName)) continue;
+        const { data: newEmp } = await supabase.from("employees").insert({
+          company_id: selectedCompanyId,
+          first_name: parsed.first,
+          last_name: parsed.last,
+          is_active: true,
+        } as any).select("id").single();
+        if (newEmp) {
+          empMap.set(empName.toLowerCase(), newEmp.id);
+          createdEmployees++;
+        }
+      }
 
       let totalShifts = 0;
       let totalAssignments = 0;
@@ -380,6 +420,9 @@ export default function ImportSchedule() {
       };
       setSummary(summaryData);
 
+      const createdMsg = (createdClients + createdEmployees) > 0
+        ? ` · ${createdClients} clientes y ${createdEmployees} empleados creados`
+        : "";
       const unmatchedMsg = summaryData.unmatchedEmployees.length > 0
         ? ` · ${summaryData.unmatchedEmployees.length} empleados no encontrados`
         : "";
@@ -387,7 +430,7 @@ export default function ImportSchedule() {
 
       setResult({
         success: true,
-        message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${unmatchedMsg}${unavailMsg}.`,
+        message: `Importación completada: ${totalShifts} turnos, ${totalAssignments} asignaciones${createdMsg}${unmatchedMsg}${unavailMsg}.`,
       });
       setStep(4);
     } catch (err: any) {
