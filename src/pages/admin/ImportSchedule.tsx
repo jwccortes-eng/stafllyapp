@@ -43,6 +43,7 @@ interface ShiftGroup {
   tags: string;
   status: string;
   employees: string[];   // User names assigned
+  employeeStatuses: string[]; // Per-employee "Last Status" from Excel
 }
 
 interface ImportSummary {
@@ -193,9 +194,10 @@ export default function ImportSchedule() {
       const endTime = parseTime(endRaw);
       if (!startTime || !endTime) continue;
 
-      // Group key: same shift code + date + times + job
-      // Skip PAY RIDE and similar payroll-only "shifts"
-      const isPayrollConcept = /pay\s*ride|pagar\s*\d|tip\s*pool/i.test(shiftTitle) || /pay\s*ride|pagar\s*\d|tip\s*pool/i.test(job);
+      // Skip PAY RIDE and similar payroll-only "shifts" (broader filter)
+      const combined = `${shiftTitle} ${job} ${(row["Sub item"] ?? "")}`.toLowerCase();
+      const isPayrollConcept = /pay\s*ride|pagar|tip\s*pool|1\/2\s*ride|x\s*hour.*pay/i.test(combined)
+        || /^99\s*[-–]/.test(job.trim());
       if (isPayrollConcept) continue;
 
       const groupKey = `${shiftTitle}|${isoDate}|${startTime}|${endTime}|${job}`;
@@ -214,11 +216,13 @@ export default function ImportSchedule() {
           tags: (row["Shift tags"] ?? "").trim(),
           status: (row["Last Status"] ?? "").trim(),
           employees: [],
+          employeeStatuses: [],
         };
       }
 
       if (userName && !groups[groupKey].employees.includes(userName)) {
         groups[groupKey].employees.push(userName);
+        groups[groupKey].employeeStatuses.push((row["Last Status"] ?? "").trim());
       }
     }
 
@@ -255,6 +259,23 @@ export default function ImportSchedule() {
     setImportProgress({ current: 0, total: filteredGroups.length, phase: "Preparando..." });
 
     try {
+      // ── Check for duplicate file upload using company_settings ──
+      if (file) {
+        const { data: setting } = await supabase
+          .from("company_settings")
+          .select("value")
+          .eq("company_id", selectedCompanyId)
+          .eq("key", "imported_schedule_files")
+          .single();
+        const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
+        if (importedFiles.includes(file.name)) {
+          setResult({ success: false, message: `El archivo "${file.name}" ya fue importado anteriormente. Usa un archivo diferente o elimina la importación anterior.` });
+          setImporting(false);
+          setImportProgress(null);
+          return;
+        }
+      }
+
       // Fetch employees and clients for matching
       setImportProgress({ current: 0, total: filteredGroups.length, phase: "Cargando maestros..." });
       const [{ data: employees }, { data: clients }] = await Promise.all([
@@ -330,20 +351,21 @@ export default function ImportSchedule() {
       let matchedClients = 0;
       let unmatchedClientsSet = new Set<string>();
 
-      // ── Process shifts in batches of 10 ──
-      // ── Fetch existing shifts for deduplication ──
+      // ── Fetch existing shifts for deduplication (composite key) ──
       setImportProgress({ current: 0, total: filteredGroups.length, phase: "Verificando duplicados..." });
-      const existingShiftCodes = new Set<string>();
+      const existingShiftKeys = new Set<string>();
       {
         const { data: existingShifts } = await supabase
           .from("scheduled_shifts")
-          .select("shift_code, date")
+          .select("shift_code, date, start_time, end_time, client_id")
           .eq("company_id", selectedCompanyId)
           .is("deleted_at", null)
           .gte("date", filterFrom || "1900-01-01")
           .lte("date", filterTo || "2100-12-31");
         (existingShifts ?? []).forEach(s => {
-          if (s.shift_code) existingShiftCodes.add(`${s.shift_code}|${s.date}`);
+          // Composite key: code|date|start|end
+          const key = `${s.shift_code || ""}|${s.date}|${s.start_time?.slice(0,5)}|${s.end_time?.slice(0,5)}`;
+          existingShiftKeys.add(key);
         });
       }
 
@@ -362,8 +384,9 @@ export default function ImportSchedule() {
         const newBatch: typeof batch = [];
         const shiftPayloads: any[] = [];
         for (const group of batch) {
-          const dedupKey = group.shiftCode ? `${group.shiftCode}|${group.date}` : null;
-          if (dedupKey && existingShiftCodes.has(dedupKey)) {
+          // Composite dedup key: code|date|start|end
+          const dedupKey = `${group.shiftCode || ""}|${group.date}|${group.startTime}|${group.endTime}`;
+          if (existingShiftKeys.has(dedupKey)) {
             skippedDuplicates++;
             continue;
           }
@@ -372,15 +395,38 @@ export default function ImportSchedule() {
           if (clientId) matchedClients++;
           else if (group.job) unmatchedClientsSet.add(group.job);
 
+          // Clean shift code: extract only the leading numeric part
+          const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : null;
+
           let title = "";
-          if (group.shiftCode) title += `#${group.shiftCode.padStart(4, "0")} `;
-          if (group.job) title += group.job;
+          if (numericCode) title += `#${numericCode.padStart(4, "0")} `;
+          if (group.job) {
+            const cleanJob = group.job.replace(/^\d+\s*[-–]\s*/, "").trim();
+            title += cleanJob;
+          }
           if (group.subItem) title += ` - ${group.subItem}`;
           if (!title.trim()) title = "Turno importado";
 
           // Auto-detect daily pay type for weekend jobs
           const titleLower = title.toLowerCase();
           const isWeekendJob = /weekend\s*j[oa]b/i.test(group.subItem) || /weekend\s*j[oa]b/i.test(group.job) || /weekend\s*j[oa]b/i.test(titleLower);
+
+          // Count real employees (exclude SYSTEM users)
+          const realEmployees = group.employees.filter(e => !/^system\s/i.test(e));
+
+          // Map shift status from employee statuses
+          // If all employees accepted → confirmed, if mixed → open, if none → open
+          const empStatuses = group.employeeStatuses || [];
+          let shiftStatus = "open";
+          if (realEmployees.length > 0) {
+            const allAccepted = empStatuses.every(s => s.toLowerCase() === "accept");
+            const anyDeclined = empStatuses.some(s => s.toLowerCase() === "decline");
+            if (allAccepted && empStatuses.length === realEmployees.length) {
+              shiftStatus = "confirmed";
+            } else if (anyDeclined && empStatuses.filter(s => s.toLowerCase() === "accept").length === 0) {
+              shiftStatus = "cancelled";
+            }
+          }
 
           shiftPayloads.push({
             company_id: selectedCompanyId,
@@ -391,14 +437,14 @@ export default function ImportSchedule() {
             client_id: clientId,
             notes: group.note || null,
             meeting_point: group.address || null,
-            shift_code: group.shiftCode || null,
-            status: "open",
-            slots: group.employees.length || 1,
+            shift_code: numericCode || null,
+            status: shiftStatus,
+            slots: realEmployees.length || 1,
             claimable: false,
             pay_type: isWeekendJob ? "daily" : "hourly",
           });
           newBatch.push(group);
-          if (dedupKey) existingShiftCodes.add(dedupKey);
+          existingShiftKeys.add(dedupKey);
         }
 
         if (shiftPayloads.length === 0) continue;
@@ -521,6 +567,27 @@ export default function ImportSchedule() {
         : "";
       const unavailMsg = totalUnavailable > 0 ? ` · ${totalUnavailable} indisponibilidades` : "";
       const dupMsg = skippedDuplicates > 0 ? ` · ${skippedDuplicates} duplicados omitidos` : "";
+
+      // ── Record this import to prevent duplicate file uploads ──
+      if (file) {
+        const { data: existingSetting } = await supabase
+          .from("company_settings")
+          .select("id, value")
+          .eq("company_id", selectedCompanyId)
+          .eq("key", "imported_schedule_files")
+          .single();
+        const prevFiles: string[] = existingSetting?.value ? (Array.isArray(existingSetting.value) ? existingSetting.value as string[] : []) : [];
+        const newFiles = [...prevFiles, file.name];
+        if (existingSetting) {
+          await supabase.from("company_settings").update({ value: newFiles as any }).eq("id", existingSetting.id);
+        } else {
+          await supabase.from("company_settings").insert({
+            company_id: selectedCompanyId,
+            key: "imported_schedule_files",
+            value: newFiles as any,
+          } as any);
+        }
+      }
 
       setResult({
         success: true,
@@ -674,15 +741,16 @@ export default function ImportSchedule() {
             <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Código</TableHead>
-                    <TableHead className="text-xs">Fecha</TableHead>
-                    <TableHead className="text-xs">Horario</TableHead>
-                    <TableHead className="text-xs">Cliente (Job)</TableHead>
-                    <TableHead className="text-xs">Tipo</TableHead>
-                    <TableHead className="text-xs">Empleados</TableHead>
-                    <TableHead className="text-xs">Dirección</TableHead>
-                  </TableRow>
+                   <TableRow>
+                     <TableHead className="text-xs">Código</TableHead>
+                     <TableHead className="text-xs">Fecha</TableHead>
+                     <TableHead className="text-xs">Horario</TableHead>
+                     <TableHead className="text-xs">Cliente (Job)</TableHead>
+                     <TableHead className="text-xs">Tipo</TableHead>
+                     <TableHead className="text-xs">Estado</TableHead>
+                     <TableHead className="text-xs">Empleados</TableHead>
+                     <TableHead className="text-xs">Dirección</TableHead>
+                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredGroups.slice(0, 20).map((g, i) => (
@@ -692,6 +760,11 @@ export default function ImportSchedule() {
                       <TableCell className="text-xs">{g.startTime} - {g.endTime}</TableCell>
                       <TableCell className="text-xs font-medium">{g.job || "—"}</TableCell>
                       <TableCell className="text-xs">{g.subItem || "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        <Badge variant={g.employeeStatuses.some(s => s.toLowerCase() === "accept") ? "default" : "outline"} className="text-[10px]">
+                          {g.employeeStatuses[0] || "—"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-xs">
                         <div className="flex flex-wrap gap-1">
                           {g.employees.slice(0, 3).map((e, j) => (
