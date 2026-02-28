@@ -87,12 +87,17 @@ function parseDate(raw: string): string | null {
 /**
  * Parse "Users" column → name (may have multiple users on same row, but Connecteam usually has one per row)
  */
+/** Convert "JOHN DOE" or "john doe" to "John Doe" */
+function toTitleCase(s: string): string {
+  return s.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function parseName(raw: string): { first: string; last: string } | null {
   const trimmed = raw?.trim();
   if (!trimmed) return null;
   const parts = trimmed.split(/\s+/);
-  if (parts.length < 2) return { first: parts[0], last: "" };
-  return { first: parts[0], last: parts.slice(1).join(" ") };
+  if (parts.length < 2) return { first: toTitleCase(parts[0]), last: "" };
+  return { first: toTitleCase(parts[0]), last: toTitleCase(parts.slice(1).join(" ")) };
 }
 
 export default function ImportSchedule() {
