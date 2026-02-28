@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarDays, Upload, DollarSign, FileSpreadsheet,
   BarChart3, Users, Tags, ContactRound, Building2,
   Clock, MapPin, Megaphone, MessageCircle, ScanEye, Inbox,
-  MessageSquare, Settings2, Home, User, Wrench, UserPlus,
+  MessageSquare, Settings2, Home, User, Wrench, UserPlus, FileText,
 } from "lucide-react";
 
 export interface NavItem {
@@ -32,6 +32,8 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "summary", to: "/app/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { id: "reports", to: "/app/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
   { id: "payroll-settings", to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
+  { id: "w9", to: "/app/w9", icon: FileText, label: "W-9", module: "employees", section: "Fiscal" },
+  { id: "1099", to: "/app/1099", icon: FileText, label: "1099-NEC", module: "employees", section: "Fiscal" },
   { id: "employees", to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Gestión" },
   { id: "directory", to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Gestión" },
   { id: "concepts", to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Gestión" },

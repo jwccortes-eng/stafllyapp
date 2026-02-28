@@ -647,6 +647,103 @@ export type Database = {
           },
         ]
       }
+      contractor_w9: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          business_name: string | null
+          city: string | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          legal_name: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          signed_at: string | null
+          signed_by: string | null
+          state: string | null
+          status: string
+          submitted_at: string | null
+          tax_classification: string
+          tin_encrypted: string | null
+          tin_last4: string | null
+          updated_at: string
+          w9_file_url: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          business_name?: string | null
+          city?: string | null
+          company_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          legal_name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          state?: string | null
+          status?: string
+          submitted_at?: string | null
+          tax_classification?: string
+          tin_encrypted?: string | null
+          tin_last4?: string | null
+          updated_at?: string
+          w9_file_url?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          business_name?: string | null
+          city?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          legal_name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          state?: string | null
+          status?: string
+          submitted_at?: string | null
+          tax_classification?: string
+          tin_encrypted?: string | null
+          tin_last4?: string | null
+          updated_at?: string
+          w9_file_url?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_w9_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_w9_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_w9_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_members: {
         Row: {
           company_id: string
@@ -2381,6 +2478,73 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_forms_1099: {
+        Row: {
+          company_id: string
+          created_at: string
+          employee_id: string
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          nonemployee_compensation: number
+          pdf_url: string | null
+          status: string
+          tax_year: number
+          total_compensation: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          employee_id: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          nonemployee_compensation?: number
+          pdf_url?: string | null
+          status?: string
+          tax_year: number
+          total_compensation?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          nonemployee_compensation?: number
+          pdf_url?: string | null
+          status?: string
+          tax_year?: number
+          total_compensation?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_forms_1099_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_forms_1099_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_forms_1099_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
