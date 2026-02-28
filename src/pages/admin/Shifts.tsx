@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Send } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Send, Upload } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -60,6 +60,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export default function Shifts() {
+  const navigate = useNavigate();
   const { role, hasModuleAccess, user } = useAuth();
   const { selectedCompanyId } = useCompany();
   const { config: payrollConfig } = usePayrollConfig();
@@ -730,6 +731,11 @@ export default function Shifts() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          {canEdit && (
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => navigate("/app/import-schedule")}>
+              <Upload className="h-3.5 w-3.5 mr-1" /> Importar
+            </Button>
+          )}
           {canEdit && (
             <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild>
