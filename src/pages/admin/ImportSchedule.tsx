@@ -357,13 +357,13 @@ export default function ImportSchedule() {
       {
         const { data: existingShifts } = await supabase
           .from("scheduled_shifts")
-          .select("shift_code, date, start_time, end_time, client_id")
+          .select("shift_code, date, start_time, end_time")
           .eq("company_id", selectedCompanyId)
           .is("deleted_at", null)
           .gte("date", filterFrom || "1900-01-01")
           .lte("date", filterTo || "2100-12-31");
         (existingShifts ?? []).forEach(s => {
-          // Composite key: code|date|start|end
+          // Composite key using stored shift_code (already numeric)
           const key = `${s.shift_code || ""}|${s.date}|${s.start_time?.slice(0,5)}|${s.end_time?.slice(0,5)}`;
           existingShiftKeys.add(key);
         });
@@ -384,8 +384,9 @@ export default function ImportSchedule() {
         const newBatch: typeof batch = [];
         const shiftPayloads: any[] = [];
         for (const group of batch) {
-          // Composite dedup key: code|date|start|end
-          const dedupKey = `${group.shiftCode || ""}|${group.date}|${group.startTime}|${group.endTime}`;
+          // Composite dedup key using cleaned numeric code to match what's stored in DB
+          const numericCodeForDedup = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
+          const dedupKey = `${numericCodeForDedup}|${group.date}|${group.startTime}|${group.endTime}`;
           if (existingShiftKeys.has(dedupKey)) {
             skippedDuplicates++;
             continue;
@@ -444,7 +445,7 @@ export default function ImportSchedule() {
             pay_type: isWeekendJob ? "daily" : "hourly",
           });
           newBatch.push(group);
-          existingShiftKeys.add(dedupKey);
+          existingShiftKeys.add(`${numericCode || ""}|${group.date}|${group.startTime}|${group.endTime}`);
         }
 
         if (shiftPayloads.length === 0) continue;
@@ -468,15 +469,18 @@ export default function ImportSchedule() {
           const shift = insertedShifts[i];
           if (!shift) continue;
 
-          for (const empName of group.employees) {
+          for (let ei = 0; ei < group.employees.length; ei++) {
+            const empName = group.employees[ei];
+            if (/^system\s/i.test(empName)) continue;
             const empId = empMap.get(empName.toLowerCase());
             if (!empId) {
               unmatchedEmployeesSet.add(empName);
               continue;
             }
             matchedEmployees++;
+            const empStatus = (group.employeeStatuses[ei] || "").toLowerCase();
             const statusMap: Record<string, string> = { accept: "accepted", decline: "rejected" };
-            const assignStatus = statusMap[group.status?.toLowerCase()] ?? "accepted";
+            const assignStatus = statusMap[empStatus] ?? "accepted";
             assignmentPayloads.push({
               company_id: selectedCompanyId,
               shift_id: shift.id,
