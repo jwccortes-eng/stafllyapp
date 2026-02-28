@@ -45,12 +45,28 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { data } = await supabase
-      .from("companies")
-      .select("id, name, slug, is_active")
-      .order("name");
+    let list: Company[] = [];
 
-    const list = (data as Company[]) ?? [];
+    if (role === 'owner') {
+      // Owners see all companies
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name, slug, is_active")
+        .order("name");
+      list = (data as Company[]) ?? [];
+    } else {
+      // Non-owners only see companies they belong to via company_users
+      const { data } = await supabase
+        .from("company_users")
+        .select("company_id, companies(id, name, slug, is_active)")
+        .eq("user_id", user.id);
+
+      list = ((data ?? [])
+        .map((cu: any) => cu.companies)
+        .filter(Boolean) as Company[])
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
     setCompanies(list);
 
     // Auto-select first company if none selected
@@ -67,8 +83,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    if (user) fetchCompanies();
-  }, [user]);
+    if (user && role !== undefined) fetchCompanies();
+  }, [user, role]);
 
   useEffect(() => {
     if (selectedCompanyId) {
