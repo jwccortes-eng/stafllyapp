@@ -53,6 +53,8 @@ import Requests from "./pages/admin/Requests";
 import Leads from "./pages/admin/Leads";
 import AdminHub from "./pages/admin/AdminHub";
 import DiscrepancyReport from "./pages/admin/DiscrepancyReport";
+import ContractorW9 from "./pages/admin/ContractorW9";
+import TaxForms1099 from "./pages/admin/TaxForms1099";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -64,6 +66,7 @@ import PortalProfile from "./pages/portal/PortalProfile";
 import PortalClock from "./pages/portal/PortalClock";
 import PayStub from "./pages/portal/PayStub";
 import PortalChat from "./pages/portal/PortalChat";
+import MyW9 from "./pages/portal/MyW9";
 import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
@@ -127,6 +130,8 @@ function App() {
                 <Route path="leads" element={<Leads />} />
                 <Route path="admin" element={<AdminHub />} />
                 <Route path="discrepancies" element={<DiscrepancyReport />} />
+                <Route path="w9" element={<ContractorW9 />} />
+                <Route path="1099" element={<TaxForms1099 />} />
               </Route>
 
               {/* Employee portal routes */}
@@ -142,6 +147,7 @@ function App() {
                 <Route path="paystub/:periodId" element={<PayStub />} />
                 <Route path="chat" element={<PortalChat />} />
                 <Route path="profile" element={<PortalProfile />} />
+                <Route path="w9" element={<MyW9 />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
