@@ -8,7 +8,7 @@ import {
   BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2,
   PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
   MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
-  ScanEye, Inbox, Wrench,
+  Inbox, Wrench,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -45,10 +45,8 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
 
   // Operaciones — scheduling, field ops, real-time
-  { to: "/app/today", icon: ScanEye, label: "Hoy", module: "shifts", section: "Operaciones" },
   { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
   { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
-  { to: "/app/shift-requests", icon: MessageSquare, label: "Solicitudes", module: "shifts", section: "Operaciones", badge: "shift_requests" },
   { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Operaciones" },
   { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Operaciones" },
 
