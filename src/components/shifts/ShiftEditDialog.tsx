@@ -24,7 +24,7 @@ interface ShiftEditDialogProps {
   onOpenChange: (open: boolean) => void;
   clients: SelectOption[];
   locations: LocationOption[];
-  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null }, oldShift: Shift) => Promise<void>;
+  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null; pay_type?: string }, oldShift: Shift) => Promise<void>;
 }
 
 export function ShiftEditDialog({
@@ -41,6 +41,7 @@ export function ShiftEditDialog({
   const [claimable, setClaimable] = useState(false);
   const [meetingPoint, setMeetingPoint] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
+  const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
   const [saving, setSaving] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
@@ -57,6 +58,7 @@ export function ShiftEditDialog({
       setClaimable(shift.claimable);
       setMeetingPoint((shift as any).meeting_point || "");
       setSpecialInstructions((shift as any).special_instructions || "");
+      setPayType((shift as any).pay_type || "hourly");
     }
   }, [shift, open]);
 
@@ -88,6 +90,7 @@ export function ShiftEditDialog({
         claimable,
         meeting_point: meetingPoint.trim() || null,
         special_instructions: specialInstructions.trim() || null,
+        pay_type: payType,
       }, shift);
       onOpenChange(false);
     } finally {
@@ -166,6 +169,19 @@ export function ShiftEditDialog({
               <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="edit-claimable" />
               <Label htmlFor="edit-claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
             </div>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Tipo de pago</Label>
+            <Select value={payType} onValueChange={v => setPayType(v as "hourly" | "daily")}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
+                <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
+              </SelectContent>
+            </Select>
+            {payType === "daily" && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">Tarifa diaria automática al consolidar.</p>
+            )}
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Notas adicionales</Label>
