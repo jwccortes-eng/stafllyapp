@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, SlidersHorizontal, X, UserX, EyeOff } from "lucide-react";
+import { Search, SlidersHorizontal, X, UserX, EyeOff, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SelectOption } from "./types";
 
@@ -10,7 +10,7 @@ export interface ShiftFilterState {
   search: string;
   clientId: string;       // "" = all
   assignedStatus: string; // "" | "assigned" | "unassigned"
-  publishStatus: string;  // "" | "published" | "draft"
+  publishStatus: string;  // "" | "published" | "draft" | "locked"
 }
 
 interface ShiftFiltersProps {
@@ -87,6 +87,22 @@ export function ShiftFilters({ filters, onChange, clients }: ShiftFiltersProps) 
       >
         <EyeOff className="h-3 w-3" />
         Borrador
+      </Button>
+
+      {/* Quick toggle: Locked */}
+      <Button
+        variant={filters.publishStatus === "locked" ? "default" : "outline"}
+        size="sm"
+        className={cn(
+          "h-8 text-xs px-3 gap-1.5 rounded-full border-border/30",
+          filters.publishStatus === "locked" 
+            ? "bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700" 
+            : "bg-white/60 dark:bg-card/60"
+        )}
+        onClick={() => toggleQuickFilter("publishStatus", "locked")}
+      >
+        <Lock className="h-3 w-3" />
+        Bloqueado
       </Button>
 
       {/* Client/Job select */}
