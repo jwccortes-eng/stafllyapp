@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarDays, Upload, DollarSign, FileSpreadsheet,
   BarChart3, Users, Tags, ContactRound, Building2,
   Clock, MapPin, Megaphone, MessageCircle, ScanEye, Inbox,
-  MessageSquare, Settings2, Home, User, Wrench, UserPlus, FileText,
+  MessageSquare, Settings2, Home, User, Wrench, UserPlus, FileText, GitCompareArrows,
 } from "lucide-react";
 
 export interface NavItem {
@@ -31,6 +31,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "movements", to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { id: "summary", to: "/app/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { id: "reports", to: "/app/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
+  { id: "comparison", to: "/app/comparison", icon: GitCompareArrows, label: "Comparación", module: "shifts", section: "Operaciones" },
   { id: "payroll-settings", to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
   { id: "w9", to: "/app/w9", icon: FileText, label: "W-9", module: "employees", section: "Fiscal" },
   { id: "1099", to: "/app/1099", icon: FileText, label: "1099-NEC", module: "employees", section: "Fiscal" },

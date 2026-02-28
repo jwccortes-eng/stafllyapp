@@ -53,6 +53,7 @@ import Requests from "./pages/admin/Requests";
 import Leads from "./pages/admin/Leads";
 import AdminHub from "./pages/admin/AdminHub";
 import DiscrepancyReport from "./pages/admin/DiscrepancyReport";
+import ComparisonReport from "./pages/admin/ComparisonReport";
 import ContractorW9 from "./pages/admin/ContractorW9";
 import TaxForms1099 from "./pages/admin/TaxForms1099";
 import MyPayments from "./pages/portal/MyPayments";
@@ -130,6 +131,7 @@ function App() {
                 <Route path="leads" element={<Leads />} />
                 <Route path="admin" element={<AdminHub />} />
                 <Route path="discrepancies" element={<DiscrepancyReport />} />
+                <Route path="comparison" element={<ComparisonReport />} />
                 <Route path="w9" element={<ContractorW9 />} />
                 <Route path="1099" element={<TaxForms1099 />} />
               </Route>
