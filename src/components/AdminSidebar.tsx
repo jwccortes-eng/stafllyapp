@@ -4,7 +4,7 @@ import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 
 import {
-  LayoutDashboard, Users, CalendarDays, Upload, Tags, FileSpreadsheet,
+  LayoutDashboard, Users, CalendarDays, Tags, FileSpreadsheet,
   BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2,
   PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
   MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
@@ -44,23 +44,22 @@ const ALL_LINKS: LinkDef[] = [
   // Inicio (always visible, no group header)
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
 
-  // Operaciones — scheduling, field ops, real-time
+  // Operaciones — scheduling, field ops
   { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
   { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
-  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Operaciones" },
-  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Operaciones" },
 
-  // Nómina — payroll, imports, reports
+  // Nómina — payroll, reports
   { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
-  { to: "/app/import", icon: Upload, label: "Importar horas", module: "import", section: "Nómina" },
   { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/app/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { to: "/app/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
   { to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
 
-  // Gestión — people, communication, requests
+  // Gestión — people, communication, requests, catalogs
   { to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Gestión" },
   { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Gestión" },
+  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Gestión" },
+  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Gestión" },
   { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Gestión" },
   { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Gestión" },
   { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
