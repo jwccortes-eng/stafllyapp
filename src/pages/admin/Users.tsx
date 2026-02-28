@@ -21,12 +21,12 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User, KeyRound, UserPlus } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User, KeyRound, UserPlus, Smartphone, Mail } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 
 const MODULES = [
   { key: "employees", label: "Empleados" },
@@ -50,7 +50,7 @@ interface UserRecord {
 
 const ROLE_LABELS: Record<RoleType, string> = {
   owner: "Dueño",
-  admin: "Administrador",
+  admin: "Admin",
   manager: "Manager",
   employee: "Empleado",
 };
@@ -69,6 +69,42 @@ const ROLE_COLORS: Record<RoleType, string> = {
   employee: "bg-muted text-muted-foreground border-border",
 };
 
+const AVATAR_COLORS = [
+  "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500",
+  "bg-violet-500", "bg-teal-500", "bg-indigo-500", "bg-pink-500",
+];
+
+function hashStr(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function UserAvatar({ name, email, size = "md" }: { name: string; email: string; size?: "sm" | "md" }) {
+  const isMobile = !email.includes("@") || email.includes("phone");
+  const initials = name
+    ? name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
+    : email.charAt(0).toUpperCase();
+  const color = AVATAR_COLORS[hashStr(name || email) % AVATAR_COLORS.length];
+  const sz = size === "sm" ? "h-8 w-8 text-xs" : "h-10 w-10 text-sm";
+
+  return (
+    <div className="relative">
+      <div className={cn("rounded-full flex items-center justify-center font-semibold text-white shrink-0", sz, color)}>
+        {initials}
+      </div>
+      <div className={cn(
+        "absolute -bottom-0.5 -right-0.5 rounded-full p-[3px] border-2 border-background",
+        isMobile ? "bg-emerald-500" : "bg-blue-500"
+      )}>
+        {isMobile
+          ? <Smartphone className="h-2 w-2 text-white" />
+          : <Mail className="h-2 w-2 text-white" />}
+      </div>
+    </div>
+  );
+}
+
 export default function UsersPage() {
   const { role: currentRole } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -76,6 +112,8 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState<UserRecord | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editRole, setEditRole] = useState<RoleType>("employee");
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const [editPerms, setEditPerms] = useState<Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }>>({});
   const [deleteTarget, setDeleteTarget] = useState<UserRecord | null>(null);
   const [passwordTarget, setPasswordTarget] = useState<UserRecord | null>(null);
@@ -117,10 +155,12 @@ export default function UsersPage() {
   const openEditUser = (u: UserRecord) => {
     setEditUser(u);
     setEditRole(u.role);
+    setEditName(u.full_name);
+    setEditEmail(u.email);
     const permsMap: Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }> = {};
     MODULES.forEach(m => {
       const existing = u.permissions.find(p => p.module === m.key);
-      permsMap[m.key] = existing 
+      permsMap[m.key] = existing
         ? { can_view: existing.can_view, can_edit: existing.can_edit, can_delete: existing.can_delete }
         : { can_view: false, can_edit: false, can_delete: false };
     });
@@ -131,6 +171,14 @@ export default function UsersPage() {
   const handleSaveRole = async () => {
     if (!editUser) return;
     setLoading(true);
+
+    // Update profile data
+    if (editName !== editUser.full_name || editEmail !== editUser.email) {
+      await supabase
+        .from("profiles")
+        .update({ full_name: editName, email: editEmail })
+        .eq("user_id", editUser.user_id);
+    }
 
     const { error: roleError } = await supabase
       .from("user_roles")
@@ -163,7 +211,7 @@ export default function UsersPage() {
         .eq("user_id", editUser.user_id);
     }
 
-    toast({ title: "Rol actualizado" });
+    toast({ title: "Usuario actualizado" });
     setEditOpen(false);
     setEditUser(null);
     fetchUsers();
@@ -243,6 +291,10 @@ export default function UsersPage() {
     );
   }
 
+  // Count by role
+  const roleCounts = { owner: 0, admin: 0, manager: 0, employee: 0 };
+  users.forEach(u => { roleCounts[u.role] = (roleCounts[u.role] || 0) + 1; });
+
   return (
     <div>
       <PageHeader
@@ -252,120 +304,111 @@ export default function UsersPage() {
         subtitle="Administra roles y permisos por módulo"
         rightSlot={<Button onClick={() => setInviteOpen(true)} className="gap-2">
           <UserPlus className="h-4 w-4" />
-          Invitar Admin
+          Invitar
         </Button>}
       />
 
-      {/* Role summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      {/* Compact role pills */}
+      <div className="flex flex-wrap gap-2 mb-5">
         {(["owner", "admin", "manager", "employee"] as RoleType[]).map(r => {
           const Icon = ROLE_ICONS[r];
-          const count = users.filter(u => u.role === r).length;
           return (
-            <Card key={r}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className={`p-2 rounded-lg ${ROLE_COLORS[r]}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{count}</p>
-                  <p className="text-xs text-muted-foreground">{ROLE_LABELS[r]}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={r} className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium", ROLE_COLORS[r])}>
+              <Icon className="h-3.5 w-3.5" />
+              {roleCounts[r]} {ROLE_LABELS[r]}
+            </div>
           );
         })}
       </div>
 
-      <div className="data-table-wrapper">
-        <div className="p-4 border-b">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar usuario..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-          </div>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Usuario</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Permisos</TableHead>
-              <TableHead className="w-12"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No hay usuarios</TableCell></TableRow>
-            ) : (
-              filtered.map(u => {
-                const Icon = ROLE_ICONS[u.role];
-                return (
-                  <TableRow key={u.user_id}>
-                    <TableCell className="font-medium">{u.full_name || "—"}</TableCell>
-                    <TableCell className="text-sm">{u.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={ROLE_COLORS[u.role]}>
-                        <Icon className="h-3 w-3 mr-1" />
-                        {ROLE_LABELS[u.role]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {u.role === 'owner' || u.role === 'admin' ? (
-                        <span>Todos los módulos</span>
-                      ) : u.role === 'manager' ? (
-                        <span>{u.permissions.filter(p => p.can_view).length} módulos</span>
-                      ) : (
-                        <span>Solo portal</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {u.role !== 'owner' && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditUser(u)}>
-                              <Pencil className="h-4 w-4 mr-2" />Editar rol
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => { setPasswordTarget(u); setNewPassword(""); }}>
-                              <KeyRound className="h-4 w-4 mr-2" />Cambiar contraseña
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(u)}>
-                              <Trash2 className="h-4 w-4 mr-2" />Quitar rol
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+      {/* Search */}
+      <div className="relative max-w-xs mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
       </div>
 
-      {/* Edit Role Dialog */}
+      {/* User list as cards */}
+      <div className="space-y-1.5">
+        {filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-12 text-sm">No hay usuarios</p>
+        ) : (
+          filtered.map(u => {
+            const Icon = ROLE_ICONS[u.role];
+            return (
+              <div
+                key={u.user_id}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border/50 hover:border-border hover:shadow-sm transition-all group"
+              >
+                <UserAvatar name={u.full_name} email={u.email} />
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{u.full_name || "Sin nombre"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                </div>
+
+                <Badge variant="outline" className={cn("text-[10px] shrink-0", ROLE_COLORS[u.role])}>
+                  <Icon className="h-3 w-3 mr-1" />
+                  {ROLE_LABELS[u.role]}
+                </Badge>
+
+                {u.role !== 'owner' && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditUser(u)}>
+                        <Pencil className="h-4 w-4 mr-2" />Editar usuario
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setPasswordTarget(u); setNewPassword(""); }}>
+                        <KeyRound className="h-4 w-4 mr-2" />Cambiar contraseña
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(u)}>
+                        <Trash2 className="h-4 w-4 mr-2" />Quitar rol
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Edit User Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditUser(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Editar rol: {editUser?.full_name || editUser?.email}</DialogTitle>
-            <DialogDescription>Cambia el rol y configura los permisos por módulo</DialogDescription>
+            <DialogTitle className="flex items-center gap-3">
+              {editUser && <UserAvatar name={editUser.full_name} email={editUser.email} size="sm" />}
+              Editar usuario
+            </DialogTitle>
+            <DialogDescription>Modifica datos, rol y permisos</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Rol</Label>
+            {/* Editable fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre</Label>
+                <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-9" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Email</Label>
+                <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="h-9" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Rol</Label>
               <Select value={editRole} onValueChange={(v) => setEditRole(v as RoleType)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Administrador — Todos los permisos</SelectItem>
-                  <SelectItem value="manager">Manager — Permisos por módulo</SelectItem>
+                  <SelectItem value="admin">Administrador — Acceso completo</SelectItem>
+                  <SelectItem value="manager">Manager — Permisos selectivos</SelectItem>
                   <SelectItem value="employee">Empleado — Solo portal</SelectItem>
                 </SelectContent>
               </Select>
@@ -373,34 +416,34 @@ export default function UsersPage() {
 
             {editRole === "manager" && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Permisos por módulo</Label>
-                <div className="border rounded-lg overflow-hidden">
+                <Label className="text-xs font-medium">Permisos por módulo</Label>
+                <div className="border rounded-xl overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs">Módulo</TableHead>
-                        <TableHead className="text-xs text-center">Ver</TableHead>
-                        <TableHead className="text-xs text-center">Editar</TableHead>
-                        <TableHead className="text-xs text-center">Eliminar</TableHead>
+                        <TableHead className="text-[10px]">Módulo</TableHead>
+                        <TableHead className="text-[10px] text-center w-16">Ver</TableHead>
+                        <TableHead className="text-[10px] text-center w-16">Editar</TableHead>
+                        <TableHead className="text-[10px] text-center w-16">Borrar</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {MODULES.map(m => (
                         <TableRow key={m.key}>
-                          <TableCell className="text-sm font-medium">{m.label}</TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-xs font-medium py-2">{m.label}</TableCell>
+                          <TableCell className="text-center py-2">
                             <Switch
                               checked={editPerms[m.key]?.can_view ?? false}
                               onCheckedChange={() => togglePerm(m.key, 'can_view')}
                             />
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center py-2">
                             <Switch
                               checked={editPerms[m.key]?.can_edit ?? false}
                               onCheckedChange={() => togglePerm(m.key, 'can_edit')}
                             />
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center py-2">
                             <Switch
                               checked={editPerms[m.key]?.can_delete ?? false}
                               onCheckedChange={() => togglePerm(m.key, 'can_delete')}
@@ -476,25 +519,25 @@ export default function UsersPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Invitar Administrador</DialogTitle>
-            <DialogDescription>Crea una cuenta nueva con rol de admin o manager</DialogDescription>
+            <DialogDescription>Crea una cuenta con rol de admin o manager</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nombre completo</Label>
-              <Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Juan Pérez" />
+            <div className="space-y-1">
+              <Label className="text-xs">Nombre completo</Label>
+              <Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Juan Pérez" className="h-9" />
             </div>
-            <div className="space-y-2">
-              <Label>Correo electrónico</Label>
-              <Input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="admin@empresa.com" />
+            <div className="space-y-1">
+              <Label className="text-xs">Correo electrónico</Label>
+              <Input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="admin@empresa.com" className="h-9" />
             </div>
-            <div className="space-y-2">
-              <Label>Contraseña</Label>
-              <Input type="password" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+            <div className="space-y-1">
+              <Label className="text-xs">Contraseña</Label>
+              <Input type="password" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="h-9" />
             </div>
-            <div className="space-y-2">
-              <Label>Rol</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Rol</Label>
               <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as "admin" | "manager")}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
