@@ -153,14 +153,6 @@ export default function TodayView() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <PageHeader
-        variant="1"
-        icon={CalendarDays}
-        title="Hoy"
-        subtitle={format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
-      />
-
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="border-border/30 shadow-sm rounded-2xl">
