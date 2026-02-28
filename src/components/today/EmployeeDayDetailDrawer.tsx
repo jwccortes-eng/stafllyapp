@@ -29,6 +29,7 @@ interface EmployeeRow {
   id: string;
   first_name: string;
   last_name: string;
+  avatar_url?: string | null;
   activeEntry?: TimeEntry;
   completedEntries: TimeEntry[];
   scheduled?: ScheduledInfo;
@@ -67,6 +68,7 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now }: P
             <EmployeeAvatar
               firstName={employee.first_name}
               lastName={employee.last_name}
+              avatarUrl={employee.avatar_url}
               className="h-12 w-12 text-base"
             />
             <div className="flex-1 min-w-0">
