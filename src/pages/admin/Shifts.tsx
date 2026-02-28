@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { DayView } from "@/components/shifts/DayView";
 import { WeekView } from "@/components/shifts/WeekView";
 import { WeekByJobView } from "@/components/shifts/WeekByJobView";
+import { WeekByEmployeeView } from "@/components/shifts/WeekByEmployeeView";
 import { MonthView } from "@/components/shifts/MonthView";
 import { EmployeeView } from "@/components/shifts/EmployeeView";
 import { ClientView } from "@/components/shifts/ClientView";
@@ -89,7 +90,7 @@ export default function Shifts() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
-  const [weekViewMode, setWeekViewMode] = useState<"grid" | "job">("job");
+  const [weekViewMode, setWeekViewMode] = useState<"grid" | "job" | "employee">("job");
   const [currentDay, setCurrentDay] = useState(() => initialDate);
   const [weekStart, setWeekStart] = useState(() => startOfWeek(initialDate, { weekStartsOn: 1 }));
   const [filters, setFilters] = useState<ShiftFilterState>(EMPTY_FILTERS);
@@ -850,7 +851,7 @@ export default function Shifts() {
         <div className="flex items-center gap-1">
           {viewMode === "week" && (
             <>
-              <Button
+               <Button
                 variant={weekViewMode === "grid" ? "secondary" : "ghost"}
                 size="sm"
                 className="h-7 text-[10px] px-2"
@@ -865,6 +866,14 @@ export default function Shifts() {
                 onClick={() => setWeekViewMode("job")}
               >
                 <Building2 className="h-3 w-3 mr-1" /> Por cliente
+              </Button>
+              <Button
+                variant={weekViewMode === "employee" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 text-[10px] px-2"
+                onClick={() => setWeekViewMode("employee")}
+              >
+                <Users className="h-3 w-3 mr-1" /> Por empleado
               </Button>
               <div className="w-px h-5 bg-border/40 mx-1" />
             </>
@@ -925,6 +934,19 @@ export default function Shifts() {
               employees={employees}
               onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
               onDropOnShift={handleDropOnShift}
+            />
+          ) : weekViewMode === "employee" ? (
+            <WeekByEmployeeView
+              weekDays={weekDays}
+              shifts={filteredShifts}
+              assignments={assignments}
+              locations={locations}
+              clients={clients}
+              employees={employees}
+              onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+              onDropOnShift={handleDropOnShift}
+              availabilityConfigs={availConfigs}
+              availabilityOverrides={availOverrides}
             />
           ) : (
             <WeekView
