@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { Loader2, Search, Clock, Eye, EyeOff, ChevronRight, CalendarDays, Filter, LayoutGrid, X } from "lucide-react";
-import { format, differenceInMinutes } from "date-fns";
+import { Loader2, Search, Clock, Eye, EyeOff, ChevronRight, ChevronLeft, CalendarDays, Filter, LayoutGrid, X } from "lucide-react";
+import { format, differenceInMinutes, addDays, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
@@ -53,6 +53,7 @@ export default function TodayView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [now, setNow] = useState(new Date());
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<GroupMode>("none");
@@ -60,13 +61,14 @@ export default function TodayView() {
   const [filterGender, setFilterGender] = useState<string>("all");
   const [filterClient, setFilterClient] = useState<string>("all");
 
-  // Live clock for active entries
+  const isToday = isSameDay(selectedDate, new Date());
+  const today = format(selectedDate, "yyyy-MM-dd");
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const today = format(new Date(), "yyyy-MM-dd");
+  // Live clock for active entries
 
   const loadData = useCallback(async () => {
     if (!selectedCompanyId) return;
@@ -255,7 +257,21 @@ export default function TodayView() {
       {/* Search + filters toolbar */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <div className="relative flex-1">
+          {/* Day navigation */}
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setSelectedDate(d => addDays(d, -1))}>
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-9 text-xs font-medium min-w-[80px]"
+              onClick={() => setSelectedDate(new Date())}>
+              {isToday ? "Today" : format(selectedDate, "EEE d MMM", { locale: es })}
+            </Button>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setSelectedDate(d => addDays(d, 1))}>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          <div className="relative flex-1 max-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-9 h-9" />
           </div>
