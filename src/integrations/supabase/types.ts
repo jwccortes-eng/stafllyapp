@@ -967,6 +967,7 @@ export type Database = {
           end_date: string | null
           english_level: string | null
           first_name: string
+          gender: string | null
           groups: string | null
           has_car: string | null
           id: string
@@ -998,6 +999,7 @@ export type Database = {
           end_date?: string | null
           english_level?: string | null
           first_name: string
+          gender?: string | null
           groups?: string | null
           has_car?: string | null
           id?: string
@@ -1029,6 +1031,7 @@ export type Database = {
           end_date?: string | null
           english_level?: string | null
           first_name?: string
+          gender?: string | null
           groups?: string | null
           has_car?: string | null
           id?: string
@@ -2549,6 +2552,7 @@ export type Database = {
           employee_role: string | null
           end_date: string | null
           first_name: string | null
+          gender: string | null
           groups: string | null
           id: string | null
           is_active: boolean | null
@@ -2568,6 +2572,7 @@ export type Database = {
           employee_role?: string | null
           end_date?: string | null
           first_name?: string | null
+          gender?: string | null
           groups?: string | null
           id?: string | null
           is_active?: boolean | null
@@ -2587,6 +2592,7 @@ export type Database = {
           employee_role?: string | null
           end_date?: string | null
           first_name?: string | null
+          gender?: string | null
           groups?: string | null
           id?: string | null
           is_active?: boolean | null
