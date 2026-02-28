@@ -146,6 +146,29 @@
   }
 }
 
+/* Owner dark premium sidebar theme */
+.owner-sidebar {
+  --sidebar-background: 225 30% 10%;
+  --sidebar-foreground: 220 20% 92%;
+  --sidebar-primary: 40 90% 60%;
+  --sidebar-primary-foreground: 225 30% 10%;
+  --sidebar-accent: 225 25% 16%;
+  --sidebar-accent-foreground: 40 90% 60%;
+  --sidebar-border: 225 25% 16%;
+  --sidebar-ring: 40 90% 60%;
+  background: hsl(225 30% 10%) !important;
+  border-color: hsl(225 25% 16%) !important;
+}
+
+.owner-sidebar .owner-badge {
+  background: linear-gradient(135deg, hsl(40 90% 60%), hsl(32 100% 56%));
+  color: hsl(225 30% 10%);
+}
+
+.owner-sidebar [data-active="true"] {
+  color: hsl(40 90% 60%);
+}
+
 @layer base {
   * {
     @apply border-border;

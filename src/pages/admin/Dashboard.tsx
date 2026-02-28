@@ -6,7 +6,7 @@ import {
   Upload, Tags, BarChart3, ArrowRight, TrendingUp,
   Zap, Clock, Sparkles, Megaphone, Pin, AlertTriangle,
   ChevronRight, Activity, ThumbsUp, Plus,
-  Inbox, MapPin, Building2, MessageCircle,
+  Inbox, MapPin, Building2, MessageCircle, Crown, ExternalLink,
 } from "lucide-react";
 import { PeriodStatusBanner } from "@/components/ui/period-status-banner";
 import { useCompany } from "@/hooks/useCompany";
@@ -20,6 +20,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
+import { Badge } from "@/components/ui/badge";
 import staflyMascot from "@/assets/stafly-mascot-3d.png";
 
 /* ─── animated counter hook ─── */
@@ -172,7 +173,7 @@ function ActivityRow({ item }: { item: any }) {
    ═══════════════════════════════════════════════════ */
 
 export default function AdminDashboard() {
-  const { selectedCompanyId, selectedCompany, isModuleActive } = useCompany();
+  const { selectedCompanyId, selectedCompany, isModuleActive, companies, setSelectedCompanyId } = useCompany();
   const { role, hasModuleAccess, fullName } = useAuth();
   const { config: payrollConfig, currentWeek } = usePayrollConfig();
   const navigate = useNavigate();
@@ -602,6 +603,58 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Owner: Company Cards ── */}
+      {role === 'owner' && companies.length > 1 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Crown className="h-4 w-4 text-amber-500" />
+            <h2 className="text-sm font-semibold font-heading text-foreground">Empresas</h2>
+            <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {companies.map(c => {
+              const isSelected = c.id === selectedCompanyId;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCompanyId(c.id)}
+                  className={cn(
+                    "text-left p-4 rounded-2xl border transition-all duration-200 group active:scale-[0.98]",
+                    isSelected
+                      ? "border-primary/40 bg-primary/[0.04] ring-1 ring-primary/20 shadow-sm"
+                      : "border-border/50 bg-card hover:border-primary/20 hover:shadow-sm"
+                  )}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className={cn(
+                        "h-9 w-9 rounded-xl flex items-center justify-center text-sm font-bold",
+                        isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                      )}>
+                        {c.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{c.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{c.slug}</p>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <span className="text-[9px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Activa</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
+                    <span className={cn("text-[10px] font-medium", c.is_active ? "text-emerald-500" : "text-muted-foreground")}>
+                      {c.is_active ? "● Activa" : "○ Inactiva"}
+                    </span>
+                    <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Render widgets in user-defined order ── */}
       {enabledWidgets.map(w => {
