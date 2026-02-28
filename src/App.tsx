@@ -52,6 +52,7 @@ import Billing from "./pages/admin/Billing";
 import Requests from "./pages/admin/Requests";
 import Leads from "./pages/admin/Leads";
 import AdminHub from "./pages/admin/AdminHub";
+import DiscrepancyReport from "./pages/admin/DiscrepancyReport";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -125,6 +126,7 @@ function App() {
                 <Route path="requests" element={<Requests />} />
                 <Route path="leads" element={<Leads />} />
                 <Route path="admin" element={<AdminHub />} />
+                <Route path="discrepancies" element={<DiscrepancyReport />} />
               </Route>
 
               {/* Employee portal routes */}

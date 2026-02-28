@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, FileSpreadsheet, Users, UserCheck } from "lucide-react";
+import { BarChart3, FileSpreadsheet, Users, UserCheck, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -61,6 +61,20 @@ export default function Reports() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">Todas las novedades registradas filtradas por periodo.</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/app/discrepancies">
+          <Card className="stat-card cursor-pointer hover:border-primary/30">
+            <CardHeader className="flex flex-row items-center gap-3">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+              <div>
+                <CardTitle className="text-base">Discrepancias</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Turnos vs. registros de reloj: ausencias, tardanzas, extras no planeadas.</p>
             </CardContent>
           </Card>
         </Link>
