@@ -1868,6 +1868,7 @@ export type Database = {
           location_id: string | null
           meeting_point: string | null
           notes: string | null
+          pay_type: string
           shift_code: string | null
           slots: number | null
           special_instructions: string | null
@@ -1889,6 +1890,7 @@ export type Database = {
           location_id?: string | null
           meeting_point?: string | null
           notes?: string | null
+          pay_type?: string
           shift_code?: string | null
           slots?: number | null
           special_instructions?: string | null
@@ -1910,6 +1912,7 @@ export type Database = {
           location_id?: string | null
           meeting_point?: string | null
           notes?: string | null
+          pay_type?: string
           shift_code?: string | null
           slots?: number | null
           special_instructions?: string | null

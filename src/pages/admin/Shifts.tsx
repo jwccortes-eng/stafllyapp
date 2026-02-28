@@ -138,6 +138,7 @@ export default function Shifts() {
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
@@ -220,7 +221,7 @@ export default function Shifts() {
     setTitle(""); setDate(""); setStartTime("08:00"); setEndTime("17:00");
     setSlots("1"); setClientId(""); setLocationId(""); setNotes("");
     setClaimable(false); setSelectedEmployees([]);
-    setMeetingPoint(""); setSpecialInstructions("");
+    setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
   };
 
   // Quick-add client inline
@@ -309,6 +310,7 @@ export default function Shifts() {
       meeting_point: meetingPoint.trim() || null,
       special_instructions: specialInstructions.trim() || null,
       created_by: user?.id,
+      pay_type: payType,
     } as any).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); setSaving(false); return; }
@@ -617,6 +619,7 @@ export default function Shifts() {
       claimable: shiftData.claimable ?? false,
       status: "draft",
       created_by: user?.id,
+      pay_type: shiftData.pay_type || "hourly",
     } as any).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); return; }
@@ -792,6 +795,19 @@ export default function Shifts() {
                       <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="claimable" />
                       <Label htmlFor="claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
                     </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Tipo de pago</Label>
+                    <Select value={payType} onValueChange={v => setPayType(v as "hourly" | "daily")}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
+                        <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {payType === "daily" && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Los empleados asignados recibirán su tarifa diaria automáticamente al consolidar nómina.</p>
+                    )}
                   </div>
                   <div><Label className="text-xs text-muted-foreground">Notas adicionales</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none" /></div>
                   <div>
