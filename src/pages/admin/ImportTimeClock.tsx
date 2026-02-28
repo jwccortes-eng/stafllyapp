@@ -35,7 +35,12 @@ interface ClockEntry {
   scheduledShiftTitle: string;
   employeeNotes: string;
   managerNotes: string;
+  isUnpaid: boolean;
 }
+
+/** Patterns that indicate an unpaid/non-billable entry */
+const UNPAID_PATTERNS = /unpaid|no\s*pay|sin\s*pago/i;
+const MAX_SHIFT_HOURS = 24;
 
 interface ImportSummary {
   totalEntries: number;
@@ -43,6 +48,7 @@ interface ImportSummary {
   linkedShifts: number;
   unmatchedEmployees: string[];
   skippedOverlap: number;
+  skippedUnpaid: number;
 }
 
 /**
@@ -233,10 +239,24 @@ export default function ImportTimeClock() {
       const isoDate = clockIn.toISOString().slice(0, 10);
       allDates.push(isoDate);
 
+      const shiftHours = parseFloat(row["Shift hours"] ?? "0") || 0;
+      const jobType = (row["Type"] ?? "").trim();
+      const scheduledTitle = (row["Scheduled shift title"] ?? "").trim();
+
+      // Detect unpaid entries: 0 hours, "Unpaid" in type/title, or unreasonable duration (>24h)
+      const durationHours = clockOut
+        ? (clockOut.getTime() - clockIn.getTime()) / 3600000
+        : 0;
+      const isUnpaid =
+        shiftHours === 0 ||
+        UNPAID_PATTERNS.test(jobType) ||
+        UNPAID_PATTERNS.test(scheduledTitle) ||
+        durationHours > MAX_SHIFT_HOURS;
+
       parsed.push({
         firstName,
         lastName,
-        job: (row["Type"] ?? "").trim(),
+        job: jobType,
         subItem: (row["Sub item"] ?? "").trim(),
         clockIn,
         clockOut,
@@ -244,11 +264,12 @@ export default function ImportTimeClock() {
         clockOutLocation: (row["End - location"] ?? "").trim(),
         clockInDevice: (row["Start - device"] ?? "").trim(),
         clockOutDevice: (row["End - device"] ?? "").trim(),
-        shiftHours: parseFloat(row["Shift hours"] ?? "0") || 0,
+        shiftHours,
         hourlyRate: parseFloat(row["Hourly rate (USD)"] ?? "0") || 0,
-        scheduledShiftTitle: (row["Scheduled shift title"] ?? "").trim(),
+        scheduledShiftTitle: scheduledTitle,
         employeeNotes: (row["Employee notes"] ?? "").trim(),
         managerNotes: (row["Manager notes"] ?? "").trim(),
+        isUnpaid,
       });
     }
 
@@ -308,9 +329,16 @@ export default function ImportTimeClock() {
       let matchedEmployees = 0;
       let linkedShifts = 0;
       let skippedOverlap = 0;
+      let skippedUnpaid = 0;
       const unmatchedSet = new Set<string>();
 
       for (const entry of filteredEntries) {
+        // Skip unpaid entries (0 hours, "Unpaid" type, or >24h duration)
+        if (entry.isUnpaid) {
+          skippedUnpaid++;
+          continue;
+        }
+
         const empName = `${entry.firstName} ${entry.lastName}`.toLowerCase();
         const empId = empMap.get(empName);
         if (!empId) {
@@ -361,6 +389,7 @@ export default function ImportTimeClock() {
         linkedShifts,
         unmatchedEmployees: Array.from(unmatchedSet),
         skippedOverlap,
+        skippedUnpaid,
       };
       setSummary(summaryData);
 
@@ -368,10 +397,11 @@ export default function ImportTimeClock() {
       const unmatchedMsg = summaryData.unmatchedEmployees.length > 0
         ? ` · ${summaryData.unmatchedEmployees.length} empleados no encontrados`
         : "";
+      const unpaidMsg = skippedUnpaid > 0 ? ` · ${skippedUnpaid} omitidos (unpaid/sin horas)` : "";
 
       setResult({
         success: true,
-        message: `Importación completada: ${totalEntries} registros de reloj, ${linkedShifts} vinculados a turnos${unmatchedMsg}${overlapMsg}.`,
+        message: `Importación completada: ${totalEntries} registros de reloj, ${linkedShifts} vinculados a turnos${unmatchedMsg}${overlapMsg}${unpaidMsg}.`,
       });
       setStep(4);
 
