@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeAvailability } from "@/hooks/useEmployeeAvailability";
+import { usePayrollConfig } from "@/hooks/usePayrollConfig";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +62,8 @@ const FIELD_LABELS: Record<string, string> = {
 export default function Shifts() {
   const { role, hasModuleAccess, user } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const { config: payrollConfig } = usePayrollConfig();
+  const payrollWeekStart = payrollConfig.payroll_week_start_day as 0 | 1 | 2 | 3 | 4 | 5 | 6;
   const canEdit = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -92,9 +95,14 @@ export default function Shifts() {
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [weekViewMode, setWeekViewMode] = useState<"grid" | "job" | "employee">("job");
   const [currentDay, setCurrentDay] = useState(() => initialDate);
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(initialDate, { weekStartsOn: 1 }));
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(initialDate, { weekStartsOn: payrollWeekStart }));
   const [filters, setFilters] = useState<ShiftFilterState>(EMPTY_FILTERS);
   const [currentMonth, setCurrentMonth] = useState(() => initialDate);
+
+  // Re-align weekStart when payroll config loads
+  useEffect(() => {
+    setWeekStart(prev => startOfWeek(prev, { weekStartsOn: payrollWeekStart }));
+  }, [payrollWeekStart]);
 
   // Sync state → URL (after initialization)
   useEffect(() => {
@@ -683,7 +691,7 @@ export default function Shifts() {
 
   const navigateToday = () => {
     setCurrentDay(new Date());
-    setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    setWeekStart(startOfWeek(new Date(), { weekStartsOn: payrollWeekStart }));
     setCurrentMonth(new Date());
   };
 
