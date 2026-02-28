@@ -115,8 +115,8 @@ export default function AdminSidebar() {
   };
 
   // User identity display
-  const roleLabel = role === 'owner' ? 'Owner' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Usuario';
-  const roleBg = role === 'owner' ? 'bg-primary/10 text-primary' : role === 'admin' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground';
+  const roleLabel = role === 'owner' ? 'Super Admin' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Usuario';
+  const roleBg = role === 'owner' ? 'owner-badge bg-accent-warm text-accent-warm-foreground' : role === 'admin' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground';
   const userEmail = user?.email ?? null;
   const userPhone = user?.phone ?? null;
   const userIdentifier = userEmail || userPhone || '';
@@ -169,21 +169,22 @@ export default function AdminSidebar() {
       <div key={link.to} className="group/link relative">
         <NavLink
           to={link.to}
+          data-active={active || undefined}
           className={cn(
             "relative flex items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-200 w-full min-w-0",
             collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2",
             active
-              ? "bg-primary/8 text-primary font-semibold"
+              ? cn("bg-sidebar-primary/8 text-sidebar-primary font-semibold")
               : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
           )}
         >
           {active && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary" />
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-sidebar-primary" />
           )}
           <div className="relative">
             <link.icon className={cn(
               "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
-              active ? "text-primary" : "text-muted-foreground/50 group-hover/link:text-sidebar-foreground"
+              active ? "text-sidebar-primary" : "text-sidebar-foreground/40 group-hover/link:text-sidebar-foreground"
             )} />
             {collapsed && badge > 0 && (
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
@@ -268,11 +269,14 @@ export default function AdminSidebar() {
     );
   };
 
+  const isOwner = role === 'owner';
+
   return (
     <aside className={cn(
       "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
       "bg-card border-r border-border/40",
-      collapsed ? "w-[60px]" : "w-[250px]"
+      collapsed ? "w-[60px]" : "w-[250px]",
+      isOwner && "owner-sidebar"
     )}>
       {/* ── User identity header ── */}
       <div className={cn(
@@ -283,14 +287,14 @@ export default function AdminSidebar() {
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <div className="relative">
-                <Avatar className="h-8 w-8 border-2 border-primary/20">
-                  <AvatarFallback className="text-[11px] font-bold bg-primary/8 text-primary">
+                <Avatar className={cn("h-8 w-8 border-2", isOwner ? "border-amber-500/40" : "border-primary/20")}>
+                  <AvatarFallback className={cn("text-[11px] font-bold", isOwner ? "bg-amber-500/15 text-amber-400" : "bg-primary/8 text-primary")}>
                     {initials}
                   </AvatarFallback>
                 </Avatar>
                 <span className={cn(
                   "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
-                  role === 'owner' ? "bg-primary" : role === 'admin' ? "bg-accent-foreground" : "bg-muted-foreground"
+                  isOwner ? "bg-amber-500" : role === 'admin' ? "bg-accent-foreground" : "bg-muted-foreground"
                 )} />
               </div>
             </TooltipTrigger>
@@ -303,14 +307,14 @@ export default function AdminSidebar() {
         ) : (
           <>
             <div className="relative shrink-0">
-              <Avatar className="h-9 w-9 border-2 border-primary/20">
-                <AvatarFallback className="text-[11px] font-bold bg-primary/8 text-primary">
+              <Avatar className={cn("h-9 w-9 border-2", isOwner ? "border-amber-500/40" : "border-primary/20")}>
+                <AvatarFallback className={cn("text-[11px] font-bold", isOwner ? "bg-amber-500/15 text-amber-400" : "bg-primary/8 text-primary")}>
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <span className={cn(
                 "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
-                role === 'owner' ? "bg-primary" : role === 'admin' ? "bg-accent-foreground" : "bg-muted-foreground"
+                isOwner ? "bg-amber-500" : role === 'admin' ? "bg-accent-foreground" : "bg-muted-foreground"
               )} />
             </div>
             <div className="min-w-0 flex-1">
