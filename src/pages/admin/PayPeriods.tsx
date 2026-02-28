@@ -51,6 +51,11 @@ export default function PayPeriods() {
   const [pendingToggle, setPendingToggle] = useState<PayPeriod | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [expandedPeriods, setExpandedPeriods] = useState<Set<string>>(new Set());
+  const [bulkOpenDialog, setBulkOpenDialog] = useState(false);
+  const [bulkMode, setBulkMode] = useState<"all" | "range">("all");
+  const [bulkFrom, setBulkFrom] = useState("");
+  const [bulkTo, setBulkTo] = useState("");
+  const [bulkOpening, setBulkOpening] = useState(false);
   const [importsMap, setImportsMap] = useState<Record<string, ImportInfo[]>>({});
   const [loadingImports, setLoadingImports] = useState<Set<string>>(new Set());
   const { toast } = useToast();
@@ -167,6 +172,27 @@ export default function PayPeriods() {
     setGeneratingYear(false);
   };
 
+  const handleBulkOpen = async () => {
+    if (!selectedCompanyId) return;
+    setBulkOpening(true);
+    let target = periods.filter(p => p.status === "closed");
+    if (bulkMode === "range" && bulkFrom && bulkTo) {
+      target = target.filter(p => p.start_date >= bulkFrom && p.start_date <= bulkTo);
+    }
+    let opened = 0;
+    for (const p of target) {
+      const { error } = await supabase
+        .from("pay_periods")
+        .update({ status: "open", closed_at: null })
+        .eq("id", p.id);
+      if (!error) opened++;
+    }
+    toast({ title: `${opened} periodos abiertos` });
+    setBulkOpening(false);
+    setBulkOpenDialog(false);
+    fetchPeriods();
+  };
+
   const requestToggle = (period: PayPeriod) => {
     setPendingToggle(period);
     setPasswordOpen(true);
@@ -230,7 +256,47 @@ export default function PayPeriods() {
         title="Periodos de pago"
         subtitle="Miércoles a Martes — ciclo semanal"
         badge="Semanal"
-        rightSlot={<div className="flex gap-2">
+        rightSlot={<div className="flex gap-2 flex-wrap">
+          <Dialog open={bulkOpenDialog} onOpenChange={setBulkOpenDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><Unlock className="h-4 w-4 mr-2" />Abrir periodos</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Abrir periodos en lote</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Selecciona si deseas abrir todos los periodos cerrados o solo un rango específico.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant={bulkMode === "all" ? "default" : "outline"} size="sm" onClick={() => setBulkMode("all")}>Todos</Button>
+                  <Button variant={bulkMode === "range" ? "default" : "outline"} size="sm" onClick={() => setBulkMode("range")}>Por rango</Button>
+                </div>
+                {bulkMode === "range" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Desde</Label>
+                      <Input type="date" value={bulkFrom} onChange={e => setBulkFrom(e.target.value)} className="mt-1" />
+                    </div>
+                    <div>
+                      <Label>Hasta</Label>
+                      <Input type="date" value={bulkTo} onChange={e => setBulkTo(e.target.value)} className="mt-1" />
+                    </div>
+                    <div className="col-span-2 flex gap-2 flex-wrap">
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setBulkFrom("2026-04-01"); setBulkTo("2026-04-30"); }}>Abril 2026</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setBulkFrom("2026-03-01"); setBulkTo("2026-03-31"); }}>Marzo 2026</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setBulkFrom("2026-02-01"); setBulkTo("2026-02-28"); }}>Feb 2026</Button>
+                    </div>
+                  </div>
+                )}
+                <Button className="w-full" onClick={handleBulkOpen} disabled={bulkOpening || (bulkMode === "range" && (!bulkFrom || !bulkTo))}>
+                  {bulkOpening ? "Abriendo..." : `Abrir periodos${bulkMode === "range" ? ` (${bulkFrom} → ${bulkTo})` : " (todos)"}`}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={yearOpen} onOpenChange={setYearOpen}>
             <DialogTrigger asChild>
               <Button variant="outline"><CalendarPlus className="h-4 w-4 mr-2" />Generar año</Button>
