@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import CompanyActionGuard from "@/components/CompanyActionGuard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -91,13 +92,14 @@ interface RoleTemplate {
 
 export default function Permissions() {
   const { role } = useAuth();
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const [managers, setManagers] = useState<CompanyUser[]>([]);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [templates, setTemplates] = useState<RoleTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showGuard, setShowGuard] = useState(false);
 
   // Fetch users for this company and templates
   useEffect(() => {
@@ -384,7 +386,7 @@ export default function Permissions() {
               })}
 
               <div className="flex justify-end">
-                <Button onClick={savePermissions} disabled={saving} className="min-w-[140px]">
+                <Button onClick={() => setShowGuard(true)} disabled={saving} className="min-w-[140px]">
                   {saving ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Guardando...</>
                   ) : (
@@ -396,6 +398,17 @@ export default function Permissions() {
           )}
         </div>
       </div>
+
+      {/* Security guard for saving permissions */}
+      <CompanyActionGuard
+        open={showGuard}
+        onOpenChange={setShowGuard}
+        title="Confirmar cambios de permisos"
+        description={`Vas a modificar los permisos granulares para ${selectedManagerInfo?.full_name || selectedManagerInfo?.email || 'este usuario'}.`}
+        companyName={selectedCompany?.name}
+        requirePassword
+        onConfirm={savePermissions}
+      />
     </div>
   );
 }

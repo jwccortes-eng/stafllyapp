@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Shield, UserCog, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import CompanyActionGuard from "@/components/CompanyActionGuard";
 
 interface CompanyUser {
   id: string;
@@ -51,6 +52,10 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
   const [selectedRole, setSelectedRole] = useState("admin");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  
+  // Guard state for protected actions
+  const [guardAction, setGuardAction] = useState<(() => Promise<void>) | null>(null);
+  const [guardTitle, setGuardTitle] = useState("");
 
   const fetchCompanyUsers = async () => {
     if (!companyId) return;
@@ -96,14 +101,12 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     }
   }, [open, companyId]);
 
-  const handleAdd = async () => {
+  const doAdd = async () => {
     if (!selectedUserId || !companyId) return;
     setLoading(true);
-
     const { error } = await supabase
       .from("company_users")
       .insert({ company_id: companyId, user_id: selectedUserId, role: selectedRole } as any);
-
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
@@ -115,7 +118,12 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     setLoading(false);
   };
 
-  const handleRemove = async (cuId: string) => {
+  const handleAdd = () => {
+    setGuardTitle("Asignar usuario a " + companyName);
+    setGuardAction(() => doAdd);
+  };
+
+  const doRemove = async (cuId: string) => {
     const { error } = await supabase.from("company_users").delete().eq("id", cuId);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -126,18 +134,27 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     }
   };
 
-  const handleRoleChange = async (cuId: string, newRole: string) => {
+  const handleRemove = (cuId: string) => {
+    setGuardTitle("Remover usuario de " + companyName);
+    setGuardAction(() => () => doRemove(cuId));
+  };
+
+  const doRoleChange = async (cuId: string, newRole: string) => {
     const { error } = await supabase
       .from("company_users")
       .update({ role: newRole } as any)
       .eq("id", cuId);
-
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Rol actualizado" });
       fetchCompanyUsers();
     }
+  };
+
+  const handleRoleChange = (cuId: string, newRole: string) => {
+    setGuardTitle("Cambiar rol en " + companyName);
+    setGuardAction(() => () => doRoleChange(cuId, newRole));
   };
 
   const roleColor = (role: string) => {
@@ -245,6 +262,20 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
           </Table>
         </div>
       </DialogContent>
+
+      {/* Security guard for user management actions */}
+      <CompanyActionGuard
+        open={!!guardAction}
+        onOpenChange={(v) => { if (!v) setGuardAction(null); }}
+        title={guardTitle}
+        description="Esta acción modifica los accesos de la empresa. Confirma tu identidad."
+        companyName={companyName}
+        requirePassword
+        onConfirm={async () => {
+          if (guardAction) await guardAction();
+          setGuardAction(null);
+        }}
+      />
     </Dialog>
   );
 }
