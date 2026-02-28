@@ -364,6 +364,7 @@ export default function Shifts() {
   };
 
   const handleEditShift = async (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => {
+    if (oldShift.status === "locked") { toast.error("Este turno está bloqueado y no se puede editar"); return; }
     const changes = getChangedFields(oldShift, updates);
     if (changes.length === 0) { toast.info("Sin cambios"); return; }
 

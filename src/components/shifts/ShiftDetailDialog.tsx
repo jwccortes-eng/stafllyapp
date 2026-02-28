@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeCombobox } from "./EmployeeCombobox";
-import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell, Smartphone } from "lucide-react";
+import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell, Smartphone, Lock } from "lucide-react";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
@@ -212,6 +212,8 @@ export function ShiftDetailDialog({
 
   if (!shift) return null;
 
+  const isLocked = shift.status === "locked";
+  const effectiveCanEdit = canEdit && !isLocked;
   const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
   const assignedIds = new Set(shiftAssignments.map(a => a.employee_id));
   const unassigned = employees.filter(e => !assignedIds.has(e.id));
@@ -489,7 +491,7 @@ export function ShiftDetailDialog({
                           a.status === "review" && "border-primary/20 bg-primary/5",
                           a.status === "pending" && "border-warning/20 bg-warning/5",
                         )}
-                        draggable={canEdit}
+                        draggable={effectiveCanEdit}
                         onDragStart={(e) => {
                           e.dataTransfer.setData("application/assignment", JSON.stringify({
                             assignmentId: a.id, employeeId: a.employee_id, fromShiftId: shift.id,
@@ -502,7 +504,7 @@ export function ShiftDetailDialog({
                           <p className="text-xs font-semibold truncate">{emp.first_name} {emp.last_name}</p>
                         </div>
                         {/* Status dropdown */}
-                        {canEdit ? (
+                        {effectiveCanEdit ? (
                           <Select
                             value={a.status}
                             onValueChange={(v) => handleChangeAssignmentStatus(a.id, v)}
@@ -546,7 +548,7 @@ export function ShiftDetailDialog({
                             {statusLabels[a.status] || a.status}
                           </span>
                         )}
-                        {canEdit && (
+                        {effectiveCanEdit && (
                           <button
                             onClick={() => setRemoveConfirm({
                               assignmentId: a.id,
@@ -573,7 +575,7 @@ export function ShiftDetailDialog({
                   <Users className="h-3.5 w-3.5" />
                   {shiftAssignments.length} de {shift.slots ?? 1} plaza{(shift.slots ?? 1) > 1 ? "s" : ""}
                 </span>
-                {canEdit && (
+                {effectiveCanEdit && (
                   <Button variant="ghost" size="sm" onClick={() => setShowAddPanel(!showAddPanel)} className="h-7 text-xs px-2 text-primary">
                     <UserPlus className="h-3 w-3 mr-1" />
                     Agregar
@@ -582,7 +584,7 @@ export function ShiftDetailDialog({
               </div>
 
               {/* Claimable toggle */}
-              {canEdit && (
+              {effectiveCanEdit && (
                 <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-3 py-2.5">
                   <div className="flex items-center gap-2">
                     <Megaphone className="h-3.5 w-3.5 text-primary" />
@@ -688,7 +690,7 @@ export function ShiftDetailDialog({
                           </p>
                         )}
 
-                        {req.status === "pending" && canEdit && (
+                        {req.status === "pending" && effectiveCanEdit && (
                           <div className="flex items-center gap-2 pt-1">
                             <Button
                               size="sm"
@@ -744,7 +746,12 @@ export function ShiftDetailDialog({
             </div>
           </div>
         )}
-        {canEdit && (
+        {isLocked ? (
+          <div className="px-5 py-3 border-t border-border/40 bg-muted/20 flex items-center justify-center gap-2">
+            <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground font-medium">Este turno está bloqueado — solo lectura</span>
+          </div>
+        ) : canEdit && (
           <div className="px-5 py-3 border-t border-border/40 bg-muted/20 flex items-center gap-2">
             {shift.status !== "published" && (
               <Button size="sm" onClick={() => onPublish(shift)} className="h-8 text-xs gap-1.5">

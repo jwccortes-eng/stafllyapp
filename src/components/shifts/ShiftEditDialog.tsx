@@ -61,6 +61,7 @@ export function ShiftEditDialog({
   }, [shift, open]);
 
   if (!shift) return null;
+  if (shift.status === "locked") return null; // Locked shifts cannot be edited
 
   const handleClientChange = (v: string) => {
     const newId = v === "none" ? "" : v;
