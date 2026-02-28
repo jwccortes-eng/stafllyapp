@@ -103,30 +103,9 @@ export function MonthView({
 
   const renderShiftCard = (shift: Shift) => {
     const shiftAssigns = getAssignmentsForShift(shift.id);
-    const isUnassigned = shiftAssigns.length === 0;
 
-    if (isUnassigned) {
-      return (
-        <div
-          key={shift.id}
-          className="rounded-md px-1.5 py-[3px] text-[10px] leading-tight cursor-pointer truncate transition-all hover:shadow-sm bg-rose-100/80 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-800/40"
-          onClick={() => onShiftClick(shift)}
-          onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-1", "ring-primary/30"); }}
-          onDragLeave={e => { e.currentTarget.classList.remove("ring-1", "ring-primary/30"); }}
-          onDrop={e => {
-            e.preventDefault();
-            e.currentTarget.classList.remove("ring-1", "ring-primary/30");
-            const data = e.dataTransfer.getData("application/assignment");
-            if (data) onDropOnShift(shift.id, data);
-          }}
-        >
-          <span className="font-medium text-rose-500/80 dark:text-rose-400/70 italic">Vacante</span>
-          <span className="ml-1 text-rose-400/60 text-[9px]">
-            {shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)}
-          </span>
-        </div>
-      );
-    }
+    // Skip unassigned shifts entirely — don't show "Vacante"
+    if (shiftAssigns.length === 0) return null;
 
     const color = getClientColor(shift.client_id, clientIds);
 
@@ -240,14 +219,10 @@ export function MonthView({
                 // Flatten: each shift with N assignments becomes N cards; unassigned = 1 card
                 const allCards: React.ReactNode[] = [];
                 dayShifts.forEach(shift => {
-                  const assigns = getAssignmentsForShift(shift.id);
-                  if (assigns.length === 0) {
-                    allCards.push(renderShiftCard(shift));
-                  } else {
-                    const cards = renderShiftCard(shift);
-                    if (Array.isArray(cards)) allCards.push(...cards);
-                    else allCards.push(cards);
-                  }
+                  const cards = renderShiftCard(shift);
+                  if (!cards) return; // skip unassigned
+                  if (Array.isArray(cards)) allCards.push(...cards);
+                  else allCards.push(cards);
                 });
 
                 const visibleCards = isExpanded ? allCards : allCards.slice(0, MAX_VISIBLE);

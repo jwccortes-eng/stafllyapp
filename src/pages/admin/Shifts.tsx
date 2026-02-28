@@ -186,17 +186,31 @@ export default function Shifts() {
       dateTo = format(endOfMonth(currentMonth), "yyyy-MM-dd");
     }
 
-    const [shiftsRes, assignRes, clientsRes, locsRes, empsRes] = await Promise.all([
-      supabase.from("scheduled_shifts").select("*, shift_code").eq("company_id", selectedCompanyId)
-        .gte("date", dateFrom).lte("date", dateTo)
-        .is("deleted_at", null).order("start_time"),
-      supabase.from("shift_assignments").select("*").eq("company_id", selectedCompanyId),
+    // Fetch shifts for the date range
+    const shiftsRes = await supabase.from("scheduled_shifts").select("*, shift_code").eq("company_id", selectedCompanyId)
+      .gte("date", dateFrom).lte("date", dateTo)
+      .is("deleted_at", null).order("start_time");
+    const shiftIds = (shiftsRes.data ?? []).map(s => s.id);
+
+    // Fetch assignments only for visible shifts (avoids 1000-row limit)
+    let allAssignments: any[] = [];
+    if (shiftIds.length > 0) {
+      for (let i = 0; i < shiftIds.length; i += 200) {
+        const chunk = shiftIds.slice(i, i + 200);
+        const { data } = await supabase.from("shift_assignments").select("*")
+          .eq("company_id", selectedCompanyId)
+          .in("shift_id", chunk);
+        if (data) allAssignments.push(...data);
+      }
+    }
+
+    const [clientsRes, locsRes, empsRes] = await Promise.all([
       supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("locations").select("id, name, address, client_id").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId).eq("is_active", true),
     ]);
     setShifts((shiftsRes.data ?? []) as Shift[]);
-    setAssignments((assignRes.data ?? []) as Assignment[]);
+    setAssignments(allAssignments as Assignment[]);
     setClients((clientsRes.data ?? []) as SelectOption[]);
     setLocations((locsRes.data ?? []) as any[]);
     setEmployees((empsRes.data ?? []) as Employee[]);
