@@ -378,6 +378,10 @@ export default function ImportSchedule() {
           if (group.subItem) title += ` - ${group.subItem}`;
           if (!title.trim()) title = "Turno importado";
 
+          // Auto-detect daily pay type for weekend jobs
+          const titleLower = title.toLowerCase();
+          const isWeekendJob = /weekend\s*j[oa]b/i.test(group.subItem) || /weekend\s*j[oa]b/i.test(group.job) || /weekend\s*j[oa]b/i.test(titleLower);
+
           shiftPayloads.push({
             company_id: selectedCompanyId,
             title: title.trim(),
@@ -391,6 +395,7 @@ export default function ImportSchedule() {
             status: "open",
             slots: group.employees.length || 1,
             claimable: false,
+            pay_type: isWeekendJob ? "daily" : "hourly",
           });
           newBatch.push(group);
           if (dedupKey) existingShiftCodes.add(dedupKey);
