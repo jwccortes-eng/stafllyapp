@@ -180,6 +180,14 @@ export default function ImportTimeClock() {
     const ws = getSheet(wb, sheetName);
     if (!ws) return;
     const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+    console.log("[TimeClock Import] Total JSON rows:", json.length);
+    if (json.length > 0) {
+      console.log("[TimeClock Import] Column headers:", Object.keys(json[0]));
+      console.log("[TimeClock Import] First row sample:", JSON.stringify(json[0]).slice(0, 1000));
+      if (json.length > 1) {
+        console.log("[TimeClock Import] Second row sample:", JSON.stringify(json[1]).slice(0, 1000));
+      }
+    }
     if (json.length === 0) return;
 
     const parsed: ClockEntry[] = [];
@@ -197,6 +205,12 @@ export default function ImportTimeClock() {
       // The clock columns come after "Sub-job code"
       const startDateKey = findClockDateKey(row, "Start Date", true);
       const endDateKey = findClockDateKey(row, "End Date", true);
+      
+      if (parsed.length === 0) {
+        console.log("[TimeClock Import] startDateKey:", startDateKey, "value:", row[startDateKey]);
+        console.log("[TimeClock Import] endDateKey:", endDateKey, "value:", row[endDateKey]);
+        console.log("[TimeClock Import] In:", row["In"], "Out:", row["Out"]);
+      }
 
       const startDateRaw = row[startDateKey] ?? "";
       const inRaw = (row["In"] ?? "").trim();
