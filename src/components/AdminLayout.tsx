@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Menu } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import staflyLogo from "@/assets/stafly-logo.png";
+import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { FloatingDock } from "@/components/navigation/FloatingDock";
 import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS } from "@/components/navigation/nav-items";
@@ -87,7 +87,7 @@ export default function AdminLayout() {
         <header className="sticky top-0 z-30 bg-card/85 backdrop-blur-xl border-b border-border/30">
           <div className="flex items-center justify-between px-4 h-14">
             <div className="flex items-center gap-2.5">
-              <img src={staflyLogo} alt="stafly" className="h-7 w-auto" style={{ imageRendering: "auto" }} />
+              <StaflyLogo size={28} />
             </div>
             <div className="flex items-center gap-1">
               {companies.length > 1 && (
