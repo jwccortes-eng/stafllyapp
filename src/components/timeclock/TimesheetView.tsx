@@ -5,7 +5,6 @@ import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -14,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
 import {
   ChevronLeft, ChevronRight, Search, Timer, Download,
-  CheckCircle2, XCircle, AlertTriangle, Clock,
+  CheckCircle2, XCircle, AlertTriangle, FileText,
 } from "lucide-react";
 import { format, startOfWeek, addDays, differenceInMinutes, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -40,15 +39,8 @@ interface Employee {
 
 const formatHours = (mins: number) => {
   if (mins <= 0) return "--";
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${h}.${String(Math.round((m / 60) * 100)).padStart(2, "0")}`;
-};
-
-const formatDuration = (mins: number) => {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  const h = mins / 60;
+  return h % 1 === 0 ? String(h) : h.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 };
 
 export function TimesheetView() {
@@ -115,11 +107,19 @@ export function TimesheetView() {
           return total;
         });
 
+        // Check which days have notes/issues
+        const dailyHasNotes: boolean[] = weekDays.map(day => {
+          return filteredEntries.some(e =>
+            isSameDay(new Date(e.clock_in), day) &&
+            (e.notes || e.status === "rejected" || !e.clock_out)
+          );
+        });
+
         const totalMins = dailyMins.reduce((a, b) => a + b, 0);
         const hasIssues = filteredEntries.some(e => e.status === "rejected" || (!e.clock_out && e.status !== "rejected"));
         const entryIds = filteredEntries.map(e => e.id);
 
-        return { ...emp, dailyMins, totalMins, hasIssues, entryIds, entryCount: filteredEntries.length };
+        return { ...emp, dailyMins, dailyHasNotes, totalMins, hasIssues, entryIds, entryCount: filteredEntries.length };
       })
       .filter(r => r.entryCount > 0 || statusFilter === "all")
       .sort((a, b) => b.totalMins - a.totalMins);
@@ -136,9 +136,12 @@ export function TimesheetView() {
         breakMins += e.break_minutes ?? 0;
       }
     });
-    const pending = filtered.filter(e => e.status === "pending" && e.clock_out).length;
-    const approved = filtered.filter(e => e.status === "approved").length;
-    return { regularHours: (regularMins / 60).toFixed(1), breakHours: (breakMins / 60).toFixed(1), totalHours: (regularMins / 60).toFixed(1), pending, approved, total: filtered.length };
+    return {
+      regularHours: (regularMins / 60).toFixed(2),
+      breakHours: (breakMins / 60).toFixed(2),
+      totalHours: (regularMins / 60).toFixed(2),
+      unpaidHours: (breakMins / 60).toFixed(0),
+    };
   }, [entries, statusFilter]);
 
   // Build drawer-compatible employee data
@@ -204,7 +207,7 @@ export function TimesheetView() {
         weekDays.forEach((d, i) => {
           row[format(d, "EEE dd/MM", { locale: es })] = r.dailyMins[i] > 0 ? Number(formatHours(r.dailyMins[i])) : "";
         });
-        row["Total"] = Number(formatHours(r.totalMins));
+        row["Total hours"] = Number(formatHours(r.totalMins));
         return row;
       });
       await writeExcelFile(data, "Timesheets", `timesheets_${format(weekStart, "yyyy-MM-dd")}.xlsx`);
@@ -219,25 +222,25 @@ export function TimesheetView() {
 
   return (
     <div className="space-y-4">
-      {/* KPIs */}
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        <div>
+      {/* KPIs - Connecteam formula style */}
+      <div className="flex flex-wrap items-baseline gap-3 text-sm">
+        <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-bold font-mono">{kpis.regularHours}</span>
-          <span className="text-muted-foreground ml-1 text-xs">Regular</span>
+          <span className="text-[11px] text-muted-foreground">Regular</span>
         </div>
-        <span className="text-muted-foreground">+</span>
-        <div>
-          <span className="text-2xl font-bold font-mono">{kpis.breakHours}</span>
-          <span className="text-muted-foreground ml-1 text-xs">Descanso</span>
+        <span className="text-lg text-muted-foreground/50 font-light">+</span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-2xl font-bold font-mono">0</span>
+          <span className="text-[11px] text-muted-foreground">Paid time off</span>
         </div>
-        <span className="text-muted-foreground">=</span>
-        <div>
+        <span className="text-lg text-muted-foreground/50 font-light">=</span>
+        <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-bold font-mono text-primary">{kpis.totalHours}</span>
-          <span className="text-muted-foreground ml-1 text-xs">Total Hrs Pagadas</span>
+          <span className="text-[11px] text-muted-foreground">Total Paid Hours</span>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Badge variant="secondary" className="text-xs">{kpis.pending} pendientes</Badge>
-          <Badge className="text-xs bg-emerald-500/15 text-emerald-600 border-emerald-200">{kpis.approved} aprobados</Badge>
+        <div className="flex items-baseline gap-1.5 ml-4 pl-4 border-l border-border/50">
+          <span className="text-2xl font-bold font-mono">{kpis.unpaidHours}</span>
+          <span className="text-[11px] text-muted-foreground">Unpaid time off</span>
         </div>
       </div>
 
@@ -254,7 +257,7 @@ export function TimesheetView() {
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
           <span className="text-xs font-medium min-w-[140px] text-center">
-            {format(weekStart, "dd/MM", { locale: es })} - {format(addDays(weekStart, 6), "dd/MM/yy", { locale: es })}
+            {format(weekStart, "MM/dd")} - {format(addDays(weekStart, 6), "MM/dd")}
           </span>
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekStart(d => addDays(d, 7))}>
             <ChevronRight className="h-3.5 w-3.5" />
@@ -267,7 +270,7 @@ export function TimesheetView() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos ({entries.length})</SelectItem>
+            <SelectItem value="all">Status filter</SelectItem>
             <SelectItem value="pending">Pendientes</SelectItem>
             <SelectItem value="approved">Aprobados</SelectItem>
             <SelectItem value="rejected">Rechazados</SelectItem>
@@ -289,42 +292,43 @@ export function TimesheetView() {
 
         {/* Export */}
         <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 ml-auto" onClick={handleExport}>
-          <Download className="h-3.5 w-3.5" /> Exportar
+          <Download className="h-3.5 w-3.5" /> Export
         </Button>
       </div>
 
-      {/* Timesheet grid */}
+      {/* Timesheet grid - Connecteam style */}
       {loading ? (
         <PageSkeleton variant="table" />
       ) : rows.length === 0 ? (
         <EmptyState icon={Timer} title="Sin fichajes esta semana" description="No hay registros para el período seleccionado" compact />
       ) : (
-        <div className="border rounded-xl overflow-hidden overflow-x-auto">
+        <div className="border rounded-xl overflow-hidden overflow-x-auto bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted/30 border-b">
+              <tr className="border-b bg-muted/20">
                 {canApprove && (
-                  <th className="w-10 px-2 py-2">
+                  <th className="w-10 px-3 py-3">
                     <Checkbox
                       checked={selectedIds.size > 0 && selectedIds.size === rows.flatMap(r => r.entryIds).length}
                       onCheckedChange={toggleSelectAll}
                     />
                   </th>
                 )}
-                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground min-w-[180px]">Empleado</th>
-                <th className="text-center px-1 py-2 text-xs font-semibold text-muted-foreground w-10">⚠</th>
+                <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]">Full name</th>
+                <th className="text-center px-1 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider w-14">Issues</th>
                 {weekDays.map(day => (
                   <th
                     key={day.toISOString()}
-                    className={`text-center px-2 py-2 text-xs font-semibold min-w-[70px] ${
-                      isToday(day) ? "text-primary bg-primary/5" : "text-muted-foreground"
+                    className={`text-center px-2 py-3 min-w-[75px] ${
+                      isToday(day) ? "bg-primary/5" : ""
                     }`}
                   >
-                    <div>{format(day, "EEE", { locale: es })}</div>
-                    <div className="font-mono text-[10px]">{format(day, "d/MM")}</div>
+                    <div className={`text-[11px] font-semibold uppercase tracking-wider ${isToday(day) ? "text-primary font-bold" : "text-muted-foreground"}`}>
+                      {format(day, "EEE", { locale: es })} {format(day, "M/d")}
+                    </div>
                   </th>
                 ))}
-                <th className="text-center px-3 py-2 text-xs font-bold text-foreground min-w-[70px]">Total</th>
+                <th className="text-center px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider min-w-[80px]">Total hours</th>
               </tr>
             </thead>
             <tbody>
@@ -335,45 +339,40 @@ export function TimesheetView() {
                   onClick={() => setSelectedEmpId(row.id)}
                 >
                   {canApprove && (
-                    <td className="px-2 py-2" onClick={e => e.stopPropagation()}>
+                    <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                       <Checkbox
                         checked={row.entryIds.every(id => selectedIds.has(id))}
                         onCheckedChange={() => toggleEmployee(row.entryIds)}
                       />
                     </td>
                   )}
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <EmployeeAvatar firstName={row.first_name} lastName={row.last_name} avatarUrl={row.avatar_url} className="h-7 w-7 text-[10px]" />
-                      <span className="font-medium text-sm truncate">{row.first_name} {row.last_name}</span>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <EmployeeAvatar firstName={row.first_name} lastName={row.last_name} avatarUrl={row.avatar_url} size="md" />
+                      <span className="font-medium text-xs uppercase tracking-wide truncate">{row.first_name} {row.last_name}</span>
                     </div>
                   </td>
-                  <td className="text-center px-1 py-2">
+                  <td className="text-center px-1 py-2.5">
                     {row.hasIssues && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mx-auto" />}
                   </td>
                   {row.dailyMins.map((mins, i) => (
                     <td
                       key={i}
-                      className={`text-center px-2 py-2 ${isToday(weekDays[i]) ? "bg-primary/5" : ""}`}
+                      className={`text-center px-2 py-2.5 ${isToday(weekDays[i]) ? "bg-primary/5" : ""}`}
                     >
                       {mins > 0 ? (
-                        <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-mono font-semibold ${
-                          row.hasIssues && entries.some(e =>
-                            e.employee_id === row.id &&
-                            isSameDay(new Date(e.clock_in), weekDays[i]) &&
-                            (e.status === "rejected" || !e.clock_out)
-                          )
-                            ? "bg-amber-100/80 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                            : "bg-sky-100/80 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
-                        }`}>
+                        <span className="inline-flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xs font-mono font-semibold bg-sky-100/80 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
                           {formatHours(mins)}
+                          {row.dailyHasNotes[i] && (
+                            <FileText className="h-2.5 w-2.5 opacity-60" />
+                          )}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground/30">--</span>
+                        <span className="text-muted-foreground/30 text-xs">--</span>
                       )}
                     </td>
                   ))}
-                  <td className="text-center px-3 py-2">
+                  <td className="text-center px-3 py-2.5">
                     <span className="font-mono font-bold text-sm">{row.totalMins > 0 ? formatHours(row.totalMins) : "--"}</span>
                   </td>
                 </tr>
@@ -382,16 +381,16 @@ export function TimesheetView() {
             <tfoot>
               <tr className="bg-muted/20 border-t">
                 {canApprove && <td />}
-                <td className="px-3 py-2 text-xs font-semibold text-muted-foreground" colSpan={2}>Totales</td>
+                <td className="px-3 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase" colSpan={2}>Totales</td>
                 {weekDays.map((day, i) => {
                   const dayTotal = rows.reduce((sum, r) => sum + r.dailyMins[i], 0);
                   return (
-                    <td key={i} className={`text-center px-2 py-2 ${isToday(day) ? "bg-primary/5" : ""}`}>
+                    <td key={i} className={`text-center px-2 py-2.5 ${isToday(day) ? "bg-primary/5" : ""}`}>
                       <span className="font-mono font-bold text-xs">{dayTotal > 0 ? formatHours(dayTotal) : "--"}</span>
                     </td>
                   );
                 })}
-                <td className="text-center px-3 py-2">
+                <td className="text-center px-3 py-2.5">
                   <span className="font-mono font-bold text-sm text-primary">
                     {formatHours(rows.reduce((sum, r) => sum + r.totalMins, 0))}
                   </span>

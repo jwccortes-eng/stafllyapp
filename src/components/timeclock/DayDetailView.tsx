@@ -5,7 +5,6 @@ import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -13,8 +12,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
 import {
-  ChevronLeft, ChevronRight, Search, Timer, Hash,
-  CheckCircle2, XCircle, Clock, Play, Square,
+  ChevronLeft, ChevronRight, Search, Timer,
+  CheckCircle2, XCircle, Clock, MessageSquare,
 } from "lucide-react";
 import { format, differenceInMinutes, addDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -29,10 +28,36 @@ interface TimeEntry {
   break_minutes: number;
   notes: string | null;
   status: string;
-  scheduled_shifts?: { id: string; shift_code: string | null; title: string; start_time: string; end_time: string } | null;
+  scheduled_shifts?: {
+    id: string;
+    shift_code: string | null;
+    title: string;
+    start_time: string;
+    end_time: string;
+    clients?: { name: string } | null;
+    locations?: { name: string } | null;
+  } | null;
 }
 
 interface Employee { id: string; first_name: string; last_name: string; avatar_url?: string | null; }
+
+/* Deterministic pastel color from string */
+const JOB_COLORS = [
+  "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+  "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+  "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
+  "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
+  "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+];
+
+function hashStr(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
 
 export function DayDetailView() {
   const { role, hasModuleAccess } = useAuth();
@@ -57,7 +82,7 @@ export function DayDetailView() {
     const endOfDay = `${dateStr}T23:59:59`;
     const [entriesRes, empsRes] = await Promise.all([
       supabase.from("time_entries")
-        .select("*, scheduled_shifts(id, shift_code, title, start_time, end_time)")
+        .select("*, scheduled_shifts(id, shift_code, title, start_time, end_time, clients(name), locations(name))")
         .eq("company_id", selectedCompanyId)
         .gte("clock_in", startOfDay).lte("clock_in", endOfDay)
         .order("clock_in", { ascending: true }),
@@ -80,12 +105,12 @@ export function DayDetailView() {
 
   const getEmp = (id: string) => employees.find(x => x.id === id);
 
-  const getDuration = (entry: TimeEntry) => {
+  const getDurationText = (entry: TimeEntry) => {
     const end = entry.clock_out ? new Date(entry.clock_out) : new Date();
     const mins = Math.max(0, differenceInMinutes(end, new Date(entry.clock_in)) - (entry.break_minutes ?? 0));
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    return `${h}h ${m}m`;
+    return `${h}:${String(m).padStart(2, "0")}`;
   };
 
   const filtered = useMemo(() => {
@@ -138,22 +163,30 @@ export function DayDetailView() {
     else { toast.success(`${ids.length} rechazados`); loadData(); }
   };
 
+  const getJobColor = (title: string) => JOB_COLORS[hashStr(title) % JOB_COLORS.length];
+
   return (
     <div className="space-y-4">
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="border-border/30 rounded-xl">
-          <CardContent className="pt-3 pb-2 px-4">
-            <div className="text-2xl font-bold">{activeCount}</div>
-            <p className="text-[11px] text-muted-foreground">Fichados ahora</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/30 rounded-xl">
-          <CardContent className="pt-3 pb-2 px-4">
-            <div className="text-2xl font-bold">{totalAttendance}</div>
-            <p className="text-[11px] text-muted-foreground">Asistencia total</p>
-          </CardContent>
-        </Card>
+      {/* KPIs - Connecteam style */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl font-bold">{activeCount}</span>
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">Fichados ahora</span>
+          </div>
+          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto text-muted-foreground">
+            <MessageSquare className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-3xl font-bold">{totalAttendance}</span>
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">Asistencia total</span>
+          </div>
+          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto text-muted-foreground">
+            <MessageSquare className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -168,9 +201,9 @@ export function DayDetailView() {
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(d => addDays(d, -1))}>
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 text-xs font-medium min-w-[120px]"
+          <Button variant="ghost" size="sm" className="h-8 text-xs font-medium min-w-[80px]"
             onClick={() => setSelectedDate(new Date())}>
-            {format(selectedDate, "EEEE d MMM", { locale: es })}
+            {format(selectedDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") ? "Today" : format(selectedDate, "EEEE d MMM", { locale: es })}
           </Button>
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(d => addDays(d, 1))}>
             <ChevronRight className="h-3.5 w-3.5" />
@@ -202,18 +235,18 @@ export function DayDetailView() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Table - Connecteam style */}
       {loading ? (
         <PageSkeleton variant="table" />
       ) : filtered.length === 0 ? (
         <EmptyState icon={Timer} title="Sin fichajes este día" description="No hay registros para la fecha seleccionada" compact />
       ) : (
-        <div className="border rounded-xl overflow-hidden">
+        <div className="border rounded-xl overflow-hidden bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted/30 border-b">
+              <tr className="border-b bg-muted/20">
                 {canApprove && (
-                  <th className="w-10 px-2 py-2">
+                  <th className="w-10 px-3 py-3">
                     <Checkbox
                       checked={selectedIds.size > 0 && selectedIds.size === filtered.length}
                       onCheckedChange={() => {
@@ -223,25 +256,32 @@ export function DayDetailView() {
                     />
                   </th>
                 )}
-                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Empleado</th>
-                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Turno</th>
-                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Entrada</th>
-                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Salida</th>
-                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Duración</th>
-                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Estado</th>
+                <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Empleado</th>
+                <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo</th>
+                <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Job</th>
+                <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Sub items</th>
+                <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Clock in</th>
+                <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Clock out</th>
+                <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Daily total</th>
+                <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Estado</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(entry => {
                 const emp = getEmp(entry.employee_id);
+                const shift = entry.scheduled_shifts;
+                const jobTitle = shift?.title?.replace(/^#\d+\s*-?\s*/, "") || "";
+                const clientName = (shift as any)?.clients?.name;
+                const locationName = (shift as any)?.locations?.name;
+
                 return (
                   <tr
                     key={entry.id}
-                    className="border-b border-border/20 hover:bg-muted/20 transition-colors cursor-pointer"
+                    className="border-b border-border/20 hover:bg-muted/30 transition-colors cursor-pointer"
                     onClick={() => setSelectedEmpId(entry.employee_id)}
                   >
                     {canApprove && (
-                      <td className="px-2 py-2" onClick={e => e.stopPropagation()}>
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedIds.has(entry.id)}
                           onCheckedChange={() => {
@@ -252,29 +292,59 @@ export function DayDetailView() {
                         />
                       </td>
                     )}
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-2">
-                        {emp && <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} className="h-7 w-7 text-[10px]" />}
-                        <span className="font-medium">{getEmpName(entry.employee_id)}</span>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-2.5">
+                        {emp && <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} size="md" />}
+                        <span className="font-medium uppercase text-xs tracking-wide">{getEmpName(entry.employee_id)}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-2">
-                      {entry.scheduled_shifts?.shift_code ? (
-                        <Badge variant="outline" className="font-mono text-[10px]">
-                          <Hash className="h-2.5 w-2.5 mr-0.5" />{entry.scheduled_shifts.shift_code}
-                        </Badge>
+                    <td className="px-3 py-3">
+                      {shift ? (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> Shift
+                        </span>
                       ) : (
-                        <span className="text-muted-foreground/40">--</span>
+                        <span className="text-muted-foreground/40 text-xs">--</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs">{format(new Date(entry.clock_in), "HH:mm")}</td>
-                    <td className="px-3 py-2 font-mono text-xs">
-                      {entry.clock_out ? format(new Date(entry.clock_out), "HH:mm") : (
-                        <Badge className="animate-pulse text-[9px] px-1.5 py-0">Activo</Badge>
+                    <td className="px-3 py-3">
+                      {jobTitle ? (
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold truncate max-w-[140px] ${getJobColor(jobTitle)}`}>
+                          {shift?.shift_code ? `${shift.shift_code} - ` : ""}{jobTitle}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/40 text-xs">--</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs font-semibold">{getDuration(entry)}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-3">
+                      {(clientName || locationName) ? (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium bg-primary/10 text-primary truncate max-w-[120px]">
+                          {clientName || locationName}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/40 text-xs">--</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="font-mono text-xs">
+                        {format(new Date(entry.clock_in), "hh:mm a")}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      {entry.clock_out ? (
+                        <span className="font-mono text-xs">{format(new Date(entry.clock_out), "hh:mm a")}</span>
+                      ) : (
+                        <span className="text-muted-foreground/40 text-xs">--</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3">
+                      {entry.clock_out ? (
+                        <span className="font-mono text-xs font-semibold">{getDurationText(entry)}</span>
+                      ) : (
+                        <span className="text-muted-foreground/40 text-xs">--</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3">
                       <Badge variant={
                         entry.status === "approved" ? "default" :
                         entry.status === "rejected" ? "destructive" : "secondary"
