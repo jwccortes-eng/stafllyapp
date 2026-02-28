@@ -27,6 +27,8 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { useSubscription } from "@/hooks/useSubscription";
+import UpgradeBanner from "@/components/billing/UpgradeBanner";
 
 const MODULES = [
   { key: "employees", label: "Empleados" },
@@ -107,6 +109,7 @@ function UserAvatar({ name, email, size = "md" }: { name: string; email: string;
 
 export default function UsersPage() {
   const { role: currentRole } = useAuth();
+  const { canAddAdmins, limits } = useSubscription();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [search, setSearch] = useState("");
   const [editUser, setEditUser] = useState<UserRecord | null>(null);
@@ -127,6 +130,9 @@ export default function UsersPage() {
   const [inviteRole, setInviteRole] = useState<"admin" | "manager">("admin");
   const [inviteLoading, setInviteLoading] = useState(false);
   const { toast } = useToast();
+
+  const adminCount = users.filter(u => u.role === "admin" || u.role === "owner").length;
+  const atAdminLimit = !canAddAdmins(adminCount);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("user_id, email, full_name");
@@ -257,6 +263,10 @@ export default function UsersPage() {
 
   const handleInviteAdmin = async () => {
     if (!inviteEmail || !invitePassword) return;
+    if (inviteRole === "admin" && atAdminLimit) {
+      toast({ title: "Límite alcanzado", description: `Tu plan permite máximo ${limits.maxAdmins} admin(s). Actualiza tu plan.`, variant: "destructive" });
+      return;
+    }
     setInviteLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-admin", {
@@ -546,9 +556,13 @@ export default function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleInviteAdmin} className="w-full" disabled={inviteLoading || !inviteEmail || invitePassword.length < 6}>
-              {inviteLoading ? "Creando..." : "Crear usuario"}
-            </Button>
+            {inviteRole === "admin" && atAdminLimit ? (
+              <UpgradeBanner feature={`Límite de ${limits.maxAdmins} administrador(es) alcanzado`} />
+            ) : (
+              <Button onClick={handleInviteAdmin} className="w-full" disabled={inviteLoading || !inviteEmail || invitePassword.length < 6}>
+                {inviteLoading ? "Creando..." : "Crear usuario"}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

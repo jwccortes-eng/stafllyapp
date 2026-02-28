@@ -15,7 +15,8 @@ const plans = [
     period: "/mes",
     description: "Para equipos pequeños que están iniciando",
     features: [
-      "Hasta 10 empleados",
+      "1 administrador",
+      "Hasta 25 empleados",
       "Nómina semanal básica",
       "Turnos y reloj",
       "Anuncios",
@@ -30,7 +31,8 @@ const plans = [
     description: "Para empresas en crecimiento",
     popular: true,
     features: [
-      "Empleados ilimitados",
+      "Hasta 3 administradores",
+      "Hasta 100 empleados",
       "Automatizaciones",
       "Reportes avanzados",
       "API externa",
@@ -46,6 +48,7 @@ const plans = [
     description: "Para operaciones a gran escala",
     features: [
       "Todo en Pro",
+      "Admins y empleados ilimitados",
       "Multi-empresa",
       "Monetización y facturación",
       "Integraciones personalizadas",
