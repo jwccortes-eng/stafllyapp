@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setActionPermissions([]);
     setFullName(null);
     // Force redirect to auth page
-    window.location.href = "/auth";
+    window.location.href = "/";
   };
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
