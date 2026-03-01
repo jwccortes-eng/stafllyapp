@@ -2852,7 +2852,6 @@ export type Database = {
           connecteam_employee_id: string | null
           created_at: string | null
           direct_manager: string | null
-          email: string | null
           employee_role: string | null
           end_date: string | null
           first_name: string | null
@@ -2861,7 +2860,6 @@ export type Database = {
           id: string | null
           is_active: boolean | null
           last_name: string | null
-          phone_number: string | null
           start_date: string | null
           tags: string | null
           updated_at: string | null
@@ -2872,7 +2870,6 @@ export type Database = {
           connecteam_employee_id?: string | null
           created_at?: string | null
           direct_manager?: string | null
-          email?: string | null
           employee_role?: string | null
           end_date?: string | null
           first_name?: string | null
@@ -2881,7 +2878,6 @@ export type Database = {
           id?: string | null
           is_active?: boolean | null
           last_name?: string | null
-          phone_number?: string | null
           start_date?: string | null
           tags?: string | null
           updated_at?: string | null
@@ -2892,7 +2888,6 @@ export type Database = {
           connecteam_employee_id?: string | null
           created_at?: string | null
           direct_manager?: string | null
-          email?: string | null
           employee_role?: string | null
           end_date?: string | null
           first_name?: string | null
@@ -2901,7 +2896,6 @@ export type Database = {
           id?: string | null
           is_active?: boolean | null
           last_name?: string | null
-          phone_number?: string | null
           start_date?: string | null
           tags?: string | null
           updated_at?: string | null
@@ -2916,6 +2910,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles_safe: {
+        Row: {
+          full_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          full_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          full_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       shifts_safe: {
         Row: {
