@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { formatPersonName } from "@/lib/format-helpers";
+import { usePageView } from "@/hooks/useAuditLog";
+import AuditPanel from "@/components/audit/AuditPanel";
 import { toast as sonnerToast } from "sonner";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +53,7 @@ type SortDir = "asc" | "desc";
 type PayFilter = "all" | "with_extras" | "with_deductions" | "zero_base";
 
 export default function PeriodSummary() {
+  usePageView("Resumen de periodo");
   const { selectedCompanyId } = useCompany();
   const { user, hasActionPermission } = useAuth();
   const { toast } = useToast();
@@ -633,6 +636,17 @@ export default function PeriodSummary() {
           </Table>
         </div>
       )}
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel
+          entityType="pay_period"
+          entityId={selectedPeriod}
+          title="Actividad del periodo"
+          hideViews
+          compact
+        />
+      </div>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
+import { usePageView } from "@/hooks/useAuditLog";
+import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { Button } from "@/components/ui/button";
@@ -98,6 +100,7 @@ interface UpdateDiff {
 }
 
 export default function Employees() {
+  usePageView("Empleados");
   const { selectedCompanyId } = useCompany();
   const { role } = useAuth();
   const isPrivileged = role === 'owner' || role === 'admin';
@@ -1094,6 +1097,16 @@ export default function Employees() {
         description={`Se eliminará permanentemente a ${deleteTarget?.first_name} ${deleteTarget?.last_name}. Confirma tu contraseña para continuar.`}
         onConfirm={handleDelete}
       />
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel
+          entityType="employee"
+          title="Actividad de empleados"
+          hideViews
+          compact
+        />
+      </div>
     </div>
   );
 }

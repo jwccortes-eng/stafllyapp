@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePageView } from "@/hooks/useAuditLog";
+import AuditPanel from "@/components/audit/AuditPanel";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Clock, CalendarRange, Upload, MoreHorizontal, List, Calendar as CalendarIcon,
@@ -18,6 +20,7 @@ import { TimesheetView } from "@/components/timeclock/TimesheetView";
 import { MonthClockView } from "@/components/timeclock/MonthClockView";
 
 export default function TimeClock() {
+  usePageView("Time Clock");
   const [activeTab, setActiveTab] = useState("today");
   const [timesheetMode, setTimesheetMode] = useState<"list" | "calendar">("list");
   const navigate = useNavigate();
@@ -144,6 +147,16 @@ export default function TimeClock() {
           {timesheetMode === "list" ? <TimesheetView /> : <MonthClockView />}
         </TabsContent>
       </Tabs>
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel
+          entityType="time_entry"
+          title="Actividad de fichajes"
+          hideViews
+          compact
+        />
+      </div>
     </div>
   );
 }

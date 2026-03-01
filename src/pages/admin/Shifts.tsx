@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { usePageView } from "@/hooks/useAuditLog";
+import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -61,6 +63,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export default function Shifts() {
+  usePageView("Programación");
   const navigate = useNavigate();
   const { role, hasModuleAccess, user } = useAuth();
   const { selectedCompanyId } = useCompany();
@@ -1200,6 +1203,16 @@ export default function Shifts() {
         locations={locations}
         onSave={handleEditShift}
       />
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel
+          entityType="shift"
+          title="Actividad de turnos"
+          hideViews
+          compact
+        />
+      </div>
     </div>
   );
 }
