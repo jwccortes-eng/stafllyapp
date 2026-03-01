@@ -31,17 +31,17 @@ export const InviteEmail = ({
 }: InviteEmailProps) => (
   <Html lang="es" dir="ltr">
     <Head />
-    <Preview>Te han invitado a stafly</Preview>
+    <Preview>Te han invitado a StaflyApps</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={logoSection}>
-          <Img src={LOGO_URL} alt="stafly" width="120" height="auto" style={logo} />
+          <Img src={LOGO_URL} alt="StaflyApps" width="120" height="auto" style={logo} />
         </Section>
         <Heading style={h1}>Te han invitado</Heading>
         <Text style={text}>
           Has sido invitado a unirte a{' '}
           <Link href={siteUrl} style={link}>
-            <strong>stafly</strong>
+            <strong>StaflyApps</strong>
           </Link>
           . Haz clic en el botón para aceptar la invitación y crear tu cuenta.
         </Text>

@@ -212,7 +212,7 @@ export default function ComparisonReport() {
     <div className="space-y-6">
       <PageHeader
         variant="3"
-        title="Connecteam vs Stafly"
+        title="Connecteam vs StaflyApps"
         subtitle="Comparación: programación vs ejecución real"
       />
 

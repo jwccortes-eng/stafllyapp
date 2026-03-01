@@ -66,7 +66,7 @@ const i18n = {
     testimonials: {
       title: "Lo que dicen nuestros clientes",
       items: [
-        { name: "María González", role: "Directora de Operaciones", company: "CleanPro Services", quote: "Stafly transformó nuestra gestión de turnos. Lo que antes tomaba horas ahora se hace en minutos.", rating: 5 },
+        { name: "María González", role: "Directora de Operaciones", company: "CleanPro Services", quote: "StaflyApps transformó nuestra gestión de turnos. Lo que antes tomaba horas ahora se hace en minutos.", rating: 5 },
         { name: "Carlos Rodríguez", role: "Gerente General", company: "Spotless Group", quote: "La verificación GPS nos dio tranquilidad total. Sabemos exactamente dónde está cada empleado.", rating: 5 },
         { name: "Ana Martínez", role: "HR Manager", company: "BrightClean Co.", quote: "La nómina semanal automática nos ahorró errores y disputas. Nuestro equipo está más contento.", rating: 5 },
       ],
@@ -137,7 +137,7 @@ const i18n = {
     testimonials: {
       title: "What our clients say",
       items: [
-        { name: "Maria González", role: "Director of Operations", company: "CleanPro Services", quote: "Stafly transformed our shift management. What used to take hours now happens in minutes.", rating: 5 },
+        { name: "Maria González", role: "Director of Operations", company: "CleanPro Services", quote: "StaflyApps transformed our shift management. What used to take hours now happens in minutes.", rating: 5 },
         { name: "Carlos Rodríguez", role: "General Manager", company: "Spotless Group", quote: "GPS verification gave us total peace of mind. We know exactly where each employee is.", rating: 5 },
         { name: "Ana Martínez", role: "HR Manager", company: "BrightClean Co.", quote: "Automatic weekly payroll eliminated errors and disputes. Our team is happier.", rating: 5 },
       ],
@@ -372,7 +372,7 @@ export default function Landing() {
               </div>
             </div>
             <div className="rounded-2xl border border-success/15 bg-success/[0.02] p-7">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-success">{c.chaos.after} — stafly</span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-success">{c.chaos.after} — StaflyApps</span>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 {c.chaos.afterItems.map((item, i) => {
                   const Icon = chaosIcons[i];
@@ -592,7 +592,7 @@ export default function Landing() {
               <a href="#contacto" className="hover:text-foreground transition-colors">{c.footer.contact}</a>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} stafly · staflyapps.com
+              © {new Date().getFullYear()} StaflyApps · staflyapps.com
             </p>
           </div>
         </div>

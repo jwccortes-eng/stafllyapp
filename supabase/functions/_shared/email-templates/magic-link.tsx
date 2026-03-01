@@ -28,15 +28,15 @@ export const MagicLinkEmail = ({
 }: MagicLinkEmailProps) => (
   <Html lang="es" dir="ltr">
     <Head />
-    <Preview>Tu enlace de acceso a stafly</Preview>
+    <Preview>Tu enlace de acceso a StaflyApps</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={logoSection}>
-          <Img src={LOGO_URL} alt="stafly" width="120" height="auto" style={logo} />
+          <Img src={LOGO_URL} alt="StaflyApps" width="120" height="auto" style={logo} />
         </Section>
         <Heading style={h1}>Tu enlace de acceso</Heading>
         <Text style={text}>
-          Haz clic en el botón para iniciar sesión en stafly. Este enlace expirará en breve.
+          Haz clic en el botón para iniciar sesión en StaflyApps. Este enlace expirará en breve.
         </Text>
         <Section style={buttonSection}>
           <Button style={button} href={confirmationUrl}>

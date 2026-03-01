@@ -23,11 +23,11 @@ const LOGO_URL = 'https://jplhtputzixwqarqlrth.supabase.co/storage/v1/object/pub
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="es" dir="ltr">
     <Head />
-    <Preview>Tu código de verificación de stafly</Preview>
+    <Preview>Tu código de verificación de StaflyApps</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={logoSection}>
-          <Img src={LOGO_URL} alt="stafly" width="120" height="auto" style={logo} />
+          <Img src={LOGO_URL} alt="StaflyApps" width="120" height="auto" style={logo} />
         </Section>
         <Heading style={h1}>Código de verificación</Heading>
         <Text style={text}>Usa el siguiente código para confirmar tu identidad:</Text>

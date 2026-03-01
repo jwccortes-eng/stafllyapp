@@ -31,7 +31,7 @@ export default function InviteEmployees() {
   const [showQR, setShowQR] = useState<string | null>(null);
   const [generatingPin, setGeneratingPin] = useState<string | null>(null);
 
-  const companyName = selectedCompany?.name ?? "stafly";
+  const companyName = selectedCompany?.name ?? "StaflyApps";
   const baseUrl = window.location.hostname.includes("lovableproject.com") || window.location.hostname.includes("localhost")
     ? "https://staflyapp.lovable.app"
     : window.location.origin;
@@ -76,7 +76,7 @@ export default function InviteEmployees() {
   const buildInviteMessage = (emp: Employee) => {
     const name = `${emp.first_name} ${emp.last_name}`;
     const pin = emp.access_pin ?? "[pendiente]";
-    return `¡Hola ${name}! 👋\n\nTe damos la bienvenida a *${companyName}* en stafly, tu portal de pagos y gestión laboral.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n🔑 Tu PIN: ${pin}\n\n💡 Tip: Guarda este enlace en tu pantalla de inicio para un acceso más rápido.\n\n— Equipo ${companyName}`;
+    return `¡Hola ${name}! 👋\n\nTe damos la bienvenida a *${companyName}* en StaflyApps, tu portal de pagos y gestión laboral.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n🔑 Tu PIN: ${pin}\n\n💡 Tip: Guarda este enlace en tu pantalla de inicio para un acceso más rápido.\n\n— Equipo ${companyName}`;
   };
 
   const shareWhatsApp = (emp: Employee) => {
