@@ -8,6 +8,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
@@ -15,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid, FlaskConical, Copy, Check } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid, FlaskConical, Copy, Check, CreditCard } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,7 +38,15 @@ interface CompanyRecord {
   user_count?: number;
   active_modules?: number;
   total_modules?: number;
+  plan?: string;
+  plan_status?: string;
 }
+
+const PLAN_OPTIONS = [
+  { value: "free", label: "Free", color: "bg-muted text-muted-foreground" },
+  { value: "pro", label: "Pro", color: "bg-primary/10 text-primary" },
+  { value: "enterprise", label: "Enterprise", color: "bg-chart-4/10 text-chart-4" },
+] as const;
 
 export default function CompaniesPage() {
   const { role } = useAuth();
@@ -50,6 +61,8 @@ export default function CompaniesPage() {
   const [usersCompany, setUsersCompany] = useState<CompanyRecord | null>(null);
   const [modulesCompany, setModulesCompany] = useState<CompanyRecord | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [planCompany, setPlanCompany] = useState<CompanyRecord | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState("free");
   const { toast } = useToast();
 
   const copyCode = (code: string) => {
@@ -68,9 +81,10 @@ export default function CompaniesPage() {
     if (!data) return;
 
     // Get user counts per company
-    const [{ data: counts }, { data: modules }] = await Promise.all([
+    const [{ data: counts }, { data: modules }, { data: subs }] = await Promise.all([
       supabase.from("company_users").select("company_id"),
       supabase.from("company_modules").select("company_id, is_active"),
+      supabase.from("subscriptions").select("company_id, plan, status"),
     ]);
 
     const countMap: Record<string, number> = {};
@@ -85,11 +99,16 @@ export default function CompaniesPage() {
       if (m.is_active) activeModMap[m.company_id] = (activeModMap[m.company_id] || 0) + 1;
     });
 
+    const planMap: Record<string, { plan: string; status: string }> = {};
+    subs?.forEach(s => { planMap[s.company_id] = { plan: s.plan, status: s.status }; });
+
     setCompanies(data.map(c => ({
       ...c,
       user_count: countMap[c.id] || 0,
       active_modules: activeModMap[c.id] || 0,
       total_modules: totalModMap[c.id] || 0,
+      plan: planMap[c.id]?.plan || "free",
+      plan_status: planMap[c.id]?.status || "none",
     })));
   };
 
@@ -154,6 +173,39 @@ export default function CompaniesPage() {
     setEditCompany(c);
     setFormName(c.name);
     setFormSlug(c.slug);
+  };
+
+  const openAssignPlan = (c: CompanyRecord) => {
+    setPlanCompany(c);
+    setSelectedPlan(c.plan || "free");
+  };
+
+  const handleAssignPlan = async () => {
+    if (!planCompany) return;
+    setLoading(true);
+
+    // Upsert into subscriptions table
+    const { data: existing } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("company_id", planCompany.id)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from("subscriptions")
+        .update({ plan: selectedPlan, status: "active", updated_at: new Date().toISOString() } as any)
+        .eq("id", existing.id);
+    } else {
+      await supabase
+        .from("subscriptions")
+        .insert({ company_id: planCompany.id, plan: selectedPlan, status: "active" } as any);
+    }
+
+    toast({ title: "Plan asignado", description: `${planCompany.name} → ${selectedPlan.toUpperCase()}` });
+    setPlanCompany(null);
+    fetchCompanies();
+    setLoading(false);
   };
 
   const filtered = companies.filter(c =>
@@ -244,10 +296,11 @@ export default function CompaniesPage() {
            <TableRow>
               <TableHead className="w-16">#ID</TableHead>
               <TableHead>Nombre</TableHead>
+              <TableHead>Plan</TableHead>
               <TableHead>Código invitación</TableHead>
-              <TableHead>Slug</TableHead>
+              <TableHead className="hidden lg:table-cell">Slug</TableHead>
               <TableHead>Usuarios</TableHead>
-              <TableHead>Módulos</TableHead>
+              <TableHead className="hidden md:table-cell">Módulos</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
@@ -255,12 +308,14 @@ export default function CompaniesPage() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                 <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                 <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                    No hay empresas
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map(c => (
+              filtered.map(c => {
+                const planOption = PLAN_OPTIONS.find(p => p.value === (c.plan || "free"))!;
+                return (
                 <TableRow key={c.id}>
                    <TableCell>
                      <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
@@ -272,6 +327,11 @@ export default function CompaniesPage() {
                        {c.name}
                        {c.is_sandbox && <Badge variant="outline" className="text-[10px]"><FlaskConical className="h-3 w-3 mr-1" />Sandbox</Badge>}
                      </div>
+                   </TableCell>
+                   <TableCell>
+                     <Badge className={`text-[10px] font-bold ${planOption.color} border-0`}>
+                       {planOption.label}
+                     </Badge>
                    </TableCell>
                   <TableCell>
                     <button
@@ -286,11 +346,11 @@ export default function CompaniesPage() {
                       )}
                     </button>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{c.slug}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground hidden lg:table-cell">{c.slug}</TableCell>
                    <TableCell>
                      <Badge variant="outline">{c.user_count} usuarios</Badge>
                    </TableCell>
-                   <TableCell>
+                   <TableCell className="hidden md:table-cell">
                      {c.total_modules ? (
                        <Badge variant="outline" className={c.active_modules === c.total_modules ? "border-primary/30 text-primary" : ""}>
                          <LayoutGrid className="h-3 w-3 mr-1" />
@@ -316,6 +376,9 @@ export default function CompaniesPage() {
                         <DropdownMenuItem onClick={() => openEdit(c)}>
                           <Pencil className="h-4 w-4 mr-2" />Editar
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openAssignPlan(c)}>
+                          <CreditCard className="h-4 w-4 mr-2" />Asignar plan
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUsersCompany(c)}>
                           <Users className="h-4 w-4 mr-2" />Usuarios
                         </DropdownMenuItem>
@@ -329,7 +392,8 @@ export default function CompaniesPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -398,6 +462,46 @@ export default function CompaniesPage() {
         open={!!modulesCompany}
         onOpenChange={(v) => { if (!v) setModulesCompany(null); }}
       />
+
+      {/* Assign Plan Dialog */}
+      <Dialog open={!!planCompany} onOpenChange={v => { if (!v) setPlanCompany(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Asignar plan</DialogTitle>
+            <DialogDescription>
+              {planCompany?.name} — Asigna un plan sin pasar por Stripe
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Plan</Label>
+              <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLAN_OPTIONS.map(p => (
+                    <SelectItem key={p.value} value={p.value}>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-block h-2 w-2 rounded-full ${p.value === "free" ? "bg-muted-foreground" : p.value === "pro" ? "bg-primary" : "bg-chart-4"}`} />
+                        {p.label}
+                        {p.value === "pro" && <span className="text-muted-foreground text-xs">— $49/mes</span>}
+                        {p.value === "enterprise" && <span className="text-muted-foreground text-xs">— $149/mes</span>}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Esto activa el plan inmediatamente sin cobro. Ideal para pilotos, cortesías o migraciones.
+            </p>
+            <Button onClick={handleAssignPlan} className="w-full" disabled={loading}>
+              {loading ? "Asignando..." : `Asignar ${PLAN_OPTIONS.find(p => p.value === selectedPlan)?.label}`}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
