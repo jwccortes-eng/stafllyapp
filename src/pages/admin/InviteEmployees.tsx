@@ -78,12 +78,25 @@ export default function InviteEmployees() {
     return `¡Hola ${name}! 👋\n\nTe damos la bienvenida a *${companyName}* en StaflyApps, tu portal de pagos y gestión laboral.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n${pinLine}\n\n💡 Tip: Guarda este enlace en tu pantalla de inicio para un acceso más rápido.\n\n— Equipo ${companyName}`;
   };
 
+  /** Ensure phone has country code for WhatsApp (defaults to +1 US if missing) */
+  const normalizePhoneForWA = (raw: string): string => {
+    let digits = raw.replace(/[^\d+]/g, "");
+    // If starts with +, keep as-is
+    if (digits.startsWith("+")) return digits.replace("+", "");
+    // If 10 digits (US local), prepend 1
+    if (digits.length === 10) return "1" + digits;
+    // If 11 digits starting with 1, it's already US
+    if (digits.length === 11 && digits.startsWith("1")) return digits;
+    // Fallback: prepend 1
+    return digits.length <= 10 ? "1" + digits : digits;
+  };
+
   const shareWhatsApp = (emp: Employee) => {
     if (!emp.phone_number) {
       toast({ title: "Sin teléfono", description: "Este empleado no tiene número registrado", variant: "destructive" });
       return;
     }
-    const phone = emp.phone_number.replace(/[\s\-\(\)]/g, "");
+    const phone = normalizePhoneForWA(emp.phone_number);
     const msg = encodeURIComponent(buildInviteMessage(emp));
     window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
   };
