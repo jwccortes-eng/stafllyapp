@@ -283,3 +283,14 @@
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
 }
+
+/* ── Print styles ── */
+@media print {
+  body { background: white !important; }
+  .print\\:hidden, nav, aside, header, [data-sidebar], .floating-dock,
+  .print-hide { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+  .print-header { display: block !important; }
+  table { font-size: 11px; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPersonName } from "@/lib/format-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -284,7 +285,7 @@ export function MonthClockView() {
       const allDays = Array.from({ length: monthEnd.getDate() }, (_, i) => i + 1);
       const data = filteredEmps.map(emp => {
         const empEntries = entries.filter(e => e.employee_id === emp.id);
-        const row: Record<string, any> = { Empleado: `${emp.first_name} ${emp.last_name}` };
+        const row: Record<string, any> = { Empleado: formatPersonName(`${emp.first_name} ${emp.last_name}`) };
         let totalMins = 0;
         allDays.forEach(day => {
           const dateKey = format(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day), "yyyy-MM-dd");
@@ -393,7 +394,7 @@ export function MonthClockView() {
                     onClick={() => setSelectedEmpId(emp.id)}
                   >
                     <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} size="sm" className="h-5 w-5 text-[8px]" />
-                    <span className="truncate flex-1">{emp.first_name} {emp.last_name.charAt(0)}.</span>
+                    <span className="truncate flex-1">{formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.</span>
                     {empMins > 0 && <span className="text-[10px] font-mono text-muted-foreground">{(empMins / 60).toFixed(0)}h</span>}
                   </button>
                 );

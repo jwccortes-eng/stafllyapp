@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search, Download, CalendarIcon, X, FileText, ChevronDown, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
@@ -474,14 +475,18 @@ export default function EmployeeReport() {
         )}
 
         {selectedEmployee && filteredPeriods.length > 0 && (
-          <>
+          <ReportActionsBar
+            title="Resumen por empleado"
+            subtitle={selectedEmp ? formatPersonName(`${selectedEmp.first_name} ${selectedEmp.last_name}`) : undefined}
+            onExportCSV={() => {
+              exportCSV();
+              return [];
+            }}
+          >
             <Button variant="outline" size="sm" onClick={exportPDF}>
-              <FileText className="h-4 w-4 mr-1" /> Descargar PDF
+              <FileText className="h-4 w-4 mr-1" /> PDF
             </Button>
-            <Button variant="outline" size="sm" onClick={exportCSV}>
-              <Download className="h-4 w-4 mr-1" /> Exportar CSV
-            </Button>
-          </>
+          </ReportActionsBar>
         )}
       </div>
 

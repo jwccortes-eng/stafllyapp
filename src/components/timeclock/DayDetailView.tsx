@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPersonName } from "@/lib/format-helpers";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
@@ -100,7 +101,7 @@ export function DayDetailView() {
 
   const getEmpName = (id: string) => {
     const e = employees.find(x => x.id === id);
-    return e ? `${e.first_name} ${e.last_name}` : "—";
+    return e ? formatPersonName(`${e.first_name} ${e.last_name}`) : "—";
   };
 
   const getEmp = (id: string) => employees.find(x => x.id === id);
@@ -313,7 +314,7 @@ export function DayDetailView() {
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2.5">
                         {emp && <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} size="md" />}
-                        <span className="font-medium uppercase text-xs tracking-wide">{getEmpName(entry.employee_id)}</span>
+                        <span className="font-medium text-xs tracking-wide">{getEmpName(entry.employee_id)}</span>
                       </div>
                     </td>
                     <td className="px-3 py-3">

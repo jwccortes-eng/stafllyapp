@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPersonName } from "@/lib/format-helpers";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -146,7 +147,7 @@ export default function EmployeeDashboard() {
     setLoading(true);
     const { data: emp } = await supabase.from("employees").select("first_name, last_name, company_id, avatar_url").eq("id", employeeId).maybeSingle();
     if (!emp) { setLoading(false); return; }
-    setEmpName(`${emp.first_name} ${emp.last_name}`);
+    setEmpName(formatPersonName(`${emp.first_name} ${emp.last_name}`));
     setEmpAvatar(emp.avatar_url);
     setCompanyId(emp.company_id);
     const today = new Date().toISOString().split("T")[0];

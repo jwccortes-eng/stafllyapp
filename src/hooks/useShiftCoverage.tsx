@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { formatPersonName } from "@/lib/format-helpers";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ShiftCoverageItem {
@@ -84,7 +85,7 @@ export function useShiftCoverage({ companyId, dateFrom, dateTo, enabled = true }
       ]);
 
       const empMap = new Map<string, string>();
-      (employees ?? []).forEach(e => empMap.set(e.id, `${e.first_name} ${e.last_name}`));
+      (employees ?? []).forEach(e => empMap.set(e.id, formatPersonName(`${e.first_name} ${e.last_name}`)));
 
       const items: ShiftCoverageItem[] = shifts.map(shift => {
         const shiftAssignments = (assignments ?? []).filter(a => a.shift_id === shift.id);

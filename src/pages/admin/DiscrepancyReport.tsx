@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPersonName } from "@/lib/format-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -110,7 +112,7 @@ export default function DiscrepancyReport() {
       ]);
 
       const empMap = new Map<string, string>();
-      employees.forEach(e => empMap.set(e.id, `${e.first_name} ${e.last_name}`));
+      employees.forEach(e => empMap.set(e.id, formatPersonName(`${e.first_name} ${e.last_name}`)));
 
       const result: DiscrepancyItem[] = [];
 
@@ -308,9 +310,14 @@ export default function DiscrepancyReport() {
               {loading ? "Analizando…" : "Analizar"}
             </Button>
             {items.length > 0 && (
-              <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5 ml-auto">
-                <Download className="h-3.5 w-3.5" /> Exportar
-              </Button>
+              <ReportActionsBar
+                title="Discrepancias"
+                subtitle={`${dateFrom} — ${dateTo}`}
+                onExportCSV={() => {
+                  handleExport();
+                  return [];
+                }}
+              />
             )}
           </div>
         </CardContent>

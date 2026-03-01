@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2, Clock } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
@@ -196,15 +197,16 @@ export default function PeriodSummary() {
 
   const selectedPeriodObj = periods.find(p => p.id === selectedPeriod);
 
-  const exportCSV = () => {
-    const header = "Empleado,Base,Extras,Deducciones,Total Final\n";
-    const csv = sorted.map(r => `"${r.first_name} ${r.last_name}",${r.base_total_pay},${r.extras_total},${r.deductions_total},${r.total_final_pay}`).join("\n");
-    const blob = new Blob([header + csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `resumen-periodo-${selectedPeriod}.csv`;
-    a.click();
+  const getCSVRows = (): string[][] => {
+    const header = ["Empleado", "Base", "Extras", "Deducciones", "Total Final"];
+    const dataRows = sorted.map(r => [
+      formatPersonName(`${r.first_name} ${r.last_name}`),
+      String(r.base_total_pay),
+      String(r.extras_total),
+      String(r.deductions_total),
+      String(r.total_final_pay),
+    ]);
+    return [header, ...dataRows];
   };
 
   const hasActiveFilters = searchTerm || payFilter !== "all";
@@ -303,9 +305,11 @@ export default function PeriodSummary() {
                   ✓ Pagado el {new Date(selectedPeriodObj.paid_at).toLocaleDateString("es")}
                 </span>
               )}
-              <Button variant="outline" size="sm" onClick={exportCSV}>
-                <Download className="h-4 w-4 mr-1.5" />Exportar
-              </Button>
+              <ReportActionsBar
+                title="Resumen del periodo"
+                subtitle={selectedPeriodObj ? `${selectedPeriodObj.start_date} — ${selectedPeriodObj.end_date}` : undefined}
+                onExportCSV={getCSVRows}
+              />
             </div>
           ) : undefined}
         />

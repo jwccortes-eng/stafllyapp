@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPersonName } from "@/lib/format-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -92,7 +94,7 @@ export default function ComparisonReport() {
     ]);
 
     const empMap = new Map<string, string>();
-    (employees ?? []).forEach(e => empMap.set(e.id, `${e.first_name} ${e.last_name}`));
+    (employees ?? []).forEach(e => empMap.set(e.id, formatPersonName(`${e.first_name} ${e.last_name}`)));
     const clientMap = new Map<string, string>();
     (clients ?? []).forEach(c => clientMap.set(c.id, c.name));
 
@@ -241,9 +243,14 @@ export default function ComparisonReport() {
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={filtered.length === 0}>
-              <Download className="h-4 w-4 mr-1.5" /> Exportar CSV
-            </Button>
+            <ReportActionsBar
+              title="Comparación programación vs ejecución"
+              subtitle={`${dateFrom} — ${dateTo}`}
+              onExportCSV={() => {
+                handleExport();
+                return [];
+              }}
+            />
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { formatPersonName } from "@/lib/format-helpers";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -138,7 +139,7 @@ export function EmployeeCombobox({
                 onClick={() => onToggle(emp.id)}
               >
                 <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" className="h-4 w-4 text-[7px]" />
-                {emp.first_name} {emp.last_name.charAt(0)}.
+                {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.
                 {isUnavailable && <CalendarOff className="h-3 w-3" />}
                 {hasConflict && !isUnavailable && <AlertTriangle className="h-3 w-3" />}
                 <X className="h-3 w-3 opacity-60" />
@@ -196,7 +197,7 @@ export function EmployeeCombobox({
                 <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" />
                 <div className="min-w-0 flex-1">
                   <span className={cn("font-medium", isUnavailable && !isSelected && "text-muted-foreground")}>
-                    {emp.first_name} {emp.last_name}
+                    {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)}
                   </span>
                   {isUnavailable && (
                     <p className="text-[10px] text-destructive flex items-center gap-1 mt-0.5">
