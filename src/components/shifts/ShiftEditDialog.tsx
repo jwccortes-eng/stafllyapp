@@ -75,7 +75,7 @@ export function ShiftEditDialog({
   };
 
   const handleSave = async () => {
-    if (!title.trim() || !date) return;
+    if (!date) return;
     setSaving(true);
     try {
       await onSave(shift.id, {
@@ -198,7 +198,7 @@ export function ShiftEditDialog({
             <Label className="text-xs text-muted-foreground">📋 Instrucciones adicionales</Label>
             <Textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} rows={2} placeholder="Ej: Llevar uniforme negro..." className="text-sm resize-none" />
           </div>
-          <Button onClick={handleSave} disabled={saving || !title.trim() || !date} className="w-full h-9 text-sm">
+          <Button onClick={handleSave} disabled={saving || !date} className="w-full h-9 text-sm">
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
             Guardar cambios
           </Button>

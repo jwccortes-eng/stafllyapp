@@ -234,7 +234,7 @@ export function ShiftDetailDialog({
   };
 
   const handleInlineSave = async () => {
-    if (!title.trim() || !date) return;
+    if (!date) return;
     if (onSave) {
       setSaving(true);
       try {
@@ -800,7 +800,7 @@ export function ShiftDetailDialog({
               </Button>
             ) : (
               <>
-                <Button size="sm" onClick={handleInlineSave} disabled={saving || !title.trim() || !date} className="h-8 text-xs gap-1.5">
+                <Button size="sm" onClick={handleInlineSave} disabled={saving || !date} className="h-8 text-xs gap-1.5">
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                   Guardar cambios
                 </Button>
