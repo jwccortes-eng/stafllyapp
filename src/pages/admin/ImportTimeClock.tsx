@@ -500,8 +500,7 @@ export default function ImportTimeClock() {
 
     doc.save(`importacion-reloj-${from}-${to}.pdf`);
   };
-
-
+  const reset = () => {
     setStep(1);
     setFile(null);
     setWorkbook(null);
