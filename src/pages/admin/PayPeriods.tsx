@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Lock, Unlock, CalendarPlus, Send, EyeOff, ChevronDown, ChevronRight, FileSpreadsheet, RefreshCw, Clock, CheckCircle2, AlertCircle, Upload, ShieldAlert } from "lucide-react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { ErrorBlock } from "@/components/ui/error-block";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
@@ -42,6 +44,8 @@ export default function PayPeriods() {
   const { selectedCompanyId } = useCompany();
   const { role, hasActionPermission } = useAuth();
   const [periods, setPeriods] = useState<PayPeriod[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [open, setOpen] = useState(false);
   const [yearOpen, setYearOpen] = useState(false);
   const [yearValue, setYearValue] = useState(new Date().getFullYear());
@@ -63,8 +67,17 @@ export default function PayPeriods() {
 
   const fetchPeriods = async () => {
     if (!selectedCompanyId) return;
-    const { data } = await supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId).order("start_date", { ascending: false });
-    setPeriods((data as PayPeriod[]) ?? []);
+    setFetchError(false);
+    try {
+      const { data, error } = await supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId).order("start_date", { ascending: false });
+      if (error) throw error;
+      setPeriods((data as PayPeriod[]) ?? []);
+    } catch (err) {
+      console.error("fetchPeriods error:", err);
+      setFetchError(true);
+    } finally {
+      setInitialLoading(false);
+    }
   };
 
   useEffect(() => { fetchPeriods(); }, [selectedCompanyId]);
@@ -261,6 +274,9 @@ export default function PayPeriods() {
   const handleReimport = (periodId: string) => {
     navigate(`/app/import?period=${periodId}`);
   };
+
+  if (initialLoading) return <PageSkeleton variant="table" />;
+  if (fetchError) return <ErrorBlock title="Error al cargar periodos" onRetry={fetchPeriods} />;
 
   return (
     <div>

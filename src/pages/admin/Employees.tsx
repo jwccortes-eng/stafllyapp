@@ -37,6 +37,7 @@ import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pe
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorBlock } from "@/components/ui/error-block";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
@@ -110,6 +111,7 @@ export default function Employees() {
   const { canAddEmployees, limits, plan } = useSubscription();
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [filterRole, setFilterRole] = useState<string>("all");
@@ -141,9 +143,17 @@ export default function Employees() {
 
   const fetchEmployees = async () => {
     if (!selectedCompanyId) return;
-    const { data } = await supabase.from("employees").select("id, company_id, first_name, last_name, phone_number, email, employee_role, is_active, start_date, end_date, groups, tags, direct_manager, connecteam_employee_id, user_id, created_at, updated_at, avatar_url, country_code, date_added, driver_licence, english_level, gender, has_car, qualify, recommended_by, added_by, added_via, last_login").eq("company_id", selectedCompanyId).order("first_name");
-    setEmployees((data as EmployeeRecord[]) ?? []);
-    setInitialLoading(false);
+    setFetchError(false);
+    try {
+      const { data, error } = await supabase.from("employees").select("id, company_id, first_name, last_name, phone_number, email, employee_role, is_active, start_date, end_date, groups, tags, direct_manager, connecteam_employee_id, user_id, created_at, updated_at, avatar_url, country_code, date_added, driver_licence, english_level, gender, has_car, qualify, recommended_by, added_by, added_via, last_login").eq("company_id", selectedCompanyId).order("first_name");
+      if (error) throw error;
+      setEmployees((data as EmployeeRecord[]) ?? []);
+    } catch (err) {
+      console.error("fetchEmployees error:", err);
+      setFetchError(true);
+    } finally {
+      setInitialLoading(false);
+    }
   };
 
   useEffect(() => { fetchEmployees(); }, [selectedCompanyId]);
@@ -912,6 +922,8 @@ export default function Employees() {
           <TableBody>
             {initialLoading ? (
               <TableRow><TableCell colSpan={8} className="p-0"><PageSkeleton variant="table" className="border-0 shadow-none p-4" /></TableCell></TableRow>
+            ) : fetchError ? (
+              <TableRow><TableCell colSpan={8} className="p-0"><ErrorBlock compact onRetry={fetchEmployees} /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
               <TableRow><TableCell colSpan={8} className="p-0">
                 <EmptyState icon={Users} title="No hay empleados" description={search ? "Intenta con otro término de búsqueda" : "Agrega tu primer empleado para comenzar"} compact />
