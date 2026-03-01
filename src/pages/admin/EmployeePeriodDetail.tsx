@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
+import { usePageView, useRecordView } from "@/hooks/useAuditLog";
+import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -54,6 +56,9 @@ export default function EmployeePeriodDetail() {
   const employeeId = searchParams.get("employeeId");
   const periodId = searchParams.get("periodId");
   const { toast } = useToast();
+
+  usePageView("Detalle empleado periodo");
+  useRecordView("employee_period", employeeId);
 
   const [employee, setEmployee] = useState<{ first_name: string; last_name: string } | null>(null);
   const [period, setPeriod] = useState<{ start_date: string; end_date: string; status: string } | null>(null);
@@ -376,6 +381,17 @@ export default function EmployeePeriodDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* Record audit trail */}
+      <div className="mt-8">
+        <AuditPanel
+          entityType="employee"
+          entityId={employeeId ?? undefined}
+          title="Historial del empleado"
+          hideViews
+          compact
+        />
+      </div>
     </div>
   );
 }
