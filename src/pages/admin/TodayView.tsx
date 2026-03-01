@@ -444,15 +444,13 @@ export default function TodayView() {
                     onClick={() => setSelectedEmpId(emp.id)}
                   >
                     <div className="relative">
-                      {emp.avatar_url ? (
-                        <img
-                          src={emp.avatar_url}
-                          alt={`${emp.first_name} ${emp.last_name}`}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="md" />
-                      )}
+                      <EmployeeAvatar
+                        firstName={emp.first_name}
+                        lastName={emp.last_name}
+                        avatarUrl={emp.avatar_url}
+                        gender={emp.gender}
+                        size="lg"
+                      />
 
                       {emp.isClockedIn && (
                         <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
