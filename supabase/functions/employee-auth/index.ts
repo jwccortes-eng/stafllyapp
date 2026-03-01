@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Internal prefix to meet Supabase min-password-length (6 chars) while keeping 4-digit PINs
+const AUTH_PWD_PREFIX = "SF_";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -129,6 +132,11 @@ async function ensureEmployeeRole(adminClient: any, userId: string): Promise<voi
   }
 }
 
+/** Build the auth password from a 4-digit PIN */
+function authPassword(pin: string): string {
+  return AUTH_PWD_PREFIX + pin;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -137,11 +145,13 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const anonClient = createClient(supabaseUrl, anonKey);
 
     const { action, phone, pin, employee_id, email, avatar_url } = await req.json();
 
-    // ACTION: check - Check if employee exists and has a PIN
+    // ACTION: check
     if (action === "check") {
       if (!phone) {
         return new Response(
@@ -179,7 +189,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ACTION: activate - Employee self-activates (sets PIN + optional profile data)
+    // ACTION: activate
     if (action === "activate") {
       if (!phone || !pin) {
         return new Response(
@@ -196,6 +206,7 @@ Deno.serve(async (req) => {
       }
 
       const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+      const pwd = authPassword(pin);
 
       const { data: employee, error: empError } = await adminClient
         .from("employees")
@@ -224,7 +235,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Update employee with new PIN and optional profile data
       const updateData: Record<string, any> = { access_pin: pin };
       if (email && typeof email === "string" && email.includes("@")) {
         updateData.email = email.trim().slice(0, 255);
@@ -235,13 +245,12 @@ Deno.serve(async (req) => {
 
       await adminClient.from("employees").update(updateData).eq("id", employee.id);
 
-      // Now auto-login the employee
       const empEmail = `emp_${cleanPhone}@employee.internal`;
 
       if (!employee.user_id) {
         const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
           email: empEmail,
-          password: pin,
+          password: pwd,
           email_confirm: true,
           user_metadata: { full_name: `${employee.first_name} ${employee.last_name}` },
         });
@@ -250,7 +259,7 @@ Deno.serve(async (req) => {
           const { data: { users } } = await adminClient.auth.admin.listUsers();
           const existingUser = users?.find((u: any) => u.email === empEmail);
           if (existingUser) {
-            await adminClient.auth.admin.updateUserById(existingUser.id, { password: pin });
+            await adminClient.auth.admin.updateUserById(existingUser.id, { password: pwd });
             await adminClient.from("employees").update({ user_id: existingUser.id }).eq("id", employee.id);
             employee.user_id = existingUser.id;
           } else {
@@ -264,14 +273,14 @@ Deno.serve(async (req) => {
           employee.user_id = newUser.user.id;
         }
       } else {
-        await adminClient.auth.admin.updateUserById(employee.user_id, { password: pin });
+        await adminClient.auth.admin.updateUserById(employee.user_id, { password: pwd });
       }
 
       await ensureEmployeeRole(adminClient, employee.user_id);
 
-      const { data: signInData, error: signInError } = await adminClient.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({
         email: empEmail,
-        password: pin,
+        password: pwd,
       });
 
       if (signInError) {
@@ -292,7 +301,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ACTION: login - Employee login with phone + PIN
+    // ACTION: login
     if (action === "login") {
       if (!phone || !pin) {
         return new Response(
@@ -302,6 +311,7 @@ Deno.serve(async (req) => {
       }
 
       const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+      const pwd = authPassword(pin);
 
       const rateCheck = await checkRateLimit(adminClient, cleanPhone);
       if (!rateCheck.allowed) {
@@ -347,7 +357,7 @@ Deno.serve(async (req) => {
       if (!employee.user_id) {
         const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
           email: empEmail,
-          password: pin,
+          password: pwd,
           email_confirm: true,
           user_metadata: { full_name: `${employee.first_name} ${employee.last_name}` },
         });
@@ -356,7 +366,7 @@ Deno.serve(async (req) => {
           const { data: { users } } = await adminClient.auth.admin.listUsers();
           const existingUser = users?.find((u: any) => u.email === empEmail);
           if (existingUser) {
-            await adminClient.auth.admin.updateUserById(existingUser.id, { password: pin });
+            await adminClient.auth.admin.updateUserById(existingUser.id, { password: pwd });
             await adminClient.from("employees").update({ user_id: existingUser.id }).eq("id", employee.id);
             employee.user_id = existingUser.id;
           } else {
@@ -370,14 +380,14 @@ Deno.serve(async (req) => {
           employee.user_id = newUser.user.id;
         }
       } else {
-        await adminClient.auth.admin.updateUserById(employee.user_id, { password: pin });
+        await adminClient.auth.admin.updateUserById(employee.user_id, { password: pwd });
       }
 
       await ensureEmployeeRole(adminClient, employee.user_id);
 
-      const { data: signInData, error: signInError } = await adminClient.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({
         email: empEmail,
-        password: pin,
+        password: pwd,
       });
 
       if (signInError) {
@@ -399,7 +409,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ACTION: provision - Admin creates/updates employee auth
+    // ACTION: provision
     if (action === "provision") {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
@@ -408,7 +418,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
       const callerClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
@@ -436,7 +445,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      const newPin = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+      // Generate 4-digit PIN for provision as well
+      const newPin = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
       
       await adminClient.from("employees").update({ access_pin: newPin }).eq("id", employee_id);
 
