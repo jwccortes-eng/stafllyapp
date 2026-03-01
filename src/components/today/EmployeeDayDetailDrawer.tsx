@@ -10,6 +10,7 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerTitle,
 } from "@/components/ui/drawer";
@@ -66,6 +67,7 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
   const [editNotes, setEditNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [forcingClockOut, setForcingClockOut] = useState<string | null>(null);
+  const { logAudit } = useAuditLog();
 
   if (!employee) return null;
 
@@ -92,6 +94,15 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
     setSaving(true);
     const today = format(new Date(), "yyyy-MM-dd");
 
+    // Capture old data for audit
+    const entry = allEntries.find(e => e.id === entryId);
+    const oldData = entry ? {
+      clock_in: entry.clock_in,
+      clock_out: entry.clock_out,
+      break_minutes: entry.break_minutes,
+      notes: entry.notes,
+    } : null;
+
     const updates: Record<string, any> = {
       clock_in: `${today}T${editClockIn}:00`,
       break_minutes: parseInt(editBreak) || 0,
@@ -113,15 +124,27 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
       toast.success("Fichaje actualizado");
       setEditingEntryId(null);
       onDataChanged?.();
+
+      logAudit({
+        action: "update",
+        entityType: "time_entry",
+        entityId: entryId,
+        details: { employee_name: `${employee.first_name} ${employee.last_name}`, source: "today_view" },
+        oldData,
+        newData: updates,
+      });
     }
     setSaving(false);
   };
 
   const forceClockOut = async (entryId: string) => {
     setForcingClockOut(entryId);
+    const clockOutTime = new Date().toISOString();
+    const entry = allEntries.find(e => e.id === entryId);
+
     const { error } = await supabase
       .from("time_entries")
-      .update({ clock_out: new Date().toISOString() })
+      .update({ clock_out: clockOutTime })
       .eq("id", entryId);
 
     if (error) {
@@ -129,6 +152,19 @@ export function EmployeeDayDetailDrawer({ employee, open, onOpenChange, now, onD
     } else {
       toast.success("Salida forzada registrada");
       onDataChanged?.();
+
+      logAudit({
+        action: "update",
+        entityType: "time_entry",
+        entityId: entryId,
+        details: {
+          employee_name: `${employee.first_name} ${employee.last_name}`,
+          source: "today_view",
+          forced_clock_out: true,
+        },
+        oldData: entry ? { clock_in: entry.clock_in, clock_out: null } : null,
+        newData: { clock_out: clockOutTime },
+      });
     }
     setForcingClockOut(null);
   };
