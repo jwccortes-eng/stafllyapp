@@ -88,7 +88,7 @@ function KpiStatCard({ label, value, subtitle, icon: Icon, color, sparkData, onC
     <div
       onClick={onClick}
       className={cn(
-        "group relative bg-card rounded-2xl border border-border/60 p-5 shadow-2xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 overflow-hidden",
+        "group relative bg-card rounded-2xl border border-border/40 p-5 shadow-xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 overflow-hidden",
         onClick && "cursor-pointer"
       )}
     >
@@ -115,7 +115,7 @@ function QuickAction({ label, description, icon: Icon, to, accent, navigate }: {
   return (
     <button
       onClick={() => navigate(to)}
-      className="group flex items-center gap-3.5 p-3.5 rounded-xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-sm transition-all duration-200 text-left active:scale-[0.98]"
+      className="group flex items-center gap-3.5 p-3.5 rounded-2xl border border-border/40 bg-card hover:border-primary/30 hover:shadow-sm transition-all duration-200 text-left active:scale-[0.98]"
     >
       <div className={cn("h-10 w-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-2xs transition-transform duration-200 group-hover:scale-105", accent)}>
         <Icon className="h-[18px] w-[18px] text-primary-foreground" />
@@ -608,7 +608,7 @@ export default function AdminDashboard() {
       {role === 'owner' && companies.length > 1 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Crown className="h-4 w-4 text-amber-500" />
+            <Crown className="h-4 w-4 text-warning" />
             <h2 className="text-sm font-semibold font-heading text-foreground">Empresas</h2>
             <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
           </div>
@@ -644,7 +644,7 @@ export default function AdminDashboard() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
-                    <span className={cn("text-[10px] font-medium", c.is_active ? "text-emerald-500" : "text-muted-foreground")}>
+                    <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
                       {c.is_active ? "● Activa" : "○ Inactiva"}
                     </span>
                     <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />

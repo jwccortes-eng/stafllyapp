@@ -101,8 +101,10 @@ export default function Directory() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
-          <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p className="text-sm">No se encontraron empleados</p>
+          <div className="h-14 w-14 mx-auto mb-3 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center">
+            <Users className="h-7 w-7 text-primary/40" />
+          </div>
+          <p className="text-sm font-heading font-semibold">No se encontraron empleados</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -113,7 +115,7 @@ export default function Directory() {
             return (
               <div
                 key={emp.id}
-                className="group relative rounded-2xl border border-border bg-card p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+                className="group relative rounded-2xl border border-border/40 bg-card p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
               >
                 {/* decorative blob */}
                 <div className="absolute top-0 right-0 h-20 w-20 rounded-full bg-primary/5 -translate-y-6 translate-x-6 group-hover:scale-150 transition-transform duration-500" />
@@ -149,7 +151,7 @@ export default function Directory() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="relative z-10 flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border">
+                <div className="relative z-10 flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border/40">
                   {phone && (
                     <>
                       <a
