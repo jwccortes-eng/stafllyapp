@@ -71,6 +71,10 @@ import PayStub from "./pages/portal/PayStub";
 import PortalChat from "./pages/portal/PortalChat";
 import MyW9 from "./pages/portal/MyW9";
 import Install from "./pages/Install";
+import TermsOfService from "./pages/legal/TermsOfService";
+import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
+import CookiePolicy from "./pages/legal/CookiePolicy";
+import HelpCenter from "./pages/help/HelpCenter";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +92,10 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/install" element={<Install />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/cookies" element={<CookiePolicy />} />
+              <Route path="/help" element={<HelpCenter />} />
 
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>

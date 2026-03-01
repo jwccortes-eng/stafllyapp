@@ -587,9 +587,9 @@ export default function Landing() {
               <StaflyLogo size={24} />
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">{c.footer.privacy}</a>
-              <a href="#" className="hover:text-foreground transition-colors">{c.footer.terms}</a>
-              <a href="#contacto" className="hover:text-foreground transition-colors">{c.footer.contact}</a>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">{c.footer.privacy}</Link>
+              <Link to="/terms" className="hover:text-foreground transition-colors">{c.footer.terms}</Link>
+              <Link to="/help" className="hover:text-foreground transition-colors">{c.footer.contact}</Link>
             </div>
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} StaflyApps · staflyapps.com
