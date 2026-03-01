@@ -33,17 +33,17 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="es" dir="ltr">
     <Head />
-    <Preview>Confirma tu cuenta en stafly</Preview>
+    <Preview>Confirma tu cuenta en StaflyApps</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={logoSection}>
-          <Img src={LOGO_URL} alt="stafly" width="120" height="auto" style={logo} />
+          <Img src={LOGO_URL} alt="StaflyApps" width="120" height="auto" style={logo} />
         </Section>
-        <Heading style={h1}>¡Bienvenido a stafly!</Heading>
+        <Heading style={h1}>¡Bienvenido a StaflyApps!</Heading>
         <Text style={text}>
           Gracias por registrarte en{' '}
           <Link href={siteUrl} style={link}>
-            <strong>stafly</strong>
+            <strong>StaflyApps</strong>
           </Link>
           . Estás a un paso de comenzar.
         </Text>
@@ -60,7 +60,7 @@ export const SignupEmail = ({
           </Button>
         </Section>
         <Text style={footer}>
-          Si no creaste una cuenta en stafly, puedes ignorar este correo.
+          Si no creaste una cuenta en StaflyApps, puedes ignorar este correo.
         </Text>
       </Container>
     </Body>

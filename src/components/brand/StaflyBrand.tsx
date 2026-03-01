@@ -69,7 +69,7 @@ export function StaflyLogo({ className = "", size = 32, markOnly = false, muted 
           className="font-heading font-bold tracking-tight text-foreground select-none"
           style={{ fontSize: size * 0.56, lineHeight: 1 }}
         >
-          stafly
+          StaflyApps
         </span>
       )}
     </div>

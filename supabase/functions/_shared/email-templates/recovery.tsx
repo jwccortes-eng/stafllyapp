@@ -28,15 +28,15 @@ export const RecoveryEmail = ({
 }: RecoveryEmailProps) => (
   <Html lang="es" dir="ltr">
     <Head />
-    <Preview>Restablecer tu contraseña en stafly</Preview>
+    <Preview>Restablecer tu contraseña en StaflyApps</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={logoSection}>
-          <Img src={LOGO_URL} alt="stafly" width="120" height="auto" style={logo} />
+          <Img src={LOGO_URL} alt="StaflyApps" width="120" height="auto" style={logo} />
         </Section>
         <Heading style={h1}>Restablecer contraseña</Heading>
         <Text style={text}>
-          Recibimos una solicitud para restablecer tu contraseña en stafly.
+          Recibimos una solicitud para restablecer tu contraseña en StaflyApps.
           Haz clic en el botón para crear una nueva contraseña.
         </Text>
         <Section style={buttonSection}>

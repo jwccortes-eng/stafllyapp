@@ -16,12 +16,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirma tu cuenta en stafly',
-  invite: 'Te han invitado a stafly',
-  magiclink: 'Tu enlace de acceso a stafly',
-  recovery: 'Restablecer tu contraseña en stafly',
-  email_change: 'Confirma tu cambio de correo en stafly',
-  reauthentication: 'Tu código de verificación de stafly',
+  signup: 'Confirma tu cuenta en StaflyApps',
+  invite: 'Te han invitado a StaflyApps',
+  magiclink: 'Tu enlace de acceso a StaflyApps',
+  recovery: 'Restablecer tu contraseña en StaflyApps',
+  email_change: 'Confirma tu cambio de correo en StaflyApps',
+  reauthentication: 'Tu código de verificación de StaflyApps',
 }
 
 // Template mapping
@@ -35,7 +35,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "staflyapp"
+const SITE_NAME = "StaflyApps"
 const SENDER_DOMAIN = "notify.staflyapps.com"
 const ROOT_DOMAIN = "staflyapps.com"
 const FROM_DOMAIN = "staflyapps.com" // Domain shown in From address (may be root or sender subdomain)

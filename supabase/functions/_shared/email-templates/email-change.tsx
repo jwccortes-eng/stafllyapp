@@ -33,15 +33,15 @@ export const EmailChangeEmail = ({
 }: EmailChangeEmailProps) => (
   <Html lang="es" dir="ltr">
     <Head />
-    <Preview>Confirma tu cambio de correo en stafly</Preview>
+    <Preview>Confirma tu cambio de correo en StaflyApps</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={logoSection}>
-          <Img src={LOGO_URL} alt="stafly" width="120" height="auto" style={logo} />
+          <Img src={LOGO_URL} alt="StaflyApps" width="120" height="auto" style={logo} />
         </Section>
         <Heading style={h1}>Confirmar cambio de correo</Heading>
         <Text style={text}>
-          Solicitaste cambiar tu correo en stafly de{' '}
+          Solicitaste cambiar tu correo en StaflyApps de{' '}
           <Link href={`mailto:${email}`} style={link}>{email}</Link>{' '}
           a{' '}
           <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
