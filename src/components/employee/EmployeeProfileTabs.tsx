@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -15,6 +17,7 @@ import { cn } from "@/lib/utils";
 import {
   User, DollarSign, Clock, CalendarDays, FileText, Activity,
   Briefcase, Phone, Mail, MapPin, Users, Tag, Star, Shield,
+  Plus, Pencil, Trash2, MoreHorizontal,
 } from "lucide-react";
 
 type EmployeeRecord = Record<string, any>;
@@ -134,43 +137,192 @@ function InfoTab({ employee, isEditing, form, setForm, isPrivileged }: {
 /* ── Pay Tab ── */
 function PayTab({ employee, companyId }: { employee: EmployeeRecord; companyId: string }) {
   const [rates, setRates] = useState<any[]>([]);
+  const [concepts, setConcepts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formConceptId, setFormConceptId] = useState("");
+  const [formRate, setFormRate] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    async function fetch() {
-      const { data } = await supabase
-        .from("concept_employee_rates")
-        .select("id, rate, effective_from, effective_to, concept_id, concepts(name, category, unit_label)")
-        .eq("employee_id", employee.id);
-      setRates(data ?? []);
-      setLoading(false);
-    }
-    fetch();
-  }, [employee.id]);
+  const fetchRates = async () => {
+    const { data } = await supabase
+      .from("concept_employee_rates")
+      .select("id, rate, effective_from, effective_to, concept_id, concepts(name, category, unit_label)")
+      .eq("employee_id", employee.id);
+    setRates(data ?? []);
+    setLoading(false);
+  };
+
+  const fetchConcepts = async () => {
+    const { data } = await supabase
+      .from("concepts")
+      .select("id, name, category, unit_label, default_rate")
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .order("name");
+    setConcepts(data ?? []);
+  };
+
+  useEffect(() => { fetchRates(); fetchConcepts(); }, [employee.id, companyId]);
+
+  const handleAdd = async () => {
+    if (!formConceptId || !formRate) return;
+    setSaving(true);
+    await supabase.from("concept_employee_rates").insert({
+      employee_id: employee.id,
+      concept_id: formConceptId,
+      rate: parseFloat(formRate),
+    });
+    setSaving(false);
+    setAdding(false);
+    setFormConceptId("");
+    setFormRate("");
+    fetchRates();
+  };
+
+  const handleUpdate = async (id: string) => {
+    if (!formRate) return;
+    setSaving(true);
+    await supabase.from("concept_employee_rates").update({ rate: parseFloat(formRate) }).eq("id", id);
+    setSaving(false);
+    setEditingId(null);
+    setFormRate("");
+    fetchRates();
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("concept_employee_rates").delete().eq("id", id);
+    fetchRates();
+  };
+
+  const startEdit = (r: any) => {
+    setEditingId(r.id);
+    setFormRate(r.rate.toString());
+  };
 
   if (loading) return <div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>;
-  if (rates.length === 0) return <EmptyState icon={DollarSign} title="Sin tasas configuradas" description="Agrega tasas de pago desde Conceptos → Tasas por empleado" compact />;
+
+  // Concepts not yet assigned
+  const assignedConceptIds = new Set(rates.map(r => r.concept_id));
+  const availableConcepts = concepts.filter(c => !assignedConceptIds.has(c.id));
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {rates.length === 0 && !adding && (
+        <EmptyState icon={DollarSign} title="Sin tasas configuradas" description="Agrega una tasa de pago para este empleado" compact />
+      )}
+
       {rates.map(r => (
         <Card key={r.id} className="rounded-xl border-border/40">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold">{(r.concepts as any)?.name ?? "Concepto"}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {r.effective_from ? format(parseISO(r.effective_from), "dd MMM yyyy", { locale: es }) : "Sin inicio"}
-                {" → "}
-                {r.effective_to ? format(parseISO(r.effective_to), "dd MMM yyyy", { locale: es }) : "Vigente"}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold text-primary tabular-nums">${r.rate.toFixed(2)}</p>
-              <p className="text-[10px] text-muted-foreground">{(r.concepts as any)?.unit_label ?? "por hora"}</p>
-            </div>
+          <CardContent className="p-4">
+            {editingId === r.id ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold mb-1">{(r.concepts as any)?.name}</p>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formRate}
+                    onChange={e => setFormRate(e.target.value)}
+                    className="h-8 text-sm"
+                    placeholder="Tarifa"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Button size="sm" className="h-7 text-xs" disabled={saving} onClick={() => handleUpdate(r.id)}>
+                    {saving ? "..." : "Guardar"}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setEditingId(null); setFormRate(""); }}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">{(r.concepts as any)?.name ?? "Concepto"}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {r.effective_from ? format(parseISO(r.effective_from), "dd MMM yyyy", { locale: es }) : "Sin inicio"}
+                    {" → "}
+                    {r.effective_to ? format(parseISO(r.effective_to), "dd MMM yyyy", { locale: es }) : "Vigente"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-primary tabular-nums">${r.rate.toFixed(2)}</p>
+                    <p className="text-[10px] text-muted-foreground">{(r.concepts as any)?.unit_label ?? "por hora"}</p>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => startEdit(r)}>
+                        <Pencil className="h-3.5 w-3.5 mr-2" />Editar tarifa
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(r.id)}>
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />Eliminar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
+
+      {adding ? (
+        <Card className="rounded-xl border-primary/30 border-dashed">
+          <CardContent className="p-4 space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Concepto</label>
+              <select
+                className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm"
+                value={formConceptId}
+                onChange={e => {
+                  setFormConceptId(e.target.value);
+                  const c = concepts.find(cc => cc.id === e.target.value);
+                  if (c?.default_rate) setFormRate(c.default_rate.toString());
+                }}
+              >
+                <option value="">Seleccionar concepto...</option>
+                {availableConcepts.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.category === "extra" ? "Pago" : "Deducción"})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Tarifa ($)</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formRate}
+                onChange={e => setFormRate(e.target.value)}
+                className="h-9"
+                placeholder="Ej: 15.00"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" disabled={saving || !formConceptId || !formRate} onClick={handleAdd} className="flex-1">
+                {saving ? "Guardando..." : "Agregar tasa"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setAdding(false); setFormConceptId(""); setFormRate(""); }}>
+                Cancelar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Button variant="outline" size="sm" className="w-full border-dashed" onClick={() => setAdding(true)} disabled={availableConcepts.length === 0}>
+          <Plus className="h-4 w-4 mr-2" />
+          {availableConcepts.length === 0 ? "Todos los conceptos asignados" : "Agregar tasa de pago"}
+        </Button>
+      )}
     </div>
   );
 }
