@@ -117,23 +117,29 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
   return (
     <div className="space-y-0">
       {/* Day headers */}
-      <div className="grid grid-cols-[200px_repeat(7,1fr)] gap-px rounded-t-xl overflow-hidden">
-        <div className="bg-transparent p-2" />
+      <div className="grid grid-cols-[200px_repeat(7,1fr)] gap-px rounded-t-xl overflow-hidden border-b border-border/10 pb-1">
+        <div className="p-2" />
         {weekDays.map(day => {
           const isToday = isSameDay(day, new Date());
           return (
             <div key={day.toISOString()} className={cn(
-              "text-center py-2.5 px-2 rounded-lg",
+              "text-center py-2 px-1 rounded-xl transition-colors",
               isToday && "bg-primary/[0.06]"
             )}>
-              <div className={cn("text-[10px] font-medium capitalize tracking-wider", isToday ? "text-primary" : "text-muted-foreground/60")}>
+              <div className={cn(
+                "text-[9px] font-semibold uppercase tracking-[0.08em]",
+                isToday ? "text-primary" : "text-muted-foreground/50"
+              )}>
                 {format(day, "EEE", { locale: es })}
               </div>
               <div className={cn(
-                "text-base font-bold mt-0.5",
-                isToday ? "text-primary" : "text-foreground/80"
+                "text-base font-bold mt-0.5 leading-none",
+                isToday ? "text-primary" : "text-foreground/75"
               )}>
                 {format(day, "d")}
+              </div>
+              <div className="text-[8px] text-muted-foreground/30 mt-0.5 font-medium">
+                {format(day, "MMM", { locale: es })}
               </div>
             </div>
           );

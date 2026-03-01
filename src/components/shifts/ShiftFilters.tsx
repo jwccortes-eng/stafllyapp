@@ -36,13 +36,12 @@ export function ShiftFilters({ filters, onChange, clients }: ShiftFiltersProps) 
   };
 
   return (
-    <div className="flex items-center gap-2.5 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap">
       {/* Filter label */}
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
-        <SlidersHorizontal className="h-3.5 w-3.5" />
-        <span className="font-medium">Filtros</span>
+      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 mr-1">
+        <SlidersHorizontal className="h-3 w-3" />
         {activeCount > 0 && (
-          <Badge variant="secondary" className="h-4 px-1.5 text-[9px] font-bold rounded-full bg-primary/10 text-primary border-0">{activeCount}</Badge>
+          <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[9px] font-bold rounded-full bg-primary/10 text-primary border-0 justify-center">{activeCount}</Badge>
         )}
       </div>
 

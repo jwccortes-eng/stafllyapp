@@ -24,35 +24,45 @@ export function WeeklySummaryBar({ shifts, assignments }: WeeklySummaryBarProps)
   const totalHours = calcTotalHours(shifts);
   const uniqueEmployees = new Set(assignments.map(a => a.employee_id)).size;
 
+  const totalSlots = shifts.reduce((sum, s) => sum + (s.slots ?? 1), 0);
+  const assignedSlots = shifts.reduce((sum, s) => sum + Math.min(s.slots ?? 1, assignments.filter(a => a.shift_id === s.id).length), 0);
+  const coveragePercent = totalSlots > 0 ? Math.round((assignedSlots / totalSlots) * 100) : 0;
+
+  const stats = [
+    { icon: Clock, label: "Horas", value: totalHours, color: "text-sky-500", bg: "bg-sky-100 dark:bg-sky-900/30" },
+    { icon: CalendarDays, label: "Turnos", value: String(shifts.length), color: "text-violet-500", bg: "bg-violet-100 dark:bg-violet-900/30" },
+    { icon: Users, label: "Empleados", value: String(uniqueEmployees), color: "text-emerald-500", bg: "bg-emerald-100 dark:bg-emerald-900/30" },
+  ];
+
   return (
-    <div className="flex items-center justify-center gap-6 rounded-2xl bg-white/70 dark:bg-card/60 border border-border/20 shadow-sm px-6 py-3">
-      <div className="flex items-center gap-2 text-xs">
-        <div className="h-7 w-7 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
-          <Clock className="h-3.5 w-3.5 text-sky-500" />
-        </div>
-        <div>
-          <span className="text-muted-foreground/60 text-[10px] block">Horas</span>
-          <span className="font-bold text-sm">{totalHours}</span>
-        </div>
+    <div className="flex items-center justify-between rounded-2xl bg-white/70 dark:bg-card/60 border border-border/15 shadow-sm px-5 py-2.5">
+      <div className="flex items-center gap-5">
+        {stats.map((stat, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className={`h-7 w-7 rounded-lg ${stat.bg} flex items-center justify-center`}>
+              <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
+            </div>
+            <div className="leading-tight">
+              <span className="text-muted-foreground/50 text-[9px] font-medium uppercase tracking-wider block">{stat.label}</span>
+              <span className="font-bold text-sm tabular-nums">{stat.value}</span>
+            </div>
+            {i < stats.length - 1 && <div className="h-6 w-px bg-border/20 ml-3" />}
+          </div>
+        ))}
       </div>
-      <div className="h-8 w-px bg-border/30" />
-      <div className="flex items-center gap-2 text-xs">
-        <div className="h-7 w-7 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-          <CalendarDays className="h-3.5 w-3.5 text-violet-500" />
+      {/* Coverage indicator */}
+      <div className="flex items-center gap-2.5">
+        <div className="text-right leading-tight">
+          <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground/50 block">Cobertura</span>
+          <span className={`text-sm font-bold tabular-nums ${coveragePercent >= 100 ? "text-emerald-500" : coveragePercent >= 50 ? "text-amber-500" : "text-rose-500"}`}>
+            {coveragePercent}%
+          </span>
         </div>
-        <div>
-          <span className="text-muted-foreground/60 text-[10px] block">Turnos</span>
-          <span className="font-bold text-sm">{shifts.length}</span>
-        </div>
-      </div>
-      <div className="h-8 w-px bg-border/30" />
-      <div className="flex items-center gap-2 text-xs">
-        <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-          <Users className="h-3.5 w-3.5 text-emerald-500" />
-        </div>
-        <div>
-          <span className="text-muted-foreground/60 text-[10px] block">Empleados</span>
-          <span className="font-bold text-sm">{uniqueEmployees}</span>
+        <div className="h-7 w-16 rounded-full bg-muted/30 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${coveragePercent >= 100 ? "bg-emerald-400" : coveragePercent >= 50 ? "bg-amber-400" : "bg-rose-400"}`}
+            style={{ width: `${coveragePercent}%` }}
+          />
         </div>
       </div>
     </div>

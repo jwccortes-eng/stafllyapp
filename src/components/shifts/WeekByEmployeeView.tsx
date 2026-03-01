@@ -99,27 +99,27 @@ export function WeekByEmployeeView({
   return (
     <div className="space-y-0 overflow-x-auto">
       {/* Day headers */}
-      <div className="grid grid-cols-[220px_repeat(7,1fr)] gap-px rounded-t-xl overflow-hidden min-w-[900px]">
+      <div className="grid grid-cols-[220px_repeat(7,1fr)] gap-px rounded-t-xl overflow-hidden border-b border-border/10 pb-1 min-w-[900px]">
         <div className="p-2" />
         {weekDays.map(day => {
           const isToday = isSameDay(day, new Date());
           const stats = getDayStats(day);
           const coverage = getDayCoverage(day);
           return (
-            <div key={day.toISOString()} className={cn("text-center py-2 px-1 rounded-lg", isToday && "bg-primary/[0.06]")}>
-              <div className={cn("text-[10px] font-medium capitalize tracking-wider", isToday ? "text-primary" : "text-muted-foreground/60")}>
+            <div key={day.toISOString()} className={cn("text-center py-2 px-1 rounded-xl", isToday && "bg-primary/[0.06]")}>
+              <div className={cn("text-[9px] font-semibold uppercase tracking-[0.08em]", isToday ? "text-primary" : "text-muted-foreground/50")}>
                 {format(day, "EEE", { locale: es })}
               </div>
-              <div className={cn("text-base font-bold mt-0.5", isToday ? "text-primary" : "text-foreground/80")}>
+              <div className={cn("text-base font-bold mt-0.5 leading-none", isToday ? "text-primary" : "text-foreground/75")}>
                 {format(day, "d/M")}
               </div>
-              <div className="flex items-center justify-center gap-2 text-[8px] text-muted-foreground/50 mt-1">
+              <div className="flex items-center justify-center gap-1.5 text-[8px] text-muted-foreground/40 mt-1.5">
                 <span className="flex items-center gap-0.5"><Timer className="h-2.5 w-2.5" />{stats.hours}</span>
                 <span className="flex items-center gap-0.5"><CalendarDays className="h-2.5 w-2.5" />{stats.shifts}</span>
                 <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{stats.users}</span>
               </div>
               {/* Coverage bar */}
-              <div className="mx-auto mt-1.5 h-1 w-4/5 rounded-full bg-muted/40 overflow-hidden">
+              <div className="mx-auto mt-1.5 h-1 w-4/5 rounded-full bg-muted/30 overflow-hidden">
                 <div
                   className={cn("h-full rounded-full transition-all", coverage >= 100 ? "bg-emerald-400" : coverage >= 50 ? "bg-amber-400" : "bg-rose-400")}
                   style={{ width: `${coverage}%` }}
