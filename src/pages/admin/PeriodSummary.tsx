@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatPersonName } from "@/lib/format-helpers";
+import { toast as sonnerToast } from "sonner";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2, Clock } from "lucide-react";
+import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2, Clock, Mail } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useToast } from "@/hooks/use-toast";
@@ -67,6 +68,7 @@ export default function PeriodSummary() {
   const [consolidating, setConsolidating] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [sendingEmails, setSendingEmails] = useState(false);
 
   const canConsolidate = hasActionPermission("aprobar_nomina");
 
@@ -304,6 +306,41 @@ export default function PeriodSummary() {
                 <span className="text-xs font-semibold text-earning bg-earning/10 px-3 py-1.5 rounded-full">
                   ✓ Pagado el {new Date(selectedPeriodObj.paid_at).toLocaleDateString("es")}
                 </span>
+              )}
+              {/* Send payroll emails */}
+              {selectedPeriodObj && rows.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={sendingEmails}
+                  onClick={async () => {
+                    if (!selectedCompanyId) return;
+                    setSendingEmails(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke("send-payroll-email", {
+                        body: {
+                          period_id: selectedPeriod,
+                          company_id: selectedCompanyId,
+                          fallback_email: user?.email ?? undefined,
+                        },
+                      });
+                      if (error) throw error;
+                      if (data?.error) throw new Error(data.error);
+                      const sent = data?.results?.filter((r: any) => r.status === "sent").length ?? 0;
+                      const failed = data?.results?.filter((r: any) => r.status === "failed").length ?? 0;
+                      const skipped = data?.results?.filter((r: any) => r.status === "skipped").length ?? 0;
+                      sonnerToast.success(`Emails enviados: ${sent}`, {
+                        description: `${failed > 0 ? `${failed} fallido(s). ` : ""}${skipped > 0 ? `${skipped} sin correo.` : ""}`,
+                      });
+                    } catch (err: any) {
+                      sonnerToast.error("Error al enviar emails", { description: err.message });
+                    }
+                    setSendingEmails(false);
+                  }}
+                >
+                  {sendingEmails ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Mail className="h-4 w-4 mr-1.5" />}
+                  Enviar detalles por email
+                </Button>
               )}
               <ReportActionsBar
                 title="Resumen del periodo"
