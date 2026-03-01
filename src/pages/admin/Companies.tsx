@@ -30,6 +30,7 @@ interface CompanyRecord {
   is_active: boolean;
   is_sandbox: boolean;
   invite_code: string;
+  company_code: number | null;
   created_at: string;
   user_count?: number;
   active_modules?: number;
@@ -61,8 +62,8 @@ export default function CompaniesPage() {
   const fetchCompanies = async () => {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, slug, is_active, is_sandbox, invite_code, created_at")
-      .order("name");
+      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at")
+      .order("company_code");
 
     if (!data) return;
 
@@ -240,9 +241,10 @@ export default function CompaniesPage() {
         </div>
         <Table>
           <TableHeader>
-            <TableRow>
+           <TableRow>
+              <TableHead className="w-16">#ID</TableHead>
               <TableHead>Nombre</TableHead>
-              <TableHead>Código</TableHead>
+              <TableHead>Código invitación</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Usuarios</TableHead>
               <TableHead>Módulos</TableHead>
@@ -253,19 +255,24 @@ export default function CompaniesPage() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                 <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                 <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                    No hay empresas
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map(c => (
                 <TableRow key={c.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {c.name}
-                      {c.is_sandbox && <Badge variant="outline" className="text-[10px]"><FlaskConical className="h-3 w-3 mr-1" />Sandbox</Badge>}
-                    </div>
-                  </TableCell>
+                   <TableCell>
+                     <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                       {String(c.company_code ?? 0).padStart(3, '0')}
+                     </span>
+                   </TableCell>
+                   <TableCell className="font-medium">
+                     <div className="flex items-center gap-2">
+                       {c.name}
+                       {c.is_sandbox && <Badge variant="outline" className="text-[10px]"><FlaskConical className="h-3 w-3 mr-1" />Sandbox</Badge>}
+                     </div>
+                   </TableCell>
                   <TableCell>
                     <button
                       onClick={() => copyCode(c.invite_code)}
