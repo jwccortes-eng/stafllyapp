@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatPersonName } from "@/lib/format-helpers";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -530,7 +531,7 @@ export default function PeriodSummary() {
                               className="flex items-center gap-2.5 group-hover:text-primary transition-colors"
                             >
                               <EmployeeAvatar firstName={r.first_name} lastName={r.last_name} size="sm" />
-                              <span className="font-medium">{r.first_name} {r.last_name}</span>
+                              <span className="font-medium">{formatPersonName(`${r.first_name} ${r.last_name}`)}</span>
                             </Link>
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm tabular-nums">
@@ -556,7 +557,7 @@ export default function PeriodSummary() {
                         </TableRow>
                       </TooltipTrigger>
                       <TooltipContent side="left" className="space-y-1 text-xs">
-                        <p className="font-semibold">{r.first_name} {r.last_name}</p>
+                        <p className="font-semibold">{formatPersonName(`${r.first_name} ${r.last_name}`)}</p>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
                           <span className="text-muted-foreground">Base:</span>
                           <span className="text-right font-mono">${fmt(r.base_total_pay)}</span>

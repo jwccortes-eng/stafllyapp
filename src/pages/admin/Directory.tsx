@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Phone, MessageSquare, Mail, Users, MessageCircle, Filter } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useCompany } from "@/hooks/useCompany";
+import { formatPersonName, formatDisplayText, localeSort } from "@/lib/format-helpers";
 
 interface DirectoryEntry {
   id: string;
@@ -42,7 +43,7 @@ export default function Directory() {
     employees.forEach((e) => {
       if (e.employee_role) set.add(e.employee_role);
     });
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => localeSort(a, b));
   }, [employees]);
 
   const filtered = employees.filter((e) => {
@@ -84,7 +85,7 @@ export default function Directory() {
             <SelectContent>
               <SelectItem value="all">Todos los roles</SelectItem>
               {roles.map((role) => (
-                <SelectItem key={role} value={role}>{role}</SelectItem>
+                <SelectItem key={role} value={role}>{formatDisplayText(role, "label")}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -125,10 +126,10 @@ export default function Directory() {
 
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-foreground truncate">
-                      {emp.first_name} {emp.last_name}
+                      {formatPersonName(`${emp.first_name} ${emp.last_name}`)}
                     </p>
                     {emp.employee_role && (
-                      <p className="text-[11px] text-muted-foreground truncate">{emp.employee_role}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{formatDisplayText(emp.employee_role, "label")}</p>
                     )}
 
                     {/* Contact info */}

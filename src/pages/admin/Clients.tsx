@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -219,8 +220,8 @@ export default function Clients() {
             <TableBody>
               {filtered.map(c => (
                 <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{c.contact_name ?? "—"}</TableCell>
+                  <TableCell className="font-medium">{formatDisplayText(c.name, "name")}</TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">{formatPersonName(c.contact_name) || "—"}</TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground">{c.contact_email ?? "—"}</TableCell>
                   <TableCell>
                     {c.deleted_at ? (

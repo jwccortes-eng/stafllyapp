@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { formatPersonName } from "@/lib/format-helpers";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -404,7 +405,7 @@ export default function EmployeeReport() {
               </div>
               {filteredEmployees.map(e => (
                 <SelectItem key={e.id} value={e.id}>
-                  {e.first_name} {e.last_name} {!e.is_active && "(inactivo)"}
+                  {formatPersonName(`${e.first_name} ${e.last_name}`)} {!e.is_active && "(inactivo)"}
                 </SelectItem>
               ))}
             </SelectContent>

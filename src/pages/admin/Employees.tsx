@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { Button } from "@/components/ui/button";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Input } from "@/components/ui/input";
@@ -903,9 +904,9 @@ export default function Employees() {
                       onClick={() => openDetailSheet(e)}
                       className="text-left hover:text-primary transition-colors"
                     >
-                      <span className="text-sm font-semibold">{e.first_name} {e.last_name}</span>
+                      <span className="text-sm font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
                       {e.employee_role && (
-                        <span className="block text-xs text-muted-foreground mt-0.5">{e.employee_role}</span>
+                        <span className="block text-xs text-muted-foreground mt-0.5">{formatDisplayText(e.employee_role, "label")}</span>
                       )}
                       {/* Show contact info inline on mobile */}
                       <div className="sm:hidden mt-1 space-y-0.5">
@@ -985,9 +986,9 @@ export default function Employees() {
                 size="lg"
               />
               <div className="flex-1 min-w-0">
-                <SheetTitle className="text-lg">{viewEmployee?.first_name} {viewEmployee?.last_name}</SheetTitle>
+                <SheetTitle className="text-lg">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
                 <SheetDescription className="flex items-center gap-2 mt-0.5">
-                  {viewEmployee?.employee_role ?? "Sin rol"}
+                  {formatDisplayText(viewEmployee?.employee_role, "label") || "Sin rol"}
                   <span className={cn(
                     "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
                     viewEmployee?.is_active ? "bg-earning/10 text-earning" : "bg-muted text-muted-foreground"
