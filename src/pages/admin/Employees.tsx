@@ -27,6 +27,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -535,17 +537,32 @@ export default function Employees() {
     isPrivileged || !SENSITIVE_FIELD_KEYS.has(f.key)
   );
 
+  const BOOLEAN_FIELDS = new Set(["has_car"]);
+
   const EmployeeForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
     <form onSubmit={onSubmit} className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
       {visibleFields.map(f => (
         <FormField key={f.key} label={f.label} required={f.required} htmlFor={`emp-${f.key}`}>
-          <Input
-            id={`emp-${f.key}`}
-            value={form[f.key] ?? ""}
-            onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-            required={f.required}
-            className="h-8 text-sm"
-          />
+          {BOOLEAN_FIELDS.has(f.key) ? (
+            <div className="flex items-center gap-2 h-8">
+              <Checkbox
+                id={`emp-${f.key}`}
+                checked={form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí"}
+                onCheckedChange={c => setForm(prev => ({ ...prev, [f.key]: c ? "Yes" : "No" }))}
+              />
+              <Label htmlFor={`emp-${f.key}`} className="text-xs font-normal cursor-pointer">
+                {form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí" ? "Sí" : "No"}
+              </Label>
+            </div>
+          ) : (
+            <Input
+              id={`emp-${f.key}`}
+              value={form[f.key] ?? ""}
+              onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+              required={f.required}
+              className="h-8 text-sm"
+            />
+          )}
         </FormField>
       ))}
       <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
@@ -1027,14 +1044,32 @@ export default function Employees() {
                   <div key={f.key} className="flex justify-between items-center py-2.5 border-b border-border/40 gap-3">
                     <span className="text-xs text-muted-foreground shrink-0 w-28">{f.label}</span>
                     {isEditing ? (
-                      <Input
-                        value={form[f.key] ?? ""}
-                        onChange={ev => setForm(prev => ({ ...prev, [f.key]: ev.target.value }))}
-                        className="h-8 text-sm flex-1"
-                      />
+                      BOOLEAN_FIELDS.has(f.key) ? (
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí"}
+                            onCheckedChange={c => setForm(prev => ({ ...prev, [f.key]: c ? "Yes" : "No" }))}
+                          />
+                          <span className="text-xs">{form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí" ? "Sí" : "No"}</span>
+                        </div>
+                      ) : (
+                        <Input
+                          value={form[f.key] ?? ""}
+                          onChange={ev => setForm(prev => ({ ...prev, [f.key]: ev.target.value }))}
+                          className="h-8 text-sm flex-1"
+                        />
+                      )
                     ) : (
                       <span className="text-sm font-medium text-right max-w-[60%] break-words">
-                        {viewEmployee?.[f.key] || <span className="text-muted-foreground/40">—</span>}
+                        {BOOLEAN_FIELDS.has(f.key) ? (
+                          viewEmployee?.[f.key] === "Yes" || viewEmployee?.[f.key] === "true" || viewEmployee?.[f.key] === "Sí" ? (
+                            <Badge variant="outline" className="bg-earning/10 text-earning border-earning/20">🚗 Sí</Badge>
+                          ) : (
+                            <span className="text-muted-foreground/40">No</span>
+                          )
+                        ) : (
+                          viewEmployee?.[f.key] || <span className="text-muted-foreground/40">—</span>
+                        )}
                       </span>
                     )}
                   </div>

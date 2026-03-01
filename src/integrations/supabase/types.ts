@@ -2407,6 +2407,81 @@ export type Database = {
           },
         ]
       }
+      shift_rides: {
+        Row: {
+          company_id: string
+          created_at: string
+          driver_id: string
+          id: string
+          movement_id: string | null
+          notes: string | null
+          passenger_count: number
+          ride_type: string
+          shift_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          driver_id: string
+          id?: string
+          movement_id?: string | null
+          notes?: string | null
+          passenger_count?: number
+          ride_type?: string
+          shift_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          driver_id?: string
+          id?: string
+          movement_id?: string | null
+          notes?: string | null
+          passenger_count?: number
+          ride_type?: string
+          shift_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_rides_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_rides_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_rides_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_rides_movement_id_fkey"
+            columns: ["movement_id"]
+            isOneToOne: false
+            referencedRelation: "movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_rides_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           clock_in_device: string | null

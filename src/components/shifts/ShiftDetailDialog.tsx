@@ -11,7 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeCombobox } from "./EmployeeCombobox";
-import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell, Smartphone, Lock, ClipboardCheck } from "lucide-react";
+import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell, Smartphone, Lock, ClipboardCheck, Car } from "lucide-react";
+import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
@@ -347,6 +348,12 @@ export function ShiftDetailDialog({
                 className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
               >
                 <MessageSquare className="h-3 w-3" /> Comentarios
+              </TabsTrigger>
+              <TabsTrigger
+                value="rides"
+                className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
+              >
+                <Car className="h-3 w-3" /> Rides
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -736,6 +743,14 @@ export function ShiftDetailDialog({
             />
           ) : tab === "comments" ? (
             <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
+          ) : tab === "rides" ? (
+            <ShiftRidesPanel
+              shiftId={shift.id}
+              companyId={selectedCompanyId!}
+              assignments={assignments}
+              employees={employees}
+              canEdit={effectiveCanEdit}
+            />
           ) : null}
         </div>
 
