@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Download, Smartphone, CheckCircle2, Apple, ArrowRight, Clock } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { QRCodeSVG } from "qrcode.react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -78,11 +79,20 @@ export default function Install() {
           className="text-center"
         />
 
-        {/* Mockup icon */}
-        <div className="flex justify-center">
-          <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-2xl shadow-primary/20">
-            <Smartphone className="h-10 w-10 text-white" />
+        {/* QR Code */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="rounded-2xl border bg-white p-4 shadow-sm">
+            <QRCodeSVG
+              value="https://staflyapps.com/install"
+              size={180}
+              level="H"
+              includeMargin={false}
+              fgColor="#1a1a2e"
+            />
           </div>
+          <p className="text-xs text-muted-foreground">
+            Escanea para descargar e iniciar sesión
+          </p>
         </div>
 
         {/* Install actions */}
