@@ -415,6 +415,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          company_code: number | null
           created_at: string
           id: string
           invite_code: string
@@ -425,6 +426,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          company_code?: number | null
           created_at?: string
           id?: string
           invite_code: string
@@ -435,6 +437,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          company_code?: number | null
           created_at?: string
           id?: string
           invite_code?: string
