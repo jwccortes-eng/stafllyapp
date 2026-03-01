@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { NumericKeypad } from "./NumericKeypad";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
-import { StaflyMascot } from "@/components/brand/StaflyMascot";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

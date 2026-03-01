@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users, AlertCircle, FileText, Hash, ArrowLeft, ShieldAlert } from "lucide-react";
-import { StaflyMascot } from "@/components/brand/StaflyMascot";
+
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -512,7 +512,9 @@ export default function PortalClock() {
 
       {todayEntries.length === 0 && !isClockedIn && todayShifts.length === 0 && (
         <div className="text-center py-8 space-y-2">
-          <StaflyMascot variant="checklist" size={64} className="mx-auto opacity-60" />
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center">
+            <Clock className="h-8 w-8 text-primary/40" />
+          </div>
           <p className="text-sm font-semibold text-foreground">No hay registros hoy</p>
           <p className="text-xs text-muted-foreground max-w-[220px] mx-auto">
             No tienes turnos programados para el día de hoy

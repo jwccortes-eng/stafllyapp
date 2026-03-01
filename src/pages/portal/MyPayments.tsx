@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
-import { StaflyMascot } from "@/components/brand/StaflyMascot";
+
 
 interface PaymentRow {
   period_id: string;
@@ -281,7 +281,9 @@ export default function MyPayments() {
         <h2 className="text-sm font-semibold text-foreground mb-4">Historial de pagos</h2>
         {payments.length === 0 ? (
           <div className="text-center py-12 space-y-3">
-            <StaflyMascot variant="paid" size={80} className="mx-auto opacity-60" />
+            <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center">
+              <Wallet className="h-8 w-8 text-primary/40" />
+            </div>
             <p className="text-sm font-semibold text-foreground">Sin pagos publicados</p>
             <p className="text-xs text-muted-foreground">Tu historial de pagos aparecerá aquí cuando esté disponible.</p>
           </div>
