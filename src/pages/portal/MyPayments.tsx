@@ -41,7 +41,7 @@ function PaymentTrendChart({ payments }: { payments: PaymentRow[] }) {
   const isUp = diff >= 0;
 
   return (
-    <div className="rounded-2xl bg-card border p-4 space-y-3">
+    <div className="rounded-2xl bg-card border border-border/40 p-4 space-y-3 shadow-xs">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tendencia de pagos</p>
         <div className={cn(
@@ -239,7 +239,7 @@ export default function MyPayments() {
 
       {/* Latest payment hero */}
       {latestPayment && (
-        <div className="rounded-2xl bg-card border p-5">
+        <div className="rounded-2xl bg-card border border-border/40 p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Último pago</p>
@@ -262,15 +262,15 @@ export default function MyPayments() {
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl bg-card border p-4 text-center">
+        <div className="rounded-2xl bg-card border border-border/40 p-4 text-center shadow-xs">
           <p className="text-xs text-muted-foreground font-medium">Acumulado</p>
           <p className="text-lg font-bold font-heading mt-1 tabular-nums">${accumulated.toFixed(0)}</p>
         </div>
-        <div className="rounded-2xl bg-card border p-4 text-center">
+        <div className="rounded-2xl bg-card border border-border/40 p-4 text-center shadow-xs">
           <p className="text-xs text-muted-foreground font-medium">Semanas</p>
           <p className="text-lg font-bold font-heading mt-1">{payments.length}</p>
         </div>
-        <Link to="/portal/accumulated" className="rounded-2xl bg-card border p-4 text-center hover:bg-accent/50 transition-colors group">
+        <Link to="/portal/accumulated" className="rounded-2xl bg-card border border-border/40 p-4 text-center hover:bg-accent/50 transition-colors group shadow-xs">
           <p className="text-xs text-muted-foreground font-medium">Historial</p>
           <BarChart3 className="h-5 w-5 text-primary mx-auto mt-2 group-hover:scale-110 transition-transform" />
         </Link>

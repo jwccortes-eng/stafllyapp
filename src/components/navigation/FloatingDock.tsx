@@ -32,7 +32,7 @@ export function FloatingDock({ items, pinnedIds, onOpenLauncher, className, vari
     )}>
       <div className={cn(
         "flex items-center gap-1 px-2 py-1.5 rounded-2xl border shadow-xl",
-        "bg-card/95 backdrop-blur-2xl border-border/40",
+        "bg-card/95 backdrop-blur-2xl border-border/30 shadow-primary-glow/20",
         "transition-all duration-300"
       )}>
         {pinnedItems.map((item) => {
