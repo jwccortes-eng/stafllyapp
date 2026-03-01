@@ -65,14 +65,24 @@ export function WeekView({ weekDays, shifts, assignments, locations, clients, on
             onDrop={e => handleDayDrop(e, day)}
           >
             <div className={cn(
-              "text-center text-xs font-medium mb-3 py-1.5 rounded-lg",
-              isToday ? "bg-primary/10 text-primary" : "text-muted-foreground/70"
+              "text-center mb-3 py-2 rounded-xl transition-colors",
+              isToday ? "bg-primary/8" : ""
             )}>
-              <div className="text-[10px] uppercase tracking-wider">{format(day, "EEE", { locale: es })}</div>
               <div className={cn(
-                "text-lg font-bold mt-0.5",
-                isToday && "text-primary"
-              )}>{format(day, "d")}</div>
+                "text-[9px] font-semibold uppercase tracking-[0.08em]",
+                isToday ? "text-primary" : "text-muted-foreground/50"
+              )}>
+                {format(day, "EEE", { locale: es })}
+              </div>
+              <div className={cn(
+                "text-lg font-bold mt-0.5 leading-none",
+                isToday ? "text-primary" : "text-foreground/75"
+              )}>
+                {format(day, "d")}
+              </div>
+              <div className="text-[8px] text-muted-foreground/35 mt-0.5 font-medium">
+                {format(day, "MMM", { locale: es })}
+              </div>
             </div>
             <div className="space-y-2">
               {dayShifts.map(shift => (
@@ -107,7 +117,9 @@ export function WeekView({ weekDays, shifts, assignments, locations, clients, on
                 </div>
               ))}
               {dayShifts.length === 0 && !onAddShift && (
-                <p className="text-[10px] text-muted-foreground/30 text-center pt-6">—</p>
+                <div className="flex items-center justify-center pt-8">
+                  <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/15" />
+                </div>
               )}
               {onAddShift && (
                 <button

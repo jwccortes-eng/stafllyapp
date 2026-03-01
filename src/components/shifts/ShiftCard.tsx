@@ -68,9 +68,9 @@ export function ShiftCard({
   return (
     <div
       className={cn(
-        "cursor-pointer transition-all group border-l-[3px] rounded-xl overflow-hidden bg-white/80 dark:bg-card/80 border border-border/30 shadow-sm hover:shadow-md hover:-translate-y-px",
+        "cursor-pointer transition-all group border-l-[3px] rounded-xl overflow-hidden bg-white/80 dark:bg-card/80 border border-border/20 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-md hover:-translate-y-0.5",
         color.border,
-        draggable && "hover:ring-1 hover:ring-primary/20"
+        draggable && "hover:ring-1 hover:ring-primary/15"
       )}
       draggable={draggable && shift.status !== "locked"}
       onDragStart={handleDragStart}

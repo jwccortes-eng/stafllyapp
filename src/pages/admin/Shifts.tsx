@@ -932,53 +932,56 @@ export default function Shifts() {
       <ShiftFilters filters={filters} onChange={setFilters} clients={clients} />
 
       {/* Navigation */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigateBack}>
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-white/60 dark:bg-card/40 border border-border/15 shadow-sm px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-muted/60" onClick={navigateBack}>
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
-          <span className="text-xs font-medium capitalize min-w-[140px] text-center">{navLabel}</span>
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={navigateForward}>
+          <button
+            onClick={navigateToday}
+            className="text-xs font-semibold capitalize min-w-[160px] text-center px-3 py-1 rounded-lg hover:bg-muted/50 transition-colors"
+          >
+            {navLabel}
+          </button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-muted/60" onClick={navigateForward}>
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={navigateToday}>Hoy</Button>
+          <button
+            onClick={navigateToday}
+            className="ml-1 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 hover:bg-primary/15 px-2.5 py-1 rounded-full transition-colors"
+          >
+            Hoy
+          </button>
         </div>
         <div className="flex items-center gap-1">
           {viewMode === "week" && (
-            <>
-               <Button
-                variant={weekViewMode === "grid" ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 text-[10px] px-2"
-                onClick={() => setWeekViewMode("grid")}
-              >
-                <LayoutGrid className="h-3 w-3 mr-1" /> Grid
-              </Button>
-              <Button
-                variant={weekViewMode === "job" ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 text-[10px] px-2"
-                onClick={() => setWeekViewMode("job")}
-              >
-                <Building2 className="h-3 w-3 mr-1" /> Por cliente
-              </Button>
-              <Button
-                variant={weekViewMode === "employee" ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 text-[10px] px-2"
-                onClick={() => setWeekViewMode("employee")}
-              >
-                <Users className="h-3 w-3 mr-1" /> Por empleado
-              </Button>
-              <div className="w-px h-5 bg-border/40 mx-1" />
-            </>
+            <div className="flex items-center bg-muted/40 rounded-lg p-0.5 mr-2">
+              {([
+                { key: "grid" as const, icon: LayoutGrid, label: "Grid" },
+                { key: "job" as const, icon: Building2, label: "Clientes" },
+                { key: "employee" as const, icon: Users, label: "Empleados" },
+              ]).map(({ key, icon: Icon, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setWeekViewMode(key)}
+                  className={cn(
+                    "flex items-center gap-1 text-[10px] font-medium px-2.5 py-1 rounded-md transition-all",
+                    weekViewMode === key
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground/60 hover:text-foreground/80"
+                  )}
+                >
+                  <Icon className="h-3 w-3" /> {label}
+                </button>
+              ))}
+            </div>
           )}
           {canEdit && (
             <>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-[10px] px-2.5 gap-1"
+                className="h-7 text-[10px] px-2.5 gap-1 rounded-lg border-border/30"
                 onClick={handlePublishAll}
                 disabled={bulkPublishing}
               >
@@ -988,7 +991,7 @@ export default function Shifts() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-[10px] px-2.5 gap-1 text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950/30"
+                className="h-7 text-[10px] px-2.5 gap-1 rounded-lg text-amber-600 border-amber-200/50 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950/30"
                 onClick={handleLockAll}
                 disabled={bulkLocking}
               >
@@ -1001,10 +1004,13 @@ export default function Shifts() {
       </div>
 
       {/* Content */}
-      <div className="rounded-2xl bg-white/50 dark:bg-card/30 border border-border/20 shadow-sm p-5 min-h-[400px]">
+      <div className="rounded-2xl bg-white/50 dark:bg-card/30 border border-border/15 shadow-sm p-4 sm:p-5 min-h-[420px]">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+            <p className="text-xs text-muted-foreground/50">Cargando turnos…</p>
           </div>
         ) : viewMode === "day" ? (
           <DayView
