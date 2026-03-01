@@ -54,8 +54,8 @@ export default function EmployeeReport() {
     return { wed, tue };
   };
 
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(() => getCurrentWeek().wed);
-  const [dateTo, setDateTo] = useState<Date | undefined>(() => getCurrentWeek().tue);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
