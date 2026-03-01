@@ -107,7 +107,7 @@ function App() {
                 <Route path="movements" element={<Movements />} />
                 <Route path="summary" element={<PeriodSummary />} />
                 <Route path="summary/detail" element={<EmployeePeriodDetail />} />
-                <Route path="reports" element={<Reports />} />
+                <Route path="reports" element={<PeriodSummary />} />
                 <Route path="reports/employee" element={<EmployeeReport />} />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="companies" element={<CompaniesPage />} />

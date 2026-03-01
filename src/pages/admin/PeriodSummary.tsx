@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2, Clock, Mail } from "lucide-react";
+import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2, Clock, Mail, FileSpreadsheet, UserCheck, BarChart3, AlertTriangle, ContactRound } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
  * Find the period that contains today (Wed–Tue cycle), or the most recent past period.
@@ -276,13 +278,12 @@ export default function PeriodSummary() {
   };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
+    <Tabs defaultValue="summary" className="space-y-5">
       <div className="flex flex-col gap-3">
         <PageHeader
           variant="2"
-          title="Resumen del periodo"
-          subtitle="Consolidación: base + extras − deducciones"
+          title="Reportes de Nómina"
+          subtitle="Resumen, análisis y exportaciones"
           badge="Semanal"
           rightSlot={selectedPeriod ? (
             <div className="flex items-center gap-2 flex-wrap">
@@ -398,7 +399,7 @@ export default function PeriodSummary() {
                 title="Resumen del periodo"
                 subtitle={selectedPeriodObj ? `${selectedPeriodObj.start_date} — ${selectedPeriodObj.end_date}` : undefined}
                 onExportCSV={getCSVRows}
-              />
+        />
             </div>
           ) : undefined}
         />
@@ -487,215 +488,211 @@ export default function PeriodSummary() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      {rows.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiCard
-            value={rows.length.toString()}
-            label="Empleados en periodo"
-            icon={<Users className="h-5 w-5 text-primary" />}
-            accent="primary"
-            subtitle={`${withBase} con pago base`}
-          />
-          <KpiCard
-            value={`$${fmt(grandBase)}`}
-            label="Total pago base"
-            icon={<DollarSign className="h-5 w-5 text-primary" />}
-            accent="primary"
-          />
-          <KpiCard
-            value={`$${fmt(grandExtras)}`}
-            label="Total extras"
-            icon={<TrendingUp className="h-5 w-5 text-earning" />}
-            accent="earning"
-            subtitle={`${withExtras} empleados con extras`}
-          />
-          <KpiCard
-            value={`$${fmt(grandDeductions)}`}
-            label="Total deducciones"
-            icon={<TrendingDown className="h-5 w-5 text-deduction" />}
-            accent="deduction"
-            subtitle={`${withDeductions} con deducciones`}
-          />
-        </div>
-      )}
+      <TabsList className="w-full justify-start">
+        <TabsTrigger value="summary" className="gap-1.5">
+          <FileSpreadsheet className="h-4 w-4" /> Resumen del periodo
+        </TabsTrigger>
+        <TabsTrigger value="reports" className="gap-1.5">
+          <BarChart3 className="h-4 w-4" /> Más reportes
+        </TabsTrigger>
+      </TabsList>
 
-      {/* Progress Bars */}
-      {rows.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <ProgressBar current={withBase} total={rows.length} label="Con pago base" accent="primary" />
-          <ProgressBar current={withExtras} total={rows.length} label="Con extras" accent="earning" />
-          <ProgressBar current={withDeductions} total={rows.length} label="Con deducciones" accent="deduction" />
-        </div>
-      )}
+      <TabsContent value="summary" className="space-y-5 mt-0">
+        {/* KPI Cards */}
+        {rows.length > 0 && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard value={rows.length.toString()} label="Empleados en periodo" icon={<Users className="h-5 w-5 text-primary" />} accent="primary" subtitle={`${withBase} con pago base`} />
+            <KpiCard value={`$${fmt(grandBase)}`} label="Total pago base" icon={<DollarSign className="h-5 w-5 text-primary" />} accent="primary" />
+            <KpiCard value={`$${fmt(grandExtras)}`} label="Total extras" icon={<TrendingUp className="h-5 w-5 text-earning" />} accent="earning" subtitle={`${withExtras} empleados con extras`} />
+            <KpiCard value={`$${fmt(grandDeductions)}`} label="Total deducciones" icon={<TrendingDown className="h-5 w-5 text-deduction" />} accent="deduction" subtitle={`${withDeductions} con deducciones`} />
+          </div>
+        )}
 
-      {/* Search & Filters */}
-      {rows.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar empleado..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-9"
-            />
-            {searchTerm && (
-              <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-                <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-              </button>
-            )}
+        {/* Progress Bars */}
+        {rows.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <ProgressBar current={withBase} total={rows.length} label="Con pago base" accent="primary" />
+            <ProgressBar current={withExtras} total={rows.length} label="Con extras" accent="earning" />
+            <ProgressBar current={withDeductions} total={rows.length} label="Con deducciones" accent="deduction" />
           </div>
-          <div className="flex items-center gap-1.5">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={payFilter} onValueChange={(v) => setPayFilter(v as PayFilter)}>
-              <SelectTrigger className="h-9 w-[170px] text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="with_extras">Con extras</SelectItem>
-                <SelectItem value="with_deductions">Con deducciones</SelectItem>
-                <SelectItem value="zero_base">Sin pago base</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={() => { setSearchTerm(""); setPayFilter("all"); }} className="text-xs">
-              <X className="h-3.5 w-3.5 mr-1" /> Limpiar
-            </Button>
-          )}
-          <span className="text-xs text-muted-foreground ml-auto tabular-nums">
-            {sorted.length}/{rows.length} empleados
-          </span>
-        </div>
-      )}
+        )}
 
-      {/* Main Table */}
-      {loading ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <div className="inline-flex items-center gap-2">
-            <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            Cargando resumen...
-          </div>
-        </div>
-      ) : (
-        <div className="data-table-wrapper">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("name")}>
-                  <span className="flex items-center gap-1">Empleado {sortIcon("name")}</span>
-                </TableHead>
-                <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("base")}>
-                  <span className="flex items-center justify-end gap-1">Base {sortIcon("base")}</span>
-                </TableHead>
-                <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("extras")}>
-                  <span className="flex items-center justify-end gap-1">Extras {sortIcon("extras")}</span>
-                </TableHead>
-                <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("deductions")}>
-                  <span className="flex items-center justify-end gap-1">Deducciones {sortIcon("deductions")}</span>
-                </TableHead>
-                <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors font-bold" onClick={() => toggleSort("total")}>
-                  <span className="flex items-center justify-end gap-1">Total Final {sortIcon("total")}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sorted.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-16">
-                    {rows.length === 0 ? "Selecciona un periodo para ver el resumen" : "Sin resultados para los filtros aplicados"}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                <>
-                  {sorted.map(r => (
-                    <Tooltip key={r.employee_id}>
-                      <TooltipTrigger asChild>
-                        <TableRow
-                          className="group cursor-pointer transition-colors hover:bg-accent/40"
-                          onMouseEnter={() => setHoveredRow(r.employee_id)}
-                          onMouseLeave={() => setHoveredRow(null)}
-                        >
-                          <TableCell>
-                            <Link
-                              to={`/app/summary/detail?employeeId=${r.employee_id}&periodId=${selectedPeriod}`}
-                              className="flex items-center gap-2.5 group-hover:text-primary transition-colors"
-                            >
-                              <EmployeeAvatar firstName={r.first_name} lastName={r.last_name} size="sm" />
-                              <span className="font-medium">{formatPersonName(`${r.first_name} ${r.last_name}`)}</span>
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm tabular-nums">
-                            ${fmt(r.base_total_pay)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm tabular-nums">
-                            {r.extras_total > 0 ? (
-                              <span className="text-earning font-medium">+${fmt(r.extras_total)}</span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm tabular-nums">
-                            {r.deductions_total > 0 ? (
-                              <span className="text-deduction font-medium">−${fmt(r.deductions_total)}</span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm tabular-nums font-bold">
-                            ${fmt(r.total_final_pay)}
-                          </TableCell>
-                        </TableRow>
-                      </TooltipTrigger>
-                      <TooltipContent side="left" className="space-y-1 text-xs">
-                        <p className="font-semibold">{formatPersonName(`${r.first_name} ${r.last_name}`)}</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                          <span className="text-muted-foreground">Base:</span>
-                          <span className="text-right font-mono">${fmt(r.base_total_pay)}</span>
-                          <span className="text-muted-foreground">Extras:</span>
-                          <span className="text-right font-mono text-earning">+${fmt(r.extras_total)}</span>
-                          <span className="text-muted-foreground">Deducciones:</span>
-                          <span className="text-right font-mono text-deduction">−${fmt(r.deductions_total)}</span>
-                          <span className="font-semibold border-t pt-0.5">Total:</span>
-                          <span className="text-right font-mono font-bold border-t pt-0.5">${fmt(r.total_final_pay)}</span>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                  {/* Totals row */}
-                  <TableRow className="bg-muted/50 border-t-2 border-border">
-                    <TableCell className="font-bold">
-                      <span className="flex items-center gap-2">
-                        <span className="rounded-full bg-primary/10 text-primary h-7 w-7 flex items-center justify-center text-[10px] font-bold shrink-0">
-                          Σ
-                        </span>
-                        TOTAL ({sorted.length})
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-bold tabular-nums">${fmt(grandBase)}</TableCell>
-                    <TableCell className="text-right font-mono font-bold tabular-nums text-earning">+${fmt(grandExtras)}</TableCell>
-                    <TableCell className="text-right font-mono font-bold tabular-nums text-deduction">−${fmt(grandDeductions)}</TableCell>
-                    <TableCell className="text-right font-mono font-bold tabular-nums text-lg">${fmt(grandTotal)}</TableCell>
-                  </TableRow>
-                </>
+        {/* Search & Filters */}
+        {rows.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar empleado..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 h-9" />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                </button>
               )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={payFilter} onValueChange={(v) => setPayFilter(v as PayFilter)}>
+                <SelectTrigger className="h-9 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="with_extras">Con extras</SelectItem>
+                  <SelectItem value="with_deductions">Con deducciones</SelectItem>
+                  <SelectItem value="zero_base">Sin pago base</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={() => { setSearchTerm(""); setPayFilter("all"); }} className="text-xs">
+                <X className="h-3.5 w-3.5 mr-1" /> Limpiar
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto tabular-nums">{sorted.length}/{rows.length} empleados</span>
+          </div>
+        )}
 
-      {/* Audit trail */}
-      <div className="mt-8">
-        <AuditPanel
-          entityType="pay_period"
-          entityId={selectedPeriod}
-          title="Actividad del periodo"
-          hideViews
-          compact
-        />
-      </div>
-    </div>
+        {/* Main Table */}
+        {loading ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <div className="inline-flex items-center gap-2">
+              <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              Cargando resumen...
+            </div>
+          </div>
+        ) : (
+          <div className="data-table-wrapper">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("name")}>
+                    <span className="flex items-center gap-1">Empleado {sortIcon("name")}</span>
+                  </TableHead>
+                  <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("base")}>
+                    <span className="flex items-center justify-end gap-1">Base {sortIcon("base")}</span>
+                  </TableHead>
+                  <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("extras")}>
+                    <span className="flex items-center justify-end gap-1">Extras {sortIcon("extras")}</span>
+                  </TableHead>
+                  <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("deductions")}>
+                    <span className="flex items-center justify-end gap-1">Deducciones {sortIcon("deductions")}</span>
+                  </TableHead>
+                  <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors font-bold" onClick={() => toggleSort("total")}>
+                    <span className="flex items-center justify-end gap-1">Total Final {sortIcon("total")}</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sorted.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-16">
+                      {rows.length === 0 ? "Selecciona un periodo para ver el resumen" : "Sin resultados para los filtros aplicados"}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <>
+                    {sorted.map(r => (
+                      <Tooltip key={r.employee_id}>
+                        <TooltipTrigger asChild>
+                          <TableRow className="group cursor-pointer transition-colors hover:bg-accent/40" onMouseEnter={() => setHoveredRow(r.employee_id)} onMouseLeave={() => setHoveredRow(null)}>
+                            <TableCell>
+                              <Link to={`/app/summary/detail?employeeId=${r.employee_id}&periodId=${selectedPeriod}`} className="flex items-center gap-2.5 group-hover:text-primary transition-colors">
+                                <EmployeeAvatar firstName={r.first_name} lastName={r.last_name} size="sm" />
+                                <span className="font-medium">{formatPersonName(`${r.first_name} ${r.last_name}`)}</span>
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">${fmt(r.base_total_pay)}</TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {r.extras_total > 0 ? <span className="text-earning font-medium">+${fmt(r.extras_total)}</span> : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {r.deductions_total > 0 ? <span className="text-deduction font-medium">−${fmt(r.deductions_total)}</span> : <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums font-bold">${fmt(r.total_final_pay)}</TableCell>
+                          </TableRow>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="space-y-1 text-xs">
+                          <p className="font-semibold">{formatPersonName(`${r.first_name} ${r.last_name}`)}</p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                            <span className="text-muted-foreground">Base:</span><span className="text-right font-mono">${fmt(r.base_total_pay)}</span>
+                            <span className="text-muted-foreground">Extras:</span><span className="text-right font-mono text-earning">+${fmt(r.extras_total)}</span>
+                            <span className="text-muted-foreground">Deducciones:</span><span className="text-right font-mono text-deduction">−${fmt(r.deductions_total)}</span>
+                            <span className="font-semibold border-t pt-0.5">Total:</span><span className="text-right font-mono font-bold border-t pt-0.5">${fmt(r.total_final_pay)}</span>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                    <TableRow className="bg-muted/50 border-t-2 border-border">
+                      <TableCell className="font-bold">
+                        <span className="flex items-center gap-2">
+                          <span className="rounded-full bg-primary/10 text-primary h-7 w-7 flex items-center justify-center text-[10px] font-bold shrink-0">Σ</span>
+                          TOTAL ({sorted.length})
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-bold tabular-nums">${fmt(grandBase)}</TableCell>
+                      <TableCell className="text-right font-mono font-bold tabular-nums text-earning">+${fmt(grandExtras)}</TableCell>
+                      <TableCell className="text-right font-mono font-bold tabular-nums text-deduction">−${fmt(grandDeductions)}</TableCell>
+                      <TableCell className="text-right font-mono font-bold tabular-nums text-lg">${fmt(grandTotal)}</TableCell>
+                    </TableRow>
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {/* Audit trail */}
+        <div className="mt-8">
+          <AuditPanel entityType="pay_period" entityId={selectedPeriod} title="Actividad del periodo" hideViews compact />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="reports" className="mt-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link to="/app/reports/employee">
+            <Card className="stat-card cursor-pointer hover:border-primary/30">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <UserCheck className="h-8 w-8 text-primary" />
+                <div><CardTitle className="text-base">Resumen por empleado</CardTitle></div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Historial completo de todos los periodos de un empleado con totales acumulados.</p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/app/directory">
+            <Card className="stat-card cursor-pointer hover:border-primary/30">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <ContactRound className="h-8 w-8 text-earning" />
+                <div><CardTitle className="text-base">Directorio de contacto</CardTitle></div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Teléfonos, correos y acciones rápidas de llamada, texto y email.</p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/app/movements">
+            <Card className="stat-card cursor-pointer hover:border-primary/30">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <DollarSign className="h-8 w-8 text-warning" />
+                <div><CardTitle className="text-base">Novedades por periodo</CardTitle></div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Todas las novedades registradas filtradas por periodo.</p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/app/discrepancies">
+            <Card className="stat-card cursor-pointer hover:border-primary/30">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <AlertTriangle className="h-8 w-8 text-destructive" />
+                <div><CardTitle className="text-base">Discrepancias</CardTitle></div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Turnos vs. registros de reloj: ausencias, tardanzas, extras no planeadas.</p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </TabsContent>
+    </Tabs>
   );
 }
