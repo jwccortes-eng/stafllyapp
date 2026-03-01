@@ -376,10 +376,10 @@ export default function PayPeriods() {
                 return (
                   <Collapsible key={p.id} open={isExpanded} onOpenChange={() => toggleExpand(p.id)} asChild>
                     <>
-                      <TableRow
+                       <TableRow
                         className={cn(
-                          "group cursor-pointer hover:bg-muted/50",
-                          isCurrentWeek && "bg-primary/5 ring-1 ring-inset ring-primary/20"
+                          "group cursor-pointer hover:bg-accent/50",
+                          isCurrentWeek && "bg-primary/[0.04] ring-1 ring-inset ring-primary/15"
                         )}
                         onClick={() => toggleExpand(p.id)}
                       >
