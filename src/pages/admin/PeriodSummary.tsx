@@ -125,7 +125,8 @@ export default function PeriodSummary() {
       const { data: movements } = await supabase
         .from("movements")
         .select("employee_id, total_value, concepts(category)")
-        .eq("period_id", selectedPeriod);
+        .eq("period_id", selectedPeriod)
+        .eq("approval_status", "approved");
       const empMap = new Map<string, SummaryRow>();
       (basePays ?? []).forEach((bp: any) => {
         empMap.set(bp.employee_id, {
@@ -308,7 +309,7 @@ export default function PeriodSummary() {
                       // Reload without resetting period
                       setLoading(true);
                       const { data: basePays2 } = await supabase.from("period_base_pay").select("employee_id, base_total_pay, employees(first_name, last_name)").eq("period_id", selectedPeriod);
-                      const { data: movements2 } = await supabase.from("movements").select("employee_id, total_value, concepts(category)").eq("period_id", selectedPeriod);
+                      const { data: movements2 } = await supabase.from("movements").select("employee_id, total_value, concepts(category)").eq("period_id", selectedPeriod).eq("approval_status", "approved");
                       const empMap2 = new Map<string, SummaryRow>();
                       (basePays2 ?? []).forEach((bp: any) => {
                         empMap2.set(bp.employee_id, { employee_id: bp.employee_id, first_name: bp.employees?.first_name ?? "", last_name: bp.employees?.last_name ?? "", base_total_pay: Number(bp.base_total_pay) || 0, extras_total: 0, deductions_total: 0, total_final_pay: 0 });

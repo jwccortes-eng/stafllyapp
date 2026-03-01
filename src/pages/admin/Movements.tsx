@@ -13,8 +13,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, ArrowUpDown, TrendingUp, TrendingDown, DollarSign, Pencil } from "lucide-react";
+import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, ArrowUpDown, TrendingUp, TrendingDown, DollarSign, Pencil, ShieldCheck, ShieldX, Clock3 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { useAuth } from "@/hooks/useAuth";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +35,7 @@ interface Concept { id: string; name: string; category: string; calc_mode: strin
 interface Movement {
   id: string; employee_id: string; period_id: string; concept_id: string;
   quantity: number | null; rate: number | null; total_value: number; note: string | null;
+  approval_status: string; approval_note: string | null; approved_by: string | null;
   employees: { first_name: string; last_name: string; } | null;
   concepts: { name: string; category: string; } | null;
 }
@@ -51,6 +53,8 @@ const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u03
 
 export default function Movements() {
   const { selectedCompanyId } = useCompany();
+  const { role, hasActionPermission } = useAuth();
+  const canApprove = role === "owner" || role === "admin" || hasActionPermission("aprobar_novedades");
   const [movements, setMovements] = useState<Movement[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
@@ -78,6 +82,10 @@ export default function Movements() {
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ quantity: "", rate: "", total_value: "", note: "" });
   const [editSaving, setEditSaving] = useState(false);
+  // Deny dialog state
+  const [denyTarget, setDenyTarget] = useState<string | null>(null);
+  const [denyNote, setDenyNote] = useState("");
+  const [denyOpen, setDenyOpen] = useState(false);
 
   const selectedPeriod = periods.find(p => p.id === filterPeriod);
   const isPeriodClosed = selectedPeriod?.status === "closed";
@@ -116,6 +124,20 @@ export default function Movements() {
       .eq("period_id", periodId)
       .order("created_at", { ascending: false });
     setMovements((data as Movement[]) ?? []);
+  };
+
+  const handleApprove = async (id: string) => {
+    const { error } = await supabase.from("movements").update({ approval_status: "approved", approved_by: (await supabase.auth.getUser()).data.user?.id } as any).eq("id", id);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Novedad aprobada ✓" }); fetchMovements(filterPeriod); }
+  };
+
+  const openDenyDialog = (id: string) => { setDenyTarget(id); setDenyNote(""); setDenyOpen(true); };
+  const handleDeny = async () => {
+    if (!denyTarget || !denyNote.trim()) { toast({ title: "Escribe un motivo", variant: "destructive" }); return; }
+    const { error } = await supabase.from("movements").update({ approval_status: "denied", approval_note: denyNote.trim(), approved_by: (await supabase.auth.getUser()).data.user?.id } as any).eq("id", denyTarget);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Novedad denegada" }); setDenyOpen(false); setDenyTarget(null); fetchMovements(filterPeriod); }
   };
 
   useEffect(() => { if (filterPeriod) fetchMovements(filterPeriod); }, [filterPeriod]);
@@ -301,10 +323,13 @@ export default function Movements() {
     const conceptName = normalize(m.concepts?.name ?? "");
     return empName.includes(s) || conceptName.includes(s);
   });
-  const extrasCount = filtered.filter(m => m.concepts?.category === "extra").length;
-  const deductionsCount = filtered.filter(m => m.concepts?.category !== "extra").length;
-  const extrasTotal = filtered.filter(m => m.concepts?.category === "extra").reduce((s, m) => s + m.total_value, 0);
-  const deductionsTotal = filtered.filter(m => m.concepts?.category !== "extra").reduce((s, m) => s + m.total_value, 0);
+  const approvedMovements = filtered.filter(m => m.approval_status === "approved");
+  const pendingCount = filtered.filter(m => m.approval_status === "pending").length;
+  const deniedCount = filtered.filter(m => m.approval_status === "denied").length;
+  const extrasCount = approvedMovements.filter(m => m.concepts?.category === "extra").length;
+  const deductionsCount = approvedMovements.filter(m => m.concepts?.category !== "extra").length;
+  const extrasTotal = approvedMovements.filter(m => m.concepts?.category === "extra").reduce((s, m) => s + m.total_value, 0);
+  const deductionsTotal = approvedMovements.filter(m => m.concepts?.category !== "extra").reduce((s, m) => s + m.total_value, 0);
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
@@ -464,17 +489,28 @@ export default function Movements() {
 
       {/* KPI Cards */}
       {movements.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <KpiCard value={filtered.length.toString()} label="Total novedades" accent="primary" icon={<DollarSign className="h-5 w-5 text-primary" />} />
-          <KpiCard value={`$${fmt(extrasTotal + deductionsTotal)}`} label="Valor total" accent="primary" />
+          {pendingCount > 0 && (
+            <KpiCard value={pendingCount.toString()} label="Pendientes de aprobación" accent="warning" icon={<Clock3 className="h-5 w-5 text-warning" />} />
+          )}
+          <KpiCard value={`$${fmt(extrasTotal + deductionsTotal)}`} label="Valor aprobado" accent="primary" />
           <KpiCard value={`$${fmt(extrasTotal)}`} label={`${extrasCount} extras`} accent="earning" icon={<TrendingUp className="h-5 w-5 text-earning" />} />
           <KpiCard value={`$${fmt(deductionsTotal)}`} label={`${deductionsCount} deducciones`} accent="deduction" icon={<TrendingDown className="h-5 w-5 text-deduction" />} />
         </div>
       )}
 
+      {/* Pending warning banner */}
+      {pendingCount > 0 && (
+        <div className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
+          <Clock3 className="h-4 w-4 text-warning shrink-0" />
+          <p className="text-sm"><strong>{pendingCount} novedad(es) pendiente(s)</strong> de aprobación. El periodo no podrá cerrarse hasta que se aprueben o denieguen todas.</p>
+        </div>
+      )}
+
       {/* Progress */}
       {movements.length > 0 && (
-        <ProgressBar current={extrasCount} total={filtered.length} label="Extras vs total" accent="earning" />
+        <ProgressBar current={extrasCount} total={approvedMovements.length || 1} label="Extras aprobados vs total" accent="earning" />
       )}
 
       {/* Table */}
@@ -485,25 +521,30 @@ export default function Movements() {
               <TableHead>Empleado</TableHead>
               <TableHead>Concepto</TableHead>
               <TableHead>Tipo</TableHead>
+              <TableHead className="text-center">Estado</TableHead>
               <TableHead className="text-right">Cant.</TableHead>
               <TableHead className="text-right">Tarifa</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Nota</TableHead>
-              <TableHead className="w-12"></TableHead>
+              <TableHead className="w-28"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {movements.length === 0 && !filterPeriod ? (
-              <TableRow><TableCell colSpan={8} className="p-0"><PageSkeleton variant="table" className="border-0 shadow-none p-4" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="p-0"><PageSkeleton variant="table" className="border-0 shadow-none p-4" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="p-0">
+              <TableRow><TableCell colSpan={9} className="p-0">
                 <EmptyState icon={DollarSign} title="No hay novedades" description="Agrega extras o deducciones en este periodo" compact />
               </TableCell></TableRow>
             ) : (
               filtered.map(m => (
                 <Tooltip key={m.id}>
                   <TooltipTrigger asChild>
-                    <TableRow className="group hover:bg-accent/40 transition-colors">
+                    <TableRow className={cn(
+                      "group hover:bg-accent/40 transition-colors",
+                      m.approval_status === "denied" && "opacity-50",
+                      m.approval_status === "pending" && "bg-warning/5"
+                    )}>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <EmployeeAvatar firstName={m.employees?.first_name ?? "?"} lastName={m.employees?.last_name ?? "?"} size="sm" />
@@ -516,14 +557,46 @@ export default function Movements() {
                           {m.concepts?.category === "extra" ? "Extra" : "Deducción"}
                         </span>
                       </TableCell>
+                      <TableCell className="text-center">
+                        {m.approval_status === "approved" && (
+                          <Badge variant="outline" className="gap-1 text-earning border-earning/30 bg-earning/5 text-[10px]">
+                            <ShieldCheck className="h-3 w-3" /> Aprobado
+                          </Badge>
+                        )}
+                        {m.approval_status === "pending" && (
+                          <Badge variant="outline" className="gap-1 text-warning border-warning/30 bg-warning/5 text-[10px]">
+                            <Clock3 className="h-3 w-3" /> Pendiente
+                          </Badge>
+                        )}
+                        {m.approval_status === "denied" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="gap-1 text-destructive border-destructive/30 bg-destructive/5 text-[10px] cursor-help">
+                                <ShieldX className="h-3 w-3" /> Denegado
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left"><p className="text-xs max-w-48">{m.approval_note || "Sin motivo"}</p></TooltipContent>
+                          </Tooltip>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right font-mono text-xs tabular-nums">{m.quantity ?? "—"}</TableCell>
                       <TableCell className="text-right font-mono text-xs tabular-nums">{m.rate ? `$${m.rate}` : "—"}</TableCell>
-                      <TableCell className={cn("text-right font-mono font-medium tabular-nums", m.concepts?.category === "extra" ? "text-earning" : "text-deduction")}>
+                      <TableCell className={cn("text-right font-mono font-medium tabular-nums", m.approval_status === "denied" ? "line-through text-muted-foreground" : m.concepts?.category === "extra" ? "text-earning" : "text-deduction")}>
                         {m.concepts?.category === "extra" ? "+" : "−"}${Math.abs(m.total_value).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-32 truncate">{m.note ?? ""}</TableCell>
                       <TableCell>
                         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {canApprove && m.approval_status === "pending" && (
+                            <>
+                              <Button variant="ghost" size="icon" className="text-earning hover:text-earning" onClick={() => handleApprove(m.id)} title="Aprobar">
+                                <ShieldCheck className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => openDenyDialog(m.id)} title="Denegar">
+                                <ShieldX className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => openEditMovement(m)} disabled={isPeriodClosed}>
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -584,6 +657,24 @@ export default function Movements() {
             <FormField label="Nota"><Textarea value={editForm.note} onChange={e => setEditForm(f => ({ ...f, note: e.target.value }))} rows={2} /></FormField>
             <Button onClick={handleEditMovement} disabled={editSaving} className="w-full">
               {editSaving ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deny Movement Dialog */}
+      <Dialog open={denyOpen} onOpenChange={(o) => { setDenyOpen(o); if (!o) setDenyTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Denegar novedad</DialogTitle>
+            <DialogDescription>Escribe el motivo por el cual se deniega esta novedad. El monto no será incluido en el cálculo de pago.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <FormField label="Motivo (obligatorio)">
+              <Textarea value={denyNote} onChange={e => setDenyNote(e.target.value)} rows={3} placeholder="Ej: Movimiento duplicado, error de importación..." />
+            </FormField>
+            <Button onClick={handleDeny} disabled={!denyNote.trim()} variant="destructive" className="w-full">
+              <ShieldX className="h-4 w-4 mr-1.5" /> Confirmar denegación
             </Button>
           </div>
         </DialogContent>

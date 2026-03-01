@@ -1485,6 +1485,9 @@ export type Database = {
       }
       movements: {
         Row: {
+          approval_note: string | null
+          approval_status: string
+          approved_by: string | null
           company_id: string
           concept_id: string
           created_at: string
@@ -1499,6 +1502,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_note?: string | null
+          approval_status?: string
+          approved_by?: string | null
           company_id?: string
           concept_id: string
           created_at?: string
@@ -1513,6 +1519,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_note?: string | null
+          approval_status?: string
+          approved_by?: string | null
           company_id?: string
           concept_id?: string
           created_at?: string
