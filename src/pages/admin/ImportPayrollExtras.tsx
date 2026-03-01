@@ -5,7 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, DollarSign, Info, ArrowLeft, Download } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, DollarSign, Info, ArrowLeft, Download, UserPlus } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
@@ -72,6 +76,8 @@ export default function ImportPayrollExtras() {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
+  const [createConfirmIdx, setCreateConfirmIdx] = useState<number | null>(null);
+  const [creatingEmployee, setCreatingEmployee] = useState(false);
 
   // Load periods
   useEffect(() => {
@@ -326,6 +332,34 @@ export default function ImportPayrollExtras() {
   const unmatchedCount = employeeExtras.filter(e => !e.employeeId).length;
   const grandTotal = employeeExtras.reduce((s, e) => s + e.total, 0);
 
+  const handleCreateEmployee = async (idx: number) => {
+    const emp = employeeExtras[idx];
+    if (!emp || emp.employeeId || !selectedCompanyId) return;
+    setCreatingEmployee(true);
+    try {
+      const { data, error } = await supabase.from("employees").insert({
+        first_name: emp.firstName,
+        last_name: emp.lastName,
+        company_id: selectedCompanyId,
+        tags: "datos-pendientes",
+        added_via: "import-extras",
+        added_by: user?.id ?? null,
+      }).select("id").single();
+
+      if (error) throw error;
+
+      // Update local state with the new employee id
+      setEmployeeExtras(prev => prev.map((e, i) =>
+        i === idx ? { ...e, employeeId: data.id } : e
+      ));
+      toast({ title: "Empleado creado", description: `${emp.firstName} ${emp.lastName} — datos pendientes por completar.` });
+    } catch (err: any) {
+      toast({ title: "Error", description: getUserFriendlyError(err), variant: "destructive" });
+    }
+    setCreatingEmployee(false);
+    setCreateConfirmIdx(null);
+  };
+
   const downloadPdf = () => {
     const doc = new jsPDF({ orientation: "landscape" });
     const period = periods.find(p => p.id === selectedPeriod);
@@ -579,7 +613,18 @@ export default function ImportPayrollExtras() {
                           {emp.employeeId ? (
                             <Badge variant="outline" className="text-earning border-earning/30">Vinculado</Badge>
                           ) : (
-                            <Badge variant="destructive">No encontrado</Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="destructive">No encontrado</Badge>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Crear empleado"
+                                onClick={() => setCreateConfirmIdx(i)}
+                              >
+                                <UserPlus className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           )}
                         </TableCell>
                       </TableRow>
@@ -628,6 +673,36 @@ export default function ImportPayrollExtras() {
           </CardContent>
         </Card>
       )}
+
+      {/* Create employee confirmation */}
+      <AlertDialog open={createConfirmIdx !== null} onOpenChange={(open) => { if (!open) setCreateConfirmIdx(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Crear empleado nuevo?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              {createConfirmIdx !== null && employeeExtras[createConfirmIdx] && (
+                <>
+                  <p>
+                    Se creará <strong>{employeeExtras[createConfirmIdx].firstName} {employeeExtras[createConfirmIdx].lastName}</strong> con datos pendientes por completar.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    El empleado quedará etiquetado como <Badge variant="outline" className="text-xs">datos-pendientes</Badge> hasta que se complete su información en el directorio.
+                  </p>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={creatingEmployee}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={creatingEmployee}
+              onClick={() => createConfirmIdx !== null && handleCreateEmployee(createConfirmIdx)}
+            >
+              {creatingEmployee ? "Creando..." : "Crear empleado"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
