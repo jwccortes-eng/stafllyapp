@@ -73,7 +73,9 @@ export default function InviteEmployees() {
   const buildInviteMessage = (emp: Employee) => {
     const name = `${emp.first_name} ${emp.last_name}`;
     const pin = emp.access_pin ?? "[pendiente]";
-    return `¡Hola ${name}! 👋\n\nTe damos la bienvenida a *${companyName}* en StaflyApps, tu portal de pagos y gestión laboral.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n🔑 Tu PIN: ${pin}\n\n💡 Tip: Guarda este enlace en tu pantalla de inicio para un acceso más rápido.\n\n— Equipo ${companyName}`;
+    const hasPin = !!emp.access_pin;
+    const pinLine = hasPin ? `🔑 Tu PIN: ${pin}` : `🔑 Activa tu cuenta y crea tu PIN en el enlace`;
+    return `¡Hola ${name}! 👋\n\nTe damos la bienvenida a *${companyName}* en StaflyApps, tu portal de pagos y gestión laboral.\n\n📱 Accede aquí: ${portalUrl}\n📞 Tu teléfono: ${emp.phone_number ?? "N/A"}\n${pinLine}\n\n💡 Tip: Guarda este enlace en tu pantalla de inicio para un acceso más rápido.\n\n— Equipo ${companyName}`;
   };
 
   const shareWhatsApp = (emp: Employee) => {
