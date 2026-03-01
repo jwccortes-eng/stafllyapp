@@ -1,0 +1,454 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
+import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
+import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import {
+  User, DollarSign, Clock, CalendarDays, FileText, Activity,
+  Briefcase, Phone, Mail, MapPin, Users, Tag, Star, Shield,
+} from "lucide-react";
+
+type EmployeeRecord = Record<string, any>;
+
+const BOOLEAN_FIELDS = new Set(["has_car"]);
+
+/* ── Field groups for Info tab ── */
+const PERSONAL_FIELDS = [
+  { key: "first_name", label: "Nombre", icon: User },
+  { key: "last_name", label: "Apellido", icon: User },
+  { key: "phone_number", label: "Teléfono", icon: Phone },
+  { key: "email", label: "Email", icon: Mail },
+  { key: "country_code", label: "Código país", icon: MapPin },
+  { key: "gender", label: "Género", icon: User },
+];
+
+const EMPLOYMENT_FIELDS = [
+  { key: "employee_role", label: "Rol", icon: Briefcase },
+  { key: "start_date", label: "Fecha inicio", icon: CalendarDays },
+  { key: "end_date", label: "Fecha fin", icon: CalendarDays },
+  { key: "direct_manager", label: "Manager directo", icon: Shield },
+  { key: "groups", label: "Grupos", icon: Users },
+  { key: "tags", label: "Tags", icon: Tag },
+  { key: "qualify", label: "Calificación", icon: Star },
+  { key: "english_level", label: "Nivel inglés", icon: Star },
+  { key: "recommended_by", label: "Recomendado por", icon: User },
+  { key: "has_car", label: "¿Tiene carro?", icon: MapPin },
+  { key: "driver_licence", label: "Licencia", icon: FileText },
+];
+
+/* ── Field Row ── */
+function FieldRow({ field, employee, isEditing, form, setForm }: {
+  field: { key: string; label: string; icon: any };
+  employee: EmployeeRecord;
+  isEditing: boolean;
+  form: Record<string, string>;
+  setForm: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
+}) {
+  const Icon = field.icon;
+  return (
+    <div className="flex items-center gap-3 py-2.5 border-b border-border/30 last:border-0">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+      <span className="text-xs text-muted-foreground shrink-0 w-28">{field.label}</span>
+      <div className="flex-1 text-right">
+        {isEditing ? (
+          BOOLEAN_FIELDS.has(field.key) ? (
+            <div className="flex items-center justify-end gap-2">
+              <Switch
+                checked={form[field.key] === "Yes" || form[field.key] === "true" || form[field.key] === "Sí"}
+                onCheckedChange={c => setForm(prev => ({ ...prev, [field.key]: c ? "Yes" : "No" }))}
+              />
+              <span className="text-xs">{form[field.key] === "Yes" || form[field.key] === "true" || form[field.key] === "Sí" ? "Sí" : "No"}</span>
+            </div>
+          ) : (
+            <Input
+              value={form[field.key] ?? ""}
+              onChange={ev => setForm(prev => ({ ...prev, [field.key]: ev.target.value }))}
+              className="h-7 text-xs"
+            />
+          )
+        ) : (
+          <span className="text-sm font-medium break-words">
+            {BOOLEAN_FIELDS.has(field.key) ? (
+              employee?.[field.key] === "Yes" || employee?.[field.key] === "true" || employee?.[field.key] === "Sí" ? (
+                <Badge variant="outline" className="bg-earning/10 text-earning border-earning/20 text-[10px]">🚗 Sí</Badge>
+              ) : <span className="text-muted-foreground/40">No</span>
+            ) : (
+              employee?.[field.key] || <span className="text-muted-foreground/40">—</span>
+            )}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Info Tab ── */
+function InfoTab({ employee, isEditing, form, setForm, isPrivileged }: {
+  employee: EmployeeRecord; isEditing: boolean; form: Record<string, string>;
+  setForm: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
+  isPrivileged: boolean;
+}) {
+  const SENSITIVE = new Set(["access_pin", "driver_licence", "has_car", "country_code", "english_level"]);
+  const filteredEmployment = EMPLOYMENT_FIELDS.filter(f => isPrivileged || !SENSITIVE.has(f.key));
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">Información personal</h3>
+        <Card className="rounded-xl border-border/40">
+          <CardContent className="p-4">
+            {PERSONAL_FIELDS.filter(f => isPrivileged || !SENSITIVE.has(f.key)).map(f => (
+              <FieldRow key={f.key} field={f} employee={employee} isEditing={isEditing} form={form} setForm={setForm} />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">Empleo</h3>
+        <Card className="rounded-xl border-border/40">
+          <CardContent className="p-4">
+            {filteredEmployment.map(f => (
+              <FieldRow key={f.key} field={f} employee={employee} isEditing={isEditing} form={form} setForm={setForm} />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+      {/* Availability */}
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">📅 Disponibilidad</h3>
+        <EmployeeAvailabilitySection employeeId={employee.id} readOnly={!isEditing} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Pay Tab ── */
+function PayTab({ employee, companyId }: { employee: EmployeeRecord; companyId: string }) {
+  const [rates, setRates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetch() {
+      const { data } = await supabase
+        .from("concept_employee_rates")
+        .select("id, rate, effective_from, effective_to, concept_id, concepts(name, category, unit_label)")
+        .eq("employee_id", employee.id);
+      setRates(data ?? []);
+      setLoading(false);
+    }
+    fetch();
+  }, [employee.id]);
+
+  if (loading) return <div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>;
+  if (rates.length === 0) return <EmptyState icon={DollarSign} title="Sin tasas configuradas" description="Agrega tasas de pago desde Conceptos → Tasas por empleado" compact />;
+
+  return (
+    <div className="space-y-2">
+      {rates.map(r => (
+        <Card key={r.id} className="rounded-xl border-border/40">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">{(r.concepts as any)?.name ?? "Concepto"}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {r.effective_from ? format(parseISO(r.effective_from), "dd MMM yyyy", { locale: es }) : "Sin inicio"}
+                {" → "}
+                {r.effective_to ? format(parseISO(r.effective_to), "dd MMM yyyy", { locale: es }) : "Vigente"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-bold text-primary tabular-nums">${r.rate.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">{(r.concepts as any)?.unit_label ?? "por hora"}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+/* ── Shifts Tab ── */
+function ShiftsTab({ employee, companyId }: { employee: EmployeeRecord; companyId: string }) {
+  const [shifts, setShifts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetch() {
+      const { data } = await supabase
+        .from("shift_assignments")
+        .select("id, status, shift_id, scheduled_shifts(title, date, start_time, end_time, status)")
+        .eq("employee_id", employee.id)
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setShifts(data ?? []);
+      setLoading(false);
+    }
+    fetch();
+  }, [employee.id, companyId]);
+
+  if (loading) return <div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>;
+  if (shifts.length === 0) return <EmptyState icon={CalendarDays} title="Sin turnos asignados" description="Este empleado no tiene turnos recientes" compact />;
+
+  const statusColors: Record<string, string> = {
+    confirmed: "bg-earning/10 text-earning",
+    pending: "bg-warning/10 text-warning",
+    rejected: "bg-destructive/10 text-destructive",
+  };
+
+  return (
+    <div className="space-y-2">
+      {shifts.map(s => {
+        const shift = s.scheduled_shifts as any;
+        if (!shift) return null;
+        return (
+          <Card key={s.id} className="rounded-xl border-border/40">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">{shift.title}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {shift.date ? format(parseISO(shift.date), "EEE dd MMM", { locale: es }) : "—"}
+                    {" · "}
+                    {shift.start_time?.slice(0, 5)} - {shift.end_time?.slice(0, 5)}
+                  </p>
+                </div>
+                <Badge className={cn("text-[10px]", statusColors[s.status] ?? "bg-muted text-muted-foreground")}>
+                  {s.status === "confirmed" ? "Confirmado" : s.status === "pending" ? "Pendiente" : s.status}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Time Tab ── */
+function TimeTab({ employee, companyId }: { employee: EmployeeRecord; companyId: string }) {
+  const [entries, setEntries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetch() {
+      const { data } = await supabase
+        .from("time_entries" as any)
+        .select("id, clock_in, clock_out, status, break_minutes")
+        .eq("employee_id", employee.id)
+        .eq("company_id", companyId)
+        .order("clock_in", { ascending: false })
+        .limit(20);
+      setEntries((data as any[]) ?? []);
+      setLoading(false);
+    }
+    fetch();
+  }, [employee.id, companyId]);
+
+  if (loading) return <div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>;
+  if (entries.length === 0) return <EmptyState icon={Clock} title="Sin fichajes" description="Este empleado no tiene registros de fichaje" compact />;
+
+  return (
+    <div className="space-y-2">
+      {entries.map((e: any) => {
+        const duration = e.clock_out
+          ? ((new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 3600000 - (e.break_minutes ?? 0) / 60).toFixed(1)
+          : null;
+        return (
+          <Card key={e.id} className="rounded-xl border-border/40">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">
+                  {format(parseISO(e.clock_in), "EEE dd MMM", { locale: es })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {format(parseISO(e.clock_in), "HH:mm")}
+                  {e.clock_out ? ` → ${format(parseISO(e.clock_out), "HH:mm")}` : " → En curso"}
+                </p>
+              </div>
+              <div className="text-right">
+                {duration ? (
+                  <p className="text-sm font-bold text-primary tabular-nums">{duration}h</p>
+                ) : (
+                  <Badge className="bg-warning/10 text-warning text-[10px] animate-pulse">Activo</Badge>
+                )}
+                <p className="text-[10px] text-muted-foreground capitalize">{e.status}</p>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Documents Tab ── */
+function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; companyId: string }) {
+  const [w9, setW9] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetch() {
+      const { data } = await supabase
+        .from("contractor_w9")
+        .select("id, status, legal_name, tax_classification, tin_last4, submitted_at, reviewed_at")
+        .eq("employee_id", employee.id)
+        .eq("company_id", companyId)
+        .maybeSingle();
+      setW9(data);
+      setLoading(false);
+    }
+    fetch();
+  }, [employee.id, companyId]);
+
+  if (loading) return <div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>;
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Formulario W-9</h3>
+      {!w9 ? (
+        <EmptyState icon={FileText} title="Sin W-9" description="No se ha enviado formulario W-9" compact />
+      ) : (
+        <Card className="rounded-xl border-border/40">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">{w9.legal_name}</p>
+              <Badge className={cn("text-[10px]",
+                w9.status === "approved" ? "bg-earning/10 text-earning" :
+                w9.status === "submitted" ? "bg-warning/10 text-warning" :
+                "bg-muted text-muted-foreground"
+              )}>
+                {w9.status === "approved" ? "Aprobado" : w9.status === "submitted" ? "Enviado" : w9.status}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div><span className="text-muted-foreground">Clasificación:</span> {w9.tax_classification}</div>
+              <div><span className="text-muted-foreground">TIN:</span> ***{w9.tin_last4 ?? "—"}</div>
+              {w9.submitted_at && <div><span className="text-muted-foreground">Enviado:</span> {format(parseISO(w9.submitted_at), "dd MMM yyyy", { locale: es })}</div>}
+              {w9.reviewed_at && <div><span className="text-muted-foreground">Revisado:</span> {format(parseISO(w9.reviewed_at), "dd MMM yyyy", { locale: es })}</div>}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ── Activity Tab ── */
+function ActivityTab({ employee }: { employee: EmployeeRecord }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetch() {
+      const { data } = await supabase
+        .from("activity_log")
+        .select("id, action, entity_type, created_at, details")
+        .eq("entity_id", employee.id)
+        .eq("entity_type", "employee")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setItems(data ?? []);
+      setLoading(false);
+    }
+    fetch();
+  }, [employee.id]);
+
+  if (loading) return <div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>;
+  if (items.length === 0) return <EmptyState icon={Activity} title="Sin actividad" description="No hay registros de actividad para este empleado" compact />;
+
+  return (
+    <div className="space-y-1">
+      {items.map(item => (
+        <div key={item.id} className="flex items-start gap-3 py-2.5 border-b border-border/30 last:border-0">
+          <div className="h-6 w-6 rounded-md bg-primary/6 flex items-center justify-center shrink-0 mt-0.5">
+            <Activity className="h-3 w-3 text-primary/70" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-foreground capitalize">{item.action}</p>
+            <p className="text-[10px] text-muted-foreground/50">
+              {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   MAIN COMPONENT
+   ═══════════════════════════════════════════ */
+export function EmployeeProfileTabs({
+  employee,
+  companyId,
+  isEditing,
+  form,
+  setForm,
+  isPrivileged,
+}: {
+  employee: EmployeeRecord;
+  companyId: string;
+  isEditing: boolean;
+  form: Record<string, string>;
+  setForm: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
+  isPrivileged: boolean;
+}) {
+  return (
+    <Tabs defaultValue="info" className="w-full">
+      <TabsList className="w-full grid grid-cols-6 h-9 mb-4 bg-muted/40 rounded-xl">
+        <TabsTrigger value="info" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <User className="h-3 w-3" />
+          <span className="hidden sm:inline">Info</span>
+        </TabsTrigger>
+        <TabsTrigger value="pay" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <DollarSign className="h-3 w-3" />
+          <span className="hidden sm:inline">Pago</span>
+        </TabsTrigger>
+        <TabsTrigger value="shifts" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <CalendarDays className="h-3 w-3" />
+          <span className="hidden sm:inline">Turnos</span>
+        </TabsTrigger>
+        <TabsTrigger value="time" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <Clock className="h-3 w-3" />
+          <span className="hidden sm:inline">Reloj</span>
+        </TabsTrigger>
+        <TabsTrigger value="docs" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <FileText className="h-3 w-3" />
+          <span className="hidden sm:inline">Docs</span>
+        </TabsTrigger>
+        <TabsTrigger value="activity" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <Activity className="h-3 w-3" />
+          <span className="hidden sm:inline">Log</span>
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="info" className="mt-0">
+        <InfoTab employee={employee} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} />
+      </TabsContent>
+      <TabsContent value="pay" className="mt-0">
+        <PayTab employee={employee} companyId={companyId} />
+      </TabsContent>
+      <TabsContent value="shifts" className="mt-0">
+        <ShiftsTab employee={employee} companyId={companyId} />
+      </TabsContent>
+      <TabsContent value="time" className="mt-0">
+        <TimeTab employee={employee} companyId={companyId} />
+      </TabsContent>
+      <TabsContent value="docs" className="mt-0">
+        <DocumentsTab employee={employee} companyId={companyId} />
+      </TabsContent>
+      <TabsContent value="activity" className="mt-0">
+        <ActivityTab employee={employee} />
+      </TabsContent>
+    </Tabs>
+  );
+}
