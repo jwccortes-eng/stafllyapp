@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -203,62 +204,77 @@ export default function Clients() {
       </div>
 
       {loading ? (
-        <PageSkeleton variant="table" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-32 animate-pulse bg-muted rounded-2xl" />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <EmptyState icon={Building2} title="No se encontraron clientes" description={search ? "Intenta con otro término" : "Agrega tu primer cliente"} />
       ) : (
-        <div className="data-table-wrapper">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead className="hidden md:table-cell">Contacto</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="w-[100px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(c => (
-                <TableRow key={c.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <ClientAvatar name={c.name} />
-                      <span className="font-medium">{formatDisplayText(c.name, "name")}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{formatPersonName(c.contact_name) || "—"}</TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{c.contact_email ?? "—"}</TableCell>
-                  <TableCell>
-                    {c.deleted_at ? (
-                      <Badge variant="secondary">Archivado</Badge>
-                    ) : (
-                      <Badge variant={c.status === "active" ? "default" : "secondary"}>{c.status === "active" ? "Activo" : "Inactivo"}</Badge>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filtered.map(c => (
+            <div
+              key={c.id}
+              className={cn(
+                "group relative rounded-2xl border border-border/40 bg-card p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden",
+                c.deleted_at && "opacity-60"
+              )}
+            >
+              {/* decorative blob */}
+              <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-primary/5 -translate-y-8 translate-x-8 group-hover:scale-[2] transition-transform duration-700" />
+
+              <div className="relative z-10 flex items-start gap-3">
+                <ClientAvatar name={c.name} size="lg" />
+
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <p className="text-sm font-bold text-foreground truncate leading-tight">
+                    {formatDisplayText(c.name, "name")}
+                  </p>
+                  <Badge variant={c.deleted_at ? "secondary" : c.status === "active" ? "default" : "secondary"} className="mt-1 text-[10px]">
+                    {c.deleted_at ? "Archivado" : c.status === "active" ? "Activo" : "Inactivo"}
+                  </Badge>
+
+                  <div className="mt-2 space-y-0.5">
+                    {c.contact_name && (
+                      <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                        <Building2 className="h-3 w-3 shrink-0" /> {formatPersonName(c.contact_name)}
+                      </p>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {canEdit && !c.deleted_at && (
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {canDelete && !c.deleted_at && (
-                        <Button variant="ghost" size="icon" onClick={() => handleArchive(c.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                      {c.deleted_at && canEdit && (
-                        <Button variant="ghost" size="icon" onClick={() => handleRestore(c.id)}>
-                          <RotateCcw className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    {c.contact_email && (
+                      <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                        <span className="shrink-0">✉️</span> {c.contact_email}
+                      </p>
+                    )}
+                    {c.contact_phone && (
+                      <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                        <span className="shrink-0">📞</span> {c.contact_phone}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="relative z-10 flex items-center gap-1.5 mt-3 pt-3 border-t border-border/30">
+                {canEdit && !c.deleted_at && (
+                  <Button variant="ghost" size="sm" className="flex-1 h-8 text-[11px] font-semibold" onClick={() => openEdit(c)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+                  </Button>
+                )}
+                {canDelete && !c.deleted_at && (
+                  <Button variant="ghost" size="sm" className="flex-1 h-8 text-[11px] font-semibold text-destructive hover:text-destructive" onClick={() => handleArchive(c.id)}>
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Archivar
+                  </Button>
+                )}
+                {c.deleted_at && canEdit && (
+                  <Button variant="ghost" size="sm" className="flex-1 h-8 text-[11px] font-semibold" onClick={() => handleRestore(c.id)}>
+                    <RotateCcw className="h-3.5 w-3.5 mr-1" /> Restaurar
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
