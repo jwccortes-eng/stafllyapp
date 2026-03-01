@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, CalendarDays, Upload, DollarSign, FileSpreadsheet,
   BarChart3, Users, Tags, ContactRound, Building2,
-  Clock, MapPin, Megaphone, MessageCircle, ScanEye, Inbox,
+  Clock, MapPin, Megaphone, MessageCircle, ScanEye, Inbox, Bell,
   MessageSquare, Settings2, Home, User, Wrench, UserPlus, FileText, GitCompareArrows,
 } from "lucide-react";
 
@@ -39,6 +39,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "announcements", to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Gestión" },
   { id: "chat", to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
   { id: "tickets", to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Gestión", badge: "tickets" },
+  { id: "notifications", to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Gestión" },
   { id: "invite", to: "/app/invite", icon: UserPlus, label: "Invitaciones", module: null, section: "Gestión" },
   { id: "admin-hub", to: "/app/admin", icon: Wrench, label: "Admin", module: null, section: "Administración", roles: ["owner"] },
 ];
