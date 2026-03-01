@@ -252,6 +252,7 @@ export default function MyShifts() {
 
   const statusConfig: Record<string, { icon: any; label: string; cls: string; bgCls: string }> = {
     confirmed: { icon: CheckCircle2, label: "Confirmado", cls: "text-earning", bgCls: "bg-earning/10" },
+    accepted: { icon: CheckCircle2, label: "Aceptado", cls: "text-earning", bgCls: "bg-earning/10" },
     pending: { icon: AlertCircle, label: "Pendiente", cls: "text-warning", bgCls: "bg-warning/10" },
     rejected: { icon: XCircle, label: "Rechazado", cls: "text-deduction", bgCls: "bg-deduction/10" },
   };
@@ -346,7 +347,7 @@ export default function MyShifts() {
         )}
 
         {/* Clock In button for confirmed today shifts */}
-        {a.status === "confirmed" && isTodayShift && (
+        {(a.status === "confirmed" || a.status === "accepted") && isTodayShift && (
           <div onClick={e => e.stopPropagation()}>
             <Button
               size="sm"
