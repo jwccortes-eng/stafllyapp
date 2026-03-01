@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Search, Building2, Loader2, Trash2, RotateCcw, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { ClientAvatar } from "@/components/ui/client-avatar";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -220,7 +221,12 @@ export default function Clients() {
             <TableBody>
               {filtered.map(c => (
                 <TableRow key={c.id}>
-                  <TableCell className="font-medium">{formatDisplayText(c.name, "name")}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <ClientAvatar name={c.name} />
+                      <span className="font-medium">{formatDisplayText(c.name, "name")}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground">{formatPersonName(c.contact_name) || "—"}</TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground">{c.contact_email ?? "—"}</TableCell>
                   <TableCell>
