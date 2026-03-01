@@ -213,12 +213,7 @@ export default function Concepts() {
     e.target.value = "";
   };
 
-  const ConceptForm = ({ values, onChange, onSubmit, submitLabel }: {
-    values: typeof emptyForm;
-    onChange: (v: typeof emptyForm) => void;
-    onSubmit: (e: React.FormEvent) => void;
-    submitLabel: string;
-  }) => (
+  const renderForm = (values: typeof emptyForm, onChange: (v: typeof emptyForm) => void, onSubmit: (e: React.FormEvent) => void, submitLabel: string) => (
     <form onSubmit={onSubmit} className="space-y-3">
       <FormField label="Nombre" required><Input value={values.name} onChange={e => onChange({ ...values, name: e.target.value })} required /></FormField>
       <FormField label="Categoría">
@@ -349,7 +344,7 @@ export default function Concepts() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Nuevo concepto</DialogTitle></DialogHeader>
-                <ConceptForm values={form} onChange={setForm} onSubmit={handleCreate} submitLabel="Crear" />
+                {renderForm(form, setForm, handleCreate, "Crear")}
               </DialogContent>
             </Dialog>
           </div>
@@ -401,7 +396,7 @@ export default function Concepts() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar concepto</DialogTitle></DialogHeader>
-          <ConceptForm values={editForm} onChange={setEditForm} onSubmit={handleEdit} submitLabel="Guardar cambios" />
+          {renderForm(editForm, setEditForm, handleEdit, "Guardar cambios")}
         </DialogContent>
       </Dialog>
 
