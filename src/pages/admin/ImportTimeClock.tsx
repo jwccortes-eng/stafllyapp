@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ChevronDown, Info, CalendarDays, Users, Clock, Building2 } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ChevronDown, Info, CalendarDays, Users, Clock, Building2, Download } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
@@ -442,7 +444,64 @@ export default function ImportTimeClock() {
     setImporting(false);
   };
 
-  const reset = () => {
+  const exportResultPdf = (sum: ImportSummary | null, coverage: CoverageSummary | null, from: string, to: string) => {
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(16);
+    doc.text("Reporte de Importación — Time Clock", 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Periodo: ${from} → ${to}`, 14, 26);
+    doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 32);
+
+    if (sum) {
+      doc.setFontSize(12);
+      doc.text("Resumen de Importación", 14, 44);
+      autoTable(doc, {
+        startY: 48,
+        head: [["Registros creados", "Vinculados a turnos", "Solapamiento", "Sin pago", "No encontrados"]],
+        body: [[sum.totalEntries, sum.linkedShifts, sum.skippedOverlap, sum.skippedUnpaid, sum.unmatchedEmployees.length]],
+        theme: "grid",
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+
+      if (sum.unmatchedEmployees.length > 0) {
+        const lastY = (doc as any).lastAutoTable?.finalY ?? 70;
+        doc.setFontSize(11);
+        doc.text("Empleados no encontrados:", 14, lastY + 10);
+        doc.setFontSize(9);
+        doc.text(sum.unmatchedEmployees.join(", "), 14, lastY + 16, { maxWidth: 260 });
+      }
+    }
+
+    if (coverage && coverage.items.length > 0) {
+      doc.addPage();
+      doc.setFontSize(12);
+      doc.text("Análisis de Cobertura — Programados vs Fichados", 14, 18);
+      doc.setFontSize(10);
+      doc.text(`Total turnos: ${coverage.totalShifts} | Cobertura: ${coverage.overallPercent}% | Completos: ${coverage.fullyCovered} | Sin fichaje: ${coverage.uncovered}`, 14, 26);
+
+      const issueItems = coverage.items.filter(i => i.missingEmployees.length > 0 || i.extraEmployees.length > 0);
+      if (issueItems.length > 0) {
+        autoTable(doc, {
+          startY: 32,
+          head: [["Fecha", "Turno", "Cobertura", "No-shows", "Extras"]],
+          body: issueItems.map(i => [
+            i.date,
+            i.shiftTitle,
+            `${i.coveragePercent}%`,
+            i.missingEmployees.map(e => e.name).join(", ") || "—",
+            i.extraEmployees.map(e => e.name).join(", ") || "—",
+          ]),
+          theme: "grid",
+          headStyles: { fillColor: [239, 68, 68] },
+          styles: { fontSize: 8 },
+        });
+      }
+    }
+
+    doc.save(`importacion-reloj-${from}-${to}.pdf`);
+  };
+
+
     setStep(1);
     setFile(null);
     setWorkbook(null);
@@ -696,9 +755,14 @@ export default function ImportTimeClock() {
             </div>
           )}
 
-          <Button variant="outline" onClick={reset}>
-            Importar otro archivo
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={reset}>
+              Importar otro archivo
+            </Button>
+            <Button variant="outline" onClick={() => exportResultPdf(summary, coverageData, filterFrom, filterTo)}>
+              <Download className="h-4 w-4 mr-1.5" /> Descargar PDF
+            </Button>
+          </div>
         </div>
       )}
     </div>
