@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { formatPersonName } from "@/lib/format-helpers";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -174,7 +175,7 @@ export function MonthView({
               onClick={() => setSelectedEmpId(emp.id)}
             >
               <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" className="h-5 w-5 text-[8px]" />
-              <span className="truncate flex-1">{emp.first_name} {emp.last_name.charAt(0)}.</span>
+              <span className="truncate flex-1">{formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.</span>
               {(empShiftCounts[emp.id] ?? 0) > 0 && (
                 <span className="text-[10px] font-mono text-muted-foreground">{empShiftCounts[emp.id]}</span>
               )}

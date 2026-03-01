@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPersonName } from "@/lib/format-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -475,7 +476,7 @@ export default function TodayView() {
 
                     <CardContent className="p-1.5 space-y-0.5">
                       <p className="text-[10px] font-semibold truncate leading-tight">
-                        {emp.first_name} {emp.last_name.charAt(0)}.
+                        {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.
                       </p>
                       {emp.isClockedIn && emp.scheduled ? (
                         <p className="text-[9px] text-muted-foreground truncate">

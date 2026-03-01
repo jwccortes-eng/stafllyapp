@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
+import { formatPersonName } from "@/lib/format-helpers";
 import { FileText, Search, Plus, Eye, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -234,7 +235,7 @@ export default function ContractorW9() {
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">
-                      {r.employee?.first_name} {r.employee?.last_name}
+                      {formatPersonName(`${r.employee?.first_name} ${r.employee?.last_name}`)}
                     </TableCell>
                     <TableCell>{r.legal_name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -273,7 +274,7 @@ export default function ContractorW9() {
                   <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                   <SelectContent>
                     {availableEmployees.map(e => (
-                      <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
+                      <SelectItem key={e.id} value={e.id}>{formatPersonName(`${e.first_name} ${e.last_name}`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
