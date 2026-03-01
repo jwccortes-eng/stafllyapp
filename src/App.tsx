@@ -75,7 +75,7 @@ import TermsOfService from "./pages/legal/TermsOfService";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import CookiePolicy from "./pages/legal/CookiePolicy";
 import HelpCenter from "./pages/help/HelpCenter";
-
+import UserManual from "./pages/help/UserManual";
 const queryClient = new QueryClient();
 
 function App() {
@@ -96,6 +96,7 @@ function App() {
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/cookies" element={<CookiePolicy />} />
               <Route path="/help" element={<HelpCenter />} />
+              <Route path="/manual" element={<UserManual />} />
 
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
