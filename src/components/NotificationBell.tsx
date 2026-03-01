@@ -18,6 +18,10 @@ const TYPE_ROUTES: Record<string, string> = {
   clock_request: "/app/requests",
   announcement: "/portal/announcements",
   payment_ready: "/portal/payments",
+  shift_reminder: "/portal/shifts",
+  no_clock: "/app/timeclock",
+  period_closed: "/app/summary",
+  payroll_email: "/app/summary",
 };
 
 function getNotificationRoute(n: { type: string; metadata: Record<string, any> | null }) {
@@ -30,6 +34,10 @@ const TYPE_COLORS: Record<string, string> = {
   clock_request: "bg-orange-500",
   announcement: "bg-blue-500",
   payment_ready: "bg-emerald-500",
+  shift_reminder: "bg-indigo-500",
+  no_clock: "bg-destructive",
+  period_closed: "bg-teal-500",
+  payroll_email: "bg-violet-500",
 };
 
 export default function NotificationBell() {
@@ -63,15 +71,23 @@ export default function NotificationBell() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
           <h3 className="text-sm font-heading font-bold">Notificaciones</h3>
-          {unreadCount > 0 && (
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
+              >
+                <CheckCheck className="h-3.5 w-3.5" />
+                Marcar todo leído
+              </button>
+            )}
             <button
-              onClick={markAllAsRead}
-              className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
+              onClick={() => { setOpen(false); navigate("/app/notifications"); }}
+              className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
             >
-              <CheckCheck className="h-3.5 w-3.5" />
-              Marcar todo leído
+              Ver todas
             </button>
-          )}
+          </div>
         </div>
 
         {/* Notifications list */}
