@@ -430,47 +430,95 @@ export default function TodayView() {
                   <Badge variant="outline" className="text-[10px] h-5 px-1.5">{rows.length}</Badge>
                 </div>
               )}
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-1.5">
-                {rows.map(emp => (
-                  <div
-                    key={emp.id}
-                    className={`relative flex flex-col items-center gap-1 rounded-lg border p-2 cursor-pointer transition-all hover:shadow-md active:scale-[0.97] ${
-                      emp.isClockedIn
-                        ? "border-emerald-500/40 ring-1 ring-emerald-500/20 bg-emerald-500/5"
-                        : emp.scheduled
-                        ? "border-primary/30 bg-primary/[0.02]"
-                        : "border-border/30 bg-muted/20"
-                    }`}
-                    onClick={() => setSelectedEmpId(emp.id)}
-                  >
-                    <div className="relative">
-                      <EmployeeAvatar
-                        firstName={emp.first_name}
-                        lastName={emp.last_name}
-                        avatarUrl={emp.avatar_url}
-                        gender={emp.gender}
-                        size="lg"
-                      />
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
+                {rows.map(emp => {
+                  const statusColor = emp.isClockedIn
+                    ? "bg-emerald-500"
+                    : emp.scheduled
+                    ? "bg-amber-400"
+                    : "bg-muted-foreground/30";
+                  const statusLabel = emp.isClockedIn
+                    ? "En línea"
+                    : emp.scheduled
+                    ? "Programado"
+                    : "Offline";
 
-                      {emp.isClockedIn && (
-                        <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 ring-1 ring-white" />
+                  return (
+                    <div
+                      key={emp.id}
+                      className={`relative flex flex-col items-center gap-1.5 rounded-xl border p-2.5 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.97] ${
+                        emp.isClockedIn
+                          ? "border-emerald-500/40 ring-1 ring-emerald-500/20 bg-emerald-500/5"
+                          : emp.scheduled
+                          ? "border-amber-400/30 bg-amber-400/[0.03]"
+                          : "border-border/30 bg-muted/20"
+                      }`}
+                      onClick={() => setSelectedEmpId(emp.id)}
+                    >
+                      {/* Avatar + online indicator */}
+                      <div className="relative">
+                        <EmployeeAvatar
+                          firstName={emp.first_name}
+                          lastName={emp.last_name}
+                          avatarUrl={emp.avatar_url}
+                          gender={emp.gender}
+                          size="lg"
+                        />
+                        <span className={`absolute -bottom-0.5 -right-0.5 flex h-3 w-3 ${emp.isClockedIn ? "" : "opacity-100"}`}>
+                          {emp.isClockedIn && (
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                          )}
+                          <span className={`relative inline-flex rounded-full h-3 w-3 ${statusColor} ring-2 ring-background`} />
+                        </span>
+                      </div>
+
+                      {/* Name */}
+                      <p className="text-[10px] font-semibold truncate w-full text-center leading-tight">
+                        {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.
+                      </p>
+
+                      {/* Status label */}
+                      <span className={`text-[8px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                        emp.isClockedIn
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : emp.scheduled
+                          ? "bg-amber-400/10 text-amber-600 dark:text-amber-400"
+                          : "bg-muted text-muted-foreground/60"
+                      }`}>
+                        {statusLabel}
+                      </span>
+
+                      {/* Time worked */}
+                      {(emp.isClockedIn || emp.totalMinutes > 0) && (
+                        <span className={`text-[9px] font-mono font-bold ${emp.isClockedIn ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                          ⏱ {formatDuration(emp.totalMinutes)}
                         </span>
                       )}
+
+                      {/* Shift summary */}
+                      {emp.scheduled && (
+                        <div className="w-full mt-0.5 pt-1 border-t border-border/20 space-y-0.5">
+                          <p className="text-[8px] font-semibold text-foreground/80 truncate text-center" title={emp.scheduled.title}>
+                            {emp.scheduled.title}
+                          </p>
+                          <p className="text-[8px] text-muted-foreground text-center font-mono">
+                            {emp.scheduled.start_time?.slice(0, 5)} – {emp.scheduled.end_time?.slice(0, 5)}
+                          </p>
+                          {emp.scheduled.client_name && (
+                            <p className="text-[7px] text-primary/70 text-center truncate" title={emp.scheduled.client_name}>
+                              📍 {emp.scheduled.client_name}
+                            </p>
+                          )}
+                          {emp.scheduled.location_name && (
+                            <p className="text-[7px] text-muted-foreground/60 text-center truncate" title={emp.scheduled.location_name}>
+                              {emp.scheduled.location_name}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-
-                    <p className="text-[10px] font-semibold truncate w-full text-center leading-tight">
-                      {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.
-                    </p>
-
-                    {(emp.isClockedIn || emp.totalMinutes > 0) && (
-                      <span className={`text-[9px] font-mono font-bold ${emp.isClockedIn ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
-                        {formatDuration(emp.totalMinutes)}
-                      </span>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
