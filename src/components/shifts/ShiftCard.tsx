@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, GripVertical, MapPin, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Shift } from "./types";
@@ -102,7 +103,7 @@ export function ShiftCard({
               </span>
               {clientName && (
                 <span className={cn("truncate font-medium", color.text)}>
-                  {clientName}
+                  {formatDisplayText(clientName, "name")}
                 </span>
               )}
             </div>
