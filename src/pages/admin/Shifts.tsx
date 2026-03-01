@@ -20,7 +20,8 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText } from "lucide-react";
+import { formatDisplayText } from "@/lib/format-helpers";
 import { PageHeader } from "@/components/ui/page-header";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -766,145 +767,204 @@ export default function Shifts() {
               <DialogTrigger asChild>
                 <Button size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1" /> Nuevo turno</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto p-5">
-                <DialogHeader><DialogTitle className="text-base font-semibold">Nuevo turno</DialogTitle></DialogHeader>
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Nombre del turno</Label>
-                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Turno mañana" className="h-9 text-sm" />
+              <DialogContent className="max-w-md max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col rounded-2xl border-border/30 shadow-xl">
+                {/* Hero header */}
+                <div className="relative px-5 pt-5 pb-4 overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-12 translate-x-12 blur-2xl" />
+                  <div className="relative z-10">
+                    <h2 className="text-base font-bold font-heading">Nuevo turno</h2>
+                    <p className="text-[11px] text-muted-foreground">Configura los detalles del turno</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Fecha</Label>
-                      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full h-9 text-sm justify-start font-normal", !date && "text-muted-foreground")}>
-                            <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
-                            {date ? format(parse(date, "yyyy-MM-dd", new Date()), "d MMM yyyy", { locale: es }) : "Seleccionar"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarWidget
-                            mode="single"
-                            selected={date ? parse(date, "yyyy-MM-dd", new Date()) : undefined}
-                            onSelect={d => { if (d) { setDate(format(d, "yyyy-MM-dd")); setDatePickerOpen(false); } }}
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                </div>
+
+                {/* Scrollable body */}
+                <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
+
+                  {/* Section: Basic info */}
+                  <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                      <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Hash className="h-3 w-3 text-primary" /></div>
+                      <span className="text-[11px] font-semibold text-foreground">Información básica</span>
                     </div>
-                    <div><Label className="text-xs text-muted-foreground">Entrada</Label><Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="h-9 text-sm" /></div>
-                    <div><Label className="text-xs text-muted-foreground">Salida</Label><Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="h-9 text-sm" /></div>
+                    <div className="p-4">
+                      <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno</Label>
+                      <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Turno mañana" className="h-9 text-sm mt-1" />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Cliente</Label>
-                      <div className="flex gap-1">
-                        <Select value={clientId || "none"} onValueChange={handleClientChange}>
-                          <SelectTrigger className="h-9 text-sm flex-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Sin asignar</SelectItem>
-                            {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <Popover open={showAddClient} onOpenChange={setShowAddClient}>
+
+                  {/* Section: Schedule */}
+                  <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                      <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Clock className="h-3 w-3 text-primary" /></div>
+                      <span className="text-[11px] font-semibold text-foreground">Horario</span>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground font-medium">Fecha</Label>
+                        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar cliente">
-                              <Plus className="h-3.5 w-3.5" />
+                            <Button variant="outline" className={cn("w-full h-9 text-sm justify-start font-normal mt-1", !date && "text-muted-foreground")}>
+                              <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                              {date ? format(parse(date, "yyyy-MM-dd", new Date()), "EEEE d 'de' MMMM yyyy", { locale: es }) : "Seleccionar"}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-64 p-3" align="end">
-                            <p className="text-xs font-medium mb-2">Nuevo cliente</p>
-                            <div className="flex gap-1.5">
-                              <Input
-                                value={newClientName}
-                                onChange={e => setNewClientName(e.target.value)}
-                                placeholder="Nombre del cliente"
-                                className="h-8 text-sm"
-                                onKeyDown={e => e.key === "Enter" && handleQuickAddClient()}
-                              />
-                              <Button size="sm" className="h-8 px-3 text-xs" onClick={handleQuickAddClient} disabled={addingClient || !newClientName.trim()}>
-                                {addingClient ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
-                              </Button>
-                            </div>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarWidget
+                              mode="single"
+                              selected={date ? parse(date, "yyyy-MM-dd", new Date()) : undefined}
+                              onSelect={d => { if (d) { setDate(format(d, "yyyy-MM-dd")); setDatePickerOpen(false); } }}
+                              className={cn("p-3 pointer-events-auto")}
+                            />
                           </PopoverContent>
                         </Popover>
                       </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Ubicación</Label>
-                      <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
-                        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><Label className="text-[11px] text-muted-foreground font-medium">Entrada</Label><Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="h-9 text-sm mt-1" /></div>
+                        <div><Label className="text-[11px] text-muted-foreground font-medium">Salida</Label><Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="h-9 text-sm mt-1" /></div>
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 items-end">
-                    <div><Label className="text-xs text-muted-foreground">Plazas disponibles</Label><Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm" /></div>
-                    <div className="flex items-center gap-2 h-9">
-                      <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="claimable" />
-                      <Label htmlFor="claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
+
+                  {/* Section: Assignment */}
+                  <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                      <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Building2 className="h-3 w-3 text-primary" /></div>
+                      <span className="text-[11px] font-semibold text-foreground">Asignación</span>
                     </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Tipo de pago</Label>
-                    <Select value={payType} onValueChange={v => setPayType(v as "hourly" | "daily")}>
-                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
-                        <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {payType === "daily" && (
-                      <>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">Los empleados asignados recibirán su tarifa diaria automáticamente al consolidar nómina.</p>
-                        <div className="mt-2">
-                          <Label className="text-xs text-muted-foreground">Jornada</Label>
-                          <Select value={dayType} onValueChange={v => setDayType(v as "full_day" | "half_day")}>
-                            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                    <div className="p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground font-medium">Cliente</Label>
+                          <div className="flex gap-1 mt-1">
+                            <Select value={clientId || "none"} onValueChange={handleClientChange}>
+                              <SelectTrigger className="h-9 text-sm flex-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sin asignar</SelectItem>
+                                {clients.map(c => <SelectItem key={c.id} value={c.id}>{formatDisplayText(c.name, "name")}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <Popover open={showAddClient} onOpenChange={setShowAddClient}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar cliente">
+                                  <Plus className="h-3.5 w-3.5" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-3" align="end">
+                                <p className="text-xs font-medium mb-2">Nuevo cliente</p>
+                                <div className="flex gap-1.5">
+                                  <Input
+                                    value={newClientName}
+                                    onChange={e => setNewClientName(e.target.value)}
+                                    placeholder="Nombre del cliente"
+                                    className="h-8 text-sm"
+                                    onKeyDown={e => e.key === "Enter" && handleQuickAddClient()}
+                                  />
+                                  <Button size="sm" className="h-8 px-3 text-xs" onClick={handleQuickAddClient} disabled={addingClient || !newClientName.trim()}>
+                                    {addingClient ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
+                                  </Button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground font-medium">Ubicación</Label>
+                          <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
+                            <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="full_day">☀️ Día completo ($200)</SelectItem>
-                              <SelectItem value="half_day">🌤️ Medio día ($125)</SelectItem>
+                              <SelectItem value="none">Sin asignar</SelectItem>
+                              {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </div>
-                      </>
-                    )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 items-end">
+                        <div><Label className="text-[11px] text-muted-foreground font-medium">Plazas disponibles</Label><Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm mt-1" /></div>
+                        <div className="flex items-center gap-2 h-9">
+                          <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="claimable" />
+                          <Label htmlFor="claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">👤 Admin del turno</Label>
-                    <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
-                      <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sin asignar</SelectItem>
-                        {selectedEmployees.length > 0 && employees.filter(e => selectedEmployees.includes(e.id)).map(e => (
-                          <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
-                        ))}
-                        {employees.filter(e => !selectedEmployees.includes(e.id)).slice(0, 20).map(e => (
-                          <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Puede confirmar asistencia del equipo.</p>
+
+                  {/* Section: Payment */}
+                  <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                      <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><CreditCard className="h-3 w-3 text-primary" /></div>
+                      <span className="text-[11px] font-semibold text-foreground">Tipo de pago</span>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <Select value={payType} onValueChange={v => setPayType(v as "hourly" | "daily")}>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
+                          <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {payType === "daily" && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] text-muted-foreground">Tarifa diaria automática al consolidar.</p>
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground font-medium">Jornada</Label>
+                            <Select value={dayType} onValueChange={v => setDayType(v as "full_day" | "half_day")}>
+                              <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="full_day">☀️ Día completo ($200)</SelectItem>
+                                <SelectItem value="half_day">🌤️ Medio día ($125)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div><Label className="text-xs text-muted-foreground">Notas adicionales</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none" /></div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">📍 Dirección / Punto de encuentro</Label>
-                    <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm" />
-                    {meetingPoint && clientId && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Autocompletada desde la ubicación del cliente. Puedes editarla.</p>
-                    )}
+
+                  {/* Section: Admin & Details */}
+                  <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                      <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><FileText className="h-3 w-3 text-primary" /></div>
+                      <span className="text-[11px] font-semibold text-foreground">Detalles adicionales</span>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground font-medium">Admin del turno</Label>
+                        <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
+                          <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sin asignar</SelectItem>
+                            {selectedEmployees.length > 0 && employees.filter(e => selectedEmployees.includes(e.id)).map(e => (
+                              <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
+                            ))}
+                            {employees.filter(e => !selectedEmployees.includes(e.id)).slice(0, 20).map(e => (
+                              <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Puede confirmar asistencia del equipo.</p>
+                      </div>
+                      <div><Label className="text-[11px] text-muted-foreground font-medium">Notas adicionales</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" /></div>
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground font-medium">Dirección / Punto de encuentro</Label>
+                        <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm mt-1" />
+                        {meetingPoint && clientId && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">Autocompletada desde la ubicación del cliente. Puedes editarla.</p>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground font-medium">Instrucciones adicionales</Label>
+                        <Textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} rows={2} placeholder="Ej: Llevar uniforme negro, llegar 15 min antes..." className="text-sm resize-none mt-1" />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">📋 Instrucciones adicionales</Label>
-                    <Textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} rows={2} placeholder="Ej: Llevar uniforme negro, llegar 15 min antes..." className="text-sm resize-none" />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Asignar empleados</Label>
-                    <div className="mt-1">
+
+                  {/* Section: Employees */}
+                  <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                      <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Users className="h-3 w-3 text-primary" /></div>
+                      <span className="text-[11px] font-semibold text-foreground">Asignar empleados</span>
+                    </div>
+                    <div className="p-4">
                       <EmployeeCombobox
                         employees={employees}
                         selected={selectedEmployees}
@@ -921,7 +981,11 @@ export default function Shifts() {
                       />
                     </div>
                   </div>
-                  <Button onClick={() => setConfirmOpen(true)} disabled={saving || !date} className="w-full h-9 text-sm">
+                </div>
+
+                {/* Footer */}
+                <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
+                  <Button onClick={() => setConfirmOpen(true)} disabled={saving || !date} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
                     Revisar y crear turno
                   </Button>
                 </div>
