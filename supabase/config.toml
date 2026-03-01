@@ -21,3 +21,5 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.payroll-consolidate]
     verify_jwt = false
+  [functions.send-payroll-email]
+    verify_jwt = false
