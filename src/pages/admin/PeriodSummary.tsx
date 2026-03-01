@@ -156,8 +156,43 @@ export default function PeriodSummary() {
         else row.deductions_total += Number(m.total_value) || 0;
       });
       empMap.forEach((row) => { row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total; });
-      setRows(Array.from(empMap.values()));
+      const allRows = Array.from(empMap.values());
+      setRows(allRows);
       setLoading(false);
+
+      // Auto-consolidate if all bases are 0 and we have permission
+      const hasAnyBase = allRows.some(r => r.base_total_pay > 0);
+      if (!hasAnyBase && selectedCompanyId && canConsolidate) {
+        // Check if there are time_entries for this period
+        const { count } = await supabase
+          .from("time_entries" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId)
+          .eq("period_id", selectedPeriod)
+          .eq("status", "approved");
+        if (count && count > 0) {
+          console.log(`Auto-consolidating: found ${count} approved time_entries with no base pay`);
+          setConsolidating(true);
+          try {
+            const { data, error } = await supabase.functions.invoke("payroll-consolidate", {
+              body: { company_id: selectedCompanyId, period_id: selectedPeriod },
+            });
+            if (!error && !data?.error) {
+              sonnerToast.success("Horas consolidadas automáticamente", {
+                description: `${data.consolidated_employees} empleado(s) actualizados.`,
+              });
+              // Reload data
+              setSelectedPeriod(prev => {
+                setTimeout(() => setSelectedPeriod(selectedPeriod), 50);
+                return "";
+              });
+            }
+          } catch (err) {
+            console.error("Auto-consolidation failed:", err);
+          }
+          setConsolidating(false);
+        }
+      }
     }
     load();
   }, [selectedPeriod]);
