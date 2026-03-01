@@ -238,7 +238,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       {/* ── HEADER ── */}
-      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-card/90 backdrop-blur-xl shadow-xs border-b border-border/30" : "bg-transparent"}`}>
+      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-card/90 backdrop-blur-2xl shadow-xs border-b border-border/40" : "bg-transparent"}`}>
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
             <div className="sm:hidden"><StaflyMark size={32} /></div>
@@ -281,7 +281,7 @@ export default function Landing() {
         </div>
 
         {mobileMenu && (
-          <div className="lg:hidden bg-card/95 backdrop-blur-xl border-t border-border/30 animate-fade-in">
+          <div className="lg:hidden bg-card/95 backdrop-blur-2xl border-t border-border/40 animate-fade-in">
             <div className="container py-4 space-y-1">
               {[
                 { href: "#producto", label: c.nav.product },
@@ -362,11 +362,11 @@ export default function Landing() {
       </section>
 
       {/* ── GOODBYE TO CHAOS ── */}
-      <section className="py-20 bg-card border-y border-border/20">
+      <section className="py-20 bg-card border-y border-border/40">
         <div className="container">
           <SectionHeader eyebrow={lang === "es" ? "PRODUCTO" : "PRODUCT"} title={c.chaos.title} />
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="rounded-2xl border border-destructive/15 bg-destructive/[0.02] p-7">
+            <div className="rounded-2xl border border-destructive/15 bg-destructive/[0.02] p-7 shadow-xs">
               <span className="text-[11px] font-bold uppercase tracking-widest text-destructive">{c.chaos.before}</span>
               <div className="mt-5 space-y-3.5">
                 {c.chaos.beforeItems.map((item, i) => (
@@ -379,13 +379,13 @@ export default function Landing() {
                 ))}
               </div>
             </div>
-            <div className="rounded-2xl border border-success/15 bg-success/[0.02] p-7">
+            <div className="rounded-2xl border border-success/15 bg-success/[0.02] p-7 shadow-xs">
               <span className="text-[11px] font-bold uppercase tracking-widest text-success">{c.chaos.after} — StaflyApps</span>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 {c.chaos.afterItems.map((item, i) => {
                   const Icon = chaosIcons[i];
                   return (
-                    <div key={i} className="bg-card rounded-xl border border-border/30 p-3.5 shadow-2xs">
+                    <div key={i} className="bg-card rounded-xl border border-border/40 p-3.5 shadow-xs hover-lift transition-all">
                       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
                         <Icon className="h-4 w-4 text-primary" />
                       </div>
@@ -412,8 +412,8 @@ export default function Landing() {
                   onClick={() => setActiveModule(i)}
                   className={`flex items-center gap-3 text-left px-4 py-3.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                     activeModule === i
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-card border border-border/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary-glow"
+                      : "bg-card border border-border/40 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                   }`}
                 >
                   <span className={activeModule === i ? "text-primary-foreground" : "text-primary"}>
@@ -423,7 +423,7 @@ export default function Landing() {
                 </button>
               ))}
             </div>
-            <div className="bg-card rounded-2xl border border-border/30 p-8 shadow-xs animate-fade-in" key={activeModule}>
+            <div className="bg-card rounded-2xl border border-border/40 p-8 shadow-xs animate-fade-in" key={activeModule}>
               <h3 className="font-heading text-xl font-bold mb-5">{c.modules.tabs[activeModule].title}</h3>
               <ul className="space-y-3.5">
                 {c.modules.tabs[activeModule].bullets.map((b, i) => (
@@ -446,12 +446,12 @@ export default function Landing() {
       </section>
 
       {/* ── SECURITY ── */}
-      <section className="py-20 bg-card border-y border-border/20" id="seguridad">
+      <section className="py-20 bg-card border-y border-border/40" id="seguridad">
         <div className="container">
           <SectionHeader eyebrow={lang === "es" ? "SEGURIDAD" : "SECURITY"} title={c.security.title} subtitle={c.security.subtitle} />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
             {c.security.cards.map((card, i) => (
-              <div key={i} className="group bg-background rounded-2xl border border-border/30 p-6 hover-lift">
+              <div key={i} className="group bg-background rounded-2xl border border-border/40 p-6 shadow-xs hover-lift">
                 <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 text-primary group-hover:bg-primary/15 transition-colors">
                   {iconMap[card.icon]}
                 </div>
@@ -469,7 +469,7 @@ export default function Landing() {
           <SectionHeader eyebrow={lang === "es" ? "TESTIMONIOS" : "TESTIMONIALS"} title={c.testimonials.title} />
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {c.testimonials.items.map((t, i) => (
-              <div key={i} className="bg-card rounded-2xl border border-border/30 p-6 shadow-xs hover-lift">
+              <div key={i} className="bg-card rounded-2xl border border-border/40 p-6 shadow-xs hover-lift">
                 <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: t.rating }).map((_, j) => (
                     <Star key={j} className="h-4 w-4 fill-warning text-warning" />
@@ -492,11 +492,11 @@ export default function Landing() {
       </section>
 
       {/* ── PRICING ── */}
-      <section id="precios" className="py-20 bg-card border-y border-border/20">
+      <section id="precios" className="py-20 bg-card border-y border-border/40">
         <div className="container">
           <div className="text-center mb-12">
             <SectionHeader eyebrow={lang === "es" ? "PRECIOS" : "PRICING"} title={c.pricing.title} subtitle={c.pricing.subtitle} className="mb-0" />
-            <div className="mt-5 inline-flex items-center bg-muted/50 rounded-xl p-1 border border-border/30">
+            <div className="mt-5 inline-flex items-center bg-muted/50 rounded-xl p-1 border border-border/40">
               <button onClick={() => setIsAnnual(false)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${!isAnnual ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
                 {c.pricing.monthly}
               </button>
@@ -508,7 +508,7 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
             {c.pricing.plans.map((plan, i) => (
-              <div key={i} className={`bg-background rounded-2xl border p-7 relative transition-all ${(plan as any).recommended ? "border-primary ring-2 ring-primary/10 shadow-lg scale-[1.02]" : "border-border/30 shadow-xs"}`}>
+              <div key={i} className={`bg-background rounded-2xl border p-7 relative transition-all ${(plan as any).recommended ? "border-primary ring-2 ring-primary/10 shadow-lg shadow-primary-glow scale-[1.02]" : "border-border/40 shadow-xs"}`}>
                 {(plan as any).recommended && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 gradient-primary text-white border-0 px-3 text-[11px]">
                     {lang === "es" ? "Recomendado" : "Recommended"}
@@ -588,7 +588,7 @@ export default function Landing() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-border/20 py-10">
+      <footer className="border-t border-border/40 py-10">
         <div className="container">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
