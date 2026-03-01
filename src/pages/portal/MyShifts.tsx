@@ -321,8 +321,8 @@ export default function MyShifts() {
           <p className="text-xs text-muted-foreground bg-muted/50 rounded-xl px-3 py-2 leading-relaxed">{a.shift.notes}</p>
         )}
 
-        {/* Accept/Reject buttons for pending assignments */}
-        {a.status === "pending" && (
+        {/* Accept/Reject buttons for non-past shifts that can be changed */}
+        {a.status === "pending" && !isBefore(parseISO(a.shift.date), today) && (
           <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
             <Button
               size="sm"
@@ -342,6 +342,22 @@ export default function MyShifts() {
             >
               <ThumbsDown className="h-3.5 w-3.5" />
               Rechazar
+            </Button>
+          </div>
+        )}
+
+        {/* Reject option for accepted/confirmed upcoming shifts */}
+        {(a.status === "accepted" || a.status === "confirmed") && !isBefore(parseISO(a.shift.date), today) && !isTodayShift && (
+          <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full h-9 text-xs gap-1.5 text-destructive hover:text-destructive"
+              onClick={() => { setRejectDialogId(a.id); setRejectReason(""); }}
+              disabled={responding === a.id}
+            >
+              <ThumbsDown className="h-3.5 w-3.5" />
+              No puedo asistir
             </Button>
           </div>
         )}
