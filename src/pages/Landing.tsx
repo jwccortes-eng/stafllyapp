@@ -7,15 +7,15 @@ import {
   CalendarDays, DollarSign, Users, Clock, BarChart3, Shield,
   ArrowRight, CheckCircle2, Globe, MapPin,
   Lock, Send, Eye, Download,
-  Menu, X, Star,
+  Menu, X, Star, Zap, ChevronRight,
 } from "lucide-react";
-import { SectionHeader } from "@/components/ui/section-header";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StaflyMark, StaflyLogo } from "@/components/brand/StaflyBrand";
+import heroDashboard from "@/assets/stafly-hero-dashboard.png";
 
 /* ───────── i18n ───────── */
 const i18n = {
@@ -25,17 +25,20 @@ const i18n = {
     portal: "Portal Empleados",
     ctaPrimary: "Empezar gratis",
     ctaSecondary: "Agendar demo",
-    ctaMicro: "Sin tarjeta • Setup en minutos • Cancela cuando quieras",
+    ctaMicro: "Sin tarjeta · Setup en minutos · Cancela cuando quieras",
     hero: {
-      h1: "Control semanal de tu equipo, sin estrés.",
-      sub: "Turnos, clock-in/out con ubicación, nómina semanal, reportes y permisos. Todo en una app.",
-      badges: ["Setup en minutos", "GPS & verificación", "Exportación lista", "Permisos granulares"],
+      eyebrow: "GESTIÓN DE PERSONAL INTELIGENTE",
+      h1: "Control total de tu equipo, sin el caos.",
+      sub: "Turnos, clock-in/out con GPS, nómina semanal, reportes y permisos — todo en una plataforma que tu equipo realmente va a usar.",
+      badges: ["Setup en minutos", "GPS verificado", "Exportación lista", "Permisos granulares"],
+      trusted: "Empresas de staffing confían en StaflyApps",
     },
     chaos: {
-      title: "Adiós al caos",
+      title: "Adiós al caos operativo",
+      subtitle: "De hojas de Excel y WhatsApp a una plataforma profesional",
       before: "Antes",
-      after: "Después",
-      beforeItems: ["Hojas de Excel", "Grupos de WhatsApp", "Llamadas telefónicas", "Papeles y recibos"],
+      after: "Ahora con StaflyApps",
+      beforeItems: ["Hojas de Excel dispersas", "Grupos de WhatsApp", "Llamadas telefónicas", "Papeles y recibos"],
       afterItems: [
         { label: "Turnos", desc: "Programa y asigna en segundos" },
         { label: "Tiempo", desc: "Clock-in/out con GPS" },
@@ -44,7 +47,7 @@ const i18n = {
       ],
     },
     modules: {
-      title: "Todo lo que necesitas",
+      title: "Todo lo que necesitas, nada que sobre",
       subtitle: "Módulos diseñados para operaciones de staffing",
       tabs: [
         { label: "Turnos", icon: "calendar", title: "Programación de turnos", bullets: ["Vista semanal tipo calendario con drag & drop", "Asignación por cliente, ubicación y rol", "Copiar semana y detección de conflictos"] },
@@ -97,17 +100,20 @@ const i18n = {
     portal: "Employee Portal",
     ctaPrimary: "Start free",
     ctaSecondary: "Book a demo",
-    ctaMicro: "No card required • Setup in minutes • Cancel anytime",
+    ctaMicro: "No card required · Setup in minutes · Cancel anytime",
     hero: {
-      h1: "Weekly control of your workforce—without the stress.",
-      sub: "Scheduling, location-based clock-in/out, weekly payroll, reports and permissions. All in one app.",
-      badges: ["Setup in minutes", "GPS & verification", "Export-ready", "Granular permissions"],
+      eyebrow: "SMART WORKFORCE MANAGEMENT",
+      h1: "Total control of your team—without the chaos.",
+      sub: "Scheduling, GPS clock-in/out, weekly payroll, reports and permissions — all in one platform your team will actually use.",
+      badges: ["Setup in minutes", "GPS verified", "Export-ready", "Granular permissions"],
+      trusted: "Staffing companies trust StaflyApps",
     },
     chaos: {
-      title: "Goodbye to chaos",
+      title: "Goodbye to operational chaos",
+      subtitle: "From spreadsheets and WhatsApp to a professional platform",
       before: "Before",
-      after: "After",
-      beforeItems: ["Excel spreadsheets", "WhatsApp groups", "Phone calls", "Paper receipts"],
+      after: "Now with StaflyApps",
+      beforeItems: ["Scattered Excel sheets", "WhatsApp groups", "Phone calls", "Paper receipts"],
       afterItems: [
         { label: "Scheduling", desc: "Plan & assign in seconds" },
         { label: "Time", desc: "Clock-in/out with GPS" },
@@ -116,7 +122,7 @@ const i18n = {
       ],
     },
     modules: {
-      title: "Everything you need",
+      title: "Everything you need, nothing you don't",
       subtitle: "Modules designed for staffing operations",
       tabs: [
         { label: "Scheduling", icon: "calendar", title: "Shift scheduling", bullets: ["Weekly calendar view with drag & drop", "Assign by client, location, and role", "Copy week and conflict detection"] },
@@ -217,6 +223,20 @@ const iconMap: Record<string, React.ReactNode> = {
 
 const chaosIcons = [CalendarDays, Clock, DollarSign, BarChart3];
 
+/* ───────── Stat Counter ───────── */
+const stats = {
+  es: [
+    { value: "500+", label: "Empleados gestionados" },
+    { value: "10k+", label: "Turnos asignados" },
+    { value: "99.9%", label: "Uptime garantizado" },
+  ],
+  en: [
+    { value: "500+", label: "Employees managed" },
+    { value: "10k+", label: "Shifts assigned" },
+    { value: "99.9%", label: "Guaranteed uptime" },
+  ],
+};
+
 /* ───────── LANDING ───────── */
 export default function Landing() {
   const [lang, setLang] = useState<"es" | "en">(() => {
@@ -241,8 +261,8 @@ export default function Landing() {
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-card/90 backdrop-blur-2xl shadow-xs border-b border-border/40" : "bg-transparent"}`}>
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <div className="sm:hidden"><StaflyMark size={32} /></div>
-            <div className="hidden sm:flex"><StaflyLogo size={32} /></div>
+            <div className="sm:hidden"><StaflyMark size={36} /></div>
+            <div className="hidden sm:flex"><StaflyLogo size={36} /></div>
           </div>
 
           <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -306,65 +326,109 @@ export default function Landing() {
       </header>
 
       {/* ── HERO ── */}
-      <section className="relative pt-28 pb-20 sm:pt-36 sm:pb-28" id="producto">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 left-1/4 w-[800px] h-[800px] rounded-full opacity-[0.04] bg-primary blur-[150px]" />
-          <div className="absolute top-40 right-1/4 w-[400px] h-[400px] rounded-full opacity-[0.03] bg-success blur-[100px]" />
+      <section className="relative pt-28 pb-8 sm:pt-36 sm:pb-12 overflow-hidden" id="producto">
+        {/* Background effects */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-40 -left-20 w-[600px] h-[600px] rounded-full bg-primary/[0.07] blur-[120px]" />
+          <div className="absolute top-20 right-0 w-[500px] h-[500px] rounded-full bg-primary-glow/[0.05] blur-[100px]" />
+          <div className="absolute bottom-0 left-1/3 w-[400px] h-[300px] rounded-full bg-success/[0.04] blur-[80px]" />
         </div>
 
         <div className="container relative">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="max-w-xl">
-              <h1 className="font-heading text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight leading-[1.1] text-foreground">
-                {c.hero.h1}
-              </h1>
-              <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
-                {c.hero.sub}
-              </p>
-              <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button size="lg" className="rounded-full px-10 h-13 text-base font-semibold gradient-primary text-white shadow-lg hover:shadow-xl transition-all press-scale">
-                      {c.ctaPrimary} <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md rounded-2xl">
-                    <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                    <DemoForm lang={lang} />
-                  </DialogContent>
-                </Dialog>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button size="lg" variant="outline" className="rounded-full h-13 px-10 text-base">
-                      {c.ctaSecondary}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md rounded-2xl">
-                    <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                    <DemoForm lang={lang} />
-                  </DialogContent>
-                </Dialog>
-              </div>
-              <p className="mt-4 text-sm text-muted-foreground">{c.ctaMicro}</p>
-
-              <div className="mt-8 flex flex-wrap gap-2">
-                {c.hero.badges.map((b, i) => (
-                  <span key={i} className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-card border border-border/50 rounded-full px-3 py-1.5 shadow-2xs">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-success" /> {b}
-                  </span>
-                ))}
-              </div>
+          <div className="max-w-3xl mx-auto text-center">
+            {/* Eyebrow */}
+            <div className="inline-flex items-center gap-2 bg-primary/[0.08] border border-primary/15 rounded-full px-4 py-1.5 mb-6">
+              <Zap className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-semibold tracking-wide text-primary uppercase">{c.hero.eyebrow}</span>
             </div>
 
-            {/* Hero mockup hidden — pending high-quality asset */}
+            <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.08] text-foreground">
+              {c.hero.h1}
+            </h1>
+            <p className="mt-6 text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              {c.hero.sub}
+            </p>
+
+            {/* CTAs */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="lg" className="rounded-full px-10 h-13 text-base font-semibold gradient-primary text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all press-scale">
+                    {c.ctaPrimary} <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md rounded-2xl">
+                  <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
+                  <DemoForm lang={lang} />
+                </DialogContent>
+              </Dialog>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="lg" variant="outline" className="rounded-full h-13 px-10 text-base border-2">
+                    {c.ctaSecondary} <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md rounded-2xl">
+                  <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
+                  <DemoForm lang={lang} />
+                </DialogContent>
+              </Dialog>
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">{c.ctaMicro}</p>
+
+            {/* Badges */}
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {c.hero.badges.map((b, i) => (
+                <span key={i} className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-card border border-border/50 rounded-full px-3.5 py-1.5 shadow-2xs">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-success" /> {b}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Hero Dashboard Mockup */}
+          <div className="mt-14 relative max-w-5xl mx-auto">
+            <div className="absolute inset-0 gradient-primary rounded-3xl blur-[60px] opacity-10 scale-95 translate-y-4" />
+            <div className="relative rounded-2xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/10 bg-card">
+              <div className="flex items-center gap-1.5 px-4 py-2.5 bg-muted/50 border-b border-border/30">
+                <div className="w-3 h-3 rounded-full bg-destructive/60" />
+                <div className="w-3 h-3 rounded-full bg-warning/60" />
+                <div className="w-3 h-3 rounded-full bg-success/60" />
+                <span className="ml-3 text-[11px] text-muted-foreground font-mono">staflyapps.com/app</span>
+              </div>
+              <img
+                src={heroDashboard}
+                alt="StaflyApps Dashboard"
+                className="w-full h-auto"
+                loading="eager"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── STATS BAR ── */}
+      <section className="py-12 border-y border-border/40 bg-card/50">
+        <div className="container">
+          <div className="grid grid-cols-3 gap-8 max-w-3xl mx-auto text-center">
+            {stats[lang].map((s, i) => (
+              <div key={i}>
+                <div className="text-2xl sm:text-3xl font-heading font-extrabold text-foreground">{s.value}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1">{s.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ── GOODBYE TO CHAOS ── */}
-      <section className="py-20 bg-card border-y border-border/40">
+      <section className="py-20 sm:py-24" id="caos">
         <div className="container">
-          <SectionHeader eyebrow={lang === "es" ? "PRODUCTO" : "PRODUCT"} title={c.chaos.title} />
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "PRODUCTO" : "PRODUCT"}</span>
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.chaos.title}</h2>
+            <p className="text-muted-foreground mt-2 text-sm">{c.chaos.subtitle}</p>
+          </div>
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <div className="rounded-2xl border border-destructive/15 bg-destructive/[0.02] p-7 shadow-xs">
               <span className="text-[11px] font-bold uppercase tracking-widest text-destructive">{c.chaos.before}</span>
@@ -380,7 +444,7 @@ export default function Landing() {
               </div>
             </div>
             <div className="rounded-2xl border border-success/15 bg-success/[0.02] p-7 shadow-xs">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-success">{c.chaos.after} — StaflyApps</span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-success">{c.chaos.after}</span>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 {c.chaos.afterItems.map((item, i) => {
                   const Icon = chaosIcons[i];
@@ -401,9 +465,13 @@ export default function Landing() {
       </section>
 
       {/* ── MODULES ── */}
-      <section className="py-20 sm:py-28" id="modulos">
+      <section className="py-20 sm:py-24 bg-card border-y border-border/40" id="modulos">
         <div className="container">
-          <SectionHeader eyebrow={lang === "es" ? "MÓDULOS" : "MODULES"} title={c.modules.title} subtitle={c.modules.subtitle} />
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "MÓDULOS" : "MODULES"}</span>
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.modules.title}</h2>
+            <p className="text-muted-foreground mt-2 text-sm">{c.modules.subtitle}</p>
+          </div>
           <div className="grid lg:grid-cols-[280px_1fr] gap-8 max-w-5xl mx-auto">
             <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
               {c.modules.tabs.map((tab, i) => (
@@ -412,8 +480,8 @@ export default function Landing() {
                   onClick={() => setActiveModule(i)}
                   className={`flex items-center gap-3 text-left px-4 py-3.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                     activeModule === i
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary-glow"
-                      : "bg-card border border-border/40 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                      : "bg-background border border-border/40 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                   }`}
                 >
                   <span className={activeModule === i ? "text-primary-foreground" : "text-primary"}>
@@ -423,7 +491,7 @@ export default function Landing() {
                 </button>
               ))}
             </div>
-            <div className="bg-card rounded-2xl border border-border/40 p-8 shadow-xs animate-fade-in" key={activeModule}>
+            <div className="bg-background rounded-2xl border border-border/40 p-8 shadow-xs animate-fade-in" key={activeModule}>
               <h3 className="font-heading text-xl font-bold mb-5">{c.modules.tabs[activeModule].title}</h3>
               <ul className="space-y-3.5">
                 {c.modules.tabs[activeModule].bullets.map((b, i) => (
@@ -446,13 +514,17 @@ export default function Landing() {
       </section>
 
       {/* ── SECURITY ── */}
-      <section className="py-20 bg-card border-y border-border/40" id="seguridad">
+      <section className="py-20 sm:py-24" id="seguridad">
         <div className="container">
-          <SectionHeader eyebrow={lang === "es" ? "SEGURIDAD" : "SECURITY"} title={c.security.title} subtitle={c.security.subtitle} />
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "SEGURIDAD" : "SECURITY"}</span>
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.security.title}</h2>
+            <p className="text-muted-foreground mt-2 text-sm">{c.security.subtitle}</p>
+          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
             {c.security.cards.map((card, i) => (
-              <div key={i} className="group bg-background rounded-2xl border border-border/40 p-6 shadow-xs hover-lift">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 text-primary group-hover:bg-primary/15 transition-colors">
+              <div key={i} className="group bg-card rounded-2xl border border-border/40 p-6 shadow-xs hover-lift">
+                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
                   {iconMap[card.icon]}
                 </div>
                 <h3 className="font-heading font-semibold text-sm mb-2">{card.title}</h3>
@@ -464,12 +536,15 @@ export default function Landing() {
       </section>
 
       {/* ── TESTIMONIALS ── */}
-      <section className="py-20">
+      <section className="py-20 bg-card border-y border-border/40">
         <div className="container">
-          <SectionHeader eyebrow={lang === "es" ? "TESTIMONIOS" : "TESTIMONIALS"} title={c.testimonials.title} />
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "TESTIMONIOS" : "TESTIMONIALS"}</span>
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.testimonials.title}</h2>
+          </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {c.testimonials.items.map((t, i) => (
-              <div key={i} className="bg-card rounded-2xl border border-border/40 p-6 shadow-xs hover-lift">
+              <div key={i} className="bg-background rounded-2xl border border-border/40 p-6 shadow-xs hover-lift">
                 <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: t.rating }).map((_, j) => (
                     <Star key={j} className="h-4 w-4 fill-warning text-warning" />
@@ -492,10 +567,12 @@ export default function Landing() {
       </section>
 
       {/* ── PRICING ── */}
-      <section id="precios" className="py-20 bg-card border-y border-border/40">
+      <section id="precios" className="py-20 sm:py-24">
         <div className="container">
           <div className="text-center mb-12">
-            <SectionHeader eyebrow={lang === "es" ? "PRECIOS" : "PRICING"} title={c.pricing.title} subtitle={c.pricing.subtitle} className="mb-0" />
+            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "PRECIOS" : "PRICING"}</span>
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.pricing.title}</h2>
+            <p className="text-muted-foreground mt-2 text-sm">{c.pricing.subtitle}</p>
             <div className="mt-5 inline-flex items-center bg-muted/50 rounded-xl p-1 border border-border/40">
               <button onClick={() => setIsAnnual(false)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${!isAnnual ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
                 {c.pricing.monthly}
@@ -508,7 +585,7 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
             {c.pricing.plans.map((plan, i) => (
-              <div key={i} className={`bg-background rounded-2xl border p-7 relative transition-all ${(plan as any).recommended ? "border-primary ring-2 ring-primary/10 shadow-lg shadow-primary-glow scale-[1.02]" : "border-border/40 shadow-xs"}`}>
+              <div key={i} className={`bg-card rounded-2xl border p-7 relative transition-all ${(plan as any).recommended ? "border-primary ring-2 ring-primary/10 shadow-lg shadow-primary/10 scale-[1.02]" : "border-border/40 shadow-xs"}`}>
                 {(plan as any).recommended && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 gradient-primary text-white border-0 px-3 text-[11px]">
                     {lang === "es" ? "Recomendado" : "Recommended"}
@@ -581,7 +658,6 @@ export default function Landing() {
                   </Dialog>
                 </div>
               </div>
-              {/* Mascot removed - background clashes with gradient */}
             </div>
           </div>
         </div>
@@ -591,9 +667,7 @@ export default function Landing() {
       <footer className="border-t border-border/40 py-10">
         <div className="container">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <StaflyLogo size={24} />
-            </div>
+            <StaflyLogo size={28} />
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <Link to="/portal" className="hover:text-foreground transition-colors font-medium text-primary">{c.footer.portal}</Link>
               <Link to="/privacy" className="hover:text-foreground transition-colors">{c.footer.privacy}</Link>
@@ -601,7 +675,7 @@ export default function Landing() {
               <Link to="/help" className="hover:text-foreground transition-colors">{c.footer.contact}</Link>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} StaflyApps · staflyapps.com
+              © {new Date().getFullYear()} StaflyApps
             </p>
           </div>
         </div>
