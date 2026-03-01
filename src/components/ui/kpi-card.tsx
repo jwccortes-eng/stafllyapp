@@ -12,11 +12,11 @@ interface KpiCardProps {
 }
 
 const accentStyles = {
-  primary: "border-primary/20 bg-primary/5",
-  earning: "border-earning/20 bg-earning/5",
-  deduction: "border-deduction/20 bg-deduction/5",
-  warning: "border-warning/20 bg-warning/5",
-  muted: "border-border bg-muted/30",
+  primary: "border-primary/15 bg-primary/[0.04]",
+  earning: "border-earning/15 bg-earning/[0.04]",
+  deduction: "border-deduction/15 bg-deduction/[0.04]",
+  warning: "border-warning/15 bg-warning/[0.04]",
+  muted: "border-border/50 bg-surface-2",
 };
 
 const valueColors = {
@@ -31,9 +31,9 @@ export function KpiCard({ value, label, icon, accent = "muted", subtitle, onClic
   return (
     <div
       className={cn(
-        "rounded-xl border p-4 transition-all duration-200",
+        "rounded-2xl border p-4 transition-all duration-200",
         accentStyles[accent],
-        onClick && "cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]",
+        onClick && "cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-[0.98]",
         className
       )}
       onClick={onClick}

@@ -11,6 +11,8 @@ interface EmptyStateProps {
   actionHref?: string;
   className?: string;
   compact?: boolean;
+  /** Optional image (e.g. mascot) to show instead of the icon */
+  image?: string;
 }
 
 export function EmptyState({
@@ -21,6 +23,7 @@ export function EmptyState({
   onAction,
   className,
   compact = false,
+  image,
 }: EmptyStateProps) {
   return (
     <div className={cn(
@@ -28,15 +31,26 @@ export function EmptyState({
       compact ? "py-8 gap-3" : "py-16 gap-4",
       className
     )}>
-      <div className={cn(
-        "rounded-2xl bg-muted/50 flex items-center justify-center",
-        compact ? "h-12 w-12" : "h-16 w-16"
-      )}>
-        <Icon className={cn(
-          "text-muted-foreground/40",
-          compact ? "h-6 w-6" : "h-8 w-8"
-        )} />
-      </div>
+      {image ? (
+        <img
+          src={image}
+          alt=""
+          className={cn(
+            "object-contain",
+            compact ? "h-16 w-16" : "h-24 w-24"
+          )}
+        />
+      ) : (
+        <div className={cn(
+          "rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center",
+          compact ? "h-12 w-12" : "h-16 w-16"
+        )}>
+          <Icon className={cn(
+            "text-primary/40",
+            compact ? "h-6 w-6" : "h-8 w-8"
+          )} />
+        </div>
+      )}
       <div className="space-y-1 max-w-xs">
         <p className={cn(
           "font-semibold text-foreground font-heading",
@@ -54,7 +68,7 @@ export function EmptyState({
           size={compact ? "sm" : "default"}
           variant="outline"
           onClick={onAction}
-          className="mt-1"
+          className="mt-1 rounded-full"
         >
           {actionLabel}
         </Button>
