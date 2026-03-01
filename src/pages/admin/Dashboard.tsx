@@ -24,7 +24,8 @@ import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
 import { Badge } from "@/components/ui/badge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
-
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { ErrorBlock } from "@/components/ui/error-block";
 
 /* ─── animated counter hook ─── */
 function useAnimatedNumber(target: number, duration = 800) {
@@ -189,6 +190,7 @@ export default function AdminDashboard() {
     pendingTickets: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [chartData, setChartData] = useState<any[]>([]);
   const [feedAnnouncements, setFeedAnnouncements] = useState<any[]>([]);
   const [activityItems, setActivityItems] = useState<any[]>([]);
@@ -202,10 +204,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!selectedCompanyId) return;
     setLoading(true);
+    setFetchError(false);
     async function fetchStats() {
+      try {
       const [empRes, periodRes, impRes, movRes, ticketsRes] = await Promise.all([
         supabase.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", selectedCompanyId!),
-        // Get the current period: the one containing today, or the most recent one that already started
         supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId!)
           .lte("start_date", new Date().toISOString().slice(0, 10))
           .order("start_date", { ascending: false }).limit(1).maybeSingle(),
@@ -233,6 +236,11 @@ export default function AdminDashboard() {
         pendingTickets: ticketsRes.count ?? 0,
       });
       setLoading(false);
+      } catch (err) {
+        console.error("Dashboard fetchStats error:", err);
+        setFetchError(true);
+        setLoading(false);
+      }
     }
 
     async function fetchChartData() {
@@ -687,6 +695,14 @@ export default function AdminDashboard() {
 
   /* ─── Determine layout: announcements + activity side-by-side when both enabled ─── */
   const bothFeedAndActivity = isWidgetEnabled("announcements") && isWidgetEnabled("activity");
+
+  if (loading && !stats.totalEmployees) {
+    return <PageSkeleton variant="cards" />;
+  }
+
+  if (fetchError) {
+    return <ErrorBlock title="Error al cargar el dashboard" message="No pudimos cargar los datos. Verifica tu conexión e intenta de nuevo." onRetry={() => window.location.reload()} />;
+  }
 
   return (
     <div className="space-y-6">

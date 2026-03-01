@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CompanyProvider } from "@/hooks/useCompany";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -78,6 +80,11 @@ import HelpCenter from "./pages/help/HelpCenter";
 import UserManual from "./pages/help/UserManual";
 const queryClient = new QueryClient();
 
+function NetworkListener() {
+  useNetworkStatus();
+  return null;
+}
+
 function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -87,6 +94,8 @@ function App() {
           <CompanyProvider>
           <Toaster />
           <Sonner />
+          <NetworkListener />
+          <ErrorBoundary>
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
@@ -168,6 +177,7 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </ErrorBoundary>
           </CompanyProvider>
         </AuthProvider>
       </TooltipProvider>
