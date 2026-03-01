@@ -11,7 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeCombobox } from "./EmployeeCombobox";
-import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell, Smartphone, Lock } from "lucide-react";
+import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell, Smartphone, Lock, ClipboardCheck } from "lucide-react";
+import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
@@ -335,6 +336,12 @@ export function ShiftDetailDialog({
                   )}
                 </TabsTrigger>
               )}
+              <TabsTrigger
+                value="attendance"
+                className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
+              >
+                <ClipboardCheck className="h-3 w-3" /> Asistencia
+              </TabsTrigger>
               <TabsTrigger
                 value="comments"
                 className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
@@ -719,6 +726,14 @@ export function ShiftDetailDialog({
                 </>
               )}
             </div>
+          ) : tab === "attendance" ? (
+            <ShiftAttendancePanel
+              shiftId={shift.id}
+              companyId={selectedCompanyId!}
+              assignments={assignments}
+              employees={employees}
+              canManage={effectiveCanEdit}
+            />
           ) : tab === "comments" ? (
             <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
           ) : null}

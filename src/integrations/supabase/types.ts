@@ -1959,6 +1959,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           date: string
+          day_type: string
           deleted_at: string | null
           end_time: string
           id: string
@@ -1966,6 +1967,7 @@ export type Database = {
           meeting_point: string | null
           notes: string | null
           pay_type: string
+          shift_admin_id: string | null
           shift_code: string | null
           slots: number | null
           special_instructions: string | null
@@ -1981,6 +1983,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date: string
+          day_type?: string
           deleted_at?: string | null
           end_time: string
           id?: string
@@ -1988,6 +1991,7 @@ export type Database = {
           meeting_point?: string | null
           notes?: string | null
           pay_type?: string
+          shift_admin_id?: string | null
           shift_code?: string | null
           slots?: number | null
           special_instructions?: string | null
@@ -2003,6 +2007,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string
+          day_type?: string
           deleted_at?: string | null
           end_time?: string
           id?: string
@@ -2010,6 +2015,7 @@ export type Database = {
           meeting_point?: string | null
           notes?: string | null
           pay_type?: string
+          shift_admin_id?: string | null
           shift_code?: string | null
           slots?: number | null
           special_instructions?: string | null
@@ -2038,6 +2044,20 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_shifts_shift_admin_id_fkey"
+            columns: ["shift_admin_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_shifts_shift_admin_id_fkey"
+            columns: ["shift_admin_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -2127,6 +2147,81 @@ export type Database = {
           },
           {
             foreignKeyName: "shift_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_attendance_confirmations: {
+        Row: {
+          assignment_id: string
+          company_id: string
+          confirmed_at: string
+          confirmed_by: string
+          created_at: string
+          employee_id: string
+          id: string
+          notes: string | null
+          shift_id: string
+          status: string
+        }
+        Insert: {
+          assignment_id: string
+          company_id: string
+          confirmed_at?: string
+          confirmed_by: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          shift_id: string
+          status?: string
+        }
+        Update: {
+          assignment_id?: string
+          company_id?: string
+          confirmed_at?: string
+          confirmed_by?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          shift_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_attendance_confirmations_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "shift_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_attendance_confirmations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_attendance_confirmations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_attendance_confirmations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_attendance_confirmations_shift_id_fkey"
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "scheduled_shifts"

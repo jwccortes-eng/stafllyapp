@@ -30,6 +30,7 @@ interface TodayShift {
   shift_code: string | null;
   location_name?: string;
   client_name?: string;
+  pay_type?: string;
 }
 
 /** Check if current time is at or after the shift start_time (tolerance = 0 min) */
@@ -120,7 +121,7 @@ export default function PortalClock() {
         .gte("clock_in", dayStart).lte("clock_in", dayEnd)
         .order("clock_in", { ascending: false }),
       supabase.from("shift_assignments")
-        .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, locations(name), clients(name))")
+        .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, pay_type, locations(name), clients(name))")
         .eq("employee_id", employeeId)
         .eq("scheduled_shifts.date", todayStr)
         .in("status", ["confirmed", "pending"]),
@@ -138,8 +139,11 @@ export default function PortalClock() {
       shift_code: sa.scheduled_shifts.shift_code,
       location_name: sa.scheduled_shifts.locations?.name,
       client_name: sa.scheduled_shifts.clients?.name,
+      pay_type: sa.scheduled_shifts.pay_type,
     }));
-    setTodayShifts(mappedShifts);
+    // Filter: only hourly shifts show clock, daily shifts use attendance confirmation
+    const clockableShifts = mappedShifts.filter(s => s.pay_type !== "daily");
+    setTodayShifts(clockableShifts);
 
     if (mappedShifts.length === 1 && !list.find(e => !e.clock_out)) {
       setSelectedShift(mappedShifts[0]);
