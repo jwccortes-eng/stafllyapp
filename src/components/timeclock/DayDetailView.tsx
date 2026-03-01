@@ -144,23 +144,41 @@ export function DayDetailView() {
     return { ...emp, activeEntry, completedEntries, totalMinutes, isClockedIn: !!activeEntry };
   }, [selectedEmpId, employees, entries]);
 
-  // Bulk actions
+  // Bulk actions — batch in chunks of 50 to avoid URL length limits
+  const batchUpdate = async (ids: string[], updates: Record<string, any>) => {
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const chunk = ids.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from("time_entries")
+        .update(updates as any)
+        .in("id", chunk)
+        .eq("status", "pending");
+      if (error) throw error;
+    }
+  };
+
   const handleBulkApprove = async () => {
     const ids = Array.from(selectedIds);
-    const { error } = await supabase.from("time_entries")
-      .update({ status: "approved", approved_at: new Date().toISOString() } as any)
-      .in("id", ids).eq("status", "pending");
-    if (error) toast.error(error.message);
-    else { toast.success(`${ids.length} aprobados`); loadData(); }
+    try {
+      await batchUpdate(ids, { status: "approved", approved_at: new Date().toISOString() });
+      toast.success(`${ids.length} aprobados`);
+      setSelectedIds(new Set());
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al aprobar");
+    }
   };
 
   const handleBulkReject = async () => {
     const ids = Array.from(selectedIds);
-    const { error } = await supabase.from("time_entries")
-      .update({ status: "rejected", notes: "[Rechazado] Rechazo masivo" })
-      .in("id", ids).eq("status", "pending");
-    if (error) toast.error(error.message);
-    else { toast.success(`${ids.length} rechazados`); loadData(); }
+    try {
+      await batchUpdate(ids, { status: "rejected", notes: "[Rechazado] Rechazo masivo" });
+      toast.success(`${ids.length} rechazados`);
+      setSelectedIds(new Set());
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al rechazar");
+    }
   };
 
   const getJobColor = (title: string) => JOB_COLORS[hashStr(title) % JOB_COLORS.length];

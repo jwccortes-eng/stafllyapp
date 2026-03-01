@@ -266,27 +266,43 @@ export function TimesheetView() {
     });
   };
 
-  // Bulk actions
+  // Bulk actions — batch in chunks of 50 to avoid URL length limits
+  const batchUpdate = async (ids: string[], updates: Record<string, any>) => {
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const chunk = ids.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from("time_entries")
+        .update(updates as any)
+        .in("id", chunk)
+        .eq("status", "pending");
+      if (error) throw error;
+    }
+  };
+
   const handleBulkApprove = async () => {
     if (selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
-    const { error } = await supabase.from("time_entries")
-      .update({ status: "approved", approved_at: new Date().toISOString() } as any)
-      .in("id", ids)
-      .eq("status", "pending");
-    if (error) toast.error(error.message);
-    else { toast.success(`${ids.length} fichajes aprobados`); loadData(); }
+    try {
+      await batchUpdate(ids, { status: "approved", approved_at: new Date().toISOString() });
+      toast.success(`${ids.length} fichajes aprobados`);
+      setSelectedIds(new Set());
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al aprobar");
+    }
   };
 
   const handleBulkReject = async () => {
     if (selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
-    const { error } = await supabase.from("time_entries")
-      .update({ status: "rejected", notes: "[Rechazado] Rechazo masivo" })
-      .in("id", ids)
-      .eq("status", "pending");
-    if (error) toast.error(error.message);
-    else { toast.success(`${ids.length} fichajes rechazados`); loadData(); }
+    try {
+      await batchUpdate(ids, { status: "rejected", notes: "[Rechazado] Rechazo masivo" });
+      toast.success(`${ids.length} fichajes rechazados`);
+      setSelectedIds(new Set());
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al rechazar");
+    }
   };
 
   const toggleSelectAll = () => {
