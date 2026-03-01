@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search, Download, CalendarIcon, X, FileText } from "lucide-react";
+import { ArrowLeft, User, DollarSign, TrendingUp, TrendingDown, Search, Download, CalendarIcon, X, FileText, ChevronDown, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,14 @@ interface Employee {
   is_active: boolean;
 }
 
+interface ConceptDetail {
+  concept_name: string;
+  category: string;
+  total_value: number;
+  quantity: number | null;
+  rate: number | null;
+}
+
 interface PeriodRow {
   period_id: string;
   start_date: string;
@@ -32,6 +40,7 @@ interface PeriodRow {
   extras_total: number;
   deductions_total: number;
   total_final_pay: number;
+  concepts: ConceptDetail[];
 }
 
 export default function EmployeeReport() {
@@ -41,6 +50,8 @@ export default function EmployeeReport() {
   const [search, setSearch] = useState("");
   const [periods, setPeriods] = useState<PeriodRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [expandedPeriods, setExpandedPeriods] = useState<Set<string>>(new Set());
+
   const getCurrentWeek = () => {
     const today = new Date();
     const day = today.getDay();
@@ -56,6 +67,15 @@ export default function EmployeeReport() {
 
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  const togglePeriod = (periodId: string) => {
+    setExpandedPeriods(prev => {
+      const next = new Set(prev);
+      if (next.has(periodId)) next.delete(periodId);
+      else next.add(periodId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -83,7 +103,7 @@ export default function EmployeeReport() {
           .eq("company_id", selectedCompanyId!),
         supabase
           .from("movements")
-          .select("period_id, total_value, concepts(category)")
+          .select("period_id, total_value, quantity, rate, concepts(name, category)")
           .eq("employee_id", selectedEmployee)
           .eq("company_id", selectedCompanyId!),
         supabase
@@ -110,21 +130,65 @@ export default function EmployeeReport() {
           extras_total: 0,
           deductions_total: 0,
           total_final_pay: 0,
+          concepts: [],
         });
+      });
+
+      // Also ensure periods with movements but no base_pay are included
+      (movRes.data ?? []).forEach((m: any) => {
+        if (!map.has(m.period_id)) {
+          const info = periodInfo.get(m.period_id);
+          if (!info) return;
+          map.set(m.period_id, {
+            period_id: m.period_id,
+            start_date: info.start_date,
+            end_date: info.end_date,
+            status: info.status,
+            base_total_pay: 0,
+            extras_total: 0,
+            deductions_total: 0,
+            total_final_pay: 0,
+            concepts: [],
+          });
+        }
       });
 
       (movRes.data ?? []).forEach((m: any) => {
         const row = map.get(m.period_id);
         if (!row) return;
-        if (m.concepts?.category === "extra") {
-          row.extras_total += Number(m.total_value) || 0;
+        const val = Number(m.total_value) || 0;
+        const conceptName = m.concepts?.name ?? "Sin concepto";
+        const category = m.concepts?.category ?? "extra";
+
+        if (category === "extra") {
+          row.extras_total += val;
         } else {
-          row.deductions_total += Number(m.total_value) || 0;
+          row.deductions_total += val;
+        }
+
+        // Aggregate same concept within a period
+        const existing = row.concepts.find(c => c.concept_name === conceptName && c.category === category);
+        if (existing) {
+          existing.total_value += val;
+          if (m.quantity != null && existing.quantity != null) existing.quantity += Number(m.quantity);
+        } else {
+          row.concepts.push({
+            concept_name: conceptName,
+            category,
+            total_value: val,
+            quantity: m.quantity != null ? Number(m.quantity) : null,
+            rate: m.rate != null ? Number(m.rate) : null,
+          });
         }
       });
 
       map.forEach(row => {
         row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total;
+        // Sort concepts: extras first, then deductions
+        row.concepts.sort((a, b) => {
+          if (a.category !== b.category) return a.category === "extra" ? -1 : 1;
+          return a.concept_name.localeCompare(b.concept_name);
+        });
       });
 
       setPeriods(Array.from(map.values()).sort((a, b) => b.start_date.localeCompare(a.start_date)));
@@ -154,13 +218,34 @@ export default function EmployeeReport() {
   const totalDeductions = filteredPeriods.reduce((s, r) => s + r.deductions_total, 0);
   const totalFinal = filteredPeriods.reduce((s, r) => s + r.total_final_pay, 0);
 
+  // Aggregate all concepts across filtered periods for summary
+  const conceptSummary = useMemo(() => {
+    const summary = new Map<string, { name: string; category: string; total: number }>();
+    filteredPeriods.forEach(p => {
+      p.concepts.forEach(c => {
+        const key = `${c.category}:${c.concept_name}`;
+        const existing = summary.get(key);
+        if (existing) {
+          existing.total += c.total_value;
+        } else {
+          summary.set(key, { name: c.concept_name, category: c.category, total: c.total_value });
+        }
+      });
+    });
+    return Array.from(summary.values()).sort((a, b) => {
+      if (a.category !== b.category) return a.category === "extra" ? -1 : 1;
+      return b.total - a.total;
+    });
+  }, [filteredPeriods]);
+
   const exportCSV = () => {
     if (!selectedEmp || filteredPeriods.length === 0) return;
-    const header = "Inicio,Fin,Estado,Base,Extras,Deducciones,Total";
-    const rows = filteredPeriods.map(p =>
-      `${p.start_date},${p.end_date},${p.status},${p.base_total_pay.toFixed(2)},${p.extras_total.toFixed(2)},${p.deductions_total.toFixed(2)},${p.total_final_pay.toFixed(2)}`
-    );
-    const totalsRow = `TOTALES,,,${totalBase.toFixed(2)},${totalExtras.toFixed(2)},${totalDeductions.toFixed(2)},${totalFinal.toFixed(2)}`;
+    const header = "Inicio,Fin,Estado,Base,Extras,Deducciones,Total,Conceptos";
+    const rows = filteredPeriods.map(p => {
+      const conceptsStr = p.concepts.map(c => `${c.concept_name}: $${c.total_value.toFixed(2)}`).join(" | ");
+      return `${p.start_date},${p.end_date},${p.status},${p.base_total_pay.toFixed(2)},${p.extras_total.toFixed(2)},${p.deductions_total.toFixed(2)},${p.total_final_pay.toFixed(2)},"${conceptsStr}"`;
+    });
+    const totalsRow = `TOTALES,,,${totalBase.toFixed(2)},${totalExtras.toFixed(2)},${totalDeductions.toFixed(2)},${totalFinal.toFixed(2)},`;
     const csv = [header, ...rows, totalsRow].join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -179,7 +264,6 @@ export default function EmployeeReport() {
       ? `${format(dateFrom, "dd/MM/yyyy")} – ${format(dateTo, "dd/MM/yyyy")}`
       : "Todos los periodos";
 
-    // Header
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
     doc.text("Resumen por Empleado", 14, 18);
@@ -190,7 +274,6 @@ export default function EmployeeReport() {
     doc.text(`Rango: ${rangeLabel}`, 14, 32);
     doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 38);
 
-    // KPI boxes
     const kpiY = 44;
     const kpiW = 60;
     const kpiH = 18;
@@ -213,28 +296,47 @@ export default function EmployeeReport() {
       doc.text(k.value, x + 4, kpiY + 14);
     });
 
-    // Table
     doc.setTextColor(0);
+    
+    // Main table with concept details
+    const tableBody: any[] = [];
+    filteredPeriods.forEach(p => {
+      tableBody.push([
+        `${p.start_date} → ${p.end_date}`,
+        p.status === "open" ? "Abierto" : "Cerrado",
+        `$${p.base_total_pay.toFixed(2)}`,
+        `+$${p.extras_total.toFixed(2)}`,
+        `-$${p.deductions_total.toFixed(2)}`,
+        `$${p.total_final_pay.toFixed(2)}`,
+      ]);
+      // Add concept detail rows
+      if (p.concepts.length > 0) {
+        p.concepts.forEach(c => {
+          const sign = c.category === "extra" ? "+" : "-";
+          tableBody.push([
+            { content: `    ${c.concept_name}`, styles: { fontSize: 7, textColor: [120, 120, 120] as [number, number, number], fontStyle: "italic" as const } },
+            "",
+            "",
+            c.category === "extra" ? { content: `${sign}$${c.total_value.toFixed(2)}`, styles: { fontSize: 7, textColor: [34, 150, 70] as [number, number, number] } } : "",
+            c.category === "deduction" ? { content: `${sign}$${c.total_value.toFixed(2)}`, styles: { fontSize: 7, textColor: [200, 50, 50] as [number, number, number] } } : "",
+            "",
+          ]);
+        });
+      }
+    });
+    
+    tableBody.push([
+      { content: "TOTALES", colSpan: 2, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+      { content: `$${totalBase.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+      { content: `+$${totalExtras.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+      { content: `-$${totalDeductions.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+      { content: `$${totalFinal.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
+    ]);
+
     autoTable(doc, {
       startY: kpiY + kpiH + 8,
       head: [["Semana", "Estado", "Base", "Extras", "Deducciones", "Total"]],
-      body: [
-        ...filteredPeriods.map(p => [
-          `${p.start_date} → ${p.end_date}`,
-          p.status === "open" ? "Abierto" : "Cerrado",
-          `$${p.base_total_pay.toFixed(2)}`,
-          `+$${p.extras_total.toFixed(2)}`,
-          `-$${p.deductions_total.toFixed(2)}`,
-          `$${p.total_final_pay.toFixed(2)}`,
-        ]),
-        [
-          { content: "TOTALES", colSpan: 2, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
-          { content: `$${totalBase.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
-          { content: `+$${totalExtras.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
-          { content: `-$${totalDeductions.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
-          { content: `$${totalFinal.toFixed(2)}`, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } },
-        ],
-      ],
+      body: tableBody,
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: { fillColor: [51, 51, 51], textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: [248, 248, 248] },
@@ -246,7 +348,6 @@ export default function EmployeeReport() {
       },
     });
 
-    // Footer
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -413,10 +514,29 @@ export default function EmployeeReport() {
             </Card>
           </div>
 
+          {/* Concept summary cards */}
+          {conceptSummary.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm font-medium text-muted-foreground mb-2">Desglose por concepto (acumulado)</p>
+              <div className="flex flex-wrap gap-2">
+                {conceptSummary.map(c => (
+                  <div key={`${c.category}:${c.name}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-card text-sm">
+                    <span className={cn("w-2 h-2 rounded-full", c.category === "extra" ? "bg-earning" : "bg-deduction")} />
+                    <span className="font-medium">{c.name}</span>
+                    <span className={cn("font-mono text-xs", c.category === "extra" ? "text-earning" : "text-deduction")}>
+                      {c.category === "extra" ? "+" : "−"}${c.total.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="data-table-wrapper">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8"></TableHead>
                   <TableHead>Semana</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Base</TableHead>
@@ -427,26 +547,60 @@ export default function EmployeeReport() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPeriods.map(p => (
-                  <TableRow key={p.period_id}>
-                    <TableCell className="font-medium text-sm">{p.start_date} → {p.end_date}</TableCell>
-                    <TableCell>
-                      <span className={p.status === "open" ? "earning-badge" : "deduction-badge"}>
-                        {p.status === "open" ? "Abierto" : "Cerrado"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">${p.base_total_pay.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono text-sm text-earning">+${p.extras_total.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono text-sm text-deduction">−${p.deductions_total.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono text-sm font-bold">${p.total_final_pay.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Link to={`/app/summary/detail?employeeId=${selectedEmployee}&periodId=${p.period_id}`}>
-                        <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredPeriods.map(p => {
+                  const isExpanded = expandedPeriods.has(p.period_id);
+                  const hasConcepts = p.concepts.length > 0;
+                  return (
+                    <>
+                      <TableRow key={p.period_id} className={cn(hasConcepts && "cursor-pointer hover:bg-muted/50")} onClick={() => hasConcepts && togglePeriod(p.period_id)}>
+                        <TableCell className="w-8 px-2">
+                          {hasConcepts && (
+                            isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium text-sm">{p.start_date} → {p.end_date}</TableCell>
+                        <TableCell>
+                          <span className={p.status === "open" ? "earning-badge" : "deduction-badge"}>
+                            {p.status === "open" ? "Abierto" : "Cerrado"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">${p.base_total_pay.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm text-earning">+${p.extras_total.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm text-deduction">−${p.deductions_total.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm font-bold">${p.total_final_pay.toFixed(2)}</TableCell>
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <Link to={`/app/summary/detail?employeeId=${selectedEmployee}&periodId=${p.period_id}`}>
+                            <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && p.concepts.map((c, i) => (
+                        <TableRow key={`${p.period_id}-c-${i}`} className="bg-muted/30">
+                          <TableCell></TableCell>
+                          <TableCell colSpan={3} className="text-sm text-muted-foreground pl-8">
+                            <span className={cn("inline-block w-2 h-2 rounded-full mr-2", c.category === "extra" ? "bg-earning" : "bg-deduction")} />
+                            {c.concept_name}
+                            {c.quantity != null && c.rate != null && (
+                              <span className="text-xs ml-2 text-muted-foreground/70">
+                                ({c.quantity} × ${c.rate.toFixed(2)})
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm text-earning">
+                            {c.category === "extra" ? `+$${c.total_value.toFixed(2)}` : ""}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm text-deduction">
+                            {c.category === "deduction" ? `−$${c.total_value.toFixed(2)}` : ""}
+                          </TableCell>
+                          <TableCell></TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      ))}
+                    </>
+                  );
+                })}
                 <TableRow className="bg-muted/50 font-bold">
+                  <TableCell></TableCell>
                   <TableCell colSpan={2}>Totales</TableCell>
                   <TableCell className="text-right font-mono">${totalBase.toFixed(2)}</TableCell>
                   <TableCell className="text-right font-mono text-earning">+${totalExtras.toFixed(2)}</TableCell>
