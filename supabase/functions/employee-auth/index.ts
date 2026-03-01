@@ -7,9 +7,9 @@ const corsHeaders = {
 };
 
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_MINUTES_TIER1 = 15;  // After 5 failures
-const LOCKOUT_MINUTES_TIER2 = 60;  // After 10 failures
-const MAX_LOCKOUT_ATTEMPTS = 20;   // After 20 failures: permanent lock until admin reset
+const LOCKOUT_MINUTES_TIER1 = 15;
+const LOCKOUT_MINUTES_TIER2 = 60;
+const MAX_LOCKOUT_ATTEMPTS = 20;
 
 interface RateLimit {
   id: string;
@@ -30,12 +30,10 @@ async function checkRateLimit(adminClient: any, phone: string): Promise<{ allowe
 
   const record = data as RateLimit;
 
-  // Check if permanently locked
   if (record.failed_attempts >= MAX_LOCKOUT_ATTEMPTS) {
     return { allowed: false, message: "Cuenta bloqueada permanentemente. Contacta al administrador." };
   }
 
-  // Check if currently locked
   if (record.locked_until) {
     const lockUntil = new Date(record.locked_until);
     const now = new Date();
@@ -53,7 +51,6 @@ async function checkRateLimit(adminClient: any, phone: string): Promise<{ allowe
 }
 
 async function recordFailedAttempt(adminClient: any, phone: string): Promise<{ locked: boolean; message: string }> {
-  // Upsert: increment failed_attempts
   const { data: existing } = await adminClient
     .from("auth_rate_limits")
     .select("id, failed_attempts")
@@ -62,12 +59,10 @@ async function recordFailedAttempt(adminClient: any, phone: string): Promise<{ l
 
   const newAttempts = (existing?.failed_attempts ?? 0) + 1;
 
-  // Determine lockout duration
   let lockedUntil: string | null = null;
   let message = "PIN incorrecto";
 
   if (newAttempts >= MAX_LOCKOUT_ATTEMPTS) {
-    // Permanent lock
     lockedUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
     message = "Cuenta bloqueada permanentemente por demasiados intentos fallidos. Contacta al administrador.";
   } else if (newAttempts >= 10) {
@@ -144,7 +139,158 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const { action, phone, pin, employee_id } = await req.json();
+    const { action, phone, pin, employee_id, email, avatar_url } = await req.json();
+
+    // ACTION: check - Check if employee exists and has a PIN
+    if (action === "check") {
+      if (!phone) {
+        return new Response(
+          JSON.stringify({ error: "Teléfono requerido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+
+      const { data: employee } = await adminClient
+        .from("employees")
+        .select("id, first_name, last_name, access_pin, is_active, avatar_url, email")
+        .eq("phone_number", cleanPhone)
+        .maybeSingle();
+
+      if (!employee) {
+        return new Response(
+          JSON.stringify({ found: false }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          found: true,
+          has_pin: !!employee.access_pin,
+          is_active: employee.is_active,
+          first_name: employee.first_name,
+          last_name: employee.last_name,
+          has_avatar: !!employee.avatar_url,
+          has_email: !!employee.email,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ACTION: activate - Employee self-activates (sets PIN + optional profile data)
+    if (action === "activate") {
+      if (!phone || !pin) {
+        return new Response(
+          JSON.stringify({ error: "Teléfono y PIN son requeridos" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!/^\d{4}$/.test(pin)) {
+        return new Response(
+          JSON.stringify({ error: "El PIN debe ser exactamente 4 dígitos numéricos" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+
+      const { data: employee, error: empError } = await adminClient
+        .from("employees")
+        .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number")
+        .eq("phone_number", cleanPhone)
+        .maybeSingle();
+
+      if (empError || !employee) {
+        return new Response(
+          JSON.stringify({ error: "Empleado no encontrado" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!employee.is_active) {
+        return new Response(
+          JSON.stringify({ error: "Tu cuenta está inactiva. Contacta al administrador." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (employee.access_pin) {
+        return new Response(
+          JSON.stringify({ error: "Tu cuenta ya está activada. Inicia sesión con tu PIN." }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update employee with new PIN and optional profile data
+      const updateData: Record<string, any> = { access_pin: pin };
+      if (email && typeof email === "string" && email.includes("@")) {
+        updateData.email = email.trim().slice(0, 255);
+      }
+      if (avatar_url && typeof avatar_url === "string") {
+        updateData.avatar_url = avatar_url.slice(0, 500);
+      }
+
+      await adminClient.from("employees").update(updateData).eq("id", employee.id);
+
+      // Now auto-login the employee
+      const empEmail = `emp_${cleanPhone}@employee.internal`;
+
+      if (!employee.user_id) {
+        const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
+          email: empEmail,
+          password: pin,
+          email_confirm: true,
+          user_metadata: { full_name: `${employee.first_name} ${employee.last_name}` },
+        });
+
+        if (createError) {
+          const { data: { users } } = await adminClient.auth.admin.listUsers();
+          const existingUser = users?.find((u: any) => u.email === empEmail);
+          if (existingUser) {
+            await adminClient.auth.admin.updateUserById(existingUser.id, { password: pin });
+            await adminClient.from("employees").update({ user_id: existingUser.id }).eq("id", employee.id);
+            employee.user_id = existingUser.id;
+          } else {
+            return new Response(
+              JSON.stringify({ error: "Error al crear cuenta" }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } else if (newUser?.user) {
+          await adminClient.from("employees").update({ user_id: newUser.user.id }).eq("id", employee.id);
+          employee.user_id = newUser.user.id;
+        }
+      } else {
+        await adminClient.auth.admin.updateUserById(employee.user_id, { password: pin });
+      }
+
+      await ensureEmployeeRole(adminClient, employee.user_id);
+
+      const { data: signInData, error: signInError } = await adminClient.auth.signInWithPassword({
+        email: empEmail,
+        password: pin,
+      });
+
+      if (signInError) {
+        return new Response(
+          JSON.stringify({ error: "Cuenta activada pero error al iniciar sesión. Intenta iniciar sesión manualmente." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          activated: true,
+          session: signInData.session,
+          user: signInData.user,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // ACTION: login - Employee login with phone + PIN
     if (action === "login") {
@@ -155,10 +301,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Clean phone number — strip everything except digits and leading +
       const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
 
-      // Check rate limit BEFORE any database lookup
       const rateCheck = await checkRateLimit(adminClient, cleanPhone);
       if (!rateCheck.allowed) {
         return new Response(
@@ -167,7 +311,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Find employee by phone number (use exact match only to prevent injection)
       const { data: employee, error: empError } = await adminClient
         .from("employees")
         .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id")
@@ -175,7 +318,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (empError || !employee) {
-        // Record failed attempt even for unknown phones (prevents enumeration timing)
         await recordFailedAttempt(adminClient, cleanPhone);
         return new Response(
           JSON.stringify({ error: "Credenciales inválidas" }),
@@ -198,10 +340,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // PIN correct — reset rate limit
       await resetRateLimit(adminClient, cleanPhone);
 
-      // If employee doesn't have a Supabase auth user, create one
       const empEmail = `emp_${cleanPhone}@employee.internal`;
       
       if (!employee.user_id) {
@@ -233,10 +373,8 @@ Deno.serve(async (req) => {
         await adminClient.auth.admin.updateUserById(employee.user_id, { password: pin });
       }
 
-      // Ensure role exists for employee portal access
       await ensureEmployeeRole(adminClient, employee.user_id);
 
-      // Sign in the employee
       const { data: signInData, error: signInError } = await adminClient.auth.signInWithPassword({
         email: empEmail,
         password: pin,
@@ -249,7 +387,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Periodic cleanup of expired rate limits
       adminClient.rpc("cleanup_expired_rate_limits").then(() => {});
 
       return new Response(
@@ -282,7 +419,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Verify caller is admin or owner
       const { data: roleData } = await callerClient
         .from("user_roles")
         .select("role")
@@ -300,12 +436,10 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Generate new PIN
       const newPin = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
       
       await adminClient.from("employees").update({ access_pin: newPin }).eq("id", employee_id);
 
-      // Reset rate limit for this employee when admin provisions new PIN
       const { data: emp } = await adminClient
         .from("employees")
         .select("phone_number")
