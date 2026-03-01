@@ -273,7 +273,7 @@ export default function MyShifts() {
       <div
         key={a.id}
         className={cn(
-          "rounded-2xl border bg-card p-4 space-y-3 transition-all duration-200 shadow-sm active:scale-[0.98] cursor-pointer",
+          "rounded-2xl border border-border/40 bg-card p-4 space-y-3 transition-all duration-200 shadow-xs active:scale-[0.98] cursor-pointer",
           isTodayShift && "ring-2 ring-primary/20 border-primary/20 shadow-md"
         )}
         onClick={() => setSelectedShift(a)}

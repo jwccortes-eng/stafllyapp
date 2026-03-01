@@ -259,7 +259,7 @@ export default function EmployeeDashboard() {
         {/* Pay */}
         {estimatedPay !== null && (
           <Link to="/portal/payments" className="block group">
-            <div className="rounded-2xl bg-card border p-4 relative overflow-hidden h-full shadow-sm hover-lift">
+            <div className="rounded-2xl bg-card border border-border/40 p-4 relative overflow-hidden h-full shadow-xs hover-lift">
               <div className="flex items-center gap-1.5 mb-2">
                 <div className="h-7 w-7 rounded-xl bg-primary/10 flex items-center justify-center">
                   <Wallet className="h-3.5 w-3.5 text-primary" />
@@ -278,7 +278,7 @@ export default function EmployeeDashboard() {
         {nextShift ? (
           <Link to="/portal/shifts" className="block group">
             <div className={cn(
-              "rounded-2xl border bg-card p-4 h-full flex flex-col justify-between shadow-sm hover-lift",
+              "rounded-2xl border border-border/40 bg-card p-4 h-full flex flex-col justify-between shadow-xs hover-lift",
               isToday(parseISO(nextShift.date)) && "ring-2 ring-primary/20 border-primary/20"
             )}>
               <div>
@@ -314,7 +314,7 @@ export default function EmployeeDashboard() {
 
       {/* ── Period info ── */}
       {periodInfo && (
-        <div className="rounded-2xl border bg-card px-4 py-3 flex items-center gap-3 shadow-sm">
+        <div className="rounded-2xl border border-border/40 bg-card px-4 py-3 flex items-center gap-3 shadow-xs">
           <div className={cn(
             "h-9 w-9 rounded-xl flex items-center justify-center shrink-0",
             periodInfo.status === "open" ? "bg-earning/10" :
