@@ -430,67 +430,48 @@ export default function TodayView() {
                   <Badge variant="outline" className="text-[10px] h-5 px-1.5">{rows.length}</Badge>
                 </div>
               )}
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-1.5">
                 {rows.map(emp => (
-                  <Card
+                  <div
                     key={emp.id}
-                    className={`relative overflow-hidden rounded-xl border shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.97] ${
+                    className={`relative flex flex-col items-center gap-1 rounded-lg border p-2 cursor-pointer transition-all hover:shadow-md active:scale-[0.97] ${
                       emp.isClockedIn
-                        ? "border-emerald-500/40 ring-2 ring-emerald-500/20"
+                        ? "border-emerald-500/40 ring-1 ring-emerald-500/20 bg-emerald-500/5"
                         : emp.scheduled
-                        ? "border-primary/30"
-                        : "border-border/30"
+                        ? "border-primary/30 bg-primary/[0.02]"
+                        : "border-border/30 bg-muted/20"
                     }`}
                     onClick={() => setSelectedEmpId(emp.id)}
                   >
-                    <div className="aspect-square relative bg-muted/30 overflow-hidden">
+                    <div className="relative">
                       {emp.avatar_url ? (
                         <img
                           src={emp.avatar_url}
                           alt={`${emp.first_name} ${emp.last_name}`}
-                          className="w-full h-full object-cover"
+                          className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/15 to-accent/10">
-                          <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="lg" />
-                        </div>
+                        <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="md" />
                       )}
 
                       {emp.isClockedIn && (
-                        <div className="absolute top-1.5 right-1.5">
-                          <span className="relative flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-                          </span>
-                        </div>
-                      )}
-
-                      {(emp.isClockedIn || emp.totalMinutes > 0) && (
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-1.5 pb-1 pt-3">
-                          <span className={`text-[11px] font-mono font-bold ${emp.isClockedIn ? "text-emerald-300" : "text-white/90"}`}>
-                            {formatDuration(emp.totalMinutes)}
-                          </span>
-                        </div>
+                        <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 ring-1 ring-white" />
+                        </span>
                       )}
                     </div>
 
-                    <CardContent className="p-1.5 space-y-0.5">
-                      <p className="text-[10px] font-semibold truncate leading-tight">
-                        {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.
-                      </p>
-                      {emp.isClockedIn && emp.scheduled ? (
-                        <p className="text-[9px] text-muted-foreground truncate">
-                          {emp.scheduled.client_name || emp.scheduled.title}
-                        </p>
-                      ) : emp.scheduled ? (
-                        <p className="text-[9px] text-muted-foreground truncate">
-                          {emp.scheduled.start_time.slice(0, 5)}–{emp.scheduled.end_time.slice(0, 5)}
-                        </p>
-                      ) : (
-                        <p className="text-[9px] text-muted-foreground/50">Sin turno</p>
-                      )}
-                    </CardContent>
-                  </Card>
+                    <p className="text-[10px] font-semibold truncate w-full text-center leading-tight">
+                      {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.
+                    </p>
+
+                    {(emp.isClockedIn || emp.totalMinutes > 0) && (
+                      <span className={`text-[9px] font-mono font-bold ${emp.isClockedIn ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                        {formatDuration(emp.totalMinutes)}
+                      </span>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
