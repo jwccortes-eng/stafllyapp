@@ -55,6 +55,8 @@ export default {
   			foreground: 'hsl(var(--foreground))',
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
+  				dark: 'hsl(var(--primary-dark))',
+  				glow: 'hsl(var(--primary-glow))',
   				foreground: 'hsl(var(--primary-foreground))'
   			},
   			secondary: {
@@ -102,6 +104,11 @@ export default {
   				DEFAULT: 'hsl(var(--deduction))',
   				foreground: 'hsl(var(--deduction-foreground))',
   				bg: 'hsl(var(--deduction-bg))'
+  			},
+  			surface: {
+  				1: 'hsl(var(--surface-1))',
+  				2: 'hsl(var(--surface-2))',
+  				3: 'hsl(var(--surface-3))'
   			},
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
