@@ -9,13 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeCombobox } from "./EmployeeCombobox";
-import { Clock, MapPin, Users, Trash2, UserPlus, Send, Save, X, Globe, Loader2, HandMetal, CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone, MessageSquare, Bell, Smartphone, Lock, ClipboardCheck, Car } from "lucide-react";
+import {
+  Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
+  CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
+  MessageSquare, Bell, Smartphone, Lock, ClipboardCheck, Car, Pencil, X,
+  CalendarDays, Building2, StickyNote, UsersRound, Sparkles,
+} from "lucide-react";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
+import { formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { useState, useEffect, useCallback } from "react";
@@ -24,7 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { toast } from "sonner";
 import type { Shift, Assignment, Employee, SelectOption } from "./types";
-import { formatShiftCode } from "./types";
+import { formatShiftCode, getClientColor } from "./types";
 import { SendNotificationDialog } from "./SendNotificationDialog";
 import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
 
@@ -68,6 +73,28 @@ interface ShiftRequestItem {
   rejection_reason: string | null;
   created_at: string;
   employee: { first_name: string; last_name: string };
+}
+
+// ── Tab button component ──
+function TabButton({ active, onClick, children, badge }: { active: boolean; onClick: () => void; children: React.ReactNode; badge?: number }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 whitespace-nowrap",
+        active
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+      )}
+    >
+      {children}
+      {badge != null && badge > 0 && (
+        <span className="h-4 min-w-4 px-1 inline-flex items-center justify-center rounded-full text-[9px] font-bold bg-warning text-warning-foreground">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
 }
 
 export function ShiftDetailDialog({
@@ -123,8 +150,6 @@ export function ShiftDetailDialog({
   const handleApproveRequest = async (req: ShiftRequestItem) => {
     if (!shift || !selectedCompanyId) return;
     setProcessingReqId(req.id);
-
-    // Check slot availability
     const shiftAssignments = assignments.filter(a => a.shift_id === shift.id);
     const maxSlots = shift.slots ?? 1;
     const approvedRequests = requests.filter(r => r.status === "approved" && r.id !== req.id).length;
@@ -133,33 +158,19 @@ export function ShiftDetailDialog({
       setProcessingReqId(null);
       return;
     }
-
-    // Create assignment
     const { error: assignErr } = await supabase.from("shift_assignments").insert({
-      company_id: selectedCompanyId,
-      shift_id: shift.id,
-      employee_id: req.employee_id,
-      status: "confirmed",
+      company_id: selectedCompanyId, shift_id: shift.id, employee_id: req.employee_id, status: "confirmed",
     } as any);
     if (assignErr) { toast.error(assignErr.message); setProcessingReqId(null); return; }
-
-    // Update request status
     await supabase.from("shift_requests")
       .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any)
       .eq("id", req.id);
-
-    // Notify employee
     await supabase.from("notifications").insert({
-      company_id: selectedCompanyId,
-      recipient_id: req.employee_id,
-      recipient_type: "employee",
-      type: "shift_request_approved",
-      title: "Solicitud aprobada",
+      company_id: selectedCompanyId, recipient_id: req.employee_id, recipient_type: "employee",
+      type: "shift_request_approved", title: "Solicitud aprobada",
       body: `Tu solicitud para "${shift.title}" fue aprobada. Estás asignado.`,
-      metadata: { shift_id: shift.id },
-      created_by: user?.id,
+      metadata: { shift_id: shift.id }, created_by: user?.id,
     } as any);
-
     toast.success(`${req.employee.first_name} aprobado y asignado`);
     setProcessingReqId(null);
     await loadRequests();
@@ -171,22 +182,15 @@ export function ShiftDetailDialog({
     const req = requests.find(r => r.id === rejectReqId);
     if (!req) return;
     setProcessingReqId(rejectReqId);
-
     await supabase.from("shift_requests")
       .update({ status: "rejected", rejection_reason: rejectReason.trim() || null, reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any)
       .eq("id", rejectReqId);
-
     await supabase.from("notifications").insert({
-      company_id: selectedCompanyId,
-      recipient_id: req.employee_id,
-      recipient_type: "employee",
-      type: "shift_request_rejected",
-      title: "Solicitud rechazada",
+      company_id: selectedCompanyId, recipient_id: req.employee_id, recipient_type: "employee",
+      type: "shift_request_rejected", title: "Solicitud rechazada",
       body: `Tu solicitud para "${shift.title}" fue rechazada.${rejectReason.trim() ? ` Motivo: ${rejectReason.trim()}` : ""}`,
-      metadata: { shift_id: shift.id },
-      created_by: user?.id,
+      metadata: { shift_id: shift.id }, created_by: user?.id,
     } as any);
-
     toast.success("Solicitud rechazada");
     setProcessingReqId(null);
     setRejectReqId(null);
@@ -222,6 +226,10 @@ export function ShiftDetailDialog({
   const location = locations.find(l => l.id === shift.location_id);
   const client = clients.find(c => c.id === shift.client_id);
   const hoursLabel = calcHours(editing ? startTime : shift.start_time.slice(0, 5), editing ? endTime : shift.end_time.slice(0, 5));
+  const clientIds = clients.map(c => c.id);
+  const clientColor = getClientColor(shift.client_id, clientIds);
+  const slotsNum = shift.slots ?? 1;
+  const fillPercent = Math.min(100, (shiftAssignments.length / slotsNum) * 100);
 
   const toggleEmployee = (id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]);
@@ -233,6 +241,36 @@ export function ShiftDetailDialog({
       setSelected([]);
       setShowAddPanel(false);
     }
+  };
+
+  const handleAddAll = () => {
+    // Add all available employees up to remaining slots
+    const remaining = slotsNum - shiftAssignments.length;
+    if (remaining <= 0) {
+      toast.error("No hay plazas disponibles");
+      return;
+    }
+    const toAdd = unassigned.slice(0, remaining).map(e => e.id);
+    if (toAdd.length === 0) {
+      toast.info("No hay empleados disponibles para asignar");
+      return;
+    }
+    onAddEmployees(shift.id, toAdd);
+    setSelected([]);
+    setShowAddPanel(false);
+  };
+
+  const handleConfirmAll = async () => {
+    const pendingAssignments = shiftAssignments.filter(a => a.status === "pending" || a.status === "review");
+    if (pendingAssignments.length === 0) {
+      toast.info("Todos los empleados ya están confirmados");
+      return;
+    }
+    for (const a of pendingAssignments) {
+      await supabase.from("shift_assignments").update({ status: "confirmed" } as any).eq("id", a.id);
+    }
+    toast.success(`${pendingAssignments.length} empleado(s) confirmados`);
+    onRequestAction?.();
   };
 
   const handleInlineSave = async () => {
@@ -255,14 +293,12 @@ export function ShiftDetailDialog({
   const statusColors: Record<string, string> = {
     confirmed: "text-earning", pending: "text-warning", rejected: "text-destructive", review: "text-primary",
   };
-
   const statusIcons: Record<string, React.ReactNode> = {
     confirmed: <ShieldCheck className="h-3.5 w-3.5 text-earning" />,
     pending: <ShieldQuestion className="h-3.5 w-3.5 text-warning" />,
     rejected: <ShieldX className="h-3.5 w-3.5 text-destructive" />,
     review: <ShieldQuestion className="h-3.5 w-3.5 text-primary" />,
   };
-
   const statusLabels: Record<string, string> = {
     confirmed: "Aceptado", pending: "Pendiente", rejected: "Rechazado", review: "En revisión",
   };
@@ -270,10 +306,9 @@ export function ShiftDetailDialog({
   const handleChangeAssignmentStatus = async (assignmentId: string, newStatus: string) => {
     setUpdatingStatus(assignmentId);
     const { error } = await supabase.from("shift_assignments")
-      .update({ status: newStatus } as any)
-      .eq("id", assignmentId);
-    if (error) { toast.error(error.message); }
-    else { toast.success(`Estado actualizado a ${statusLabels[newStatus] || newStatus}`); }
+      .update({ status: newStatus } as any).eq("id", assignmentId);
+    if (error) toast.error(error.message);
+    else toast.success(`Estado actualizado a ${statusLabels[newStatus] || newStatus}`);
     setUpdatingStatus(null);
     onRequestAction?.();
   };
@@ -284,213 +319,251 @@ export function ShiftDetailDialog({
     setRemoveConfirm(null);
   };
 
-  const statusLabel = shift.status === "published" ? "publicado" : shift.status === "draft" ? "borrador" : shift.status;
+  const statusLabel = shift.status === "published" ? "Publicado" : shift.status === "draft" ? "Borrador" : shift.status === "locked" ? "Bloqueado" : shift.status;
+  const pendingRequests = requests.filter(r => r.status === "pending").length;
 
   return (
     <>
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); setEditing(false); } }}>
-      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col">
-        {/* Header */}
-         <div className="px-5 pt-4 pb-3 border-b border-border/40">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              {shift.shift_code && (
-                <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5">
-                  #{formatShiftCode(shift.shift_code)}
-                </span>
-              )}
-              <p className="text-xs text-muted-foreground capitalize">
-                {format(parseISO(shift.date), "EEEE, d 'de' MMMM yyyy", { locale: es })}
-              </p>
+      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden max-h-[88vh] flex flex-col rounded-2xl border-border/30 shadow-xl">
+
+        {/* ── HERO HEADER ── */}
+        <div className={cn("relative px-5 pt-5 pb-4 overflow-hidden")}>
+          {/* Background gradient accent */}
+          <div className={cn("absolute inset-0 opacity-[0.07]", clientColor.bg)} />
+          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-12 translate-x-12 blur-2xl" />
+
+          <div className="relative z-10">
+            {/* Top row: code + date + status */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                {shift.shift_code && (
+                  <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 rounded-lg px-2 py-1">
+                    #{formatShiftCode(shift.shift_code)}
+                  </span>
+                )}
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarDays className="h-3 w-3" />
+                  <span className="capitalize">{format(parseISO(shift.date), "EEE d MMM yyyy", { locale: es })}</span>
+                </div>
+              </div>
+              <Badge
+                variant={shift.status === "published" ? "default" : shift.status === "locked" ? "outline" : "secondary"}
+                className={cn(
+                  "text-[10px] px-2.5 py-0.5 rounded-full font-semibold",
+                  shift.status === "locked" && "border-muted-foreground/30 text-muted-foreground"
+                )}
+              >
+                {shift.status === "locked" && <Lock className="h-2.5 w-2.5 mr-1" />}
+                {statusLabel}
+              </Badge>
             </div>
-            <Badge
-              variant={shift.status === "published" ? "default" : "secondary"}
-              className="text-[10px] px-2 py-0.5 capitalize"
-            >
-              {statusLabel}
-            </Badge>
-          </div>
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="h-8 bg-transparent p-0 gap-4 border-b-0">
-              <TabsTrigger
-                value="details"
-                className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
-              >
-                Detalles
-              </TabsTrigger>
-              <TabsTrigger
-                value="team"
-                className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
-              >
-                Equipo ({shiftAssignments.length}/{shift.slots ?? 1})
-              </TabsTrigger>
-              {requests.length > 0 && (
-                <TabsTrigger
-                  value="requests"
-                  className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
-                >
-                  Solicitudes
-                  {requests.filter(r => r.status === "pending").length > 0 && (
-                    <Badge className="h-4 min-w-4 px-1 text-[9px] bg-warning text-warning-foreground">
-                      {requests.filter(r => r.status === "pending").length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
+
+            {/* Time hero display */}
+            <div className="flex items-baseline gap-3 mb-2">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Clock className="h-4 w-4 text-primary" />
+                </div>
+                <span className="text-2xl font-bold tracking-tight font-[var(--font-heading)]">
+                  {shift.start_time.slice(0, 5)}
+                </span>
+                <span className="text-muted-foreground text-lg">→</span>
+                <span className="text-2xl font-bold tracking-tight font-[var(--font-heading)]">
+                  {shift.end_time.slice(0, 5)}
+                </span>
+              </div>
+              <span className="text-sm font-semibold text-primary bg-primary/10 rounded-lg px-2.5 py-1">
+                {hoursLabel}
+              </span>
+            </div>
+
+            {/* Client & Location chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              {client && (
+                <div className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium", clientColor.bg, clientColor.text)}>
+                  <Building2 className="h-3 w-3" />
+                  {formatDisplayText(client.name, "name")}
+                </div>
               )}
-              <TabsTrigger
-                value="attendance"
-                className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
-              >
-                <ClipboardCheck className="h-3 w-3" /> Asistencia
-              </TabsTrigger>
-              <TabsTrigger
-                value="comments"
-                className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
-              >
-                <MessageSquare className="h-3 w-3" /> Comentarios
-              </TabsTrigger>
-              <TabsTrigger
-                value="rides"
-                className="text-xs px-0 pb-2 rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary gap-1"
-              >
-                <Car className="h-3 w-3" /> Rides
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+              {location && (
+                <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium bg-muted text-muted-foreground">
+                  <MapPin className="h-3 w-3" />
+                  {formatDisplayText(location.name, "name")}
+                </div>
+              )}
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
+                <Globe className="h-3 w-3" />
+                America/New_York
+              </div>
+            </div>
+
+            {/* Team fill bar */}
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-500",
+                    fillPercent >= 100 ? "bg-earning" : fillPercent > 50 ? "bg-primary" : "bg-warning"
+                  )}
+                  style={{ width: `${fillPercent}%` }}
+                />
+              </div>
+              <span className="text-[11px] font-semibold tabular-nums whitespace-nowrap">
+                <Users className="h-3 w-3 inline mr-0.5 -mt-0.5" />
+                {shiftAssignments.length}/{slotsNum}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Body */}
+        {/* ── TAB BAR ── */}
+        <div className="px-4 py-2 border-t border-b border-border/30 bg-muted/20">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+            <TabButton active={tab === "details"} onClick={() => setTab("details")}>
+              <StickyNote className="h-3 w-3" /> Detalles
+            </TabButton>
+            <TabButton active={tab === "team"} onClick={() => setTab("team")}>
+              <UsersRound className="h-3 w-3" /> Equipo
+            </TabButton>
+            {requests.length > 0 && (
+              <TabButton active={tab === "requests"} onClick={() => setTab("requests")} badge={pendingRequests}>
+                <Sparkles className="h-3 w-3" /> Solicitudes
+              </TabButton>
+            )}
+            <TabButton active={tab === "attendance"} onClick={() => setTab("attendance")}>
+              <ClipboardCheck className="h-3 w-3" /> Asistencia
+            </TabButton>
+            <TabButton active={tab === "comments"} onClick={() => setTab("comments")}>
+              <MessageSquare className="h-3 w-3" /> Notas
+            </TabButton>
+            <TabButton active={tab === "rides"} onClick={() => setTab("rides")}>
+              <Car className="h-3 w-3" /> Rides
+            </TabButton>
+          </div>
+        </div>
+
+        {/* ── BODY ── */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
+
+          {/* ─── DETAILS TAB ─── */}
           {tab === "details" ? (
             <div className="space-y-4">
-              {/* Date & Time */}
-              <div className="space-y-3">
-                {editing ? (
-                  <>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Fecha</Label>
-                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-sm" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <Label className="text-xs text-muted-foreground">Entrada</Label>
-                        <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="h-9 text-sm" />
-                      </div>
-                      <div className="flex-1">
-                        <Label className="text-xs text-muted-foreground">Salida</Label>
-                        <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="h-9 text-sm" />
-                      </div>
-                      <div className="pt-5">
-                        <span className="text-sm font-semibold whitespace-nowrap">{hoursLabel}</span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{shift.start_time.slice(0, 5)}</span>
-                      <span className="text-muted-foreground">→</span>
-                      <span>{shift.end_time.slice(0, 5)}</span>
-                    </div>
-                    <span className="text-sm font-semibold text-foreground">{hoursLabel}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 text-xs text-primary">
-                  <Globe className="h-3.5 w-3.5" />
-                  <span>America/New_York</span>
-                </div>
-              </div>
-
-              <hr className="border-border/40" />
-
-              {/* Shift Title */}
-              <div>
-                <Label className="text-xs text-muted-foreground">Nombre del turno</Label>
-                {editing ? (
-                  <Input value={title} onChange={e => setTitle(e.target.value)} className="h-9 text-sm" />
-                ) : (
-                  <p className="text-sm font-medium mt-0.5">{shift.title}</p>
-                )}
-              </div>
-
-              {/* Client (Job) */}
-              <div>
-                <Label className="text-xs text-muted-foreground">Cliente</Label>
-                {editing ? (
-                  <Select value={clientId || "none"} onValueChange={v => setClientId(v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sin asignar</SelectItem>
-                      {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <p className="text-sm mt-0.5">{client?.name || <span className="text-muted-foreground italic">sin asignar</span>}</p>
-                )}
-              </div>
-
-              {/* Location (Address) */}
-              <div>
-                <Label className="text-xs text-muted-foreground">Ubicación</Label>
-                {editing ? (
-                  <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sin asignar</SelectItem>
-                      {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="flex items-center gap-1.5 text-sm mt-0.5">
-                    {location ? (
-                      <><MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />{location.name}</>
-                    ) : (
-                      <span className="text-muted-foreground italic">sin asignar</span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Slots & Claimable */}
-              {editing && (
-                <div className="grid grid-cols-2 gap-3 items-end">
+              {editing ? (
+                /* ── Inline edit mode ── */
+                <div className="space-y-3">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Plazas</Label>
-                    <Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm" />
+                    <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno</Label>
+                    <Input value={title} onChange={e => setTitle(e.target.value)} className="h-9 text-sm mt-1" />
                   </div>
-                  <div className="flex items-center gap-2 h-9">
-                    <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="detail-claimable" />
-                    <Label htmlFor="detail-claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground font-medium">Fecha</Label>
+                    <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-sm mt-1" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Entrada</Label>
+                      <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="h-9 text-sm mt-1" />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Salida</Label>
+                      <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="h-9 text-sm mt-1" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Cliente</Label>
+                      <Select value={clientId || "none"} onValueChange={v => setClientId(v === "none" ? "" : v)}>
+                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {clients.map(c => <SelectItem key={c.id} value={c.id}>{formatDisplayText(c.name, "name")}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Ubicación</Label>
+                      <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
+                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 items-end">
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Plazas</Label>
+                      <Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm mt-1" />
+                    </div>
+                    <div className="flex items-center gap-2 h-9">
+                      <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="detail-claimable" />
+                      <Label htmlFor="detail-claimable" className="text-xs font-normal cursor-pointer">Reclamo</Label>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground font-medium">Notas</Label>
+                    <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" />
                   </div>
                 </div>
-              )}
+              ) : (
+                /* ── View mode ── */
+                <div className="space-y-3">
+                  {/* Info cards */}
+                  <div className="rounded-xl border border-border/30 bg-muted/20 divide-y divide-border/30">
+                    <InfoRow icon={Hash} label="Nombre del turno" value={shift.title} />
+                    <InfoRow icon={Building2} label="Cliente" value={client ? formatDisplayText(client.name, "name") : undefined} empty="Sin asignar" />
+                    <InfoRow icon={MapPin} label="Ubicación" value={location?.name} empty="Sin asignar" />
+                    <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
+                  </div>
 
-              {!editing && shift.claimable && (
-                <div className="flex items-center gap-2 text-xs text-primary">
-                  <Checkbox checked disabled className="h-3.5 w-3.5" />
-                  <span>Los empleados pueden reclamar este turno</span>
+                  {shift.claimable && (
+                    <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 rounded-xl px-3 py-2">
+                      <Megaphone className="h-3.5 w-3.5" />
+                      <span className="font-medium">Los empleados pueden reclamar este turno</span>
+                    </div>
+                  )}
+
+                  {shift.notes && (
+                    <div className="rounded-xl bg-muted/30 border border-border/20 px-3.5 py-2.5">
+                      <p className="text-[10px] font-medium text-muted-foreground mb-1">Notas</p>
+                      <p className="text-xs text-foreground/80">{shift.notes}</p>
+                    </div>
+                  )}
                 </div>
               )}
-
-              {/* Notes */}
-              <div>
-                <Label className="text-xs text-muted-foreground">Notas</Label>
-                {editing ? (
-                  <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-0.5" />
-                ) : shift.notes ? (
-                  <p className="text-xs bg-muted/40 rounded-lg px-3 py-2 mt-0.5 text-muted-foreground">{shift.notes}</p>
-                ) : (
-                  <p className="text-xs text-muted-foreground/60 italic mt-0.5">sin notas</p>
-                )}
-              </div>
             </div>
+
+          /* ─── TEAM TAB ─── */
           ) : tab === "team" ? (
-            /* Team tab */
             <div className="space-y-3">
-              {/* Employee list with status management */}
-              {shiftAssignments.length > 0 && (
+              {/* Quick actions bar */}
+              {effectiveCanEdit && shiftAssignments.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[10px] gap-1 rounded-full border-earning/30 text-earning hover:bg-earning/10"
+                    onClick={handleConfirmAll}
+                  >
+                    <CheckCircle2 className="h-3 w-3" /> Confirmar todos
+                  </Button>
+                  {unassigned.length > 0 && shiftAssignments.length < slotsNum && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-[10px] gap-1 rounded-full border-primary/30 text-primary hover:bg-primary/10"
+                      onClick={handleAddAll}
+                    >
+                      <UsersRound className="h-3 w-3" /> Contratar todo
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Employee list */}
+              {shiftAssignments.length > 0 ? (
                 <div className="space-y-1.5">
                   {shiftAssignments.map(a => {
                     const emp = employees.find(e => e.id === a.employee_id);
@@ -499,7 +572,7 @@ export function ShiftDetailDialog({
                       <div
                         key={a.id}
                         className={cn(
-                          "flex items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors",
+                          "flex items-center gap-2.5 rounded-xl border px-3 py-2 transition-all duration-200 group",
                           a.status === "confirmed" && "border-earning/20 bg-earning/5",
                           a.status === "rejected" && "border-destructive/20 bg-destructive/5",
                           a.status === "review" && "border-primary/20 bg-primary/5",
@@ -517,15 +590,10 @@ export function ShiftDetailDialog({
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold truncate">{emp.first_name} {emp.last_name}</p>
                         </div>
-                        {/* Status dropdown */}
                         {effectiveCanEdit ? (
-                          <Select
-                            value={a.status}
-                            onValueChange={(v) => handleChangeAssignmentStatus(a.id, v)}
-                            disabled={updatingStatus === a.id}
-                          >
+                          <Select value={a.status} onValueChange={(v) => handleChangeAssignmentStatus(a.id, v)} disabled={updatingStatus === a.id}>
                             <SelectTrigger className={cn(
-                              "h-7 w-[120px] text-[10px] font-semibold border-0 gap-1",
+                              "h-7 w-[110px] text-[10px] font-semibold border-0 gap-1 rounded-full",
                               a.status === "confirmed" && "text-earning bg-earning/10",
                               a.status === "rejected" && "text-destructive bg-destructive/10",
                               a.status === "review" && "text-primary bg-primary/10",
@@ -534,26 +602,10 @@ export function ShiftDetailDialog({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="confirmed">
-                                <span className="flex items-center gap-1.5 text-earning font-semibold">
-                                  <ShieldCheck className="h-3 w-3" /> Aceptado
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="rejected">
-                                <span className="flex items-center gap-1.5 text-destructive font-semibold">
-                                  <ShieldX className="h-3 w-3" /> Rechazado
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="review">
-                                <span className="flex items-center gap-1.5 text-primary font-semibold">
-                                  <ShieldQuestion className="h-3 w-3" /> En revisión
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="pending">
-                                <span className="flex items-center gap-1.5 text-warning font-semibold">
-                                  <ShieldQuestion className="h-3 w-3" /> Pendiente
-                                </span>
-                              </SelectItem>
+                              <SelectItem value="confirmed"><span className="flex items-center gap-1.5 text-earning font-semibold"><ShieldCheck className="h-3 w-3" /> Aceptado</span></SelectItem>
+                              <SelectItem value="rejected"><span className="flex items-center gap-1.5 text-destructive font-semibold"><ShieldX className="h-3 w-3" /> Rechazado</span></SelectItem>
+                              <SelectItem value="review"><span className="flex items-center gap-1.5 text-primary font-semibold"><ShieldQuestion className="h-3 w-3" /> En revisión</span></SelectItem>
+                              <SelectItem value="pending"><span className="flex items-center gap-1.5 text-warning font-semibold"><ShieldQuestion className="h-3 w-3" /> Pendiente</span></SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
@@ -564,11 +616,8 @@ export function ShiftDetailDialog({
                         )}
                         {effectiveCanEdit && (
                           <button
-                            onClick={() => setRemoveConfirm({
-                              assignmentId: a.id,
-                              employeeName: `${emp.first_name} ${emp.last_name}`,
-                            })}
-                            className="text-muted-foreground/40 hover:text-destructive transition-colors p-1 rounded-lg hover:bg-destructive/10"
+                            onClick={() => setRemoveConfirm({ assignmentId: a.id, employeeName: `${emp.first_name} ${emp.last_name}` })}
+                            className="text-muted-foreground/30 hover:text-destructive transition-colors p-1 rounded-lg hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -577,42 +626,43 @@ export function ShiftDetailDialog({
                     );
                   })}
                 </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                    <Users className="h-5 w-5 text-muted-foreground/40" />
+                  </div>
+                  <p className="text-xs text-muted-foreground font-medium">Sin empleados asignados</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Agrega empleados desde el botón de abajo</p>
+                </div>
               )}
 
-              {shiftAssignments.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">Sin empleados asignados aún</p>
+              {/* Add button */}
+              {effectiveCanEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddPanel(!showAddPanel)}
+                  className="w-full h-9 text-xs gap-1.5 rounded-xl border-dashed border-primary/30 text-primary hover:bg-primary/5"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Agregar empleados
+                </Button>
               )}
-
-              {/* Capacity indicator */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" />
-                  {shiftAssignments.length} de {shift.slots ?? 1} plaza{(shift.slots ?? 1) > 1 ? "s" : ""}
-                </span>
-                {effectiveCanEdit && (
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddPanel(!showAddPanel)} className="h-7 text-xs px-2 text-primary">
-                    <UserPlus className="h-3 w-3 mr-1" />
-                    Agregar
-                  </Button>
-                )}
-              </div>
 
               {/* Claimable toggle */}
               {effectiveCanEdit && (
-                <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-3 py-2.5">
+                <div className="flex items-center justify-between rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5">
                   <div className="flex items-center gap-2">
                     <Megaphone className="h-3.5 w-3.5 text-primary" />
                     <div>
                       <p className="text-[11px] font-semibold">Permitir reclamo</p>
-                      <p className="text-[9px] text-muted-foreground">Empleados podrán solicitar este turno</p>
+                      <p className="text-[9px] text-muted-foreground">Empleados pueden solicitar este turno</p>
                     </div>
                   </div>
                   <Switch
                     checked={shift.claimable}
                     onCheckedChange={async (checked) => {
-                      if (onSave) {
-                        await onSave(shift.id, { claimable: checked }, shift);
-                      }
+                      if (onSave) await onSave(shift.id, { claimable: checked }, shift);
                     }}
                   />
                 </div>
@@ -620,8 +670,8 @@ export function ShiftDetailDialog({
 
               {/* Add panel */}
               {showAddPanel && (
-                <div className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
-                  <p className="text-[11px] font-medium text-muted-foreground">Seleccionar empleados</p>
+                <div className="border border-primary/20 rounded-xl p-3 space-y-2 bg-primary/[0.02]">
+                  <p className="text-[11px] font-semibold text-primary">Seleccionar empleados</p>
                   <EmployeeCombobox
                     employees={unassigned}
                     selected={selected}
@@ -638,54 +688,43 @@ export function ShiftDetailDialog({
                     availabilityBlockMode="warning"
                   />
                   {selected.length > 0 && (
-                    <Button size="sm" onClick={handleAdd} className="w-full h-8 text-xs">
+                    <Button size="sm" onClick={handleAdd} className="w-full h-8 text-xs rounded-xl">
+                      <UserPlus className="h-3 w-3 mr-1.5" />
                       Asignar {selected.length} empleado{selected.length > 1 ? "s" : ""}
                     </Button>
                   )}
                 </div>
               )}
-
-              {/* Qualified count hint */}
-              {employees.length > 0 && (
-                <p className="text-[11px] text-muted-foreground">
-                  <span className="font-semibold text-foreground">{employees.length} empleados</span> disponibles en el directorio
-                </p>
-              )}
             </div>
+
+          /* ─── REQUESTS TAB ─── */
           ) : tab === "requests" ? (
-            /* Requests tab */
             <div className="space-y-3">
               {loadingRequests ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
+                <div className="flex justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
               ) : requests.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-8">Sin solicitudes</p>
               ) : (
                 <>
-                  {/* Capacity summary */}
-                  <div className="rounded-lg bg-muted/40 p-3 text-center">
-                    <p className="text-lg font-bold tabular-nums">
-                      {shiftAssignments.length} <span className="text-muted-foreground text-sm font-normal">/ {shift.slots ?? 1}</span>
+                  <div className="rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 p-4 text-center">
+                    <p className="text-2xl font-bold tabular-nums font-[var(--font-heading)]">
+                      {shiftAssignments.length} <span className="text-muted-foreground text-sm font-normal">/ {slotsNum}</span>
                     </p>
-                    <p className="text-[10px] text-muted-foreground">plazas ocupadas</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">plazas ocupadas</p>
                   </div>
-
                   {requests.map(req => {
-                    const isFull = shiftAssignments.length >= (shift.slots ?? 1);
+                    const isFull = shiftAssignments.length >= slotsNum;
                     return (
-                      <div key={req.id} className="rounded-lg border bg-card p-3 space-y-2">
+                      <div key={req.id} className="rounded-xl border border-border/30 bg-card p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <EmployeeAvatar firstName={req.employee.first_name} lastName={req.employee.last_name} size="sm" />
                             <div>
                               <p className="text-xs font-semibold">{req.employee.first_name} {req.employee.last_name}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {format(parseISO(req.created_at), "d MMM HH:mm", { locale: es })}
-                              </p>
+                              <p className="text-[10px] text-muted-foreground">{format(parseISO(req.created_at), "d MMM HH:mm", { locale: es })}</p>
                             </div>
                           </div>
-                          <Badge variant="outline" className={cn("text-[10px]",
+                          <Badge variant="outline" className={cn("text-[10px] rounded-full",
                             req.status === "pending" && "bg-warning/10 text-warning border-warning/30",
                             req.status === "approved" && "bg-earning/10 text-earning border-earning/30",
                             req.status === "rejected" && "bg-destructive/10 text-destructive border-destructive/30"
@@ -693,37 +732,18 @@ export function ShiftDetailDialog({
                             {req.status === "pending" ? "Pendiente" : req.status === "approved" ? "Aprobada" : "Rechazada"}
                           </Badge>
                         </div>
-
-                        {req.message && (
-                          <p className="text-[11px] text-muted-foreground bg-muted/30 rounded px-2 py-1">"{req.message}"</p>
-                        )}
-
+                        {req.message && <p className="text-[11px] text-muted-foreground bg-muted/30 rounded-lg px-2.5 py-1.5">"{req.message}"</p>}
                         {req.rejection_reason && req.status === "rejected" && (
-                          <p className="text-[11px] text-destructive flex items-center gap-1">
-                            <XCircle className="h-3 w-3" /> {req.rejection_reason}
-                          </p>
+                          <p className="text-[11px] text-destructive flex items-center gap-1"><XCircle className="h-3 w-3" /> {req.rejection_reason}</p>
                         )}
-
                         {req.status === "pending" && effectiveCanEdit && (
                           <div className="flex items-center gap-2 pt-1">
-                            <Button
-                              size="sm"
-                              className="h-7 text-[11px] gap-1"
-                              onClick={() => handleApproveRequest(req)}
-                              disabled={processingReqId === req.id || isFull}
-                            >
+                            <Button size="sm" className="h-7 text-[11px] gap-1 rounded-full" onClick={() => handleApproveRequest(req)} disabled={processingReqId === req.id || isFull}>
                               {processingReqId === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
                               {isFull ? "Sin plazas" : "Aprobar"}
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-[11px] gap-1 text-destructive hover:text-destructive"
-                              onClick={() => { setRejectReqId(req.id); setRejectReason(""); }}
-                              disabled={processingReqId === req.id}
-                            >
-                              <XCircle className="h-3 w-3" />
-                              Rechazar
+                            <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1 rounded-full text-destructive hover:text-destructive" onClick={() => { setRejectReqId(req.id); setRejectReason(""); }} disabled={processingReqId === req.id}>
+                              <XCircle className="h-3 w-3" /> Rechazar
                             </Button>
                           </div>
                         )}
@@ -733,39 +753,22 @@ export function ShiftDetailDialog({
                 </>
               )}
             </div>
+
           ) : tab === "attendance" ? (
-            <ShiftAttendancePanel
-              shiftId={shift.id}
-              companyId={selectedCompanyId!}
-              assignments={assignments}
-              employees={employees}
-              canManage={effectiveCanEdit}
-            />
+            <ShiftAttendancePanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canManage={effectiveCanEdit} />
           ) : tab === "comments" ? (
             <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
           ) : tab === "rides" ? (
-            <ShiftRidesPanel
-              shiftId={shift.id}
-              companyId={selectedCompanyId!}
-              assignments={assignments}
-              employees={employees}
-              canEdit={effectiveCanEdit}
-            />
+            <ShiftRidesPanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canEdit={effectiveCanEdit} />
           ) : null}
         </div>
 
-        {/* Reject request dialog */}
+        {/* ── Reject request overlay ── */}
         {rejectReqId && (
-          <div className="absolute inset-0 z-50 bg-background/80 flex items-center justify-center p-6">
-            <div className="bg-card border rounded-xl p-4 w-full max-w-sm space-y-3 shadow-lg">
+          <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-6">
+            <div className="bg-card border border-border/30 rounded-2xl p-5 w-full max-w-sm space-y-3 shadow-xl">
               <p className="text-sm font-semibold">Rechazar solicitud</p>
-              <Textarea
-                value={rejectReason}
-                onChange={e => setRejectReason(e.target.value)}
-                placeholder="Motivo del rechazo (opcional)..."
-                rows={3}
-                className="text-sm resize-none"
-              />
+              <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo del rechazo (opcional)..." rows={3} className="text-sm resize-none" />
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" size="sm" onClick={() => { setRejectReqId(null); setRejectReason(""); }}>Cancelar</Button>
                 <Button variant="destructive" size="sm" onClick={handleRejectRequest} disabled={processingReqId === rejectReqId}>
@@ -776,73 +779,53 @@ export function ShiftDetailDialog({
             </div>
           </div>
         )}
+
+        {/* ── FOOTER ACTION BAR ── */}
         {isLocked ? (
-          <div className="px-5 py-3 border-t border-border/40 bg-muted/20 flex items-center justify-center gap-2">
+          <div className="px-5 py-3 border-t border-border/30 bg-muted/30 flex items-center justify-center gap-2">
             <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground font-medium">Este turno está bloqueado — solo lectura</span>
+            <span className="text-xs text-muted-foreground font-medium">Turno bloqueado — solo lectura</span>
           </div>
         ) : canEdit && (
-          <div className="px-5 py-3 border-t border-border/40 bg-muted/20 flex items-center gap-2">
-            {shift.status !== "published" && (
-              <Button size="sm" onClick={() => onPublish(shift)} className="h-8 text-xs gap-1.5">
-                <Send className="h-3 w-3" />
-                Publicar
-              </Button>
-            )}
-              <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)} className="h-8 text-xs gap-1.5">
-                <Bell className="h-3 w-3" />
-                Notificar
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1.5"
-                onClick={async () => {
-                  const empIds = shiftAssignments.map(a => a.employee_id);
-                  if (empIds.length === 0) {
-                    toast.error("No hay empleados asignados a este turno.");
-                    return;
-                  }
-                  const { data } = await supabase
-                    .from("employees")
-                    .select("phone_number")
-                    .in("id", empIds)
-                    .not("phone_number", "is", null);
-                  const phones = (data ?? [])
-                    .map(e => e.phone_number)
-                    .filter((p): p is string => !!p && p.trim().length > 0);
-                  if (phones.length === 0) {
-                    toast.error("Ningún empleado asignado tiene número de teléfono registrado.");
-                    return;
-                  }
-                  const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
-                  const recipients = phones.join(",");
-                  window.open(`sms:${recipients}${separator}body=`, "_blank");
-                }}
-              >
-                <Smartphone className="h-3 w-3" />
-                SMS
-              </Button>
-              {!editing ? (
-              <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="h-8 text-xs gap-1.5">
-                <Save className="h-3 w-3" />
-                Editar turno
-              </Button>
+          <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
+            {!editing ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                {shift.status !== "published" && (
+                  <Button size="sm" onClick={() => onPublish(shift)} className="h-8 text-xs gap-1.5 rounded-full">
+                    <Send className="h-3 w-3" /> Publicar
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)} className="h-8 text-xs gap-1.5 rounded-full">
+                  <Bell className="h-3 w-3" /> Notificar
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-full"
+                  onClick={async () => {
+                    const empIds = shiftAssignments.map(a => a.employee_id);
+                    if (empIds.length === 0) { toast.error("No hay empleados asignados."); return; }
+                    const { data } = await supabase.from("employees").select("phone_number").in("id", empIds).not("phone_number", "is", null);
+                    const phones = (data ?? []).map(e => e.phone_number).filter((p): p is string => !!p && p.trim().length > 0);
+                    if (phones.length === 0) { toast.error("Ningún empleado tiene teléfono registrado."); return; }
+                    const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
+                    window.open(`sms:${phones.join(",")}${separator}body=`, "_blank");
+                  }}
+                >
+                  <Smartphone className="h-3 w-3" /> SMS
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="h-8 text-xs gap-1.5 rounded-full ml-auto">
+                  <Pencil className="h-3 w-3" /> Editar
+                </Button>
+              </div>
             ) : (
-              <>
-                <Button size="sm" onClick={handleInlineSave} disabled={saving || !date} className="h-8 text-xs gap-1.5">
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleInlineSave} disabled={saving || !date} className="h-8 text-xs gap-1.5 rounded-full flex-1">
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                   Guardar cambios
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs">
-                  Cancelar
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs rounded-full">
+                  <X className="h-3 w-3 mr-1" /> Cancelar
                 </Button>
-              </>
-            )}
-            {shift.status === "published" && !editing && (
-              <Badge variant="secondary" className="ml-auto text-[10px]">
-                ✓ Publicado
-              </Badge>
+              </div>
             )}
           </div>
         )}
@@ -851,31 +834,44 @@ export function ShiftDetailDialog({
 
     {/* Remove assignment confirmation */}
     <AlertDialog open={!!removeConfirm} onOpenChange={(o) => { if (!o) setRemoveConfirm(null); }}>
-      <AlertDialogContent>
+      <AlertDialogContent className="rounded-2xl">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-base">
             <Trash2 className="h-4 w-4 text-destructive" /> Confirmar eliminación
           </AlertDialogTitle>
           <AlertDialogDescription>
-            ¿Estás seguro de remover a <strong>{removeConfirm?.employeeName}</strong> de este turno? Esta acción no se puede deshacer.
+            ¿Remover a <strong>{removeConfirm?.employeeName}</strong> de este turno?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmRemove} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+          <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmRemove} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full">
             Sí, remover
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
 
-    <SendNotificationDialog
-      open={notifyOpen}
-      onOpenChange={setNotifyOpen}
-      shift={shift}
-      assignments={assignments}
-      employees={employees}
-    />
+    <SendNotificationDialog open={notifyOpen} onOpenChange={setNotifyOpen} shift={shift} assignments={assignments} employees={employees} />
     </>
+  );
+}
+
+// ── Helper component for info rows ──
+function InfoRow({ icon: Icon, label, value, empty }: { icon: any; label: string; value?: string; empty?: string }) {
+  return (
+    <div className="flex items-center gap-3 px-3.5 py-2.5">
+      <div className="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] text-muted-foreground font-medium">{label}</p>
+        {value ? (
+          <p className="text-xs font-medium text-foreground truncate">{value}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground/50 italic">{empty || "—"}</p>
+        )}
+      </div>
+    </div>
   );
 }
