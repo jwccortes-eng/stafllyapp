@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Search, CalendarDays, Clock, DollarSign, Users, BarChart3, Building2, MessageCircle, Shield, Smartphone, HelpCircle, ChevronDown } from "lucide-react";
+import { ArrowLeft, Search, CalendarDays, Clock, DollarSign, Users, BarChart3, Building2, MessageCircle, Shield, Smartphone, HelpCircle, ChevronDown, FileDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { cn } from "@/lib/utils";
+import { downloadChatGPTPromptPDF } from "@/lib/export-chatgpt-prompt-pdf";
 
 interface FaqItem { q: string; a: string }
 
@@ -193,11 +195,16 @@ export default function HelpCenter() {
           </div>
         )}
 
-        <div className="rounded-2xl border bg-muted/20 p-6 text-center space-y-2">
+        <div className="rounded-2xl border bg-muted/20 p-6 text-center space-y-3">
           <HelpCircle className="h-7 w-7 text-muted-foreground/30 mx-auto" />
           <p className="text-sm text-muted-foreground">¿No encontraste lo que buscas?</p>
           <p className="text-xs text-muted-foreground/70">Escríbenos a <span className="text-primary font-medium">soporte@staflyapps.com</span></p>
+          <Button variant="outline" size="sm" onClick={downloadChatGPTPromptPDF} className="mt-2">
+            <FileDown className="h-4 w-4 mr-1.5" />
+            Descargar Mega-Prompt (PDF)
+          </Button>
         </div>
+
       </main>
     </div>
   );
