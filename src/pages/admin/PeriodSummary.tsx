@@ -90,7 +90,7 @@ export default function PeriodSummary() {
       setSelectedPeriod(matching[0].id);
       setSearchParams({ periodId: matching[0].id });
     }
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, periods]);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
