@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, DollarSign, Info, ArrowLeft } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, DollarSign, Info, ArrowLeft, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
@@ -15,6 +15,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -324,6 +326,61 @@ export default function ImportPayrollExtras() {
   const unmatchedCount = employeeExtras.filter(e => !e.employeeId).length;
   const grandTotal = employeeExtras.reduce((s, e) => s + e.total, 0);
 
+  const downloadPdf = () => {
+    const doc = new jsPDF({ orientation: "landscape" });
+    const period = periods.find(p => p.id === selectedPeriod);
+    const periodLabel = period ? `${period.start_date} → ${period.end_date}` : "";
+
+    doc.setFontSize(16);
+    doc.text("Reporte de Pagos Adicionales", 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Periodo: ${periodLabel}`, 14, 26);
+    doc.text(`Archivo: ${file?.name ?? "—"}`, 14, 32);
+    doc.text(`Fecha: ${new Date().toLocaleDateString("es-US")}`, 14, 38);
+
+    // Summary KPIs
+    doc.setFontSize(11);
+    doc.text(`Empleados: ${employeeExtras.length}  ·  Vinculados: ${matchedCount}  ·  Sin vincular: ${unmatchedCount}  ·  Total: $${grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, 14, 46);
+
+    const head = [["Empleado", ...detectedColumns, "Total", "Notas", "Estado"]];
+    const body = employeeExtras.map(emp => {
+      const cols = detectedColumns.map(col => {
+        const extra = emp.extras.find(e => e.column === col);
+        return extra ? `$${extra.value.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—";
+      });
+      return [
+        `${emp.firstName} ${emp.lastName}`,
+        ...cols,
+        `$${emp.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+        emp.notes || "—",
+        emp.employeeId ? "Vinculado" : "No encontrado",
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 52,
+      head,
+      body,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [59, 130, 246] },
+      columnStyles: {
+        0: { cellWidth: 40 },
+      },
+      didParseCell(data) {
+        if (data.section === "body" && data.column.index === head[0].length - 1) {
+          const val = String(data.cell.raw);
+          if (val === "No encontrado") {
+            data.cell.styles.textColor = [220, 38, 38];
+          } else {
+            data.cell.styles.textColor = [22, 163, 74];
+          }
+        }
+      },
+    });
+
+    doc.save(`pagos-adicionales-${period?.start_date ?? "reporte"}.pdf`);
+  };
+
   const reset = () => {
     setFile(null);
     setWorkbook(null);
@@ -534,6 +591,10 @@ export default function ImportPayrollExtras() {
           </Card>
 
           <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={downloadPdf} className="gap-2">
+              <Download className="h-4 w-4" />
+              Descargar PDF
+            </Button>
             <Button variant="outline" onClick={reset}>Cancelar</Button>
             <Button
               onClick={handleImport}
