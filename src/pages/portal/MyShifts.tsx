@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown, LogIn, ChevronRight } from "lucide-react";
+import { CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle, HandMetal, Users, Loader2, ThumbsUp, ThumbsDown, LogIn, ChevronRight, ChevronDown, FileText } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StaflyMascot } from "@/components/brand/StaflyMascot";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,84 @@ interface ClaimableShift {
   location?: { name: string } | null;
   client?: { name: string } | null;
   assignedCount: number;
+}
+
+/* ── Compact past shift card ── */
+function PastShiftCard({ assignment: a, statusConfig, onClick }: { assignment: ShiftAssignment; statusConfig: Record<string, any>; onClick: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const cfg = statusConfig[a.status] || statusConfig.pending;
+  const StatusIcon = cfg.icon;
+  const dateLabel = format(parseISO(a.shift.date), "d MMM", { locale: es });
+  const hasDetails = !!(a.shift.notes || a.shift.meeting_point || a.shift.special_instructions);
+
+  return (
+    <div className="rounded-xl border border-border/30 bg-card/60 transition-all duration-200">
+      {/* Compact row */}
+      <div
+        className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer active:scale-[0.99]"
+        onClick={onClick}
+      >
+        {/* Date pill */}
+        <div className="text-center shrink-0 w-10">
+          <p className="text-[10px] font-bold uppercase text-muted-foreground/60 leading-none">{format(parseISO(a.shift.date), "MMM", { locale: es })}</p>
+          <p className="text-base font-bold text-foreground/70 leading-tight">{format(parseISO(a.shift.date), "d")}</p>
+        </div>
+
+        <div className="h-8 w-px bg-border/40 shrink-0" />
+
+        {/* Info */}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-foreground/80 truncate">{a.shift.title}</p>
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70 mt-0.5">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {a.shift.start_time?.slice(0, 5)}–{a.shift.end_time?.slice(0, 5)}
+            </span>
+            {a.shift.client && (
+              <span className="truncate">{a.shift.client.name}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Status dot */}
+        <div className={cn("h-2 w-2 rounded-full shrink-0", cfg.cls === "text-earning" ? "bg-earning" : cfg.cls === "text-warning" ? "bg-warning" : "bg-deduction")} />
+
+        {/* Expand toggle */}
+        {hasDetails && (
+          <button
+            className="p-1 rounded-lg hover:bg-muted/60 text-muted-foreground/40 transition-colors"
+            onClick={e => { e.stopPropagation(); setExpanded(!expanded); }}
+          >
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", expanded && "rotate-180")} />
+          </button>
+        )}
+      </div>
+
+      {/* Expandable details */}
+      {expanded && hasDetails && (
+        <div className="px-3.5 pb-3 pt-0 space-y-1.5 animate-fade-in border-t border-border/20 mx-3">
+          {a.shift.notes && (
+            <div className="flex items-start gap-2 pt-2">
+              <FileText className="h-3 w-3 text-muted-foreground/50 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-muted-foreground/70 leading-relaxed">{a.shift.notes}</p>
+            </div>
+          )}
+          {a.shift.meeting_point && (
+            <div className="flex items-start gap-2">
+              <MapPin className="h-3 w-3 text-muted-foreground/50 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-muted-foreground/70">{a.shift.meeting_point}</p>
+            </div>
+          )}
+          {a.shift.special_instructions && (
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-3 w-3 text-warning/60 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-muted-foreground/70">{a.shift.special_instructions}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function MyShifts() {
@@ -457,8 +535,12 @@ export default function MyShifts() {
       {/* Past */}
       {past.length > 0 && (
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Pasados</h2>
-          <div className="space-y-2 opacity-70">{past.map(renderShift)}</div>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Pasados ({past.length})
+          </h2>
+          <div className="space-y-1.5">
+            {past.map(a => <PastShiftCard key={a.id} assignment={a} statusConfig={statusConfig} onClick={() => setSelectedShift(a)} />)}
+          </div>
         </div>
       )}
 
