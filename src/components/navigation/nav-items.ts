@@ -33,7 +33,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "w9", to: "/app/w9", icon: FileText, label: "W-9", module: "employees", section: "Fiscal" },
   { id: "1099", to: "/app/1099", icon: FileText, label: "1099-NEC", module: "employees", section: "Fiscal" },
   { id: "employees", to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Gestión" },
-  { id: "directory", to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Gestión" },
+  { id: "directory", to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Operaciones" },
   { id: "concepts", to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Gestión" },
   { id: "announcements", to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Gestión" },
   { id: "chat", to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
