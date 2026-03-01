@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck } from "lucide-react";
+import { Phone, Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck, Building2 } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { StaflyMascot } from "@/components/brand/StaflyMascot";
 
@@ -22,21 +22,60 @@ export default function Auth() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [settingUp, setSettingUp] = useState(false);
   const { toast } = useToast();
 
   const isPhone = isPhoneNumber(identifier);
 
+  // Auto-setup: when user logs in with no company, provision one
   useEffect(() => {
-    if (authLoading || !user) return;
-    if (role === "employee") {
-      navigate("/portal");
-    } else if (role === "admin" || role === "owner" || role === "manager") {
-      navigate("/app");
-    }
-  }, [user, role, authLoading, navigate]);
+    if (authLoading || !user || settingUp) return;
+
+    const autoSetup = async () => {
+      // If role is null or employee (default from trigger), and we have company_name in metadata
+      if (role === null || role === undefined) {
+        const metaCompanyName = user.user_metadata?.company_name;
+        if (metaCompanyName) {
+          setSettingUp(true);
+          try {
+            const { data, error } = await supabase.functions.invoke("setup-company", {
+              body: { company_name: metaCompanyName },
+            });
+            if (error) throw error;
+            if (data?.already_setup) {
+              // Already has a company, just reload
+              window.location.reload();
+              return;
+            }
+            if (data?.success) {
+              toast({ title: "¡Empresa creada!", description: `${metaCompanyName} está lista.` });
+              // Reload to pick up new role/company
+              window.location.reload();
+              return;
+            }
+          } catch (err: any) {
+            console.error("Auto-setup error:", err);
+            // Don't block login if setup fails
+          } finally {
+            setSettingUp(false);
+          }
+        }
+      }
+
+      // Normal redirect
+      if (role === "employee") {
+        navigate("/portal");
+      } else if (role === "admin" || role === "owner" || role === "manager") {
+        navigate("/app");
+      }
+    };
+
+    autoSetup();
+  }, [user, role, authLoading, navigate, settingUp]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,11 +105,16 @@ export default function Auth() {
         toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
       }
     } else {
+      if (!companyName.trim()) {
+        toast({ title: "Error", description: "Ingresa el nombre de tu empresa", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
       const { error } = await supabase.auth.signUp({
         email: identifier,
         password,
         options: {
-          data: { full_name: fullName },
+          data: { full_name: fullName, company_name: companyName.trim() },
           emailRedirectTo: window.location.origin,
         },
       });
@@ -128,8 +172,17 @@ export default function Auth() {
             <StaflyLogo size={48} />
           </div>
 
+          {/* Setting up overlay */}
+          {settingUp && (
+            <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-12 text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <h2 className="text-lg font-semibold font-heading text-foreground">Configurando tu empresa...</h2>
+              <p className="text-sm text-muted-foreground">Estamos preparando todo para que puedas comenzar.</p>
+            </div>
+          )}
+
           {/* Card */}
-          <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+          {!settingUp && <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
             <div className="text-center space-y-1">
               <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
                 {isLogin
@@ -172,6 +225,26 @@ export default function Auth() {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Tu nombre completo"
+                      className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors"
+                      required={!isLogin}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Company name (signup only) */}
+              {!isLogin && !isPhone && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="companyName" className="text-xs font-semibold text-foreground/80">
+                    Nombre de tu empresa
+                  </Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                    <Input
+                      id="companyName"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Mi Empresa LLC"
                       className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors"
                       required={!isLogin}
                     />
@@ -259,7 +332,7 @@ export default function Auth() {
                 </button>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Footer */}
           <div className="flex items-center justify-center gap-1.5 mt-8 text-muted-foreground/40">
