@@ -1,6 +1,7 @@
 import { isSameDay, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { formatDisplayText } from "@/lib/format-helpers";
 import { Clock, Users, Timer, CalendarDays, Ban } from "lucide-react";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { getClientColor } from "./types";
@@ -186,7 +187,7 @@ export function WeekByEmployeeView({
                         </div>
                         {clientName && (
                           <div className={cn("truncate mt-0.5 font-medium text-[9px]", color.text)}>
-                            {clientName}
+                            {formatDisplayText(clientName, "name")}
                           </div>
                         )}
                       </div>

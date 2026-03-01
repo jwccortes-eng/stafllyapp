@@ -1,4 +1,5 @@
 import { Building2 } from "lucide-react";
+import { formatDisplayText } from "@/lib/format-helpers";
 import { ShiftCard } from "./ShiftCard";
 import { getClientColor } from "./types";
 import type { Shift, Assignment, SelectOption } from "./types";
@@ -62,7 +63,7 @@ export function ClientView({ clients, shifts, assignments, locations, onShiftCli
                 <Building2 className={`h-4 w-4 ${color.text}`} />
               </div>
               <div>
-                <p className="text-sm font-semibold">{client.name}</p>
+                <p className="text-sm font-semibold">{formatDisplayText(client.name, "name")}</p>
                 <p className="text-[10px] text-muted-foreground/50">{cShifts.length} turno{cShifts.length !== 1 ? "s" : ""}</p>
               </div>
             </div>

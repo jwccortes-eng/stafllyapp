@@ -1,6 +1,7 @@
 import { isSameDay, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { formatDisplayText } from "@/lib/format-helpers";
 import { Clock, Users, ChevronDown, ChevronUp, Timer, CalendarDays } from "lucide-react";
 import { useState } from "react";
 import { getClientColor } from "./types";
@@ -162,7 +163,7 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
               <div className="flex items-center gap-2.5 p-2.5">
                 <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", color.dot)} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold truncate">{client.name}</p>
+                  <p className="text-xs font-semibold truncate">{formatDisplayText(client.name, "name")}</p>
                   <div className="flex items-center gap-3 text-[9px] text-muted-foreground/60 mt-0.5">
                     <span className="flex items-center gap-0.5"><Timer className="h-2.5 w-2.5" /> {stats.hours}</span>
                     <span className="flex items-center gap-0.5"><CalendarDays className="h-2.5 w-2.5" /> {stats.shifts}</span>
