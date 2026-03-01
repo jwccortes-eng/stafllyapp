@@ -166,6 +166,9 @@ export default function Shifts() {
     if (filters.clientId) {
       result = result.filter(s => s.client_id === filters.clientId);
     }
+    if (filters.locationId) {
+      result = result.filter(s => s.location_id === filters.locationId);
+    }
     if (filters.assignedStatus === "assigned") {
       result = result.filter(s => assignments.some(a => a.shift_id === s.id));
     } else if (filters.assignedStatus === "unassigned") {
@@ -177,6 +180,9 @@ export default function Shifts() {
       result = result.filter(s => s.status !== "published" && s.status !== "locked");
     } else if (filters.publishStatus === "locked") {
       result = result.filter(s => s.status === "locked");
+    }
+    if (filters.claimableOnly) {
+      result = result.filter(s => s.claimable);
     }
     return result;
   }, [shifts, assignments, filters]);
@@ -996,7 +1002,7 @@ export default function Shifts() {
       />
 
       {/* Filters */}
-      <ShiftFilters filters={filters} onChange={setFilters} clients={clients} />
+      <ShiftFilters filters={filters} onChange={setFilters} clients={clients} locations={locations} />
 
       {/* Navigation */}
       <div className="flex items-center justify-between gap-3 rounded-xl bg-white/60 dark:bg-card/40 border border-border/15 shadow-sm px-3 py-2">

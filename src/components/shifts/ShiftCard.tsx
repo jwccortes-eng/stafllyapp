@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, GripVertical, MapPin, AlertTriangle } from "lucide-react";
+import { Clock, Users, GripVertical, MapPin, AlertTriangle, Hand, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO } from "date-fns";
@@ -49,11 +49,16 @@ function getStatusBadges(shift: Shift, assignmentCount: number): StatusBadge[] {
   return badges;
 }
 
+function isOvernight(startTime: string, endTime: string): boolean {
+  return endTime.slice(0, 5) <= startTime.slice(0, 5) && endTime.slice(0, 5) !== "00:00";
+}
+
 export function ShiftCard({
   shift, assignmentCount, locationName, clientName, clientIds = [], onClick, compact, draggable, onDragStart, showDate, coverageStatus,
 }: ShiftCardProps) {
   const color = getClientColor(shift.client_id, clientIds);
   const badges = getStatusBadges(shift, assignmentCount);
+  const overnight = isOvernight(shift.start_time, shift.end_time);
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("application/shift-action", e.altKey ? "duplicate" : "move");
@@ -93,6 +98,9 @@ export function ShiftCard({
               <p className={cn("font-semibold truncate leading-tight", compact ? "text-[11px]" : "text-xs")}>
                 {shift.title}
               </p>
+              {shift.claimable && (
+                <Hand className="h-3 w-3 text-violet-400 shrink-0" />
+              )}
             </div>
 
             {/* Time + client inline */}
@@ -100,6 +108,7 @@ export function ShiftCard({
               <span className="flex items-center gap-1 shrink-0">
                 <Clock className="h-3 w-3" />
                 {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
+                {overnight && <Moon className="h-2.5 w-2.5 text-indigo-400" />}
               </span>
               {clientName && (
                 <span className={cn("truncate font-medium", color.text)}>

@@ -2,32 +2,41 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, SlidersHorizontal, X, UserX, EyeOff, Lock } from "lucide-react";
+import { Search, SlidersHorizontal, X, UserX, EyeOff, Lock, MapPin, Hand } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SelectOption } from "./types";
 
 export interface ShiftFilterState {
   search: string;
-  clientId: string;       // "" = all
-  assignedStatus: string; // "" | "assigned" | "unassigned"
-  publishStatus: string;  // "" | "published" | "draft" | "locked"
+  clientId: string;
+  locationId: string;
+  assignedStatus: string;
+  publishStatus: string;
+  claimableOnly: boolean;
 }
 
 interface ShiftFiltersProps {
   filters: ShiftFilterState;
   onChange: (filters: ShiftFilterState) => void;
   clients: SelectOption[];
+  locations?: SelectOption[];
 }
 
 export const EMPTY_FILTERS: ShiftFilterState = {
   search: "",
   clientId: "",
+  locationId: "",
   assignedStatus: "",
   publishStatus: "",
+  claimableOnly: false,
 };
 
-export function ShiftFilters({ filters, onChange, clients }: ShiftFiltersProps) {
-  const activeCount = [filters.search, filters.clientId, filters.assignedStatus, filters.publishStatus].filter(Boolean).length;
+export function ShiftFilters({ filters, onChange, clients, locations = [] }: ShiftFiltersProps) {
+  const activeCount = [
+    filters.search, filters.clientId, filters.locationId,
+    filters.assignedStatus, filters.publishStatus,
+    filters.claimableOnly ? "1" : "",
+  ].filter(Boolean).length;
 
   const update = (partial: Partial<ShiftFilterState>) => onChange({ ...filters, ...partial });
 
@@ -104,7 +113,23 @@ export function ShiftFilters({ filters, onChange, clients }: ShiftFiltersProps) 
         Bloqueado
       </Button>
 
-      {/* Client/Job select */}
+      {/* Quick toggle: Claimable */}
+      <Button
+        variant={filters.claimableOnly ? "default" : "outline"}
+        size="sm"
+        className={cn(
+          "h-8 text-xs px-3 gap-1.5 rounded-full border-border/30",
+          filters.claimableOnly
+            ? "bg-violet-100 text-violet-600 hover:bg-violet-200 border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800"
+            : "bg-white/60 dark:bg-card/60"
+        )}
+        onClick={() => update({ claimableOnly: !filters.claimableOnly })}
+      >
+        <Hand className="h-3 w-3" />
+        Reclamable
+      </Button>
+
+      {/* Client select */}
       <Select value={filters.clientId || "all"} onValueChange={v => update({ clientId: v === "all" ? "" : v })}>
         <SelectTrigger className="h-8 text-xs w-[150px] rounded-full bg-white/60 dark:bg-card/60 border-border/30">
           <SelectValue placeholder="Todos los clientes" />
@@ -114,6 +139,20 @@ export function ShiftFilters({ filters, onChange, clients }: ShiftFiltersProps) 
           {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
         </SelectContent>
       </Select>
+
+      {/* Location select */}
+      {locations.length > 0 && (
+        <Select value={filters.locationId || "all"} onValueChange={v => update({ locationId: v === "all" ? "" : v })}>
+          <SelectTrigger className="h-8 text-xs w-[150px] rounded-full bg-white/60 dark:bg-card/60 border-border/30">
+            <MapPin className="h-3 w-3 mr-1 shrink-0" />
+            <SelectValue placeholder="Todas las ubicaciones" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las ubicaciones</SelectItem>
+            {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* Reset */}
       {activeCount > 0 && (
