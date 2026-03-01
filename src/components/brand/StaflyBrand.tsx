@@ -1,52 +1,25 @@
 /**
- * Stafly Brand System — Pure SVG, no PNGs.
+ * StaflyApps Brand System — Uses generated brand assets.
  * Single source of truth for logo mark + wordmark across the entire app.
  */
+import staflyIcon from "@/assets/stafly-app-icon-new.png";
+import staflySidebarLogo from "@/assets/stafly-sidebar-logo.png";
 
 interface MarkProps {
   className?: string;
   size?: number;
 }
 
-/** Isotipo — Bird wing mark inside a rounded square */
+/** Isotipo — App icon mark */
 export function StaflyMark({ className = "", size = 32 }: MarkProps) {
   return (
-    <svg
+    <img
+      src={staflyIcon}
+      alt="StaflyApps"
       width={size}
       height={size}
-      viewBox="0 0 48 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-label="Stafly"
-    >
-      {/* Rounded square background */}
-      <rect width="48" height="48" rx="12" fill="currentColor" className="text-primary" />
-      {/* Stylised bird / wing — two arcs forming an abstract "S" wing */}
-      <path
-        d="M14 32C14 32 18 20 24 16C30 12 36 14 36 14"
-        stroke="white"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 28C12 28 20 24 26 22C32 20 38 22 38 22"
-        stroke="white"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.7"
-      />
-      <path
-        d="M16 34C16 34 22 30 28 28C34 26 38 28 38 28"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.45"
-      />
-    </svg>
+      className={`rounded-lg shrink-0 ${className}`}
+    />
   );
 }
 
@@ -57,10 +30,26 @@ interface LogoProps {
   markOnly?: boolean;
   /** Muted style for footer / watermark usage */
   muted?: boolean;
+  /** Use dark/sidebar variant */
+  variant?: "default" | "sidebar";
 }
 
-/** Full logo — Mark + "stafly" wordmark */
-export function StaflyLogo({ className = "", size = 32, markOnly = false, muted = false }: LogoProps) {
+/** Full logo — Mark + "StaflyApps" wordmark */
+export function StaflyLogo({ className = "", size = 32, markOnly = false, muted = false, variant = "default" }: LogoProps) {
+  if (variant === "sidebar") {
+    return (
+      <div className={`flex items-center ${className}`} style={muted ? { opacity: 0.4 } : undefined}>
+        <img
+          src={staflySidebarLogo}
+          alt="StaflyApps"
+          height={size}
+          style={{ height: size, width: "auto" }}
+          className="shrink-0"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={`flex items-center gap-2 ${className}`} style={muted ? { opacity: 0.4 } : undefined}>
       <StaflyMark size={size} />
