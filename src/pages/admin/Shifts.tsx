@@ -320,11 +320,11 @@ export default function Shifts() {
   };
 
   const handleCreate = async () => {
-    if (!title.trim() || !date || !selectedCompanyId) return;
+    if (!date || !selectedCompanyId) return;
     setSaving(true);
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert({
       company_id: selectedCompanyId,
-      title: title.trim(),
+      title: title.trim() || "Turno",
       date, start_time: startTime, end_time: endTime,
       slots: parseInt(slots) || 1,
       client_id: clientId || null,
@@ -342,8 +342,9 @@ export default function Shifts() {
     // Update title to include the auto-generated shift code
     if (shift?.shift_code) {
       const code = String(shift.shift_code).padStart(4, "0");
+      const finalTitle = title.trim() ? `#${code} ${title.trim()}` : `#${code}`;
       await supabase.from("scheduled_shifts")
-        .update({ title: `#${code} ${title.trim()}` } as any)
+        .update({ title: finalTitle } as any)
         .eq("id", shift.id);
     }
 
@@ -884,7 +885,7 @@ export default function Shifts() {
                       />
                     </div>
                   </div>
-                  <Button onClick={() => setConfirmOpen(true)} disabled={saving || !title.trim() || !date} className="w-full h-9 text-sm">
+                  <Button onClick={() => setConfirmOpen(true)} disabled={saving || !date} className="w-full h-9 text-sm">
                     Revisar y crear turno
                   </Button>
                 </div>
