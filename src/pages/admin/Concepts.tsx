@@ -6,9 +6,9 @@ import { FormField } from "@/components/ui/form-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Pencil, Trash2, ToggleLeft, Upload, Download } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, MoreHorizontal, Pencil, Trash2, ToggleLeft, Upload, Download, Search, TrendingUp, TrendingDown, Calculator, DollarSign, Hash, Layers } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
@@ -31,6 +31,18 @@ const emptyForm = {
   unit_label: "unidades", default_rate: "", rate_source: "concept_default" as string,
 };
 
+const calcModeLabels: Record<string, string> = {
+  quantity_x_rate: "Cantidad × Tarifa",
+  manual_value: "Valor manual",
+  hybrid: "Híbrido",
+};
+
+const calcModeIcons: Record<string, typeof Calculator> = {
+  quantity_x_rate: Hash,
+  manual_value: DollarSign,
+  hybrid: Layers,
+};
+
 export default function Concepts() {
   const { selectedCompanyId } = useCompany();
   const [concepts, setConcepts] = useState<Concept[]>([]);
@@ -42,6 +54,7 @@ export default function Concepts() {
   const [editForm, setEditForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [search, setSearch] = useState("");
   const { toast } = useToast();
 
   const fetchConcepts = async () => {
@@ -51,6 +64,12 @@ export default function Concepts() {
   };
 
   useEffect(() => { fetchConcepts(); }, [selectedCompanyId]);
+
+  const filtered = concepts.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
+  const activeConcepts = filtered.filter(c => c.is_active);
+  const inactiveConcepts = filtered.filter(c => !c.is_active);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +156,6 @@ export default function Concepts() {
     const file = e.target.files?.[0];
     if (!file || !selectedCompanyId) return;
     setImporting(true);
-
     try {
       const data = await file.arrayBuffer();
       const wb = await safeRead(data);
@@ -145,17 +163,14 @@ export default function Concepts() {
       const sheet = getSheet(wb, sheetNames[0]);
       if (!sheet) { setImporting(false); return; }
       const rows = safeSheetToJson<Record<string, any>>(sheet);
-
       if (rows.length === 0) {
         toast({ title: "Archivo vacío", description: "No se encontraron filas.", variant: "destructive" });
         setImporting(false);
         return;
       }
-
       const normalize = (s: string) => s?.toString().trim().toLowerCase().replace(/[^a-záéíóúñü0-9]/g, "") ?? "";
-
       const categoryMap: Record<string, "extra" | "deduction"> = {
-        extra: "extra", extras: "extra", suma: "extra",
+        extra: "extra", extras: "extra", suma: "extra", pago: "extra",
         deduccion: "deduction", deducción: "deduction", deduction: "deduction", resta: "deduction",
       };
       const calcModeMap: Record<string, "quantity_x_rate" | "manual_value" | "hybrid"> = {
@@ -167,37 +182,28 @@ export default function Concepts() {
         conceptdefault: "concept_default", defaultdelconcepto: "concept_default", "concept_default": "concept_default",
         perempleado: "per_employee", porempleado: "per_employee", "per_employee": "per_employee",
       };
-
       const findCol = (row: Record<string, any>, candidates: string[]) => {
         for (const key of Object.keys(row)) {
           if (candidates.includes(normalize(key))) return row[key];
         }
         return undefined;
       };
-
       let created = 0, skipped = 0;
       for (const row of rows) {
         const name = (findCol(row, ["nombre", "name"]) ?? "").toString().trim();
         if (!name) { skipped++; continue; }
-
         const catRaw = normalize((findCol(row, ["categoria", "categoría", "category"]) ?? "extra").toString());
         const calcRaw = normalize((findCol(row, ["calculo", "cálculo", "calcmode", "modocalculo", "mododecalculo", "calculation"]) ?? "manual_value").toString());
         const rateSourceRaw = normalize((findCol(row, ["fuentetarifa", "ratesource", "fuente"]) ?? "concept_default").toString());
         const unitLabel = (findCol(row, ["unidad", "unit", "unitlabel"]) ?? "unidades").toString().trim();
         const defaultRate = parseFloat((findCol(row, ["tarifa", "tarifadefault", "rate", "defaultrate"]) ?? "").toString()) || null;
-
         const { error } = await supabase.from("concepts").insert({
-          name,
-          category: categoryMap[catRaw] ?? "extra",
-          calc_mode: calcModeMap[calcRaw] ?? "manual_value",
-          unit_label: unitLabel,
-          default_rate: defaultRate,
-          rate_source: rateSourceMap[rateSourceRaw] ?? "concept_default",
+          name, category: categoryMap[catRaw] ?? "extra", calc_mode: calcModeMap[calcRaw] ?? "manual_value",
+          unit_label: unitLabel, default_rate: defaultRate, rate_source: rateSourceMap[rateSourceRaw] ?? "concept_default",
           company_id: selectedCompanyId,
         });
         if (error) { skipped++; } else { created++; }
       }
-
       toast({ title: `Importación completada`, description: `${created} creados, ${skipped} omitidos` });
       fetchConcepts();
     } catch (err: any) {
@@ -206,7 +212,6 @@ export default function Concepts() {
     setImporting(false);
     e.target.value = "";
   };
-
 
   const ConceptForm = ({ values, onChange, onSubmit, submitLabel }: {
     values: typeof emptyForm;
@@ -220,7 +225,7 @@ export default function Concepts() {
         <Select value={values.category} onValueChange={v => onChange({ ...values, category: v })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="extra">Extra (suma)</SelectItem>
+            <SelectItem value="extra">Pago (suma)</SelectItem>
             <SelectItem value="deduction">Deducción (resta)</SelectItem>
           </SelectContent>
         </Select>
@@ -252,145 +257,142 @@ export default function Concepts() {
     </form>
   );
 
+  const ConceptCard = ({ concept, inactive = false }: { concept: Concept; inactive?: boolean }) => {
+    const isPayment = concept.category === "extra";
+    const CalcIcon = calcModeIcons[concept.calc_mode] || Calculator;
+
+    return (
+      <div className={`group relative rounded-xl border bg-card p-4 transition-all hover:shadow-md hover:border-primary/20 ${inactive ? "opacity-50" : ""}`}>
+        {/* Top row: category badge + menu */}
+        <div className="flex items-start justify-between mb-3">
+          <Badge
+            variant="outline"
+            className={
+              isPayment
+                ? "border-earning/30 bg-earning-bg text-earning font-medium"
+                : "border-destructive/30 bg-deduction-bg text-destructive font-medium"
+            }
+          >
+            {isPayment ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+            {isPayment ? "Pago" : "Deducción"}
+          </Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {!inactive && (
+                <DropdownMenuItem onClick={() => openEdit(concept)}>
+                  <Pencil className="h-4 w-4 mr-2" />Editar
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => handleToggleActive(concept)}>
+                <ToggleLeft className="h-4 w-4 mr-2" />{inactive ? "Activar" : "Desactivar"}
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(concept)}>
+                <Trash2 className="h-4 w-4 mr-2" />Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Name */}
+        <h3 className="font-semibold text-sm text-foreground mb-3 leading-tight">{concept.name}</h3>
+
+        {/* Meta row */}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <CalcIcon className="h-3.5 w-3.5" />
+            {calcModeLabels[concept.calc_mode] || concept.calc_mode}
+          </span>
+          <span className="text-border">•</span>
+          <span>{concept.unit_label}</span>
+        </div>
+
+        {/* Rate */}
+        {concept.default_rate != null && (
+          <div className="mt-3 pt-3 border-t border-border/50">
+            <span className="text-xs text-muted-foreground">Tarifa: </span>
+            <span className="font-mono text-sm font-semibold text-foreground">${concept.default_rate}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div>
       <PageHeader
         variant="3"
         title="Conceptos"
         subtitle="Extras y deducciones dinámicas"
-        rightSlot={<div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => {
-            const template = [
-              { nombre: "Bono productividad", categoría: "extra", cálculo: "quantity_x_rate", unidad: "unidades", tarifa: 50, fuente_tarifa: "concept_default" },
-              { nombre: "Descuento uniforme", categoría: "deducción", cálculo: "manual_value", unidad: "pesos", tarifa: "", fuente_tarifa: "concept_default" },
-            ];
-            writeExcelFile(template, "Conceptos", "plantilla_conceptos.xlsx");
-          }}>
-            <Download className="h-4 w-4 mr-2" />Plantilla
-          </Button>
-          <Button variant="outline" disabled={importing} onClick={() => document.getElementById("import-concepts-file")?.click()}>
-            <Upload className="h-4 w-4 mr-2" />{importing ? "Importando..." : "Importar XLS"}
-          </Button>
-          <input id="import-concepts-file" type="file" accept=".xls,.xlsx" className="hidden" onChange={handleImportFile} />
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />Nuevo concepto</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Nuevo concepto</DialogTitle></DialogHeader>
-              <ConceptForm values={form} onChange={setForm} onSubmit={handleCreate} submitLabel="Crear" />
-            </DialogContent>
-          </Dialog>
-        </div>}
+        rightSlot={
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => {
+              const template = [
+                { nombre: "Bono productividad", categoría: "extra", cálculo: "quantity_x_rate", unidad: "unidades", tarifa: 50, fuente_tarifa: "concept_default" },
+                { nombre: "Descuento uniforme", categoría: "deducción", cálculo: "manual_value", unidad: "pesos", tarifa: "", fuente_tarifa: "concept_default" },
+              ];
+              writeExcelFile(template, "Conceptos", "plantilla_conceptos.xlsx");
+            }}>
+              <Download className="h-4 w-4 mr-2" />Plantilla
+            </Button>
+            <Button variant="outline" disabled={importing} onClick={() => document.getElementById("import-concepts-file")?.click()}>
+              <Upload className="h-4 w-4 mr-2" />{importing ? "Importando..." : "Importar XLS"}
+            </Button>
+            <input id="import-concepts-file" type="file" accept=".xls,.xlsx" className="hidden" onChange={handleImportFile} />
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" />Nuevo concepto</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Nuevo concepto</DialogTitle></DialogHeader>
+                <ConceptForm values={form} onChange={setForm} onSubmit={handleCreate} submitLabel="Crear" />
+              </DialogContent>
+            </Dialog>
+          </div>
+        }
       />
 
-      {/* Active concepts */}
-      <div>
-        <h2 className="text-sm font-semibold text-foreground mb-2">Activos ({concepts.filter(c => c.is_active).length})</h2>
-        <div className="data-table-wrapper">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Cálculo</TableHead>
-                <TableHead>Unidad</TableHead>
-                <TableHead>Tarifa</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {concepts.filter(c => c.is_active).length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay conceptos activos</TableCell></TableRow>
-              ) : (
-                concepts.filter(c => c.is_active).map(c => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell>
-                      <span className={c.category === "extra" ? "earning-badge" : "deduction-badge"}>
-                        {c.category === "extra" ? "Extra" : "Deducción"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs">{c.calc_mode.replace(/_/g, " ")}</TableCell>
-                    <TableCell className="text-xs">{c.unit_label}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.default_rate ? `$${c.default_rate}` : "—"}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(c)}>
-                            <Pencil className="h-4 w-4 mr-2" />Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleActive(c)}>
-                            <ToggleLeft className="h-4 w-4 mr-2" />Desactivar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(c)}>
-                            <Trash2 className="h-4 w-4 mr-2" />Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      {/* Search */}
+      <div className="relative mb-6 max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar concepto..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
-      {/* Inactive concepts */}
-      {concepts.filter(c => !c.is_active).length > 0 && (
-        <div className="mt-6 opacity-70">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Inactivos ({concepts.filter(c => !c.is_active).length})</h2>
-          <div className="data-table-wrapper">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Cálculo</TableHead>
-                  <TableHead>Unidad</TableHead>
-                  <TableHead>Tarifa</TableHead>
-                  <TableHead className="w-10" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {concepts.filter(c => !c.is_active).map(c => (
-                  <TableRow key={c.id} className="opacity-60">
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell>
-                      <span className={c.category === "extra" ? "earning-badge" : "deduction-badge"}>
-                        {c.category === "extra" ? "Extra" : "Deducción"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs">{c.calc_mode.replace(/_/g, " ")}</TableCell>
-                    <TableCell className="text-xs">{c.unit_label}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.default_rate ? `$${c.default_rate}` : "—"}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleToggleActive(c)}>
-                            <ToggleLeft className="h-4 w-4 mr-2" />Activar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(c)}>
-                            <Trash2 className="h-4 w-4 mr-2" />Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      {/* Active concepts grid */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          Activos
+          <Badge variant="secondary" className="font-mono text-xs">{activeConcepts.length}</Badge>
+        </h2>
+        {activeConcepts.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-muted/30 py-12 text-center text-muted-foreground text-sm">
+            {search ? "Sin resultados para esta búsqueda" : "No hay conceptos activos"}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {activeConcepts.map(c => <ConceptCard key={c.id} concept={c} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Inactive concepts grid */}
+      {inactiveConcepts.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+            Inactivos
+            <Badge variant="secondary" className="font-mono text-xs">{inactiveConcepts.length}</Badge>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {inactiveConcepts.map(c => <ConceptCard key={c.id} concept={c} inactive />)}
           </div>
         </div>
       )}
