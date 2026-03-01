@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck, Building2, Phone } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
-import { StaflyMascot } from "@/components/brand/StaflyMascot";
+
 import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
 
 type AuthMode = "admin" | "employee";
@@ -99,7 +99,9 @@ export default function Auth() {
         </div>
 
         <div className="relative z-10 flex flex-col items-center text-center px-16 max-w-md">
-          <StaflyMascot variant="checklist" size={200} className="drop-shadow-xl mb-10 select-none" />
+          <div className="h-24 w-24 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-10 select-none">
+            <ShieldCheck className="h-12 w-12 text-primary/60" />
+          </div>
           <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
             {mode === "employee"
               ? "Tu portal de trabajo, siempre contigo."

@@ -14,7 +14,7 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { format, parseISO, isToday, isTomorrow, formatDistanceToNow, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import { StaflyMascot } from "@/components/brand/StaflyMascot";
+
 
 // --- Types (unchanged) ---
 interface PayPeriod {
@@ -250,7 +250,7 @@ export default function EmployeeDashboard() {
             <p className="text-[11px] font-medium opacity-80">{greeting}</p>
             <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">{firstName}</h1>
           </div>
-          <StaflyMascot variant="wave" size={80} className="opacity-90 drop-shadow-xl -mr-1" />
+          
         </div>
       </div>
 
@@ -354,7 +354,9 @@ export default function EmployeeDashboard() {
       {/* ── Feed ── */}
       {announcements.length === 0 ? (
         <div className="text-center py-12 space-y-3">
-          <StaflyMascot variant="default" size={80} className="mx-auto opacity-60" />
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center">
+            <Megaphone className="h-8 w-8 text-primary/40" />
+          </div>
           <p className="text-sm font-semibold text-foreground">Sin publicaciones aún</p>
           <p className="text-xs text-muted-foreground max-w-[240px] mx-auto">Las novedades y anuncios de tu empresa aparecerán aquí.</p>
         </div>
