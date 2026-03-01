@@ -901,36 +901,35 @@ export default function Employees() {
             <TableRow>
               <TableHead className="w-12"></TableHead>
               <TableHead>Nombre</TableHead>
-              <TableHead className="hidden sm:table-cell">Email</TableHead>
-              <TableHead className="hidden sm:table-cell">Teléfono</TableHead>
+              <TableHead className="hidden md:table-cell">Contacto</TableHead>
+              <TableHead className="hidden lg:table-cell">Rol</TableHead>
+              <TableHead className="hidden lg:table-cell">Grupo</TableHead>
+              <TableHead className="hidden xl:table-cell">Inicio</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {initialLoading ? (
-              <TableRow><TableCell colSpan={6} className="p-0"><PageSkeleton variant="table" className="border-0 shadow-none p-4" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="p-0"><PageSkeleton variant="table" className="border-0 shadow-none p-4" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="p-0">
+              <TableRow><TableCell colSpan={8} className="p-0">
                 <EmptyState icon={Users} title="No hay empleados" description={search ? "Intenta con otro término de búsqueda" : "Agrega tu primer empleado para comenzar"} compact />
               </TableCell></TableRow>
             ) : (
               filtered.map((e) => (
-                <TableRow key={e.id} className={`${!e.is_active ? "opacity-40" : ""} group hover:bg-accent/50 transition-colors`}>
+                <TableRow key={e.id} className={`${!e.is_active ? "opacity-40" : ""} group hover:bg-accent/50 transition-colors cursor-pointer`} onClick={() => openDetailSheet(e)}>
                   <TableCell className="py-3">
                     <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} size="md" />
                   </TableCell>
                   <TableCell className="py-3">
-                    <button
-                      onClick={() => openDetailSheet(e)}
-                      className="text-left hover:text-primary transition-colors"
-                    >
+                    <div className="text-left">
                       <span className="text-sm font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                      {e.employee_role && (
-                        <span className="block text-xs text-muted-foreground mt-0.5">{formatDisplayText(e.employee_role, "label")}</span>
-                      )}
                       {/* Show contact info inline on mobile */}
-                      <div className="sm:hidden mt-1 space-y-0.5">
+                      <div className="md:hidden mt-1 space-y-0.5">
+                        {e.employee_role && (
+                          <span className="block text-[11px] text-muted-foreground">{formatDisplayText(e.employee_role, "label")}</span>
+                        )}
                         {e.email && (
                           <span className="block text-[11px] text-muted-foreground truncate max-w-[200px]">{e.email}</span>
                         )}
@@ -938,24 +937,57 @@ export default function Employees() {
                           <span className="block text-[11px] text-muted-foreground">{e.phone_number}</span>
                         )}
                       </div>
-                    </button>
+                    </div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell py-3">
-                    {e.email ? (
-                      <a href={`mailto:${e.email}`} className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
-                        <Mail className="h-3.5 w-3.5 shrink-0" /><span className="truncate max-w-[180px]">{e.email}</span>
-                      </a>
+                  <TableCell className="hidden md:table-cell py-3">
+                    <div className="space-y-1">
+                      {e.email ? (
+                        <a href={`mailto:${e.email}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
+                          <Mail className="h-3 w-3 shrink-0" /><span className="truncate max-w-[180px]">{e.email}</span>
+                        </a>
+                      ) : null}
+                      {e.phone_number ? (
+                        <a href={`tel:${e.phone_number}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
+                          <Phone className="h-3 w-3 shrink-0" />{e.phone_number}
+                        </a>
+                      ) : null}
+                      {!e.email && !e.phone_number && (
+                        <span className="text-xs text-muted-foreground/40">—</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell py-3">
+                    {e.employee_role ? (
+                      <Badge variant="secondary" className="text-[11px] font-normal">
+                        {formatDisplayText(e.employee_role, "label")}
+                      </Badge>
                     ) : (
-                      <span className="text-sm text-muted-foreground/40">—</span>
+                      <span className="text-xs text-muted-foreground/40">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell py-3">
-                    {e.phone_number ? (
-                      <a href={`tel:${e.phone_number}`} className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
-                        <Phone className="h-3.5 w-3.5 shrink-0" />{e.phone_number}
-                      </a>
+                  <TableCell className="hidden lg:table-cell py-3">
+                    {e.groups ? (
+                      <div className="flex flex-wrap gap-1">
+                        {e.groups.split(",").slice(0, 2).map((g: string) => (
+                          <Badge key={g.trim()} variant="outline" className="text-[10px] font-normal px-1.5 py-0">
+                            {g.trim()}
+                          </Badge>
+                        ))}
+                        {e.groups.split(",").length > 2 && (
+                          <Badge variant="outline" className="text-[10px] font-normal px-1.5 py-0 text-muted-foreground">
+                            +{e.groups.split(",").length - 2}
+                          </Badge>
+                        )}
+                      </div>
                     ) : (
-                      <span className="text-sm text-muted-foreground/40">—</span>
+                      <span className="text-xs text-muted-foreground/40">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell py-3">
+                    {e.start_date ? (
+                      <span className="text-xs text-muted-foreground">{e.start_date}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/40">—</span>
                     )}
                   </TableCell>
                   <TableCell className="py-3">
@@ -968,7 +1000,7 @@ export default function Employees() {
                       {e.is_active ? "Activo" : "Inactivo"}
                     </span>
                   </TableCell>
-                  <TableCell className="py-3">
+                  <TableCell className="py-3" onClick={ev => ev.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
