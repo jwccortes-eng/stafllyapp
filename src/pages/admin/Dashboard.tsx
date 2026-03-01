@@ -7,6 +7,8 @@ import {
   Zap, Clock, Sparkles, Megaphone, Pin, AlertTriangle,
   ChevronRight, Activity, ThumbsUp, Plus,
   Inbox, MapPin, Building2, MessageCircle, Crown, ExternalLink,
+  ClipboardList, UserCheck, AlertCircle, CheckCircle2,
+  Calendar, Timer, Shield,
 } from "lucide-react";
 import { PeriodStatusBanner } from "@/components/ui/period-status-banner";
 import { useCompany } from "@/hooks/useCompany";
@@ -193,6 +195,8 @@ export default function AdminDashboard() {
   const [periodSummary, setPeriodSummary] = useState({ open: 0, closed: 0, published: 0, paid: 0 });
   const [sparkEmployees, setSparkEmployees] = useState<number[]>([]);
   const [sparkPayments, setSparkPayments] = useState<number[]>([]);
+  const [pendingCounts, setPendingCounts] = useState({ shiftRequests: 0, pendingMovements: 0, openTickets: 0, pendingAttendance: 0 });
+  const [todaySummary, setTodaySummary] = useState({ shiftsToday: 0, assignedToday: 0, clockedIn: 0, openEntries: 0 });
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -274,6 +278,42 @@ export default function AdminDashboard() {
     fetchStats();
     fetchChartData();
     fetchFeed();
+
+    // Fetch pending request counts
+    async function fetchPendingCounts() {
+      const today = new Date().toISOString().split("T")[0];
+      const [shiftReqRes, movRes, ticketRes, attRes] = await Promise.all([
+        supabase.from("shift_requests").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).eq("status", "pending"),
+        supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).eq("approval_status", "pending"),
+        supabase.from("employee_tickets").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).in("status", ["new", "in_progress"]),
+        supabase.from("shift_attendance_confirmations").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).eq("status", "pending"),
+      ]);
+      setPendingCounts({
+        shiftRequests: shiftReqRes.count ?? 0,
+        pendingMovements: movRes.count ?? 0,
+        openTickets: ticketRes.count ?? 0,
+        pendingAttendance: attRes.count ?? 0,
+      });
+    }
+    fetchPendingCounts();
+
+    // Fetch today summary
+    async function fetchTodaySummary() {
+      const today = new Date().toISOString().split("T")[0];
+      const [shiftsRes, assignRes, clockRes] = await Promise.all([
+        supabase.from("scheduled_shifts").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).eq("date", today).is("deleted_at", null),
+        supabase.from("shift_assignments").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).eq("status", "confirmed")
+          .in("shift_id", (await supabase.from("scheduled_shifts").select("id").eq("company_id", selectedCompanyId!).eq("date", today).is("deleted_at", null)).data?.map(s => s.id) ?? []),
+        supabase.from("time_entries" as any).select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).is("clock_out" as any, null),
+      ]);
+      setTodaySummary({
+        shiftsToday: shiftsRes.count ?? 0,
+        assignedToday: assignRes.count ?? 0,
+        clockedIn: 0,
+        openEntries: clockRes.count ?? 0,
+      });
+    }
+    fetchTodaySummary();
 
     supabase.from("employees").select("created_at")
       .eq("company_id", selectedCompanyId!).eq("is_active", true)
@@ -387,6 +427,108 @@ export default function AdminDashboard() {
         </div>
       </div>
     ) : null,
+    pending_requests: () => {
+      const totalPending = pendingCounts.shiftRequests + pendingCounts.pendingMovements + pendingCounts.openTickets + pendingCounts.pendingAttendance;
+      const items = [
+        { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/8", to: "/app/shift-requests" },
+        { label: "Novedades pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/8", to: "/app/movements" },
+        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/8", to: "/app/requests" },
+        { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/8", to: "/app/shifts" },
+      ];
+      return (
+        <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
+          <CardHeader className="pb-3 px-5 pt-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg bg-destructive/8 flex items-center justify-center">
+                  <Inbox className="h-3.5 w-3.5 text-destructive" />
+                </div>
+                <CardTitle className="text-sm font-semibold font-heading">Pendientes</CardTitle>
+                {totalPending > 0 && (
+                  <Badge variant="destructive" className="text-[10px] h-5 px-1.5 rounded-full animate-pulse">
+                    {totalPending}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="px-3 pb-4">
+            {totalPending === 0 ? (
+              <div className="text-center py-6">
+                <div className="h-10 w-10 rounded-xl bg-earning/8 flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle2 className="h-4 w-4 text-earning" />
+                </div>
+                <p className="text-xs font-medium text-earning">¡Todo al día!</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">No hay solicitudes pendientes</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {items.map(item => (
+                  <button
+                    key={item.to}
+                    onClick={() => navigate(item.to)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border border-border/40 transition-all hover:shadow-sm hover:border-primary/20 text-left",
+                      item.count === 0 && "opacity-50"
+                    )}
+                  >
+                    <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", item.bg)}>
+                      <item.icon className={cn("h-4 w-4", item.color)} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className={cn("text-lg font-bold tabular-nums leading-none", item.count > 0 ? item.color : "text-muted-foreground")}>{item.count}</p>
+                      <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">{item.label}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      );
+    },
+    today_summary: () => {
+      const todayStr = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
+      return (
+        <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
+          <CardHeader className="pb-3 px-5 pt-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
+                  <Calendar className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold font-heading">Hoy</CardTitle>
+                  <p className="text-[10px] text-muted-foreground/60 capitalize">{todayStr}</p>
+                </div>
+              </div>
+              <Link to="/app/today" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
+                Ver detalle <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="px-3 pb-4">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col items-center p-3 rounded-xl bg-primary/[0.04] border border-border/30">
+                <Clock className="h-4 w-4 text-primary mb-1.5" />
+                <p className="text-xl font-bold text-primary tabular-nums">{todaySummary.shiftsToday}</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Turnos</p>
+              </div>
+              <div className="flex flex-col items-center p-3 rounded-xl bg-earning/[0.04] border border-border/30">
+                <UserCheck className="h-4 w-4 text-earning mb-1.5" />
+                <p className="text-xl font-bold text-earning tabular-nums">{todaySummary.assignedToday}</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Asignados</p>
+              </div>
+              <div className="flex flex-col items-center p-3 rounded-xl bg-warning/[0.04] border border-border/30">
+                <Timer className="h-4 w-4 text-warning mb-1.5" />
+                <p className="text-xl font-bold text-warning tabular-nums">{todaySummary.openEntries}</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Fichados</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    },
     chart: () => chartData.length > 0 ? (
       <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
         <CardHeader className="pb-2 px-5 pt-5">
