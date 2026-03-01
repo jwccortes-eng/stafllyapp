@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { formatPersonName } from "@/lib/format-helpers";
 import { usePageView } from "@/hooks/useAuditLog";
 import AuditPanel from "@/components/audit/AuditPanel";
@@ -72,6 +72,7 @@ export default function PeriodSummary() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [sendingEmails, setSendingEmails] = useState(false);
+  const autoConsolidatedRef = useRef<string | null>(null);
 
   const canConsolidate = hasActionPermission("aprobar_nomina");
 
@@ -160,10 +161,9 @@ export default function PeriodSummary() {
       setRows(allRows);
       setLoading(false);
 
-      // Auto-consolidate if all bases are 0 and we have permission
+      // Auto-consolidate only once per period if all bases are 0
       const hasAnyBase = allRows.some(r => r.base_total_pay > 0);
-      if (!hasAnyBase && selectedCompanyId && canConsolidate) {
-        // Find the period date range to query time_entries (which has no period_id column)
+      if (!hasAnyBase && selectedCompanyId && canConsolidate && autoConsolidatedRef.current !== selectedPeriod) {
         const periodObj = periods.find(p => p.id === selectedPeriod);
         if (periodObj) {
           const { count } = await supabase
@@ -174,7 +174,7 @@ export default function PeriodSummary() {
             .gte("clock_in", periodObj.start_date)
             .lte("clock_in", periodObj.end_date + "T23:59:59");
           if (count && count > 0) {
-            console.log(`Auto-consolidating: found ${count} approved time_entries with no base pay`);
+            autoConsolidatedRef.current = selectedPeriod;
             setConsolidating(true);
             try {
               const { data, error } = await supabase.functions.invoke("payroll-consolidate", {
@@ -182,18 +182,16 @@ export default function PeriodSummary() {
               });
               if (!error && !data?.error) {
                 sonnerToast.success("Horas consolidadas automáticamente", {
-                  description: `${data.consolidated_employees} empleado(s) actualizados.`,
+                  description: `${data.consolidated_employees ?? 0} empleado(s) actualizados.`,
                 });
-                // Reload data
-                setSelectedPeriod(prev => {
-                  setTimeout(() => setSelectedPeriod(selectedPeriod), 50);
-                  return "";
-                });
+                // Reload data without resetting selectedPeriod (avoids loop)
+                load();
               }
             } catch (err) {
               console.error("Auto-consolidation failed:", err);
             }
             setConsolidating(false);
+            return; // load() already called recursively
           }
         }
       }
@@ -304,12 +302,23 @@ export default function PeriodSummary() {
                       if (data?.error) throw new Error(data.error);
                       toast({
                         title: "Horas consolidadas",
-                        description: `${data.consolidated_employees} empleado(s) actualizados. ${data.skipped_import_employees} con import CSV preservados.`,
+                        description: `${data.consolidated_employees ?? 0} empleado(s) actualizados. ${data.skipped_import_employees ?? 0} con import CSV preservados.`,
                       });
-                      setSelectedPeriod(prev => {
-                        setTimeout(() => setSelectedPeriod(selectedPeriod), 50);
-                        return "";
+                      autoConsolidatedRef.current = null; // allow re-auto if user manually consolidates
+                      // Reload without resetting period
+                      setLoading(true);
+                      const { data: basePays2 } = await supabase.from("period_base_pay").select("employee_id, base_total_pay, employees(first_name, last_name)").eq("period_id", selectedPeriod);
+                      const { data: movements2 } = await supabase.from("movements").select("employee_id, total_value, concepts(category)").eq("period_id", selectedPeriod);
+                      const empMap2 = new Map<string, SummaryRow>();
+                      (basePays2 ?? []).forEach((bp: any) => {
+                        empMap2.set(bp.employee_id, { employee_id: bp.employee_id, first_name: bp.employees?.first_name ?? "", last_name: bp.employees?.last_name ?? "", base_total_pay: Number(bp.base_total_pay) || 0, extras_total: 0, deductions_total: 0, total_final_pay: 0 });
                       });
+                      const { data: movEmps2 } = await supabase.from("movements").select("employee_id, employees(first_name, last_name)").eq("period_id", selectedPeriod);
+                      (movEmps2 ?? []).forEach((me: any) => { if (!empMap2.has(me.employee_id) && me.employees) empMap2.set(me.employee_id, { employee_id: me.employee_id, first_name: me.employees.first_name ?? "", last_name: me.employees.last_name ?? "", base_total_pay: 0, extras_total: 0, deductions_total: 0, total_final_pay: 0 }); });
+                      (movements2 ?? []).forEach((m: any) => { const row = empMap2.get(m.employee_id); if (!row) return; if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0; else row.deductions_total += Number(m.total_value) || 0; });
+                      empMap2.forEach(row => { row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total; });
+                      setRows(Array.from(empMap2.values()));
+                      setLoading(false);
                     } catch (err: any) {
                       toast({ title: "Error al consolidar", description: err.message, variant: "destructive" });
                     }
