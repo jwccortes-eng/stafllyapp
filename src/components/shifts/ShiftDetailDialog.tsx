@@ -14,10 +14,11 @@ import {
   Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
   CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, ClipboardCheck, Car, Pencil, X,
-  CalendarDays, Building2, StickyNote, UsersRound, Sparkles,
+  CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon,
 } from "lucide-react";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
+import { ShiftChatPanel } from "./ShiftChatPanel";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
@@ -434,6 +435,9 @@ export function ShiftDetailDialog({
             <TabButton active={tab === "attendance"} onClick={() => setTab("attendance")}>
               <ClipboardCheck className="h-3 w-3" /> Asistencia
             </TabButton>
+            <TabButton active={tab === "chat"} onClick={() => setTab("chat")}>
+              <MessageCircleIcon className="h-3 w-3" /> Chat
+            </TabButton>
             <TabButton active={tab === "comments"} onClick={() => setTab("comments")}>
               <MessageSquare className="h-3 w-3" /> Notas
             </TabButton>
@@ -590,6 +594,20 @@ export function ShiftDetailDialog({
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold truncate">{emp.first_name} {emp.last_name}</p>
                         </div>
+                        {/* Contact icons */}
+                        {(emp as any).phone_number && (() => {
+                          const cleanPhone = (emp as any).phone_number.replace(/[^+\d]/g, "");
+                          return (
+                            <div className="flex items-center gap-0.5 opacity-50 group-hover:opacity-100 transition-opacity">
+                              <a href={`tel:${cleanPhone}`} className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-primary/10 text-primary" title="Llamar" onClick={e => e.stopPropagation()}>
+                                <Phone className="h-3 w-3" />
+                              </a>
+                              <a href={`https://wa.me/${cleanPhone.replace("+", "")}`} target="_blank" rel="noopener noreferrer" className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[#25D366]/10 text-[#25D366]" title="WhatsApp" onClick={e => e.stopPropagation()}>
+                                <MessageCircleIcon className="h-3 w-3" />
+                              </a>
+                            </div>
+                          );
+                        })()}
                         {effectiveCanEdit ? (
                           <Select value={a.status} onValueChange={(v) => handleChangeAssignmentStatus(a.id, v)} disabled={updatingStatus === a.id}>
                             <SelectTrigger className={cn(
@@ -758,6 +776,8 @@ export function ShiftDetailDialog({
             <ShiftAttendancePanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canManage={effectiveCanEdit} />
           ) : tab === "comments" ? (
             <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
+          ) : tab === "chat" ? (
+            <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} isAdmin={true} />
           ) : tab === "rides" ? (
             <ShiftRidesPanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canEdit={effectiveCanEdit} />
           ) : null}

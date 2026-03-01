@@ -2268,6 +2268,125 @@ export type Database = {
           },
         ]
       }
+      shift_chat_config: {
+        Row: {
+          auto_close_at: string | null
+          auto_open_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_open: boolean
+          reopened_at: string | null
+          reopened_by: string | null
+          shift_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_close_at?: string | null
+          auto_open_at?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          reopened_at?: string | null
+          reopened_by?: string | null
+          shift_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_close_at?: string | null
+          auto_open_at?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          reopened_at?: string | null
+          reopened_by?: string | null
+          shift_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_chat_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_chat_config_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: true
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_chat_messages: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          sender_employee_id: string | null
+          sender_type: string
+          sender_user_id: string | null
+          shift_id: string
+        }
+        Insert: {
+          company_id: string
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          sender_employee_id?: string | null
+          sender_type?: string
+          sender_user_id?: string | null
+          shift_id: string
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          sender_employee_id?: string | null
+          sender_type?: string
+          sender_user_id?: string | null
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_chat_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_chat_messages_sender_employee_id_fkey"
+            columns: ["sender_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_chat_messages_sender_employee_id_fkey"
+            columns: ["sender_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_chat_messages_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_comments: {
         Row: {
           attachments: Json | null

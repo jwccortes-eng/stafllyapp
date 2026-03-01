@@ -29,6 +29,7 @@ interface ShiftAssignment {
     shift_code?: string | null;
     meeting_point?: string | null;
     special_instructions?: string | null;
+    company_id?: string;
     location?: { name: string } | null;
     client?: { name: string } | null;
   };
@@ -163,7 +164,7 @@ export default function MyShifts() {
       .select(`
         id, status,
         scheduled_shifts!inner (
-          id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions,
+          id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions, company_id,
           locations (name),
           clients (name)
         )
@@ -186,6 +187,7 @@ export default function MyShifts() {
         shift_code: a.scheduled_shifts.shift_code,
         meeting_point: a.scheduled_shifts.meeting_point,
         special_instructions: a.scheduled_shifts.special_instructions,
+        company_id: a.scheduled_shifts.company_id,
         location: a.scheduled_shifts.locations,
         client: a.scheduled_shifts.clients,
       },
