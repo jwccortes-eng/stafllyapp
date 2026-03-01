@@ -152,7 +152,7 @@ export default function ContractorW9() {
 
     if (formTin.trim()) {
       payload.tin_last4 = formTin.slice(-4);
-      payload.tin_encrypted = formTin.trim(); // In production, encrypt via edge function
+      // Only store last 4 digits — full TIN is NOT persisted for security
     }
 
     if (editing) {
