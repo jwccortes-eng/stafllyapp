@@ -24,7 +24,7 @@ interface ShiftEditDialogProps {
   onOpenChange: (open: boolean) => void;
   clients: SelectOption[];
   locations: LocationOption[];
-  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null; pay_type?: string }, oldShift: Shift) => Promise<void>;
+  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null; pay_type?: string; day_type?: string; shift_admin_id?: string | null }, oldShift: Shift) => Promise<void>;
 }
 
 export function ShiftEditDialog({
@@ -42,6 +42,8 @@ export function ShiftEditDialog({
   const [meetingPoint, setMeetingPoint] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
+  const [dayType, setDayType] = useState<"full_day" | "half_day">("full_day");
+  const [shiftAdminId, setShiftAdminId] = useState("");
   const [saving, setSaving] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
@@ -59,6 +61,8 @@ export function ShiftEditDialog({
       setMeetingPoint((shift as any).meeting_point || "");
       setSpecialInstructions((shift as any).special_instructions || "");
       setPayType((shift as any).pay_type || "hourly");
+      setDayType((shift as any).day_type || "full_day");
+      setShiftAdminId((shift as any).shift_admin_id || "");
     }
   }, [shift, open]);
 
@@ -91,6 +95,8 @@ export function ShiftEditDialog({
         meeting_point: meetingPoint.trim() || null,
         special_instructions: specialInstructions.trim() || null,
         pay_type: payType,
+        day_type: payType === "daily" ? dayType : "full_day",
+        shift_admin_id: shiftAdminId || null,
       }, shift);
       onOpenChange(false);
     } finally {
@@ -180,7 +186,19 @@ export function ShiftEditDialog({
               </SelectContent>
             </Select>
             {payType === "daily" && (
-              <p className="text-[10px] text-muted-foreground mt-0.5">Tarifa diaria automática al consolidar.</p>
+              <>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Tarifa diaria automática al consolidar.</p>
+                <div className="mt-2">
+                  <Label className="text-xs text-muted-foreground">Jornada</Label>
+                  <Select value={dayType} onValueChange={v => setDayType(v as "full_day" | "half_day")}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full_day">☀️ Día completo ($200)</SelectItem>
+                      <SelectItem value="half_day">🌤️ Medio día ($125)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
           </div>
           <div>

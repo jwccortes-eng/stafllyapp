@@ -149,6 +149,8 @@ export default function Shifts() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
+  const [dayType, setDayType] = useState<"full_day" | "half_day">("full_day");
+  const [shiftAdminId, setShiftAdminId] = useState("");
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
@@ -246,6 +248,7 @@ export default function Shifts() {
     setSlots("1"); setClientId(""); setLocationId(""); setNotes("");
     setClaimable(false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
+    setDayType("full_day"); setShiftAdminId("");
   };
 
   // Quick-add client inline
@@ -335,6 +338,8 @@ export default function Shifts() {
       special_instructions: specialInstructions.trim() || null,
       created_by: user?.id,
       pay_type: payType,
+      day_type: payType === "daily" ? dayType : "full_day",
+      shift_admin_id: shiftAdminId || null,
     } as any).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); setSaving(false); return; }
@@ -851,8 +856,36 @@ export default function Shifts() {
                       </SelectContent>
                     </Select>
                     {payType === "daily" && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Los empleados asignados recibirán su tarifa diaria automáticamente al consolidar nómina.</p>
+                      <>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Los empleados asignados recibirán su tarifa diaria automáticamente al consolidar nómina.</p>
+                        <div className="mt-2">
+                          <Label className="text-xs text-muted-foreground">Jornada</Label>
+                          <Select value={dayType} onValueChange={v => setDayType(v as "full_day" | "half_day")}>
+                            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="full_day">☀️ Día completo ($200)</SelectItem>
+                              <SelectItem value="half_day">🌤️ Medio día ($125)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
                     )}
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">👤 Admin del turno</Label>
+                    <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sin asignar</SelectItem>
+                        {selectedEmployees.length > 0 && employees.filter(e => selectedEmployees.includes(e.id)).map(e => (
+                          <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
+                        ))}
+                        {employees.filter(e => !selectedEmployees.includes(e.id)).slice(0, 20).map(e => (
+                          <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Puede confirmar asistencia del equipo.</p>
                   </div>
                   <div><Label className="text-xs text-muted-foreground">Notas adicionales</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none" /></div>
                   <div>
