@@ -22,6 +22,7 @@ const i18n = {
   es: {
     nav: { product: "Producto", modules: "Módulos", pricing: "Precios", security: "Seguridad" },
     login: "Iniciar sesión",
+    portal: "Portal Empleados",
     ctaPrimary: "Empezar gratis",
     ctaSecondary: "Agendar demo",
     ctaMicro: "Sin tarjeta • Setup en minutos • Cancela cuando quieras",
@@ -88,11 +89,12 @@ const i18n = {
       sub: "Empieza gratis hoy. Sin tarjeta de crédito.",
     },
     form: { name: "Nombre", company: "Empresa", email: "Email", phone: "Teléfono", employees: "# Empleados", submit: "Agendar demo" },
-    footer: { privacy: "Privacidad", terms: "Términos", contact: "Contacto" },
+    footer: { privacy: "Privacidad", terms: "Términos", contact: "Contacto", portal: "Portal Empleados" },
   },
   en: {
     nav: { product: "Product", modules: "Modules", pricing: "Pricing", security: "Security" },
     login: "Sign in",
+    portal: "Employee Portal",
     ctaPrimary: "Start free",
     ctaSecondary: "Book a demo",
     ctaMicro: "No card required • Setup in minutes • Cancel anytime",
@@ -159,7 +161,7 @@ const i18n = {
       sub: "Start free today. No credit card required.",
     },
     form: { name: "Name", company: "Company", email: "Email", phone: "Phone", employees: "# Employees", submit: "Book a demo" },
-    footer: { privacy: "Privacy", terms: "Terms", contact: "Contact" },
+    footer: { privacy: "Privacy", terms: "Terms", contact: "Contact", portal: "Employee Portal" },
   },
 };
 
@@ -256,6 +258,9 @@ export default function Landing() {
               <span className="font-medium">{lang === "es" ? "EN" : "ES"}</span>
             </button>
             <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-sm">
+              <Link to="/portal">{c.portal}</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-sm">
               <Link to="/auth">{c.login}</Link>
             </Button>
             <Dialog>
@@ -286,6 +291,9 @@ export default function Landing() {
               ].map(item => (
                 <a key={item.href} href={item.href} onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-xl hover:bg-muted transition-colors">{item.label}</a>
               ))}
+              <Link to="/portal" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-xl hover:bg-muted transition-colors text-primary">
+                {c.portal}
+              </Link>
               <Link to="/auth" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-xl hover:bg-muted transition-colors text-primary">
                 {c.login}
               </Link>
@@ -587,6 +595,7 @@ export default function Landing() {
               <StaflyLogo size={24} />
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <Link to="/portal" className="hover:text-foreground transition-colors font-medium text-primary">{c.footer.portal}</Link>
               <Link to="/privacy" className="hover:text-foreground transition-colors">{c.footer.privacy}</Link>
               <Link to="/terms" className="hover:text-foreground transition-colors">{c.footer.terms}</Link>
               <Link to="/help" className="hover:text-foreground transition-colors">{c.footer.contact}</Link>
