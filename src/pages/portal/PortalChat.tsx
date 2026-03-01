@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 interface Conversation { id: string; type: string; name: string | null; created_by: string; updated_at: string; }
 interface Member { user_id: string; conversation_id: string; }
-interface Profile { user_id: string; full_name: string | null; email: string | null; }
+interface Profile { user_id: string; full_name: string | null; }
 interface Message { id: string; conversation_id: string; sender_id: string; content: string; created_at: string; deleted_at: string | null; }
 
 export default function PortalChat() {
@@ -48,7 +48,7 @@ export default function PortalChat() {
     const [convRes, memRes, profRes] = await Promise.all([
       supabase.from("conversations").select("*").eq("company_id", companyId).order("updated_at", { ascending: false }),
       supabase.from("conversation_members").select("user_id, conversation_id").eq("company_id", companyId),
-      supabase.from("profiles").select("user_id, full_name, email"),
+      supabase.from("profiles_safe").select("user_id, full_name"),
     ]);
     setConversations((convRes.data ?? []) as unknown as Conversation[]);
     setMembers((memRes.data ?? []) as unknown as Member[]);
@@ -118,7 +118,7 @@ export default function PortalChat() {
     if (convo.name) return convo.name;
     const convoMembers = members.filter(m => m.conversation_id === convo.id && m.user_id !== userId);
     if (convoMembers.length === 0) return "Yo";
-    return convoMembers.map(m => profiles.get(m.user_id)?.full_name ?? profiles.get(m.user_id)?.email ?? "Usuario").join(", ");
+    return convoMembers.map(m => profiles.get(m.user_id)?.full_name ?? "Usuario").join(", ");
   };
 
   const getInitials = (name: string) => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
