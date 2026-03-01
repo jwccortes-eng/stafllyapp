@@ -135,7 +135,7 @@ export default function Employees() {
 
   const fetchEmployees = async () => {
     if (!selectedCompanyId) return;
-    const { data } = await supabase.from("employees").select("*").eq("company_id", selectedCompanyId).order("first_name");
+    const { data } = await supabase.from("employees").select("id, company_id, first_name, last_name, phone_number, email, employee_role, is_active, start_date, end_date, groups, tags, direct_manager, connecteam_employee_id, user_id, created_at, updated_at, avatar_url, country_code, date_added, driver_licence, english_level, gender, has_car, qualify, recommended_by, added_by, added_via, last_login").eq("company_id", selectedCompanyId).order("first_name");
     setEmployees((data as EmployeeRecord[]) ?? []);
     setInitialLoading(false);
   };

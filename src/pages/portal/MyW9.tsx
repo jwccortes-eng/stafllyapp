@@ -109,7 +109,7 @@ export default function MyW9() {
 
     if (tin.trim()) {
       payload.tin_last4 = tin.slice(-4);
-      payload.tin_encrypted = tin.trim();
+      // Only store last 4 digits — full TIN is NOT persisted for security
     }
 
     let error;
