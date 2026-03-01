@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
 import { Badge } from "@/components/ui/badge";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 
 
 /* ─── animated counter hook ─── */
@@ -745,6 +746,9 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Onboarding Checklist ── */}
+      <OnboardingChecklist />
 
       {/* ── Owner: Company Cards ── */}
       {role === 'owner' && companies.length > 1 && (
