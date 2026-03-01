@@ -46,6 +46,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
+import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 
@@ -1039,55 +1040,15 @@ export default function Employees() {
                   </Button>
                 </div>
               )}
-              <div className="space-y-0.5">
-                {visibleFields.filter(f => !f.hidden).map(f => (
-                  <div key={f.key} className="flex justify-between items-center py-2.5 border-b border-border/40 gap-3">
-                    <span className="text-xs text-muted-foreground shrink-0 w-28">{f.label}</span>
-                    {isEditing ? (
-                      BOOLEAN_FIELDS.has(f.key) ? (
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí"}
-                            onCheckedChange={c => setForm(prev => ({ ...prev, [f.key]: c ? "Yes" : "No" }))}
-                          />
-                          <span className="text-xs">{form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí" ? "Sí" : "No"}</span>
-                        </div>
-                      ) : (
-                        <Input
-                          value={form[f.key] ?? ""}
-                          onChange={ev => setForm(prev => ({ ...prev, [f.key]: ev.target.value }))}
-                          className="h-8 text-sm flex-1"
-                        />
-                      )
-                    ) : (
-                      <span className="text-sm font-medium text-right max-w-[60%] break-words">
-                        {BOOLEAN_FIELDS.has(f.key) ? (
-                          viewEmployee?.[f.key] === "Yes" || viewEmployee?.[f.key] === "true" || viewEmployee?.[f.key] === "Sí" ? (
-                            <Badge variant="outline" className="bg-earning/10 text-earning border-earning/20">🚗 Sí</Badge>
-                          ) : (
-                            <span className="text-muted-foreground/40">No</span>
-                          )
-                        ) : (
-                          viewEmployee?.[f.key] || <span className="text-muted-foreground/40">—</span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-              ))}
 
-              {/* Availability Section */}
-              {viewEmployee && (
-                <div className="pt-4">
-                  <Separator className="mb-4" />
-                  <p className="text-xs font-semibold mb-3 flex items-center gap-1.5">
-                    📅 Disponibilidad
-                  </p>
-                  <EmployeeAvailabilitySection
-                    employeeId={viewEmployee.id}
-                    readOnly={!isEditing}
-                  />
-                </div>
-              )}
+              <EmployeeProfileTabs
+                employee={viewEmployee!}
+                companyId={selectedCompanyId!}
+                isEditing={isEditing}
+                form={form}
+                setForm={setForm}
+                isPrivileged={isPrivileged}
+              />
 
               <div className="flex gap-2 pt-6">
                 <Button
@@ -1107,7 +1068,6 @@ export default function Employees() {
                   <Trash2 className="h-3 w-3 mr-1.5" />Eliminar
                 </Button>
               </div>
-            </div>
             </div>
           </ScrollArea>
         </SheetContent>
