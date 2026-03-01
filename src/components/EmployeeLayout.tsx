@@ -13,6 +13,21 @@ import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { EMPLOYEE_NAV_ITEMS, EMPLOYEE_DEFAULT_PINS } from "@/components/navigation/nav-items";
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 
+/** Shows current page title in mobile portal header */
+function PortalPageTitle() {
+  const location = useLocation();
+  const current = EMPLOYEE_NAV_ITEMS.find(item => {
+    if (item.end) return location.pathname === item.to;
+    return location.pathname === item.to || location.pathname.startsWith(item.to + "/");
+  });
+  if (!current) return null;
+  return (
+    <span className="text-sm font-semibold text-foreground/80 truncate max-w-[140px]">
+      {current.label}
+    </span>
+  );
+}
+
 export default function EmployeeLayout() {
   const { user, role, employeeActive, loading, signOut } = useAuth();
   const location = useLocation();
@@ -53,11 +68,12 @@ export default function EmployeeLayout() {
   if (isMobile) {
     return (
       <div className="min-h-[100dvh] bg-[hsl(var(--background))] flex flex-col">
-        {/* Top bar */}
+        {/* Top bar with page context */}
         <header className="sticky top-0 z-30 shrink-0 bg-card/95 backdrop-blur-2xl border-b border-border/50 shadow-2xs">
           <div className="flex items-center justify-between px-5 h-14">
-            <div className="flex items-center gap-2">
-              <StaflyLogo size={28} />
+            <div className="flex items-center gap-2.5">
+              <StaflyLogo size={24} />
+              <PortalPageTitle />
             </div>
             <div className="flex items-center gap-1">
               <NotificationBell />

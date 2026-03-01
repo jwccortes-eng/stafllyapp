@@ -16,6 +16,22 @@ import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS } from "@/components/navigation/nav
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import CompanyActionGuard from "@/components/CompanyActionGuard";
+import { NavItem } from "@/components/navigation/nav-items";
+
+/** Shows current page title in mobile header */
+function MobilePageTitle({ items }: { items: NavItem[] }) {
+  const location = useLocation();
+  const current = items.find(item => {
+    if (item.end) return location.pathname === item.to;
+    return location.pathname === item.to || location.pathname.startsWith(item.to + "/");
+  });
+  if (!current) return null;
+  return (
+    <span className="text-sm font-semibold text-foreground/80 truncate max-w-[140px]">
+      {current.label}
+    </span>
+  );
+}
 
 const SidebarContext = createContext<{ collapsed: boolean; setCollapsed: (v: boolean) => void }>({ collapsed: false, setCollapsed: () => {} });
 
@@ -85,11 +101,12 @@ export default function AdminLayout() {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background pb-20">
-        {/* Compact top bar */}
-        <header className="sticky top-0 z-30 bg-card/85 backdrop-blur-xl border-b border-border/30">
+        {/* Compact top bar with page context */}
+        <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-xl border-b border-border/30">
           <div className="flex items-center justify-between px-4 h-14">
             <div className="flex items-center gap-2.5">
-              <StaflyLogo size={28} />
+              <StaflyLogo size={24} />
+              <MobilePageTitle items={visibleItems} />
             </div>
             <div className="flex items-center gap-1">
               {companies.length > 1 && (
@@ -149,38 +166,18 @@ export default function AdminLayout() {
     );
   }
 
-  // Desktop layout — keep sidebar + add dock
+  // Desktop layout — sidebar only (no redundant dock)
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); localStorage.setItem("sidebar-collapsed", String(v)); } }}>
       <div className="min-h-screen bg-background">
         <AdminSidebar />
         <CommandPalette />
         <main className={cn(
-          "transition-all duration-300 ease-in-out p-6 lg:p-8 pb-24 animate-fade-in",
+          "transition-all duration-300 ease-in-out p-6 lg:p-8 animate-fade-in",
           collapsed ? "ml-[60px]" : "ml-[250px]"
         )}>
           <Outlet />
         </main>
-
-        {/* Floating Dock on desktop too */}
-        <FloatingDock
-          items={visibleItems}
-          pinnedIds={pinnedIds}
-          onOpenLauncher={() => setLauncherOpen(true)}
-          variant="admin"
-        />
-
-        {/* App Launcher */}
-        <AppLauncher
-          open={launcherOpen}
-          onClose={() => setLauncherOpen(false)}
-          items={visibleItems}
-          pinnedIds={pinnedIds}
-          onTogglePin={togglePin}
-          maxPins={maxPins}
-          onSignOut={signOut}
-          variant="admin"
-        />
       </div>
     </SidebarContext.Provider>
   );
