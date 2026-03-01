@@ -767,7 +767,7 @@ export default function Shifts() {
               <DialogTrigger asChild>
                 <Button size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1" /> Nuevo turno</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col rounded-2xl border-border/30 shadow-xl">
+              <DialogContent className="max-w-lg max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col rounded-2xl border-border/30 shadow-xl">
                 {/* Hero header */}
                 <div className="relative px-5 pt-5 pb-4 overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-12 translate-x-12 blur-2xl" />
