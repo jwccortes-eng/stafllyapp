@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import defaultAvatarImg from "@/assets/default-avatar.png";
 
 function hashName(name: string) {
   let h = 0;
