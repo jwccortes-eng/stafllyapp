@@ -204,7 +204,10 @@ export default function AdminDashboard() {
     async function fetchStats() {
       const [empRes, periodRes, impRes, movRes, ticketsRes] = await Promise.all([
         supabase.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", selectedCompanyId!),
-        supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId!).order("start_date", { ascending: false }).limit(1).maybeSingle(),
+        // Get the current period: the one containing today, or the most recent one that already started
+        supabase.from("pay_periods").select("*").eq("company_id", selectedCompanyId!)
+          .lte("start_date", new Date().toISOString().slice(0, 10))
+          .order("start_date", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("imports").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!),
         supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!),
         supabase.from("employee_tickets").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).in("status", ["new", "in_progress"]),
