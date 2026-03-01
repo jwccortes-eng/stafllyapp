@@ -6,6 +6,7 @@ import { Search, Phone, MessageSquare, Mail, Users, MessageCircle, Filter } from
 import { PageHeader } from "@/components/ui/page-header";
 import { useCompany } from "@/hooks/useCompany";
 import { formatPersonName, formatDisplayText, localeSort } from "@/lib/format-helpers";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 interface DirectoryEntry {
   id: string;
@@ -14,6 +15,8 @@ interface DirectoryEntry {
   phone_number: string | null;
   email: string | null;
   employee_role: string | null;
+  gender: string | null;
+  avatar_url: string | null;
 }
 
 export default function Directory() {
@@ -28,7 +31,7 @@ export default function Directory() {
     setLoading(true);
     supabase
       .from("employees")
-      .select("id, first_name, last_name, phone_number, email, employee_role")
+      .select("id, first_name, last_name, phone_number, email, employee_role, gender, avatar_url")
       .eq("company_id", selectedCompanyId)
       .eq("is_active", true)
       .order("first_name")
@@ -96,7 +99,7 @@ export default function Directory() {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-28 animate-pulse bg-muted rounded-2xl" />
+            <div key={i} className="h-32 animate-pulse bg-muted rounded-2xl" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -110,7 +113,6 @@ export default function Directory() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((emp) => {
             const phone = cleanPhone(emp.phone_number);
-            const initials = `${emp.first_name?.[0] ?? ""}${emp.last_name?.[0] ?? ""}`.toUpperCase();
 
             return (
               <div
@@ -118,32 +120,39 @@ export default function Directory() {
                 className="group relative rounded-2xl border border-border/40 bg-card p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
               >
                 {/* decorative blob */}
-                <div className="absolute top-0 right-0 h-20 w-20 rounded-full bg-primary/5 -translate-y-6 translate-x-6 group-hover:scale-150 transition-transform duration-500" />
+                <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-primary/5 -translate-y-8 translate-x-8 group-hover:scale-[2] transition-transform duration-700" />
 
                 <div className="relative z-10 flex items-start gap-3">
-                  {/* Avatar */}
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0 shadow-sm">
-                    <span className="text-sm font-bold text-primary-foreground">{initials}</span>
-                  </div>
+                  {/* 3D Avatar */}
+                  <EmployeeAvatar
+                    firstName={emp.first_name}
+                    lastName={emp.last_name}
+                    avatarUrl={emp.avatar_url}
+                    gender={emp.gender}
+                    size="xl"
+                    className="ring-2 ring-background shadow-lg"
+                  />
 
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground truncate">
+                  <div className="min-w-0 flex-1 pt-1">
+                    <p className="text-sm font-bold text-foreground truncate leading-tight">
                       {formatPersonName(`${emp.first_name} ${emp.last_name}`)}
                     </p>
                     {emp.employee_role && (
-                      <p className="text-[11px] text-muted-foreground truncate">{formatDisplayText(emp.employee_role, "label")}</p>
+                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
+                        {formatDisplayText(emp.employee_role, "label")}
+                      </span>
                     )}
 
                     {/* Contact info */}
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-2 space-y-0.5">
                       {emp.phone_number && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          📞 {emp.phone_number}
+                        <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                          <Phone className="h-3 w-3 shrink-0" /> {emp.phone_number}
                         </p>
                       )}
                       {emp.email && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          ✉️ {emp.email}
+                        <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                          <Mail className="h-3 w-3 shrink-0" /> {emp.email}
                         </p>
                       )}
                     </div>
@@ -151,12 +160,12 @@ export default function Directory() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="relative z-10 flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border/40">
+                <div className="relative z-10 flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border/30">
                   {phone && (
                     <>
                       <a
                         href={`tel:${phone}`}
-                        className="flex-1 min-w-[4.5rem] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
+                        className="flex-1 min-w-[4rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[11px] font-semibold bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
                       >
                         <Phone className="h-3.5 w-3.5 shrink-0" />
                         Llamar
@@ -165,14 +174,14 @@ export default function Directory() {
                         href={`https://wa.me/${phone.replace('+', '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 min-w-[4.5rem] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
+                        className="flex-1 min-w-[4rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[11px] font-semibold bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
                       >
                         <MessageCircle className="h-3.5 w-3.5 shrink-0" />
                         WhatsApp
                       </a>
                       <a
                         href={`sms:${phone}`}
-                        className="flex-1 min-w-[4.5rem] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        className="flex-1 min-w-[4rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[11px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                       >
                         <MessageSquare className="h-3.5 w-3.5 shrink-0" />
                         Texto
@@ -182,7 +191,7 @@ export default function Directory() {
                   {emp.email && (
                     <a
                       href={`mailto:${emp.email}`}
-                      className="flex-1 min-w-[4.5rem] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-medium bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
+                      className="flex-1 min-w-[4rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[11px] font-semibold bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
                     >
                       <Mail className="h-3.5 w-3.5 shrink-0" />
                       Correo
