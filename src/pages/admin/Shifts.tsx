@@ -20,7 +20,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText } from "lucide-react";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { PageHeader } from "@/components/ui/page-header";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
@@ -565,6 +565,22 @@ export default function Shifts() {
     loadData();
   };
 
+  // --- Bulk unlock all shifts in current view ---
+  const [bulkUnlocking, setBulkUnlocking] = useState(false);
+  const handleUnlockAll = async () => {
+    const locked = filteredShifts.filter(s => s.status === "locked");
+    if (locked.length === 0) { toast.info("No hay turnos bloqueados para desbloquear"); return; }
+    setBulkUnlocking(true);
+    const ids = locked.map(s => s.id);
+    const { error } = await supabase.from("scheduled_shifts")
+      .update({ status: "published" } as any)
+      .in("id", ids);
+    if (error) { toast.error(error.message); setBulkUnlocking(false); return; }
+    toast.success(`${ids.length} turno(s) desbloqueados`);
+    setBulkUnlocking(false);
+    loadData();
+  };
+
   const handleAddEmployees = async (shiftId: string, employeeIds: string[]) => {
     if (!selectedCompanyId) return;
     const assigns = employeeIds.map(eid => ({
@@ -1070,6 +1086,16 @@ export default function Shifts() {
               >
                 {bulkLocking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
                 Bloquear
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-[10px] px-2.5 gap-1 rounded-lg text-emerald-600 border-emerald-200/50 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
+                onClick={handleUnlockAll}
+                disabled={bulkUnlocking}
+              >
+                {bulkUnlocking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlock className="h-3 w-3" />}
+                Desbloquear
               </Button>
             </>
           )}
