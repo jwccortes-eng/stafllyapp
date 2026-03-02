@@ -81,6 +81,8 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
     const names = getAssignedNames(shift.id);
     const assignCount = assignments.filter(a => a.shift_id === shift.id).length;
     const isLocked = shift.status === "locked";
+    const totalSlots = shift.slots ?? 1;
+    const isFull = assignCount >= totalSlots;
 
     return (
       <div
@@ -104,7 +106,7 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
         <div className="font-bold truncate text-[12px] leading-snug text-foreground/90">
           {shift.shift_code && <span className="text-foreground/50">#{formatShiftCode(shift.shift_code)}</span>}{" "}
           {shift.title.toUpperCase()}
-          {(shift.slots ?? 1) > 1 && <span className="text-foreground/40"> - {shift.slots}</span>}
+          {totalSlots > 1 && <span className="text-foreground/40"> - {totalSlots}</span>}
         </div>
 
         {/* Time */}
@@ -127,6 +129,20 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
             )}
           </div>
         )}
+
+        {/* Capacity bar */}
+        <div className="flex items-center gap-1.5 mt-2">
+          <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all",
+                isFull ? "bg-emerald-400 dark:bg-emerald-500" : assignCount === 0 ? "bg-rose-400 dark:bg-rose-500" : "bg-amber-400 dark:bg-amber-500"
+              )}
+              style={{ width: `${Math.min(100, Math.round((assignCount / totalSlots) * 100))}%` }}
+            />
+          </div>
+          <span className="text-[9px] tabular-nums text-muted-foreground/50 font-medium">{assignCount}/{totalSlots}</span>
+        </div>
       </div>
     );
   };
