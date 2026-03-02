@@ -13,7 +13,7 @@ import { EmployeeCombobox } from "./EmployeeCombobox";
 import {
   Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
   CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
-  MessageSquare, Bell, Smartphone, Lock, ClipboardCheck, Car, Pencil, X,
+  MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
   CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon,
 } from "lucide-react";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
@@ -802,9 +802,31 @@ export function ShiftDetailDialog({
 
         {/* ── FOOTER ACTION BAR ── */}
         {isLocked ? (
-          <div className="px-5 py-3 border-t border-border/30 bg-muted/30 flex items-center justify-center gap-2">
-            <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground font-medium">Turno bloqueado — solo lectura</span>
+          <div className="px-5 py-3 border-t border-border/30 bg-muted/30 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">Turno bloqueado — solo lectura</span>
+            </div>
+            {canEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-[10px] gap-1.5 rounded-full text-emerald-600 border-emerald-200/50 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
+                onClick={async () => {
+                  const { error } = await supabase.from("scheduled_shifts")
+                    .update({ status: "published" } as any)
+                    .eq("id", shift.id);
+                  if (error) { toast.error(error.message); return; }
+                  toast.success("Turno desbloqueado");
+                  onOpenChange(false);
+                  // Trigger parent reload by calling onPublish with updated shift
+                  onPublish({ ...shift, status: "published" });
+                }}
+              >
+                <Unlock className="h-3 w-3" />
+                Desbloquear
+              </Button>
+            )}
           </div>
         ) : canEdit && (
           <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
