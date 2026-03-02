@@ -4,136 +4,90 @@
 ## Visión
 Construir la versión completa (all-features) usando Quality Staff como empresa piloto, luego definir restricciones por tier para comercializar.
 
-**Orden de ejecución**: Fase 1 → Fase 2 → Fase 4
+**Orden de ejecución**: Fase 1 → Fase 2 → Fase 3 → Fase 4
 
 ---
 
-## FASE 1: Nómina End-to-End (ACTIVA)
+## FASE 1: Nómina End-to-End — ✅ ~90% construido
 
 ### 1.1 Importación de horas — ✅ CONSTRUIDO
-- [x] ImportTimeClock.tsx (796 líneas) — subir Excel → mapear → match empleados → guardar
-- [x] Soporte Connecteam + Excel genérico (connecteam-parser.ts)
-- [x] ImportConnecteam.tsx — parser dedicado
-- [x] Log de importación con estados
-- [ ] **PENDIENTE**: Validar flujo completo con datos reales de Quality Staff
-- [ ] **PENDIENTE**: UX de errores — mensajes más claros para el usuario
+- [x] ImportTimeClock.tsx — subir Excel → mapear → match empleados → guardar
+- [x] Soporte Connecteam + Excel genérico
+- [ ] **PENDIENTE**: Validar flujo completo con datos reales
 
 ### 1.2 Consolidación de base pay — ✅ CONSTRUIDO
-- [x] Función DB `consolidate_period_base_pay` — consolida desde time_entries y shifts
-- [x] Consolidación de turnos daily-pay (auto-movements con concepto "Daily Pay")
-- [x] Validaciones pre-consolidación (entradas abiertas, rechazadas)
-- [x] Botón de consolidar en PeriodSummary
-- [ ] **PENDIENTE**: Probar consolidación con datos reales completos
+- [x] Función DB `consolidate_period_base_pay`
+- [ ] **PENDIENTE**: Probar con datos reales completos
 
 ### 1.3 Novedades (Movements) — ✅ CONSTRUIDO
-- [x] Movements.tsx (593 líneas) — CRUD completo por empleado/periodo
-- [x] Conceptos con tasas por empleado vs tasa por defecto (concept_employee_rates)
-- [x] ImportPayrollExtras.tsx (708 líneas) — importación masiva
-- [x] KPIs: total extras, deducciones, empleados afectados
-- [ ] **PENDIENTE**: Validar que los cálculos de calc_mode (qty_x_rate, manual_value) sean correctos
+- [x] CRUD completo + importación masiva + KPIs
 
-### 1.4 Resumen de periodo (PeriodSummary) — ✅ CONSTRUIDO
-- [x] PeriodSummary.tsx (652 líneas) — base pay + earnings - deductions = net pay
-- [x] Exportación Excel
-- [x] Flujo de estados: Abierto → Cerrado → Publicado → Pagado
-- [x] Envío de recibos por email (send-payroll-email edge function)
-- [x] Audit trail integrado
-- [ ] **PENDIENTE**: Mejorar formato de exportación Excel (más profesional)
-- [ ] **PENDIENTE**: Probar flujo de email end-to-end
+### 1.4 Resumen de periodo — ✅ CONSTRUIDO
+- [x] base pay + earnings - deductions = net pay + exportación + email
 
 ### 1.5 Reportes de nómina — ✅ CONSTRUIDO
-- [x] EmployeeReport.tsx (636 líneas) — reporte individual con desglose
-- [x] ComparisonReport.tsx (367 líneas) — comparativo turnos vs cobertura
-- [x] DiscrepancyReport.tsx (466 líneas) — discrepancias reloj vs schedule
-- [ ] **PENDIENTE**: Reporte comparativo entre periodos (periodo A vs B)
+- [x] Individual, comparativo, discrepancias
 
 ### 1.6 Portal del empleado — Pagos — ✅ CONSTRUIDO
-- [x] PayStub.tsx (209 líneas) — recibo detallado por periodo
-- [x] MyPayments.tsx (412 líneas) — historial con expandir detalles
-- [x] Accumulated.tsx (203 líneas) — acumulado con tabla y totales
-- [ ] **PENDIENTE**: Gráfico de tendencia en MyPayments
-
-### 📋 RESUMEN FASE 1: ~90% construido. Falta validación con datos reales y pulido.
+- [x] PayStub, MyPayments, Accumulated
 
 ---
 
-## FASE 2: Turnos y Reloj (SIGUIENTE)
+## FASE 2: Turnos y Reloj — ✅ ~85% construido
 
-### 2.1 Gestión de turnos (Shifts) — ✅ CONSTRUIDO
-- [x] Shifts.tsx + componentes (DayView, WeekView, MonthView, etc.)
-- [x] Asignación de empleados (EmployeeCombobox)
-- [x] Vistas: día, semana, mes, por empleado, por cliente
-- [x] Solicitudes de turno (ShiftRequests.tsx)
-- [x] Notificaciones automáticas (trigger DB notify_managers_on_shift_request)
-- [x] Códigos incrementales #0001
-- [x] Import de horarios (ImportSchedule.tsx)
-- [ ] **PENDIENTE**: Drag & drop para reasignar turnos
-- [ ] **PENDIENTE**: Copiar semana anterior
+### 2.1 Gestión de turnos — ✅ CONSTRUIDO
+- [x] Vistas día/semana/mes, asignación, solicitudes, notificaciones
 
-### 2.2 Reloj de entrada/salida (TimeClock) — ✅ CONSTRUIDO
-- [x] TimeClock.tsx — vista mensual admin
-- [x] PortalClock.tsx — fichaje empleado
-- [x] Validación solapamiento (trigger DB prevent_overlapping_time_entries)
-- [x] Estados: pendiente/aprobado/rechazado
-- [x] Consolidación automática vía función DB
-- [ ] **PENDIENTE**: Geocerca (geofence) — estructura DB existe, falta implementar en portal
-- [ ] **PENDIENTE**: Fichaje con foto (opcional)
+### 2.2 Reloj — ✅ CONSTRUIDO
+- [x] Admin + Portal, validación solapamiento, estados
+- [ ] **PENDIENTE**: Geocerca, fichaje con foto
 
-### 2.3 Vista "Hoy" (TodayView) — ✅ CONSTRUIDO
-- [x] TodayView.tsx — dashboard operativo
-- [x] EmployeeDayDetailDrawer — timeline del día por empleado
-- [x] Forzar salida de fichajes abiertos
-- [ ] **PENDIENTE**: Alertas de empleados que no han fichado
-
-### 📋 RESUMEN FASE 2: ~85% construido. Falta geocerca, drag&drop turnos, alertas.
+### 2.3 Vista "Hoy" — ✅ CONSTRUIDO
+- [x] Dashboard operativo + timeline + forzar salida
 
 ---
 
-## FASE 3: Definición de Tiers y Feature Gating (DESPUÉS)
+## FASE 3: Feature Gating + Billing — ✅ IMPLEMENTADO
 
-### 3.1 Estado actual del feature gating
-- [x] useSubscription.tsx — lee plan de tabla `subscriptions`
-- [x] PLAN_LIMITS definidos (Free: 25 emp/1 admin, Pro: 100/3, Enterprise: ilimitado)
-- [x] PREMIUM_FEATURES: automations, monetization, advanced-reports, api-access
-- [x] UpgradeBanner componente
-- [x] Billing con Stripe (checkout, webhook, portal)
+### 3.1 Mapeo de módulos por plan — ✅ DONE
+- [x] MODULE_PLAN_MAP en useSubscription: Free (empleados, conceptos, turnos, anuncios), Pro (reloj, nómina, reportes, clientes, ubicaciones), Enterprise (automatizaciones, chat, API)
+- [x] `canAccessModule()` y `requiredPlanForModule()` helpers
+- [x] Sidebar muestra módulos bloqueados con 🔒 + badge del plan requerido
+- [x] Click en módulo bloqueado → redirige a /app/pricing
+- [x] Trial banner en sidebar (días restantes)
 
-### 3.2 Pendiente
-- [ ] Mapear TODOS los módulos a planes (no solo features premium)
-- [ ] Bloquear navegación sidebar para módulos no incluidos
-- [ ] Crear productos/precios en Stripe producción
-- [ ] Trial de 14 días
-- [ ] Upgrade flow in-app más fluido
+### 3.2 Stripe real — ✅ DONE
+- [x] Productos creados: Staffly Pro (prod_U3IluoBcH0iTV3), Enterprise (prod_U3IlChjEUzg2pj)
+- [x] Price IDs: price_1T5C9xK7PYTRtWks5cRmmPtJ (Pro), price_1T5CAJK7PYTRtWksY7nUGqB5 (Enterprise)
+- [x] billing-checkout: funcional con Stripe real
+- [x] billing-webhook: procesa eventos y actualiza subscriptions
+- [x] billing-customer-portal: portal de gestión Stripe
 
-### 3.1 Mapeo propuesto de módulos por plan
-| Módulo | Free | Pro ($49) | Enterprise ($149) |
-|--------|------|-----------|-------------------|
-| Directorio empleados | ✅ | ✅ | ✅ |
-| Turnos (básico, sin reloj) | ✅ | ✅ | ✅ |
-| Anuncios | ✅ | ✅ | ✅ |
-| Reloj entrada/salida | ❌ | ✅ | ✅ |
-| Nómina completa | ❌ | ✅ | ✅ |
-| Reportes avanzados | ❌ | ✅ | ✅ |
-| Clientes y ubicaciones | ❌ | ✅ | ✅ |
-| Novedades / Extras | ❌ | ✅ | ✅ |
-| Automatizaciones | ❌ | ❌ | ✅ |
-| API externa | ❌ | ❌ | ✅ |
-| Multi-marca | ❌ | ❌ | ✅ |
-| Chat interno | ❌ | ❌ | ✅ |
+### 3.3 Trial 14 días — ✅ DONE
+- [x] setup-company crea suscripción "trialing" con plan "pro" por 14 días
+- [x] UI muestra días restantes en sidebar y Pricing
+
+### 3.4 Planes manuales — ✅ EXISTENTE
+- [x] Asignación manual desde panel admin de empresas
+
+### 3.5 Pendiente
+- [ ] Configurar webhook en Stripe Dashboard (endpoint + eventos)
+- [ ] Implementar downgrade automático post-trial (cron o webhook)
+- [ ] Bloquear acceso real a páginas gated (no solo sidebar)
 
 ---
 
-## FASE 4: Onboarding Self-Service (POSTERIOR)
+## FASE 4: Onboarding Self-Service — ✅ PARCIAL
 
-- [ ] Landing page con CTA → registro
-- [ ] Wizard: nombre empresa → slug → admin principal
-- [ ] Provisionar empresa con configuración por defecto + módulos del plan
-- [ ] Trial period (14 días Pro gratis)
+- [x] Landing page con CTA → registro
+- [x] Wizard: nombre empresa → slug → admin principal (setup-company edge function)
+- [x] Provisionar empresa con configuración por defecto + módulos + trial Pro 14d
 - [ ] Setup wizard post-registro: importar empleados, configurar nómina
+- [ ] Mejorar flujo de bienvenida post-registro
 
 ---
 
 ## Estado actual
 - **Empresa piloto**: Quality Staff
-- **Fase activa**: Fase 1 — validación con datos reales
-- **Última actualización**: 2026-03-01
+- **Fase activa**: Fase 3 completada, validación pendiente
+- **Última actualización**: 2026-03-02

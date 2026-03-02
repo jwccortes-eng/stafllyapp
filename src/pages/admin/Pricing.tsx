@@ -1,4 +1,4 @@
-import { Check, Tag } from "lucide-react";
+import { Check, Sparkles, Clock } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,8 +17,7 @@ const plans = [
     features: [
       "1 administrador",
       "Hasta 25 empleados",
-      "Nómina semanal básica",
-      "Turnos y reloj",
+      "Directorio y turnos básicos",
       "Anuncios",
     ],
     priceId: null,
@@ -33,9 +32,10 @@ const plans = [
     features: [
       "Hasta 3 administradores",
       "Hasta 100 empleados",
-      "Automatizaciones",
+      "Reloj de entrada/salida",
+      "Nómina completa",
       "Reportes avanzados",
-      "API externa",
+      "Clientes y ubicaciones",
       "Soporte prioritario",
     ],
     priceId: "price_1T5C9xK7PYTRtWks5cRmmPtJ",
@@ -50,8 +50,9 @@ const plans = [
       "Todo en Pro",
       "Admins y empleados ilimitados",
       "Multi-empresa",
-      "Monetización y facturación",
-      "Integraciones personalizadas",
+      "Chat interno",
+      "Automatizaciones",
+      "API externa",
       "SLA garantizado",
     ],
     priceId: "price_1T5CAJK7PYTRtWksY7nUGqB5",
@@ -59,7 +60,7 @@ const plans = [
 ];
 
 export default function Pricing() {
-  const { plan: currentPlan, isLoading } = useSubscription();
+  const { plan: currentPlan, isLoading, isTrial, trialDaysLeft } = useSubscription();
   const checkoutMutation = useCreateCheckoutSession();
 
   const handleCheckout = (priceId: string | null) => {
@@ -76,9 +77,28 @@ export default function Pricing() {
         subtitle="Elige el plan que mejor se adapte a tu operación"
       />
 
+      {/* Trial notice */}
+      {isTrial && trialDaysLeft !== null && (
+        <div className="max-w-5xl mx-auto rounded-xl border border-primary/20 bg-primary/5 px-5 py-3 flex items-center gap-3 animate-slide-up">
+          <Clock className="h-5 w-5 text-primary shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-foreground">
+              Estás en tu prueba Pro gratuita
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {trialDaysLeft > 0
+                ? `Te quedan ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''} para explorar todas las funciones Pro.`
+                : 'Tu prueba ha expirado. Selecciona un plan para continuar.'}
+            </p>
+          </div>
+          <Sparkles className="h-5 w-5 text-primary/40" />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         {plans.map((p, idx) => {
           const isCurrent = currentPlan === p.id;
+          const isTrialPlan = isTrial && p.id === "pro";
           return (
             <Card
               key={p.id}
@@ -114,11 +134,19 @@ export default function Pricing() {
               <CardFooter>
                 <Button
                   className="w-full"
-                  variant={isCurrent ? "outline" : p.popular ? "default" : "secondary"}
-                  disabled={isCurrent || isLoading || checkoutMutation.isPending}
+                  variant={isCurrent || isTrialPlan ? "outline" : p.popular ? "default" : "secondary"}
+                  disabled={(isCurrent && !isTrial) || isLoading || checkoutMutation.isPending}
                   onClick={() => handleCheckout(p.priceId)}
                 >
-                  {isCurrent ? "Plan actual" : checkoutMutation.isPending ? "Procesando…" : "Seleccionar"}
+                  {isCurrent && !isTrial
+                    ? "Plan actual"
+                    : isTrialPlan
+                      ? "Activar Pro"
+                      : checkoutMutation.isPending
+                        ? "Procesando…"
+                        : p.priceId
+                          ? "Seleccionar"
+                          : "Plan actual"}
                 </Button>
               </CardFooter>
             </Card>

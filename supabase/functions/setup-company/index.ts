@@ -20,6 +20,8 @@ const DEFAULT_SETTINGS = [
   { key: "pay_types", value: { hourly: true, daily: true, salary: false } },
 ];
 
+const TRIAL_DAYS = 14;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -104,7 +106,7 @@ Deno.serve(async (req) => {
       role: "admin",
     });
 
-    // 3. Update user_roles to admin (handle_new_user_role trigger already created an 'employee' row)
+    // 3. Update user_roles to admin
     const { data: existingRole } = await adminClient
       .from("user_roles")
       .select("id")
@@ -141,17 +143,31 @@ Deno.serve(async (req) => {
     }));
     await adminClient.from("company_settings").insert(settings);
 
-    // 6. Log activity
+    // 6. Create 14-day Pro trial subscription
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
+
+    await adminClient.from("subscriptions").upsert({
+      company_id: companyId,
+      plan: "pro",
+      status: "trialing",
+      current_period_end: trialEnd.toISOString(),
+      cancel_at_period_end: false,
+    }, { onConflict: "company_id" });
+
+    // 7. Log activity
     await adminClient.from("activity_log").insert({
       user_id: user.id,
       company_id: companyId,
       action: "self_service_setup",
       entity_type: "company",
       entity_id: companyId,
-      details: { name, slug, source: "self_service" },
+      details: { name, slug, source: "self_service", trial_days: TRIAL_DAYS },
     });
 
-    return new Response(JSON.stringify({ success: true, company_id: companyId, slug }), {
+    console.log(`[setup-company] Created company=${companyId}, slug=${slug}, trial=${TRIAL_DAYS}d`);
+
+    return new Response(JSON.stringify({ success: true, company_id: companyId, slug, trial_days: TRIAL_DAYS }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
