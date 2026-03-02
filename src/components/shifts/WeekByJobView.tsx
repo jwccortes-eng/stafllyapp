@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { Clock, Users, ChevronDown, ChevronUp, Timer, CalendarDays, Lock, Moon, Hand } from "lucide-react";
 import { useState } from "react";
-import { getClientColor } from "./types";
+import { getClientColor, formatShiftCode } from "./types";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
 interface WeekByJobViewProps {
@@ -80,19 +80,14 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
   const renderShiftPill = (shift: Shift, color: ReturnType<typeof getClientColor>) => {
     const names = getAssignedNames(shift.id);
     const assignCount = assignments.filter(a => a.shift_id === shift.id).length;
-    const isUnassigned = assignCount === 0;
-    const totalSlots = shift.slots ?? 1;
-    const isFull = assignCount >= totalSlots;
     const isLocked = shift.status === "locked";
-    const overnight = shift.end_time.slice(0, 5) <= shift.start_time.slice(0, 5) && shift.end_time.slice(0, 5) !== "00:00";
 
     return (
       <div
         key={shift.id}
         className={cn(
-          "rounded-xl px-2.5 py-2 text-[10px] cursor-pointer border-l-[3px] transition-all hover:shadow-md hover:-translate-y-0.5 bg-white/80 dark:bg-card/80 border border-border/15",
-          color.border,
-          isUnassigned ? "border-l-rose-300 bg-rose-50/40 dark:bg-rose-950/20" : color.bg,
+          "rounded-xl px-3 py-2.5 text-[11px] cursor-pointer border-l-[3px] transition-all hover:shadow-md hover:-translate-y-0.5 border border-border/10",
+          color.border, color.bg,
           isLocked && "opacity-70"
         )}
         onClick={() => onShiftClick(shift)}
@@ -105,51 +100,33 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
           if (data) onDropOnShift(shift.id, data);
         }}
       >
-        {/* Title row with icons */}
-        <div className="flex items-start justify-between gap-1">
-          <div className="font-semibold truncate text-[11px] min-w-0 flex-1">{shift.title}</div>
-          <div className="flex items-center gap-0.5 shrink-0">
-            {shift.claimable && <Hand className="h-2.5 w-2.5 text-violet-400" />}
-            {overnight && <Moon className="h-2.5 w-2.5 text-indigo-400" />}
-            {isLocked && <Lock className="h-2.5 w-2.5 text-muted-foreground/50" />}
-          </div>
+        {/* Title with shift code */}
+        <div className="font-bold truncate text-[12px] leading-snug text-foreground/90">
+          {shift.shift_code && <span className="text-foreground/50">#{formatShiftCode(shift.shift_code)}</span>}{" "}
+          {shift.title.toUpperCase()}
+          {(shift.slots ?? 1) > 1 && <span className="text-foreground/40"> - {shift.slots}</span>}
         </div>
 
-        {/* Time + duration */}
-        <div className="text-muted-foreground/70 flex items-center gap-1.5 mt-0.5">
+        {/* Time */}
+        <div className="text-muted-foreground/60 flex items-center gap-1.5 mt-1">
           <Clock className="h-3 w-3 shrink-0" />
           <span>{shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}</span>
-          <span className="text-muted-foreground/40 text-[9px]">{calcDuration(shift.start_time, shift.end_time)}</span>
         </div>
 
         {/* Employee names */}
-        {names.length > 0 ? (
-          <div className="mt-1.5 space-y-px">
+        {names.length > 0 && (
+          <div className="mt-2 space-y-0.5">
             {names.slice(0, 2).map((n, i) => (
-              <div key={i} className="flex items-center gap-1 text-muted-foreground/60">
-                <Users className="h-2.5 w-2.5 shrink-0" />
+              <div key={i} className="flex items-center gap-1.5 text-muted-foreground/55 text-[11px]">
+                <Users className="h-3 w-3 shrink-0" />
                 <span className="truncate">{n}</span>
               </div>
             ))}
-            {names.length > 2 && <span className="text-muted-foreground/40 ml-3.5">+{names.length - 2} más</span>}
+            {names.length > 2 && (
+              <span className="text-muted-foreground/40 text-[11px] ml-[18px]">+{names.length - 2} más</span>
+            )}
           </div>
-        ) : (
-          <div className="mt-1.5 text-rose-500 dark:text-rose-400 font-semibold text-[10px]">Sin asignar</div>
         )}
-
-        {/* Mini capacity bar */}
-        <div className="flex items-center gap-1.5 mt-1.5">
-          <div className="flex-1 h-1 bg-muted/40 rounded-full overflow-hidden">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all",
-                isFull ? "bg-emerald-400" : assignCount === 0 ? "bg-rose-400" : "bg-amber-400"
-              )}
-              style={{ width: `${Math.min(100, Math.round((assignCount / totalSlots) * 100))}%` }}
-            />
-          </div>
-          <span className="text-[9px] tabular-nums text-muted-foreground/50 font-medium">{assignCount}/{totalSlots}</span>
-        </div>
       </div>
     );
   };
