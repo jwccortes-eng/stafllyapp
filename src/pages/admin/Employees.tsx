@@ -48,6 +48,7 @@ import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
+import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 
@@ -588,6 +589,7 @@ export default function Employees() {
         title="Empleados"
         subtitle={`${filtered.length} de ${employees.length} empleados`}
         rightSlot={<div className="flex gap-2 flex-wrap">
+          <BulkRateAssignment />
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
             <Download className="h-4 w-4 mr-2" />Exportar Excel
           </Button>
