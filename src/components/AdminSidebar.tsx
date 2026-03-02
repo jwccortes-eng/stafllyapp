@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,10 +8,11 @@ import {
   BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2,
   PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
   MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
-  Inbox, Wrench,
+  Inbox, Wrench, Lock, Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -71,7 +72,9 @@ const SECTION_ORDER = ["Inicio", "Operaciones", "Nómina", "Gestión"];
 export default function AdminSidebar() {
   const { signOut, role, hasModuleAccess, user, fullName } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
+  const { canAccessModule, requiredPlanForModule, isTrial, trialDaysLeft } = useSubscription();
   const location = useLocation();
+  const navigate = useNavigate();
   const { collapsed, setCollapsed } = useSidebarCollapsed();
   const { theme, setTheme } = useTheme();
 
@@ -105,6 +108,12 @@ export default function AdminSidebar() {
     if (role === 'owner' || role === 'admin') return true;
     if (role === 'manager') return hasModuleAccess(module, 'view');
     return false;
+  };
+
+  /** Whether a module is locked behind a higher plan */
+  const isModuleLocked = (module: string | null): boolean => {
+    if (!module) return false;
+    return !canAccessModule(module);
   };
 
   const isActive = (to: string, end?: boolean) => {
@@ -159,39 +168,61 @@ export default function AdminSidebar() {
     });
   };
 
+
   const renderLink = (link: LinkDef) => {
     const active = isActive(link.to, link.end);
     const badge = link.badge ? badgeCounts[link.badge] : 0;
+    const locked = isModuleLocked(link.module);
+    const requiredPlan = link.module ? requiredPlanForModule(link.module) : null;
+
+    const handleClick = (e: React.MouseEvent) => {
+      if (locked) {
+        e.preventDefault();
+        navigate("/app/pricing");
+      }
+    };
 
     const linkContent = (
       <div key={link.to} className="group/link relative">
         <NavLink
-          to={link.to}
+          to={locked ? "#" : link.to}
+          onClick={handleClick}
           data-active={active || undefined}
           className={cn(
             "relative flex items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-200 w-full min-w-0",
             collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2",
-            active
-              ? cn("bg-sidebar-primary/8 text-sidebar-primary font-semibold")
-              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+            locked
+              ? "text-sidebar-foreground/25 cursor-pointer hover:bg-sidebar-accent/20"
+              : active
+                ? cn("bg-sidebar-primary/8 text-sidebar-primary font-semibold")
+                : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
           )}
         >
-          {active && (
+          {active && !locked && (
             <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-sidebar-primary" />
           )}
           <div className="relative">
-            <link.icon className={cn(
-              "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
-              active ? "text-sidebar-primary" : "text-sidebar-foreground/40 group-hover/link:text-sidebar-foreground"
-            )} />
-            {collapsed && badge > 0 && (
+            {locked ? (
+              <Lock className="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/20" />
+            ) : (
+              <link.icon className={cn(
+                "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
+                active ? "text-sidebar-primary" : "text-sidebar-foreground/40 group-hover/link:text-sidebar-foreground"
+              )} />
+            )}
+            {collapsed && badge > 0 && !locked && (
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
             )}
           </div>
           {!collapsed && (
             <>
-              <span className="flex-1 truncate leading-tight">{link.label}</span>
-              {badge > 0 && (
+              <span className={cn("flex-1 truncate leading-tight", locked && "line-through decoration-sidebar-foreground/15")}>{link.label}</span>
+              {locked && requiredPlan && (
+                <span className="ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/8 text-primary">
+                  {requiredPlan}
+                </span>
+              )}
+              {!locked && badge > 0 && (
                 <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive/10 text-destructive text-[10px] font-bold tabular-nums px-1">
                   {badge > 99 ? "99+" : badge}
                 </span>
@@ -208,7 +239,10 @@ export default function AdminSidebar() {
           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
           <TooltipContent side="right" className="text-xs font-medium flex items-center gap-2">
             {link.label}
-            {badge > 0 && (
+            {locked && requiredPlan && (
+              <span className="text-[9px] font-bold text-primary">🔒 {requiredPlan}</span>
+            )}
+            {!locked && badge > 0 && (
               <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
                 {badge}
               </span>
@@ -383,6 +417,27 @@ export default function AdminSidebar() {
           </>
         )}
       </nav>
+
+      {/* Trial banner */}
+      {isTrial && trialDaysLeft !== null && !collapsed && (
+        <div className="mx-2 mb-1 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 shrink-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[11px] font-bold text-primary">Prueba Pro</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground leading-tight">
+            {trialDaysLeft > 0
+              ? `Te quedan ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''} de prueba gratuita.`
+              : 'Tu prueba ha expirado.'}
+          </p>
+          <button
+            onClick={() => navigate("/app/pricing")}
+            className="mt-1.5 text-[10px] font-semibold text-primary hover:underline"
+          >
+            Ver planes →
+          </button>
+        </div>
+      )}
 
       {/* ── Footer ── */}
       <div className="px-2 py-2.5 border-t border-border/30 space-y-0.5 shrink-0">
