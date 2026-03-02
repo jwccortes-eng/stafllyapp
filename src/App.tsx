@@ -61,6 +61,7 @@ import DiscrepancyReport from "./pages/admin/DiscrepancyReport";
 import ComparisonReport from "./pages/admin/ComparisonReport";
 import ContractorW9 from "./pages/admin/ContractorW9";
 import TaxForms1099 from "./pages/admin/TaxForms1099";
+import ModuleGate from "./components/ModuleGate";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
 import Accumulated from "./pages/portal/Accumulated";
@@ -113,38 +114,38 @@ function App() {
               <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="employees" element={<Employees />} />
-                <Route path="periods" element={<PayPeriods />} />
-                <Route path="import" element={<ImportConnecteam />} />
+                <Route path="periods" element={<ModuleGate moduleKey="periods"><PayPeriods /></ModuleGate>} />
+                <Route path="import" element={<ModuleGate moduleKey="import"><ImportConnecteam /></ModuleGate>} />
                 <Route path="concepts" element={<Concepts />} />
-                <Route path="movements" element={<Movements />} />
-                <Route path="summary" element={<PeriodSummary />} />
-                <Route path="summary/detail" element={<EmployeePeriodDetail />} />
-                <Route path="reports" element={<PeriodSummary />} />
-                <Route path="reports/employee" element={<EmployeeReport />} />
+                <Route path="movements" element={<ModuleGate moduleKey="movements"><Movements /></ModuleGate>} />
+                <Route path="summary" element={<ModuleGate moduleKey="summary"><PeriodSummary /></ModuleGate>} />
+                <Route path="summary/detail" element={<ModuleGate moduleKey="summary"><EmployeePeriodDetail /></ModuleGate>} />
+                <Route path="reports" element={<ModuleGate moduleKey="reports"><PeriodSummary /></ModuleGate>} />
+                <Route path="reports/employee" element={<ModuleGate moduleKey="reports"><EmployeeReport /></ModuleGate>} />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="companies" element={<CompaniesPage />} />
                 <Route path="global" element={<OwnerDashboard />} />
                 <Route path="invite" element={<InviteEmployees />} />
                 <Route path="directory" element={<Directory />} />
-                <Route path="clients" element={<Clients />} />
-                <Route path="locations" element={<Locations />} />
+                <Route path="clients" element={<ModuleGate moduleKey="clients"><Clients /></ModuleGate>} />
+                <Route path="locations" element={<ModuleGate moduleKey="locations"><Locations /></ModuleGate>} />
                 <Route path="shifts" element={<Shifts />} />
-                <Route path="import-schedule" element={<ImportSchedule />} />
-                <Route path="import-timeclock" element={<ImportTimeClock />} />
-                <Route path="import-extras" element={<ImportPayrollExtras />} />
+                <Route path="import-schedule" element={<ModuleGate moduleKey="import"><ImportSchedule /></ModuleGate>} />
+                <Route path="import-timeclock" element={<ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate>} />
+                <Route path="import-extras" element={<ModuleGate moduleKey="import"><ImportPayrollExtras /></ModuleGate>} />
                 <Route path="shift-requests" element={<ShiftRequests />} />
-                <Route path="timeclock" element={<TimeClock />} />
+                <Route path="timeclock" element={<ModuleGate moduleKey="timeclock"><TimeClock /></ModuleGate>} />
                 <Route path="today" element={<TodayView />} />
                 <Route path="announcements" element={<Announcements />} />
-                <Route path="chat" element={<InternalChat />} />
+                <Route path="chat" element={<ModuleGate moduleKey="chat"><InternalChat /></ModuleGate>} />
                 <Route path="settings" element={<PlatformSettings />} />
                 <Route path="activity" element={<ActivityLog />} />
                 <Route path="onboarding" element={<OnboardingWizard />} />
                 <Route path="permissions" element={<Permissions />} />
                 <Route path="company-config" element={<CompanyConfig />} />
-                <Route path="automations" element={<Automations />} />
+                <Route path="automations" element={<ModuleGate moduleKey="automations"><Automations /></ModuleGate>} />
                 <Route path="payroll-settings" element={<PayrollSettings />} />
-                <Route path="monetization" element={<MonetizationReport />} />
+                <Route path="monetization" element={<ModuleGate moduleKey="monetization"><MonetizationReport /></ModuleGate>} />
                 <Route path="pricing" element={<Pricing />} />
                 <Route path="billing" element={<Billing />} />
                 <Route path="system-health" element={<SystemHealth />} />
@@ -154,7 +155,7 @@ function App() {
                 <Route path="requests" element={<Requests />} />
                 <Route path="leads" element={<Leads />} />
                 <Route path="admin" element={<AdminHub />} />
-                <Route path="discrepancies" element={<DiscrepancyReport />} />
+                <Route path="discrepancies" element={<ModuleGate moduleKey="reports"><DiscrepancyReport /></ModuleGate>} />
                 <Route path="comparison" element={<ComparisonReport />} />
                 <Route path="w9" element={<ContractorW9 />} />
                 <Route path="1099" element={<TaxForms1099 />} />
