@@ -25,3 +25,5 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.setup-company]
     verify_jwt = false
+  [functions.trial-downgrade]
+    verify_jwt = false

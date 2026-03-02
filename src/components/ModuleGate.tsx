@@ -1,0 +1,53 @@
+import { useSubscription, MODULE_PLAN_MAP, PLAN_LIMITS, PlanId } from "@/hooks/useSubscription";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Lock, ArrowRight, Sparkles } from "lucide-react";
+
+interface ModuleGateProps {
+  /** The module key to check (e.g. "timeclock", "automations") */
+  moduleKey: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Wraps a page component. If the current plan doesn't have access
+ * to the module, shows an upgrade prompt instead of the page content.
+ */
+export default function ModuleGate({ moduleKey, children }: ModuleGateProps) {
+  const { canAccessModule, plan } = useSubscription();
+  const navigate = useNavigate();
+
+  if (canAccessModule(moduleKey)) {
+    return <>{children}</>;
+  }
+
+  const requiredPlan = MODULE_PLAN_MAP[moduleKey] as PlanId | undefined;
+  const planLabel = requiredPlan ? PLAN_LIMITS[requiredPlan]?.label : "Pro";
+
+  return (
+    <div className="flex items-center justify-center min-h-[60vh] animate-fade-in">
+      <div className="max-w-md text-center space-y-6 px-6">
+        <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/8 flex items-center justify-center">
+          <Lock className="h-7 w-7 text-primary" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-foreground">
+            Función exclusiva de {planLabel}
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Tu plan actual (<span className="font-semibold">{PLAN_LIMITS[plan]?.label ?? "Starter"}</span>) no incluye este módulo.
+            Actualiza tu plan para desbloquear esta funcionalidad y muchas más.
+          </p>
+        </div>
+        <Button
+          onClick={() => navigate("/app/pricing")}
+          className="press-scale gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          Ver planes
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
