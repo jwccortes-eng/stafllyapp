@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown, LayoutGrid, List, MessageCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -133,6 +133,7 @@ export default function Employees() {
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   const [importing, setImporting] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [updateDiffs, setUpdateDiffs] = useState<UpdateDiff[]>([]);
   const [updateStep, setUpdateStep] = useState<"upload" | "preview" | "done">("upload");
   const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
@@ -833,113 +834,238 @@ export default function Employees() {
         </div>}
       />
 
-      <div className="data-table-wrapper">
-        <div className="p-4 border-b space-y-3">
-          <DataTableToolbar
-            search={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Buscar por nombre, email o teléfono..."
-          >
-            <Button
-              variant={filtersOpen || activeFilterCount > 0 ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setFiltersOpen(!filtersOpen)}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filtros
-              {activeFilterCount > 0 && (
-                <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full">
-                  {activeFilterCount}
-                </Badge>
-              )}
-              <ChevronDown className={`h-3 w-3 ml-1 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
-            </Button>
-            {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
-                <X className="h-3 w-3 mr-1" />Limpiar
-              </Button>
-            )}
-          </DataTableToolbar>
-
-          {filtersOpen && (
-            <div className="flex gap-3 flex-wrap animate-in slide-in-from-top-2 duration-200">
-              <FormField label="Estado" className="space-y-1">
-                <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
-                  <SelectTrigger className="w-[140px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="active">Activos</SelectItem>
-                    <SelectItem value="inactive">Inactivos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormField>
-              {uniqueRoles.length > 0 && (
-                <FormField label="Rol" className="space-y-1">
-                  <Select value={filterRole} onValueChange={setFilterRole}>
-                    <SelectTrigger className="w-[160px] h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los roles</SelectItem>
-                      {uniqueRoles.map(r => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
-              )}
-              {uniqueGroups.length > 0 && (
-                <FormField label="Grupo" className="space-y-1">
-                  <Select value={filterGroup} onValueChange={setFilterGroup}>
-                    <SelectTrigger className="w-[160px] h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los grupos</SelectItem>
-                      {uniqueGroups.map(g => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
-              )}
-            </div>
-          )}
+      {/* Advanced toolbar */}
+      <div className="flex items-center gap-2 flex-wrap mb-6">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[180px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por nombre, email o teléfono…"
+            className="pl-9 h-9 text-xs"
+          />
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12"></TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead className="hidden md:table-cell">Contacto</TableHead>
-              <TableHead className="hidden lg:table-cell">Rol</TableHead>
-              <TableHead className="hidden lg:table-cell">Grupo</TableHead>
-              <TableHead className="hidden xl:table-cell">Inicio</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="w-12"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {initialLoading ? (
-              <TableRow><TableCell colSpan={8} className="p-0"><PageSkeleton variant="table" className="border-0 shadow-none p-4" /></TableCell></TableRow>
-            ) : fetchError ? (
-              <TableRow><TableCell colSpan={8} className="p-0"><ErrorBlock compact onRetry={fetchEmployees} /></TableCell></TableRow>
-            ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="p-0">
-                <EmptyState icon={Users} title="No hay empleados" description={search ? "Intenta con otro término de búsqueda" : "Agrega tu primer empleado para comenzar"} compact />
-              </TableCell></TableRow>
-            ) : (
-              filtered.map((e) => (
+
+        {/* Status filter */}
+        <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+          <SelectTrigger className="w-[120px] h-9 text-xs">
+            <Filter className="h-3 w-3 mr-1.5 text-muted-foreground/50" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Activos</SelectItem>
+            <SelectItem value="inactive">Inactivos</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Role filter */}
+        {uniqueRoles.length > 0 && (
+          <Select value={filterRole} onValueChange={setFilterRole}>
+            <SelectTrigger className="w-[140px] h-9 text-xs">
+              <SelectValue placeholder="Rol" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los roles</SelectItem>
+              {uniqueRoles.map(r => (
+                <SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Group filter */}
+        {uniqueGroups.length > 0 && (
+          <Select value={filterGroup} onValueChange={setFilterGroup}>
+            <SelectTrigger className="w-[140px] h-9 text-xs">
+              <SelectValue placeholder="Grupo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los grupos</SelectItem>
+              {uniqueGroups.map(g => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground/50 px-2" onClick={clearFilters}>
+            <X className="h-3 w-3 mr-1" /> Limpiar
+          </Button>
+        )}
+
+        <div className="h-5 w-px bg-border/30 mx-1 hidden sm:block" />
+
+        {/* View mode toggle */}
+        <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
+          <button
+            className={cn(
+              "h-9 w-9 flex items-center justify-center transition-colors",
+              viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50"
+            )}
+            onClick={() => setViewMode("grid")}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </button>
+          <button
+            className={cn(
+              "h-9 w-9 flex items-center justify-center transition-colors",
+              viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50"
+            )}
+            onClick={() => setViewMode("list")}
+          >
+            <List className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Export */}
+        <Button variant="outline" size="sm" className="h-9 text-xs ml-auto" onClick={handleExport} disabled={filtered.length === 0}>
+          <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar
+        </Button>
+      </div>
+
+      {/* Content */}
+      {initialLoading ? (
+        <div className={cn(
+          viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2"
+        )}>
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className={cn("animate-pulse bg-muted rounded-2xl", viewMode === "grid" ? "h-44" : "h-16")} />
+          ))}
+        </div>
+      ) : fetchError ? (
+        <ErrorBlock compact onRetry={fetchEmployees} />
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={Users} title="No hay empleados" description={search ? "Intenta con otro término de búsqueda" : "Agrega tu primer empleado para comenzar"} />
+      ) : viewMode === "grid" ? (
+        /* ─── Grid View ─── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filtered.map(e => {
+            const phone = e.phone_number?.replace(/[^+\d]/g, "") ?? "";
+            return (
+              <div
+                key={e.id}
+                onClick={() => openDetailSheet(e)}
+                className={cn(
+                  "group relative rounded-2xl border border-border/40 bg-card p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden cursor-pointer",
+                  !e.is_active && "opacity-50"
+                )}
+              >
+                {/* decorative blob */}
+                <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-primary/5 -translate-y-8 translate-x-8 group-hover:scale-[2] transition-transform duration-700" />
+
+                <div className="relative z-10 flex items-start gap-3">
+                  <EmployeeAvatar
+                    firstName={e.first_name ?? ""}
+                    lastName={e.last_name ?? ""}
+                    avatarUrl={e.avatar_url}
+                    gender={e.gender}
+                    size="xl"
+                    className="ring-2 ring-background shadow-lg"
+                  />
+
+                  <div className="min-w-0 flex-1 pt-1">
+                    <p className="text-sm font-bold text-foreground truncate leading-tight">
+                      {formatPersonName(`${e.first_name} ${e.last_name}`)}
+                    </p>
+                    {e.employee_role && (
+                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
+                        {formatDisplayText(e.employee_role, "label")}
+                      </span>
+                    )}
+
+                    <div className="mt-2 space-y-0.5">
+                      {e.phone_number && (
+                        <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                          <Phone className="h-3 w-3 shrink-0" /> {e.phone_number}
+                        </p>
+                      )}
+                      {e.email && (
+                        <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                          <Mail className="h-3 w-3 shrink-0" /> {e.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status badge */}
+                  <span className={cn(
+                    "absolute top-0 right-0 px-2 py-0.5 rounded-full text-[9px] font-bold z-20",
+                    e.is_active ? "bg-earning/10 text-earning" : "bg-muted text-muted-foreground"
+                  )}>
+                    {e.is_active ? "Activo" : "Inactivo"}
+                  </span>
+                </div>
+
+                {/* Action buttons */}
+                <div className="relative z-10 flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border/30">
+                  {phone && (
+                    <>
+                      <a
+                        href={`tel:${phone}`}
+                        onClick={ev => ev.stopPropagation()}
+                        className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
+                      >
+                        <Phone className="h-3 w-3 shrink-0" /> Llamar
+                      </a>
+                      <a
+                        href={`https://wa.me/${phone.replace('+', '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={ev => ev.stopPropagation()}
+                        className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-earning/10 text-earning hover:bg-earning/20 transition-colors"
+                      >
+                        <MessageCircle className="h-3 w-3 shrink-0" /> WhatsApp
+                      </a>
+                    </>
+                  )}
+                  {e.email && (
+                    <a
+                      href={`mailto:${e.email}`}
+                      onClick={ev => ev.stopPropagation()}
+                      className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
+                    >
+                      <Mail className="h-3 w-3 shrink-0" /> Correo
+                    </a>
+                  )}
+                  <button
+                    onClick={(ev) => { ev.stopPropagation(); openDetailSheet(e); }}
+                    className="flex-1 min-w-[3.5rem] flex items-center justify-center gap-1 py-1.5 rounded-xl text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    <Eye className="h-3 w-3 shrink-0" /> Ver
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* ─── List View (Table) ─── */
+        <div className="rounded-2xl border border-border/40 bg-card overflow-hidden shadow-xs">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30">
+                <TableHead className="w-12"></TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Nombre</TableHead>
+                <TableHead className="hidden md:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Contacto</TableHead>
+                <TableHead className="hidden lg:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Rol</TableHead>
+                <TableHead className="hidden lg:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Grupo</TableHead>
+                <TableHead className="hidden xl:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Inicio</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Estado</TableHead>
+                <TableHead className="w-12"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((e) => (
                 <TableRow key={e.id} className={`${!e.is_active ? "opacity-40" : ""} group hover:bg-accent/50 transition-colors cursor-pointer`} onClick={() => openDetailSheet(e)}>
                   <TableCell className="py-3">
-                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} size="md" />
+                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="md" />
                   </TableCell>
                   <TableCell className="py-3">
                     <div className="text-left">
                       <span className="text-sm font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                      {/* Show contact info inline on mobile */}
                       <div className="md:hidden mt-1 space-y-0.5">
                         {e.employee_role && (
                           <span className="block text-[11px] text-muted-foreground">{formatDisplayText(e.employee_role, "label")}</span>
@@ -1036,11 +1162,11 @@ export default function Employees() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Detail + Edit Sheet */}
       <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); } }}>
