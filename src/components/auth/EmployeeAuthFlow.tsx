@@ -25,6 +25,18 @@ interface EmployeeInfo {
   has_email: boolean;
 }
 
+/** Extract real error message from supabase.functions.invoke error */
+async function extractErrorMsg(error: any): Promise<string> {
+  try {
+    const ctx = error?.context;
+    if (ctx && typeof ctx.json === "function") {
+      const body = await ctx.json();
+      if (body?.error) return body.error;
+    }
+  } catch { /* ignore */ }
+  return error?.message || "Error de conexión. Verifica tu internet e intenta de nuevo.";
+}
+
 export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => void }) {
   const { toast } = useToast();
   const [step, setStep] = useState<EmployeeStep>("phone");
@@ -49,9 +61,16 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
       const { data, error } = await supabase.functions.invoke("employee-auth", {
         body: { action: "check", phone: phone.trim() },
       });
-      if (error) throw error;
 
-      if (!data?.found) {
+      if (error) {
+        const msg = await extractErrorMsg(error);
+        toast({ title: "Error", description: msg, variant: "destructive" });
+        return;
+      }
+
+      if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      } else if (!data?.found) {
         toast({ title: "No encontrado", description: "No hay cuenta asociada a este número. Verifica con tu administrador.", variant: "destructive" });
       } else if (!data.is_active) {
         toast({ title: "Cuenta inactiva", description: "Tu cuenta está inactiva. Contacta al administrador.", variant: "destructive" });
@@ -63,8 +82,8 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
           setStep("activate_pin");
         }
       }
-    } catch {
-      toast({ title: "Error", description: "Error de conexión", variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error de conexión. Verifica tu internet e intenta de nuevo.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -76,9 +95,15 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
       const { data, error } = await supabase.functions.invoke("employee-auth", {
         body: { action: "login", phone: phone.trim(), pin: enteredPin },
       });
+
       if (error) {
-        toast({ title: "Error", description: "Error de conexión", variant: "destructive" });
-      } else if (data?.error) {
+        const msg = await extractErrorMsg(error);
+        toast({ title: "Error", description: msg, variant: "destructive" });
+        setPin("");
+        return;
+      }
+
+      if (data?.error) {
         toast({ title: "Error", description: data.error, variant: "destructive" });
         setPin("");
       } else if (data?.session) {
@@ -88,8 +113,8 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         });
         onSessionReady();
       }
-    } catch {
-      toast({ title: "Error", description: "Error al iniciar sesión", variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error al iniciar sesión. Verifica tu internet.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -154,7 +179,12 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const msg = await extractErrorMsg(error);
+        toast({ title: "Error", description: msg, variant: "destructive" });
+        return;
+      }
+
       if (data?.error) {
         toast({ title: "Error", description: data.error, variant: "destructive" });
         return;
@@ -168,8 +198,8 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         toast({ title: "¡Cuenta activada! 🎉", description: "Bienvenido a StaflyApps" });
         onSessionReady();
       }
-    } catch {
-      toast({ title: "Error", description: "Error al activar cuenta", variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error al activar cuenta. Verifica tu internet.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
