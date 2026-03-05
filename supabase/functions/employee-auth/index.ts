@@ -447,21 +447,73 @@ Deno.serve(async (req) => {
 
       // Generate 4-digit PIN for provision as well
       const newPin = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+      const newPwd = authPassword(newPin);
       
       await adminClient.from("employees").update({ access_pin: newPin }).eq("id", employee_id);
 
       const { data: emp } = await adminClient
         .from("employees")
-        .select("phone_number")
+        .select("phone_number, user_id")
         .eq("id", employee_id)
         .maybeSingle();
       
+      // Also update auth password if employee has an auth account
+      if (emp?.user_id) {
+        await adminClient.auth.admin.updateUserById(emp.user_id, { password: newPwd });
+      }
+
       if (emp?.phone_number) {
         await resetRateLimit(adminClient, emp.phone_number.replace(/[\s\-\(\)]/g, ""));
       }
 
       return new Response(
         JSON.stringify({ success: true, pin: newPin }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ACTION: sync-pins — Bulk update auth passwords for all employees with 4-digit PINs
+    if (action === "sync-pins") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user: caller } } = await callerClient.auth.getUser();
+      if (!caller) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: roleData } = await callerClient.from("user_roles").select("role").eq("user_id", caller.id);
+      const callerRoles = (roleData ?? []).map((r: any) => r.role);
+      if (!callerRoles.includes("owner") && !callerRoles.includes("admin")) {
+        return new Response(JSON.stringify({ error: "Solo admins pueden sincronizar PINs" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: emps } = await adminClient
+        .from("employees")
+        .select("id, first_name, last_name, access_pin, user_id")
+        .not("access_pin", "is", null)
+        .not("user_id", "is", null);
+
+      let updated = 0;
+      for (const e of emps ?? []) {
+        if (e.access_pin && e.user_id) {
+          const pwd = authPassword(e.access_pin);
+          const { error } = await adminClient.auth.admin.updateUserById(e.user_id, { password: pwd });
+          if (!error) updated++;
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, updated }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
