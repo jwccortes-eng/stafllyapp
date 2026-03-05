@@ -497,7 +497,6 @@ Deno.serve(async (req) => {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
       const { data: emps } = await adminClient
         .from("employees")
         .select("id, first_name, last_name, access_pin, user_id")

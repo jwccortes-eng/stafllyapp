@@ -1,0 +1,1 @@
+UPDATE employees SET access_pin = '2003', updated_at = now() WHERE first_name = 'Carlos' AND last_name = 'Ortiz' AND id = 'f122dc20-28e5-42b6-844d-2f70f3d91dba';
