@@ -474,10 +474,11 @@ Deno.serve(async (req) => {
 
     // ACTION: sync-pins — Bulk update auth passwords for all employees with 4-digit PINs
     if (action === "sync-pins") {
-      // Allow service_role key (from curl) OR authenticated admin/owner
+      // Allow service_role key (from curl via apikey or Authorization) OR authenticated admin/owner
       const authHeader = req.headers.get("Authorization");
+      const apikeyHeader = req.headers.get("apikey");
       const token = authHeader?.replace("Bearer ", "") ?? "";
-      const isServiceRole = token === serviceRoleKey;
+      const isServiceRole = token === serviceRoleKey || apikeyHeader === serviceRoleKey;
 
       if (!isServiceRole) {
         if (!authHeader) {
