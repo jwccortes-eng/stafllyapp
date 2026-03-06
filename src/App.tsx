@@ -35,6 +35,7 @@ import Shifts from "./pages/admin/Shifts";
 import ImportSchedule from "./pages/admin/ImportSchedule";
 import ImportTimeClock from "./pages/admin/ImportTimeClock";
 import ImportPayrollExtras from "./pages/admin/ImportPayrollExtras";
+import BulkImportShifts from "./pages/admin/BulkImportShifts";
 import TimeClock from "./pages/admin/TimeClock";
 import TodayView from "./pages/admin/TodayView";
 import Announcements from "./pages/admin/Announcements";
@@ -133,6 +134,7 @@ function App() {
                 <Route path="import-schedule" element={<ModuleGate moduleKey="import"><ImportSchedule /></ModuleGate>} />
                 <Route path="import-timeclock" element={<ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate>} />
                 <Route path="import-extras" element={<ModuleGate moduleKey="import"><ImportPayrollExtras /></ModuleGate>} />
+                <Route path="bulk-import-shifts" element={<ModuleGate moduleKey="import"><BulkImportShifts /></ModuleGate>} />
                 <Route path="shift-requests" element={<ShiftRequests />} />
                 <Route path="timeclock" element={<ModuleGate moduleKey="timeclock"><TimeClock /></ModuleGate>} />
                 <Route path="today" element={<TodayView />} />
