@@ -79,7 +79,7 @@ function parseHtmlXls(html: string): ParsedRow[] {
     });
 
     if (row.first_name && row.last_name) {
-      rows.push(row as ParsedRow);
+      rows.push(row as unknown as ParsedRow);
     }
   });
 
