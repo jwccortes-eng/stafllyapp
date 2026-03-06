@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import {
-  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, Timer, Download,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, Timer, Download, Upload,
   CheckCircle2, XCircle, AlertCircle, CalendarIcon, Filter, Clock,
 } from "lucide-react";
 import { format, startOfWeek, addDays, differenceInMinutes, parseISO, isWithinInterval, isSameDay } from "date-fns";
