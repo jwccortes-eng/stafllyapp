@@ -970,6 +970,58 @@ export type Database = {
           },
         ]
       }
+      employee_portal_modules: {
+        Row: {
+          company_id: string
+          employee_id: string
+          enabled: boolean
+          id: string
+          module: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          employee_id: string
+          enabled?: boolean
+          id?: string
+          module: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          employee_id?: string
+          enabled?: boolean
+          id?: string
+          module?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_portal_modules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_portal_modules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_portal_modules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_tickets: {
         Row: {
           assigned_to: string | null
@@ -1864,6 +1916,8 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          phone_login_enabled: boolean | null
+          phone_number: string | null
           user_id: string
         }
         Insert: {
@@ -1871,6 +1925,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          phone_login_enabled?: boolean | null
+          phone_number?: string | null
           user_id: string
         }
         Update: {
@@ -1878,6 +1934,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          phone_login_enabled?: boolean | null
+          phone_number?: string | null
           user_id?: string
         }
         Relationships: []

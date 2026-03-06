@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Palette, ShieldCheck, Zap, Save } from "lucide-react";
+import { Settings, Palette, ShieldCheck, Zap, Save, Phone } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { AdminPhoneLinkSection } from "@/components/employee/AdminPhoneLinkTab";
 
 interface SettingsMap {
   branding: { platform_name: string; tagline: string; primary_color: string };
@@ -104,6 +105,9 @@ export default function PlatformSettings() {
           </TabsTrigger>
           <TabsTrigger value="features" className="gap-2">
             <Zap className="h-4 w-4" /> Funcionalidades
+          </TabsTrigger>
+          <TabsTrigger value="myaccount" className="gap-2">
+            <Phone className="h-4 w-4" /> Mi cuenta
           </TabsTrigger>
         </TabsList>
 
@@ -248,6 +252,19 @@ export default function PlatformSettings() {
                 <Save className="h-4 w-4" />
                 {saving ? "Guardando..." : "Guardar funcionalidades"}
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* My Account - Phone Link */}
+        <TabsContent value="myaccount">
+          <Card>
+            <CardHeader>
+              <CardTitle>Mi cuenta</CardTitle>
+              <CardDescription>Configura opciones de acceso adicionales para tu perfil de administrador</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdminPhoneLinkSection />
             </CardContent>
           </Card>
         </TabsContent>
