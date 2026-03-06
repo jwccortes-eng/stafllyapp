@@ -69,7 +69,7 @@ export default function UnpaidShiftsReport() {
     setLoading(true);
 
     try {
-      const dateFrom = "2026-01-01";
+      const dateFrom = "2025-01-01";
       const dateTo = new Date().toISOString().split("T")[0];
 
       let periodFilter: { start: string; end: string } | null = null;
