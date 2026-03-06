@@ -2,7 +2,7 @@ import { isSameDay, format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
-import { Clock, Users, ChevronDown, ChevronUp, Timer, CalendarDays, Lock, Moon, Hand } from "lucide-react";
+import { Clock, Users, ChevronDown, ChevronUp, Timer, CalendarDays, Lock } from "lucide-react";
 import { useState } from "react";
 import { getClientColor, formatShiftCode } from "./types";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
@@ -84,7 +84,6 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
     const isLocked = shift.status === "locked";
     const totalSlots = shift.slots ?? 1;
 
-    // Count by acceptance status
     const accepted = shiftAssignments.filter(a => a.status === "accepted" || a.status === "confirmed").length;
     const pending = shiftAssignments.filter(a => a.status === "pending").length;
     const rejected = shiftAssignments.filter(a => a.status === "rejected").length;
@@ -94,8 +93,8 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
       <div
         key={shift.id}
         className={cn(
-          "rounded-xl px-3 py-2.5 text-[11px] cursor-pointer border-l-[3px] transition-all hover:shadow-md hover:-translate-y-0.5 border border-border/10",
-          color.border, color.bg,
+          "rounded-lg px-2 py-2 text-[10px] cursor-pointer border-l-[3px] transition-all hover:shadow-md hover:-translate-y-0.5 border border-border/10 bg-card",
+          color.border,
           isLocked && "opacity-70"
         )}
         onClick={() => onShiftClick(shift)}
@@ -108,62 +107,50 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
           if (data) onDropOnShift(shift.id, data);
         }}
       >
-        {/* Title with shift code */}
-        <div className="font-bold truncate text-[12px] leading-snug text-foreground/90">
-          {shift.shift_code && <span className="text-foreground/50">#{formatShiftCode(shift.shift_code)}</span>}{" "}
-          {shift.title.toUpperCase()}
-          {totalSlots > 1 && <span className="text-foreground/40"> - {totalSlots}</span>}
+        {/* Title */}
+        <div className="font-bold truncate text-[10px] leading-snug text-foreground/85">
+          {shift.shift_code && <span className="text-foreground/40">#{formatShiftCode(shift.shift_code)}</span>}{" "}
+          <span className="uppercase">{shift.title}</span>
+          {totalSlots > 1 && <span className="text-foreground/40 ml-0.5">({totalSlots})</span>}
         </div>
 
         {/* Time */}
-        <div className="text-muted-foreground/60 flex items-center gap-1.5 mt-1">
-          <Clock className="h-3 w-3 shrink-0" />
+        <div className="text-muted-foreground/55 flex items-center gap-1 mt-0.5">
+          <Clock className="h-2.5 w-2.5 shrink-0" />
           <span>{shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}</span>
         </div>
 
         {/* Employee names */}
         {names.length > 0 && (
-          <div className="mt-2 space-y-0.5">
+          <div className="mt-1.5 space-y-0">
             {names.slice(0, 2).map((n, i) => (
-              <div key={i} className="flex items-center gap-1.5 text-muted-foreground/55 text-[11px]">
-                <Users className="h-3 w-3 shrink-0" />
+              <div key={i} className="flex items-center gap-1 text-muted-foreground/50 text-[10px] leading-tight">
+                <Users className="h-2.5 w-2.5 shrink-0" />
                 <span className="truncate">{n}</span>
               </div>
             ))}
             {names.length > 2 && (
-              <span className="text-muted-foreground/40 text-[11px] ml-[18px]">+{names.length - 2} más</span>
+              <span className="text-muted-foreground/35 text-[10px] ml-[14px]">+{names.length - 2} más</span>
             )}
           </div>
         )}
 
-        {/* Acceptance status bar */}
-        <div className="flex items-center gap-1.5 mt-2">
-          <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden flex">
+        {/* Status bar */}
+        <div className="flex items-center gap-1 mt-1.5">
+          <div className="flex-1 h-1 bg-muted/30 rounded-full overflow-hidden flex">
             {accepted > 0 && (
-              <div
-                className="h-full bg-emerald-400 dark:bg-emerald-500 transition-all"
-                style={{ width: `${Math.round((accepted / totalSlots) * 100)}%` }}
-              />
+              <div className="h-full bg-emerald-400 transition-all" style={{ width: `${Math.round((accepted / totalSlots) * 100)}%` }} />
             )}
             {pending > 0 && (
-              <div
-                className="h-full bg-amber-400 dark:bg-amber-500 transition-all"
-                style={{ width: `${Math.round((pending / totalSlots) * 100)}%` }}
-              />
+              <div className="h-full bg-amber-400 transition-all" style={{ width: `${Math.round((pending / totalSlots) * 100)}%` }} />
             )}
             {rejected > 0 && (
-              <div
-                className="h-full bg-rose-400 dark:bg-rose-500 transition-all"
-                style={{ width: `${Math.round((rejected / totalSlots) * 100)}%` }}
-              />
+              <div className="h-full bg-rose-400 transition-all" style={{ width: `${Math.round((rejected / totalSlots) * 100)}%` }} />
             )}
           </div>
           <span className={cn(
-            "text-[9px] tabular-nums font-medium shrink-0",
-            allAccepted ? "text-emerald-500 dark:text-emerald-400" :
-            rejected > 0 ? "text-rose-500 dark:text-rose-400" :
-            pending > 0 ? "text-amber-500 dark:text-amber-400" :
-            "text-muted-foreground/50"
+            "text-[8px] tabular-nums font-semibold shrink-0",
+            allAccepted ? "text-emerald-500" : rejected > 0 ? "text-rose-500" : pending > 0 ? "text-amber-500" : "text-muted-foreground/40"
           )}>
             {accepted}/{totalSlots}
           </span>
@@ -172,22 +159,25 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
     );
   };
 
-  // Clients with shifts + no-client group
   const clientGroups = clients.filter(c => shifts.some(s => s.client_id === c.id));
   const hasNoClientShifts = shifts.some(s => !s.client_id);
 
   return (
-    <div className="space-y-0">
-      {/* Day headers */}
-      <div className="grid grid-cols-[200px_repeat(7,1fr)] gap-px rounded-t-xl overflow-hidden border-b border-border/10 pb-1">
-        <div className="p-2" />
-        {weekDays.map(day => {
+    <div className="border border-border/20 rounded-xl overflow-hidden bg-card/50">
+      {/* Sticky day headers */}
+      <div className="grid grid-cols-[180px_repeat(7,1fr)] border-b border-border/20 bg-muted/30 sticky top-0 z-10">
+        <div className="p-2 border-r border-border/10" />
+        {weekDays.map((day, i) => {
           const isToday = isSameDay(day, new Date());
           return (
-            <div key={day.toISOString()} className={cn(
-              "text-center py-2.5 px-1 rounded-xl transition-colors",
-              isToday && "bg-primary/[0.06]"
-            )}>
+            <div
+              key={day.toISOString()}
+              className={cn(
+                "text-center py-2.5 px-1",
+                i < 6 && "border-r border-border/10",
+                isToday && "bg-primary/[0.06]"
+              )}
+            >
               <div className={cn(
                 "text-[9px] font-semibold uppercase tracking-[0.08em]",
                 isToday ? "text-primary" : "text-muted-foreground/50"
@@ -216,16 +206,16 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
 
         return (
           <div key={client.id} className="border-b border-border/15 last:border-b-0">
-            {/* Client header row */}
+            {/* Client header */}
             <div
-              className="grid grid-cols-[200px_repeat(7,1fr)] gap-px cursor-pointer hover:bg-accent/20 transition-colors rounded-lg"
+              className="grid grid-cols-[180px_repeat(7,1fr)] cursor-pointer hover:bg-accent/20 transition-colors"
               onClick={() => toggleClient(client.id)}
             >
-              <div className="flex items-center gap-2.5 p-3">
-                <div className={cn("w-3 h-3 rounded-full shrink-0 ring-2 ring-white dark:ring-card", color.dot)} />
+              <div className="flex items-center gap-2.5 p-3 border-r border-border/10">
+                <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", color.dot)} />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold truncate">{formatDisplayText(client.name, "name")}</p>
-                  <div className="flex items-center gap-3 text-[9px] text-muted-foreground/60 mt-0.5">
+                  <div className="flex items-center gap-2.5 text-[9px] text-muted-foreground/55 mt-0.5">
                     <span className="flex items-center gap-0.5"><Timer className="h-2.5 w-2.5" /> {stats.hours}</span>
                     <span className="flex items-center gap-0.5"><CalendarDays className="h-2.5 w-2.5" /> {stats.shifts}</span>
                     <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" /> {stats.users}</span>
@@ -233,28 +223,41 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
                 </div>
                 {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/40" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/40" />}
               </div>
-              {!isExpanded && weekDays.map(day => {
+              {!isExpanded && weekDays.map((day, i) => {
                 const dayShifts = getShiftsForDayAndClient(day, client.id);
                 return (
-                  <div key={day.toISOString()} className="p-1 flex items-center justify-center">
+                  <div key={day.toISOString()} className={cn("p-1 flex items-center justify-center", i < 6 && "border-r border-border/10")}>
                     {dayShifts.length > 0 && (
                       <span className="text-[10px] text-muted-foreground/50 tabular-nums">{dayShifts.length} turno{dayShifts.length !== 1 ? "s" : ""}</span>
                     )}
                   </div>
                 );
               })}
-              {isExpanded && weekDays.map(day => <div key={day.toISOString()} />)}
+              {isExpanded && weekDays.map((day, i) => <div key={day.toISOString()} className={cn(i < 6 && "border-r border-border/10")} />)}
             </div>
 
-            {/* Expanded shifts */}
+            {/* Expanded: shift cards in aligned columns */}
             {isExpanded && (
-              <div className="grid grid-cols-[200px_repeat(7,1fr)] gap-px bg-muted/[0.03]">
-                <div className="p-1" />
-                {weekDays.map(day => {
+              <div className="grid grid-cols-[180px_repeat(7,1fr)]">
+                <div className="border-r border-border/10" />
+                {weekDays.map((day, i) => {
                   const dayShifts = getShiftsForDayAndClient(day, client.id)
                     .sort((a, b) => a.start_time.localeCompare(b.start_time));
+                  const isToday = isSameDay(day, new Date());
                   return (
-                    <div key={day.toISOString()} className="p-1.5 space-y-1.5 min-h-[80px]">
+                    <div
+                      key={day.toISOString()}
+                      className={cn(
+                        "p-1.5 space-y-1.5 min-h-[90px]",
+                        i < 6 && "border-r border-border/10",
+                        isToday && "bg-primary/[0.02]"
+                      )}
+                    >
+                      {dayShifts.length === 0 && (
+                        <div className="h-full flex items-center justify-center">
+                          <div className="w-1 h-1 rounded-full bg-muted-foreground/10" />
+                        </div>
+                      )}
                       {dayShifts.map(shift => renderShiftPill(shift, color))}
                     </div>
                   );
@@ -268,17 +271,30 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
       {/* No-client group */}
       {hasNoClientShifts && (
         <div className="border-b border-border/15">
-          <div className="grid grid-cols-[200px_repeat(7,1fr)] gap-px">
-            <div className="flex items-center gap-2.5 p-3">
-              <div className="w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0 ring-2 ring-white dark:ring-card" />
-              <p className="text-xs font-medium text-muted-foreground/60">Sin cliente</p>
+          <div className="grid grid-cols-[180px_repeat(7,1fr)]">
+            <div className="flex items-center gap-2.5 p-3 border-r border-border/10">
+              <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 shrink-0" />
+              <p className="text-xs font-medium text-muted-foreground/50">Sin cliente</p>
             </div>
-            {weekDays.map(day => {
+            {weekDays.map((day, i) => {
               const dayShifts = getShiftsForDayAndClient(day, null)
                 .sort((a, b) => a.start_time.localeCompare(b.start_time));
               const noClientColor = getClientColor(null, clientIds);
+              const isToday = isSameDay(day, new Date());
               return (
-                <div key={day.toISOString()} className="p-1.5 space-y-1.5 min-h-[80px]">
+                <div
+                  key={day.toISOString()}
+                  className={cn(
+                    "p-1.5 space-y-1.5 min-h-[90px]",
+                    i < 6 && "border-r border-border/10",
+                    isToday && "bg-primary/[0.02]"
+                  )}
+                >
+                  {dayShifts.length === 0 && (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="w-1 h-1 rounded-full bg-muted-foreground/10" />
+                    </div>
+                  )}
                   {dayShifts.map(shift => renderShiftPill(shift, noClientColor))}
                 </div>
               );
