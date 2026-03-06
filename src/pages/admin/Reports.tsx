@@ -78,6 +78,20 @@ export default function Reports() {
             </CardContent>
           </Card>
         </Link>
+
+        <Link to="/app/unpaid-shifts">
+          <Card className="stat-card cursor-pointer hover:border-primary/30">
+            <CardHeader className="flex flex-row items-center gap-3">
+              <DollarSign className="h-8 w-8 text-earning" />
+              <div>
+                <CardTitle className="text-base">Turnos sin pago</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Auditoría de programaciones vs fichajes y pagos consolidados.</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );
