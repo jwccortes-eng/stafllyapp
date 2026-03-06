@@ -49,6 +49,7 @@ import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
+import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 
