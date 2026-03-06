@@ -84,6 +84,26 @@ export default function PayPeriods() {
 
   useEffect(() => { fetchPeriods(); }, [selectedCompanyId]);
 
+  // Fetch management metadata (imports + base_pay) for all periods
+  useEffect(() => {
+    if (!selectedCompanyId || periods.length === 0) return;
+    async function fetchMeta() {
+      const periodIds = periods.map(p => p.id);
+      const [importsRes, basePayRes] = await Promise.all([
+        supabase.from("imports").select("period_id").eq("company_id", selectedCompanyId!).in("period_id", periodIds),
+        supabase.from("period_base_pay").select("period_id").eq("company_id", selectedCompanyId!).in("period_id", periodIds),
+      ]);
+      const importSet = new Set((importsRes.data ?? []).map(r => r.period_id));
+      const basePaySet = new Set((basePayRes.data ?? []).map(r => r.period_id));
+      const meta: Record<string, { hasImports: boolean; hasBasePay: boolean }> = {};
+      for (const pid of periodIds) {
+        meta[pid] = { hasImports: importSet.has(pid), hasBasePay: basePaySet.has(pid) };
+      }
+      setPeriodMeta(meta);
+    }
+    fetchMeta();
+  }, [selectedCompanyId, periods]);
+
   // Determine which period can be opened next (sequential rule)
   const canOpenPeriodId = useMemo(() => {
     if (periods.length === 0) return null;
