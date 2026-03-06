@@ -104,6 +104,7 @@ function parseName(raw: string): { first: string; last: string } | null {
 export default function ImportSchedule() {
   const { selectedCompanyId } = useCompany();
   const { toast } = useToast();
+  const [files, setFiles] = useState<File[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [workbook, setWorkbook] = useState<SafeWorkbook | null>(null);
   const [sheets, setSheets] = useState<string[]>([]);
@@ -119,49 +120,20 @@ export default function ImportSchedule() {
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
   const [deletePasswordOpen, setDeletePasswordOpen] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
+  const [parsingFiles, setParsingFiles] = useState(false);
 
   // Filter dates if the range is large
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
 
-  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > MAX_FILE_SIZE) {
-      toast({ title: "Error", description: "Archivo demasiado grande (máx 10MB)", variant: "destructive" });
-      return;
-    }
-    setFile(f);
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const data = evt.target?.result;
-      if (!data) return;
-      const wb = await safeRead(data as ArrayBuffer);
-      setWorkbook(wb);
-      const names = getSheetNames(wb);
-      setSheets(names);
-      if (names.length === 1) {
-        setSelectedSheet(names[0]);
-        processSheet(wb, names[0]);
-      } else {
-        setStep(2);
-      }
-    };
-    reader.readAsArrayBuffer(f);
-  }, []);
-
-  const processSheet = (wb: SafeWorkbook, sheetName: string) => {
+  /** Process a single workbook sheet and return parsed groups + unavailability */
+  const parseSheetData = (wb: SafeWorkbook, sheetName: string) => {
     const ws = getSheet(wb, sheetName);
-    if (!ws) return;
+    if (!ws) return { groups: [] as ShiftGroup[], unavail: [] as { name: string; date: string }[], dates: [] as string[] };
     const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
-    if (json.length === 0) return;
+    if (json.length === 0) return { groups: [] as ShiftGroup[], unavail: [] as { name: string; date: string }[], dates: [] as string[] };
 
-    const hdrs = Object.keys(json[0]);
-    setHeaders(hdrs);
-    setPreviewRows(json.slice(0, 5));
-
-    // Parse all rows into shift groups
-    const groups: Record<string, ShiftGroup> = {};
+    const groupsMap: Record<string, ShiftGroup> = {};
     const unavail: { name: string; date: string }[] = [];
     const allDates: string[] = [];
 
@@ -169,68 +141,98 @@ export default function ImportSchedule() {
       const dateRaw = row["Date"] ?? "";
       const isoDate = parseDate(dateRaw);
       if (!isoDate) continue;
-
       allDates.push(isoDate);
       const availStatus = (row["Availability status"] ?? "").trim().toLowerCase();
       const userName = (row["Users"] ?? "").trim();
-
-      // Handle Unavailable rows
       if (availStatus === "unavailable") {
-        if (userName) {
-          unavail.push({ name: userName, date: isoDate });
-        }
+        if (userName) unavail.push({ name: userName, date: isoDate });
         continue;
       }
-
       const shiftTitle = (row["Shift title"] ?? "").trim();
       const startRaw = (row["Start"] ?? "").trim();
       const endRaw = (row["End"] ?? "").trim();
       const job = (row["Job"] ?? "").trim();
-
-      // Skip rows without shift data
       if (!shiftTitle && !job && !startRaw) continue;
-
       const startTime = parseTime(startRaw);
       const endTime = parseTime(endRaw);
       if (!startTime || !endTime) continue;
-
-      // Skip PAY RIDE and similar payroll-only "shifts" (broader filter)
       const combined = `${shiftTitle} ${job} ${(row["Sub item"] ?? "")}`.toLowerCase();
       const isPayrollConcept = /pay\s*ride|pagar|tip\s*pool|1\/2\s*ride|x\s*hour.*pay/i.test(combined)
         || /^99\s*[-–]/.test(job.trim());
       if (isPayrollConcept) continue;
-
       const groupKey = `${shiftTitle}|${isoDate}|${startTime}|${endTime}|${job}`;
-
-      if (!groups[groupKey]) {
-        groups[groupKey] = {
-          key: groupKey,
-          shiftCode: shiftTitle,
-          date: isoDate,
-          startTime,
-          endTime,
-          job,
-          subItem: (row["Sub item"] ?? "").trim(),
-          address: (row["Address"] ?? "").trim(),
-          note: (row["Note"] ?? "").trim(),
-          tags: (row["Shift tags"] ?? "").trim(),
-          status: (row["Last Status"] ?? "").trim(),
-          employees: [],
-          employeeStatuses: [],
+      if (!groupsMap[groupKey]) {
+        groupsMap[groupKey] = {
+          key: groupKey, shiftCode: shiftTitle, date: isoDate, startTime, endTime, job,
+          subItem: (row["Sub item"] ?? "").trim(), address: (row["Address"] ?? "").trim(),
+          note: (row["Note"] ?? "").trim(), tags: (row["Shift tags"] ?? "").trim(),
+          status: (row["Last Status"] ?? "").trim(), employees: [], employeeStatuses: [],
         };
       }
+      if (userName && !groupsMap[groupKey].employees.includes(userName)) {
+        groupsMap[groupKey].employees.push(userName);
+        groupsMap[groupKey].employeeStatuses.push((row["Last Status"] ?? "").trim());
+      }
+    }
+    return { groups: Object.values(groupsMap), unavail, dates: allDates };
+  };
 
-      if (userName && !groups[groupKey].employees.includes(userName)) {
-        groups[groupKey].employees.push(userName);
-        groups[groupKey].employeeStatuses.push((row["Last Status"] ?? "").trim());
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files ?? []);
+    if (selectedFiles.length === 0) return;
+
+    const validFiles = selectedFiles.filter(f => {
+      if (f.size > MAX_FILE_SIZE) {
+        toast({ title: "Error", description: `"${f.name}" demasiado grande (máx 10MB)`, variant: "destructive" });
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    setFiles(validFiles);
+    setFile(validFiles[0]); // Keep first for backward compat
+    setParsingFiles(true);
+
+    // Parse all files and merge results
+    let allGroups: ShiftGroup[] = [];
+    let allUnavail: { name: string; date: string }[] = [];
+    let allDates: string[] = [];
+
+    for (const f of validFiles) {
+      const data = await f.arrayBuffer();
+      const wb = await safeRead(data);
+      const names = getSheetNames(wb);
+      // Use first sheet of each file
+      const sheetName = names[0];
+      if (!sheetName) continue;
+      const result = parseSheetData(wb, sheetName);
+      allGroups = [...allGroups, ...result.groups];
+      allUnavail = [...allUnavail, ...result.unavail];
+      allDates = [...allDates, ...result.dates];
+    }
+
+    // Deduplicate groups across files (same key = same shift)
+    const dedupMap: Record<string, ShiftGroup> = {};
+    for (const g of allGroups) {
+      if (!dedupMap[g.key]) {
+        dedupMap[g.key] = g;
+      } else {
+        // Merge employees from duplicate
+        for (let i = 0; i < g.employees.length; i++) {
+          if (!dedupMap[g.key].employees.includes(g.employees[i])) {
+            dedupMap[g.key].employees.push(g.employees[i]);
+            dedupMap[g.key].employeeStatuses.push(g.employeeStatuses[i]);
+          }
+        }
       }
     }
 
-    const groupList = Object.values(groups);
-    setShiftGroups(groupList);
-    setUnavailableRecords(unavail);
+    const mergedGroups = Object.values(dedupMap);
+    setShiftGroups(mergedGroups);
+    setUnavailableRecords(allUnavail);
 
-    // Date range
     if (allDates.length > 0) {
       allDates.sort();
       setDateRange({ from: allDates[0], to: allDates[allDates.length - 1] });
@@ -238,13 +240,9 @@ export default function ImportSchedule() {
       setFilterTo(allDates[allDates.length - 1]);
     }
 
+    setParsingFiles(false);
     setStep(3);
-  };
-
-  const selectSheet = (name: string) => {
-    setSelectedSheet(name);
-    if (workbook) processSheet(workbook, name);
-  };
+  }, [toast]);
 
   const filteredGroups = shiftGroups.filter(g => {
     if (filterFrom && g.date < filterFrom) return false;
@@ -260,20 +258,20 @@ export default function ImportSchedule() {
 
     try {
       // ── Check for duplicate file upload using company_settings ──
-      if (file) {
-        const { data: setting } = await supabase
-          .from("company_settings")
-          .select("value")
-          .eq("company_id", selectedCompanyId)
-          .eq("key", "imported_schedule_files")
-          .single();
-        const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
-        if (importedFiles.includes(file.name)) {
-          setResult({ success: false, message: `El archivo "${file.name}" ya fue importado anteriormente. Usa un archivo diferente o elimina la importación anterior.` });
-          setImporting(false);
-          setImportProgress(null);
-          return;
-        }
+      const { data: setting } = await supabase
+        .from("company_settings")
+        .select("value")
+        .eq("company_id", selectedCompanyId)
+        .eq("key", "imported_schedule_files")
+        .single();
+      const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
+      const fileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
+      const alreadyImported = fileNames.filter(n => importedFiles.includes(n));
+      if (alreadyImported.length > 0) {
+        setResult({ success: false, message: `Archivo(s) ya importado(s): ${alreadyImported.join(", ")}. Usa archivos diferentes o elimina la importación anterior.` });
+        setImporting(false);
+        setImportProgress(null);
+        return;
       }
 
       // Fetch employees and clients for matching
@@ -573,7 +571,8 @@ export default function ImportSchedule() {
       const dupMsg = skippedDuplicates > 0 ? ` · ${skippedDuplicates} duplicados omitidos` : "";
 
       // ── Record this import to prevent duplicate file uploads ──
-      if (file) {
+      const recordedFileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
+      if (recordedFileNames.length > 0) {
         const { data: existingSetting } = await supabase
           .from("company_settings")
           .select("id, value")
@@ -581,7 +580,7 @@ export default function ImportSchedule() {
           .eq("key", "imported_schedule_files")
           .single();
         const prevFiles: string[] = existingSetting?.value ? (Array.isArray(existingSetting.value) ? existingSetting.value as string[] : []) : [];
-        const newFiles = [...prevFiles, file.name];
+        const newFiles = [...prevFiles, ...recordedFileNames];
         if (existingSetting) {
           await supabase.from("company_settings").update({ value: newFiles as any }).eq("id", existingSetting.id);
         } else {
@@ -657,37 +656,49 @@ export default function ImportSchedule() {
       {/* Step 1: Upload */}
       {step === 1 && (
         <Card>
-          <CardHeader><CardTitle>Paso 1: Selecciona el archivo de Schedule Export</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Paso 1: Selecciona los archivos de Schedule Export</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>Archivo XLSX de Schedule Export</Label>
+              <Label>Archivos XLSX de Schedule Export (puedes seleccionar varios)</Label>
               <div className="mt-1 border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-                <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-xs text-muted-foreground mb-2">Arrastra o selecciona tu archivo Schedule Export de Connecteam</p>
-                <input type="file" accept={ACCEPTED_EXTENSIONS} onChange={handleFileUpload} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                {parsingFiles ? (
+                  <>
+                    <FileSpreadsheet className="h-8 w-8 mx-auto text-primary mb-2 animate-pulse" />
+                    <p className="text-sm font-medium">Procesando {files.length} archivo(s)…</p>
+                    <p className="text-xs text-muted-foreground mt-1">Analizando y fusionando turnos</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-xs text-muted-foreground mb-2">Arrastra o selecciona tus archivos Schedule Export de Connecteam</p>
+                    <input type="file" accept={ACCEPTED_EXTENSIONS} multiple onChange={handleFileUpload} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Step 2: Sheet selection */}
-      {step === 2 && (
-        <Card>
-          <CardHeader><CardTitle>Paso 2: Selecciona la hoja</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {sheets.map(s => (
-              <Button key={s} variant="outline" className="w-full justify-start" onClick={() => selectSheet(s)}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" /> {s}
-              </Button>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {/* Step 2 skipped in multi-file mode */}
 
       {/* Step 3: Review & Import */}
       {step === 3 && (
         <div className="space-y-4">
+          {/* Files loaded */}
+          {files.length > 1 && (
+            <Card className="p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Archivos cargados ({files.length})</p>
+              <div className="flex flex-wrap gap-1.5">
+                {files.map((f, i) => (
+                  <Badge key={i} variant="secondary" className="text-[10px]">
+                    <FileSpreadsheet className="h-3 w-3 mr-1" />{f.name}
+                  </Badge>
+                ))}
+              </div>
+            </Card>
+          )}
+
           {/* Summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card className="p-4">
@@ -789,8 +800,8 @@ export default function ImportSchedule() {
           </Card>
 
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => { setStep(1); setFile(null); setWorkbook(null); setShiftGroups([]); }}>
-              ← Cambiar archivo
+            <Button variant="outline" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); }}>
+              ← Cambiar archivos
             </Button>
             <Button onClick={handleImport} disabled={importing || filteredGroups.length === 0}>
               {importing ? "Importando…" : `Importar ${filteredGroups.length} turnos`}
@@ -876,8 +887,8 @@ export default function ImportSchedule() {
             </Card>
           )}
 
-          <Button variant="outline" onClick={() => { setStep(1); setFile(null); setWorkbook(null); setShiftGroups([]); setResult(null); setSummary(null); }}>
-            Importar otro archivo
+          <Button variant="outline" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); setResult(null); setSummary(null); }}>
+            Importar más archivos
           </Button>
         </div>
       )}
