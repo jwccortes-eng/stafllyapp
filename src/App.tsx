@@ -162,6 +162,7 @@ function App() {
                 <Route path="comparison" element={<ComparisonReport />} />
                 <Route path="w9" element={<ContractorW9 />} />
                 <Route path="1099" element={<TaxForms1099 />} />
+                <Route path="import-inactive" element={<ImportInactiveEmployees />} />
               </Route>
 
               {/* Employee portal routes */}
