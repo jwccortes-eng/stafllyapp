@@ -139,26 +139,67 @@ export function TimesheetView() {
     if (!selectedCompanyId) return;
     setLoading(true);
     const fetchEnd = addDays(rangeEnd, 1);
-    const [entriesRes, empsRes] = await Promise.all([
+
+    // Build shifts query based on view mode
+    let shiftsQuery = supabase.from("shifts")
+      .select("id, employee_id, clock_in_time, clock_out_time, shift_start_date, shift_hours, customer, sub_job, period_id")
+      .eq("company_id", selectedCompanyId);
+
+    if (viewMode === "period" && selectedPeriodId) {
+      shiftsQuery = shiftsQuery.eq("period_id", selectedPeriodId);
+    } else {
+      shiftsQuery = shiftsQuery
+        .gte("shift_start_date", format(rangeStart, "yyyy-MM-dd"))
+        .lte("shift_start_date", format(fetchEnd, "yyyy-MM-dd"));
+    }
+
+    const [entriesRes, shiftsRes, empsRes] = await Promise.all([
       supabase.from("time_entries")
         .select("id, employee_id, shift_id, clock_in, clock_out, break_minutes, notes, status")
         .eq("company_id", selectedCompanyId)
         .gte("clock_in", rangeStart.toISOString())
         .lt("clock_in", fetchEnd.toISOString())
         .order("clock_in", { ascending: true }),
+      shiftsQuery.order("shift_start_date", { ascending: true }),
       supabase.from("employees")
         .select("id, first_name, last_name, avatar_url")
         .eq("company_id", selectedCompanyId)
         .eq("is_active", true)
         .order("first_name"),
     ]);
-    setEntries((entriesRes.data ?? []) as TimeEntry[]);
+
+    const clockEntries: TimeEntry[] = (entriesRes.data ?? []).map((e: any) => ({
+      ...e,
+      source: "clock" as const,
+    }));
+
+    const importedEntries: TimeEntry[] = (shiftsRes.data ?? []).map((s: any) => {
+      const clockIn = s.clock_in_time || (s.shift_start_date ? `${s.shift_start_date}T08:00:00` : new Date().toISOString());
+      const shiftHours = s.shift_hours ?? 0;
+      const clockOut = s.clock_out_time || (shiftHours > 0
+        ? new Date(new Date(clockIn).getTime() + shiftHours * 3600000).toISOString()
+        : null);
+      return {
+        id: `imp_${s.id}`,
+        employee_id: s.employee_id,
+        shift_id: null,
+        clock_in: clockIn,
+        clock_out: clockOut,
+        break_minutes: 0,
+        notes: [s.customer, s.sub_job].filter(Boolean).join(" · ") || null,
+        status: "imported",
+        source: "import" as const,
+        import_meta: { customer: s.customer, sub_job: s.sub_job, shift_hours: s.shift_hours },
+      } satisfies TimeEntry;
+    });
+
+    setEntries([...clockEntries, ...importedEntries]);
     setEmployees((empsRes.data ?? []) as Employee[]);
     setSelectedIds(new Set());
     setExpandedIds(new Set());
     setPage(1);
     setLoading(false);
-  }, [selectedCompanyId, rangeStart, rangeEnd]);
+  }, [selectedCompanyId, rangeStart, rangeEnd, viewMode, selectedPeriodId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
