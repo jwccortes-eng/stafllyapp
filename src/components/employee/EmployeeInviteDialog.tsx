@@ -35,10 +35,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
   const slug = company?.slug ?? "";
   const companyName = company?.name ?? "la empresa";
 
-  const portalUrl = `${PRODUCTION_URL}/${slug}`;
+  const portalUrl = `${PRODUCTION_URL}/auth`;
   const pin = employee.access_pin ?? "—";
 
-  const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Enlace: ${portalUrl}\n🔑 Tu PIN: ${pin}\n\nIngresa con tu número de teléfono y PIN.`;
+  const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Enlace: ${portalUrl}\n🔑 Tu PIN: ${pin}\n\nIngresa con tu número de teléfono y PIN. Selecciona "Acceso empleado" al entrar.`;
 
   const phoneDigits = (employee.phone_number ?? "").replace(/\D/g, "");
   const fullPhone = phoneDigits.length === 10 ? `1${phoneDigits}` : phoneDigits;
