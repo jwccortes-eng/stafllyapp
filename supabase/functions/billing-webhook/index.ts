@@ -111,6 +111,11 @@ Deno.serve(async (req) => {
         const companyId = sub.metadata?.companyId;
         if (!companyId) break;
 
+        if (!(await validateCompany(companyId))) {
+          console.error(`[billing-webhook] Invalid company_id: ${companyId}`);
+          break;
+        }
+
         const priceId = sub.items.data[0]?.price?.id;
         const plan = PLAN_MAP[priceId] || "pro";
 
