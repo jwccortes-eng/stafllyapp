@@ -306,7 +306,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               <Sparkles className="h-7 w-7 text-primary" />
             </div>
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              ¡Bienvenido, {employeeInfo.first_name}!
+              ¡Activa tu cuenta!
             </h1>
             <p className="text-sm text-muted-foreground">
               {pinPhase === "create" ? "Crea un PIN de 4 dígitos" : "Confirma tu PIN"}
