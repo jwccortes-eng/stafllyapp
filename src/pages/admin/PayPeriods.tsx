@@ -407,8 +407,9 @@ export default function PayPeriods() {
               <TableHead>Inicio</TableHead>
               <TableHead>Fin</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>Publicado</TableHead>
+              <TableHead>Gestión</TableHead>
               <TableHead>Cerrado</TableHead>
+              <TableHead className="w-28">Acciones</TableHead>
               <TableHead className="w-28">Acciones</TableHead>
             </TableRow>
           </TableHeader>
