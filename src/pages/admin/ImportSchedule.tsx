@@ -104,6 +104,7 @@ function parseName(raw: string): { first: string; last: string } | null {
 export default function ImportSchedule() {
   const { selectedCompanyId } = useCompany();
   const { toast } = useToast();
+  const [files, setFiles] = useState<File[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [workbook, setWorkbook] = useState<SafeWorkbook | null>(null);
   const [sheets, setSheets] = useState<string[]>([]);
@@ -119,36 +120,129 @@ export default function ImportSchedule() {
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
   const [deletePasswordOpen, setDeletePasswordOpen] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
+  const [parsingFiles, setParsingFiles] = useState(false);
 
   // Filter dates if the range is large
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
 
-  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > MAX_FILE_SIZE) {
-      toast({ title: "Error", description: "Archivo demasiado grande (máx 10MB)", variant: "destructive" });
-      return;
-    }
-    setFile(f);
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const data = evt.target?.result;
-      if (!data) return;
-      const wb = await safeRead(data as ArrayBuffer);
-      setWorkbook(wb);
-      const names = getSheetNames(wb);
-      setSheets(names);
-      if (names.length === 1) {
-        setSelectedSheet(names[0]);
-        processSheet(wb, names[0]);
-      } else {
-        setStep(2);
+  /** Process a single workbook sheet and return parsed groups + unavailability */
+  const parseSheetData = (wb: SafeWorkbook, sheetName: string) => {
+    const ws = getSheet(wb, sheetName);
+    if (!ws) return { groups: [] as ShiftGroup[], unavail: [] as { name: string; date: string }[], dates: [] as string[] };
+    const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+    if (json.length === 0) return { groups: [] as ShiftGroup[], unavail: [] as { name: string; date: string }[], dates: [] as string[] };
+
+    const groupsMap: Record<string, ShiftGroup> = {};
+    const unavail: { name: string; date: string }[] = [];
+    const allDates: string[] = [];
+
+    for (const row of json) {
+      const dateRaw = row["Date"] ?? "";
+      const isoDate = parseDate(dateRaw);
+      if (!isoDate) continue;
+      allDates.push(isoDate);
+      const availStatus = (row["Availability status"] ?? "").trim().toLowerCase();
+      const userName = (row["Users"] ?? "").trim();
+      if (availStatus === "unavailable") {
+        if (userName) unavail.push({ name: userName, date: isoDate });
+        continue;
       }
-    };
-    reader.readAsArrayBuffer(f);
-  }, []);
+      const shiftTitle = (row["Shift title"] ?? "").trim();
+      const startRaw = (row["Start"] ?? "").trim();
+      const endRaw = (row["End"] ?? "").trim();
+      const job = (row["Job"] ?? "").trim();
+      if (!shiftTitle && !job && !startRaw) continue;
+      const startTime = parseTime(startRaw);
+      const endTime = parseTime(endRaw);
+      if (!startTime || !endTime) continue;
+      const combined = `${shiftTitle} ${job} ${(row["Sub item"] ?? "")}`.toLowerCase();
+      const isPayrollConcept = /pay\s*ride|pagar|tip\s*pool|1\/2\s*ride|x\s*hour.*pay/i.test(combined)
+        || /^99\s*[-–]/.test(job.trim());
+      if (isPayrollConcept) continue;
+      const groupKey = `${shiftTitle}|${isoDate}|${startTime}|${endTime}|${job}`;
+      if (!groupsMap[groupKey]) {
+        groupsMap[groupKey] = {
+          key: groupKey, shiftCode: shiftTitle, date: isoDate, startTime, endTime, job,
+          subItem: (row["Sub item"] ?? "").trim(), address: (row["Address"] ?? "").trim(),
+          note: (row["Note"] ?? "").trim(), tags: (row["Shift tags"] ?? "").trim(),
+          status: (row["Last Status"] ?? "").trim(), employees: [], employeeStatuses: [],
+        };
+      }
+      if (userName && !groupsMap[groupKey].employees.includes(userName)) {
+        groupsMap[groupKey].employees.push(userName);
+        groupsMap[groupKey].employeeStatuses.push((row["Last Status"] ?? "").trim());
+      }
+    }
+    return { groups: Object.values(groupsMap), unavail, dates: allDates };
+  };
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files ?? []);
+    if (selectedFiles.length === 0) return;
+
+    const validFiles = selectedFiles.filter(f => {
+      if (f.size > MAX_FILE_SIZE) {
+        toast({ title: "Error", description: `"${f.name}" demasiado grande (máx 10MB)`, variant: "destructive" });
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    setFiles(validFiles);
+    setFile(validFiles[0]); // Keep first for backward compat
+    setParsingFiles(true);
+
+    // Parse all files and merge results
+    let allGroups: ShiftGroup[] = [];
+    let allUnavail: { name: string; date: string }[] = [];
+    let allDates: string[] = [];
+
+    for (const f of validFiles) {
+      const data = await f.arrayBuffer();
+      const wb = await safeRead(data);
+      const names = getSheetNames(wb);
+      // Use first sheet of each file
+      const sheetName = names[0];
+      if (!sheetName) continue;
+      const result = parseSheetData(wb, sheetName);
+      allGroups = [...allGroups, ...result.groups];
+      allUnavail = [...allUnavail, ...result.unavail];
+      allDates = [...allDates, ...result.dates];
+    }
+
+    // Deduplicate groups across files (same key = same shift)
+    const dedupMap: Record<string, ShiftGroup> = {};
+    for (const g of allGroups) {
+      if (!dedupMap[g.key]) {
+        dedupMap[g.key] = g;
+      } else {
+        // Merge employees from duplicate
+        for (let i = 0; i < g.employees.length; i++) {
+          if (!dedupMap[g.key].employees.includes(g.employees[i])) {
+            dedupMap[g.key].employees.push(g.employees[i]);
+            dedupMap[g.key].employeeStatuses.push(g.employeeStatuses[i]);
+          }
+        }
+      }
+    }
+
+    const mergedGroups = Object.values(dedupMap);
+    setShiftGroups(mergedGroups);
+    setUnavailableRecords(allUnavail);
+
+    if (allDates.length > 0) {
+      allDates.sort();
+      setDateRange({ from: allDates[0], to: allDates[allDates.length - 1] });
+      setFilterFrom(allDates[0]);
+      setFilterTo(allDates[allDates.length - 1]);
+    }
+
+    setParsingFiles(false);
+    setStep(3);
+  }, [toast]);
 
   const processSheet = (wb: SafeWorkbook, sheetName: string) => {
     const ws = getSheet(wb, sheetName);
