@@ -328,10 +328,10 @@ export default function Landing() {
       {/* ── HERO ── */}
       <section className="relative pt-28 pb-8 sm:pt-36 sm:pb-12 overflow-hidden" id="producto">
         {/* Background effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-40 -left-20 w-[600px] h-[600px] rounded-full bg-primary/[0.07] blur-[120px]" />
-          <div className="absolute top-20 right-0 w-[500px] h-[500px] rounded-full bg-primary-glow/[0.05] blur-[100px]" />
-          <div className="absolute bottom-0 left-1/3 w-[400px] h-[300px] rounded-full bg-success/[0.04] blur-[80px]" />
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="hidden sm:block absolute -top-40 -left-20 w-[600px] h-[600px] rounded-full bg-primary/[0.07] blur-[120px]" />
+          <div className="hidden sm:block absolute top-20 right-0 w-[500px] h-[500px] rounded-full bg-primary-glow/[0.05] blur-[100px]" />
+          <div className="hidden sm:block absolute bottom-0 left-1/3 w-[400px] h-[300px] rounded-full bg-success/[0.04] blur-[80px]" />
         </div>
 
         <div className="container relative">
