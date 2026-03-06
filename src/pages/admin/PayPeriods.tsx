@@ -230,7 +230,38 @@ export default function PayPeriods() {
 
   const requestToggle = (period: PayPeriod) => {
     setPendingToggle(period);
-    setPasswordOpen(true);
+    // Closing (locking) doesn't require password — only reopening (unlocking) does
+    if (period.status === "open") {
+      // Will call toggleStatus directly after setting pendingToggle
+      closePeriodDirectly(period);
+    } else {
+      setPasswordOpen(true);
+    }
+  };
+
+  const closePeriodDirectly = async (period: PayPeriod) => {
+    // Block close if there are pending approval movements
+    const { count } = await supabase
+      .from("movements")
+      .select("id", { count: "exact", head: true })
+      .eq("period_id", period.id)
+      .eq("approval_status", "pending");
+    if (count && count > 0) {
+      toast({ title: "No se puede cerrar", description: `Hay ${count} novedad(es) pendientes de aprobación. Aprueba o deniega todas antes de cerrar el periodo.`, variant: "destructive" });
+      setPendingToggle(null);
+      return;
+    }
+    const { error } = await supabase
+      .from("pay_periods")
+      .update({ status: "closed", closed_at: new Date().toISOString() })
+      .eq("id", period.id);
+    if (error) {
+      toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+    } else {
+      toast({ title: "Periodo cerrado" });
+      fetchPeriods();
+    }
+    setPendingToggle(null);
   };
 
   const toggleStatus = async () => {
