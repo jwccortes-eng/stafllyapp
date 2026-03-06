@@ -106,6 +106,9 @@ export default function PlatformSettings() {
           <TabsTrigger value="features" className="gap-2">
             <Zap className="h-4 w-4" /> Funcionalidades
           </TabsTrigger>
+          <TabsTrigger value="myaccount" className="gap-2">
+            <Phone className="h-4 w-4" /> Mi cuenta
+          </TabsTrigger>
         </TabsList>
 
         {/* Branding */}
