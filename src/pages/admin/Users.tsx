@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User,
   KeyRound, UserPlus, Smartphone, Mail, Building2, ChevronDown, ChevronRight,
-  Package, Ticket, Copy, Plus, ToggleLeft,
+  Package, Ticket, Copy, Plus, ToggleLeft, Download,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
@@ -55,7 +55,7 @@ const MODULES = [
   { key: "chat", label: "Chat" },
 ];
 
-type RoleType = "owner" | "admin" | "manager" | "employee";
+type RoleType = "developer" | "owner" | "admin" | "manager" | "employee";
 
 interface CompanyAssignment {
   company_id: string;
@@ -88,9 +88,10 @@ interface PromoCode {
   created_at: string;
 }
 
-const ROLE_LABELS: Record<RoleType, string> = { owner: "Dueño", admin: "Admin", manager: "Manager", employee: "Empleado" };
-const ROLE_ICONS: Record<RoleType, typeof Shield> = { owner: ShieldCheck, admin: Shield, manager: UserCog, employee: User };
+const ROLE_LABELS: Record<RoleType, string> = { developer: "Desarrollador", owner: "Dueño", admin: "Admin", manager: "Manager", employee: "Empleado" };
+const ROLE_ICONS: Record<RoleType, typeof Shield> = { developer: ShieldCheck, owner: ShieldCheck, admin: Shield, manager: UserCog, employee: User };
 const ROLE_COLORS: Record<RoleType, string> = {
+  developer: "bg-destructive/10 text-destructive border-destructive/20",
   owner: "bg-chart-1/10 text-chart-1 border-chart-1/20",
   admin: "bg-primary/10 text-primary border-primary/20",
   manager: "bg-chart-4/10 text-chart-4 border-chart-4/20",
@@ -162,7 +163,7 @@ function UserRow({ u, onEdit, onResetPw, onDelete }: {
             <Icon className="h-3 w-3 mr-1" />{ROLE_LABELS[u.role]}
           </Badge>
 
-          {u.role !== "owner" && (
+          {u.role !== "developer" && u.role !== "owner" && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -287,7 +288,7 @@ export default function UsersPage() {
   const [promoLoading, setPromoLoading] = useState(false);
 
   const { toast } = useToast();
-  const adminCount = users.filter(u => u.role === "admin" || u.role === "owner").length;
+  const adminCount = users.filter(u => u.role === "admin" || u.role === "owner" || u.role === "developer").length;
   const atAdminLimit = !canAddAdmins(adminCount);
 
   const fetchUsers = async () => {
@@ -458,11 +459,30 @@ export default function UsersPage() {
     .filter(u => roleFilter === "all" || u.role === roleFilter)
     .filter(u => `${u.full_name} ${u.email} ${u.role}`.toLowerCase().includes(search.toLowerCase()));
 
-  if (currentRole !== "owner") {
+  const exportUsersCsv = () => {
+    const headers = ["Nombre", "Email", "Rol", "Empresas", "Fecha creación"];
+    const rows = filtered.map(u => [
+      u.full_name || "Sin nombre",
+      u.email,
+      ROLE_LABELS[u.role],
+      u.companies.map(c => c.company_name).join("; ") || "—",
+      "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `usuarios_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (currentRole !== "developer" && currentRole !== "owner") {
     return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">No tienes acceso a este módulo.</p></div>;
   }
 
-  const roleCounts = { owner: 0, admin: 0, manager: 0, employee: 0 };
+  const roleCounts: Record<RoleType, number> = { developer: 0, owner: 0, admin: 0, manager: 0, employee: 0 };
   users.forEach(u => { roleCounts[u.role] = (roleCounts[u.role] || 0) + 1; });
 
   return (
@@ -474,6 +494,9 @@ export default function UsersPage() {
         subtitle="Usuarios, empresas, permisos y códigos promocionales"
         rightSlot={
           <div className="flex gap-2">
+            <Button variant="outline" size="icon" onClick={exportUsersCsv} title="Exportar CSV">
+              <Download className="h-4 w-4" />
+            </Button>
             <Button variant="outline" onClick={() => setPromoOpen(true)} className="gap-2">
               <Ticket className="h-4 w-4" />Crear código
             </Button>
@@ -500,7 +523,7 @@ export default function UsersPage() {
             >
               Todos ({users.length})
             </button>
-            {(["owner", "admin", "manager", "employee"] as RoleType[]).map(r => {
+            {(["developer", "owner", "admin", "manager", "employee"] as RoleType[]).map(r => {
               const Icon = ROLE_ICONS[r];
               return (
                 <button
