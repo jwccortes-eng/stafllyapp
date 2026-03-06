@@ -459,6 +459,25 @@ export default function UsersPage() {
     .filter(u => roleFilter === "all" || u.role === roleFilter)
     .filter(u => `${u.full_name} ${u.email} ${u.role}`.toLowerCase().includes(search.toLowerCase()));
 
+  const exportUsersCsv = () => {
+    const headers = ["Nombre", "Email", "Rol", "Empresas", "Fecha creación"];
+    const rows = filtered.map(u => [
+      u.full_name || "Sin nombre",
+      u.email,
+      ROLE_LABELS[u.role],
+      u.companies.map(c => c.company_name).join("; ") || "—",
+      "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `usuarios_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (currentRole !== "developer" && currentRole !== "owner") {
     return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">No tienes acceso a este módulo.</p></div>;
   }
