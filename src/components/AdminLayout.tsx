@@ -87,7 +87,7 @@ export default function AdminLayout() {
   const isLinkVisible = (module: string | null) => {
     if (!module) return true;
     if (!isModuleActive(module)) return false;
-    if (role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
     if (role === 'manager') return hasModuleAccess(module, 'view');
     return false;
   };

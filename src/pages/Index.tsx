@@ -10,7 +10,7 @@ export default function Index() {
   useEffect(() => {
     if (loading) return;
     if (!user) return;
-    if (role === "admin" || role === "owner" || role === "manager") {
+    if (role === "developer" || role === "admin" || role === "owner" || role === "manager") {
       navigate("/app");
     } else if (role === "employee") {
       navigate("/portal");
