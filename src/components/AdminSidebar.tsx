@@ -122,8 +122,8 @@ export default function AdminSidebar() {
   };
 
   // User identity display
-  const roleLabel = role === 'owner' ? 'Super Admin' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Usuario';
-  const roleBg = role === 'owner' ? 'owner-badge bg-accent-warm text-accent-warm-foreground' : role === 'admin' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground';
+  const roleLabel = role === 'developer' ? 'Desarrollador' : role === 'owner' ? 'Super Admin' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Usuario';
+  const roleBg = role === 'developer' ? 'bg-destructive text-destructive-foreground' : role === 'owner' ? 'owner-badge bg-accent-warm text-accent-warm-foreground' : role === 'admin' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground';
   const userEmail = user?.email ?? null;
   const userPhone = user?.phone ?? null;
   const userIdentifier = userEmail || userPhone || '';
