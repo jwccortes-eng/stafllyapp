@@ -494,6 +494,9 @@ export default function UsersPage() {
         subtitle="Usuarios, empresas, permisos y códigos promocionales"
         rightSlot={
           <div className="flex gap-2">
+            <Button variant="outline" size="icon" onClick={exportUsersCsv} title="Exportar CSV">
+              <Download className="h-4 w-4" />
+            </Button>
             <Button variant="outline" onClick={() => setPromoOpen(true)} className="gap-2">
               <Ticket className="h-4 w-4" />Crear código
             </Button>
