@@ -337,7 +337,7 @@ export default function ImportSchedule() {
 
   const selectSheet = (name: string) => {
     setSelectedSheet(name);
-    if (workbook) processSheet(workbook, name);
+    // Legacy single-file sheet selection — not used in multi-file mode
   };
 
   const filteredGroups = shiftGroups.filter(g => {
