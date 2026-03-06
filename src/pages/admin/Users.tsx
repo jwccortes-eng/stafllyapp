@@ -523,7 +523,7 @@ export default function UsersPage() {
             >
               Todos ({users.length})
             </button>
-            {(["owner", "admin", "manager", "employee"] as RoleType[]).map(r => {
+            {(["developer", "owner", "admin", "manager", "employee"] as RoleType[]).map(r => {
               const Icon = ROLE_ICONS[r];
               return (
                 <button
