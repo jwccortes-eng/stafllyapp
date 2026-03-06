@@ -667,7 +667,8 @@ export default function ImportSchedule() {
       const dupMsg = skippedDuplicates > 0 ? ` · ${skippedDuplicates} duplicados omitidos` : "";
 
       // ── Record this import to prevent duplicate file uploads ──
-      if (file) {
+      const fileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
+      if (fileNames.length > 0) {
         const { data: existingSetting } = await supabase
           .from("company_settings")
           .select("id, value")
@@ -675,7 +676,7 @@ export default function ImportSchedule() {
           .eq("key", "imported_schedule_files")
           .single();
         const prevFiles: string[] = existingSetting?.value ? (Array.isArray(existingSetting.value) ? existingSetting.value as string[] : []) : [];
-        const newFiles = [...prevFiles, file.name];
+        const newFiles = [...prevFiles, ...fileNames];
         if (existingSetting) {
           await supabase.from("company_settings").update({ value: newFiles as any }).eq("id", existingSetting.id);
         } else {
