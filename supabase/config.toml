@@ -5,6 +5,8 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.auth-email-hook]
     verify_jwt = false
+  [functions.bulk-import-shifts]
+    verify_jwt = false
   [functions.billing-checkout]
     verify_jwt = false
   [functions.billing-customer-portal]
