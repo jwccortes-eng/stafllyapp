@@ -667,7 +667,7 @@ export default function ImportSchedule() {
       const dupMsg = skippedDuplicates > 0 ? ` · ${skippedDuplicates} duplicados omitidos` : "";
 
       // ── Record this import to prevent duplicate file uploads ──
-      const fileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
+      const recordedFileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
       if (fileNames.length > 0) {
         const { data: existingSetting } = await supabase
           .from("company_settings")
