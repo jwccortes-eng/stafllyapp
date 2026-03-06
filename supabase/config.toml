@@ -23,6 +23,8 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.send-payroll-email]
     verify_jwt = false
+  [functions.send-invite-email]
+    verify_jwt = false
   [functions.setup-company]
     verify_jwt = false
   [functions.trial-downgrade]
