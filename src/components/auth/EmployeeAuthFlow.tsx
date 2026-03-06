@@ -17,12 +17,8 @@ type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin";
 
 interface EmployeeInfo {
   found: boolean;
-  has_pin: boolean;
+  requires_activation: boolean;
   is_active: boolean;
-  first_name: string;
-  last_name: string;
-  has_avatar: boolean;
-  has_email: boolean;
 }
 
 /** Extract real error message from supabase.functions.invoke error */
@@ -76,7 +72,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         toast({ title: "Cuenta inactiva", description: "Tu cuenta está inactiva. Contacta al administrador.", variant: "destructive" });
       } else {
         setEmployeeInfo(data);
-        if (data.has_pin) {
+        if (!data.requires_activation) {
           setStep("login_pin");
         } else {
           setStep("activate_pin");
@@ -205,7 +201,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
     }
   };
 
-  const initials = employeeInfo ? `${employeeInfo.first_name[0]}${employeeInfo.last_name[0]}` : "";
+  const initials = "EP";
 
   return (
     <div className="w-full max-w-[400px] mx-auto">
@@ -275,7 +271,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               </AvatarFallback>
             </Avatar>
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              Hola, {employeeInfo.first_name} 👋
+              Ingresa tu PIN
             </h1>
             <p className="text-sm text-muted-foreground">Ingresa tu PIN de 4 dígitos</p>
           </div>
@@ -310,7 +306,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               <Sparkles className="h-7 w-7 text-primary" />
             </div>
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              ¡Bienvenido, {employeeInfo.first_name}!
+              ¡Activa tu cuenta!
             </h1>
             <p className="text-sm text-muted-foreground">
               {pinPhase === "create" ? "Crea un PIN de 4 dígitos" : "Confirma tu PIN"}

@@ -61,14 +61,33 @@ export function ReportActionsBar({
     const header = document.createElement("div");
     header.id = "print-header";
     header.className = "print-header";
-    header.innerHTML = `
-      <div style="padding: 16px 0; border-bottom: 2px solid #333; margin-bottom: 16px;">
-        <h1 style="font-size: 18px; font-weight: 700; margin: 0;">${title}</h1>
-        ${subtitle ? `<p style="font-size: 13px; color: #666; margin: 4px 0 0;">${subtitle}</p>` : ""}
-        ${filtersSummary ? `<p style="font-size: 11px; color: #888; margin: 2px 0 0;">Filtros: ${filtersSummary}</p>` : ""}
-        <p style="font-size: 10px; color: #999; margin: 4px 0 0;">Generado: ${new Date().toLocaleString("es-US")}</p>
-      </div>
-    `;
+
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = "padding: 16px 0; border-bottom: 2px solid #333; margin-bottom: 16px;";
+
+    const h1 = document.createElement("h1");
+    h1.style.cssText = "font-size: 18px; font-weight: 700; margin: 0;";
+    h1.textContent = title;
+    wrapper.appendChild(h1);
+
+    if (subtitle) {
+      const pSub = document.createElement("p");
+      pSub.style.cssText = "font-size: 13px; color: #666; margin: 4px 0 0;";
+      pSub.textContent = subtitle;
+      wrapper.appendChild(pSub);
+    }
+    if (filtersSummary) {
+      const pFilter = document.createElement("p");
+      pFilter.style.cssText = "font-size: 11px; color: #888; margin: 2px 0 0;";
+      pFilter.textContent = `Filtros: ${filtersSummary}`;
+      wrapper.appendChild(pFilter);
+    }
+    const pDate = document.createElement("p");
+    pDate.style.cssText = "font-size: 10px; color: #999; margin: 4px 0 0;";
+    pDate.textContent = `Generado: ${new Date().toLocaleString("es-US")}`;
+    wrapper.appendChild(pDate);
+
+    header.appendChild(wrapper);
 
     const main = document.querySelector("main") || document.body;
     main.prepend(header);
