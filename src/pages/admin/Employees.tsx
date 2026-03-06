@@ -1255,6 +1255,15 @@ export default function Employees() {
         </SheetContent>
       </Sheet>
 
+      {/* Employee Invite Dialog */}
+      {viewEmployee && (
+        <EmployeeInviteDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          employee={viewEmployee}
+        />
+      )}
+
       {/* Create Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
         <DialogContent className="max-w-md">
