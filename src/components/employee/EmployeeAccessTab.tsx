@@ -30,6 +30,7 @@ interface Props {
   employee: EmployeeRecord;
   companyId: string;
   isPrivileged: boolean;
+  onEmployeeUpdate?: (updates: Partial<EmployeeRecord>) => void;
 }
 
 export function EmployeeAccessTab({ employee, companyId, isPrivileged }: Props) {

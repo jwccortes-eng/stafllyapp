@@ -1230,6 +1230,7 @@ export default function Employees() {
                 form={form}
                 setForm={setForm}
                 isPrivileged={isPrivileged}
+                onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)}
               />
 
               <div className="flex gap-2 pt-6">
