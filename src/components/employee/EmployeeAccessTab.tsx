@@ -100,6 +100,7 @@ export function EmployeeAccessTab({ employee, companyId, isPrivileged, onEmploye
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "PIN actualizado", description: `Nuevo PIN: ${newPin}` });
+      onEmployeeUpdate?.({ access_pin: newPin });
       setNewPin("");
     }
     setSavingPin(false);
