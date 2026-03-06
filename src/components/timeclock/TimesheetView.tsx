@@ -391,18 +391,23 @@ export function TimesheetView() {
   const selectedPeriod = payPeriods.find(p => p.id === selectedPeriodId);
 
   const getStatusBadge = (row: typeof rows[0]) => {
+    if (row.importedCount > 0 && row.importedCount === row.entryCount)
+      return <Badge className="text-[10px] rounded-full px-2.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">Importado</Badge>;
     if (row.approvedCount === row.entryCount && row.entryCount > 0)
       return <Badge className="text-[10px] rounded-full px-2.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">Aprobado</Badge>;
     if (row.rejectedCount > 0)
       return <Badge className="text-[10px] rounded-full px-2.5 bg-destructive/10 text-destructive border-0">Rechazado</Badge>;
     if (row.pendingCount > 0)
       return <Badge className="text-[10px] rounded-full px-2.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">Pendiente</Badge>;
+    if (row.importedCount > 0)
+      return <Badge className="text-[10px] rounded-full px-2.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">Mixto</Badge>;
     return <span className="text-xs text-muted-foreground">--</span>;
   };
 
   const getEntryStatusIcon = (status: string) => {
     if (status === "approved") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
     if (status === "rejected") return <XCircle className="h-3.5 w-3.5 text-destructive" />;
+    if (status === "imported") return <Upload className="h-3.5 w-3.5 text-blue-500" />;
     return <Clock className="h-3.5 w-3.5 text-amber-500" />;
   };
 
