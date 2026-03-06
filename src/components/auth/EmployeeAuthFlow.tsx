@@ -201,7 +201,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
     }
   };
 
-  const initials = employeeInfo ? `${employeeInfo.first_name[0]}${employeeInfo.last_name[0]}` : "";
+  const initials = "EP";
 
   return (
     <div className="w-full max-w-[400px] mx-auto">
