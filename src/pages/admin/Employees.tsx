@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown, LayoutGrid, List, MessageCircle } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown, LayoutGrid, List, MessageCircle, Send } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -49,6 +49,7 @@ import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
+import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 
@@ -139,6 +140,7 @@ export default function Employees() {
   const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateMode, setUpdateMode] = useState<"diff" | "full">("full");
+  const [inviteOpen, setInviteOpen] = useState(false);
   const { toast } = useToast();
 
   const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
@@ -1191,6 +1193,14 @@ export default function Employees() {
                 </SheetDescription>
               </div>
               <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={() => setInviteOpen(true)}
+              >
+                <Send className="h-3 w-3 mr-1.5" />Invitar
+              </Button>
+              <Button
                 variant={isEditing ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
@@ -1244,6 +1254,15 @@ export default function Employees() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {/* Employee Invite Dialog */}
+      {viewEmployee && (
+        <EmployeeInviteDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          employee={viewEmployee}
+        />
+      )}
 
       {/* Create Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
