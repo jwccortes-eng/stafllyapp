@@ -62,6 +62,7 @@ import DiscrepancyReport from "./pages/admin/DiscrepancyReport";
 import ComparisonReport from "./pages/admin/ComparisonReport";
 import ContractorW9 from "./pages/admin/ContractorW9";
 import TaxForms1099 from "./pages/admin/TaxForms1099";
+import ImportInactiveEmployees from "./pages/admin/ImportInactiveEmployees";
 import ModuleGate from "./components/ModuleGate";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
@@ -161,6 +162,7 @@ function App() {
                 <Route path="comparison" element={<ComparisonReport />} />
                 <Route path="w9" element={<ContractorW9 />} />
                 <Route path="1099" element={<TaxForms1099 />} />
+                <Route path="import-inactive" element={<ImportInactiveEmployees />} />
               </Route>
 
               {/* Employee portal routes */}
