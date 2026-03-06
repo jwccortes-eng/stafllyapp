@@ -1882,6 +1882,84 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          modules: string[]
+          uses_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          modules?: string[]
+          uses_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          modules?: string[]
+          uses_count?: number
+        }
+        Relationships: []
+      }
+      promo_redemptions: {
+        Row: {
+          company_id: string
+          id: string
+          promo_code_id: string
+          redeemed_at: string
+          redeemed_by: string | null
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          promo_code_id: string
+          redeemed_at?: string
+          redeemed_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          promo_code_id?: string
+          redeemed_at?: string
+          redeemed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_redemptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_redemptions_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       read_receipts: {
         Row: {
           conversation_id: string
