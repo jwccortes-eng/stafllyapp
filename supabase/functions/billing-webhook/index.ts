@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
         await supabase.from("billing_events").insert({
           company_id: companyId,
           type: event.type,
-          payload_json: event as any,
+          payload_json: sanitizePayload(event),
         });
 
         console.log(`[billing-webhook] Subscription updated: company=${companyId}, status=${sub.status}`);
