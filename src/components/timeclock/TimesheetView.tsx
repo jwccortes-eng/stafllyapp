@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import {
-  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, Timer, Download,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, Timer, Download, Upload,
   CheckCircle2, XCircle, AlertCircle, CalendarIcon, Filter, Clock,
 } from "lucide-react";
 import { format, startOfWeek, addDays, differenceInMinutes, parseISO, isWithinInterval, isSameDay } from "date-fns";
@@ -31,6 +31,8 @@ interface TimeEntry {
   break_minutes: number;
   notes: string | null;
   status: string;
+  source: "clock" | "import";
+  import_meta?: { customer?: string; sub_job?: string; shift_hours?: number };
 }
 
 interface Employee {
@@ -137,26 +139,67 @@ export function TimesheetView() {
     if (!selectedCompanyId) return;
     setLoading(true);
     const fetchEnd = addDays(rangeEnd, 1);
-    const [entriesRes, empsRes] = await Promise.all([
+
+    // Build shifts query based on view mode
+    let shiftsQuery = supabase.from("shifts")
+      .select("id, employee_id, clock_in_time, clock_out_time, shift_start_date, shift_hours, customer, sub_job, period_id")
+      .eq("company_id", selectedCompanyId);
+
+    if (viewMode === "period" && selectedPeriodId) {
+      shiftsQuery = shiftsQuery.eq("period_id", selectedPeriodId);
+    } else {
+      shiftsQuery = shiftsQuery
+        .gte("shift_start_date", format(rangeStart, "yyyy-MM-dd"))
+        .lte("shift_start_date", format(fetchEnd, "yyyy-MM-dd"));
+    }
+
+    const [entriesRes, shiftsRes, empsRes] = await Promise.all([
       supabase.from("time_entries")
         .select("id, employee_id, shift_id, clock_in, clock_out, break_minutes, notes, status")
         .eq("company_id", selectedCompanyId)
         .gte("clock_in", rangeStart.toISOString())
         .lt("clock_in", fetchEnd.toISOString())
         .order("clock_in", { ascending: true }),
+      shiftsQuery.order("shift_start_date", { ascending: true }),
       supabase.from("employees")
         .select("id, first_name, last_name, avatar_url")
         .eq("company_id", selectedCompanyId)
         .eq("is_active", true)
         .order("first_name"),
     ]);
-    setEntries((entriesRes.data ?? []) as TimeEntry[]);
+
+    const clockEntries: TimeEntry[] = (entriesRes.data ?? []).map((e: any) => ({
+      ...e,
+      source: "clock" as const,
+    }));
+
+    const importedEntries: TimeEntry[] = (shiftsRes.data ?? []).map((s: any) => {
+      const clockIn = s.clock_in_time || (s.shift_start_date ? `${s.shift_start_date}T08:00:00` : new Date().toISOString());
+      const shiftHours = s.shift_hours ?? 0;
+      const clockOut = s.clock_out_time || (shiftHours > 0
+        ? new Date(new Date(clockIn).getTime() + shiftHours * 3600000).toISOString()
+        : null);
+      return {
+        id: `imp_${s.id}`,
+        employee_id: s.employee_id,
+        shift_id: null,
+        clock_in: clockIn,
+        clock_out: clockOut,
+        break_minutes: 0,
+        notes: [s.customer, s.sub_job].filter(Boolean).join(" · ") || null,
+        status: "imported",
+        source: "import" as const,
+        import_meta: { customer: s.customer, sub_job: s.sub_job, shift_hours: s.shift_hours },
+      } satisfies TimeEntry;
+    });
+
+    setEntries([...clockEntries, ...importedEntries]);
     setEmployees((empsRes.data ?? []) as Employee[]);
     setSelectedIds(new Set());
     setExpandedIds(new Set());
     setPage(1);
     setLoading(false);
-  }, [selectedCompanyId, rangeStart, rangeEnd]);
+  }, [selectedCompanyId, rangeStart, rangeEnd, viewMode, selectedPeriodId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -174,7 +217,9 @@ export function TimesheetView() {
         let totalMins = 0;
         let breakMins = 0;
         filteredEntries.forEach(e => {
-          if (e.clock_out) {
+          if (e.source === "import" && e.import_meta?.shift_hours) {
+            totalMins += Math.round(e.import_meta.shift_hours * 60);
+          } else if (e.clock_out) {
             totalMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
             breakMins += e.break_minutes ?? 0;
           }
@@ -184,8 +229,9 @@ export function TimesheetView() {
         const approvedCount = empEntries.filter(e => e.status === "approved").length;
         const rejectedCount = empEntries.filter(e => e.status === "rejected").length;
         const openCount = empEntries.filter(e => !e.clock_out).length;
+        const importedCount = empEntries.filter(e => e.status === "imported").length;
         const hasIssues = rejectedCount > 0 || openCount > 0;
-        const entryIds = filteredEntries.map(e => e.id);
+        const entryIds = filteredEntries.filter(e => e.source === "clock").map(e => e.id);
 
         // Daily breakdown
         const dayMap = new Map<string, TimeEntry[]>();
@@ -201,7 +247,9 @@ export function TimesheetView() {
             let dayMins = 0;
             let dayBreakMins = 0;
             dayEntries.forEach(e => {
-              if (e.clock_out) {
+              if (e.source === "import" && e.import_meta?.shift_hours) {
+                dayMins += Math.round(e.import_meta.shift_hours * 60);
+              } else if (e.clock_out) {
                 dayMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
                 dayBreakMins += e.break_minutes ?? 0;
               }
@@ -217,6 +265,7 @@ export function TimesheetView() {
           pendingCount,
           approvedCount,
           rejectedCount,
+          importedCount,
           openCount,
           hasIssues,
           entryIds,
@@ -243,7 +292,9 @@ export function TimesheetView() {
     let regularMins = 0;
     let breakMins = 0;
     filtered.forEach(e => {
-      if (e.clock_out) {
+      if (e.source === "import" && e.import_meta?.shift_hours) {
+        regularMins += Math.round(e.import_meta.shift_hours * 60);
+      } else if (e.clock_out) {
         regularMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
         breakMins += e.break_minutes ?? 0;
       }
@@ -348,18 +399,23 @@ export function TimesheetView() {
   const selectedPeriod = payPeriods.find(p => p.id === selectedPeriodId);
 
   const getStatusBadge = (row: typeof rows[0]) => {
+    if (row.importedCount > 0 && row.importedCount === row.entryCount)
+      return <Badge className="text-[10px] rounded-full px-2.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">Importado</Badge>;
     if (row.approvedCount === row.entryCount && row.entryCount > 0)
       return <Badge className="text-[10px] rounded-full px-2.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">Aprobado</Badge>;
     if (row.rejectedCount > 0)
       return <Badge className="text-[10px] rounded-full px-2.5 bg-destructive/10 text-destructive border-0">Rechazado</Badge>;
     if (row.pendingCount > 0)
       return <Badge className="text-[10px] rounded-full px-2.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">Pendiente</Badge>;
+    if (row.importedCount > 0)
+      return <Badge className="text-[10px] rounded-full px-2.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">Mixto</Badge>;
     return <span className="text-xs text-muted-foreground">--</span>;
   };
 
   const getEntryStatusIcon = (status: string) => {
     if (status === "approved") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
     if (status === "rejected") return <XCircle className="h-3.5 w-3.5 text-destructive" />;
+    if (status === "imported") return <Upload className="h-3.5 w-3.5 text-blue-500" />;
     return <Clock className="h-3.5 w-3.5 text-amber-500" />;
   };
 
@@ -450,7 +506,7 @@ export function TimesheetView() {
         )}
 
         {/* Status filter */}
-        <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
+         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="h-9 w-[140px] text-xs">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
@@ -459,6 +515,7 @@ export function TimesheetView() {
             <SelectItem value="pending">Pendientes</SelectItem>
             <SelectItem value="approved">Aprobados</SelectItem>
             <SelectItem value="rejected">Rechazados</SelectItem>
+            <SelectItem value="imported">Importados</SelectItem>
           </SelectContent>
         </Select>
 
@@ -608,36 +665,57 @@ export function TimesheetView() {
 
                         {/* Individual entries */}
                         {dayData.entries.map(entry => {
-                          const duration = entry.clock_out
-                            ? Math.max(0, differenceInMinutes(new Date(entry.clock_out), new Date(entry.clock_in)) - (entry.break_minutes ?? 0))
-                            : 0;
+                          const isImported = entry.source === "import";
+                          const duration = isImported && entry.import_meta?.shift_hours
+                            ? Math.round(entry.import_meta.shift_hours * 60)
+                            : entry.clock_out
+                              ? Math.max(0, differenceInMinutes(new Date(entry.clock_out), new Date(entry.clock_in)) - (entry.break_minutes ?? 0))
+                              : 0;
                           return (
                             <TableRow key={entry.id} className="bg-muted/10 hover:bg-muted/20 border-b-0">
                               {canApprove && (
                                 <TableCell onClick={e => e.stopPropagation()}>
-                                  <Checkbox
-                                    checked={selectedIds.has(entry.id)}
-                                    onCheckedChange={() => {
-                                      const next = new Set(selectedIds);
-                                      next.has(entry.id) ? next.delete(entry.id) : next.add(entry.id);
-                                      setSelectedIds(next);
-                                    }}
-                                  />
+                                  {!isImported ? (
+                                    <Checkbox
+                                      checked={selectedIds.has(entry.id)}
+                                      onCheckedChange={() => {
+                                        const next = new Set(selectedIds);
+                                        next.has(entry.id) ? next.delete(entry.id) : next.add(entry.id);
+                                        setSelectedIds(next);
+                                      }}
+                                    />
+                                  ) : null}
                                 </TableCell>
                               )}
                               <TableCell />
                               <TableCell className="py-2">
                                 <div className="flex items-center gap-4 pl-4">
-                                  <div className="flex items-center gap-1.5 text-xs">
-                                    <span className="text-muted-foreground">In:</span>
-                                    <span className="font-mono font-medium">{format(new Date(entry.clock_in), "hh:mm a")}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 text-xs">
-                                    <span className="text-muted-foreground">Out:</span>
-                                    <span className="font-mono font-medium">
-                                      {entry.clock_out ? format(new Date(entry.clock_out), "hh:mm a") : <span className="text-amber-500">Abierto</span>}
-                                    </span>
-                                  </div>
+                                  {isImported ? (
+                                    <>
+                                      <div className="flex items-center gap-1.5 text-xs">
+                                        <Upload className="h-3 w-3 text-blue-500" />
+                                        <span className="font-medium text-blue-600 dark:text-blue-400">
+                                          {entry.import_meta?.shift_hours?.toFixed(2)}h
+                                        </span>
+                                      </div>
+                                      {entry.notes && (
+                                        <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">{entry.notes}</span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-muted-foreground">In:</span>
+                                        <span className="font-mono font-medium">{format(new Date(entry.clock_in), "hh:mm a")}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-muted-foreground">Out:</span>
+                                        <span className="font-mono font-medium">
+                                          {entry.clock_out ? format(new Date(entry.clock_out), "hh:mm a") : <span className="text-amber-500">Abierto</span>}
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell />
