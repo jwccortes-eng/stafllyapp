@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
       .eq("user_id", caller.id)
       .maybeSingle();
 
-    if (!roleData || (roleData.role !== "owner" && roleData.role !== "admin")) {
+    const allowedRoles = ["developer", "owner", "admin"];
+    if (!roleData || !allowedRoles.includes(roleData.role)) {
       return new Response(
         JSON.stringify({ error: "Solo owners y admins pueden cambiar contraseñas" }),
         {
