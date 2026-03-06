@@ -33,7 +33,7 @@ interface Props {
   onEmployeeUpdate?: (updates: Partial<EmployeeRecord>) => void;
 }
 
-export function EmployeeAccessTab({ employee, companyId, isPrivileged }: Props) {
+export function EmployeeAccessTab({ employee, companyId, isPrivileged, onEmployeeUpdate }: Props) {
   const [modules, setModules] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
