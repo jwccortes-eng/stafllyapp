@@ -1193,6 +1193,14 @@ export default function Employees() {
                 </SheetDescription>
               </div>
               <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={() => setInviteOpen(true)}
+              >
+                <Send className="h-3 w-3 mr-1.5" />Invitar
+              </Button>
+              <Button
                 variant={isEditing ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
