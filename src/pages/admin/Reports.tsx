@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, FileSpreadsheet, Users, UserCheck, AlertTriangle } from "lucide-react";
+import { BarChart3, FileSpreadsheet, Users, UserCheck, AlertTriangle, DollarSign } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -75,6 +75,20 @@ export default function Reports() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">Turnos vs. registros de reloj: ausencias, tardanzas, extras no planeadas.</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/app/unpaid-shifts">
+          <Card className="stat-card cursor-pointer hover:border-primary/30">
+            <CardHeader className="flex flex-row items-center gap-3">
+              <DollarSign className="h-8 w-8 text-earning" />
+              <div>
+                <CardTitle className="text-base">Turnos sin pago</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Auditoría de programaciones vs fichajes y pagos consolidados.</p>
             </CardContent>
           </Card>
         </Link>
