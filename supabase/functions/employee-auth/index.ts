@@ -162,9 +162,19 @@ Deno.serve(async (req) => {
 
       const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
 
+      // Rate limit check action to prevent enumeration
+      const rateCheck = await checkRateLimit(adminClient, cleanPhone);
+      if (!rateCheck.allowed) {
+        // Return generic response to avoid leaking info
+        return new Response(
+          JSON.stringify({ found: false }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const { data: employee } = await adminClient
         .from("employees")
-        .select("id, first_name, last_name, access_pin, is_active, avatar_url, email")
+        .select("id, access_pin, is_active")
         .eq("phone_number", cleanPhone)
         .maybeSingle();
 
@@ -175,15 +185,12 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Return minimal info — no PII (name, email, avatar)
       return new Response(
         JSON.stringify({
           found: true,
-          has_pin: !!employee.access_pin,
+          requires_activation: !employee.access_pin,
           is_active: employee.is_active,
-          first_name: employee.first_name,
-          last_name: employee.last_name,
-          has_avatar: !!employee.avatar_url,
-          has_email: !!employee.email,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
