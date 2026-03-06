@@ -28,6 +28,7 @@ interface PayPeriod {
   status: string;
   closed_at: string | null;
   published_at: string | null;
+  paid_at?: string | null;
 }
 
 interface ImportInfo {
