@@ -237,16 +237,44 @@ export default function ImportConnecteam() {
     // Enrich with employee count and base total per import
     const enriched = await Promise.all(
       (data as any[]).map(async (imp) => {
-        const { count } = await supabase
+        // First try by import_id (direct import to period_base_pay)
+        const { count: countByImport } = await supabase
           .from("period_base_pay")
           .select("id", { count: "exact", head: true })
           .eq("import_id", imp.id);
-        const { data: basePays } = await supabase
+        const { data: basePaysByImport } = await supabase
           .from("period_base_pay")
           .select("base_total_pay")
           .eq("import_id", imp.id);
-        const total = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.base_total_pay || 0), 0);
-        return { ...imp, _emp_count: count ?? 0, _base_total: Math.round(total * 100) / 100 } as ImportHistory;
+        
+        let empCount = countByImport ?? 0;
+        let total = (basePaysByImport ?? []).reduce((s: number, bp: any) => s + Number(bp.base_total_pay || 0), 0);
+
+        // If no results by import_id, fall back to period_id (consolidated from shifts)
+        if (empCount === 0 && imp.period_id) {
+          const { count: countByPeriod } = await supabase
+            .from("period_base_pay")
+            .select("id", { count: "exact", head: true })
+            .eq("period_id", imp.period_id);
+          const { data: basePaysByPeriod } = await supabase
+            .from("period_base_pay")
+            .select("base_total_pay")
+            .eq("period_id", imp.period_id);
+          empCount = countByPeriod ?? 0;
+          total = (basePaysByPeriod ?? []).reduce((s: number, bp: any) => s + Number(bp.base_total_pay || 0), 0);
+        }
+
+        // If still 0 employees, count from shifts table by import_id
+        if (empCount === 0 && imp.id) {
+          const { data: shiftEmps } = await supabase
+            .from("shifts")
+            .select("employee_id")
+            .eq("import_id", imp.id);
+          const uniqueEmps = new Set((shiftEmps ?? []).map((s: any) => s.employee_id));
+          empCount = uniqueEmps.size;
+        }
+
+        return { ...imp, _emp_count: empCount, _base_total: Math.round(total * 100) / 100 } as ImportHistory;
       })
     );
     setImportHistory(enriched);
