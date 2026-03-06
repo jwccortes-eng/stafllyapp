@@ -38,7 +38,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 const SITE_NAME = "StaflyApps"
 const SENDER_DOMAIN = "notify.staflyapps.com"
 const ROOT_DOMAIN = "staflyapps.com"
-const FROM_DOMAIN = "staflyapps.com" // Domain shown in From address (may be root or sender subdomain)
+const FROM_DOMAIN = "notify.staflyapps.com" // Must match SENDER_DOMAIN for Resend verification
 
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.
