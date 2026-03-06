@@ -493,7 +493,7 @@ export function TimesheetView() {
         )}
 
         {/* Status filter */}
-        <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
+         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="h-9 w-[140px] text-xs">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
@@ -502,6 +502,7 @@ export function TimesheetView() {
             <SelectItem value="pending">Pendientes</SelectItem>
             <SelectItem value="approved">Aprobados</SelectItem>
             <SelectItem value="rejected">Rechazados</SelectItem>
+            <SelectItem value="imported">Importados</SelectItem>
           </SelectContent>
         </Select>
 
