@@ -322,7 +322,7 @@ export default function UnpaidShiftsReport() {
         variant="4"
         eyebrow="AUDITORÍA"
         title="Turnos sin pago"
-        subtitle="Programaciones vs fichajes y pagos desde enero 2026"
+        subtitle="Programaciones vs fichajes y pagos desde enero 2025"
       />
 
       <div className="flex flex-wrap items-end gap-3">
