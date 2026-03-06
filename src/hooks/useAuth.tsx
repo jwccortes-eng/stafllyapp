@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
-    if (role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
     if (role === 'manager') {
       const perm = permissions.find(p => p.module === module);
       if (!perm) return false;
