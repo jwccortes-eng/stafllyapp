@@ -255,6 +255,19 @@ export default function PlatformSettings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* My Account - Phone Link */}
+        <TabsContent value="myaccount">
+          <Card>
+            <CardHeader>
+              <CardTitle>Mi cuenta</CardTitle>
+              <CardDescription>Configura opciones de acceso adicionales para tu perfil de administrador</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdminPhoneLinkSection />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
