@@ -57,11 +57,28 @@ Deno.serve(async (req) => {
 
     console.log(`[billing-webhook] Event: ${event.type}, id: ${event.id}`);
 
+    // Helper: validate company exists
+    const validateCompany = async (companyId: string): Promise<boolean> => {
+      const { data } = await supabase.from("companies").select("id").eq("id", companyId).maybeSingle();
+      return !!data;
+    };
+
+    // Helper: sanitize Stripe payload (remove sensitive card/bank details)
+    const sanitizePayload = (evt: any): any => {
+      const safe = { id: evt.id, type: evt.type, created: evt.created };
+      return safe;
+    };
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const companyId = session.metadata?.companyId;
         if (!companyId || !session.subscription) break;
+
+        if (!(await validateCompany(companyId))) {
+          console.error(`[billing-webhook] Invalid company_id: ${companyId}`);
+          break;
+        }
 
         // Fetch the subscription to get plan details
         const sub = await stripe.subscriptions.retrieve(session.subscription as string);
