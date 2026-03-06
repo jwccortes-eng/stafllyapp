@@ -17,8 +17,9 @@ import { cn } from "@/lib/utils";
 import {
   User, DollarSign, Clock, CalendarDays, FileText, Activity,
   Briefcase, Phone, Mail, MapPin, Users, Tag, Star, Shield,
-  Plus, Pencil, Trash2, MoreHorizontal,
+  Plus, Pencil, Trash2, MoreHorizontal, KeyRound,
 } from "lucide-react";
+import { EmployeeAccessTab } from "@/components/employee/EmployeeAccessTab";
 
 type EmployeeRecord = Record<string, any>;
 
