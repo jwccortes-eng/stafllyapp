@@ -5,10 +5,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   User, Mail, Phone, MapPin, CalendarDays, Wallet,
-  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2,
+  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2, KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 
