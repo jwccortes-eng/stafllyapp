@@ -463,7 +463,7 @@ export default function UsersPage() {
     return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">No tienes acceso a este módulo.</p></div>;
   }
 
-  const roleCounts = { owner: 0, admin: 0, manager: 0, employee: 0 };
+  const roleCounts: Record<RoleType, number> = { developer: 0, owner: 0, admin: 0, manager: 0, employee: 0 };
   users.forEach(u => { roleCounts[u.role] = (roleCounts[u.role] || 0) + 1; });
 
   return (
