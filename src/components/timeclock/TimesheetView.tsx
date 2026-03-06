@@ -261,6 +261,7 @@ export function TimesheetView() {
           pendingCount,
           approvedCount,
           rejectedCount,
+          importedCount,
           openCount,
           hasIssues,
           entryIds,
