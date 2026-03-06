@@ -995,8 +995,8 @@ export default function ImportSchedule() {
             </Card>
           )}
 
-          <Button variant="outline" onClick={() => { setStep(1); setFile(null); setWorkbook(null); setShiftGroups([]); setResult(null); setSummary(null); }}>
-            Importar otro archivo
+          <Button variant="outline" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); setResult(null); setSummary(null); }}>
+            Importar más archivos
           </Button>
         </div>
       )}
