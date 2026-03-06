@@ -336,29 +336,89 @@ export default function PayPeriods() {
               </DialogHeader>
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Selecciona si deseas abrir todos los periodos cerrados o solo un rango específico.
+                  Selecciona el rango de periodos cerrados que deseas abrir.
                 </p>
-                <div className="flex gap-2">
-                  <Button variant={bulkMode === "all" ? "default" : "outline"} size="sm" onClick={() => setBulkMode("all")}>Todos</Button>
-                  <Button variant={bulkMode === "range" ? "default" : "outline"} size="sm" onClick={() => setBulkMode("range")}>Por rango</Button>
+                {/* Quick range presets */}
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-2 block">Accesos rápidos</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button type="button" variant={bulkMode === "all" ? "default" : "outline"} size="sm" onClick={() => { setBulkMode("all"); setBulkFrom(""); setBulkTo(""); }}>
+                      Todos los cerrados
+                    </Button>
+                    {(() => {
+                      const now = new Date();
+                      const currentYear = now.getFullYear();
+                      const currentMonth = now.getMonth(); // 0-indexed
+                      const months = [];
+                      // Show current month + 2 previous months
+                      for (let i = 0; i < 3; i++) {
+                        const d = new Date(currentYear, currentMonth - i, 1);
+                        const y = d.getFullYear();
+                        const m = d.getMonth();
+                        const lastDay = new Date(y, m + 1, 0).getDate();
+                        const label = format(d, "MMM yyyy", { locale: es });
+                        const from = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+                        const to = `${y}-${String(m + 1).padStart(2, "0")}-${lastDay}`;
+                        months.push({ label, from, to });
+                      }
+                      return months.map(({ label, from, to }) => (
+                        <Button key={from} type="button" variant={bulkMode === "range" && bulkFrom === from && bulkTo === to ? "default" : "outline"} size="sm"
+                          onClick={() => { setBulkMode("range"); setBulkFrom(from); setBulkTo(to); }}
+                          className="capitalize">
+                          {label}
+                        </Button>
+                      ));
+                    })()}
+                  </div>
                 </div>
-                {bulkMode === "range" && (
+                {/* Quarter presets */}
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-2 block">Trimestres</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Q1", from: "-01-01", to: "-03-31" },
+                      { label: "Q2", from: "-04-01", to: "-06-30" },
+                      { label: "Q3", from: "-07-01", to: "-09-30" },
+                      { label: "Q4", from: "-10-01", to: "-12-31" },
+                    ].map(q => {
+                      const y = new Date().getFullYear();
+                      const from = `${y}${q.from}`;
+                      const to = `${y}${q.to}`;
+                      return (
+                        <Button key={q.label} type="button" variant={bulkMode === "range" && bulkFrom === from && bulkTo === to ? "default" : "outline"} size="sm"
+                          onClick={() => { setBulkMode("range"); setBulkFrom(from); setBulkTo(to); }}>
+                          {q.label} {y}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* Custom range */}
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-2 block">Rango personalizado</Label>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label>Desde</Label>
-                      <Input type="date" value={bulkFrom} onChange={e => setBulkFrom(e.target.value)} className="mt-1" />
+                      <Input type="date" value={bulkFrom} onChange={e => { setBulkMode("range"); setBulkFrom(e.target.value); }} className="mt-1" />
                     </div>
                     <div>
                       <Label>Hasta</Label>
-                      <Input type="date" value={bulkTo} onChange={e => setBulkTo(e.target.value)} className="mt-1" />
-                    </div>
-                    <div className="col-span-2 flex gap-2 flex-wrap">
-                      <Button type="button" variant="outline" size="sm" onClick={() => { setBulkFrom("2026-04-01"); setBulkTo("2026-04-30"); }}>Abril 2026</Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => { setBulkFrom("2026-03-01"); setBulkTo("2026-03-31"); }}>Marzo 2026</Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => { setBulkFrom("2026-02-01"); setBulkTo("2026-02-28"); }}>Feb 2026</Button>
+                      <Input type="date" value={bulkTo} onChange={e => { setBulkMode("range"); setBulkTo(e.target.value); }} className="mt-1" />
                     </div>
                   </div>
-                )}
+                </div>
+                {/* Preview count */}
+                {(() => {
+                  let target = periods.filter(p => p.status === "closed");
+                  if (bulkMode === "range" && bulkFrom && bulkTo) {
+                    target = target.filter(p => p.start_date >= bulkFrom && p.start_date <= bulkTo);
+                  }
+                  return (
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {target.length} periodo{target.length !== 1 ? "s" : ""} cerrado{target.length !== 1 ? "s" : ""} {bulkMode === "range" && bulkFrom && bulkTo ? `entre ${bulkFrom} y ${bulkTo}` : "en total"}
+                    </p>
+                  );
+                })()}
                 <Button className="w-full" onClick={handleBulkOpen} disabled={bulkOpening || (bulkMode === "range" && (!bulkFrom || !bulkTo))}>
                   {bulkOpening ? "Abriendo..." : `Abrir periodos${bulkMode === "range" ? ` (${bulkFrom} → ${bulkTo})` : " (todos)"}`}
                 </Button>
