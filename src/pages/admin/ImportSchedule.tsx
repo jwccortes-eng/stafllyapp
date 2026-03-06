@@ -680,19 +680,7 @@ export default function ImportSchedule() {
         </Card>
       )}
 
-      {/* Step 2: Sheet selection */}
-      {step === 2 && (
-        <Card>
-          <CardHeader><CardTitle>Paso 2: Selecciona la hoja</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {sheets.map(s => (
-              <Button key={s} variant="outline" className="w-full justify-start" onClick={() => selectSheet(s)}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" /> {s}
-              </Button>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {/* Step 2 skipped in multi-file mode */}
 
       {/* Step 3: Review & Import */}
       {step === 3 && (
