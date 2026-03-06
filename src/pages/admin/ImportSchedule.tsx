@@ -354,20 +354,20 @@ export default function ImportSchedule() {
 
     try {
       // ── Check for duplicate file upload using company_settings ──
-      if (file) {
-        const { data: setting } = await supabase
-          .from("company_settings")
-          .select("value")
-          .eq("company_id", selectedCompanyId)
-          .eq("key", "imported_schedule_files")
-          .single();
-        const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
-        if (importedFiles.includes(file.name)) {
-          setResult({ success: false, message: `El archivo "${file.name}" ya fue importado anteriormente. Usa un archivo diferente o elimina la importación anterior.` });
-          setImporting(false);
-          setImportProgress(null);
-          return;
-        }
+      const { data: setting } = await supabase
+        .from("company_settings")
+        .select("value")
+        .eq("company_id", selectedCompanyId)
+        .eq("key", "imported_schedule_files")
+        .single();
+      const importedFiles: string[] = setting?.value ? (Array.isArray(setting.value) ? setting.value as string[] : []) : [];
+      const fileNames = files.length > 0 ? files.map(f => f.name) : (file ? [file.name] : []);
+      const alreadyImported = fileNames.filter(n => importedFiles.includes(n));
+      if (alreadyImported.length > 0) {
+        setResult({ success: false, message: `Archivo(s) ya importado(s): ${alreadyImported.join(", ")}. Usa archivos diferentes o elimina la importación anterior.` });
+        setImporting(false);
+        setImportProgress(null);
+        return;
       }
 
       // Fetch employees and clients for matching
