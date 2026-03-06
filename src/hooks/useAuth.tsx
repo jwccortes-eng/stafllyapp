@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) throw roleError;
 
-      const rolePriority: AppRole[] = ["owner", "admin", "manager", "employee", null];
+      const rolePriority: AppRole[] = ["developer", "owner", "admin", "manager", "employee", null];
       const availableRoles = new Set((roleRows ?? []).map((row) => row.role as Exclude<AppRole, null>));
       let resolvedRole = rolePriority.find(
         (candidate) => candidate && availableRoles.has(candidate)
