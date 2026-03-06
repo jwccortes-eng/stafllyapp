@@ -333,7 +333,7 @@ export default function UnpaidShiftsReport() {
               <SelectValue placeholder="Todos los periodos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos (desde Ene 2026)</SelectItem>
+              <SelectItem value="all">Todos (desde Ene 2025)</SelectItem>
               {periods.map((p) => (
                 <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
               ))}
