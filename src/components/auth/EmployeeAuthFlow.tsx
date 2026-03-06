@@ -72,7 +72,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         toast({ title: "Cuenta inactiva", description: "Tu cuenta está inactiva. Contacta al administrador.", variant: "destructive" });
       } else {
         setEmployeeInfo(data);
-        if (data.has_pin) {
+        if (!data.requires_activation) {
           setStep("login_pin");
         } else {
           setStep("activate_pin");
