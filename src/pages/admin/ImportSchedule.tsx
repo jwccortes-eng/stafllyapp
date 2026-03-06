@@ -908,8 +908,8 @@ export default function ImportSchedule() {
           </Card>
 
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => { setStep(1); setFile(null); setWorkbook(null); setShiftGroups([]); }}>
-              ← Cambiar archivo
+            <Button variant="outline" onClick={() => { setStep(1); setFile(null); setFiles([]); setWorkbook(null); setShiftGroups([]); }}>
+              ← Cambiar archivos
             </Button>
             <Button onClick={handleImport} disabled={importing || filteredGroups.length === 0}>
               {importing ? "Importando…" : `Importar ${filteredGroups.length} turnos`}
