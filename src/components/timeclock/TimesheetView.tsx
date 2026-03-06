@@ -663,36 +663,57 @@ export function TimesheetView() {
 
                         {/* Individual entries */}
                         {dayData.entries.map(entry => {
-                          const duration = entry.clock_out
-                            ? Math.max(0, differenceInMinutes(new Date(entry.clock_out), new Date(entry.clock_in)) - (entry.break_minutes ?? 0))
-                            : 0;
+                          const isImported = entry.source === "import";
+                          const duration = isImported && entry.import_meta?.shift_hours
+                            ? Math.round(entry.import_meta.shift_hours * 60)
+                            : entry.clock_out
+                              ? Math.max(0, differenceInMinutes(new Date(entry.clock_out), new Date(entry.clock_in)) - (entry.break_minutes ?? 0))
+                              : 0;
                           return (
                             <TableRow key={entry.id} className="bg-muted/10 hover:bg-muted/20 border-b-0">
                               {canApprove && (
                                 <TableCell onClick={e => e.stopPropagation()}>
-                                  <Checkbox
-                                    checked={selectedIds.has(entry.id)}
-                                    onCheckedChange={() => {
-                                      const next = new Set(selectedIds);
-                                      next.has(entry.id) ? next.delete(entry.id) : next.add(entry.id);
-                                      setSelectedIds(next);
-                                    }}
-                                  />
+                                  {!isImported ? (
+                                    <Checkbox
+                                      checked={selectedIds.has(entry.id)}
+                                      onCheckedChange={() => {
+                                        const next = new Set(selectedIds);
+                                        next.has(entry.id) ? next.delete(entry.id) : next.add(entry.id);
+                                        setSelectedIds(next);
+                                      }}
+                                    />
+                                  ) : null}
                                 </TableCell>
                               )}
                               <TableCell />
                               <TableCell className="py-2">
                                 <div className="flex items-center gap-4 pl-4">
-                                  <div className="flex items-center gap-1.5 text-xs">
-                                    <span className="text-muted-foreground">In:</span>
-                                    <span className="font-mono font-medium">{format(new Date(entry.clock_in), "hh:mm a")}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 text-xs">
-                                    <span className="text-muted-foreground">Out:</span>
-                                    <span className="font-mono font-medium">
-                                      {entry.clock_out ? format(new Date(entry.clock_out), "hh:mm a") : <span className="text-amber-500">Abierto</span>}
-                                    </span>
-                                  </div>
+                                  {isImported ? (
+                                    <>
+                                      <div className="flex items-center gap-1.5 text-xs">
+                                        <Upload className="h-3 w-3 text-blue-500" />
+                                        <span className="font-medium text-blue-600 dark:text-blue-400">
+                                          {entry.import_meta?.shift_hours?.toFixed(2)}h
+                                        </span>
+                                      </div>
+                                      {entry.notes && (
+                                        <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">{entry.notes}</span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-muted-foreground">In:</span>
+                                        <span className="font-mono font-medium">{format(new Date(entry.clock_in), "hh:mm a")}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-muted-foreground">Out:</span>
+                                        <span className="font-mono font-medium">
+                                          {entry.clock_out ? format(new Date(entry.clock_out), "hh:mm a") : <span className="text-amber-500">Abierto</span>}
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell />
