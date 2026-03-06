@@ -752,14 +752,24 @@ export default function ImportSchedule() {
       {/* Step 1: Upload */}
       {step === 1 && (
         <Card>
-          <CardHeader><CardTitle>Paso 1: Selecciona el archivo de Schedule Export</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Paso 1: Selecciona los archivos de Schedule Export</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>Archivo XLSX de Schedule Export</Label>
+              <Label>Archivos XLSX de Schedule Export (puedes seleccionar varios)</Label>
               <div className="mt-1 border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-                <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-xs text-muted-foreground mb-2">Arrastra o selecciona tu archivo Schedule Export de Connecteam</p>
-                <input type="file" accept={ACCEPTED_EXTENSIONS} onChange={handleFileUpload} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                {parsingFiles ? (
+                  <>
+                    <FileSpreadsheet className="h-8 w-8 mx-auto text-primary mb-2 animate-pulse" />
+                    <p className="text-sm font-medium">Procesando {files.length} archivo(s)…</p>
+                    <p className="text-xs text-muted-foreground mt-1">Analizando y fusionando turnos</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-xs text-muted-foreground mb-2">Arrastra o selecciona tus archivos Schedule Export de Connecteam</p>
+                    <input type="file" accept={ACCEPTED_EXTENSIONS} multiple onChange={handleFileUpload} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
