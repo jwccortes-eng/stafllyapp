@@ -20,16 +20,25 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User, KeyRound, UserPlus, Smartphone, Mail } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User,
+  KeyRound, UserPlus, Smartphone, Mail, Building2, ChevronDown, ChevronRight,
+  Package, Ticket, Copy, Plus, ToggleLeft,
+} from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { useSubscription } from "@/hooks/useSubscription";
+import { useSubscription, PLAN_LIMITS, type PlanId } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 
+/* ── Constants ── */
 const MODULES = [
   { key: "employees", label: "Empleados" },
   { key: "periods", label: "Periodos" },
@@ -38,9 +47,25 @@ const MODULES = [
   { key: "movements", label: "Novedades" },
   { key: "summary", label: "Resumen" },
   { key: "reports", label: "Reportes" },
+  { key: "shifts", label: "Turnos" },
+  { key: "timeclock", label: "Reloj" },
+  { key: "clients", label: "Clientes" },
+  { key: "locations", label: "Ubicaciones" },
+  { key: "announcements", label: "Anuncios" },
+  { key: "chat", label: "Chat" },
 ];
 
-type RoleType = 'owner' | 'admin' | 'manager' | 'employee';
+type RoleType = "owner" | "admin" | "manager" | "employee";
+
+interface CompanyAssignment {
+  company_id: string;
+  company_name: string;
+  company_role: string;
+  plan: PlanId;
+  plan_status: string;
+  active_modules: string[];
+  promo_codes: { code: string; modules: string[] }[];
+}
 
 interface UserRecord {
   user_id: string;
@@ -48,22 +73,23 @@ interface UserRecord {
   full_name: string;
   role: RoleType;
   permissions: { module: string; can_view: boolean; can_edit: boolean; can_delete: boolean }[];
+  companies: CompanyAssignment[];
 }
 
-const ROLE_LABELS: Record<RoleType, string> = {
-  owner: "Dueño",
-  admin: "Admin",
-  manager: "Manager",
-  employee: "Empleado",
-};
+interface PromoCode {
+  id: string;
+  code: string;
+  description: string | null;
+  modules: string[];
+  max_uses: number | null;
+  uses_count: number;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+}
 
-const ROLE_ICONS: Record<RoleType, typeof Shield> = {
-  owner: ShieldCheck,
-  admin: Shield,
-  manager: UserCog,
-  employee: User,
-};
-
+const ROLE_LABELS: Record<RoleType, string> = { owner: "Dueño", admin: "Admin", manager: "Manager", employee: "Empleado" };
+const ROLE_ICONS: Record<RoleType, typeof Shield> = { owner: ShieldCheck, admin: Shield, manager: UserCog, employee: User };
 const ROLE_COLORS: Record<RoleType, string> = {
   owner: "bg-chart-1/10 text-chart-1 border-chart-1/20",
   admin: "bg-primary/10 text-primary border-primary/20",
@@ -71,47 +97,167 @@ const ROLE_COLORS: Record<RoleType, string> = {
   employee: "bg-muted text-muted-foreground border-border",
 };
 
-const AVATAR_COLORS = [
-  "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500",
-  "bg-violet-500", "bg-teal-500", "bg-indigo-500", "bg-pink-500",
-];
+const PLAN_COLORS: Record<string, string> = {
+  free: "bg-muted text-muted-foreground",
+  pro: "bg-chart-4/10 text-chart-4",
+  enterprise: "bg-chart-1/10 text-chart-1",
+};
 
-function hashStr(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
+const AVATAR_COLORS = ["bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-violet-500", "bg-teal-500", "bg-indigo-500", "bg-pink-500"];
+
+function hashStr(s: string) { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h); }
 
 function UserAvatar({ name, email, size = "md" }: { name: string; email: string; size?: "sm" | "md" }) {
   const isMobile = !email.includes("@") || email.includes("phone");
-  const initials = name
-    ? name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
-    : email.charAt(0).toUpperCase();
+  const initials = name ? name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) : email.charAt(0).toUpperCase();
   const color = AVATAR_COLORS[hashStr(name || email) % AVATAR_COLORS.length];
   const sz = size === "sm" ? "h-8 w-8 text-xs" : "h-10 w-10 text-sm";
-
   return (
     <div className="relative">
-      <div className={cn("rounded-full flex items-center justify-center font-semibold text-white shrink-0", sz, color)}>
-        {initials}
-      </div>
-      <div className={cn(
-        "absolute -bottom-0.5 -right-0.5 rounded-full p-[3px] border-2 border-background",
-        isMobile ? "bg-emerald-500" : "bg-blue-500"
-      )}>
-        {isMobile
-          ? <Smartphone className="h-2 w-2 text-white" />
-          : <Mail className="h-2 w-2 text-white" />}
+      <div className={cn("rounded-full flex items-center justify-center font-semibold text-white shrink-0", sz, color)}>{initials}</div>
+      <div className={cn("absolute -bottom-0.5 -right-0.5 rounded-full p-[3px] border-2 border-background", isMobile ? "bg-emerald-500" : "bg-blue-500")}>
+        {isMobile ? <Smartphone className="h-2 w-2 text-white" /> : <Mail className="h-2 w-2 text-white" />}
       </div>
     </div>
   );
 }
 
+/* ── User Row (expandable) ── */
+function UserRow({ u, onEdit, onResetPw, onDelete }: {
+  u: UserRecord; onEdit: () => void; onResetPw: () => void; onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const Icon = ROLE_ICONS[u.role];
+  const hasCompanies = u.companies.length > 0;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="rounded-xl bg-card border border-border/50 hover:border-border hover:shadow-sm transition-all group">
+        {/* Main row */}
+        <div className="flex items-center gap-3 px-4 py-3">
+          {hasCompanies ? (
+            <CollapsibleTrigger asChild>
+              <button className="shrink-0 p-1 rounded hover:bg-accent transition-colors">
+                {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+              </button>
+            </CollapsibleTrigger>
+          ) : <div className="w-6" />}
+
+          <UserAvatar name={u.full_name} email={u.email} />
+
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold truncate">{u.full_name || "Sin nombre"}</p>
+            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+          </div>
+
+          {/* Company count */}
+          {hasCompanies && (
+            <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+              <Building2 className="h-3.5 w-3.5" />
+              <span>{u.companies.length}</span>
+            </div>
+          )}
+
+          <Badge variant="outline" className={cn("text-[10px] shrink-0", ROLE_COLORS[u.role])}>
+            <Icon className="h-3 w-3 mr-1" />{ROLE_LABELS[u.role]}
+          </Badge>
+
+          {u.role !== "owner" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}><Pencil className="h-4 w-4 mr-2" />Editar usuario</DropdownMenuItem>
+                <DropdownMenuItem onClick={onResetPw}><KeyRound className="h-4 w-4 mr-2" />Cambiar contraseña</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive" onClick={onDelete}><Trash2 className="h-4 w-4 mr-2" />Quitar rol</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
+        {/* Expanded detail */}
+        <CollapsibleContent>
+          <div className="border-t border-border/50 px-4 py-3 space-y-3">
+            {u.companies.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">Sin empresas asignadas</p>
+            ) : (
+              u.companies.map(c => (
+                <div key={c.company_id} className="bg-muted/40 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{c.company_name}</span>
+                      <Badge variant="outline" className="text-[10px]">{c.company_role}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={cn("text-[10px] border-0", PLAN_COLORS[c.plan] || PLAN_COLORS.free)}>
+                        {PLAN_LIMITS[c.plan]?.label || "Starter"}
+                      </Badge>
+                      {c.plan_status === "trialing" && <Badge variant="outline" className="text-[10px] text-chart-4">Trial</Badge>}
+                    </div>
+                  </div>
+
+                  {/* Active modules */}
+                  {c.active_modules.length > 0 && (
+                    <div className="flex items-start gap-2">
+                      <Package className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="flex flex-wrap gap-1">
+                        {c.active_modules.map(m => {
+                          const mod = MODULES.find(mm => mm.key === m);
+                          return <Badge key={m} variant="secondary" className="text-[10px] font-normal">{mod?.label || m}</Badge>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Promo codes */}
+                  {c.promo_codes.length > 0 && (
+                    <div className="flex items-start gap-2">
+                      <Ticket className="h-3.5 w-3.5 text-chart-4 mt-0.5 shrink-0" />
+                      <div className="flex flex-wrap gap-1">
+                        {c.promo_codes.map(pc => (
+                          <Badge key={pc.code} variant="outline" className="text-[10px] text-chart-4 border-chart-4/30">
+                            {pc.code}
+                            <span className="ml-1 text-muted-foreground">({pc.modules.length} mód.)</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Permissions for managers */}
+                  {u.role === "manager" && u.permissions.length > 0 && (
+                    <div className="mt-1">
+                      <p className="text-[10px] text-muted-foreground font-medium mb-1">Permisos:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {u.permissions.filter(p => p.can_view || p.can_edit || p.can_delete).map(p => {
+                          const mod = MODULES.find(m => m.key === p.module);
+                          const flags = [p.can_view && "V", p.can_edit && "E", p.can_delete && "D"].filter(Boolean).join("");
+                          return <Badge key={p.module} variant="secondary" className="text-[10px] font-normal">{mod?.label || p.module} [{flags}]</Badge>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
+
+/* ── Main Page ── */
 export default function UsersPage() {
-  const { role: currentRole } = useAuth();
+  const { role: currentRole, user } = useAuth();
   const { canAddAdmins, limits } = useSubscription();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleType | "all">("all");
   const [editUser, setEditUser] = useState<UserRecord | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editRole, setEditRole] = useState<RoleType>("employee");
@@ -129,27 +275,78 @@ export default function UsersPage() {
   const [invitePassword, setInvitePassword] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "manager">("admin");
   const [inviteLoading, setInviteLoading] = useState(false);
-  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("users");
 
+  // Promo state
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoDesc, setPromoDesc] = useState("");
+  const [promoModules, setPromoModules] = useState<string[]>([]);
+  const [promoMaxUses, setPromoMaxUses] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+
+  const { toast } = useToast();
   const adminCount = users.filter(u => u.role === "admin" || u.role === "owner").length;
   const atAdminLimit = !canAddAdmins(adminCount);
 
   const fetchUsers = async () => {
-    const { data: profiles } = await supabase.from("profiles").select("user_id, email, full_name");
-    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
-    const { data: perms } = await supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete");
+    const [profilesRes, rolesRes, permsRes, companyUsersRes, subsRes, modulesRes, redemptionsRes, promoCodesRes] = await Promise.all([
+      supabase.from("profiles").select("user_id, email, full_name"),
+      supabase.from("user_roles").select("user_id, role"),
+      supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete"),
+      supabase.from("company_users").select("user_id, company_id, role, companies(id, name)"),
+      supabase.from("subscriptions").select("company_id, plan, status"),
+      supabase.from("company_modules").select("company_id, module, is_active"),
+      supabase.from("promo_redemptions").select("company_id, promo_codes(code, modules)"),
+      supabase.from("promo_codes").select("*").order("created_at", { ascending: false }),
+    ]);
 
-    if (!profiles) return;
+    const profiles = profilesRes.data ?? [];
+    const roles = rolesRes.data ?? [];
+    const perms = permsRes.data ?? [];
+    const companyUsers = companyUsersRes.data ?? [];
+    const subs = subsRes.data ?? [];
+    const modules = modulesRes.data ?? [];
+    const redemptions = redemptionsRes.data ?? [];
+
+    setPromoCodes((promoCodesRes.data ?? []) as unknown as PromoCode[]);
 
     const userList: UserRecord[] = profiles.map(p => {
-      const roleRec = roles?.find(r => r.user_id === p.user_id);
-      const userPerms = perms?.filter(pm => pm.user_id === p.user_id) ?? [];
+      const roleRec = roles.find(r => r.user_id === p.user_id);
+      const userPerms = perms.filter(pm => pm.user_id === p.user_id);
+
+      // Build company assignments
+      const userCompanies = companyUsers
+        .filter(cu => cu.user_id === p.user_id)
+        .map((cu: any) => {
+          const companyId = cu.company_id;
+          const sub = subs.find(s => s.company_id === companyId);
+          const activeModules = modules
+            .filter(m => m.company_id === companyId && m.is_active)
+            .map(m => m.module);
+          const companyRedemptions = redemptions
+            .filter((r: any) => r.company_id === companyId && r.promo_codes)
+            .map((r: any) => ({ code: r.promo_codes.code, modules: r.promo_codes.modules ?? [] }));
+
+          return {
+            company_id: companyId,
+            company_name: cu.companies?.name ?? "—",
+            company_role: cu.role ?? "admin",
+            plan: (sub?.plan ?? "free") as PlanId,
+            plan_status: sub?.status ?? "none",
+            active_modules: activeModules,
+            promo_codes: companyRedemptions,
+          };
+        });
+
       return {
         user_id: p.user_id,
         email: p.email ?? "",
         full_name: p.full_name ?? "",
         role: (roleRec?.role as RoleType) ?? "employee",
         permissions: userPerms,
+        companies: userCompanies,
       };
     });
 
@@ -158,6 +355,7 @@ export default function UsersPage() {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  /* ── Edit handlers (same logic as before) ── */
   const openEditUser = (u: UserRecord) => {
     setEditUser(u);
     setEditRole(u.role);
@@ -166,9 +364,7 @@ export default function UsersPage() {
     const permsMap: Record<string, { can_view: boolean; can_edit: boolean; can_delete: boolean }> = {};
     MODULES.forEach(m => {
       const existing = u.permissions.find(p => p.module === m.key);
-      permsMap[m.key] = existing
-        ? { can_view: existing.can_view, can_edit: existing.can_edit, can_delete: existing.can_delete }
-        : { can_view: false, can_edit: false, can_delete: false };
+      permsMap[m.key] = existing ? { can_view: existing.can_view, can_edit: existing.can_edit, can_delete: existing.can_delete } : { can_view: false, can_edit: false, can_delete: false };
     });
     setEditPerms(permsMap);
     setEditOpen(true);
@@ -177,51 +373,21 @@ export default function UsersPage() {
   const handleSaveRole = async () => {
     if (!editUser) return;
     setLoading(true);
-
-    // Update profile data
     if (editName !== editUser.full_name || editEmail !== editUser.email) {
-      await supabase
-        .from("profiles")
-        .update({ full_name: editName, email: editEmail })
-        .eq("user_id", editUser.user_id);
+      await supabase.from("profiles").update({ full_name: editName, email: editEmail }).eq("user_id", editUser.user_id);
     }
-
-    const { error: roleError } = await supabase
-      .from("user_roles")
-      .update({ role: editRole } as any)
-      .eq("user_id", editUser.user_id);
-
-    if (roleError) {
-      toast({ title: "Error", description: getUserFriendlyError(roleError), variant: "destructive" });
-      setLoading(false);
-      return;
-    }
-
+    const { error: roleError } = await supabase.from("user_roles").update({ role: editRole } as any).eq("user_id", editUser.user_id);
+    if (roleError) { toast({ title: "Error", description: getUserFriendlyError(roleError), variant: "destructive" }); setLoading(false); return; }
     if (editRole === "manager") {
       for (const mod of MODULES) {
         const perm = editPerms[mod.key];
-        await supabase
-          .from("module_permissions")
-          .upsert({
-            user_id: editUser.user_id,
-            module: mod.key,
-            can_view: perm.can_view,
-            can_edit: perm.can_edit,
-            can_delete: perm.can_delete,
-          } as any, { onConflict: "user_id,module" });
+        await supabase.from("module_permissions").upsert({ user_id: editUser.user_id, module: mod.key, can_view: perm.can_view, can_edit: perm.can_edit, can_delete: perm.can_delete } as any, { onConflict: "user_id,module" });
       }
     } else {
-      await supabase
-        .from("module_permissions")
-        .delete()
-        .eq("user_id", editUser.user_id);
+      await supabase.from("module_permissions").delete().eq("user_id", editUser.user_id);
     }
-
     toast({ title: "Usuario actualizado" });
-    setEditOpen(false);
-    setEditUser(null);
-    fetchUsers();
-    setLoading(false);
+    setEditOpen(false); setEditUser(null); fetchUsers(); setLoading(false);
   };
 
   const handleDeleteUser = async () => {
@@ -229,79 +395,73 @@ export default function UsersPage() {
     await supabase.from("user_roles").delete().eq("user_id", deleteTarget.user_id);
     await supabase.from("module_permissions").delete().eq("user_id", deleteTarget.user_id);
     toast({ title: "Rol de usuario eliminado" });
-    setDeleteTarget(null);
-    fetchUsers();
+    setDeleteTarget(null); fetchUsers();
   };
 
   const handleResetPassword = async () => {
     if (!passwordTarget || !newPassword) return;
     setPasswordLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-reset-password", {
-        body: { user_id: passwordTarget.user_id, new_password: newPassword },
-      });
+      const { data, error } = await supabase.functions.invoke("admin-reset-password", { body: { user_id: passwordTarget.user_id, new_password: newPassword } });
       if (error) throw error;
-      if (data?.error) {
-        toast({ title: "Error", description: data.error, variant: "destructive" });
-      } else {
-        toast({ title: "Contraseña actualizada", description: `Se cambió la contraseña de ${passwordTarget.full_name || passwordTarget.email}` });
-        setPasswordTarget(null);
-        setNewPassword("");
-      }
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Error al cambiar contraseña", variant: "destructive" });
-    }
+      if (data?.error) { toast({ title: "Error", description: data.error, variant: "destructive" }); }
+      else { toast({ title: "Contraseña actualizada" }); setPasswordTarget(null); setNewPassword(""); }
+    } catch (err: any) { toast({ title: "Error", description: err.message || "Error al cambiar contraseña", variant: "destructive" }); }
     setPasswordLoading(false);
   };
 
-  const togglePerm = (module: string, field: 'can_view' | 'can_edit' | 'can_delete') => {
-    setEditPerms(prev => ({
-      ...prev,
-      [module]: { ...prev[module], [field]: !prev[module][field] },
-    }));
+  const togglePerm = (module: string, field: "can_view" | "can_edit" | "can_delete") => {
+    setEditPerms(prev => ({ ...prev, [module]: { ...prev[module], [field]: !prev[module][field] } }));
   };
 
   const handleInviteAdmin = async () => {
     if (!inviteEmail || !invitePassword) return;
-    if (inviteRole === "admin" && atAdminLimit) {
-      toast({ title: "Límite alcanzado", description: `Tu plan permite máximo ${limits.maxAdmins} admin(s). Actualiza tu plan.`, variant: "destructive" });
-      return;
-    }
+    if (inviteRole === "admin" && atAdminLimit) { toast({ title: "Límite alcanzado", description: `Tu plan permite máximo ${limits.maxAdmins} admin(s).`, variant: "destructive" }); return; }
     setInviteLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("invite-admin", {
-        body: { email: inviteEmail, password: invitePassword, full_name: inviteName, role: inviteRole },
-      });
+      const { data, error } = await supabase.functions.invoke("invite-admin", { body: { email: inviteEmail, password: invitePassword, full_name: inviteName, role: inviteRole } });
       if (error) throw error;
-      if (data?.error) {
-        toast({ title: "Error", description: data.error, variant: "destructive" });
-      } else {
-        toast({ title: "Usuario creado", description: `${inviteEmail} fue agregado como ${inviteRole === "admin" ? "Administrador" : "Manager"}` });
-        setInviteOpen(false);
-        setInviteEmail("");
-        setInviteName("");
-        setInvitePassword("");
-        fetchUsers();
-      }
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Error al crear usuario", variant: "destructive" });
-    }
+      if (data?.error) { toast({ title: "Error", description: data.error, variant: "destructive" }); }
+      else { toast({ title: "Usuario creado" }); setInviteOpen(false); setInviteEmail(""); setInviteName(""); setInvitePassword(""); fetchUsers(); }
+    } catch (err: any) { toast({ title: "Error", description: err.message, variant: "destructive" }); }
     setInviteLoading(false);
   };
 
-  const filtered = users.filter(u =>
-    `${u.full_name} ${u.email} ${u.role}`.toLowerCase().includes(search.toLowerCase())
-  );
+  /* ── Promo code handlers ── */
+  const handleCreatePromo = async () => {
+    if (!promoCode || promoModules.length === 0) return;
+    setPromoLoading(true);
+    const { error } = await supabase.from("promo_codes").insert({
+      code: promoCode.toUpperCase().trim(),
+      description: promoDesc || null,
+      modules: promoModules,
+      max_uses: promoMaxUses ? parseInt(promoMaxUses) : null,
+      created_by: user?.id,
+    } as any);
+    if (error) { toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" }); }
+    else { toast({ title: "Código creado", description: promoCode.toUpperCase() }); setPromoOpen(false); setPromoCode(""); setPromoDesc(""); setPromoModules([]); setPromoMaxUses(""); fetchUsers(); }
+    setPromoLoading(false);
+  };
 
-  if (currentRole !== 'owner') {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground">No tienes acceso a este módulo.</p>
-      </div>
-    );
+  const handleTogglePromo = async (id: string, active: boolean) => {
+    await supabase.from("promo_codes").update({ is_active: !active } as any).eq("id", id);
+    fetchUsers();
+  };
+
+  const handleCopyPromo = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast({ title: "Copiado", description: code });
+  };
+
+  /* ── Filters ── */
+  const filtered = users
+    .filter(u => roleFilter === "all" || u.role === roleFilter)
+    .filter(u => `${u.full_name} ${u.email} ${u.role}`.toLowerCase().includes(search.toLowerCase()));
+
+  if (currentRole !== "owner") {
+    return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">No tienes acceso a este módulo.</p></div>;
   }
 
-  // Count by role
   const roleCounts = { owner: 0, admin: 0, manager: 0, employee: 0 };
   users.forEach(u => { roleCounts[u.role] = (roleCounts[u.role] || 0) + 1; });
 
@@ -311,84 +471,119 @@ export default function UsersPage() {
         variant="5"
         icon={ShieldCheck}
         title="Gestión de Usuarios"
-        subtitle="Administra roles y permisos por módulo"
-        rightSlot={<Button onClick={() => setInviteOpen(true)} className="gap-2">
-          <UserPlus className="h-4 w-4" />
-          Invitar
-        </Button>}
+        subtitle="Usuarios, empresas, permisos y códigos promocionales"
+        rightSlot={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setPromoOpen(true)} className="gap-2">
+              <Ticket className="h-4 w-4" />Crear código
+            </Button>
+            <Button onClick={() => setInviteOpen(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" />Invitar
+            </Button>
+          </div>
+        }
       />
 
-      {/* Compact role pills */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        {(["owner", "admin", "manager", "employee"] as RoleType[]).map(r => {
-          const Icon = ROLE_ICONS[r];
-          return (
-            <div key={r} className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium", ROLE_COLORS[r])}>
-              <Icon className="h-3.5 w-3.5" />
-              {roleCounts[r]} {ROLE_LABELS[r]}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="users" className="gap-1.5"><User className="h-3.5 w-3.5" />Usuarios ({users.length})</TabsTrigger>
+          <TabsTrigger value="promos" className="gap-1.5"><Ticket className="h-3.5 w-3.5" />Códigos Promo ({promoCodes.length})</TabsTrigger>
+        </TabsList>
+
+        {/* ── Users Tab ── */}
+        <TabsContent value="users" className="space-y-4 mt-4">
+          {/* Role pills (clickable filters) */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setRoleFilter("all")}
+              className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors", roleFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/40")}
+            >
+              Todos ({users.length})
+            </button>
+            {(["owner", "admin", "manager", "employee"] as RoleType[]).map(r => {
+              const Icon = ROLE_ICONS[r];
+              return (
+                <button
+                  key={r}
+                  onClick={() => setRoleFilter(r)}
+                  className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors", roleFilter === r ? "bg-primary text-primary-foreground border-primary" : cn(ROLE_COLORS[r], "hover:opacity-80"))}
+                >
+                  <Icon className="h-3.5 w-3.5" />{roleCounts[r]} {ROLE_LABELS[r]}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="relative max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar usuario..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
+          </div>
+
+          <div className="space-y-1.5">
+            {filtered.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12 text-sm">No hay usuarios</p>
+            ) : (
+              filtered.map(u => (
+                <UserRow
+                  key={u.user_id}
+                  u={u}
+                  onEdit={() => openEditUser(u)}
+                  onResetPw={() => { setPasswordTarget(u); setNewPassword(""); }}
+                  onDelete={() => setDeleteTarget(u)}
+                />
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ── Promos Tab ── */}
+        <TabsContent value="promos" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">Códigos que desbloquean módulos para empresas</p>
+            <Button size="sm" onClick={() => setPromoOpen(true)} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" />Nuevo código
+            </Button>
+          </div>
+
+          {promoCodes.length === 0 ? (
+            <div className="text-center py-16">
+              <Ticket className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No hay códigos promocionales</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => setPromoOpen(true)}>Crear primer código</Button>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-xs mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
-      </div>
-
-      {/* User list as cards */}
-      <div className="space-y-1.5">
-        {filtered.length === 0 ? (
-          <p className="text-center text-muted-foreground py-12 text-sm">No hay usuarios</p>
-        ) : (
-          filtered.map(u => {
-            const Icon = ROLE_ICONS[u.role];
-            return (
-              <div
-                key={u.user_id}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border/50 hover:border-border hover:shadow-sm transition-all group"
-              >
-                <UserAvatar name={u.full_name} email={u.email} />
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{u.full_name || "Sin nombre"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+          ) : (
+            <div className="space-y-2">
+              {promoCodes.map(pc => (
+                <div key={pc.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border/50">
+                  <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", pc.is_active ? "bg-emerald-500" : "bg-muted-foreground/30")} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono font-bold">{pc.code}</span>
+                      <button onClick={() => handleCopyPromo(pc.code)} className="text-muted-foreground hover:text-foreground"><Copy className="h-3 w-3" /></button>
+                    </div>
+                    {pc.description && <p className="text-xs text-muted-foreground truncate">{pc.description}</p>}
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap justify-end">
+                    {(pc.modules ?? []).map(m => {
+                      const mod = MODULES.find(mm => mm.key === m);
+                      return <Badge key={m} variant="secondary" className="text-[10px]">{mod?.label || m}</Badge>;
+                    })}
+                  </div>
+                  <div className="text-xs text-muted-foreground shrink-0 text-right min-w-[60px]">
+                    {pc.uses_count}{pc.max_uses ? `/${pc.max_uses}` : ""} usos
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => handleTogglePromo(pc.id, pc.is_active)}>
+                    <ToggleLeft className={cn("h-4 w-4", pc.is_active ? "text-emerald-500" : "text-muted-foreground")} />
+                  </Button>
                 </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
-                <Badge variant="outline" className={cn("text-[10px] shrink-0", ROLE_COLORS[u.role])}>
-                  <Icon className="h-3 w-3 mr-1" />
-                  {ROLE_LABELS[u.role]}
-                </Badge>
-
-                {u.role !== 'owner' && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEditUser(u)}>
-                        <Pencil className="h-4 w-4 mr-2" />Editar usuario
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setPasswordTarget(u); setNewPassword(""); }}>
-                        <KeyRound className="h-4 w-4 mr-2" />Cambiar contraseña
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(u)}>
-                        <Trash2 className="h-4 w-4 mr-2" />Quitar rol
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Edit User Dialog */}
-      <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditUser(null); }}>
+      {/* ── Edit User Dialog ── */}
+      <Dialog open={editOpen} onOpenChange={v => { setEditOpen(v); if (!v) setEditUser(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
@@ -398,24 +593,14 @@ export default function UsersPage() {
             <DialogDescription>Modifica datos, rol y permisos</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Editable fields */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Nombre</Label>
-                <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-9" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Email</Label>
-                <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="h-9" />
-              </div>
+              <div className="space-y-1"><Label className="text-xs">Nombre</Label><Input value={editName} onChange={e => setEditName(e.target.value)} className="h-9" /></div>
+              <div className="space-y-1"><Label className="text-xs">Email</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="h-9" /></div>
             </div>
-
             <div className="space-y-1">
               <Label className="text-xs">Rol</Label>
-              <Select value={editRole} onValueChange={(v) => setEditRole(v as RoleType)}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={editRole} onValueChange={v => setEditRole(v as RoleType)}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Administrador — Acceso completo</SelectItem>
                   <SelectItem value="manager">Manager — Permisos selectivos</SelectItem>
@@ -423,42 +608,24 @@ export default function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
-
             {editRole === "manager" && (
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Permisos por módulo</Label>
                 <div className="border rounded-xl overflow-hidden">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-[10px]">Módulo</TableHead>
-                        <TableHead className="text-[10px] text-center w-16">Ver</TableHead>
-                        <TableHead className="text-[10px] text-center w-16">Editar</TableHead>
-                        <TableHead className="text-[10px] text-center w-16">Borrar</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow>
+                      <TableHead className="text-[10px]">Módulo</TableHead>
+                      <TableHead className="text-[10px] text-center w-16">Ver</TableHead>
+                      <TableHead className="text-[10px] text-center w-16">Editar</TableHead>
+                      <TableHead className="text-[10px] text-center w-16">Borrar</TableHead>
+                    </TableRow></TableHeader>
                     <TableBody>
                       {MODULES.map(m => (
                         <TableRow key={m.key}>
                           <TableCell className="text-xs font-medium py-2">{m.label}</TableCell>
-                          <TableCell className="text-center py-2">
-                            <Switch
-                              checked={editPerms[m.key]?.can_view ?? false}
-                              onCheckedChange={() => togglePerm(m.key, 'can_view')}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center py-2">
-                            <Switch
-                              checked={editPerms[m.key]?.can_edit ?? false}
-                              onCheckedChange={() => togglePerm(m.key, 'can_edit')}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center py-2">
-                            <Switch
-                              checked={editPerms[m.key]?.can_delete ?? false}
-                              onCheckedChange={() => togglePerm(m.key, 'can_delete')}
-                            />
-                          </TableCell>
+                          <TableCell className="text-center py-2"><Switch checked={editPerms[m.key]?.can_view ?? false} onCheckedChange={() => togglePerm(m.key, "can_view")} /></TableCell>
+                          <TableCell className="text-center py-2"><Switch checked={editPerms[m.key]?.can_edit ?? false} onCheckedChange={() => togglePerm(m.key, "can_edit")} /></TableCell>
+                          <TableCell className="text-center py-2"><Switch checked={editPerms[m.key]?.can_delete ?? false} onCheckedChange={() => togglePerm(m.key, "can_delete")} /></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -466,90 +633,57 @@ export default function UsersPage() {
                 </div>
               </div>
             )}
-
-            <Button onClick={handleSaveRole} className="w-full" disabled={loading}>
-              {loading ? "Guardando..." : "Guardar cambios"}
-            </Button>
+            <Button onClick={handleSaveRole} className="w-full" disabled={loading}>{loading ? "Guardando..." : "Guardar cambios"}</Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Change Password Dialog */}
-      <Dialog open={!!passwordTarget} onOpenChange={(v) => { if (!v) { setPasswordTarget(null); setNewPassword(""); } }}>
+      {/* ── Change Password Dialog ── */}
+      <Dialog open={!!passwordTarget} onOpenChange={v => { if (!v) { setPasswordTarget(null); setNewPassword(""); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Cambiar contraseña</DialogTitle>
-            <DialogDescription>
-              {passwordTarget?.full_name || passwordTarget?.email}
-            </DialogDescription>
+            <DialogDescription>{passwordTarget?.full_name || passwordTarget?.email}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="newPassword">Nueva contraseña</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                minLength={6}
-              />
+              <Input id="newPassword" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" minLength={6} />
             </div>
-            <Button
-              onClick={handleResetPassword}
-              className="w-full"
-              disabled={passwordLoading || newPassword.length < 6}
-            >
-              {passwordLoading ? "Cambiando..." : "Cambiar contraseña"}
-            </Button>
+            <Button onClick={handleResetPassword} className="w-full" disabled={passwordLoading || newPassword.length < 6}>{passwordLoading ? "Cambiando..." : "Cambiar contraseña"}</Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+      {/* ── Delete Confirmation ── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Quitar rol de usuario?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará el rol de <strong>{deleteTarget?.full_name || deleteTarget?.email}</strong> y sus permisos asociados.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Se eliminará el rol de <strong>{deleteTarget?.full_name || deleteTarget?.email}</strong> y sus permisos asociados.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Quitar rol
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Quitar rol</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Invite Admin Dialog */}
-      <Dialog open={inviteOpen} onOpenChange={(v) => { setInviteOpen(v); if (!v) { setInviteEmail(""); setInviteName(""); setInvitePassword(""); } }}>
+      {/* ── Invite Admin Dialog ── */}
+      <Dialog open={inviteOpen} onOpenChange={v => { setInviteOpen(v); if (!v) { setInviteEmail(""); setInviteName(""); setInvitePassword(""); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Invitar Administrador</DialogTitle>
             <DialogDescription>Crea una cuenta con rol de admin o manager</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1">
-              <Label className="text-xs">Nombre completo</Label>
-              <Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Juan Pérez" className="h-9" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Correo electrónico</Label>
-              <Input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="admin@empresa.com" className="h-9" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Contraseña</Label>
-              <Input type="password" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="h-9" />
-            </div>
+            <div className="space-y-1"><Label className="text-xs">Nombre completo</Label><Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Juan Pérez" className="h-9" /></div>
+            <div className="space-y-1"><Label className="text-xs">Correo electrónico</Label><Input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="admin@empresa.com" className="h-9" /></div>
+            <div className="space-y-1"><Label className="text-xs">Contraseña</Label><Input type="password" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="h-9" /></div>
             <div className="space-y-1">
               <Label className="text-xs">Rol</Label>
-              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as "admin" | "manager")}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={inviteRole} onValueChange={v => setInviteRole(v as "admin" | "manager")}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Administrador</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
@@ -559,10 +693,54 @@ export default function UsersPage() {
             {inviteRole === "admin" && atAdminLimit ? (
               <UpgradeBanner feature={`Límite de ${limits.maxAdmins} administrador(es) alcanzado`} />
             ) : (
-              <Button onClick={handleInviteAdmin} className="w-full" disabled={inviteLoading || !inviteEmail || invitePassword.length < 6}>
-                {inviteLoading ? "Creando..." : "Crear usuario"}
-              </Button>
+              <Button onClick={handleInviteAdmin} className="w-full" disabled={inviteLoading || !inviteEmail || invitePassword.length < 6}>{inviteLoading ? "Creando..." : "Crear usuario"}</Button>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Create Promo Code Dialog ── */}
+      <Dialog open={promoOpen} onOpenChange={v => { setPromoOpen(v); if (!v) { setPromoCode(""); setPromoDesc(""); setPromoModules([]); setPromoMaxUses(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear código promocional</DialogTitle>
+            <DialogDescription>El código desbloqueará módulos específicos para las empresas que lo rediman</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Código</Label>
+                <Input value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} placeholder="PROMO2026" className="h-9 font-mono" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Usos máximos (vacío = ilimitado)</Label>
+                <Input type="number" value={promoMaxUses} onChange={e => setPromoMaxUses(e.target.value)} placeholder="∞" className="h-9" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Descripción (opcional)</Label>
+              <Input value={promoDesc} onChange={e => setPromoDesc(e.target.value)} placeholder="Campaña lanzamiento Q1" className="h-9" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Módulos a desbloquear</Label>
+              <div className="flex flex-wrap gap-2">
+                {MODULES.map(m => {
+                  const selected = promoModules.includes(m.key);
+                  return (
+                    <button
+                      key={m.key}
+                      onClick={() => setPromoModules(prev => selected ? prev.filter(x => x !== m.key) : [...prev, m.key])}
+                      className={cn("px-2.5 py-1 rounded-full text-xs border transition-colors", selected ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/40")}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <Button onClick={handleCreatePromo} className="w-full" disabled={promoLoading || !promoCode || promoModules.length === 0}>
+              {promoLoading ? "Creando..." : "Crear código"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
