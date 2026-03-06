@@ -459,7 +459,7 @@ export default function UsersPage() {
     .filter(u => roleFilter === "all" || u.role === roleFilter)
     .filter(u => `${u.full_name} ${u.email} ${u.role}`.toLowerCase().includes(search.toLowerCase()));
 
-  if (currentRole !== "owner") {
+  if (currentRole !== "developer" && currentRole !== "owner") {
     return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">No tienes acceso a este módulo.</p></div>;
   }
 
