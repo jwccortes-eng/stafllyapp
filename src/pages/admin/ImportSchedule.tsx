@@ -793,6 +793,20 @@ export default function ImportSchedule() {
       {/* Step 3: Review & Import */}
       {step === 3 && (
         <div className="space-y-4">
+          {/* Files loaded */}
+          {files.length > 1 && (
+            <Card className="p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Archivos cargados ({files.length})</p>
+              <div className="flex flex-wrap gap-1.5">
+                {files.map((f, i) => (
+                  <Badge key={i} variant="secondary" className="text-[10px]">
+                    <FileSpreadsheet className="h-3 w-3 mr-1" />{f.name}
+                  </Badge>
+                ))}
+              </div>
+            </Card>
+          )}
+
           {/* Summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card className="p-4">
