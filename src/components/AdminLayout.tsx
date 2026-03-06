@@ -82,7 +82,7 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (role !== 'owner' && role !== 'admin' && role !== 'manager') return <Navigate to="/auth" replace />;
+  if (role !== 'developer' && role !== 'owner' && role !== 'admin' && role !== 'manager') return <Navigate to="/auth" replace />;
 
   const isLinkVisible = (module: string | null) => {
     if (!module) return true;
