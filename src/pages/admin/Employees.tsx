@@ -140,6 +140,7 @@ export default function Employees() {
   const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateMode, setUpdateMode] = useState<"diff" | "full">("full");
+  const [inviteOpen, setInviteOpen] = useState(false);
   const { toast } = useToast();
 
   const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
