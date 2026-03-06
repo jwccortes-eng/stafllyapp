@@ -134,7 +134,7 @@ export default function UnpaidShiftsReport() {
         .from("pay_periods")
         .select("id, start_date, end_date")
         .eq("company_id", selectedCompanyId)
-        .gte("start_date", "2025-12-01");
+        .gte("start_date", "2024-12-01");
 
       const periodIds = (allPeriods ?? []).map((p) => p.id);
 
