@@ -17,12 +17,8 @@ type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin";
 
 interface EmployeeInfo {
   found: boolean;
-  has_pin: boolean;
+  requires_activation: boolean;
   is_active: boolean;
-  first_name: string;
-  last_name: string;
-  has_avatar: boolean;
-  has_email: boolean;
 }
 
 /** Extract real error message from supabase.functions.invoke error */
