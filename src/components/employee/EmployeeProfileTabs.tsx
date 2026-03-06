@@ -600,6 +600,9 @@ export function EmployeeProfileTabs({
       <TabsContent value="time" className="mt-0">
         <TimeTab employee={employee} companyId={companyId} />
       </TabsContent>
+      <TabsContent value="access" className="mt-0">
+        <EmployeeAccessTab employee={employee} companyId={companyId} isPrivileged={isPrivileged} />
+      </TabsContent>
       <TabsContent value="docs" className="mt-0">
         <DocumentsTab employee={employee} companyId={companyId} />
       </TabsContent>
