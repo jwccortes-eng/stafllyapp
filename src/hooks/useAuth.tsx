@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-type AppRole = 'owner' | 'admin' | 'manager' | 'employee' | null;
+type AppRole = 'developer' | 'owner' | 'admin' | 'manager' | 'employee' | null;
 type EmployeeStatus = 'active' | 'inactive' | null;
 
 interface ModulePermission {
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) throw roleError;
 
-      const rolePriority: AppRole[] = ["owner", "admin", "manager", "employee", null];
+      const rolePriority: AppRole[] = ["developer", "owner", "admin", "manager", "employee", null];
       const availableRoles = new Set((roleRows ?? []).map((row) => row.role as Exclude<AppRole, null>));
       let resolvedRole = rolePriority.find(
         (candidate) => candidate && availableRoles.has(candidate)
@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
-    if (role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
     if (role === 'manager') {
       const perm = permissions.find(p => p.module === module);
       if (!perm) return false;
@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasActionPermission = (action: string): boolean => {
-    if (role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
     if (role === 'manager') {
       const perm = actionPermissions.find(p => p.action === action);
       return perm?.granted ?? false;

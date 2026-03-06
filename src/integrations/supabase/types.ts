@@ -3444,7 +3444,7 @@ export type Database = {
       user_company_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
-      app_role: "admin" | "employee" | "owner" | "manager"
+      app_role: "admin" | "employee" | "developer" | "owner" | "manager"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
       concept_category: "extra" | "deduction"
       rate_source: "concept_default" | "per_employee"
@@ -3575,7 +3575,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "employee", "owner", "manager"],
+      app_role: ["admin", "employee", "developer", "owner", "manager"],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
       concept_category: ["extra", "deduction"],
       rate_source: ["concept_default", "per_employee"],

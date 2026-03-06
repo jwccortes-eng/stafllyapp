@@ -48,7 +48,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
     let list: Company[] = [];
 
-    if (role === 'owner') {
+    if (role === 'developer' || role === 'owner') {
       // Owners see all companies
       const { data } = await supabase
         .from("companies")

@@ -26,7 +26,7 @@ export function useNotifications() {
     if (!user) return;
 
     // Admins/owners: show notifications targeted to them (user) AND recent company notifications
-    const isAdmin = role === "owner" || role === "admin" || role === "manager";
+    const isAdmin = role === "developer" || role === "owner" || role === "admin" || role === "manager";
 
     if (isAdmin && selectedCompanyId) {
       // Fetch both: user-targeted + company-wide (for the bell)

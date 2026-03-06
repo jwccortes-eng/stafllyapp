@@ -46,7 +46,7 @@ export default function AuditPanel({
   const [limit, setLimit] = useState(30);
 
   // Only admins/owners/managers can see audit
-  const canView = role === "owner" || role === "admin" || role === "manager";
+  const canView = role === "developer" || role === "owner" || role === "admin" || role === "manager";
 
   const fetchEntries = useCallback(async () => {
     if (!canView || !user?.id) return;

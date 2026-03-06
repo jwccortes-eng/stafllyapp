@@ -105,7 +105,7 @@ export default function AdminSidebar() {
   const isLinkVisible = (module: string | null) => {
     if (!module) return true;
     if (!isModuleActive(module)) return false;
-    if (role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
     if (role === 'manager') return hasModuleAccess(module, 'view');
     return false;
   };
@@ -122,8 +122,8 @@ export default function AdminSidebar() {
   };
 
   // User identity display
-  const roleLabel = role === 'owner' ? 'Super Admin' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Usuario';
-  const roleBg = role === 'owner' ? 'owner-badge bg-accent-warm text-accent-warm-foreground' : role === 'admin' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground';
+  const roleLabel = role === 'developer' ? 'Desarrollador' : role === 'owner' ? 'Super Admin' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Usuario';
+  const roleBg = role === 'developer' ? 'bg-destructive text-destructive-foreground' : role === 'owner' ? 'owner-badge bg-accent-warm text-accent-warm-foreground' : role === 'admin' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground';
   const userEmail = user?.email ?? null;
   const userPhone = user?.phone ?? null;
   const userIdentifier = userEmail || userPhone || '';
@@ -301,7 +301,7 @@ export default function AdminSidebar() {
     );
   };
 
-  const isOwner = role === 'owner';
+  const isOwner = role === 'developer' || role === 'owner';
 
   return (
     <aside className={cn(
@@ -410,7 +410,7 @@ export default function AdminSidebar() {
         {visibleSections.map(renderSection)}
 
         {/* Owner admin hub link */}
-        {role === 'owner' && (
+        {(role === 'developer' || role === 'owner') && (
           <>
             <div className="border-t border-sidebar-border/30 my-2" />
             {renderLink({ to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "", end: true })}

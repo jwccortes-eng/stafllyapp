@@ -75,14 +75,14 @@ export function CommandPalette() {
   const isVisible = (module: string | null) => {
     if (!module) return true;
     if (!isModuleActive(module)) return false;
-    if (role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
     if (role === 'manager') return hasModuleAccess(module, 'view');
     return false;
   };
 
   const links = useMemo(() => {
     const base = ALL_SEARCHABLE.filter(l => isVisible(l.module));
-    if (role === 'owner') return [...base, ...OWNER_SEARCHABLE];
+    if (role === 'developer' || role === 'owner') return [...base, ...OWNER_SEARCHABLE];
     return base;
   }, [role]);
 

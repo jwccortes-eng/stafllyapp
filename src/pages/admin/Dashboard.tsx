@@ -372,7 +372,7 @@ export default function AdminDashboard() {
 
   const canAccess = (module: string) => {
     if (!isModuleActive(module)) return false;
-    if (role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
     if (role === 'manager') return hasModuleAccess(module, 'view');
     return false;
   };
@@ -767,7 +767,7 @@ export default function AdminDashboard() {
       <OnboardingChecklist />
 
       {/* ── Owner: Company Cards ── */}
-      {role === 'owner' && companies.length > 1 && (
+      {(role === 'developer' || role === 'owner') && companies.length > 1 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-4 w-4 text-warning" />
