@@ -247,7 +247,9 @@ export function TimesheetView() {
             let dayMins = 0;
             let dayBreakMins = 0;
             dayEntries.forEach(e => {
-              if (e.clock_out) {
+              if (e.source === "import" && e.import_meta?.shift_hours) {
+                dayMins += Math.round(e.import_meta.shift_hours * 60);
+              } else if (e.clock_out) {
                 dayMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
                 dayBreakMins += e.break_minutes ?? 0;
               }
