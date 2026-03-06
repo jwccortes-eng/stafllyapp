@@ -284,10 +284,10 @@ export default function UnpaidShiftsReport() {
       {items.length > 0 && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Total incidencias" value={stats.total} icon={AlertTriangle} />
-            <KpiCard label="Sin fichaje" value={stats.noClock} icon={Clock} />
-            <KpiCard label="Sin pago consolidado" value={stats.noPay} icon={DollarSign} />
-            <KpiCard label="Empleados afectados" value={stats.uniqueEmps} icon={CalendarCheck} />
+            <KpiCard label="Total incidencias" value={stats.total} icon={<AlertTriangle className="h-5 w-5 text-warning" />} accent="warning" />
+            <KpiCard label="Sin fichaje" value={stats.noClock} icon={<Clock className="h-5 w-5 text-deduction" />} accent="deduction" />
+            <KpiCard label="Sin pago consolidado" value={stats.noPay} icon={<DollarSign className="h-5 w-5 text-primary" />} accent="primary" />
+            <KpiCard label="Empleados afectados" value={stats.uniqueEmps} icon={<CalendarCheck className="h-5 w-5 text-earning" />} accent="earning" />
           </div>
 
           <div className="flex items-center gap-2">

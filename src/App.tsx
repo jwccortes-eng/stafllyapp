@@ -164,6 +164,7 @@ function App() {
                 <Route path="w9" element={<ContractorW9 />} />
                 <Route path="1099" element={<TaxForms1099 />} />
                 <Route path="import-inactive" element={<ImportInactiveEmployees />} />
+                <Route path="unpaid-shifts" element={<ModuleGate moduleKey="reports"><UnpaidShiftsReport /></ModuleGate>} />
               </Route>
 
               {/* Employee portal routes */}
