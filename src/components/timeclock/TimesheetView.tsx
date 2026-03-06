@@ -31,6 +31,8 @@ interface TimeEntry {
   break_minutes: number;
   notes: string | null;
   status: string;
+  source: "clock" | "import";
+  import_meta?: { customer?: string; sub_job?: string; shift_hours?: number };
 }
 
 interface Employee {
