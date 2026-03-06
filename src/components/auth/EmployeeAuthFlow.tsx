@@ -271,7 +271,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               </AvatarFallback>
             </Avatar>
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              Hola, {employeeInfo.first_name} 👋
+              Ingresa tu PIN
             </h1>
             <p className="text-sm text-muted-foreground">Ingresa tu PIN de 4 dígitos</p>
           </div>
