@@ -91,33 +91,48 @@ export function EmployeeAccessTab({ employee, companyId, isPrivileged, onEmploye
     }
     setSavingPin(true);
 
-    // Update PIN in employees table
-    const { error } = await supabase
-      .from("employees")
-      .update({ access_pin: newPin })
-      .eq("id", employee.id);
+    try {
+      const { data: updated, error } = await supabase
+        .from("employees")
+        .update({ access_pin: newPin })
+        .eq("id", employee.id)
+        .select("id, access_pin")
+        .maybeSingle();
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      setSavingPin(false);
-      return;
-    }
-
-    // Sync auth password if employee has a linked user account
-    if (employee.user_id) {
-      try {
-        await supabase.functions.invoke("admin-reset-password", {
-          body: { user_id: employee.user_id, new_password: `SF_${newPin}` },
-        });
-      } catch (_) {
-        // Non-critical: PIN saved but auth password sync failed silently
+      if (error) {
+        console.error("PIN update error:", error);
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        setSavingPin(false);
+        return;
       }
-    }
 
-    toast({ title: "PIN actualizado", description: `Nuevo PIN: ${newPin}` });
-    onEmployeeUpdate?.({ access_pin: newPin });
-    setNewPin("");
-    setSavingPin(false);
+      if (!updated) {
+        console.error("PIN update: 0 rows affected for employee", employee.id);
+        toast({ title: "Error", description: "No se pudo guardar el PIN. Verifica tus permisos.", variant: "destructive" });
+        setSavingPin(false);
+        return;
+      }
+
+      // Sync auth password if employee has a linked user account
+      if (employee.user_id) {
+        try {
+          await supabase.functions.invoke("admin-reset-password", {
+            body: { user_id: employee.user_id, new_password: `SF_${newPin}` },
+          });
+        } catch (syncErr) {
+          console.warn("Auth password sync error:", syncErr);
+        }
+      }
+
+      toast({ title: "PIN actualizado", description: `Nuevo PIN: ${newPin}` });
+      onEmployeeUpdate?.({ access_pin: newPin });
+      setNewPin("");
+    } catch (err: any) {
+      console.error("PIN change error:", err);
+      toast({ title: "Error", description: err?.message || "Error al guardar PIN", variant: "destructive" });
+    } finally {
+      setSavingPin(false);
+    }
   };
 
   const generateRandomPin = () => {
