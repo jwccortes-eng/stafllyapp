@@ -547,6 +547,7 @@ export function EmployeeProfileTabs({
   form,
   setForm,
   isPrivileged,
+  onEmployeeUpdate,
 }: {
   employee: EmployeeRecord;
   companyId: string;
@@ -554,6 +555,7 @@ export function EmployeeProfileTabs({
   form: Record<string, string>;
   setForm: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   isPrivileged: boolean;
+  onEmployeeUpdate?: (updates: Partial<EmployeeRecord>) => void;
 }) {
   return (
     <Tabs defaultValue="info" className="w-full">
@@ -601,7 +603,7 @@ export function EmployeeProfileTabs({
         <TimeTab employee={employee} companyId={companyId} />
       </TabsContent>
       <TabsContent value="access" className="mt-0">
-        <EmployeeAccessTab employee={employee} companyId={companyId} isPrivileged={isPrivileged} />
+        <EmployeeAccessTab employee={employee} companyId={companyId} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} />
       </TabsContent>
       <TabsContent value="docs" className="mt-0">
         <DocumentsTab employee={employee} companyId={companyId} />
