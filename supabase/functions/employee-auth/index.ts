@@ -525,6 +525,66 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ACTION: change-pin — Employee changes their own PIN (requires auth)
+    if (action === "change-pin") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user: caller } } = await callerClient.auth.getUser();
+      if (!caller) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { current_pin, new_pin } = await req.json().catch(() => ({}));
+
+      if (!new_pin || !/^\d{4}$/.test(new_pin)) {
+        return new Response(JSON.stringify({ error: "El nuevo PIN debe ser exactamente 4 dígitos" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Find employee linked to this user
+      const { data: emp } = await adminClient
+        .from("employees")
+        .select("id, access_pin, user_id")
+        .eq("user_id", caller.id)
+        .maybeSingle();
+
+      if (!emp) {
+        return new Response(JSON.stringify({ error: "Empleado no encontrado" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify current PIN if provided
+      if (current_pin && emp.access_pin && current_pin !== emp.access_pin) {
+        return new Response(JSON.stringify({ error: "PIN actual incorrecto" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Update PIN in employees table
+      await adminClient.from("employees").update({ access_pin: new_pin }).eq("id", emp.id);
+
+      // Sync auth password
+      const newPwd = authPassword(new_pin);
+      await adminClient.auth.admin.updateUserById(caller.id, { password: newPwd });
+
+      return new Response(
+        JSON.stringify({ success: true, message: "PIN actualizado correctamente" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(JSON.stringify({ error: "Acción no válida" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

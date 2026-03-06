@@ -5,10 +5,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   User, Mail, Phone, MapPin, CalendarDays, Wallet,
-  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2,
+  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2, KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -242,6 +244,9 @@ export default function PortalProfile() {
         ))}
       </div>
 
+      {/* Change PIN section */}
+      <ChangePinSection />
+
       {/* Logout */}
       <LogoutConfirmDialog onConfirm={signOut}>
         <Button
@@ -252,6 +257,118 @@ export default function PortalProfile() {
           Cerrar sesión
         </Button>
       </LogoutConfirmDialog>
+    </div>
+  );
+}
+
+function ChangePinSection() {
+  const { toast } = useToast();
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const handleChangePin = async () => {
+    if (!/^\d{4}$/.test(newPin)) {
+      toast({ title: "Error", description: "El nuevo PIN debe ser exactamente 4 dígitos", variant: "destructive" });
+      return;
+    }
+    if (newPin !== confirmPin) {
+      toast({ title: "Error", description: "Los PINs no coinciden", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: { action: "change-pin", current_pin: currentPin || undefined, new_pin: newPin },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "PIN actualizado ✅", description: "Tu nuevo PIN está activo" });
+      setCurrentPin("");
+      setNewPin("");
+      setConfirmPin("");
+      setExpanded(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "No se pudo cambiar el PIN", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        className="flex items-center gap-3.5 w-full rounded-2xl border border-border/40 bg-card p-4 hover:bg-accent/50 transition-all duration-200 active:scale-[0.98] shadow-xs"
+      >
+        <div className="h-10 w-10 rounded-xl bg-primary/8 flex items-center justify-center">
+          <KeyRound className="h-[18px] w-[18px] text-primary/70" />
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <p className="text-sm font-semibold">Cambiar PIN</p>
+          <p className="text-[10px] text-muted-foreground">Actualiza tu código de acceso</p>
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 shadow-xs">
+      <div className="flex items-center gap-2">
+        <KeyRound className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold">Cambiar PIN</h3>
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">PIN actual (opcional)</Label>
+          <Input
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={currentPin}
+            onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            placeholder="••••"
+            className="h-10 text-center tracking-[0.5em] font-mono"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Nuevo PIN *</Label>
+          <Input
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={newPin}
+            onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            placeholder="••••"
+            className="h-10 text-center tracking-[0.5em] font-mono"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Confirmar nuevo PIN *</Label>
+          <Input
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={confirmPin}
+            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            placeholder="••••"
+            className="h-10 text-center tracking-[0.5em] font-mono"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" className="flex-1" onClick={() => setExpanded(false)}>
+          Cancelar
+        </Button>
+        <Button size="sm" className="flex-1" onClick={handleChangePin} disabled={saving || !newPin || !confirmPin}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar PIN"}
+        </Button>
+      </div>
     </div>
   );
 }
