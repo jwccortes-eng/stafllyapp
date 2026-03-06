@@ -60,7 +60,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
     }
     setSending(true);
     try {
-      const { error } = await supabase.functions.invoke("send-payroll-email", {
+      const { data, error } = await supabase.functions.invoke("send-invite-email", {
         body: {
           to: employee.email,
           subject: `Invitación al portal de ${companyName}`,
@@ -90,6 +90,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
         },
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       setEmailSent(true);
       toast({ title: "Email enviado", description: `Invitación enviada a ${employee.email}` });
     } catch (err: any) {
