@@ -676,7 +676,7 @@ export default function ImportSchedule() {
           .eq("key", "imported_schedule_files")
           .single();
         const prevFiles: string[] = existingSetting?.value ? (Array.isArray(existingSetting.value) ? existingSetting.value as string[] : []) : [];
-        const newFiles = [...prevFiles, ...fileNames];
+        const newFiles = [...prevFiles, ...recordedFileNames];
         if (existingSetting) {
           await supabase.from("company_settings").update({ value: newFiles as any }).eq("id", existingSetting.id);
         } else {
