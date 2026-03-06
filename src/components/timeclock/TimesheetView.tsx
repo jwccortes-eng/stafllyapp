@@ -227,8 +227,9 @@ export function TimesheetView() {
         const approvedCount = empEntries.filter(e => e.status === "approved").length;
         const rejectedCount = empEntries.filter(e => e.status === "rejected").length;
         const openCount = empEntries.filter(e => !e.clock_out).length;
+        const importedCount = empEntries.filter(e => e.status === "imported").length;
         const hasIssues = rejectedCount > 0 || openCount > 0;
-        const entryIds = filteredEntries.map(e => e.id);
+        const entryIds = filteredEntries.filter(e => e.source === "clock").map(e => e.id);
 
         // Daily breakdown
         const dayMap = new Map<string, TimeEntry[]>();
