@@ -109,7 +109,7 @@ export default function Employees() {
   usePageView("Empleados");
   const { selectedCompanyId } = useCompany();
   const { role } = useAuth();
-  const isPrivileged = role === 'owner' || role === 'admin';
+  const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
   const { canAddEmployees, limits, plan } = useSubscription();
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);

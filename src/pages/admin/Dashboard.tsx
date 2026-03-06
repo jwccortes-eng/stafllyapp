@@ -767,7 +767,7 @@ export default function AdminDashboard() {
       <OnboardingChecklist />
 
       {/* ── Owner: Company Cards ── */}
-      {role === 'owner' && companies.length > 1 && (
+      {(role === 'developer' || role === 'owner') && companies.length > 1 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-4 w-4 text-warning" />

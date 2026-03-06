@@ -82,7 +82,7 @@ export function CommandPalette() {
 
   const links = useMemo(() => {
     const base = ALL_SEARCHABLE.filter(l => isVisible(l.module));
-    if (role === 'owner') return [...base, ...OWNER_SEARCHABLE];
+    if (role === 'developer' || role === 'owner') return [...base, ...OWNER_SEARCHABLE];
     return base;
   }, [role]);
 

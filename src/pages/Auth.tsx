@@ -56,7 +56,7 @@ export default function Auth() {
         }
       }
       if (role === "employee") navigate("/portal");
-      else if (role === "admin" || role === "owner" || role === "manager") navigate("/app");
+      else if (role === "developer" || role === "admin" || role === "owner" || role === "manager") navigate("/app");
     };
     autoSetup();
   }, [user, role, authLoading, navigate, settingUp]);

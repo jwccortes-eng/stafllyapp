@@ -410,7 +410,7 @@ export default function AdminSidebar() {
         {visibleSections.map(renderSection)}
 
         {/* Owner admin hub link */}
-        {role === 'owner' && (
+        {(role === 'developer' || role === 'owner') && (
           <>
             <div className="border-t border-sidebar-border/30 my-2" />
             {renderLink({ to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "", end: true })}
