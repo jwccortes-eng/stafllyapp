@@ -19,15 +19,7 @@ import { cn } from "@/lib/utils";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  employee: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    phone_number?: string | null;
-    email?: string | null;
-    access_pin?: string | null;
-    company_id: string;
-  };
+  employee: Record<string, any>;
 }
 
 const PRODUCTION_URL = "https://staflyapps.com";
