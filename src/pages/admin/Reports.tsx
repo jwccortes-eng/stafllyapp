@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, FileSpreadsheet, Users, UserCheck, AlertTriangle } from "lucide-react";
+import { BarChart3, FileSpreadsheet, Users, UserCheck, AlertTriangle, DollarSign } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 
