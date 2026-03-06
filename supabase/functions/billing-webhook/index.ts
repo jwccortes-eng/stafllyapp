@@ -57,11 +57,28 @@ Deno.serve(async (req) => {
 
     console.log(`[billing-webhook] Event: ${event.type}, id: ${event.id}`);
 
+    // Helper: validate company exists
+    const validateCompany = async (companyId: string): Promise<boolean> => {
+      const { data } = await supabase.from("companies").select("id").eq("id", companyId).maybeSingle();
+      return !!data;
+    };
+
+    // Helper: sanitize Stripe payload (remove sensitive card/bank details)
+    const sanitizePayload = (evt: any): any => {
+      const safe = { id: evt.id, type: evt.type, created: evt.created };
+      return safe;
+    };
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const companyId = session.metadata?.companyId;
         if (!companyId || !session.subscription) break;
+
+        if (!(await validateCompany(companyId))) {
+          console.error(`[billing-webhook] Invalid company_id: ${companyId}`);
+          break;
+        }
 
         // Fetch the subscription to get plan details
         const sub = await stripe.subscriptions.retrieve(session.subscription as string);
@@ -81,7 +98,7 @@ Deno.serve(async (req) => {
         await supabase.from("billing_events").insert({
           company_id: companyId,
           type: event.type,
-          payload_json: event as any,
+          payload_json: sanitizePayload(event),
         });
 
         console.log(`[billing-webhook] Subscription created: company=${companyId}, plan=${plan}`);
@@ -93,6 +110,11 @@ Deno.serve(async (req) => {
         const sub = event.data.object as Stripe.Subscription;
         const companyId = sub.metadata?.companyId;
         if (!companyId) break;
+
+        if (!(await validateCompany(companyId))) {
+          console.error(`[billing-webhook] Invalid company_id: ${companyId}`);
+          break;
+        }
 
         const priceId = sub.items.data[0]?.price?.id;
         const plan = PLAN_MAP[priceId] || "pro";
@@ -110,7 +132,7 @@ Deno.serve(async (req) => {
         await supabase.from("billing_events").insert({
           company_id: companyId,
           type: event.type,
-          payload_json: event as any,
+          payload_json: sanitizePayload(event),
         });
 
         console.log(`[billing-webhook] Subscription updated: company=${companyId}, status=${sub.status}`);
@@ -121,6 +143,11 @@ Deno.serve(async (req) => {
         const sub = event.data.object as Stripe.Subscription;
         const companyId = sub.metadata?.companyId;
         if (!companyId) break;
+
+        if (!(await validateCompany(companyId))) {
+          console.error(`[billing-webhook] Invalid company_id: ${companyId}`);
+          break;
+        }
 
         await supabase.from("subscriptions").upsert({
           company_id: companyId,
@@ -135,7 +162,7 @@ Deno.serve(async (req) => {
         await supabase.from("billing_events").insert({
           company_id: companyId,
           type: event.type,
-          payload_json: event as any,
+          payload_json: sanitizePayload(event),
         });
 
         console.log(`[billing-webhook] Subscription deleted: company=${companyId}`);
@@ -154,7 +181,7 @@ Deno.serve(async (req) => {
         await supabase.from("billing_events").insert({
           company_id: companyId,
           type: event.type,
-          payload_json: event as any,
+          payload_json: sanitizePayload(event),
         });
 
         console.log(`[billing-webhook] Invoice paid: company=${companyId}`);
@@ -177,7 +204,7 @@ Deno.serve(async (req) => {
         await supabase.from("billing_events").insert({
           company_id: companyId,
           type: event.type,
-          payload_json: event as any,
+          payload_json: sanitizePayload(event),
         });
 
         console.log(`[billing-webhook] Payment failed: company=${companyId}, status=past_due`);
