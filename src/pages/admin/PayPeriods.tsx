@@ -63,6 +63,7 @@ export default function PayPeriods() {
   const [bulkOpening, setBulkOpening] = useState(false);
   const [importsMap, setImportsMap] = useState<Record<string, ImportInfo[]>>({});
   const [loadingImports, setLoadingImports] = useState<Set<string>>(new Set());
+  const [periodMeta, setPeriodMeta] = useState<Record<string, { hasImports: boolean; hasBasePay: boolean }>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
 
