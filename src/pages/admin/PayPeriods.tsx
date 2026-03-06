@@ -671,12 +671,10 @@ export default function PayPeriods() {
       <PasswordConfirmDialog
         open={passwordOpen}
         onOpenChange={setPasswordOpen}
-        title={pendingToggle?.status === "open" ? "Cerrar periodo" : (canOpenPeriodId === pendingToggle?.id ? "Abrir periodo" : "Reabrir periodo")}
-        description={pendingToggle?.status === "open"
-          ? "Cerrar un periodo bloquea la creación y eliminación de novedades e importaciones. Confirma tu contraseña para continuar."
-          : canOpenPeriodId === pendingToggle?.id
-            ? "Este es el siguiente periodo en secuencia. Confirma tu contraseña para abrirlo."
-            : "Reabrir un periodo fuera de secuencia requiere privilegios especiales. Confirma tu contraseña para continuar."}
+        title={canOpenPeriodId === pendingToggle?.id ? "Abrir periodo" : "Reabrir periodo"}
+        description={canOpenPeriodId === pendingToggle?.id
+          ? "Este es el siguiente periodo en secuencia. Confirma tu contraseña para abrirlo."
+          : "Reabrir un periodo fuera de secuencia requiere privilegios especiales. Confirma tu contraseña para continuar."}
         onConfirm={toggleStatus}
       />
     </div>
