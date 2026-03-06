@@ -90,6 +90,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
         },
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       setEmailSent(true);
       toast({ title: "Email enviado", description: `Invitación enviada a ${employee.email}` });
     } catch (err: any) {
