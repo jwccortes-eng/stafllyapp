@@ -308,7 +308,7 @@ export default function AdminSidebar() {
       "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
       "bg-card border-r border-border/40",
       collapsed ? "w-[60px]" : "w-[250px]",
-      isOwner && "owner-sidebar"
+      // owner-sidebar dark theme removed per user request
     )}>
       {/* ── User identity header ── */}
       <div className={cn(
