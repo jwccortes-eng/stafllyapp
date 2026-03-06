@@ -91,6 +91,7 @@ export function EmployeeAccessTab({ employee, companyId, isPrivileged, onEmploye
     }
     setSavingPin(true);
 
+    // Update PIN in employees table
     const { error } = await supabase
       .from("employees")
       .update({ access_pin: newPin })
@@ -98,11 +99,24 @@ export function EmployeeAccessTab({ employee, companyId, isPrivileged, onEmploye
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "PIN actualizado", description: `Nuevo PIN: ${newPin}` });
-      onEmployeeUpdate?.({ access_pin: newPin });
-      setNewPin("");
+      setSavingPin(false);
+      return;
     }
+
+    // Sync auth password if employee has a linked user account
+    if (employee.user_id) {
+      try {
+        await supabase.functions.invoke("admin-reset-password", {
+          body: { user_id: employee.user_id, new_password: `SF_${newPin}` },
+        });
+      } catch (_) {
+        // Non-critical: PIN saved but auth password sync failed silently
+      }
+    }
+
+    toast({ title: "PIN actualizado", description: `Nuevo PIN: ${newPin}` });
+    onEmployeeUpdate?.({ access_pin: newPin });
+    setNewPin("");
     setSavingPin(false);
   };
 
