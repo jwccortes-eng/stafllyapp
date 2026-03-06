@@ -28,6 +28,7 @@ interface PayPeriod {
   status: string;
   closed_at: string | null;
   published_at: string | null;
+  paid_at?: string | null;
 }
 
 interface ImportInfo {
@@ -62,6 +63,7 @@ export default function PayPeriods() {
   const [bulkOpening, setBulkOpening] = useState(false);
   const [importsMap, setImportsMap] = useState<Record<string, ImportInfo[]>>({});
   const [loadingImports, setLoadingImports] = useState<Set<string>>(new Set());
+  const [periodMeta, setPeriodMeta] = useState<Record<string, { hasImports: boolean; hasBasePay: boolean }>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -81,6 +83,26 @@ export default function PayPeriods() {
   };
 
   useEffect(() => { fetchPeriods(); }, [selectedCompanyId]);
+
+  // Fetch management metadata (imports + base_pay) for all periods
+  useEffect(() => {
+    if (!selectedCompanyId || periods.length === 0) return;
+    async function fetchMeta() {
+      const periodIds = periods.map(p => p.id);
+      const [importsRes, basePayRes] = await Promise.all([
+        supabase.from("imports").select("period_id").eq("company_id", selectedCompanyId!).in("period_id", periodIds),
+        supabase.from("period_base_pay").select("period_id").eq("company_id", selectedCompanyId!).in("period_id", periodIds),
+      ]);
+      const importSet = new Set((importsRes.data ?? []).map(r => r.period_id));
+      const basePaySet = new Set((basePayRes.data ?? []).map(r => r.period_id));
+      const meta: Record<string, { hasImports: boolean; hasBasePay: boolean }> = {};
+      for (const pid of periodIds) {
+        meta[pid] = { hasImports: importSet.has(pid), hasBasePay: basePaySet.has(pid) };
+      }
+      setPeriodMeta(meta);
+    }
+    fetchMeta();
+  }, [selectedCompanyId, periods]);
 
   // Determine which period can be opened next (sequential rule)
   const canOpenPeriodId = useMemo(() => {
@@ -385,8 +407,9 @@ export default function PayPeriods() {
               <TableHead>Inicio</TableHead>
               <TableHead>Fin</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>Publicado</TableHead>
+              <TableHead>Gestión</TableHead>
               <TableHead>Cerrado</TableHead>
+              <TableHead className="w-28">Acciones</TableHead>
               <TableHead className="w-28">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -425,16 +448,49 @@ export default function PayPeriods() {
                         </TableCell>
                         <TableCell>{p.end_date}</TableCell>
                         <TableCell>
-                          <span className={p.status === "open" ? "earning-badge" : "deduction-badge"}>
-                            {p.status === "open" ? "Abierto" : "Cerrado"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {p.published_at ? (
-                            <span className="earning-badge">Publicado</span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">No publicado</span>
-                          )}
+                          {(() => {
+                            const meta = periodMeta[p.id];
+                            const steps = [
+                              { label: "Abierto", done: true },
+                              { label: "Importado", done: meta?.hasImports ?? false },
+                              { label: "Consolidado", done: meta?.hasBasePay ?? false },
+                              { label: "Cerrado", done: p.status === "closed" },
+                              { label: "Publicado", done: !!p.published_at },
+                            ];
+                            // Find the highest completed step
+                            let currentLabel = "Nuevo";
+                            for (let i = steps.length - 1; i >= 0; i--) {
+                              if (steps[i].done) { currentLabel = steps[i].label; break; }
+                            }
+                            const completedCount = steps.filter(s => s.done).length;
+                            const colorMap: Record<string, string> = {
+                              "Nuevo": "bg-muted text-muted-foreground",
+                              "Abierto": "bg-primary/10 text-primary",
+                              "Importado": "bg-accent-warm/15 text-accent-warm",
+                              "Consolidado": "bg-warning/15 text-warning",
+                              "Cerrado": "bg-destructive/10 text-destructive",
+                              "Publicado": "bg-earning/15 text-earning",
+                            };
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", colorMap[currentLabel] || "bg-muted text-muted-foreground")}>
+                                  {currentLabel}
+                                </span>
+                                <div className="flex gap-0.5">
+                                  {steps.map((s, i) => (
+                                    <TooltipProvider key={i}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className={cn("block w-2 h-2 rounded-full transition-colors", s.done ? "bg-earning" : "bg-border/40")} />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="text-xs">{s.label}{s.done ? " ✓" : ""}</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>
                         <TableCell>
