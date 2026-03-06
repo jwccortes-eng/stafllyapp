@@ -19,6 +19,12 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // ── KILL SWITCH: email sending temporarily suspended ──
+  return new Response(
+    JSON.stringify({ error: "El envío de correos de nómina está temporalmente suspendido." }),
+    { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+
   try {
     // Auth
     const authHeader = req.headers.get("Authorization");
