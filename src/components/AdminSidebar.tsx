@@ -301,7 +301,7 @@ export default function AdminSidebar() {
     );
   };
 
-  const isOwner = role === 'owner';
+  const isOwner = role === 'developer' || role === 'owner';
 
   return (
     <aside className={cn(
