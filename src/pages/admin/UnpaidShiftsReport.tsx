@@ -51,7 +51,7 @@ export default function UnpaidShiftsReport() {
         .from("pay_periods")
         .select("id, start_date, end_date, status")
         .eq("company_id", selectedCompanyId)
-        .gte("start_date", "2026-01-01")
+        .gte("start_date", "2025-01-01")
         .order("start_date", { ascending: false });
       setPeriods(
         (data ?? []).map((p) => ({
@@ -69,7 +69,7 @@ export default function UnpaidShiftsReport() {
     setLoading(true);
 
     try {
-      const dateFrom = "2026-01-01";
+      const dateFrom = "2025-01-01";
       const dateTo = new Date().toISOString().split("T")[0];
 
       let periodFilter: { start: string; end: string } | null = null;
@@ -134,7 +134,7 @@ export default function UnpaidShiftsReport() {
         .from("pay_periods")
         .select("id, start_date, end_date")
         .eq("company_id", selectedCompanyId)
-        .gte("start_date", "2025-12-01");
+        .gte("start_date", "2024-12-01");
 
       const periodIds = (allPeriods ?? []).map((p) => p.id);
 
@@ -322,7 +322,7 @@ export default function UnpaidShiftsReport() {
         variant="4"
         eyebrow="AUDITORÍA"
         title="Turnos sin pago"
-        subtitle="Programaciones vs fichajes y pagos desde enero 2026"
+        subtitle="Programaciones vs fichajes y pagos desde enero 2025"
       />
 
       <div className="flex flex-wrap items-end gap-3">
@@ -333,7 +333,7 @@ export default function UnpaidShiftsReport() {
               <SelectValue placeholder="Todos los periodos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos (desde Ene 2026)</SelectItem>
+              <SelectItem value="all">Todos (desde Ene 2025)</SelectItem>
               {periods.map((p) => (
                 <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
               ))}
