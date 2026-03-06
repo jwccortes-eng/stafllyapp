@@ -288,7 +288,7 @@ export default function UsersPage() {
   const [promoLoading, setPromoLoading] = useState(false);
 
   const { toast } = useToast();
-  const adminCount = users.filter(u => u.role === "admin" || u.role === "owner").length;
+  const adminCount = users.filter(u => u.role === "admin" || u.role === "owner" || u.role === "developer").length;
   const atAdminLimit = !canAddAdmins(adminCount);
 
   const fetchUsers = async () => {
