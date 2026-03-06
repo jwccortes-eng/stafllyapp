@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Palette, ShieldCheck, Zap, Save } from "lucide-react";
+import { Settings, Palette, ShieldCheck, Zap, Save, Phone } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { AdminPhoneLinkSection } from "@/components/employee/AdminPhoneLinkTab";
 
 interface SettingsMap {
   branding: { platform_name: string; tagline: string; primary_color: string };
