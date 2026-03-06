@@ -217,7 +217,9 @@ export function TimesheetView() {
         let totalMins = 0;
         let breakMins = 0;
         filteredEntries.forEach(e => {
-          if (e.clock_out) {
+          if (e.source === "import" && e.import_meta?.shift_hours) {
+            totalMins += Math.round(e.import_meta.shift_hours * 60);
+          } else if (e.clock_out) {
             totalMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
             breakMins += e.break_minutes ?? 0;
           }
