@@ -80,25 +80,35 @@ export function useNotifications() {
     setLoading(false);
   }, [user, role, selectedCompanyId]);
 
-  // ... keep existing code (playSound, markAsRead, markAllAsRead)
   const playSound = useCallback(() => {
     try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio("data:audio/wav;base64,UklGRl9vT19teleVklVRg==");
-        const ctx = new AudioContext();
+      const ctx = new AudioContext();
+      const now = ctx.currentTime;
+
+      // Two-tone alert: ascending ding-ding
+      const playTone = (freq: number, startAt: number, duration: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.frequency.value = 880;
+        osc.frequency.value = freq;
         osc.type = "sine";
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.3);
-      }
+        gain.gain.setValueAtTime(0, startAt);
+        gain.gain.linearRampToValueAtTime(0.4, startAt + 0.02);
+        gain.gain.setValueAtTime(0.4, startAt + duration * 0.6);
+        gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+        osc.start(startAt);
+        osc.stop(startAt + duration);
+      };
+
+      // First tone (C6) + second tone higher (E6) — friendly alert
+      playTone(1047, now, 0.15);
+      playTone(1319, now + 0.18, 0.22);
+
+      // Cleanup audio context after sound finishes
+      setTimeout(() => ctx.close().catch(() => {}), 1000);
     } catch {
-      // Audio not available
+      // Audio not available (e.g. no user interaction yet)
     }
   }, []);
 
