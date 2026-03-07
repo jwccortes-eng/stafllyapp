@@ -8,7 +8,7 @@ import {
   ChevronRight, Activity, ThumbsUp, Plus,
   Inbox, MapPin, Building2, MessageCircle, Crown, ExternalLink,
   ClipboardList, UserCheck, AlertCircle, CheckCircle2,
-  Calendar, Timer, Shield,
+  Calendar, Timer, Shield, Receipt, Briefcase,
 } from "lucide-react";
 import { PeriodStatusBanner } from "@/components/ui/period-status-banner";
 import { useCompany } from "@/hooks/useCompany";
@@ -200,6 +200,7 @@ export default function AdminDashboard() {
   const [sparkPayments, setSparkPayments] = useState<number[]>([]);
   const [pendingCounts, setPendingCounts] = useState({ shiftRequests: 0, pendingMovements: 0, openTickets: 0, pendingAttendance: 0 });
   const [todaySummary, setTodaySummary] = useState({ shiftsToday: 0, assignedToday: 0, clockedIn: 0, openEntries: 0 });
+  const [commercialKpis, setCommercialKpis] = useState({ activeClients: 0, openRequests: 0, unpaidInvoices: 0, overdueInvoices: 0, unpaidTotal: 0, overdueTotal: 0 });
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -326,6 +327,27 @@ export default function AdminDashboard() {
       });
     }
     fetchTodaySummary();
+
+    // Fetch commercial KPIs
+    async function fetchCommercialKpis() {
+      const [clientsRes, reqRes, invRes] = await Promise.all([
+        supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).is("deleted_at", null).eq("status", "active"),
+        supabase.from("staffing_requests").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).not("status", "in", '("completed","cancelled","rejected")'),
+        supabase.from("invoices").select("id, status, grand_total").eq("company_id", selectedCompanyId!),
+      ]);
+      const invoices = invRes.data ?? [];
+      const unpaid = invoices.filter(i => ["issued","sent","viewed","overdue"].includes(i.status));
+      const overdue = invoices.filter(i => i.status === "overdue");
+      setCommercialKpis({
+        activeClients: clientsRes.count ?? 0,
+        openRequests: reqRes.count ?? 0,
+        unpaidInvoices: unpaid.length,
+        overdueInvoices: overdue.length,
+        unpaidTotal: unpaid.reduce((s, i) => s + (i.grand_total || 0), 0),
+        overdueTotal: overdue.reduce((s, i) => s + (i.grand_total || 0), 0),
+      });
+    }
+    fetchCommercialKpis();
 
     supabase.from("employees").select("created_at")
       .eq("company_id", selectedCompanyId!).eq("is_active", true)
@@ -499,6 +521,20 @@ export default function AdminDashboard() {
         </Card>
       );
     },
+    commercial_kpis: () => (
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase className="h-3.5 w-3.5 text-primary" />
+          <h2 className="text-sm font-semibold font-heading text-foreground">Comercial</h2>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiStatCard label="Clientes activos" value={commercialKpis.activeClients} subtitle="empresas operando" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
+          <KpiStatCard label="Solicitudes abiertas" value={commercialKpis.openRequests} subtitle="en pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
+          <KpiStatCard label="Por cobrar" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} facturas`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Vencido" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} facturas`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
+        </div>
+      </div>
+    ),
     today_summary: () => {
       const todayStr = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
       return (

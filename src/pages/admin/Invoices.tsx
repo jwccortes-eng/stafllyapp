@@ -61,6 +61,7 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generatingLines, setGeneratingLines] = useState<string | null>(null);
 
   const [form, setForm] = useState({ client_id: "", due_date: "", external_notes: "", internal_notes: "" });
 
@@ -116,6 +117,59 @@ export default function Invoices() {
     const { error } = await supabase.from("invoices").update(updates).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Estado actualizado`);
+    loadData();
+  };
+
+  const handleGenerateLineItems = async (inv: Invoice) => {
+    if (!selectedCompanyId) return;
+    setGeneratingLines(inv.id);
+    // Find shifts linked to this client in the invoice service period or all completed shifts
+    const { data: shifts } = await supabase
+      .from("scheduled_shifts")
+      .select("id, title, date, start_time, end_time, category_id")
+      .eq("company_id", selectedCompanyId)
+      .eq("client_id", inv.client_id)
+      .is("deleted_at", null);
+
+    if (!shifts || shifts.length === 0) {
+      toast.error("No hay turnos para este cliente"); setGeneratingLines(null); return;
+    }
+
+    // Get assignments with employees for each shift
+    const shiftIds = shifts.map(s => s.id);
+    const { data: assignments } = await supabase
+      .from("shift_assignments")
+      .select("shift_id, employee_id, employees(first_name, last_name)")
+      .in("shift_id", shiftIds)
+      .eq("status", "confirmed");
+
+    const lines = shifts.map((s, idx) => {
+      const assignedCount = (assignments ?? []).filter(a => a.shift_id === s.id).length;
+      const startH = s.start_time ? parseInt(s.start_time.split(":")[0]) : 0;
+      const endH = s.end_time ? parseInt(s.end_time.split(":")[0]) : 0;
+      const hours = endH > startH ? endH - startH : 8;
+      return {
+        invoice_id: inv.id,
+        company_id: selectedCompanyId,
+        description: `${s.title} — ${s.date}`,
+        quantity: Math.max(assignedCount, 1) * hours,
+        unit_price: inv.grand_total > 0 ? 0 : 25, // default rate placeholder
+        total: Math.max(assignedCount, 1) * hours * 25,
+        shift_id: s.id,
+        category_id: s.category_id,
+        sort_order: idx,
+      };
+    });
+
+    const { error } = await supabase.from("invoice_line_items").insert(lines as any);
+    if (error) { toast.error(error.message); setGeneratingLines(null); return; }
+
+    // Update invoice subtotal/grand_total
+    const subtotal = lines.reduce((s, l) => s + l.total, 0);
+    await supabase.from("invoices").update({ subtotal, grand_total: subtotal + (inv.tax_amount || 0) - (inv.discount_amount || 0) } as any).eq("id", inv.id);
+
+    toast.success(`${lines.length} líneas generadas`);
+    setGeneratingLines(null);
     loadData();
   };
 
@@ -239,6 +293,7 @@ export default function Invoices() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3.5 w-3.5" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {inv.status === "draft" && <DropdownMenuItem onClick={() => handleGenerateLineItems(inv)} disabled={generatingLines === inv.id}><FileText className="h-4 w-4 mr-2" /> {generatingLines === inv.id ? "Generando..." : "Generar líneas desde turnos"}</DropdownMenuItem>}
                             {inv.status === "draft" && <DropdownMenuItem onClick={() => handleStatusChange(inv.id, "approved")}><CheckCircle2 className="h-4 w-4 mr-2" /> Aprobar</DropdownMenuItem>}
                             {inv.status === "approved" && <DropdownMenuItem onClick={() => handleStatusChange(inv.id, "issued")}><FileText className="h-4 w-4 mr-2" /> Emitir</DropdownMenuItem>}
                             {["issued","viewed"].includes(inv.status) && <DropdownMenuItem onClick={() => handleStatusChange(inv.id, "sent")}><Send className="h-4 w-4 mr-2" /> Marcar enviada</DropdownMenuItem>}
