@@ -501,6 +501,23 @@ export default function Movements() {
         </div>
       )}
 
+      {filtered.length > 0 && (
+        <ReportActionsBar
+          title="Novedades"
+          subtitle={selectedPeriod ? `${selectedPeriod.start_date} — ${selectedPeriod.end_date}` : undefined}
+          onExportCSV={() => {
+            const headers = ["Empleado", "Concepto", "Categoría", "Cantidad", "Tarifa", "Total", "Estado", "Nota"];
+            const rows = filtered.map(m => [
+              m.employees ? `${m.employees.first_name} ${m.employees.last_name}` : "",
+              m.concepts?.name ?? "", m.concepts?.category ?? "",
+              String(m.quantity ?? ""), String(m.rate ?? ""),
+              String(m.total_value), m.approval_status, m.note ?? "",
+            ]);
+            return [headers, ...rows];
+          }}
+        />
+      )}
+
       {/* Pending warning banner */}
       {pendingCount > 0 && (
         <div className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
