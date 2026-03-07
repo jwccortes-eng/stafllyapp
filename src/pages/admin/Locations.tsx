@@ -208,6 +208,22 @@ export default function Locations() {
         ) : undefined}
       />
 
+      {filtered.length > 0 && (
+        <ReportActionsBar
+          title="Ubicaciones"
+          subtitle={`${filtered.length} ubicación${filtered.length !== 1 ? "es" : ""}`}
+          onExportCSV={() => {
+            const headers = ["Nombre", "Dirección", "Ciudad", "Estado", "Cliente", "Radio geocerca", "Status"];
+            const rows = filtered.map(l => [
+              l.name, l.address ?? "", l.city ?? "", l.state ?? "",
+              clients.find(c => c.id === l.client_id)?.name ?? "",
+              String(l.geofence_radius ?? ""), l.status,
+            ]);
+            return [headers, ...rows];
+          }}
+        />
+      )}
+
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
