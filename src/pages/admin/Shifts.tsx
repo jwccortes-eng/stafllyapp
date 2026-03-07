@@ -926,13 +926,32 @@ export default function Shifts() {
                         </div>
                         <div>
                           <Label className="text-[11px] text-muted-foreground font-medium">Ubicación</Label>
-                          <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
-                            <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Sin asignar</SelectItem>
-                              {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-1 mt-1">
+                            <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
+                              <SelectTrigger className="h-9 text-sm flex-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sin asignar</SelectItem>
+                                {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <Popover open={showAddLocation} onOpenChange={setShowAddLocation}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar ubicación">
+                                  <Plus className="h-3.5 w-3.5" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-3" align="end">
+                                <p className="text-xs font-medium mb-2">Nueva ubicación</p>
+                                <div className="space-y-1.5">
+                                  <Input value={newLocationName} onChange={e => setNewLocationName(e.target.value)} placeholder="Nombre" className="h-8 text-sm" />
+                                  <Input value={newLocationAddress} onChange={e => setNewLocationAddress(e.target.value)} placeholder="Dirección (opcional)" className="h-8 text-sm" onKeyDown={e => e.key === "Enter" && handleQuickAddLocation()} />
+                                  <Button size="sm" className="h-8 w-full text-xs" onClick={handleQuickAddLocation} disabled={addingLocation || !newLocationName.trim()}>
+                                    {addingLocation ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
+                                  </Button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 items-end">
@@ -942,6 +961,50 @@ export default function Shifts() {
                           <Label htmlFor="claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Section: Transportation */}
+                  <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                      <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Car className="h-3 w-3 text-primary" /></div>
+                      <span className="text-[11px] font-semibold text-foreground">Transporte</span>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Checkbox checked={transportRequired} onCheckedChange={c => setTransportRequired(!!c)} id="transport" />
+                        <Label htmlFor="transport" className="text-xs font-normal cursor-pointer">¿Este turno requiere transporte?</Label>
+                      </div>
+                      {transportRequired && (
+                        <>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-[11px] text-muted-foreground font-medium">Capacidad por vehículo</Label>
+                              <Input type="number" min="1" value={carCapacity} onChange={e => setCarCapacity(e.target.value)} className="h-9 text-sm mt-1" />
+                            </div>
+                            <div className="flex flex-col justify-end">
+                              <p className="text-[11px] text-muted-foreground font-medium mb-1">Vehículos necesarios</p>
+                              <div className="h-9 flex items-center px-3 rounded-md border border-border/30 bg-muted/20 text-sm font-semibold">
+                                {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 4))}
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
+                            <Select value={driverEmployeeId || "none"} onValueChange={v => setDriverEmployeeId(v === "none" ? "" : v)}>
+                              <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sin asignar</SelectItem>
+                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
+                            <Input value={transportNotes} onChange={e => setTransportNotes(e.target.value)} placeholder="Ej: Recoger en oficina a las 7:30 AM" className="h-9 text-sm mt-1" />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
