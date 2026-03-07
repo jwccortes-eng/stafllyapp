@@ -856,6 +856,11 @@ export function ShiftDetailDialog({
                 >
                   <Smartphone className="h-3 w-3" /> SMS
                 </Button>
+                {onDuplicate && (
+                  <Button variant="outline" size="sm" onClick={() => { onDuplicate(shift); onOpenChange(false); }} className="h-8 text-xs gap-1.5 rounded-full">
+                    <Copy className="h-3 w-3" /> Duplicar
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="h-8 text-xs gap-1.5 rounded-full ml-auto">
                   <Pencil className="h-3 w-3" /> Editar
                 </Button>
