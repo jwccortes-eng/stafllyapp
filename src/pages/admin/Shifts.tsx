@@ -360,6 +360,10 @@ export default function Shifts() {
       pay_type: payType,
       day_type: payType === "daily" ? dayType : "full_day",
       shift_admin_id: shiftAdminId || null,
+      transportation_required: transportRequired,
+      car_capacity: parseInt(carCapacity) || 4,
+      transportation_notes: transportNotes.trim() || null,
+      driver_employee_id: driverEmployeeId || null,
     } as any).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); setSaving(false); return; }
