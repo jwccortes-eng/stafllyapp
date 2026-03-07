@@ -521,6 +521,20 @@ export default function AdminDashboard() {
         </Card>
       );
     },
+    commercial_kpis: () => (
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase className="h-3.5 w-3.5 text-primary" />
+          <h2 className="text-sm font-semibold font-heading text-foreground">Comercial</h2>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiStatCard label="Clientes activos" value={commercialKpis.activeClients} subtitle="empresas operando" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
+          <KpiStatCard label="Solicitudes abiertas" value={commercialKpis.openRequests} subtitle="en pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
+          <KpiStatCard label="Por cobrar" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} facturas`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Vencido" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} facturas`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
+        </div>
+      </div>
+    ),
     today_summary: () => {
       const todayStr = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
       return (
