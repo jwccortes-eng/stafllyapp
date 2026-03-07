@@ -14,7 +14,7 @@ import {
   Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
   CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
-  CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon,
+  CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy,
 } from "lucide-react";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
