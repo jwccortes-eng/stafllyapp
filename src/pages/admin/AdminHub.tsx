@@ -4,8 +4,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import {
   Globe, Building2, Shield, Users, Activity, Settings2,
-  CalendarDays, DollarSign, ListChecks, Cpu, FileText, Zap, UserPlus,
+  CalendarDays, DollarSign, ListChecks, Cpu, FileText, Zap, UserPlus, BookOpen,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { downloadManualPdf } from "@/lib/export-manual-pdf";
 
 const sections = [
   {
