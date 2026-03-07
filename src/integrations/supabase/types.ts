@@ -970,6 +970,67 @@ export type Database = {
           },
         ]
       }
+      employee_documents: {
+        Row: {
+          category: string
+          company_id: string
+          created_at: string
+          employee_id: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          name: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string
+          company_id: string
+          created_at?: string
+          employee_id: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          name: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          name?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_portal_modules: {
         Row: {
           company_id: string
@@ -1109,10 +1170,13 @@ export type Database = {
           access_pin: string | null
           added_by: string | null
           added_via: string | null
+          address: string | null
           avatar_url: string | null
+          birthday: string | null
           company_id: string
           connecteam_employee_id: string | null
           country_code: string | null
+          county: string | null
           created_at: string
           date_added: string | null
           direct_manager: string | null
@@ -1141,10 +1205,13 @@ export type Database = {
           access_pin?: string | null
           added_by?: string | null
           added_via?: string | null
+          address?: string | null
           avatar_url?: string | null
+          birthday?: string | null
           company_id?: string
           connecteam_employee_id?: string | null
           country_code?: string | null
+          county?: string | null
           created_at?: string
           date_added?: string | null
           direct_manager?: string | null
@@ -1173,10 +1240,13 @@ export type Database = {
           access_pin?: string | null
           added_by?: string | null
           added_via?: string | null
+          address?: string | null
           avatar_url?: string | null
+          birthday?: string | null
           company_id?: string
           connecteam_employee_id?: string | null
           country_code?: string | null
+          county?: string | null
           created_at?: string
           date_added?: string | null
           direct_manager?: string | null
