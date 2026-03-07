@@ -65,9 +65,14 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Gestión" },
   { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
   { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Gestión", badge: "tickets" },
+
+  // Comercial — staffing requests, invoicing
+  { to: "/app/staffing-requests", icon: ClipboardList, label: "Solicitudes", module: null, section: "Comercial" },
+  { to: "/app/invoices", icon: Receipt, label: "Facturación", module: null, section: "Comercial" },
+  { to: "/app/service-categories", icon: Tags, label: "Categorías", module: null, section: "Comercial" },
 ];
 
-const SECTION_ORDER = ["Inicio", "Operaciones", "Nómina", "Gestión"];
+const SECTION_ORDER = ["Inicio", "Operaciones", "Nómina", "Gestión", "Comercial"];
 
 export default function AdminSidebar() {
   const { signOut, role, hasModuleAccess, user, fullName } = useAuth();
