@@ -144,6 +144,10 @@ export default function Shifts() {
   const [newClientName, setNewClientName] = useState("");
   const [addingClient, setAddingClient] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
+  const [newLocationName, setNewLocationName] = useState("");
+  const [newLocationAddress, setNewLocationAddress] = useState("");
+  const [addingLocation, setAddingLocation] = useState(false);
+  const [showAddLocation, setShowAddLocation] = useState(false);
   const [notes, setNotes] = useState("");
   const [claimable, setClaimable] = useState(false);
   const [meetingPoint, setMeetingPoint] = useState("");
@@ -155,6 +159,10 @@ export default function Shifts() {
   const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
   const [dayType, setDayType] = useState<"full_day" | "half_day">("full_day");
   const [shiftAdminId, setShiftAdminId] = useState("");
+  const [transportRequired, setTransportRequired] = useState(false);
+  const [carCapacity, setCarCapacity] = useState("4");
+  const [transportNotes, setTransportNotes] = useState("");
+  const [driverEmployeeId, setDriverEmployeeId] = useState("");
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
