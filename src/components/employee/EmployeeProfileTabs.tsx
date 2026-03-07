@@ -34,6 +34,9 @@ const PERSONAL_FIELDS = [
   { key: "email", label: "Email", icon: Mail },
   { key: "country_code", label: "Código país", icon: MapPin },
   { key: "gender", label: "Género", icon: User },
+  { key: "birthday", label: "Cumpleaños", icon: Cake },
+  { key: "address", label: "Dirección", icon: Home },
+  { key: "county", label: "Condado", icon: MapPin },
 ];
 
 const EMPLOYMENT_FIELDS = [
