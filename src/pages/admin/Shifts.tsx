@@ -267,6 +267,8 @@ export default function Shifts() {
     setClaimable(false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
     setDayType("full_day"); setShiftAdminId("");
+    setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
+    setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
   };
 
   // Quick-add client inline
