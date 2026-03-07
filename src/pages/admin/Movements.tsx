@@ -697,6 +697,11 @@ export default function Movements() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel entityType="movement" title="Actividad de novedades" hideViews compact />
+      </div>
     </div>
   );
 }

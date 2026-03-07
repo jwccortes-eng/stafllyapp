@@ -473,6 +473,11 @@ export default function Clients() {
           ))}
         </div>
       )}
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel entityType="client" title="Actividad de clientes" hideViews compact />
+      </div>
     </div>
   );
 }

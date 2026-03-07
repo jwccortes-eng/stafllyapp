@@ -418,6 +418,11 @@ export default function Concepts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel entityType="concept" title="Actividad de conceptos" hideViews compact />
+      </div>
     </div>
   );
 }

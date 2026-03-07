@@ -302,6 +302,11 @@ export default function Locations() {
           </Table>
         </div>
       )}
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel entityType="location" title="Actividad de ubicaciones" hideViews compact />
+      </div>
     </div>
   );
 }
