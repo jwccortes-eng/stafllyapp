@@ -12,12 +12,13 @@ export interface DashboardWidget {
 const DEFAULT_WIDGETS: DashboardWidget[] = [
   { id: "kpis", label: "KPIs principales", description: "Empleados, pagos, novedades y pendientes", enabled: true, order: 0 },
   { id: "pending_requests", label: "Solicitudes pendientes", description: "Turnos, tickets y novedades por aprobar", enabled: true, order: 1 },
-  { id: "quick_actions", label: "Accesos rápidos", description: "Atajos a las acciones más comunes", enabled: true, order: 2 },
-  { id: "today_summary", label: "Resumen de hoy", description: "Turnos activos, fichajes y asistencia del día", enabled: true, order: 3 },
-  { id: "chart", label: "Tendencia de pagos", description: "Gráfico de barras por periodo", enabled: true, order: 4 },
-  { id: "announcements", label: "Comunicados", description: "Últimos anuncios publicados", enabled: true, order: 5 },
-  { id: "activity", label: "Actividad reciente", description: "Timeline de acciones recientes", enabled: true, order: 6 },
-  { id: "period_banner", label: "Estado de periodos", description: "Banner resumen de periodos abiertos/cerrados", enabled: true, order: 7 },
+  { id: "commercial_kpis", label: "KPIs comerciales", description: "Clientes, solicitudes, facturas y vencidos", enabled: true, order: 2 },
+  { id: "quick_actions", label: "Accesos rápidos", description: "Atajos a las acciones más comunes", enabled: true, order: 3 },
+  { id: "today_summary", label: "Resumen de hoy", description: "Turnos activos, fichajes y asistencia del día", enabled: true, order: 4 },
+  { id: "chart", label: "Tendencia de pagos", description: "Gráfico de barras por periodo", enabled: true, order: 5 },
+  { id: "announcements", label: "Comunicados", description: "Últimos anuncios publicados", enabled: true, order: 6 },
+  { id: "activity", label: "Actividad reciente", description: "Timeline de acciones recientes", enabled: true, order: 7 },
+  { id: "period_banner", label: "Estado de periodos", description: "Banner resumen de periodos abiertos/cerrados", enabled: true, order: 8 },
 ];
 
 const STORAGE_KEY = "dashboard-widgets";
