@@ -61,6 +61,7 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generatingLines, setGeneratingLines] = useState<string | null>(null);
 
   const [form, setForm] = useState({ client_id: "", due_date: "", external_notes: "", internal_notes: "" });
 

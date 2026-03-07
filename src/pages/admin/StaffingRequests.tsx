@@ -382,6 +382,7 @@ export default function StaffingRequests() {
                             {req.status === "under_review" && <DropdownMenuItem onClick={() => handleStatusChange(req.id, "approved")}><CheckCircle2 className="h-4 w-4 mr-2" /> Aprobar</DropdownMenuItem>}
                             {req.status === "under_review" && <DropdownMenuItem onClick={() => handleStatusChange(req.id, "rejected")} className="text-destructive"><XCircle className="h-4 w-4 mr-2" /> Rechazar</DropdownMenuItem>}
                             {["approved", "sourcing"].includes(req.status) && <DropdownMenuItem onClick={() => handleStatusChange(req.id, "sourcing")}><UsersIcon className="h-4 w-4 mr-2" /> Buscar personal</DropdownMenuItem>}
+                            {["approved", "sourcing", "partially_assigned", "fully_assigned"].includes(req.status) && <DropdownMenuItem onClick={() => handleConvertToShifts(req)}><CalendarIcon className="h-4 w-4 mr-2" /> Convertir a turno</DropdownMenuItem>}
                             {!["completed", "cancelled"].includes(req.status) && <DropdownMenuItem onClick={() => handleStatusChange(req.id, "cancelled")} className="text-destructive"><XCircle className="h-4 w-4 mr-2" /> Cancelar</DropdownMenuItem>}
                           </DropdownMenuContent>
                         </DropdownMenu>
