@@ -120,6 +120,59 @@ export default function Invoices() {
     loadData();
   };
 
+  const handleGenerateLineItems = async (inv: Invoice) => {
+    if (!selectedCompanyId) return;
+    setGeneratingLines(inv.id);
+    // Find shifts linked to this client in the invoice service period or all completed shifts
+    const { data: shifts } = await supabase
+      .from("scheduled_shifts")
+      .select("id, title, date, start_time, end_time, category_id")
+      .eq("company_id", selectedCompanyId)
+      .eq("client_id", inv.client_id)
+      .is("deleted_at", null);
+
+    if (!shifts || shifts.length === 0) {
+      toast.error("No hay turnos para este cliente"); setGeneratingLines(null); return;
+    }
+
+    // Get assignments with employees for each shift
+    const shiftIds = shifts.map(s => s.id);
+    const { data: assignments } = await supabase
+      .from("shift_assignments")
+      .select("shift_id, employee_id, employees(first_name, last_name)")
+      .in("shift_id", shiftIds)
+      .eq("status", "confirmed");
+
+    const lines = shifts.map((s, idx) => {
+      const assignedCount = (assignments ?? []).filter(a => a.shift_id === s.id).length;
+      const startH = s.start_time ? parseInt(s.start_time.split(":")[0]) : 0;
+      const endH = s.end_time ? parseInt(s.end_time.split(":")[0]) : 0;
+      const hours = endH > startH ? endH - startH : 8;
+      return {
+        invoice_id: inv.id,
+        company_id: selectedCompanyId,
+        description: `${s.title} — ${s.date}`,
+        quantity: Math.max(assignedCount, 1) * hours,
+        unit_price: inv.grand_total > 0 ? 0 : 25, // default rate placeholder
+        total: Math.max(assignedCount, 1) * hours * 25,
+        shift_id: s.id,
+        category_id: s.category_id,
+        sort_order: idx,
+      };
+    });
+
+    const { error } = await supabase.from("invoice_line_items").insert(lines as any);
+    if (error) { toast.error(error.message); setGeneratingLines(null); return; }
+
+    // Update invoice subtotal/grand_total
+    const subtotal = lines.reduce((s, l) => s + l.total, 0);
+    await supabase.from("invoices").update({ subtotal, grand_total: subtotal + (inv.tax_amount || 0) - (inv.discount_amount || 0) } as any).eq("id", inv.id);
+
+    toast.success(`${lines.length} líneas generadas`);
+    setGeneratingLines(null);
+    loadData();
+  };
+
   const getClientName = (id: string) => clients.find(c => c.id === id)?.name || "—";
 
   const totals = useMemo(() => {
