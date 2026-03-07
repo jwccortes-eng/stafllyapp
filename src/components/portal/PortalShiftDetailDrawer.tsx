@@ -152,22 +152,28 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
               {shift.location && (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
                   <MapPin className="h-5 w-5 text-primary shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ubicación</p>
                     <p className="text-sm font-medium">{shift.location.name}</p>
                   </div>
                 </div>
               )}
 
-              {/* Meeting Point */}
+              {/* Meeting Point — clickable to Google Maps */}
               {shift.meeting_point && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/15 hover:bg-primary/10 transition-colors group"
+                >
                   <Navigation className="h-5 w-5 text-primary shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Punto de encuentro</p>
-                    <p className="text-sm">{shift.meeting_point}</p>
+                    <p className="text-sm group-hover:underline">{shift.meeting_point}</p>
                   </div>
-                </div>
+                  <MapPin className="h-4 w-4 text-primary/60" />
+                </a>
               )}
 
               {/* Special Instructions */}
