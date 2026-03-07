@@ -450,26 +450,118 @@ function TimeTab({ employee, companyId }: { employee: EmployeeRecord; companyId:
 /* ── Documents Tab ── */
 function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; companyId: string }) {
   const [w9, setW9] = useState<any>(null);
+  const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    async function fetch() {
-      const { data } = await supabase
+  const fetchDocs = async () => {
+    const [{ data: w9Data }, { data: docsData }] = await Promise.all([
+      supabase
         .from("contractor_w9")
         .select("id, status, legal_name, tax_classification, tin_last4, submitted_at, reviewed_at")
         .eq("employee_id", employee.id)
         .eq("company_id", companyId)
-        .maybeSingle();
-      setW9(data);
-      setLoading(false);
+        .maybeSingle(),
+      supabase
+        .from("employee_documents" as any)
+        .select("*")
+        .eq("employee_id", employee.id)
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false }),
+    ]);
+    setW9(w9Data);
+    setDocs((docsData as any[]) ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchDocs(); }, [employee.id, companyId]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    setUploading(true);
+    for (const file of Array.from(files)) {
+      const path = `${companyId}/${employee.id}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("employee-documents").upload(path, file);
+      if (uploadError) {
+        toast({ title: "Error al subir", description: uploadError.message, variant: "destructive" });
+        continue;
+      }
+      const { data: urlData } = supabase.storage.from("employee-documents").getPublicUrl(path);
+      await (supabase.from("employee_documents" as any) as any).insert({
+        employee_id: employee.id,
+        company_id: companyId,
+        name: file.name,
+        file_url: urlData.publicUrl,
+        file_type: file.type,
+        file_size: file.size,
+        category: "other",
+      });
     }
-    fetch();
-  }, [employee.id, companyId]);
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+    fetchDocs();
+    toast({ title: "Documentos subidos" });
+  };
+
+  const handleDelete = async (doc: any) => {
+    const path = `${companyId}/${employee.id}/${doc.file_url.split("/").pop()}`;
+    await supabase.storage.from("employee-documents").remove([path]);
+    await (supabase.from("employee_documents" as any) as any).delete().eq("id", doc.id);
+    fetchDocs();
+  };
 
   if (loading) return <div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
+      {/* Upload section */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Documentos</h3>
+        <div>
+          <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            <Upload className="h-3 w-3" />{uploading ? "Subiendo..." : "Subir"}
+          </Button>
+        </div>
+      </div>
+
+      {docs.length > 0 && (
+        <div className="space-y-2">
+          {docs.map((doc: any) => (
+            <Card key={doc.id} className="rounded-xl border-border/40">
+              <CardContent className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <FileText className="h-4 w-4 text-primary/60 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">{doc.name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : ""}
+                      {doc.created_at && ` · ${format(parseISO(doc.created_at), "dd MMM yyyy", { locale: es })}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button size="icon" variant="ghost" className="h-7 w-7" asChild>
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer"><Download className="h-3 w-3" /></a>
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(doc)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {docs.length === 0 && !w9 && (
+        <EmptyState icon={FileText} title="Sin documentos" description="Sube identificaciones, licencias u otros documentos" compact />
+      )}
+
+      {/* W-9 section */}
       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Formulario W-9</h3>
       {!w9 ? (
         <EmptyState icon={FileText} title="Sin W-9" description="No se ha enviado formulario W-9" compact />
