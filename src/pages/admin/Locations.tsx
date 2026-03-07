@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Search, MapPin, Loader2, Trash2, RotateCcw, Pencil } from "lucide-react";
+import { Plus, Search, MapPin, Loader2, Trash2, RotateCcw, Pencil, Download } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 
 interface Location {
   id: string;

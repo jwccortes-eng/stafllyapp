@@ -220,6 +220,21 @@ export default function Clients() {
         ) : undefined}
       />
 
+      {filtered.length > 0 && (
+        <ReportActionsBar
+          title="Clientes"
+          subtitle={`${filtered.length} cliente${filtered.length !== 1 ? "s" : ""}`}
+          onExportCSV={() => {
+            const headers = ["Nombre", "Contacto", "Teléfono", "Email", "Estado", "Notas"];
+            const rows = filtered.map(c => [
+              c.name, c.contact_name ?? "", c.contact_phone ?? "",
+              c.contact_email ?? "", c.status, c.notes ?? "",
+            ]);
+            return [headers, ...rows];
+          }}
+        />
+      )}
+
       {/* Advanced toolbar */}
       <div className="flex items-center gap-2 flex-wrap mb-6">
         {/* Search */}
