@@ -293,6 +293,7 @@ export default function Invoices() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3.5 w-3.5" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {inv.status === "draft" && <DropdownMenuItem onClick={() => handleGenerateLineItems(inv)} disabled={generatingLines === inv.id}><FileText className="h-4 w-4 mr-2" /> {generatingLines === inv.id ? "Generando..." : "Generar líneas desde turnos"}</DropdownMenuItem>}
                             {inv.status === "draft" && <DropdownMenuItem onClick={() => handleStatusChange(inv.id, "approved")}><CheckCircle2 className="h-4 w-4 mr-2" /> Aprobar</DropdownMenuItem>}
                             {inv.status === "approved" && <DropdownMenuItem onClick={() => handleStatusChange(inv.id, "issued")}><FileText className="h-4 w-4 mr-2" /> Emitir</DropdownMenuItem>}
                             {["issued","viewed"].includes(inv.status) && <DropdownMenuItem onClick={() => handleStatusChange(inv.id, "sent")}><Send className="h-4 w-4 mr-2" /> Marcar enviada</DropdownMenuItem>}
