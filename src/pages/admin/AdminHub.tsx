@@ -4,8 +4,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import {
   Globe, Building2, Shield, Users, Activity, Settings2,
-  CalendarDays, DollarSign, ListChecks, Cpu, FileText, Zap, UserPlus,
+  CalendarDays, DollarSign, ListChecks, Cpu, FileText, Zap, UserPlus, BookOpen,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { downloadManualPdf } from "@/lib/export-manual-pdf";
 
 const sections = [
   {
@@ -52,12 +54,18 @@ export default function AdminHub() {
 
   return (
     <div className="space-y-8 animate-fade-in max-w-5xl">
-      <PageHeader
-        variant="1"
-        eyebrow="OWNER"
-        title="Administración"
-        subtitle="Configuración avanzada, usuarios y herramientas del sistema"
-      />
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <PageHeader
+          variant="1"
+          eyebrow="Owner"
+          title="Administración"
+          subtitle="Configuración avanzada, usuarios y herramientas del sistema"
+        />
+        <Button variant="outline" size="sm" onClick={downloadManualPdf} className="gap-2">
+          <BookOpen className="h-4 w-4" />
+          Descargar manual PDF
+        </Button>
+      </div>
 
       {sections.map((section) => (
         <div key={section.title} className="space-y-3">
