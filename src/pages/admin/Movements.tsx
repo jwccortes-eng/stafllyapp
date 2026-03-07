@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Trash2, Upload, CheckCircle2, AlertTriangle, XCircle, Download, ChevronsUpDown, Check, Search, Lock, ArrowUpDown, TrendingUp, TrendingDown, DollarSign, Pencil, ShieldCheck, ShieldX, Clock3 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useAuth } from "@/hooks/useAuth";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -500,6 +502,23 @@ export default function Movements() {
         </div>
       )}
 
+      {filtered.length > 0 && (
+        <ReportActionsBar
+          title="Novedades"
+          subtitle={selectedPeriod ? `${selectedPeriod.start_date} — ${selectedPeriod.end_date}` : undefined}
+          onExportCSV={() => {
+            const headers = ["Empleado", "Concepto", "Categoría", "Cantidad", "Tarifa", "Total", "Estado", "Nota"];
+            const rows = filtered.map(m => [
+              m.employees ? `${m.employees.first_name} ${m.employees.last_name}` : "",
+              m.concepts?.name ?? "", m.concepts?.category ?? "",
+              String(m.quantity ?? ""), String(m.rate ?? ""),
+              String(m.total_value), m.approval_status, m.note ?? "",
+            ]);
+            return [headers, ...rows];
+          }}
+        />
+      )}
+
       {/* Pending warning banner */}
       {pendingCount > 0 && (
         <div className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
@@ -679,6 +698,11 @@ export default function Movements() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel entityType="movement" title="Actividad de novedades" hideViews compact />
+      </div>
     </div>
   );
 }

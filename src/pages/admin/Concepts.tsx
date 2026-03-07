@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -417,6 +418,11 @@ export default function Concepts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel entityType="concept" title="Actividad de conceptos" hideViews compact />
+      </div>
     </div>
   );
 }

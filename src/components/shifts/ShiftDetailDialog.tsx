@@ -14,7 +14,7 @@ import {
   Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
   CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
-  CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon,
+  CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy,
 } from "lucide-react";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
@@ -50,6 +50,7 @@ interface ShiftDetailDialogProps {
   onPublish: (shift: Shift) => void;
   onSave?: (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => Promise<void>;
   onRequestAction?: () => void;
+  onDuplicate?: (shift: Shift) => void;
   availabilityConfigs?: AvailabilityConfig[];
   availabilityOverrides?: AvailabilityOverride[];
 }
@@ -101,6 +102,7 @@ function TabButton({ active, onClick, children, badge }: { active: boolean; onCl
 export function ShiftDetailDialog({
   shift, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
+  onDuplicate,
   availabilityConfigs = [], availabilityOverrides = [],
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
@@ -854,6 +856,11 @@ export function ShiftDetailDialog({
                 >
                   <Smartphone className="h-3 w-3" /> SMS
                 </Button>
+                {onDuplicate && (
+                  <Button variant="outline" size="sm" onClick={() => { onDuplicate(shift); onOpenChange(false); }} className="h-8 text-xs gap-1.5 rounded-full">
+                    <Copy className="h-3 w-3" /> Duplicar
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="h-8 text-xs gap-1.5 rounded-full ml-auto">
                   <Pencil className="h-3 w-3" /> Editar
                 </Button>

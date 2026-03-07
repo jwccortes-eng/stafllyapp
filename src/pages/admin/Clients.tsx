@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import AuditPanel from "@/components/audit/AuditPanel";
 import { cn } from "@/lib/utils";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +19,7 @@ import {
   LayoutGrid, List, Download, Phone, Mail, MessageCircle, Filter, X, Users
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -218,6 +220,21 @@ export default function Clients() {
           </Dialog>
         ) : undefined}
       />
+
+      {filtered.length > 0 && (
+        <ReportActionsBar
+          title="Clientes"
+          subtitle={`${filtered.length} cliente${filtered.length !== 1 ? "s" : ""}`}
+          onExportCSV={() => {
+            const headers = ["Nombre", "Contacto", "Teléfono", "Email", "Estado", "Notas"];
+            const rows = filtered.map(c => [
+              c.name, c.contact_name ?? "", c.contact_phone ?? "",
+              c.contact_email ?? "", c.status, c.notes ?? "",
+            ]);
+            return [headers, ...rows];
+          }}
+        />
+      )}
 
       {/* Advanced toolbar */}
       <div className="flex items-center gap-2 flex-wrap mb-6">
@@ -456,6 +473,11 @@ export default function Clients() {
           ))}
         </div>
       )}
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel entityType="client" title="Actividad de clientes" hideViews compact />
+      </div>
     </div>
   );
 }

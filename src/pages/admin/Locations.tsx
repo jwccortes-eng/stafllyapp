@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -10,8 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Search, MapPin, Loader2, Trash2, RotateCcw, Pencil } from "lucide-react";
+import { Plus, Search, MapPin, Loader2, Trash2, RotateCcw, Pencil, Download } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 
 interface Location {
   id: string;
@@ -207,6 +209,22 @@ export default function Locations() {
         ) : undefined}
       />
 
+      {filtered.length > 0 && (
+        <ReportActionsBar
+          title="Ubicaciones"
+          subtitle={`${filtered.length} ubicación${filtered.length !== 1 ? "es" : ""}`}
+          onExportCSV={() => {
+            const headers = ["Nombre", "Dirección", "Ciudad", "Estado", "Cliente", "Radio geocerca", "Status"];
+            const rows = filtered.map(l => [
+              l.name, l.address ?? "", l.city ?? "", l.state ?? "",
+              clients.find(c => c.id === l.client_id)?.name ?? "",
+              String(l.geofence_radius ?? ""), l.status,
+            ]);
+            return [headers, ...rows];
+          }}
+        />
+      )}
+
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -284,6 +302,11 @@ export default function Locations() {
           </Table>
         </div>
       )}
+
+      {/* Audit trail */}
+      <div className="mt-8">
+        <AuditPanel entityType="location" title="Actividad de ubicaciones" hideViews compact />
+      </div>
     </div>
   );
 }

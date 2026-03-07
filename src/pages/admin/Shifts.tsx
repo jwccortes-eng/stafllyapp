@@ -1287,6 +1287,9 @@ export default function Shifts() {
         onPublish={handlePublishShift}
         onSave={handleEditShift}
         onRequestAction={loadData}
+        onDuplicate={(s) => {
+          handleDuplicateToDay(s, s.date);
+        }}
         availabilityConfigs={availConfigs}
         availabilityOverrides={availOverrides}
       />
