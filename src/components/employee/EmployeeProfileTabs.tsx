@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,9 +17,10 @@ import { cn } from "@/lib/utils";
 import {
   User, DollarSign, Clock, CalendarDays, FileText, Activity,
   Briefcase, Phone, Mail, MapPin, Users, Tag, Star, Shield,
-  Plus, Pencil, Trash2, MoreHorizontal, KeyRound,
+  Plus, Pencil, Trash2, MoreHorizontal, KeyRound, Upload, Download, Cake, Home,
 } from "lucide-react";
 import { EmployeeAccessTab } from "@/components/employee/EmployeeAccessTab";
+import { useToast } from "@/hooks/use-toast";
 
 type EmployeeRecord = Record<string, any>;
 
