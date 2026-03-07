@@ -18,6 +18,7 @@ import {
   LayoutGrid, List, Download, Phone, Mail, MessageCircle, Filter, X, Users
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { ClientAvatar } from "@/components/ui/client-avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 
