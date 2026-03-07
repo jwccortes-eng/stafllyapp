@@ -290,6 +290,27 @@ export default function Shifts() {
     setShowAddClient(false);
   };
 
+  // Quick-add location inline
+  const handleQuickAddLocation = async () => {
+    if (!newLocationName.trim() || !selectedCompanyId) return;
+    setAddingLocation(true);
+    const { data, error } = await supabase.from("locations").insert({
+      company_id: selectedCompanyId,
+      name: newLocationName.trim(),
+      address: newLocationAddress.trim() || null,
+      client_id: clientId || null,
+    } as any).select("id").single();
+    if (error) { toast.error(error.message); setAddingLocation(false); return; }
+    if (data) {
+      setLocations(prev => [...prev, { id: data.id, name: newLocationName.trim(), address: newLocationAddress.trim(), client_id: clientId || null }]);
+      setLocationId(data.id);
+      if (newLocationAddress.trim()) setMeetingPoint(newLocationAddress.trim());
+      toast.success(`Ubicación "${newLocationName.trim()}" creada`);
+    }
+    setNewLocationName(""); setNewLocationAddress("");
+    setAddingLocation(false); setShowAddLocation(false);
+  };
+
   // Auto-fill meeting point from client's location address
   const handleClientChange = (newClientId: string) => {
     setClientId(newClientId === "none" ? "" : newClientId);
