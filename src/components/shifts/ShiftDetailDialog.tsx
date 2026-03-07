@@ -14,7 +14,7 @@ import {
   Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
   CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
-  CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy,
+  CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy, FileText,
 } from "lucide-react";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
@@ -861,6 +861,27 @@ export function ShiftDetailDialog({
                     <Copy className="h-3 w-3" /> Duplicar
                   </Button>
                 )}
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-full" onClick={() => {
+                  import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
+                    const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
+                    const assignedEmps = shiftAssigns.map(a => {
+                      const emp = employees.find(e => e.id === a.employee_id);
+                      return { name: emp ? `${emp.first_name} ${emp.last_name}` : "—", phone: (emp as any)?.phone_number || null, role: null };
+                    });
+                    const clientName = clients.find(c => c.id === shift.client_id)?.name || null;
+                    const locationName = locations.find(l => l.id === shift.location_id)?.name || null;
+                    downloadShiftAssignmentPDF({
+                      title: shift.title, date: shift.date, startTime: shift.start_time, endTime: shift.end_time,
+                      clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
+                      transportRequired: (shift as any).transportation_required || false,
+                      transportNotes: (shift as any).transportation_notes || null,
+                      carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
+                      employees: assignedEmps, supervisorName: null,
+                    });
+                  });
+                }}>
+                  <FileText className="h-3 w-3" /> PDF
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="h-8 text-xs gap-1.5 rounded-full ml-auto">
                   <Pencil className="h-3 w-3" /> Editar
                 </Button>

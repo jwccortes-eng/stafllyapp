@@ -64,6 +64,9 @@ import ContractorW9 from "./pages/admin/ContractorW9";
 import TaxForms1099 from "./pages/admin/TaxForms1099";
 import ImportInactiveEmployees from "./pages/admin/ImportInactiveEmployees";
 import UnpaidShiftsReport from "./pages/admin/UnpaidShiftsReport";
+import StaffingRequests from "./pages/admin/StaffingRequests";
+import InvoicesPage from "./pages/admin/Invoices";
+import ServiceCategories from "./pages/admin/ServiceCategories";
 import ModuleGate from "./components/ModuleGate";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
@@ -165,6 +168,9 @@ function App() {
                 <Route path="1099" element={<TaxForms1099 />} />
                 <Route path="import-inactive" element={<ImportInactiveEmployees />} />
                 <Route path="unpaid-shifts" element={<ModuleGate moduleKey="reports"><UnpaidShiftsReport /></ModuleGate>} />
+                <Route path="staffing-requests" element={<StaffingRequests />} />
+                <Route path="invoices" element={<InvoicesPage />} />
+                <Route path="service-categories" element={<ServiceCategories />} />
               </Route>
 
               {/* Employee portal routes */}

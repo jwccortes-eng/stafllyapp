@@ -3,6 +3,7 @@ import {
   BarChart3, Users, Tags, ContactRound, Building2,
   Clock, MapPin, Megaphone, MessageCircle, ScanEye, Inbox, Bell,
   MessageSquare, Settings2, Home, User, Wrench, UserPlus, FileText, GitCompareArrows,
+  ClipboardList, Receipt,
 } from "lucide-react";
 
 export interface NavItem {
@@ -41,6 +42,9 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "notifications", to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Gestión" },
   { id: "invite", to: "/app/invite", icon: UserPlus, label: "Invitaciones", module: null, section: "Gestión" },
   { id: "admin-hub", to: "/app/admin", icon: Wrench, label: "Admin", module: null, section: "Administración", roles: ["owner"] },
+  { id: "staffing-requests", to: "/app/staffing-requests", icon: ClipboardList, label: "Solicitudes", module: null, section: "Comercial" },
+  { id: "invoices", to: "/app/invoices", icon: Receipt, label: "Facturación", module: null, section: "Comercial" },
+  { id: "service-categories", to: "/app/service-categories", icon: Tags, label: "Categorías", module: null, section: "Comercial" },
 ];
 
 export const ADMIN_DEFAULT_PINS = ["dashboard", "shifts", "employees", "movements"];
