@@ -1173,6 +1173,7 @@ export type Database = {
           address: string | null
           avatar_url: string | null
           birthday: string | null
+          certifications: string[] | null
           company_id: string
           connecteam_employee_id: string | null
           country_code: string | null
@@ -1194,12 +1195,16 @@ export type Database = {
           last_login: string | null
           last_name: string
           phone_number: string | null
+          professional_summary: string | null
           qualify: string | null
           recommended_by: string | null
+          service_category_ids: string[] | null
+          skills: string[] | null
           start_date: string | null
           tags: string | null
           updated_at: string
           user_id: string | null
+          years_experience: number | null
         }
         Insert: {
           access_pin?: string | null
@@ -1208,6 +1213,7 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           birthday?: string | null
+          certifications?: string[] | null
           company_id?: string
           connecteam_employee_id?: string | null
           country_code?: string | null
@@ -1229,12 +1235,16 @@ export type Database = {
           last_login?: string | null
           last_name: string
           phone_number?: string | null
+          professional_summary?: string | null
           qualify?: string | null
           recommended_by?: string | null
+          service_category_ids?: string[] | null
+          skills?: string[] | null
           start_date?: string | null
           tags?: string | null
           updated_at?: string
           user_id?: string | null
+          years_experience?: number | null
         }
         Update: {
           access_pin?: string | null
@@ -1243,6 +1253,7 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           birthday?: string | null
+          certifications?: string[] | null
           company_id?: string
           connecteam_employee_id?: string | null
           country_code?: string | null
@@ -1264,12 +1275,16 @@ export type Database = {
           last_login?: string | null
           last_name?: string
           phone_number?: string | null
+          professional_summary?: string | null
           qualify?: string | null
           recommended_by?: string | null
+          service_category_ids?: string[] | null
+          skills?: string[] | null
           start_date?: string | null
           tags?: string | null
           updated_at?: string
           user_id?: string | null
+          years_experience?: number | null
         }
         Relationships: [
           {
@@ -1470,6 +1485,209 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_line_items: {
+        Row: {
+          category_id: string | null
+          company_id: string
+          created_at: string
+          description: string
+          employee_id: string | null
+          id: string
+          invoice_id: string
+          quantity: number
+          shift_id: string | null
+          sort_order: number
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          category_id?: string | null
+          company_id: string
+          created_at?: string
+          description: string
+          employee_id?: string | null
+          id?: string
+          invoice_id: string
+          quantity?: number
+          shift_id?: string | null
+          sort_order?: number
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          category_id?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string
+          employee_id?: string | null
+          id?: string
+          invoice_id?: string
+          quantity?: number
+          shift_id?: string | null
+          sort_order?: number
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          billing_address: string | null
+          client_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          discount_amount: number | null
+          due_date: string | null
+          external_notes: string | null
+          grand_total: number
+          id: string
+          internal_notes: string | null
+          invoice_number: string
+          issue_date: string
+          paid_at: string | null
+          request_id: string | null
+          sent_at: string | null
+          service_period_end: string | null
+          service_period_start: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          updated_at: string
+          viewed_at: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          billing_address?: string | null
+          client_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
+          external_notes?: string | null
+          grand_total?: number
+          id?: string
+          internal_notes?: string | null
+          invoice_number: string
+          issue_date?: string
+          paid_at?: string | null
+          request_id?: string | null
+          sent_at?: string | null
+          service_period_end?: string | null
+          service_period_start?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          updated_at?: string
+          viewed_at?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          billing_address?: string | null
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
+          external_notes?: string | null
+          grand_total?: number
+          id?: string
+          internal_notes?: string | null
+          invoice_number?: string
+          issue_date?: string
+          paid_at?: string | null
+          request_id?: string | null
+          sent_at?: string | null
+          service_period_end?: string | null
+          service_period_start?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          updated_at?: string
+          viewed_at?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "staffing_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -2117,6 +2335,80 @@ export type Database = {
           },
         ]
       }
+      request_candidates: {
+        Row: {
+          accepted_at: string | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          notes: string | null
+          proposed_by: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          request_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          proposed_by?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          request_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          proposed_by?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          request_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_candidates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_candidates_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_candidates_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_candidates_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "staffing_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_templates: {
         Row: {
           actions: string[]
@@ -2201,6 +2493,8 @@ export type Database = {
       }
       scheduled_shifts: {
         Row: {
+          car_capacity: number
+          category_id: string | null
           claimable: boolean
           client_id: string | null
           company_id: string
@@ -2209,6 +2503,7 @@ export type Database = {
           date: string
           day_type: string
           deleted_at: string | null
+          driver_employee_id: string | null
           end_time: string
           id: string
           location_id: string | null
@@ -2222,9 +2517,13 @@ export type Database = {
           start_time: string
           status: string
           title: string
+          transportation_notes: string | null
+          transportation_required: boolean
           updated_at: string
         }
         Insert: {
+          car_capacity?: number
+          category_id?: string | null
           claimable?: boolean
           client_id?: string | null
           company_id: string
@@ -2233,6 +2532,7 @@ export type Database = {
           date: string
           day_type?: string
           deleted_at?: string | null
+          driver_employee_id?: string | null
           end_time: string
           id?: string
           location_id?: string | null
@@ -2246,9 +2546,13 @@ export type Database = {
           start_time: string
           status?: string
           title: string
+          transportation_notes?: string | null
+          transportation_required?: boolean
           updated_at?: string
         }
         Update: {
+          car_capacity?: number
+          category_id?: string | null
           claimable?: boolean
           client_id?: string | null
           company_id?: string
@@ -2257,6 +2561,7 @@ export type Database = {
           date?: string
           day_type?: string
           deleted_at?: string | null
+          driver_employee_id?: string | null
           end_time?: string
           id?: string
           location_id?: string | null
@@ -2270,9 +2575,18 @@ export type Database = {
           start_time?: string
           status?: string
           title?: string
+          transportation_notes?: string | null
+          transportation_required?: boolean
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "scheduled_shifts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "scheduled_shifts_client_id_fkey"
             columns: ["client_id"]
@@ -2285,6 +2599,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_shifts_driver_employee_id_fkey"
+            columns: ["driver_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_shifts_driver_employee_id_fkey"
+            columns: ["driver_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
           {
@@ -2339,6 +2667,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      service_categories: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shift_assignments: {
         Row: {
@@ -2972,6 +3344,140 @@ export type Database = {
         }
         Relationships: []
       }
+      staffing_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          assigned_manager_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          category_id: string | null
+          client_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          creation_source: string
+          end_time: string
+          estimated_bill_rate: number | null
+          estimated_duration_hours: number | null
+          estimated_pay_rate: number | null
+          gender_preference: string | null
+          id: string
+          internal_notes: string | null
+          location_id: string | null
+          notes: string | null
+          priority: string
+          requested_date: string
+          requested_role: string | null
+          required_experience: string | null
+          required_language: string | null
+          required_tags: string[] | null
+          start_time: string
+          status: Database["public"]["Enums"]["staffing_request_status"]
+          title: string
+          updated_at: string
+          workers_needed: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_manager_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          category_id?: string | null
+          client_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          creation_source?: string
+          end_time?: string
+          estimated_bill_rate?: number | null
+          estimated_duration_hours?: number | null
+          estimated_pay_rate?: number | null
+          gender_preference?: string | null
+          id?: string
+          internal_notes?: string | null
+          location_id?: string | null
+          notes?: string | null
+          priority?: string
+          requested_date: string
+          requested_role?: string | null
+          required_experience?: string | null
+          required_language?: string | null
+          required_tags?: string[] | null
+          start_time?: string
+          status?: Database["public"]["Enums"]["staffing_request_status"]
+          title: string
+          updated_at?: string
+          workers_needed?: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_manager_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          category_id?: string | null
+          client_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          creation_source?: string
+          end_time?: string
+          estimated_bill_rate?: number | null
+          estimated_duration_hours?: number | null
+          estimated_pay_rate?: number | null
+          gender_preference?: string | null
+          id?: string
+          internal_notes?: string | null
+          location_id?: string | null
+          notes?: string | null
+          priority?: string
+          requested_date?: string
+          requested_role?: string | null
+          required_experience?: string | null
+          required_language?: string | null
+          required_tags?: string[] | null
+          start_time?: string
+          status?: Database["public"]["Enums"]["staffing_request_status"]
+          title?: string
+          updated_at?: string
+          workers_needed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staffing_requests_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staffing_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staffing_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staffing_requests_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean
@@ -3517,7 +4023,30 @@ export type Database = {
       app_role: "admin" | "employee" | "developer" | "owner" | "manager"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
       concept_category: "extra" | "deduction"
+      invoice_status:
+        | "draft"
+        | "approved"
+        | "issued"
+        | "sent"
+        | "viewed"
+        | "partially_paid"
+        | "paid"
+        | "overdue"
+        | "voided"
       rate_source: "concept_default" | "per_employee"
+      staffing_request_status:
+        | "draft"
+        | "submitted"
+        | "under_review"
+        | "approved"
+        | "rejected"
+        | "sourcing"
+        | "partially_assigned"
+        | "fully_assigned"
+        | "scheduled"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3648,7 +4177,32 @@ export const Constants = {
       app_role: ["admin", "employee", "developer", "owner", "manager"],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
       concept_category: ["extra", "deduction"],
+      invoice_status: [
+        "draft",
+        "approved",
+        "issued",
+        "sent",
+        "viewed",
+        "partially_paid",
+        "paid",
+        "overdue",
+        "voided",
+      ],
       rate_source: ["concept_default", "per_employee"],
+      staffing_request_status: [
+        "draft",
+        "submitted",
+        "under_review",
+        "approved",
+        "rejected",
+        "sourcing",
+        "partially_assigned",
+        "fully_assigned",
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
     },
   },
 } as const
