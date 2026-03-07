@@ -168,6 +168,9 @@ function App() {
                 <Route path="1099" element={<TaxForms1099 />} />
                 <Route path="import-inactive" element={<ImportInactiveEmployees />} />
                 <Route path="unpaid-shifts" element={<ModuleGate moduleKey="reports"><UnpaidShiftsReport /></ModuleGate>} />
+                <Route path="staffing-requests" element={<StaffingRequests />} />
+                <Route path="invoices" element={<InvoicesPage />} />
+                <Route path="service-categories" element={<ServiceCategories />} />
               </Route>
 
               {/* Employee portal routes */}
