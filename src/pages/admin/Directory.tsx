@@ -69,7 +69,24 @@ export default function Directory() {
         subtitle={`${filtered.length} empleados activos`}
       />
 
-      {/* Search & Filter */}
+      {filtered.length > 0 && (
+        <ReportActionsBar
+          title="Directorio"
+          subtitle={`${filtered.length} empleados`}
+          onExportCSV={() => {
+            const headers = ["Nombre", "Teléfono", "Email", "Rol", "Género"];
+            const rows = filtered.map(e => [
+              formatPersonName(`${e.first_name} ${e.last_name}`),
+              e.phone_number ?? "",
+              e.email ?? "",
+              e.employee_role ?? "",
+              e.gender ?? "",
+            ]);
+            return [headers, ...rows];
+          }}
+        />
+      )}
+
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
