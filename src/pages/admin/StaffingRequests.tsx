@@ -157,6 +157,28 @@ export default function StaffingRequests() {
     loadData();
   };
 
+  const handleConvertToShifts = async (req: StaffingRequest) => {
+    if (!selectedCompanyId) return;
+    const { error } = await supabase.from("scheduled_shifts").insert({
+      company_id: selectedCompanyId,
+      title: req.title,
+      date: req.requested_date,
+      start_time: req.start_time,
+      end_time: req.end_time,
+      client_id: req.client_id,
+      location_id: req.location_id,
+      category_id: req.category_id,
+      slots: req.workers_needed,
+      notes: req.notes,
+      request_id: req.id,
+      created_by: user?.id,
+    } as any);
+    if (error) { toast.error(error.message); return; }
+    await supabase.from("staffing_requests").update({ status: "scheduled" } as any).eq("id", req.id);
+    toast.success("Turno creado desde la solicitud");
+    loadData();
+  };
+
   const getClientName = (id: string | null) => clients.find(c => c.id === id)?.name || "—";
   const getLocationName = (id: string | null) => locations.find(l => l.id === id)?.name || "—";
   const getCategoryName = (id: string | null) => categories.find(c => c.id === id)?.name || "—";
