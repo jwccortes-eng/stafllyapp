@@ -328,6 +328,27 @@ export default function AdminDashboard() {
     }
     fetchTodaySummary();
 
+    // Fetch commercial KPIs
+    async function fetchCommercialKpis() {
+      const [clientsRes, reqRes, invRes] = await Promise.all([
+        supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).is("deleted_at", null).eq("status", "active"),
+        supabase.from("staffing_requests").select("id", { count: "exact", head: true }).eq("company_id", selectedCompanyId!).not("status", "in", '("completed","cancelled","rejected")'),
+        supabase.from("invoices").select("id, status, grand_total").eq("company_id", selectedCompanyId!),
+      ]);
+      const invoices = invRes.data ?? [];
+      const unpaid = invoices.filter(i => ["issued","sent","viewed","overdue"].includes(i.status));
+      const overdue = invoices.filter(i => i.status === "overdue");
+      setCommercialKpis({
+        activeClients: clientsRes.count ?? 0,
+        openRequests: reqRes.count ?? 0,
+        unpaidInvoices: unpaid.length,
+        overdueInvoices: overdue.length,
+        unpaidTotal: unpaid.reduce((s, i) => s + (i.grand_total || 0), 0),
+        overdueTotal: overdue.reduce((s, i) => s + (i.grand_total || 0), 0),
+      });
+    }
+    fetchCommercialKpis();
+
     supabase.from("employees").select("created_at")
       .eq("company_id", selectedCompanyId!).eq("is_active", true)
       .order("created_at", { ascending: true })
