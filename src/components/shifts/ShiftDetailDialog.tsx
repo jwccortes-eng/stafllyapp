@@ -637,6 +637,16 @@ export function ShiftDetailDialog({
                             {statusLabels[a.status] || a.status}
                           </span>
                         )}
+                        {effectiveCanEdit && selectedCompanyId && (
+                          <ShiftReviewButton
+                            shiftId={shift.id}
+                            companyId={selectedCompanyId}
+                            reviewerType="manager"
+                            reviewerId={user?.id || ""}
+                            reviewedEmployeeId={emp.id}
+                            employeeName={`${emp.first_name} ${emp.last_name}`}
+                          />
+                        )}
                         {effectiveCanEdit && (
                           <button
                             onClick={() => setRemoveConfirm({ assignmentId: a.id, employeeName: `${emp.first_name} ${emp.last_name}` })}
