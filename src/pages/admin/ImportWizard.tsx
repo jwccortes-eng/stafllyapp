@@ -1090,6 +1090,35 @@ export default function ImportWizard() {
         </TabsList>
 
         <TabsContent value="wizard" className="space-y-5 mt-4">
+          {/* Platform selector */}
+          {step === "upload" && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Plataforma de origen</p>
+              <div className="flex flex-wrap gap-2">
+                {PLATFORM_LIST.map(p => (
+                  <Button
+                    key={p.id}
+                    variant={platform === p.id ? "default" : "outline"}
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      setPlatform(p.id);
+                      setScheduleFiles([]);
+                      setClockFile(null);
+                      setPayrollFile(null);
+                      setShiftGroups([]);
+                      setClockEntries([]);
+                      setPayrollExtras([]);
+                      setValidation(null);
+                    }}
+                  >
+                    <span className={platform === p.id ? "" : p.color}>{p.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Stepper */}
           {step !== "result" && step !== "importing" && (
             <div className="flex items-center gap-2">
