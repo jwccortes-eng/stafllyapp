@@ -696,12 +696,15 @@ export function EmployeeProfileTabs({
         <InfoTab employee={employee} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} />
       </TabsContent>
       <TabsContent value="reputation" className="mt-0">
-        <Card className="rounded-xl border-border/40">
-          <CardContent className="p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3">Performance Score</h3>
-            <EmployeePerformanceScore employeeId={employee.id} />
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <ReputationProfile employeeId={employee.id} companyId={companyId} />
+          <Card className="rounded-xl border-border/40">
+            <CardContent className="p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3">Desglose de reseñas</h3>
+              <EmployeePerformanceScore employeeId={employee.id} />
+            </CardContent>
+          </Card>
+        </div>
       </TabsContent>
       <TabsContent value="pay" className="mt-0">
         <PayTab employee={employee} companyId={companyId} />
