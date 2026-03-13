@@ -106,7 +106,7 @@ export default function ActivityLog() {
         .order("created_at", { ascending: false })
         .limit(limit);
 
-      if (role !== "owner" && selectedCompanyId) {
+      if (role !== "owner" && role !== "developer" && selectedCompanyId) {
         query = query.eq("company_id", selectedCompanyId);
       }
       if (filterEntity !== "all") {
@@ -159,7 +159,7 @@ export default function ActivityLog() {
     );
   });
 
-  if (role !== "owner" && role !== "admin") {
+  if (role !== "owner" && role !== "developer" && role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-muted-foreground">No tienes acceso a este módulo.</p>

@@ -239,7 +239,7 @@ export default function CompaniesPage() {
 
   const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "developer") {
     return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">No tienes acceso a este módulo.</p></div>;
   }
 

@@ -162,7 +162,7 @@ export default function OnboardingWizard() {
     });
   };
 
-  if (role !== "owner") {
+  if (role !== "owner" && role !== "developer") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-muted-foreground">No tienes acceso a este módulo.</p>
