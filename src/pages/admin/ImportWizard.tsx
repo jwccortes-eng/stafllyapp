@@ -1479,7 +1479,7 @@ export default function ImportWizard() {
               )}
 
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep("upload")} className="gap-1.5">
+                <Button variant="outline" onClick={() => setStep("upload-payroll")} className="gap-1.5">
                   <RotateCcw className="h-4 w-4" />
                   Volver
                 </Button>
