@@ -380,27 +380,29 @@ export default function ImportWizard() {
   const parsePayrollFile = useCallback(async (f: File) => {
     const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
     let json: Record<string, string>[];
+    const useSecondSheet = platformConfig.payroll.preferSecondSheet;
     if (ext === "csv" || ext === "txt" || ext === "tsv") {
       json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
     } else {
-      // For Excel payroll, try second sheet first
       const data = await f.arrayBuffer();
       const wb = await safeRead(data);
       const names = getSheetNames(wb);
-      const sheetName = names.length >= 2 ? names[1] : names[0];
+      const sheetName = useSecondSheet && names.length >= 2 ? names[1] : names[0];
       const ws = getSheet(wb, sheetName);
       if (!ws) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
       json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
     }
     if (json.length === 0) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
 
+    const CONCEPT_MAP = platformConfig.payroll.conceptMap;
     const headers = Object.keys(json[0]);
     const detected: string[] = [];
     headers.forEach(h => {
-      if (PAYROLL_CONCEPT_MAP[h.toLowerCase().trim()]) detected.push(h);
+      if (CONCEPT_MAP[h.toLowerCase().trim()]) detected.push(h);
     });
 
     // Fetch employees for matching
+    const pc = platformConfig.payroll.columns;
     const { data: employees } = await supabase
       .from("employees")
       .select("id, first_name, last_name")
@@ -410,8 +412,8 @@ export default function ImportWizard() {
     // Group by employee (keep last row = summary)
     const employeeGroups: Record<string, Record<string, string>> = {};
     for (const row of json) {
-      const fn = (row["First name"] ?? "").trim();
-      const ln = (row["Last name"] ?? "").trim();
+      const fn = resolveColumn(row, pc.firstName);
+      const ln = resolveColumn(row, pc.lastName);
       if (!fn && !ln) continue;
       if (/^SYSTEM$/i.test(fn)) continue;
       const key = `${fn.toLowerCase()}|${ln.toLowerCase()}`;
@@ -420,14 +422,14 @@ export default function ImportWizard() {
 
     const results: PayrollExtra[] = [];
     for (const [, row] of Object.entries(employeeGroups)) {
-      const fn = (row["First name"] ?? "").trim();
-      const ln = (row["Last name"] ?? "").trim();
+      const fn = resolveColumn(row, pc.firstName);
+      const ln = resolveColumn(row, pc.lastName);
       const emp = empList.find(e => e.first_name.toLowerCase() === fn.toLowerCase() && e.last_name.toLowerCase() === ln.toLowerCase());
 
       const extras: PayrollExtra["extras"] = [];
       let total = 0;
       for (const col of detected) {
-        const mapping = PAYROLL_CONCEPT_MAP[col.toLowerCase().trim()];
+        const mapping = CONCEPT_MAP[col.toLowerCase().trim()];
         if (!mapping) continue;
         const val = parseCurrency(row[col]);
         if (val === 0) continue;
@@ -441,7 +443,7 @@ export default function ImportWizard() {
     }
 
     return { extras: results, detectedCols: detected };
-  }, [selectedCompanyId]);
+  }, [selectedCompanyId, platformConfig]);
 
   /* ─── Parse all files and build validation ─── */
   const handleParseAll = useCallback(async () => {
