@@ -67,7 +67,8 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
   { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Gestión", badge: "tickets" },
 
-  // AI
+  // AI & Maps
+  { to: "/app/live-map", icon: Map, label: "Mapa en Vivo", module: null, section: "Operaciones" },
   { to: "/app/ai-workforce", icon: Brain, label: "AI Workforce", module: null, section: "Operaciones" },
 
   // Comercial — staffing requests, invoicing

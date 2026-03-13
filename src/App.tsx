@@ -176,6 +176,7 @@ function App() {
                 <Route path="invoices" element={<InvoicesPage />} />
                 <Route path="service-categories" element={<ServiceCategories />} />
                 <Route path="ai-workforce" element={<AIWorkforce />} />
+                <Route path="live-map" element={<LiveMap />} />
               </Route>
 
               {/* Employee portal routes */}
