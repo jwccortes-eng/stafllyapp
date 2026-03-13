@@ -836,10 +836,10 @@ export default function ImportWizard() {
             results.timeClockLinked++;
             // Update shift status → "worked"
             await supabase.from("scheduled_shifts")
-              .update({ status: "confirmed" })
+              .update({ status: "worked" })
               .eq("id", shiftId)
               .eq("company_id", selectedCompanyId)
-              .in("status", ["open", "assigned"]);
+              .in("status", ["open", "assigned", "scheduled"]);
           }
 
           const notesParts: string[] = [];
