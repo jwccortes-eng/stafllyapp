@@ -8,7 +8,7 @@ import {
   BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2,
   PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
   MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
-  Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt,
+  Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -65,6 +65,9 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Gestión" },
   { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
   { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Gestión", badge: "tickets" },
+
+  // AI
+  { to: "/app/ai-workforce", icon: Brain, label: "AI Workforce", module: null, section: "Operaciones" },
 
   // Comercial — staffing requests, invoicing
   { to: "/app/staffing-requests", icon: ClipboardList, label: "Solicitudes", module: null, section: "Comercial" },
