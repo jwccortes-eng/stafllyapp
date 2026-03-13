@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, MapPin, Users, CalendarDays, FileText, Navigation, AlertCircle, LogIn, MessageCircle, Star } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
+import { NavigationButtons } from "@/components/navigation/NavigationButtons";
 import { format, parseISO, differenceInMinutes, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
