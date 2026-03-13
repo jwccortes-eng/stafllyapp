@@ -141,6 +141,7 @@ function App() {
                 <Route path="import-timeclock" element={<ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate>} />
                 <Route path="import-extras" element={<ModuleGate moduleKey="import"><ImportPayrollExtras /></ModuleGate>} />
                 <Route path="bulk-import-shifts" element={<BulkImportShifts />} />
+                <Route path="import-wizard" element={<ModuleGate moduleKey="import"><ImportWizard /></ModuleGate>} />
                 <Route path="shift-requests" element={<ShiftRequests />} />
                 <Route path="timeclock" element={<ModuleGate moduleKey="timeclock"><TimeClock /></ModuleGate>} />
                 <Route path="today" element={<TodayView />} />
