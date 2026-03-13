@@ -1125,15 +1125,18 @@ export default function ImportWizard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-xs text-muted-foreground mb-3">
-                      Schedule Export de Connecteam (.xlsx). Detecta turnos, Weekend Jobs y PayRide automáticamente.
+                      Schedule Export (.xlsx, .csv, .txt). Detecta turnos, Weekend Jobs y PayRide automáticamente.
                     </p>
                     <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
                       <Upload className="h-5 w-5 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
                         {scheduleFiles.length > 0 ? scheduleFiles.map(f => f.name).join(", ") : "Subir archivo(s)"}
                       </span>
-                      <input type="file" className="hidden" accept=".xls,.xlsx" multiple onChange={handleScheduleFiles} />
+                      <input type="file" className="hidden" accept={ACCEPTED_FORMATS} multiple onChange={handleScheduleFiles} />
                     </label>
+                    <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("schedule")}>
+                      <Download className="h-3.5 w-3.5" /> Descargar plantilla
+                    </Button>
                   </CardContent>
                 </Card>
 
