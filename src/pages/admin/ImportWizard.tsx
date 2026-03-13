@@ -1014,6 +1014,44 @@ export default function ImportWizard() {
   };
 
   const hasAnyFile = scheduleFiles.length > 0 || clockFile || payrollFile;
+  const ACCEPTED_FORMATS = ".xls,.xlsx,.csv,.txt,.tsv";
+
+  /* ─── Template downloads ─── */
+  const downloadTemplate = async (type: "schedule" | "timeclock" | "payroll") => {
+    const templates: Record<string, { headers: string[]; sample: Record<string, string>[] }> = {
+      schedule: {
+        headers: ["Date", "Shift title", "Start", "End", "Job", "Sub item", "Users", "Address", "Note", "Shift tags", "Availability status", "Last Status"],
+        sample: [
+          { Date: "01/15/2025", "Shift title": "101", Start: "8:00 AM", End: "5:00 PM", Job: "01 - ACME Corp", "Sub item": "", Users: "John Smith", Address: "123 Main St", Note: "", "Shift tags": "", "Availability status": "", "Last Status": "Accepted" },
+          { Date: "01/15/2025", "Shift title": "102", Start: "6:00 PM", End: "11:00 PM", Job: "02 - Beta Inc", "Sub item": "Weekend Job", Users: "Jane Doe", Address: "", Note: "", "Shift tags": "", "Availability status": "", "Last Status": "Accepted" },
+          { Date: "01/15/2025", "Shift title": "99", Start: "7:00 AM", End: "7:30 AM", Job: "99 - PAY RIDE", "Sub item": "PayRide", Users: "John Smith", Address: "", Note: "", "Shift tags": "", "Availability status": "", "Last Status": "" },
+        ],
+      },
+      timeclock: {
+        headers: ["Shift Number", "Type", "First name", "Last name", "Start Date", "In", "End Date", "Out", "Shift hours", "Hourly rate (USD)", "Scheduled shift title", "Employee notes", "Manager notes"],
+        sample: [
+          { "Shift Number": "1", Type: "Regular", "First name": "John", "Last name": "Smith", "Start Date": "01/15/2025", In: "8:00 AM", "End Date": "01/15/2025", Out: "5:00 PM", "Shift hours": "9", "Hourly rate (USD)": "18.50", "Scheduled shift title": "101", "Employee notes": "", "Manager notes": "" },
+        ],
+      },
+      payroll: {
+        headers: ["First name", "Last name", "PayPer Day", "Ryde", "Tips", "Reimbursements", "Travel Hours", "Discount"],
+        sample: [
+          { "First name": "John", "Last name": "Smith", "PayPer Day": "$525.00", Ryde: "$25.00", Tips: "$50.00", Reimbursements: "", "Travel Hours": "", Discount: "" },
+        ],
+      },
+    };
+
+    const tpl = templates[type];
+    const data = tpl.sample.map(row => {
+      const full: Record<string, string> = {};
+      tpl.headers.forEach(h => { full[h] = row[h] ?? ""; });
+      return full;
+    });
+
+    const names = { schedule: "Plantilla_Programaciones", timeclock: "Plantilla_Relojes", payroll: "Plantilla_Nomina" };
+    await writeExcelFile(data, "Template", `${names[type]}.xlsx`);
+    toast({ title: "Plantilla descargada", description: `${names[type]}.xlsx` });
+  };
 
   /* ─── Render helpers ─── */
   const KpiCard = ({ label, value, icon: Icon, color = "text-primary" }: { label: string; value: string | number; icon: any; color?: string }) => (
