@@ -36,6 +36,7 @@ import ImportSchedule from "./pages/admin/ImportSchedule";
 import ImportTimeClock from "./pages/admin/ImportTimeClock";
 import ImportPayrollExtras from "./pages/admin/ImportPayrollExtras";
 import BulkImportShifts from "./pages/admin/BulkImportShifts";
+import ImportWizard from "./pages/admin/ImportWizard";
 import TimeClock from "./pages/admin/TimeClock";
 import TodayView from "./pages/admin/TodayView";
 import Announcements from "./pages/admin/Announcements";
