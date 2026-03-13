@@ -165,11 +165,7 @@ const parseCurrency = (val: string): number => {
   return parseFloat(cleaned) || 0;
 };
 
-function findClockDateKey(row: Record<string, string>, baseName: string, useSecond: boolean): string {
-  const keys = Object.keys(row).filter(k => k.startsWith(baseName));
-  if (useSecond && keys.length > 1) return keys[1];
-  return keys[0] || baseName;
-}
+// findClockDateKey removed — now using resolveColumn from platform configs
 
 /* ─── Wizard steps ─── */
 type WizardStep = "upload" | "validation" | "confirm" | "importing" | "result" | "history";
