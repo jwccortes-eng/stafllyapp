@@ -137,6 +137,7 @@ supabase/
 | `auth-email-hook` | Personalizar emails de auth | ❌ (hook) |
 | `external-api` | API pública para integraciones | ✅ API Key |
 | `payroll-consolidate` | Consolidar base pay de periodo | ✅ JWT |
+| `ai-workforce` | Sugerencias IA de asignación de personal | ✅ JWT |
 
 ## Seguridad
 
