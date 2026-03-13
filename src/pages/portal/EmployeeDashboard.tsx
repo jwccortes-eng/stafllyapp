@@ -2,19 +2,20 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPersonName } from "@/lib/format-helpers";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import {
   Wallet, Clock, Megaphone, CalendarDays,
   ArrowRight, Pin,
   ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper,
+  Timer, LogIn, LogOut, MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { format, parseISO, isToday, isTomorrow, formatDistanceToNow, isAfter, subDays } from "date-fns";
+import { format, parseISO, isToday, isTomorrow, formatDistanceToNow, isAfter, subDays, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-
+import { Button } from "@/components/ui/button";
 
 // --- Types (unchanged) ---
 interface PayPeriod {
