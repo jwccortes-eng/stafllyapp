@@ -109,23 +109,57 @@ serve(async (req) => {
       if (a.status === "confirmed" || a.status === "completed") perfMap[a.employee_id].completed++;
     }
 
+    // Fetch review averages per employee
+    const { data: reviews } = await supabase
+      .from("shift_reviews")
+      .select("reviewed_employee_id, overall_rating")
+      .eq("company_id", company_id)
+      .eq("reviewer_type", "manager");
+
+    const reviewMap: Record<string, { sum: number; count: number }> = {};
+    for (const r of reviews ?? []) {
+      if (!r.reviewed_employee_id) continue;
+      if (!reviewMap[r.reviewed_employee_id]) reviewMap[r.reviewed_employee_id] = { sum: 0, count: 0 };
+      reviewMap[r.reviewed_employee_id].sum += Number(r.overall_rating);
+      reviewMap[r.reviewed_employee_id].count++;
+    }
+
+    // Fetch badges per employee
+    const { data: badges } = await supabase
+      .from("employee_badges")
+      .select("employee_id, badge_label")
+      .eq("company_id", company_id);
+
+    const badgeMap: Record<string, string[]> = {};
+    for (const b of badges ?? []) {
+      if (!badgeMap[b.employee_id]) badgeMap[b.employee_id] = [];
+      badgeMap[b.employee_id].push(b.badge_label);
+    }
+
     // Build context for AI
     const contextData = {
-      employees: (employees ?? []).map((e: any) => ({
-        id: e.id,
-        name: `${e.first_name} ${e.last_name}`,
-        skills: e.skills ?? [],
-        certifications: e.certifications ?? [],
-        service_categories: e.service_category_ids ?? [],
-        address: e.address,
-        qualify: e.qualify,
-        years_experience: e.years_experience,
-        english_level: e.english_level,
-        performance: perfMap[e.id] ? {
-          completion_rate: Math.round((perfMap[e.id].completed / perfMap[e.id].total) * 100),
-          shifts_last_30d: perfMap[e.id].total,
-        } : { completion_rate: 0, shifts_last_30d: 0 },
-      })),
+      employees: (employees ?? []).map((e: any) => {
+        const perf = perfMap[e.id];
+        const rev = reviewMap[e.id];
+        return {
+          id: e.id,
+          name: `${e.first_name} ${e.last_name}`,
+          skills: e.skills ?? [],
+          certifications: e.certifications ?? [],
+          service_categories: e.service_category_ids ?? [],
+          address: e.address,
+          qualify: e.qualify,
+          years_experience: e.years_experience,
+          english_level: e.english_level,
+          performance: perf ? {
+            completion_rate: Math.round((perf.completed / perf.total) * 100),
+            shifts_last_30d: perf.total,
+          } : { completion_rate: 0, shifts_last_30d: 0 },
+          rating: rev ? Math.round((rev.sum / rev.count) * 10) / 10 : null,
+          review_count: rev?.count ?? 0,
+          badges: badgeMap[e.id] ?? [],
+        };
+      }),
       shifts: (shifts ?? []).map((s: any) => ({
         id: s.id,
         title: s.title,
