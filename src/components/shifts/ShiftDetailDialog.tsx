@@ -51,6 +51,7 @@ interface ShiftDetailDialogProps {
   onSave?: (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => Promise<void>;
   onRequestAction?: () => void;
   onDuplicate?: (shift: Shift) => void;
+  onDelete?: (shift: Shift) => void;
   availabilityConfigs?: AvailabilityConfig[];
   availabilityOverrides?: AvailabilityOverride[];
 }
