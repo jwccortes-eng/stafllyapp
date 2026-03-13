@@ -38,7 +38,9 @@ export default function AIWorkforce() {
   const [assigned, setAssigned] = useState<Set<string>>(new Set());
 
   const allowedRoles = ["developer", "owner", "admin"];
-  if (!allowedRoles.includes(role ?? "")) {
+  const hasAccess = allowedRoles.includes(role ?? "");
+
+  if (!hasAccess) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-muted-foreground">No tienes acceso a este módulo.</p>
