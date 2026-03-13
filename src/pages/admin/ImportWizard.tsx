@@ -168,12 +168,14 @@ const parseCurrency = (val: string): number => {
 // findClockDateKey removed — now using resolveColumn from platform configs
 
 /* ─── Wizard steps ─── */
-type WizardStep = "upload" | "validation" | "confirm" | "importing" | "result" | "history";
+type WizardStep = "upload-schedule" | "upload-clock" | "upload-payroll" | "validation" | "confirm" | "importing" | "result" | "history";
 
-const STEPS = [
-  { key: "upload" as const, label: "Subir Archivos", icon: Upload },
-  { key: "validation" as const, label: "Validación", icon: AlertTriangle },
-  { key: "confirm" as const, label: "Confirmar", icon: CheckCircle2 },
+const STEPS: { key: WizardStep; label: string; icon: any }[] = [
+  { key: "upload-schedule", label: "Schedules", icon: CalendarDays },
+  { key: "upload-clock", label: "Time Clocks", icon: Clock },
+  { key: "upload-payroll", label: "Payroll", icon: DollarSign },
+  { key: "validation", label: "Validation", icon: AlertTriangle },
+  { key: "confirm", label: "Import", icon: CheckCircle2 },
 ];
 
 export default function ImportWizard() {
