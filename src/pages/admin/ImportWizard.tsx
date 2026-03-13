@@ -343,44 +343,46 @@ export default function ImportWizard() {
   const parseClockFile = useCallback(async (f: File) => {
     const json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
     const parsed: ClockEntry[] = [];
+    const tc = platformConfig.timeclock.columns;
 
     for (const row of json) {
-      const shiftNum = (row["Shift Number"] ?? "").trim();
-      const type = (row["Type"] ?? "").trim();
-      if (!shiftNum && !type) continue; // summary row
+      const shiftNum = resolveColumn(row, tc.shiftNumber);
+      const type = resolveColumn(row, tc.type);
+      if (!shiftNum && !type) continue;
 
-      const firstName = (row["First name"] ?? "").trim();
-      const lastName = (row["Last name"] ?? "").trim();
+      const firstName = resolveColumn(row, tc.firstName);
+      const lastName = resolveColumn(row, tc.lastName);
       if (!firstName && !lastName) continue;
       if (/^SYSTEM$/i.test(firstName)) continue;
 
-      const startDateKey = findClockDateKey(row, "Start Date", true);
-      const endDateKey = findClockDateKey(row, "End Date", true);
+      // Resolve date columns (handle duplicate "Start Date" columns)
+      const startDateKey = findColumnKey(row, tc.startDate) || "Start Date";
+      const endDateKey = findColumnKey(row, tc.endDate) || "End Date";
       const startDateRaw = row[startDateKey] ?? "";
-      const inRaw = (row["In"] ?? "").trim();
+      const inRaw = resolveColumn(row, tc.clockIn);
       const endDateRaw = row[endDateKey] ?? "";
-      const outRaw = (row["Out"] ?? "").trim();
+      const outRaw = resolveColumn(row, tc.clockOut);
 
       const clockIn = parseClockTimestamp(startDateRaw, inRaw);
       if (!clockIn) continue;
       const clockOut = parseClockTimestamp(endDateRaw, outRaw);
 
-      const shiftHours = parseFloat(row["Shift hours"] ?? "0") || 0;
+      const shiftHours = parseFloat(resolveColumn(row, tc.shiftHours) || "0") || 0;
       const durationHours = clockOut ? (clockOut.getTime() - clockIn.getTime()) / 3600000 : 0;
-      const isUnpaid = shiftHours === 0 || /unpaid|no\s*pay|sin\s*pago/i.test(type) || durationHours > 24;
+      const isUnpaid = shiftHours === 0 || platformConfig.timeclock.unpaidPatterns.some(p => p.test(type)) || durationHours > 24;
 
       parsed.push({
         firstName, lastName, clockIn, clockOut, shiftHours,
-        hourlyRate: parseFloat(row["Hourly rate (USD)"] ?? "0") || 0,
-        scheduledShiftTitle: (row["Scheduled shift title"] ?? "").trim(),
-        employeeNotes: (row["Employee notes"] ?? "").trim(),
-        managerNotes: (row["Manager notes"] ?? "").trim(),
+        hourlyRate: parseFloat(resolveColumn(row, tc.hourlyRate) || "0") || 0,
+        scheduledShiftTitle: resolveColumn(row, tc.scheduledShiftTitle),
+        employeeNotes: resolveColumn(row, tc.employeeNotes),
+        managerNotes: resolveColumn(row, tc.managerNotes),
         isUnpaid,
         job: type,
       });
     }
     return parsed;
-  }, []);
+  }, [platformConfig]);
 
   /* ─── Parse Payroll file ─── */
   const parsePayrollFile = useCallback(async (f: File) => {
