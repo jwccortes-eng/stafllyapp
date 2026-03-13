@@ -129,6 +129,7 @@ const priorityConfig: Record<string, { cls: string; bgCls: string; label: string
 
 export default function EmployeeDashboard() {
   const { employeeId } = useAuth();
+  const navigate = useNavigate();
   const [empName, setEmpName] = useState("");
   const [empAvatar, setEmpAvatar] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -139,6 +140,8 @@ export default function EmployeeDashboard() {
   const [reactions, setReactions] = useState<Record<string, ReactionCount[]>>({});
   const [loading, setLoading] = useState(true);
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
+  const [clockStatus, setClockStatus] = useState<{ isClockedIn: boolean; clockInTime: string | null; shiftTitle: string | null }>({ isClockedIn: false, clockInTime: null, shiftTitle: null });
+  const [weeklyHours, setWeeklyHours] = useState<string>("0h");
 
   const loadFeed = useCallback(async () => {
     if (!employeeId) {
