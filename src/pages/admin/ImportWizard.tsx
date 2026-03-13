@@ -968,6 +968,7 @@ export default function ImportWizard() {
         company_id: selectedCompanyId,
         created_by: user.id,
         batch_type: "unified",
+        source: platform,
         schedule_file_name: scheduleFiles.map(f => f.name).join(", ") || null,
         timeclock_file_name: clockFile?.name ?? null,
         payroll_file_name: payrollFile?.name ?? null,
