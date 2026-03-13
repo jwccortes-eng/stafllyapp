@@ -178,6 +178,7 @@ function App() {
                 <Route path="service-categories" element={<ServiceCategories />} />
                 <Route path="ai-workforce" element={<AIWorkforce />} />
                 <Route path="live-map" element={<LiveMap />} />
+                <Route path="leaderboard" element={<Leaderboard />} />
               </Route>
 
               {/* Employee portal routes */}
