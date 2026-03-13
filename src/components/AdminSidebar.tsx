@@ -9,7 +9,7 @@ import {
   PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
   MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
-  Map,
+  Map as MapIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
