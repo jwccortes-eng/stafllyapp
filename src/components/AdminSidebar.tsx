@@ -9,6 +9,7 @@ import {
   PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
   MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
+  Map as MapIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -66,7 +67,8 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
   { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Gestión", badge: "tickets" },
 
-  // AI
+  // AI & Maps
+  { to: "/app/live-map", icon: MapIcon, label: "Mapa en Vivo", module: null, section: "Operaciones" },
   { to: "/app/ai-workforce", icon: Brain, label: "AI Workforce", module: null, section: "Operaciones" },
 
   // Comercial — staffing requests, invoicing

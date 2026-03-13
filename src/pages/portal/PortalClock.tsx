@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users, AlertCircle, FileText, Hash, ArrowLeft, ShieldAlert } from "lucide-react";
+import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users, AlertCircle, FileText, Hash, ArrowLeft, ShieldAlert, Navigation } from "lucide-react";
+import { capturePosition, getDeviceId, distanceMeters } from "@/lib/geo-helpers";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -166,12 +167,64 @@ export default function PortalClock() {
 
     setActing(true);
     try {
-      const { error } = await supabase.from("time_entries").insert({
+      // Capture GPS position
+      const pos = await capturePosition();
+      const device = getDeviceId();
+
+      const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
         employee_id: employeeId, company_id: companyId,
         clock_in: new Date().toISOString(), status: "pending",
         shift_id: selectedShift.id,
-      });
+      }).select("id").single();
       if (error) throw error;
+
+      // Save clock event with GPS data
+      if (insertedEntry) {
+        await supabase.from("clock_events").insert({
+          employee_id: employeeId, company_id: companyId,
+          shift_id: selectedShift.id, time_entry_id: insertedEntry.id,
+          type: "clock_in",
+          latitude: pos?.latitude ?? null,
+          longitude: pos?.longitude ?? null,
+          accuracy: pos?.accuracy ?? null,
+          device,
+        } as any);
+
+        // Check geofence if location has coordinates
+        if (pos && selectedShift.id) {
+          const { data: shiftData } = await supabase
+            .from("scheduled_shifts")
+            .select("location_id, locations(latitude, longitude, geofence_radius)")
+            .eq("id", selectedShift.id)
+            .maybeSingle();
+
+          const loc = (shiftData as any)?.locations;
+          if (loc?.latitude && loc?.longitude) {
+            const dist = distanceMeters(pos.latitude, pos.longitude, loc.latitude, loc.longitude);
+            const radius = loc.geofence_radius ?? 200;
+            if (dist > radius) {
+              // Create alert for outside geofence
+              await supabase.from("clock_alerts").insert({
+                employee_id: employeeId, company_id: companyId,
+                shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE",
+                severity: "high",
+                description: `Clock-in a ${Math.round(dist)}m de la ubicación (radio: ${radius}m)`,
+              } as any);
+            }
+          }
+        }
+
+        // Check GPS accuracy
+        if (pos && pos.accuracy > 100) {
+          await supabase.from("clock_alerts").insert({
+            employee_id: employeeId, company_id: companyId,
+            shift_id: selectedShift.id, type: "GPS_LOW_ACCURACY",
+            severity: "low",
+            description: `Precisión GPS: ±${Math.round(pos.accuracy)}m`,
+          } as any);
+        }
+      }
+
       toast({ title: "Entrada registrada", description: `Turno: ${selectedShift.title} (#${(selectedShift.shift_code || "").padStart(4, "0")})` });
       setSelectedShift(null);
       await loadData();
@@ -183,39 +236,41 @@ export default function PortalClock() {
   const handleClockOut = async () => {
     if (!activeEntry || !companyId || !employeeId) return;
 
-    // Find the shift associated with the active entry
     const activeShift = todayShifts.find(s => s.id === activeEntry.shift_id) ?? null;
     const scheduleCheck = isClockOutWithinSchedule(activeShift);
 
     setActing(true);
     try {
       const clockOutTime = new Date().toISOString();
+      const pos = await capturePosition();
+      const device = getDeviceId();
+
+      // Save clock-out event with GPS
+      await supabase.from("clock_events").insert({
+        employee_id: employeeId, company_id: companyId,
+        shift_id: activeEntry.shift_id, time_entry_id: activeEntry.id,
+        type: "clock_out",
+        latitude: pos?.latitude ?? null,
+        longitude: pos?.longitude ?? null,
+        accuracy: pos?.accuracy ?? null,
+        device,
+      } as any);
 
       if (!scheduleCheck.withinSchedule) {
-        // Clock-out outside schedule → mark as "pending" and create a review ticket
         const { error } = await supabase.from("time_entries")
           .update({ clock_out: clockOutTime, status: "pending", notes: `⚠️ Salida fuera de horario programado. ${scheduleCheck.message}` })
           .eq("id", activeEntry.id);
         if (error) throw error;
 
-        // Create a ticket for admin review
         await supabase.from("employee_tickets").insert({
-          company_id: companyId,
-          employee_id: employeeId,
+          company_id: companyId, employee_id: employeeId,
           subject: "Salida fuera de horario programado",
           description: `Clock-out registrado a las ${format(new Date(), "HH:mm")} fuera del horario del turno "${activeShift?.title ?? "N/A"}" (${activeShift?.start_time?.slice(0, 5) ?? "?"} - ${activeShift?.end_time?.slice(0, 5) ?? "?"}). Requiere revisión antes de consolidar.`,
-          type: "time_adjustment",
-          source: "auto",
-          priority: "medium",
-          status: "new",
-          source_entity_type: "time_entry",
-          source_entity_id: activeEntry.id,
+          type: "time_adjustment", source: "auto", priority: "medium", status: "new",
+          source_entity_type: "time_entry", source_entity_id: activeEntry.id,
         });
 
-        toast({
-          title: "Salida registrada (en revisión)",
-          description: "Tu salida está fuera del horario programado. Se generó una solicitud de revisión.",
-        });
+        toast({ title: "Salida registrada (en revisión)", description: "Tu salida está fuera del horario programado. Se generó una solicitud de revisión." });
       } else {
         const { error } = await supabase.from("time_entries")
           .update({ clock_out: clockOutTime }).eq("id", activeEntry.id);
