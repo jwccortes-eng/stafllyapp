@@ -639,22 +639,28 @@ export default function ImportWizard() {
           }
         }
 
-        // Fetch existing shifts for dedup
+        // Fetch existing shifts for dedup using reconciliation_hash
         setImportProgress("Verificando duplicados de turnos...");
         const allDates = realShifts.map(g => g.date).sort();
-        const existingShiftKeys = new Set<string>();
+        const existingHashes = new Set<string>();
         if (allDates.length > 0) {
           const { data: existingShifts } = await supabase
             .from("scheduled_shifts")
-            .select("shift_code, date, start_time, end_time")
+            .select("reconciliation_hash, shift_code, date, start_time, end_time")
             .eq("company_id", selectedCompanyId)
             .is("deleted_at", null)
             .gte("date", allDates[0])
             .lte("date", allDates[allDates.length - 1]);
           (existingShifts ?? []).forEach(s => {
-            existingShiftKeys.add(`${s.shift_code || ""}|${s.date}|${s.start_time?.slice(0, 5)}|${s.end_time?.slice(0, 5)}`);
+            if (s.reconciliation_hash) existingHashes.add(s.reconciliation_hash);
+            // Legacy fallback key
+            existingHashes.add(`${s.shift_code || ""}|${s.date}|${s.start_time?.slice(0, 5)}|${s.end_time?.slice(0, 5)}`);
           });
         }
+
+        /** Build reconciliation hash: employee + date + start_time + location */
+        const buildHash = (empName: string, date: string, startTime: string, location: string) =>
+          `${empName.toLowerCase().trim()}|${date}|${startTime}|${location.toLowerCase().trim()}`;
 
         // Insert shifts in batches
         const BATCH_SIZE = 10;
@@ -667,8 +673,15 @@ export default function ImportWizard() {
 
           for (const group of batch) {
             const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
-            const dedupKey = `${numericCode}|${group.date}|${group.startTime}|${group.endTime}`;
-            if (existingShiftKeys.has(dedupKey)) {
+            const legacyKey = `${numericCode}|${group.date}|${group.startTime}|${group.endTime}`;
+            const location = group.address || group.job || "";
+
+            // Check per-employee hashes for dedup
+            const realEmployees = group.employees.filter(e => !/^system\s/i.test(e));
+            const empHashes = realEmployees.map(e => buildHash(e, group.date, group.startTime, location));
+            const allExist = empHashes.length > 0 && empHashes.every(h => existingHashes.has(h));
+
+            if (existingHashes.has(legacyKey) || allExist) {
               results.scheduleDuplicatesSkipped++;
               continue;
             }
@@ -680,7 +693,8 @@ export default function ImportWizard() {
             if (group.subItem) title += ` - ${group.subItem}`;
             if (!title.trim()) title = "Turno importado";
 
-            const realEmployees = group.employees.filter(e => !/^system\s/i.test(e));
+            // Store first employee hash as reconciliation_hash on the shift
+            const primaryHash = empHashes[0] ?? buildHash("", group.date, group.startTime, location);
 
             shiftPayloads.push({
               company_id: selectedCompanyId,
@@ -696,9 +710,11 @@ export default function ImportWizard() {
               slots: realEmployees.length || 1,
               claimable: false,
               pay_type: group.isWeekendJob ? "daily" : "hourly",
+              reconciliation_hash: primaryHash,
             });
             batchGroups.push(group);
-            existingShiftKeys.add(dedupKey);
+            existingHashes.add(legacyKey);
+            empHashes.forEach(h => existingHashes.add(h));
           }
 
           if (shiftPayloads.length === 0) continue;

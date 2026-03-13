@@ -2698,6 +2698,7 @@ export type Database = {
           meeting_point: string | null
           notes: string | null
           pay_type: string
+          reconciliation_hash: string | null
           shift_admin_id: string | null
           shift_code: string | null
           slots: number | null
@@ -2727,6 +2728,7 @@ export type Database = {
           meeting_point?: string | null
           notes?: string | null
           pay_type?: string
+          reconciliation_hash?: string | null
           shift_admin_id?: string | null
           shift_code?: string | null
           slots?: number | null
@@ -2756,6 +2758,7 @@ export type Database = {
           meeting_point?: string | null
           notes?: string | null
           pay_type?: string
+          reconciliation_hash?: string | null
           shift_admin_id?: string | null
           shift_code?: string | null
           slots?: number | null
