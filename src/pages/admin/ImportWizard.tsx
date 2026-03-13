@@ -187,7 +187,7 @@ export default function ImportWizard() {
   const platformConfig = PLATFORM_CONFIGS[platform];
 
   // Step state
-  const [step, setStep] = useState<WizardStep>("upload");
+  const [step, setStep] = useState<WizardStep>("upload-schedule");
 
   // File state
   const [scheduleFiles, setScheduleFiles] = useState<File[]>([]);
