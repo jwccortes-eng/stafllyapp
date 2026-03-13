@@ -9,6 +9,7 @@ import {
   PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
   MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
+  Map,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
