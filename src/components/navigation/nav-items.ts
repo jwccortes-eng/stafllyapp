@@ -3,7 +3,7 @@ import {
   BarChart3, Users, Tags, ContactRound, Building2,
   Clock, MapPin, Megaphone, MessageCircle, ScanEye, Inbox, Bell,
   MessageSquare, Settings2, Home, User, Wrench, UserPlus, FileText, GitCompareArrows,
-  ClipboardList, Receipt,
+  ClipboardList, Receipt, Brain,
 } from "lucide-react";
 
 export interface NavItem {
