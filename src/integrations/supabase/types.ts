@@ -1119,6 +1119,58 @@ export type Database = {
           },
         ]
       }
+      employee_badges: {
+        Row: {
+          badge_emoji: string
+          badge_key: string
+          badge_label: string
+          company_id: string
+          earned_at: string
+          employee_id: string
+          id: string
+        }
+        Insert: {
+          badge_emoji?: string
+          badge_key: string
+          badge_label: string
+          company_id: string
+          earned_at?: string
+          employee_id: string
+          id?: string
+        }
+        Update: {
+          badge_emoji?: string
+          badge_key?: string
+          badge_label?: string
+          company_id?: string
+          earned_at?: string
+          employee_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_badges_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_badges_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_badges_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_documents: {
         Row: {
           category: string
