@@ -64,6 +64,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
   const { employeeId } = useAuth();
   const [tab, setTab] = useState<DrawerTab>("info");
   const [empCompanyId, setEmpCompanyId] = useState<string>("");
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Load company_id from employee
   useEffect(() => {
@@ -72,6 +73,17 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
         .then(({ data }) => { if (data) setEmpCompanyId(data.company_id); });
     }
   }, [employeeId]);
+
+  // Load location coordinates
+  useEffect(() => {
+    if (!shift?.id || !open) { setLocationCoords(null); return; }
+    supabase.from("scheduled_shifts").select("location_id, locations(latitude, longitude)").eq("id", shift.id).maybeSingle()
+      .then(({ data }) => {
+        const loc = (data as any)?.locations;
+        if (loc?.latitude && loc?.longitude) setLocationCoords({ lat: loc.latitude, lng: loc.longitude });
+        else setLocationCoords(null);
+      });
+  }, [shift?.id, open]);
 
   if (!shift) return null;
 
