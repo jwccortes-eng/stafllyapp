@@ -1074,7 +1074,7 @@ export default function ImportWizard() {
       <PageHeader
         variant="3"
         title="Asistente de Importación"
-        subtitle="Importa programaciones, relojes y nómina desde Connecteam en un solo flujo"
+        subtitle={`Importa programaciones, relojes y nómina desde ${platformConfig.label}`}
       />
 
       <Tabs value={activeTab} onValueChange={v => setActiveTab(v as any)}>
