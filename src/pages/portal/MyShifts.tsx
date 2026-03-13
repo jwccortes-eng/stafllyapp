@@ -363,9 +363,9 @@ export default function MyShifts() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               {isTodayShift && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground">HOY</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground">Hoy</span>
               )}
-              <p className="text-sm font-semibold text-foreground">{a.shift.title}</p>
+              <p className="text-sm font-semibold text-foreground truncate">{a.shift.title}</p>
             </div>
             <p className="text-xs text-muted-foreground mt-1 capitalize">
               {dateLabel}
@@ -378,28 +378,27 @@ export default function MyShifts() {
           <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-1 shrink-0" />
         </div>
 
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        {/* Compact info row: time + location + client */}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span className="flex items-center gap-1.5 font-medium">
             <Clock className="h-3.5 w-3.5" />
             {a.shift.start_time?.slice(0, 5)} – {a.shift.end_time?.slice(0, 5)}
           </span>
           {a.shift.location && (
-            <span className="flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5" />
-              {a.shift.location.name}
+            <span className="flex items-center gap-1 truncate">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate">{a.shift.location.name}</span>
             </span>
           )}
           {a.shift.client && (
-            <span className="flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5" />
-              {a.shift.client.name}
+            <span className="flex items-center gap-1 truncate">
+              <Users className="h-3 w-3 shrink-0" />
+              <span className="truncate">{a.shift.client.name}</span>
             </span>
           )}
         </div>
 
-        {a.shift.notes && (
-          <p className="text-xs text-muted-foreground bg-muted/50 rounded-xl px-3 py-2 leading-relaxed">{a.shift.notes}</p>
-        )}
+        {/* Notes hidden — only in detail drawer */}
 
         {/* Accept/Reject buttons for non-past shifts that can be changed */}
         {a.status === "pending" && !isBefore(parseISO(a.shift.date), today) && (

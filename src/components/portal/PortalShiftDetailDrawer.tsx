@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, MapPin, Users, CalendarDays, FileText, Navigation, AlertCircle, LogIn, MessageCircle, Star } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
+import { NavigationButtons } from "@/components/navigation/NavigationButtons";
 import { format, parseISO, differenceInMinutes, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -25,7 +26,7 @@ interface ShiftInfo {
   shift_code?: string | null;
   meeting_point?: string | null;
   special_instructions?: string | null;
-  location?: { name: string } | null;
+  location?: { name: string; latitude?: number | null; longitude?: number | null } | null;
   client?: { name: string } | null;
   company_id?: string;
 }
@@ -63,6 +64,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
   const { employeeId } = useAuth();
   const [tab, setTab] = useState<DrawerTab>("info");
   const [empCompanyId, setEmpCompanyId] = useState<string>("");
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Load company_id from employee
   useEffect(() => {
@@ -71,6 +73,17 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
         .then(({ data }) => { if (data) setEmpCompanyId(data.company_id); });
     }
   }, [employeeId]);
+
+  // Load location coordinates
+  useEffect(() => {
+    if (!shift?.id || !open) { setLocationCoords(null); return; }
+    supabase.from("scheduled_shifts").select("location_id, locations(latitude, longitude)").eq("id", shift.id).maybeSingle()
+      .then(({ data }) => {
+        const loc = (data as any)?.locations;
+        if (loc?.latitude && loc?.longitude) setLocationCoords({ lat: loc.latitude, lng: loc.longitude });
+        else setLocationCoords(null);
+      });
+  }, [shift?.id, open]);
 
   if (!shift) return null;
 
@@ -151,12 +164,17 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
 
               {/* Location */}
               {shift.location && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                  <MapPin className="h-5 w-5 text-primary shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ubicación</p>
-                    <p className="text-sm font-medium">{shift.location.name}</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                    <MapPin className="h-5 w-5 text-primary shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ubicación</p>
+                      <p className="text-sm font-medium">{shift.location.name}</p>
+                    </div>
                   </div>
+                  {locationCoords && (
+                    <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navegar a ubicación" />
+                  )}
                 </div>
               )}
 

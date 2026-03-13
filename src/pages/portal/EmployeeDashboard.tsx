@@ -2,19 +2,20 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPersonName } from "@/lib/format-helpers";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import {
   Wallet, Clock, Megaphone, CalendarDays,
   ArrowRight, Pin,
   ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper,
+  Timer, LogIn, LogOut, MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { format, parseISO, isToday, isTomorrow, formatDistanceToNow, isAfter, subDays } from "date-fns";
+import { format, parseISO, isToday, isTomorrow, formatDistanceToNow, isAfter, subDays, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-
+import { Button } from "@/components/ui/button";
 
 // --- Types (unchanged) ---
 interface PayPeriod {
@@ -128,6 +129,7 @@ const priorityConfig: Record<string, { cls: string; bgCls: string; label: string
 
 export default function EmployeeDashboard() {
   const { employeeId } = useAuth();
+  const navigate = useNavigate();
   const [empName, setEmpName] = useState("");
   const [empAvatar, setEmpAvatar] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -138,6 +140,8 @@ export default function EmployeeDashboard() {
   const [reactions, setReactions] = useState<Record<string, ReactionCount[]>>({});
   const [loading, setLoading] = useState(true);
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
+  const [clockStatus, setClockStatus] = useState<{ isClockedIn: boolean; clockInTime: string | null; shiftTitle: string | null }>({ isClockedIn: false, clockInTime: null, shiftTitle: null });
+  const [weeklyHours, setWeeklyHours] = useState<string>("0h");
 
   const loadFeed = useCallback(async () => {
     if (!employeeId) {
@@ -151,12 +155,36 @@ export default function EmployeeDashboard() {
     setEmpAvatar(emp.avatar_url);
     setCompanyId(emp.company_id);
     const today = new Date().toISOString().split("T")[0];
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
+    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
 
-    const [periodRes, assignRes, annRes] = await Promise.all([
+    const [periodRes, assignRes, annRes, clockRes, weekRes] = await Promise.all([
       supabase.from("pay_periods").select("id, start_date, end_date, status, published_at").eq("company_id", emp.company_id).order("start_date", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("shift_assignments").select(`status, scheduled_shifts!inner (title, date, start_time, end_time, status, locations (name))`).eq("employee_id", employeeId).neq("status", "rejected").gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(1),
       supabase.from("announcements").select("id, title, body, priority, pinned, published_at, link_url, link_label, media_urls").eq("company_id", emp.company_id).not("published_at", "is", null).is("deleted_at", null).order("pinned", { ascending: false }).order("published_at", { ascending: false }).limit(20),
+      // Active clock entry
+      supabase.from("time_entries").select("id, clock_in, clock_out, shift_id, scheduled_shifts(title)").eq("employee_id", employeeId).is("clock_out", null).limit(1),
+      // Weekly hours
+      supabase.from("time_entries").select("clock_in, clock_out").eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
     ]);
+
+    // Clock status
+    const activeClocks = (clockRes.data ?? []) as any[];
+    if (activeClocks.length > 0) {
+      setClockStatus({ isClockedIn: true, clockInTime: activeClocks[0].clock_in, shiftTitle: activeClocks[0].scheduled_shifts?.title ?? null });
+    } else {
+      setClockStatus({ isClockedIn: false, clockInTime: null, shiftTitle: null });
+    }
+
+    // Weekly hours calc
+    let totalSec = 0;
+    for (const e of (weekRes.data ?? []) as any[]) {
+      const end = e.clock_out ? new Date(e.clock_out) : new Date();
+      totalSec += (end.getTime() - new Date(e.clock_in).getTime()) / 1000;
+    }
+    const wh = Math.floor(totalSec / 3600);
+    const wm = Math.floor((totalSec % 3600) / 60);
+    setWeeklyHours(wm > 0 ? `${wh}h ${wm}m` : `${wh}h`);
 
     if (periodRes.data) {
       const p = periodRes.data;
@@ -251,6 +279,52 @@ export default function EmployeeDashboard() {
             <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">{firstName}</h1>
           </div>
           
+        </div>
+      </div>
+
+      {/* ── Clock status + weekly hours ── */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Clock status */}
+        <div
+          className={cn(
+            "rounded-2xl border p-4 cursor-pointer active:scale-[0.98] transition-all",
+            clockStatus.isClockedIn
+              ? "border-earning/30 bg-earning/5"
+              : "border-border/40 bg-card"
+          )}
+          onClick={() => navigate("/portal/clock")}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className={cn("h-2.5 w-2.5 rounded-full", clockStatus.isClockedIn ? "bg-earning animate-pulse" : "bg-muted-foreground/30")} />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {clockStatus.isClockedIn ? "En turno" : "Fuera de turno"}
+            </span>
+          </div>
+          {clockStatus.isClockedIn && clockStatus.shiftTitle && (
+            <p className="text-xs font-medium text-foreground truncate">{clockStatus.shiftTitle}</p>
+          )}
+          <Button
+            size="sm"
+            variant={clockStatus.isClockedIn ? "destructive" : "default"}
+            className="w-full mt-2 h-9 text-xs gap-1.5 font-bold"
+            onClick={e => { e.stopPropagation(); navigate("/portal/clock"); }}
+          >
+            {clockStatus.isClockedIn ? <><LogOut className="h-3.5 w-3.5" /> Marcar Salida</> : <><LogIn className="h-3.5 w-3.5" /> Marcar Entrada</>}
+          </Button>
+        </div>
+
+        {/* Weekly hours */}
+        <div className="rounded-2xl border border-border/40 bg-card p-4">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="h-7 w-7 rounded-xl bg-accent flex items-center justify-center">
+              <Timer className="h-3.5 w-3.5 text-accent-foreground" />
+            </div>
+          </div>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Horas esta semana</p>
+          <p className="text-xl font-bold font-heading tabular-nums leading-none mt-1 text-foreground">{weeklyHours}</p>
+          <div className="flex items-center gap-1 mt-2.5 text-[10px] font-medium text-primary opacity-60">
+            <Clock className="h-2.5 w-2.5" /> Reloj
+          </div>
         </div>
       </div>
 

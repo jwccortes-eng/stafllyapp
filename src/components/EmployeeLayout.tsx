@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Outlet, useLocation, Navigate } from "react-router-dom";
-import { User, LogOut } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
+import { User, LogOut, LogIn } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,6 +12,7 @@ import { FloatingDock } from "@/components/navigation/FloatingDock";
 import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { EMPLOYEE_NAV_ITEMS, EMPLOYEE_DEFAULT_PINS } from "@/components/navigation/nav-items";
 import { useNavPreferences } from "@/hooks/useNavPreferences";
+import { supabase } from "@/integrations/supabase/client";
 
 /** Shows current page title in mobile portal header */
 function PortalPageTitle() {
@@ -29,11 +30,29 @@ function PortalPageTitle() {
 }
 
 export default function EmployeeLayout() {
-  const { user, role, employeeActive, loading, signOut } = useAuth();
+  const { user, role, employeeActive, employeeId, loading, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const { pinnedIds, togglePin, maxPins } = useNavPreferences(EMPLOYEE_DEFAULT_PINS);
+  const [isClockedIn, setIsClockedIn] = useState(false);
+
+  // Check active clock entry
+  const checkClockStatus = useCallback(async () => {
+    if (!employeeId) return;
+    const { data } = await supabase.from("time_entries").select("id").eq("employee_id", employeeId).is("clock_out", null).limit(1);
+    setIsClockedIn((data ?? []).length > 0);
+  }, [employeeId]);
+
+  useEffect(() => { checkClockStatus(); }, [checkClockStatus]);
+  useEffect(() => {
+    if (!employeeId) return;
+    const ch = supabase.channel("emp-clock-status").on("postgres_changes", { event: "*", schema: "public", table: "time_entries", filter: `employee_id=eq.${employeeId}` }, () => checkClockStatus()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [employeeId, checkClockStatus]);
+
+  const isOnClockPage = location.pathname.includes("/portal/clock");
 
   if (loading) {
     return (
@@ -104,6 +123,21 @@ export default function EmployeeLayout() {
           onSignOut={signOut}
           variant="portal"
         />
+
+        {/* Floating Clock Button */}
+        {!isOnClockPage && (
+          <button
+            onClick={() => navigate("/portal/clock")}
+            className={cn(
+              "fixed z-40 right-5 bottom-24 h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-all active:scale-90",
+              isClockedIn
+                ? "bg-destructive text-destructive-foreground animate-pulse"
+                : "gradient-primary text-primary-foreground"
+            )}
+          >
+            {isClockedIn ? <LogOut className="h-6 w-6" /> : <LogIn className="h-6 w-6" />}
+          </button>
+        )}
 
         <EmployeeChatWidget />
       </div>
