@@ -673,8 +673,15 @@ export default function ImportWizard() {
 
           for (const group of batch) {
             const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : "";
-            const dedupKey = `${numericCode}|${group.date}|${group.startTime}|${group.endTime}`;
-            if (existingShiftKeys.has(dedupKey)) {
+            const legacyKey = `${numericCode}|${group.date}|${group.startTime}|${group.endTime}`;
+            const location = group.address || group.job || "";
+
+            // Check per-employee hashes for dedup
+            const realEmployees = group.employees.filter(e => !/^system\s/i.test(e));
+            const empHashes = realEmployees.map(e => buildHash(e, group.date, group.startTime, location));
+            const allExist = empHashes.length > 0 && empHashes.every(h => existingHashes.has(h));
+
+            if (existingHashes.has(legacyKey) || allExist) {
               results.scheduleDuplicatesSkipped++;
               continue;
             }
@@ -686,7 +693,8 @@ export default function ImportWizard() {
             if (group.subItem) title += ` - ${group.subItem}`;
             if (!title.trim()) title = "Turno importado";
 
-            const realEmployees = group.employees.filter(e => !/^system\s/i.test(e));
+            // Store first employee hash as reconciliation_hash on the shift
+            const primaryHash = empHashes[0] ?? buildHash("", group.date, group.startTime, location);
 
             shiftPayloads.push({
               company_id: selectedCompanyId,
@@ -702,9 +710,11 @@ export default function ImportWizard() {
               slots: realEmployees.length || 1,
               claimable: false,
               pay_type: group.isWeekendJob ? "daily" : "hourly",
+              reconciliation_hash: primaryHash,
             });
             batchGroups.push(group);
-            existingShiftKeys.add(dedupKey);
+            existingHashes.add(legacyKey);
+            empHashes.forEach(h => existingHashes.add(h));
           }
 
           if (shiftPayloads.length === 0) continue;
