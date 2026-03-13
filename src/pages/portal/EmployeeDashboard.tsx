@@ -155,12 +155,36 @@ export default function EmployeeDashboard() {
     setEmpAvatar(emp.avatar_url);
     setCompanyId(emp.company_id);
     const today = new Date().toISOString().split("T")[0];
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
+    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
 
-    const [periodRes, assignRes, annRes] = await Promise.all([
+    const [periodRes, assignRes, annRes, clockRes, weekRes] = await Promise.all([
       supabase.from("pay_periods").select("id, start_date, end_date, status, published_at").eq("company_id", emp.company_id).order("start_date", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("shift_assignments").select(`status, scheduled_shifts!inner (title, date, start_time, end_time, status, locations (name))`).eq("employee_id", employeeId).neq("status", "rejected").gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(1),
       supabase.from("announcements").select("id, title, body, priority, pinned, published_at, link_url, link_label, media_urls").eq("company_id", emp.company_id).not("published_at", "is", null).is("deleted_at", null).order("pinned", { ascending: false }).order("published_at", { ascending: false }).limit(20),
+      // Active clock entry
+      supabase.from("time_entries").select("id, clock_in, clock_out, shift_id, scheduled_shifts(title)").eq("employee_id", employeeId).is("clock_out", null).limit(1),
+      // Weekly hours
+      supabase.from("time_entries").select("clock_in, clock_out").eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
     ]);
+
+    // Clock status
+    const activeClocks = (clockRes.data ?? []) as any[];
+    if (activeClocks.length > 0) {
+      setClockStatus({ isClockedIn: true, clockInTime: activeClocks[0].clock_in, shiftTitle: activeClocks[0].scheduled_shifts?.title ?? null });
+    } else {
+      setClockStatus({ isClockedIn: false, clockInTime: null, shiftTitle: null });
+    }
+
+    // Weekly hours calc
+    let totalSec = 0;
+    for (const e of (weekRes.data ?? []) as any[]) {
+      const end = e.clock_out ? new Date(e.clock_out) : new Date();
+      totalSec += (end.getTime() - new Date(e.clock_in).getTime()) / 1000;
+    }
+    const wh = Math.floor(totalSec / 3600);
+    const wm = Math.floor((totalSec % 3600) / 60);
+    setWeeklyHours(wm > 0 ? `${wh}h ${wm}m` : `${wh}h`);
 
     if (periodRes.data) {
       const p = periodRes.data;
