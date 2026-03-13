@@ -863,6 +863,11 @@ export function ShiftDetailDialog({
                     <Copy className="h-3 w-3" /> Duplicar
                   </Button>
                 )}
+                {onDelete && !isLocked && (
+                  <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(true)} className="h-8 text-xs gap-1.5 rounded-full text-destructive border-destructive/30 hover:bg-destructive/10">
+                    <Trash2 className="h-3 w-3" /> Eliminar
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-full" onClick={() => {
                   import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
                     const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
