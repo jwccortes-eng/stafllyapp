@@ -832,12 +832,20 @@ export default function ImportWizard() {
             }
           }
 
-          if (shiftId) results.timeClockLinked++;
+          if (shiftId) {
+            results.timeClockLinked++;
+            // Update shift status → "worked"
+            await supabase.from("scheduled_shifts")
+              .update({ status: "confirmed" })
+              .eq("id", shiftId)
+              .eq("company_id", selectedCompanyId)
+              .in("status", ["open", "assigned"]);
+          }
 
           const notesParts: string[] = [];
           if (entry.employeeNotes) notesParts.push(`Empleado: ${entry.employeeNotes}`);
           if (entry.managerNotes) notesParts.push(`Manager: ${entry.managerNotes}`);
-          notesParts.push("[Importado Connecteam]");
+          notesParts.push(`[Import ${platformConfig.label}]`);
 
           const { error } = await supabase.from("time_entries").insert({
             company_id: selectedCompanyId,
@@ -924,6 +932,20 @@ export default function ImportWizard() {
               if (!error) results.payrollMovementsCreated++;
             }
           }
+        }
+      }
+
+      // ── Mark shifts as closed if payroll was processed ──
+      if (payrollExtras.length > 0 && clockEntries.length > 0) {
+        setImportProgress("Cerrando turnos procesados...");
+        const clockDatesSet = new Set(clockEntries.map(e => e.clockIn.toISOString().slice(0, 10)));
+        const datesToClose = [...clockDatesSet];
+        if (datesToClose.length > 0) {
+          await supabase.from("scheduled_shifts")
+            .update({ status: "closed" })
+            .eq("company_id", selectedCompanyId)
+            .eq("status", "confirmed")
+            .in("date", datesToClose);
         }
       }
 
