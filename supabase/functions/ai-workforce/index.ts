@@ -109,23 +109,57 @@ serve(async (req) => {
       if (a.status === "confirmed" || a.status === "completed") perfMap[a.employee_id].completed++;
     }
 
+    // Fetch review averages per employee
+    const { data: reviews } = await supabase
+      .from("shift_reviews")
+      .select("reviewed_employee_id, overall_rating")
+      .eq("company_id", company_id)
+      .eq("reviewer_type", "manager");
+
+    const reviewMap: Record<string, { sum: number; count: number }> = {};
+    for (const r of reviews ?? []) {
+      if (!r.reviewed_employee_id) continue;
+      if (!reviewMap[r.reviewed_employee_id]) reviewMap[r.reviewed_employee_id] = { sum: 0, count: 0 };
+      reviewMap[r.reviewed_employee_id].sum += Number(r.overall_rating);
+      reviewMap[r.reviewed_employee_id].count++;
+    }
+
+    // Fetch badges per employee
+    const { data: badges } = await supabase
+      .from("employee_badges")
+      .select("employee_id, badge_label")
+      .eq("company_id", company_id);
+
+    const badgeMap: Record<string, string[]> = {};
+    for (const b of badges ?? []) {
+      if (!badgeMap[b.employee_id]) badgeMap[b.employee_id] = [];
+      badgeMap[b.employee_id].push(b.badge_label);
+    }
+
     // Build context for AI
     const contextData = {
-      employees: (employees ?? []).map((e: any) => ({
-        id: e.id,
-        name: `${e.first_name} ${e.last_name}`,
-        skills: e.skills ?? [],
-        certifications: e.certifications ?? [],
-        service_categories: e.service_category_ids ?? [],
-        address: e.address,
-        qualify: e.qualify,
-        years_experience: e.years_experience,
-        english_level: e.english_level,
-        performance: perfMap[e.id] ? {
-          completion_rate: Math.round((perfMap[e.id].completed / perfMap[e.id].total) * 100),
-          shifts_last_30d: perfMap[e.id].total,
-        } : { completion_rate: 0, shifts_last_30d: 0 },
-      })),
+      employees: (employees ?? []).map((e: any) => {
+        const perf = perfMap[e.id];
+        const rev = reviewMap[e.id];
+        return {
+          id: e.id,
+          name: `${e.first_name} ${e.last_name}`,
+          skills: e.skills ?? [],
+          certifications: e.certifications ?? [],
+          service_categories: e.service_category_ids ?? [],
+          address: e.address,
+          qualify: e.qualify,
+          years_experience: e.years_experience,
+          english_level: e.english_level,
+          performance: perf ? {
+            completion_rate: Math.round((perf.completed / perf.total) * 100),
+            shifts_last_30d: perf.total,
+          } : { completion_rate: 0, shifts_last_30d: 0 },
+          rating: rev ? Math.round((rev.sum / rev.count) * 10) / 10 : null,
+          review_count: rev?.count ?? 0,
+          badges: badgeMap[e.id] ?? [],
+        };
+      }),
       shifts: (shifts ?? []).map((s: any) => ({
         id: s.id,
         title: s.title,
@@ -146,19 +180,20 @@ serve(async (req) => {
     const systemPrompt = `Eres un asistente de optimización de workforce para una empresa de staffing. Tu trabajo es analizar turnos abiertos y sugerir los mejores empleados para cada turno.
 
 REGLAS:
-- Analiza las habilidades, experiencia, ubicación y rendimiento de cada empleado
-- Prioriza empleados con mejor tasa de completación de turnos
-- No sugiereas empleados que ya están asignados al turno
-- Da un score de 0-100 para cada sugerencia
-- Explica brevemente por qué cada empleado es buena opción
+- Analiza habilidades, experiencia, ubicación, rendimiento, rating y badges de cada empleado
+- PRIORIZA empleados con: mejor rating (≥4.5), más badges, mayor tasa de completación
+- Los empleados con badges como "Top Performer", "Reliable", "Always On Time" deben tener prioridad
+- No sugieras empleados que ya están asignados al turno
+- Da un score de 0-100 para cada sugerencia (incluye rating y reputación en el cálculo)
+- Explica brevemente por qué cada empleado es buena opción, mencionando su rating y badges si los tiene
 - Si un turno requiere N empleados y ya tiene algunos, sugiere solo los faltantes
 - Responde SIEMPRE en español
 
 IMPORTANTE: Usa la herramienta suggest_assignments para devolver las sugerencias estructuradas.`;
 
     const userPrompt = mode === "optimize"
-      ? `Analiza todos los turnos abiertos y optimiza la asignación de personal para maximizar eficiencia:\n\n${JSON.stringify(contextData, null, 2)}`
-      : `Sugiere los mejores empleados para los siguientes turnos:\n\n${JSON.stringify(contextData, null, 2)}`;
+      ? `Analiza todos los turnos abiertos y optimiza la asignación de personal para maximizar eficiencia. Prioriza empleados con mejor reputación y rating:\n\n${JSON.stringify(contextData, null, 2)}`
+      : `Sugiere los mejores empleados para los siguientes turnos. Prioriza empleados con mejor reputación y badges:\n\n${JSON.stringify(contextData, null, 2)}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
