@@ -377,14 +377,20 @@ export default function ImportWizard() {
 
   /* ─── Parse Payroll file ─── */
   const parsePayrollFile = useCallback(async (f: File) => {
-    const data = await f.arrayBuffer();
-    const wb = await safeRead(data);
-    const names = getSheetNames(wb);
-    // Try second sheet (Nómina Final) first, then first sheet
-    const sheetName = names.length >= 2 ? names[1] : names[0];
-    const ws = getSheet(wb, sheetName);
-    if (!ws) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
-    const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+    const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+    let json: Record<string, string>[];
+    if (ext === "csv" || ext === "txt" || ext === "tsv") {
+      json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
+    } else {
+      // For Excel payroll, try second sheet first
+      const data = await f.arrayBuffer();
+      const wb = await safeRead(data);
+      const names = getSheetNames(wb);
+      const sheetName = names.length >= 2 ? names[1] : names[0];
+      const ws = getSheet(wb, sheetName);
+      if (!ws) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
+      json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+    }
     if (json.length === 0) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
 
     const headers = Object.keys(json[0]);
