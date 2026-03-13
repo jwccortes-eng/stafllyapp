@@ -70,6 +70,7 @@ import InvoicesPage from "./pages/admin/Invoices";
 import ServiceCategories from "./pages/admin/ServiceCategories";
 import AIWorkforce from "./pages/admin/AIWorkforce";
 import LiveMap from "./pages/admin/LiveMap";
+import Leaderboard from "./pages/admin/Leaderboard";
 import ModuleGate from "./components/ModuleGate";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
