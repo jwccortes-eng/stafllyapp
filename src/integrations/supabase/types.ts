@@ -1362,6 +1362,7 @@ export type Database = {
           schedule_shifts_created: number | null
           schedule_unavailable: number | null
           schedule_weekend_jobs: number | null
+          source: string
           status: string
           timeclock_entries_created: number | null
           timeclock_file_name: string | null
@@ -1394,6 +1395,7 @@ export type Database = {
           schedule_shifts_created?: number | null
           schedule_unavailable?: number | null
           schedule_weekend_jobs?: number | null
+          source?: string
           status?: string
           timeclock_entries_created?: number | null
           timeclock_file_name?: string | null
@@ -1426,6 +1428,7 @@ export type Database = {
           schedule_shifts_created?: number | null
           schedule_unavailable?: number | null
           schedule_weekend_jobs?: number | null
+          source?: string
           status?: string
           timeclock_entries_created?: number | null
           timeclock_file_name?: string | null

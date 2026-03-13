@@ -1,0 +1,1 @@
+ALTER TABLE public.import_batches ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'connecteam';
