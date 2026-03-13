@@ -146,11 +146,19 @@ Eres un experto en documentación técnica y de usuario. Tu tarea es generar doc
 
 ### Flujo de fichaje diario
 1. Empleado abre portal → Reloj
-2. Clock In (se registra hora + GPS)
-3. Trabaja...
-4. Clock Out (se registra hora + GPS)
-5. Admin revisa en Today View
-6. Aprueba/rechaza/edita fichajes
+2. Clock In (se registra hora + GPS + device)
+3. Sistema valida geofencing (si aplica)
+4. Si fuera de zona → genera alerta automática
+5. Trabaja...
+6. Clock Out (se registra hora + GPS)
+7. Admin revisa en Today View + Mapa en Vivo
+8. Aprueba/rechaza/edita fichajes
+
+### Flujo de AI Workforce
+1. Admin abre AI Workforce → selecciona turno abierto
+2. Sistema envía datos a Lovable AI (empleados, skills, historial)
+3. IA devuelve top candidatos con score y razonamiento
+4. Admin revisa sugerencias y asigna con un clic
 
 ---
 

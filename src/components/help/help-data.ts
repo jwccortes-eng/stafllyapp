@@ -113,6 +113,27 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     },
   },
   {
+    id: "gps",
+    icon: Clock,
+    title: { es: "GPS y ubicación", en: "GPS & Location" },
+    description: { es: "Geolocalización y mapas", en: "Geolocation and maps" },
+    color: "bg-primary/10 text-primary",
+    faqs: {
+      es: [
+        { q: "¿Qué datos de ubicación se capturan?", a: "Al hacer **Clock In/Out** se registra latitud, longitud y precisión GPS.\nEl sistema **no** rastrea fuera del turno." },
+        { q: "¿Qué es el geofencing?", a: "Cada ubicación de trabajo puede tener un **radio permitido**. Si fichas fuera de ese radio, se genera una alerta automática para tu supervisor." },
+        { q: "Me sale alerta de 'fuera de zona'", a: "Significa que tu GPS estaba fuera del radio permitido de la ubicación. Verifica que estés en el lugar correcto y que tu GPS tenga buena señal." },
+        { q: "¿Cómo navego al trabajo?", a: "En el detalle de tu turno hay botones para abrir **Google Maps**, **Apple Maps** o **Waze** con la dirección exacta." },
+      ],
+      en: [
+        { q: "What location data is captured?", a: "On **Clock In/Out**, latitude, longitude and GPS accuracy are recorded.\nThe system does **not** track outside of shifts." },
+        { q: "What is geofencing?", a: "Each work location can have an **allowed radius**. If you clock in outside that radius, an automatic alert is generated." },
+        { q: "I got an 'outside zone' alert", a: "Your GPS was outside the allowed radius. Make sure you're at the right location with a good GPS signal." },
+        { q: "How do I navigate to work?", a: "In your shift details, use the buttons for **Google Maps**, **Apple Maps** or **Waze** with the exact address." },
+      ],
+    },
+  },
+  {
     id: "billing",
     icon: CreditCard,
     title: { es: "Facturación", en: "Billing" },
