@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile, parseAnyFileToJson } from "@/lib/safe-xlsx";
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
+import { PLATFORM_LIST, PLATFORM_CONFIGS, resolveColumn, findColumnKey, type ImportPlatform, type PlatformConfig } from "@/lib/import-platform-configs";
 import {
   Upload, FileSpreadsheet, CheckCircle2, AlertCircle, CalendarDays,
   Clock, DollarSign, ChevronRight, ChevronDown, Loader2, Users,
@@ -156,15 +157,7 @@ function parseName(raw: string): { first: string; last: string } | null {
   return { first: toTitleCase(parts[0]), last: toTitleCase(parts.slice(1).join(" ")) };
 }
 
-const PAYROLL_CONCEPT_MAP: Record<string, { conceptName: string; category: "extra" | "deduction" }> = {
-  "payper day": { conceptName: "Weekend Job", category: "extra" },
-  "ryde": { conceptName: "Pago de Transporte Regular", category: "extra" },
-  "tips": { conceptName: "Propinas", category: "extra" },
-  "reimbursements": { conceptName: "Reintegros", category: "extra" },
-  "travel hours": { conceptName: "Horas de viaje", category: "extra" },
-  "otros": { conceptName: "Otros pagos", category: "extra" },
-  "discount": { conceptName: "Descuentos", category: "deduction" },
-};
+// Payroll concept map is now loaded from platform config at runtime
 
 const parseCurrency = (val: string): number => {
   if (!val || typeof val !== "string") return 0;
@@ -172,11 +165,7 @@ const parseCurrency = (val: string): number => {
   return parseFloat(cleaned) || 0;
 };
 
-function findClockDateKey(row: Record<string, string>, baseName: string, useSecond: boolean): string {
-  const keys = Object.keys(row).filter(k => k.startsWith(baseName));
-  if (useSecond && keys.length > 1) return keys[1];
-  return keys[0] || baseName;
-}
+// findClockDateKey removed — now using resolveColumn from platform configs
 
 /* ─── Wizard steps ─── */
 type WizardStep = "upload" | "validation" | "confirm" | "importing" | "result" | "history";
@@ -192,6 +181,8 @@ export default function ImportWizard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"wizard" | "history">("wizard");
+  const [platform, setPlatform] = useState<ImportPlatform>("connecteam");
+  const platformConfig = PLATFORM_CONFIGS[platform];
 
   // Step state
   const [step, setStep] = useState<WizardStep>("upload");
@@ -255,23 +246,24 @@ export default function ImportWizard() {
       const json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
 
       for (const row of json) {
-        const dateRaw = row["Date"] ?? "";
+        const sc = platformConfig.schedule.columns;
+        const dateRaw = resolveColumn(row, sc.date);
         const isoDate = parseDate(dateRaw);
         if (!isoDate) continue;
 
-        const availStatus = (row["Availability status"] ?? "").trim().toLowerCase();
-        const userName = (row["Users"] ?? "").trim();
+        const availStatus = resolveColumn(row, sc.availabilityStatus).toLowerCase();
+        const userName = resolveColumn(row, sc.users);
 
-        if (availStatus === "unavailable") {
+        if (platformConfig.schedule.unavailablePatterns.some(p => p.test(availStatus))) {
           if (userName) allUnavail.push({ name: userName, date: isoDate });
           continue;
         }
 
-        const shiftTitle = (row["Shift title"] ?? "").trim();
-        const startRaw = (row["Start"] ?? "").trim();
-        const endRaw = (row["End"] ?? "").trim();
-        const job = (row["Job"] ?? "").trim();
-        const subItem = (row["Sub item"] ?? "").trim();
+        const shiftTitle = resolveColumn(row, sc.shiftTitle);
+        const startRaw = resolveColumn(row, sc.start);
+        const endRaw = resolveColumn(row, sc.end);
+        const job = resolveColumn(row, sc.job);
+        const subItem = resolveColumn(row, sc.subItem);
 
         if (!shiftTitle && !job && !startRaw) continue;
         const startTime = parseTime(startRaw);
@@ -280,11 +272,10 @@ export default function ImportWizard() {
 
         // Detect PayRide
         const combined = `${shiftTitle} ${job} ${subItem}`.toLowerCase();
-        const isPayRide = /pay\s*ride|pagar|1\/2\s*ride/i.test(combined) || /^99\s*[-–]/.test(job.trim());
-        const isWeekendJob = /weekend\s*j[oa]b/i.test(subItem) || /weekend\s*j[oa]b/i.test(job) || /weekend\s*j[oa]b/i.test(combined);
+        const isPayRide = platformConfig.schedule.payRidePatterns.some(p => p.test(combined)) || /^99\s*[-–]/.test(job.trim());
+        const isWeekendJob = platformConfig.schedule.weekendJobPatterns.some(p => p.test(combined));
 
         if (isPayRide) {
-          // Still track for summary but skip shift creation
           const existingRide = allGroups.find(g => g.key === `PAYRIDE|${isoDate}|${userName}`);
           if (!existingRide) {
             allGroups.push({
@@ -298,19 +289,23 @@ export default function ImportWizard() {
           continue;
         }
 
+        const address = resolveColumn(row, sc.address);
+        const note = resolveColumn(row, sc.note);
+        const tags = resolveColumn(row, sc.tags);
+        const lastStatus = resolveColumn(row, sc.lastStatus);
+
         const groupKey = `${shiftTitle}|${isoDate}|${startTime}|${endTime}|${job}`;
         const existing = allGroups.find(g => g.key === groupKey);
         if (!existing) {
           allGroups.push({
             key: groupKey, shiftCode: shiftTitle, date: isoDate, startTime, endTime, job, subItem,
-            address: (row["Address"] ?? "").trim(), note: (row["Note"] ?? "").trim(),
-            tags: (row["Shift tags"] ?? "").trim(), status: (row["Last Status"] ?? "").trim(),
-            employees: userName ? [userName] : [], employeeStatuses: [(row["Last Status"] ?? "").trim()],
+            address, note, tags, status: lastStatus,
+            employees: userName ? [userName] : [], employeeStatuses: [lastStatus],
             isWeekendJob, isPayRide: false,
           });
         } else if (userName && !existing.employees.includes(userName)) {
           existing.employees.push(userName);
-          existing.employeeStatuses.push((row["Last Status"] ?? "").trim());
+          existing.employeeStatuses.push(lastStatus);
         }
       }
     }
@@ -330,76 +325,80 @@ export default function ImportWizard() {
       }
     }
     return { groups: Object.values(dedupMap), unavail: allUnavail };
-  }, []);
+  }, [platformConfig]);
 
   /* ─── Parse Time Clock file ─── */
   const parseClockFile = useCallback(async (f: File) => {
     const json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
     const parsed: ClockEntry[] = [];
+    const tc = platformConfig.timeclock.columns;
 
     for (const row of json) {
-      const shiftNum = (row["Shift Number"] ?? "").trim();
-      const type = (row["Type"] ?? "").trim();
-      if (!shiftNum && !type) continue; // summary row
+      const shiftNum = resolveColumn(row, tc.shiftNumber);
+      const type = resolveColumn(row, tc.type);
+      if (!shiftNum && !type) continue;
 
-      const firstName = (row["First name"] ?? "").trim();
-      const lastName = (row["Last name"] ?? "").trim();
+      const firstName = resolveColumn(row, tc.firstName);
+      const lastName = resolveColumn(row, tc.lastName);
       if (!firstName && !lastName) continue;
       if (/^SYSTEM$/i.test(firstName)) continue;
 
-      const startDateKey = findClockDateKey(row, "Start Date", true);
-      const endDateKey = findClockDateKey(row, "End Date", true);
+      // Resolve date columns (handle duplicate "Start Date" columns)
+      const startDateKey = findColumnKey(row, tc.startDate) || "Start Date";
+      const endDateKey = findColumnKey(row, tc.endDate) || "End Date";
       const startDateRaw = row[startDateKey] ?? "";
-      const inRaw = (row["In"] ?? "").trim();
+      const inRaw = resolveColumn(row, tc.clockIn);
       const endDateRaw = row[endDateKey] ?? "";
-      const outRaw = (row["Out"] ?? "").trim();
+      const outRaw = resolveColumn(row, tc.clockOut);
 
       const clockIn = parseClockTimestamp(startDateRaw, inRaw);
       if (!clockIn) continue;
       const clockOut = parseClockTimestamp(endDateRaw, outRaw);
 
-      const shiftHours = parseFloat(row["Shift hours"] ?? "0") || 0;
+      const shiftHours = parseFloat(resolveColumn(row, tc.shiftHours) || "0") || 0;
       const durationHours = clockOut ? (clockOut.getTime() - clockIn.getTime()) / 3600000 : 0;
-      const isUnpaid = shiftHours === 0 || /unpaid|no\s*pay|sin\s*pago/i.test(type) || durationHours > 24;
+      const isUnpaid = shiftHours === 0 || platformConfig.timeclock.unpaidPatterns.some(p => p.test(type)) || durationHours > 24;
 
       parsed.push({
         firstName, lastName, clockIn, clockOut, shiftHours,
-        hourlyRate: parseFloat(row["Hourly rate (USD)"] ?? "0") || 0,
-        scheduledShiftTitle: (row["Scheduled shift title"] ?? "").trim(),
-        employeeNotes: (row["Employee notes"] ?? "").trim(),
-        managerNotes: (row["Manager notes"] ?? "").trim(),
+        hourlyRate: parseFloat(resolveColumn(row, tc.hourlyRate) || "0") || 0,
+        scheduledShiftTitle: resolveColumn(row, tc.scheduledShiftTitle),
+        employeeNotes: resolveColumn(row, tc.employeeNotes),
+        managerNotes: resolveColumn(row, tc.managerNotes),
         isUnpaid,
         job: type,
       });
     }
     return parsed;
-  }, []);
+  }, [platformConfig]);
 
   /* ─── Parse Payroll file ─── */
   const parsePayrollFile = useCallback(async (f: File) => {
     const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
     let json: Record<string, string>[];
+    const useSecondSheet = platformConfig.payroll.preferSecondSheet;
     if (ext === "csv" || ext === "txt" || ext === "tsv") {
       json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
     } else {
-      // For Excel payroll, try second sheet first
       const data = await f.arrayBuffer();
       const wb = await safeRead(data);
       const names = getSheetNames(wb);
-      const sheetName = names.length >= 2 ? names[1] : names[0];
+      const sheetName = useSecondSheet && names.length >= 2 ? names[1] : names[0];
       const ws = getSheet(wb, sheetName);
       if (!ws) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
       json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
     }
     if (json.length === 0) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
 
+    const CONCEPT_MAP = platformConfig.payroll.conceptMap;
     const headers = Object.keys(json[0]);
     const detected: string[] = [];
     headers.forEach(h => {
-      if (PAYROLL_CONCEPT_MAP[h.toLowerCase().trim()]) detected.push(h);
+      if (CONCEPT_MAP[h.toLowerCase().trim()]) detected.push(h);
     });
 
     // Fetch employees for matching
+    const pc = platformConfig.payroll.columns;
     const { data: employees } = await supabase
       .from("employees")
       .select("id, first_name, last_name")
@@ -409,8 +408,8 @@ export default function ImportWizard() {
     // Group by employee (keep last row = summary)
     const employeeGroups: Record<string, Record<string, string>> = {};
     for (const row of json) {
-      const fn = (row["First name"] ?? "").trim();
-      const ln = (row["Last name"] ?? "").trim();
+      const fn = resolveColumn(row, pc.firstName);
+      const ln = resolveColumn(row, pc.lastName);
       if (!fn && !ln) continue;
       if (/^SYSTEM$/i.test(fn)) continue;
       const key = `${fn.toLowerCase()}|${ln.toLowerCase()}`;
@@ -419,14 +418,14 @@ export default function ImportWizard() {
 
     const results: PayrollExtra[] = [];
     for (const [, row] of Object.entries(employeeGroups)) {
-      const fn = (row["First name"] ?? "").trim();
-      const ln = (row["Last name"] ?? "").trim();
+      const fn = resolveColumn(row, pc.firstName);
+      const ln = resolveColumn(row, pc.lastName);
       const emp = empList.find(e => e.first_name.toLowerCase() === fn.toLowerCase() && e.last_name.toLowerCase() === ln.toLowerCase());
 
       const extras: PayrollExtra["extras"] = [];
       let total = 0;
       for (const col of detected) {
-        const mapping = PAYROLL_CONCEPT_MAP[col.toLowerCase().trim()];
+        const mapping = CONCEPT_MAP[col.toLowerCase().trim()];
         if (!mapping) continue;
         const val = parseCurrency(row[col]);
         if (val === 0) continue;
@@ -440,7 +439,7 @@ export default function ImportWizard() {
     }
 
     return { extras: results, detectedCols: detected };
-  }, [selectedCompanyId]);
+  }, [selectedCompanyId, platformConfig]);
 
   /* ─── Parse all files and build validation ─── */
   const handleParseAll = useCallback(async () => {
@@ -1071,7 +1070,7 @@ export default function ImportWizard() {
       <PageHeader
         variant="3"
         title="Asistente de Importación"
-        subtitle="Importa programaciones, relojes y nómina desde Connecteam en un solo flujo"
+        subtitle={`Importa programaciones, relojes y nómina desde ${platformConfig.label}`}
       />
 
       <Tabs value={activeTab} onValueChange={v => setActiveTab(v as any)}>
@@ -1087,6 +1086,35 @@ export default function ImportWizard() {
         </TabsList>
 
         <TabsContent value="wizard" className="space-y-5 mt-4">
+          {/* Platform selector */}
+          {step === "upload" && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Plataforma de origen</p>
+              <div className="flex flex-wrap gap-2">
+                {PLATFORM_LIST.map(p => (
+                  <Button
+                    key={p.id}
+                    variant={platform === p.id ? "default" : "outline"}
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      setPlatform(p.id);
+                      setScheduleFiles([]);
+                      setClockFile(null);
+                      setPayrollFile(null);
+                      setShiftGroups([]);
+                      setClockEntries([]);
+                      setPayrollExtras([]);
+                      setValidation(null);
+                    }}
+                  >
+                    <span className={platform === p.id ? "" : p.color}>{p.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Stepper */}
           {step !== "result" && step !== "importing" && (
             <div className="flex items-center gap-2">
