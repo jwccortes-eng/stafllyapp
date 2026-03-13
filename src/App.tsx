@@ -69,6 +69,7 @@ import StaffingRequests from "./pages/admin/StaffingRequests";
 import InvoicesPage from "./pages/admin/Invoices";
 import ServiceCategories from "./pages/admin/ServiceCategories";
 import AIWorkforce from "./pages/admin/AIWorkforce";
+import LiveMap from "./pages/admin/LiveMap";
 import ModuleGate from "./components/ModuleGate";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
