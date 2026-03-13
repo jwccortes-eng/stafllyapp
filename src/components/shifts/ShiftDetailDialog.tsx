@@ -51,6 +51,7 @@ interface ShiftDetailDialogProps {
   onSave?: (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => Promise<void>;
   onRequestAction?: () => void;
   onDuplicate?: (shift: Shift) => void;
+  onDelete?: (shift: Shift) => void;
   availabilityConfigs?: AvailabilityConfig[];
   availabilityOverrides?: AvailabilityOverride[];
 }
@@ -102,7 +103,7 @@ function TabButton({ active, onClick, children, badge }: { active: boolean; onCl
 export function ShiftDetailDialog({
   shift, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
-  onDuplicate,
+  onDuplicate, onDelete,
   availabilityConfigs = [], availabilityOverrides = [],
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
@@ -133,6 +134,7 @@ export function ShiftDetailDialog({
   const [removeConfirm, setRemoveConfirm] = useState<{ assignmentId: string; employeeName: string } | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const loadRequests = useCallback(async () => {
     if (!shift) return;
@@ -861,6 +863,11 @@ export function ShiftDetailDialog({
                     <Copy className="h-3 w-3" /> Duplicar
                   </Button>
                 )}
+                {onDelete && !isLocked && (
+                  <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(true)} className="h-8 text-xs gap-1.5 rounded-full text-destructive border-destructive/30 hover:bg-destructive/10">
+                    <Trash2 className="h-3 w-3" /> Eliminar
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-full" onClick={() => {
                   import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
                     const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
@@ -917,6 +924,31 @@ export function ShiftDetailDialog({
           <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
           <AlertDialogAction onClick={handleConfirmRemove} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full">
             Sí, remover
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Delete shift confirmation */}
+    <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
+      <AlertDialogContent className="rounded-2xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-base">
+            <Trash2 className="h-4 w-4 text-destructive" /> Eliminar turno
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            ¿Estás seguro de que deseas eliminar el turno <strong>"{shift.title}"</strong> del{" "}
+            <strong>{format(parseISO(shift.date), "d 'de' MMMM", { locale: es })}</strong>?
+            Esta acción no se puede deshacer.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => { onDelete?.(shift); setDeleteConfirm(false); onOpenChange(false); }}
+            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full"
+          >
+            Sí, eliminar
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
