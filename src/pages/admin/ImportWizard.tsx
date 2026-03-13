@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile, parseAnyFileToJson } from "@/lib/safe-xlsx";
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
+import { PLATFORM_LIST, PLATFORM_CONFIGS, resolveColumn, findColumnKey, type ImportPlatform, type PlatformConfig } from "@/lib/import-platform-configs";
 import {
   Upload, FileSpreadsheet, CheckCircle2, AlertCircle, CalendarDays,
   Clock, DollarSign, ChevronRight, ChevronDown, Loader2, Users,
