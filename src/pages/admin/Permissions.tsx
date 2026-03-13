@@ -225,7 +225,7 @@ export default function Permissions() {
   const grantedCount = ALL_ACTIONS.filter(a => permissions[a]).length;
   const selectedManagerInfo = managers.find(m => m.user_id === selectedManager);
 
-  if (role !== "owner" && role !== "admin") {
+  if (role !== "owner" && role !== "developer" && role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-muted-foreground">No tienes acceso a este módulo.</p>

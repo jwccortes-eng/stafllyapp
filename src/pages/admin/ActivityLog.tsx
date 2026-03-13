@@ -159,7 +159,7 @@ export default function ActivityLog() {
     );
   });
 
-  if (role !== "owner" && role !== "admin") {
+  if (role !== "owner" && role !== "developer" && role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-muted-foreground">No tienes acceso a este módulo.</p>
