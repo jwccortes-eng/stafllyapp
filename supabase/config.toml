@@ -31,3 +31,5 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.trial-downgrade]
     verify_jwt = false
+  [functions.ai-workforce]
+    verify_jwt = false

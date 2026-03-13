@@ -106,7 +106,8 @@ export default function AIWorkforce() {
     <div className="space-y-6 p-4 md:p-6 max-w-5xl mx-auto">
       <PageHeader
         title="AI Workforce Optimization"
-        description="Sugerencias inteligentes de asignación de personal basadas en habilidades, disponibilidad y rendimiento."
+        subtitle="Sugerencias inteligentes de asignación de personal basadas en habilidades, disponibilidad y rendimiento."
+        icon={Sparkles}
       />
 
       {/* Action Cards */}
