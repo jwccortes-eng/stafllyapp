@@ -334,12 +334,7 @@ export default function ImportWizard() {
 
   /* ─── Parse Time Clock file ─── */
   const parseClockFile = useCallback(async (f: File) => {
-    const data = await f.arrayBuffer();
-    const wb = await safeRead(data);
-    const names = getSheetNames(wb);
-    const ws = getSheet(wb, names[0]);
-    if (!ws) return [];
-    const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+    const json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
     const parsed: ClockEntry[] = [];
 
     for (const row of json) {
