@@ -935,6 +935,20 @@ export default function ImportWizard() {
         }
       }
 
+      // ── Mark shifts as closed if payroll was processed ──
+      if (payrollExtras.length > 0 && clockEntries.length > 0) {
+        setImportProgress("Cerrando turnos procesados...");
+        const clockDatesSet = new Set(clockEntries.map(e => e.clockIn.toISOString().slice(0, 10)));
+        const datesToClose = [...clockDatesSet];
+        if (datesToClose.length > 0) {
+          await supabase.from("scheduled_shifts")
+            .update({ status: "closed" })
+            .eq("company_id", selectedCompanyId)
+            .eq("status", "confirmed")
+            .in("date", datesToClose);
+        }
+      }
+
       // ── Save import batch ──
       setImportProgress("Guardando historial...");
       const allDates = shiftGroups.filter(g => !g.isPayRide).map(g => g.date).sort();
