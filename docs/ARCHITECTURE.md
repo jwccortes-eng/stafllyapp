@@ -101,6 +101,9 @@ supabase/
 | `notifications` | Sistema de notificaciones | ✅ |
 | `activity_log` | Registro de auditoría | ✅ |
 | `conversations` / `internal_messages` | Chat interno | ✅ |
+| `clock_events` | Eventos GPS de clock-in/out | ✅ |
+| `clock_alerts` | Alertas de geofencing y fraude | ✅ |
+| `employee_location_history` | Historial de ubicación en turno | ✅ |
 
 ## Autenticación y roles
 
@@ -134,6 +137,7 @@ supabase/
 | `auth-email-hook` | Personalizar emails de auth | ❌ (hook) |
 | `external-api` | API pública para integraciones | ✅ API Key |
 | `payroll-consolidate` | Consolidar base pay de periodo | ✅ JWT |
+| `ai-workforce` | Sugerencias IA de asignación de personal | ✅ JWT |
 
 ## Seguridad
 
@@ -178,3 +182,39 @@ supabase/
 - **Iconos**: Lucide React
 - **Fechas**: date-fns
 - **Exportación**: ExcelJS para .xlsx, jsPDF para .pdf
+- **Mapas**: Leaflet + OpenStreetMap (react-leaflet)
+- **IA**: Lovable AI gateway (Gemini / GPT)
+
+## Geolocalización y supervisión operativa
+
+### GPS en Clock In / Clock Out
+- Al fichar entrada/salida se captura: `latitude`, `longitude`, `accuracy`, `device`, `address`
+- Datos almacenados en `clock_events` con referencia a `employee_id`, `shift_id` y `time_entry_id`
+- Helper `capturePosition()` en `src/lib/geo-helpers.ts` con timeout configurable
+
+### Mapa operativo en vivo (`/app/live-map`)
+- Leaflet + OpenStreetMap (sin API key)
+- Marcadores: trabajadores activos (🟢), ubicaciones (🔵), alertas (🔴)
+- Polling cada 30 segundos + Supabase Realtime
+- KPIs: activos, ubicaciones, alertas, tasa de cobertura
+
+### Geofencing
+- Cada `location` tiene `geofence_radius` (metros)
+- Al fichar, se calcula distancia Haversine entre GPS del empleado y coordenadas de la ubicación
+- Si está fuera del radio → se crea alerta `OUTSIDE_GEOFENCE` en `clock_alerts`
+
+### Detección de fraude
+- Tipos de alerta: `OUTSIDE_GEOFENCE`, `GPS_LOW_ACCURACY`, `DEVICE_DUPLICATION`, `SUSPICIOUS_MOVEMENT`
+- Severidades: `warning`, `high`, `critical`
+- Panel de alertas integrado en Live Map y dashboard
+
+### AI Workforce (`/app/ai-workforce`)
+- Usa Lovable AI (Gemini) para sugerir empleados óptimos para turnos abiertos
+- Analiza: skills, certificaciones, experiencia, tasa de cumplimiento (30 días)
+- Score 0-100 con razonamiento explicado
+- Botón de asignación directa desde sugerencias
+
+### Privacidad
+- Tracking GPS **solo** durante Clock In → Clock Out
+- No hay tracking continuo fuera de turnos
+- Helper `getDeviceId()` usa solo user-agent (no fingerprinting invasivo)

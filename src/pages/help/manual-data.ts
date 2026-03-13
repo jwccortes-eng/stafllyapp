@@ -44,6 +44,8 @@ export const employeeSections: ManualSection[] = [
       { title: "Toca 'Fichar Entrada'", description: "El sistema registrará tu hora de entrada y ubicación GPS.", tip: "Asegúrate de tener la ubicación activada en tu teléfono." },
       { title: "Agrega notas (opcional)", description: "Puedes agregar una nota o comentario al fichar, como 'Llegué temprano' o 'Tráfico en ruta'." },
       { title: "Toca 'Fichar Salida' al terminar", description: "Al finalizar tu jornada, regresa a la pestaña Reloj y toca el botón de salida." },
+      { title: "Ubicación GPS automática", description: "Al fichar entrada y salida, el sistema captura tu ubicación GPS de forma automática. Esto permite a tu empresa verificar que estés en el lugar correcto.", tip: "Si tu teléfono pide permiso de ubicación, acéptalo para evitar alertas." },
+      { title: "Navegar al trabajo", description: "En la sección de tu turno puedes tocar 'Navegar' para abrir Google Maps, Apple Maps o Waze con la dirección exacta del trabajo." },
     ],
   },
   {
@@ -122,6 +124,34 @@ export const adminSections: ManualSection[] = [
       { title: "Time Clock", description: "Revisa todos los fichajes del día: entrada, salida, horas trabajadas y ubicación GPS." },
       { title: "Aprueba registros", description: "Los fichajes pendientes requieren tu aprobación antes de contabilizarse en la nómina." },
       { title: "Corrige discrepancias", description: "Si un empleado olvidó fichar salida, puedes editar manualmente el registro.", tip: "Las ediciones manuales quedan registradas en el log de actividad." },
+      { title: "Ubicación GPS", description: "Cada fichaje incluye latitud, longitud y precisión GPS. Puedes ver la ubicación exacta en el mapa." },
+      { title: "Alertas de geofencing", description: "Si un empleado ficha fuera del radio permitido de la ubicación de trabajo, se genera una alerta automática en el sistema.", tip: "Configura el radio permitido desde Locations > Editar > Geofence Radius." },
+    ],
+  },
+  {
+    id: "mapa-vivo",
+    title: "Mapa en vivo",
+    subtitle: "Supervisión operativa en tiempo real",
+    image: illustDashboard,
+    steps: [
+      { title: "Accede al Mapa en Vivo", description: "Ve a Operaciones > Mapa en Vivo para ver la ubicación de tus empleados activos en tiempo real." },
+      { title: "Capas del mapa", description: "Visualiza trabajadores activos (verde), ubicaciones de trabajo (azul) y alertas (rojo) en el mapa interactivo." },
+      { title: "Detalle del trabajador", description: "Haz clic en un marcador para ver: nombre, turno, cliente, hora de entrada y horas trabajadas." },
+      { title: "Alertas de fraude", description: "El sistema detecta automáticamente: fichajes fuera de zona, GPS de baja precisión y uso de dispositivos duplicados.", tip: "Las alertas se clasifican por severidad: warning, high, critical." },
+      { title: "Actualización automática", description: "El mapa se actualiza cada 30 segundos con datos en tiempo real." },
+    ],
+  },
+  {
+    id: "ai-workforce",
+    title: "AI Workforce",
+    subtitle: "Optimización inteligente de personal",
+    image: illustDashboard,
+    steps: [
+      { title: "Accede a AI Workforce", description: "Ve a Operaciones > AI Workforce para acceder a las sugerencias inteligentes de asignación." },
+      { title: "Sugerir empleados", description: "Selecciona un turno abierto y el sistema analizará habilidades, disponibilidad y rendimiento para recomendarte los mejores candidatos." },
+      { title: "Score de compatibilidad", description: "Cada sugerencia incluye un puntaje de 0 a 100 que indica qué tan adecuado es el empleado para el turno." },
+      { title: "Optimizar asignación global", description: "Usa 'Optimizar Asignación' para que la IA sugiera redistribución de personal en todos los turnos abiertos.", tip: "La IA considera distancia, experiencia, certificaciones y tasa de cumplimiento de los últimos 30 días." },
+      { title: "Asignar con un clic", description: "Desde las sugerencias, toca 'Asignar' para crear la asignación directamente sin salir del módulo." },
     ],
   },
   {
