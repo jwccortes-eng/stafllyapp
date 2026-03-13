@@ -180,19 +180,20 @@ serve(async (req) => {
     const systemPrompt = `Eres un asistente de optimización de workforce para una empresa de staffing. Tu trabajo es analizar turnos abiertos y sugerir los mejores empleados para cada turno.
 
 REGLAS:
-- Analiza las habilidades, experiencia, ubicación y rendimiento de cada empleado
-- Prioriza empleados con mejor tasa de completación de turnos
-- No sugiereas empleados que ya están asignados al turno
-- Da un score de 0-100 para cada sugerencia
-- Explica brevemente por qué cada empleado es buena opción
+- Analiza habilidades, experiencia, ubicación, rendimiento, rating y badges de cada empleado
+- PRIORIZA empleados con: mejor rating (≥4.5), más badges, mayor tasa de completación
+- Los empleados con badges como "Top Performer", "Reliable", "Always On Time" deben tener prioridad
+- No sugieras empleados que ya están asignados al turno
+- Da un score de 0-100 para cada sugerencia (incluye rating y reputación en el cálculo)
+- Explica brevemente por qué cada empleado es buena opción, mencionando su rating y badges si los tiene
 - Si un turno requiere N empleados y ya tiene algunos, sugiere solo los faltantes
 - Responde SIEMPRE en español
 
 IMPORTANTE: Usa la herramienta suggest_assignments para devolver las sugerencias estructuradas.`;
 
     const userPrompt = mode === "optimize"
-      ? `Analiza todos los turnos abiertos y optimiza la asignación de personal para maximizar eficiencia:\n\n${JSON.stringify(contextData, null, 2)}`
-      : `Sugiere los mejores empleados para los siguientes turnos:\n\n${JSON.stringify(contextData, null, 2)}`;
+      ? `Analiza todos los turnos abiertos y optimiza la asignación de personal para maximizar eficiencia. Prioriza empleados con mejor reputación y rating:\n\n${JSON.stringify(contextData, null, 2)}`
+      : `Sugiere los mejores empleados para los siguientes turnos. Prioriza empleados con mejor reputación y badges:\n\n${JSON.stringify(contextData, null, 2)}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
