@@ -8,7 +8,7 @@ import {
   BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2,
   PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
   MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
-  Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt,
+  Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
