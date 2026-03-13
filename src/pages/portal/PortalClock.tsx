@@ -236,39 +236,41 @@ export default function PortalClock() {
   const handleClockOut = async () => {
     if (!activeEntry || !companyId || !employeeId) return;
 
-    // Find the shift associated with the active entry
     const activeShift = todayShifts.find(s => s.id === activeEntry.shift_id) ?? null;
     const scheduleCheck = isClockOutWithinSchedule(activeShift);
 
     setActing(true);
     try {
       const clockOutTime = new Date().toISOString();
+      const pos = await capturePosition();
+      const device = getDeviceId();
+
+      // Save clock-out event with GPS
+      await supabase.from("clock_events").insert({
+        employee_id: employeeId, company_id: companyId,
+        shift_id: activeEntry.shift_id, time_entry_id: activeEntry.id,
+        type: "clock_out",
+        latitude: pos?.latitude ?? null,
+        longitude: pos?.longitude ?? null,
+        accuracy: pos?.accuracy ?? null,
+        device,
+      } as any);
 
       if (!scheduleCheck.withinSchedule) {
-        // Clock-out outside schedule → mark as "pending" and create a review ticket
         const { error } = await supabase.from("time_entries")
           .update({ clock_out: clockOutTime, status: "pending", notes: `⚠️ Salida fuera de horario programado. ${scheduleCheck.message}` })
           .eq("id", activeEntry.id);
         if (error) throw error;
 
-        // Create a ticket for admin review
         await supabase.from("employee_tickets").insert({
-          company_id: companyId,
-          employee_id: employeeId,
+          company_id: companyId, employee_id: employeeId,
           subject: "Salida fuera de horario programado",
           description: `Clock-out registrado a las ${format(new Date(), "HH:mm")} fuera del horario del turno "${activeShift?.title ?? "N/A"}" (${activeShift?.start_time?.slice(0, 5) ?? "?"} - ${activeShift?.end_time?.slice(0, 5) ?? "?"}). Requiere revisión antes de consolidar.`,
-          type: "time_adjustment",
-          source: "auto",
-          priority: "medium",
-          status: "new",
-          source_entity_type: "time_entry",
-          source_entity_id: activeEntry.id,
+          type: "time_adjustment", source: "auto", priority: "medium", status: "new",
+          source_entity_type: "time_entry", source_entity_id: activeEntry.id,
         });
 
-        toast({
-          title: "Salida registrada (en revisión)",
-          description: "Tu salida está fuera del horario programado. Se generó una solicitud de revisión.",
-        });
+        toast({ title: "Salida registrada (en revisión)", description: "Tu salida está fuera del horario programado. Se generó una solicitud de revisión." });
       } else {
         const { error } = await supabase.from("time_entries")
           .update({ clock_out: clockOutTime }).eq("id", activeEntry.id);
