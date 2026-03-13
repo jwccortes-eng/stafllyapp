@@ -3515,6 +3515,123 @@ export type Database = {
           },
         ]
       }
+      shift_reviews: {
+        Row: {
+          comment: string | null
+          company_id: string
+          created_at: string
+          id: string
+          overall_rating: number
+          rating_clarity: number | null
+          rating_compensation: number | null
+          rating_conditions: number | null
+          rating_instructions: number | null
+          rating_organization: number | null
+          rating_presentation: number | null
+          rating_productivity: number | null
+          rating_professionalism: number | null
+          rating_punctuality: number | null
+          rating_quality: number | null
+          rating_service: number | null
+          rating_supervisor_treatment: number | null
+          rating_teamwork: number | null
+          reviewed_client_id: string | null
+          reviewed_employee_id: string | null
+          reviewer_id: string
+          reviewer_type: string
+          shift_id: string
+          would_work_again: boolean | null
+        }
+        Insert: {
+          comment?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          overall_rating: number
+          rating_clarity?: number | null
+          rating_compensation?: number | null
+          rating_conditions?: number | null
+          rating_instructions?: number | null
+          rating_organization?: number | null
+          rating_presentation?: number | null
+          rating_productivity?: number | null
+          rating_professionalism?: number | null
+          rating_punctuality?: number | null
+          rating_quality?: number | null
+          rating_service?: number | null
+          rating_supervisor_treatment?: number | null
+          rating_teamwork?: number | null
+          reviewed_client_id?: string | null
+          reviewed_employee_id?: string | null
+          reviewer_id: string
+          reviewer_type: string
+          shift_id: string
+          would_work_again?: boolean | null
+        }
+        Update: {
+          comment?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          overall_rating?: number
+          rating_clarity?: number | null
+          rating_compensation?: number | null
+          rating_conditions?: number | null
+          rating_instructions?: number | null
+          rating_organization?: number | null
+          rating_presentation?: number | null
+          rating_productivity?: number | null
+          rating_professionalism?: number | null
+          rating_punctuality?: number | null
+          rating_quality?: number | null
+          rating_service?: number | null
+          rating_supervisor_treatment?: number | null
+          rating_teamwork?: number | null
+          reviewed_client_id?: string | null
+          reviewed_employee_id?: string | null
+          reviewer_id?: string
+          reviewer_type?: string
+          shift_id?: string
+          would_work_again?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_reviews_reviewed_client_id_fkey"
+            columns: ["reviewed_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_reviews_reviewed_employee_id_fkey"
+            columns: ["reviewed_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_reviews_reviewed_employee_id_fkey"
+            columns: ["reviewed_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_reviews_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_rides: {
         Row: {
           company_id: string

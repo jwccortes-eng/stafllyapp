@@ -1,7 +1,8 @@
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Users, CalendarDays, FileText, Navigation, AlertCircle, LogIn, MessageCircle } from "lucide-react";
+import { Clock, MapPin, Users, CalendarDays, FileText, Navigation, AlertCircle, LogIn, MessageCircle, Star } from "lucide-react";
+import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { format, parseISO, differenceInMinutes, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -208,6 +209,22 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                   <LogIn className="h-5 w-5" />
                   Marcar Entrada
                 </Button>
+              )}
+
+              {/* Review button for completed shifts */}
+              {shift.status === "completed" && employeeId && shiftCompanyId && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <Star className="h-5 w-5 text-amber-400 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Evaluar este trabajo</p>
+                  </div>
+                  <ShiftReviewButton
+                    shiftId={shift.id}
+                    companyId={shiftCompanyId}
+                    reviewerType="employee"
+                    reviewerId={employeeId}
+                  />
+                </div>
               )}
             </div>
           )}

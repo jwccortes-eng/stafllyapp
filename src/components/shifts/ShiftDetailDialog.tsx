@@ -16,6 +16,7 @@ import {
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
   CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy, FileText,
 } from "lucide-react";
+import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
 import { ShiftChatPanel } from "./ShiftChatPanel";
@@ -635,6 +636,16 @@ export function ShiftDetailDialog({
                             {statusIcons[a.status]}
                             {statusLabels[a.status] || a.status}
                           </span>
+                        )}
+                        {effectiveCanEdit && selectedCompanyId && (
+                          <ShiftReviewButton
+                            shiftId={shift.id}
+                            companyId={selectedCompanyId}
+                            reviewerType="manager"
+                            reviewerId={user?.id || ""}
+                            reviewedEmployeeId={emp.id}
+                            employeeName={`${emp.first_name} ${emp.last_name}`}
+                          />
                         )}
                         {effectiveCanEdit && (
                           <button

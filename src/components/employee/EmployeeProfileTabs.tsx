@@ -17,8 +17,9 @@ import { cn } from "@/lib/utils";
 import {
   User, DollarSign, Clock, CalendarDays, FileText, Activity,
   Briefcase, Phone, Mail, MapPin, Users, Tag, Star, Shield,
-  Plus, Pencil, Trash2, MoreHorizontal, KeyRound, Upload, Download, Cake, Home,
+  Plus, Pencil, Trash2, MoreHorizontal, KeyRound, Upload, Download, Cake, Home, TrendingUp,
 } from "lucide-react";
+import { EmployeePerformanceScore } from "@/components/reviews/EmployeePerformanceScore";
 import { EmployeeAccessTab } from "@/components/employee/EmployeeAccessTab";
 import { useToast } from "@/hooks/use-toast";
 
@@ -655,10 +656,14 @@ export function EmployeeProfileTabs({
 }) {
   return (
     <Tabs defaultValue="info" className="w-full">
-      <TabsList className="w-full grid grid-cols-7 h-9 mb-4 bg-muted/40 rounded-xl">
+      <TabsList className="w-full grid grid-cols-8 h-9 mb-4 bg-muted/40 rounded-xl">
         <TabsTrigger value="info" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <User className="h-3 w-3" />
           <span className="hidden sm:inline">Info</span>
+        </TabsTrigger>
+        <TabsTrigger value="reputation" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <TrendingUp className="h-3 w-3" />
+          <span className="hidden sm:inline">Score</span>
         </TabsTrigger>
         <TabsTrigger value="pay" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <DollarSign className="h-3 w-3" />
@@ -688,6 +693,14 @@ export function EmployeeProfileTabs({
 
       <TabsContent value="info" className="mt-0">
         <InfoTab employee={employee} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} />
+      </TabsContent>
+      <TabsContent value="reputation" className="mt-0">
+        <Card className="rounded-xl border-border/40">
+          <CardContent className="p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3">Performance Score</h3>
+            <EmployeePerformanceScore employeeId={employee.id} />
+          </CardContent>
+        </Card>
       </TabsContent>
       <TabsContent value="pay" className="mt-0">
         <PayTab employee={employee} companyId={companyId} />
