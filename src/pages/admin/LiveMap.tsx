@@ -225,6 +225,10 @@ export default function LiveMap() {
     }
   };
 
+  if (!hasAccess) {
+    return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">No tienes acceso a este módulo.</p></div>;
+  }
+
   return (
     <div className="space-y-4 p-4 md:p-6">
       <PageHeader title="Mapa Operativo" subtitle="Supervisión en tiempo real de trabajadores y ubicaciones" icon={MapPin} />
