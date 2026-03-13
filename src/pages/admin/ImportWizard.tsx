@@ -258,23 +258,24 @@ export default function ImportWizard() {
       const json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
 
       for (const row of json) {
-        const dateRaw = row["Date"] ?? "";
+        const sc = platformConfig.schedule.columns;
+        const dateRaw = resolveColumn(row, sc.date);
         const isoDate = parseDate(dateRaw);
         if (!isoDate) continue;
 
-        const availStatus = (row["Availability status"] ?? "").trim().toLowerCase();
-        const userName = (row["Users"] ?? "").trim();
+        const availStatus = resolveColumn(row, sc.availabilityStatus).toLowerCase();
+        const userName = resolveColumn(row, sc.users);
 
-        if (availStatus === "unavailable") {
+        if (platformConfig.schedule.unavailablePatterns.some(p => p.test(availStatus))) {
           if (userName) allUnavail.push({ name: userName, date: isoDate });
           continue;
         }
 
-        const shiftTitle = (row["Shift title"] ?? "").trim();
-        const startRaw = (row["Start"] ?? "").trim();
-        const endRaw = (row["End"] ?? "").trim();
-        const job = (row["Job"] ?? "").trim();
-        const subItem = (row["Sub item"] ?? "").trim();
+        const shiftTitle = resolveColumn(row, sc.shiftTitle);
+        const startRaw = resolveColumn(row, sc.start);
+        const endRaw = resolveColumn(row, sc.end);
+        const job = resolveColumn(row, sc.job);
+        const subItem = resolveColumn(row, sc.subItem);
 
         if (!shiftTitle && !job && !startRaw) continue;
         const startTime = parseTime(startRaw);
@@ -283,11 +284,10 @@ export default function ImportWizard() {
 
         // Detect PayRide
         const combined = `${shiftTitle} ${job} ${subItem}`.toLowerCase();
-        const isPayRide = /pay\s*ride|pagar|1\/2\s*ride/i.test(combined) || /^99\s*[-–]/.test(job.trim());
-        const isWeekendJob = /weekend\s*j[oa]b/i.test(subItem) || /weekend\s*j[oa]b/i.test(job) || /weekend\s*j[oa]b/i.test(combined);
+        const isPayRide = platformConfig.schedule.payRidePatterns.some(p => p.test(combined)) || /^99\s*[-–]/.test(job.trim());
+        const isWeekendJob = platformConfig.schedule.weekendJobPatterns.some(p => p.test(combined));
 
         if (isPayRide) {
-          // Still track for summary but skip shift creation
           const existingRide = allGroups.find(g => g.key === `PAYRIDE|${isoDate}|${userName}`);
           if (!existingRide) {
             allGroups.push({
@@ -301,19 +301,23 @@ export default function ImportWizard() {
           continue;
         }
 
+        const address = resolveColumn(row, sc.address);
+        const note = resolveColumn(row, sc.note);
+        const tags = resolveColumn(row, sc.tags);
+        const lastStatus = resolveColumn(row, sc.lastStatus);
+
         const groupKey = `${shiftTitle}|${isoDate}|${startTime}|${endTime}|${job}`;
         const existing = allGroups.find(g => g.key === groupKey);
         if (!existing) {
           allGroups.push({
             key: groupKey, shiftCode: shiftTitle, date: isoDate, startTime, endTime, job, subItem,
-            address: (row["Address"] ?? "").trim(), note: (row["Note"] ?? "").trim(),
-            tags: (row["Shift tags"] ?? "").trim(), status: (row["Last Status"] ?? "").trim(),
-            employees: userName ? [userName] : [], employeeStatuses: [(row["Last Status"] ?? "").trim()],
+            address, note, tags, status: lastStatus,
+            employees: userName ? [userName] : [], employeeStatuses: [lastStatus],
             isWeekendJob, isPayRide: false,
           });
         } else if (userName && !existing.employees.includes(userName)) {
           existing.employees.push(userName);
-          existing.employeeStatuses.push((row["Last Status"] ?? "").trim());
+          existing.employeeStatuses.push(lastStatus);
         }
       }
     }
