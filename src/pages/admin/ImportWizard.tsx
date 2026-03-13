@@ -832,12 +832,20 @@ export default function ImportWizard() {
             }
           }
 
-          if (shiftId) results.timeClockLinked++;
+          if (shiftId) {
+            results.timeClockLinked++;
+            // Update shift status → "worked"
+            await supabase.from("scheduled_shifts")
+              .update({ status: "confirmed" })
+              .eq("id", shiftId)
+              .eq("company_id", selectedCompanyId)
+              .in("status", ["open", "assigned"]);
+          }
 
           const notesParts: string[] = [];
           if (entry.employeeNotes) notesParts.push(`Empleado: ${entry.employeeNotes}`);
           if (entry.managerNotes) notesParts.push(`Manager: ${entry.managerNotes}`);
-          notesParts.push("[Importado Connecteam]");
+          notesParts.push(`[Import ${platformConfig.label}]`);
 
           const { error } = await supabase.from("time_entries").insert({
             company_id: selectedCompanyId,
