@@ -26,7 +26,7 @@ interface ShiftInfo {
   shift_code?: string | null;
   meeting_point?: string | null;
   special_instructions?: string | null;
-  location?: { name: string } | null;
+  location?: { name: string; latitude?: number | null; longitude?: number | null } | null;
   client?: { name: string } | null;
   company_id?: string;
 }

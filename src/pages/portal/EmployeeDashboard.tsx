@@ -282,6 +282,52 @@ export default function EmployeeDashboard() {
         </div>
       </div>
 
+      {/* ── Clock status + weekly hours ── */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Clock status */}
+        <div
+          className={cn(
+            "rounded-2xl border p-4 cursor-pointer active:scale-[0.98] transition-all",
+            clockStatus.isClockedIn
+              ? "border-earning/30 bg-earning/5"
+              : "border-border/40 bg-card"
+          )}
+          onClick={() => navigate("/portal/clock")}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className={cn("h-2.5 w-2.5 rounded-full", clockStatus.isClockedIn ? "bg-earning animate-pulse" : "bg-muted-foreground/30")} />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {clockStatus.isClockedIn ? "En turno" : "Fuera de turno"}
+            </span>
+          </div>
+          {clockStatus.isClockedIn && clockStatus.shiftTitle && (
+            <p className="text-xs font-medium text-foreground truncate">{clockStatus.shiftTitle}</p>
+          )}
+          <Button
+            size="sm"
+            variant={clockStatus.isClockedIn ? "destructive" : "default"}
+            className="w-full mt-2 h-9 text-xs gap-1.5 font-bold"
+            onClick={e => { e.stopPropagation(); navigate("/portal/clock"); }}
+          >
+            {clockStatus.isClockedIn ? <><LogOut className="h-3.5 w-3.5" /> Marcar Salida</> : <><LogIn className="h-3.5 w-3.5" /> Marcar Entrada</>}
+          </Button>
+        </div>
+
+        {/* Weekly hours */}
+        <div className="rounded-2xl border border-border/40 bg-card p-4">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="h-7 w-7 rounded-xl bg-accent flex items-center justify-center">
+              <Timer className="h-3.5 w-3.5 text-accent-foreground" />
+            </div>
+          </div>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Horas esta semana</p>
+          <p className="text-xl font-bold font-heading tabular-nums leading-none mt-1 text-foreground">{weeklyHours}</p>
+          <div className="flex items-center gap-1 mt-2.5 text-[10px] font-medium text-primary opacity-60">
+            <Clock className="h-2.5 w-2.5" /> Reloj
+          </div>
+        </div>
+      </div>
+
       {/* ── Hero cards: pay + next shift ── */}
       <div className="grid grid-cols-2 gap-3">
         {/* Pay */}
