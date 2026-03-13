@@ -168,12 +168,14 @@ const parseCurrency = (val: string): number => {
 // findClockDateKey removed — now using resolveColumn from platform configs
 
 /* ─── Wizard steps ─── */
-type WizardStep = "upload" | "validation" | "confirm" | "importing" | "result" | "history";
+type WizardStep = "upload-schedule" | "upload-clock" | "upload-payroll" | "validation" | "confirm" | "importing" | "result" | "history";
 
-const STEPS = [
-  { key: "upload" as const, label: "Subir Archivos", icon: Upload },
-  { key: "validation" as const, label: "Validación", icon: AlertTriangle },
-  { key: "confirm" as const, label: "Confirmar", icon: CheckCircle2 },
+const STEPS: { key: WizardStep; label: string; icon: any }[] = [
+  { key: "upload-schedule", label: "Schedules", icon: CalendarDays },
+  { key: "upload-clock", label: "Time Clocks", icon: Clock },
+  { key: "upload-payroll", label: "Payroll", icon: DollarSign },
+  { key: "validation", label: "Validation", icon: AlertTriangle },
+  { key: "confirm", label: "Import", icon: CheckCircle2 },
 ];
 
 export default function ImportWizard() {
@@ -185,7 +187,7 @@ export default function ImportWizard() {
   const platformConfig = PLATFORM_CONFIGS[platform];
 
   // Step state
-  const [step, setStep] = useState<WizardStep>("upload");
+  const [step, setStep] = useState<WizardStep>("upload-schedule");
 
   // File state
   const [scheduleFiles, setScheduleFiles] = useState<File[]>([]);
@@ -1029,7 +1031,7 @@ export default function ImportWizard() {
 
   /* ─── Reset ─── */
   const resetWizard = () => {
-    setStep("upload");
+    setStep("upload-schedule");
     setScheduleFiles([]);
     setClockFile(null);
     setPayrollFile(null);
@@ -1133,8 +1135,8 @@ export default function ImportWizard() {
         </TabsList>
 
         <TabsContent value="wizard" className="space-y-5 mt-4">
-          {/* Platform selector */}
-          {step === "upload" && (
+          {/* Platform selector — show on first step only */}
+          {step === "upload-schedule" && (
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">Plataforma de origen</p>
               <div className="flex flex-wrap gap-2">
@@ -1164,14 +1166,14 @@ export default function ImportWizard() {
 
           {/* Stepper */}
           {step !== "result" && step !== "importing" && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 overflow-x-auto pb-1">
               {STEPS.map((s, i) => {
                 const isActive = s.key === step;
                 const isPast = STEPS.findIndex(x => x.key === step) > i;
                 return (
                   <React.Fragment key={s.key}>
-                    {i > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                       isActive ? "bg-primary text-primary-foreground" :
                       isPast ? "bg-primary/10 text-primary" :
                       "bg-muted text-muted-foreground"
@@ -1185,95 +1187,129 @@ export default function ImportWizard() {
             </div>
           )}
 
-          {/* ═══ STEP: UPLOAD ═══ */}
-          {step === "upload" && (
+          {/* ═══ STEP 1: UPLOAD SCHEDULES ═══ */}
+          {step === "upload-schedule" && (
             <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                {/* Schedule */}
-                <Card className={scheduleFiles.length > 0 ? "ring-2 ring-primary/30" : ""}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <CalendarDays className="h-4 w-4 text-primary" />
-                      Paso 1: Programaciones
-                      {scheduleFiles.length > 0 && <Badge variant="secondary" className="ml-auto">{scheduleFiles.length} archivo(s)</Badge>}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Schedule Export (.xlsx, .csv, .txt). Detecta turnos, Weekend Jobs y PayRide automáticamente.
-                    </p>
-                    <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {scheduleFiles.length > 0 ? scheduleFiles.map(f => f.name).join(", ") : "Subir archivo(s)"}
-                      </span>
-                      <input type="file" className="hidden" accept={ACCEPTED_FORMATS} multiple onChange={handleScheduleFiles} />
-                    </label>
-                    <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("schedule")}>
-                      <Download className="h-3.5 w-3.5" /> Descargar plantilla
-                    </Button>
-                  </CardContent>
-                </Card>
+              <Card className={scheduleFiles.length > 0 ? "ring-2 ring-primary/30" : ""}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-primary" />
+                    Upload Schedules
+                    {scheduleFiles.length > 0 && <Badge variant="secondary" className="ml-auto">{scheduleFiles.length} archivo(s)</Badge>}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Schedule Export (.xlsx, .csv, .txt). Detecta turnos, Weekend Jobs y PayRide automáticamente.
+                  </p>
+                  <label className="flex flex-col items-center gap-3 p-6 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {scheduleFiles.length > 0 ? scheduleFiles.map(f => f.name).join(", ") : "Arrastra o haz clic para subir archivo(s)"}
+                    </span>
+                    <input type="file" className="hidden" accept={ACCEPTED_FORMATS} multiple onChange={handleScheduleFiles} />
+                  </label>
+                  <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("schedule")}>
+                    <Download className="h-3.5 w-3.5" /> Descargar plantilla
+                  </Button>
+                </CardContent>
+              </Card>
 
-                {/* Time Clock */}
-                <Card className={clockFile ? "ring-2 ring-primary/30" : ""}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-emerald-500" />
-                      Paso 2: Relojes
-                      {clockFile && <Badge variant="secondary" className="ml-auto">1 archivo</Badge>}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Time Clock Report (.xlsx, .csv, .txt). Crea entradas de reloj y vincula a turnos.
-                    </p>
-                    <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {clockFile ? clockFile.name : "Subir archivo"}
-                      </span>
-                      <input type="file" className="hidden" accept={ACCEPTED_FORMATS} onChange={handleClockFile} />
-                    </label>
-                    <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("timeclock")}>
-                      <Download className="h-3.5 w-3.5" /> Descargar plantilla
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Payroll */}
-                <Card className={payrollFile ? "ring-2 ring-primary/30" : ""}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-amber-500" />
-                      Paso 3: Nómina
-                      {payrollFile && <Badge variant="secondary" className="ml-auto">1 archivo</Badge>}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Nómina Final (.xlsx, .csv, .txt). Detecta Weekend Job, Transporte, Tips, Descuentos.
-                    </p>
-                    <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {payrollFile ? payrollFile.name : "Subir archivo"}
-                      </span>
-                      <input type="file" className="hidden" accept={ACCEPTED_FORMATS} onChange={handlePayrollFile} />
-                    </label>
-                    <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("payroll")}>
-                      <Download className="h-3.5 w-3.5" /> Descargar plantilla
-                    </Button>
-                  </CardContent>
-                </Card>
+              <div className="flex justify-between">
+                <div />
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setStep("upload-clock")} className="gap-1.5 text-muted-foreground">
+                    <SkipForward className="h-4 w-4" /> Skip
+                  </Button>
+                  <Button onClick={() => setStep("upload-clock")} className="gap-1.5">
+                    Siguiente <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
+            </div>
+          )}
+
+          {/* ═══ STEP 2: UPLOAD TIME CLOCKS ═══ */}
+          {step === "upload-clock" && (
+            <div className="space-y-4">
+              <Card className={clockFile ? "ring-2 ring-primary/30" : ""}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    Upload Time Clocks
+                    {clockFile && <Badge variant="secondary" className="ml-auto">1 archivo</Badge>}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Time Clock Report (.xlsx, .csv, .txt). Crea entradas de reloj y vincula a turnos.
+                  </p>
+                  <label className="flex flex-col items-center gap-3 p-6 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {clockFile ? clockFile.name : "Arrastra o haz clic para subir archivo"}
+                    </span>
+                    <input type="file" className="hidden" accept={ACCEPTED_FORMATS} onChange={handleClockFile} />
+                  </label>
+                  <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("timeclock")}>
+                    <Download className="h-3.5 w-3.5" /> Descargar plantilla
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep("upload-schedule")} className="gap-1.5">
+                  <RotateCcw className="h-4 w-4" /> Atrás
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setStep("upload-payroll")} className="gap-1.5 text-muted-foreground">
+                    <SkipForward className="h-4 w-4" /> Skip
+                  </Button>
+                  <Button onClick={() => setStep("upload-payroll")} className="gap-1.5">
+                    Siguiente <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ STEP 3: UPLOAD PAYROLL ═══ */}
+          {step === "upload-payroll" && (
+            <div className="space-y-4">
+              <Card className={payrollFile ? "ring-2 ring-primary/30" : ""}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    Upload Payroll
+                    {payrollFile && <Badge variant="secondary" className="ml-auto">1 archivo</Badge>}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Nómina Final (.xlsx, .csv, .txt). Detecta Weekend Job, Transporte, Tips, Descuentos.
+                  </p>
+                  <label className="flex flex-col items-center gap-3 p-6 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {payrollFile ? payrollFile.name : "Arrastra o haz clic para subir archivo"}
+                    </span>
+                    <input type="file" className="hidden" accept={ACCEPTED_FORMATS} onChange={handlePayrollFile} />
+                  </label>
+                  <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("payroll")}>
+                    <Download className="h-3.5 w-3.5" /> Descargar plantilla
+                  </Button>
+                </CardContent>
+              </Card>
 
               <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 text-xs text-muted-foreground">
                 <Info className="h-4 w-4 shrink-0" />
-                Soporta Excel (.xlsx), CSV y TXT. Puedes subir solo los archivos que necesites — no es obligatorio completar los 3 pasos.
+                No es obligatorio subir los 3 archivos. El sistema procesará solo los que hayas cargado.
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep("upload-clock")} className="gap-1.5">
+                  <RotateCcw className="h-4 w-4" /> Atrás
+                </Button>
                 <Button onClick={handleParseAll} disabled={!hasAnyFile || parsing} className="gap-2">
                   {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
                   {parsing ? "Procesando..." : "Validar archivos"}
@@ -1443,7 +1479,7 @@ export default function ImportWizard() {
               )}
 
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep("upload")} className="gap-1.5">
+                <Button variant="outline" onClick={() => setStep("upload-payroll")} className="gap-1.5">
                   <RotateCcw className="h-4 w-4" />
                   Volver
                 </Button>
