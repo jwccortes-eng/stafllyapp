@@ -103,7 +103,7 @@ function TabButton({ active, onClick, children, badge }: { active: boolean; onCl
 export function ShiftDetailDialog({
   shift, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
-  onDuplicate,
+  onDuplicate, onDelete,
   availabilityConfigs = [], availabilityOverrides = [],
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
