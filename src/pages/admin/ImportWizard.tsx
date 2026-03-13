@@ -1151,15 +1151,18 @@ export default function ImportWizard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-xs text-muted-foreground mb-3">
-                      Time Clock Shift Report (.xlsx). Crea entradas de reloj y vincula a turnos programados.
+                      Time Clock Report (.xlsx, .csv, .txt). Crea entradas de reloj y vincula a turnos.
                     </p>
                     <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
                       <Upload className="h-5 w-5 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
                         {clockFile ? clockFile.name : "Subir archivo"}
                       </span>
-                      <input type="file" className="hidden" accept=".xls,.xlsx" onChange={handleClockFile} />
+                      <input type="file" className="hidden" accept={ACCEPTED_FORMATS} onChange={handleClockFile} />
                     </label>
+                    <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("timeclock")}>
+                      <Download className="h-3.5 w-3.5" /> Descargar plantilla
+                    </Button>
                   </CardContent>
                 </Card>
 
