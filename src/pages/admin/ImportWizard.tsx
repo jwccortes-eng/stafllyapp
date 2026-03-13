@@ -768,12 +768,31 @@ export default function ImportWizard() {
         setImportProgress("Cargando turnos para vincular relojes...");
         const { data: shifts } = await supabase
           .from("scheduled_shifts")
-          .select("id, shift_code, date")
+          .select("id, shift_code, date, start_time, end_time")
           .eq("company_id", selectedCompanyId)
           .is("deleted_at", null);
-        const shiftMap = new Map<string, string>();
+
+        // Build multiple lookup maps for reconciliation
+        const shiftByCode = new Map<string, string>(); // shift_code|date → id
+        const shiftByHash = new Map<string, string>(); // date|start_time → id (fallback)
         (shifts ?? []).forEach(s => {
-          if (s.shift_code) shiftMap.set(`${s.shift_code}|${s.date}`, s.id);
+          if (s.shift_code) shiftByCode.set(`${s.shift_code}|${s.date}`, s.id);
+          if (s.start_time) shiftByHash.set(`${s.date}|${s.start_time.slice(0, 5)}`, s.id);
+        });
+
+        // Also build employee+date+time assignment map for precise matching
+        const { data: assignments } = await supabase
+          .from("shift_assignments")
+          .select("employee_id, shift_id, scheduled_shifts!inner(date, start_time)")
+          .eq("company_id", selectedCompanyId)
+          .in("status", ["accepted", "confirmed"]);
+
+        const assignmentMap = new Map<string, string>(); // empId|date|startTime → shiftId
+        (assignments as any[] ?? []).forEach((a: any) => {
+          const ss = a.scheduled_shifts;
+          if (ss && a.employee_id) {
+            assignmentMap.set(`${a.employee_id}|${ss.date}|${ss.start_time?.slice(0, 5)}`, a.shift_id);
+          }
         });
 
         for (let i = 0; i < validClock.length; i++) {
@@ -787,12 +806,34 @@ export default function ImportWizard() {
             continue;
           }
 
+          // Reconciliation: try multiple strategies
           let shiftId: string | null = null;
-          if (entry.scheduledShiftTitle) {
-            const clockDate = entry.clockIn.toISOString().slice(0, 10);
-            shiftId = shiftMap.get(`${entry.scheduledShiftTitle}|${clockDate}`) ?? null;
-            if (shiftId) results.timeClockLinked++;
+          const clockDate = entry.clockIn.toISOString().slice(0, 10);
+          const clockStartTime = `${String(entry.clockIn.getHours()).padStart(2, "0")}:${String(entry.clockIn.getMinutes()).padStart(2, "0")}`;
+
+          // Strategy 1: employee + date + start_time via assignment
+          shiftId = assignmentMap.get(`${empId}|${clockDate}|${clockStartTime}`) ?? null;
+
+          // Strategy 2: shift_code + date
+          if (!shiftId && entry.scheduledShiftTitle) {
+            shiftId = shiftByCode.get(`${entry.scheduledShiftTitle}|${clockDate}`) ?? null;
           }
+
+          // Strategy 3: date + approximate start_time (±30 min)
+          if (!shiftId) {
+            const clockMinutes = entry.clockIn.getHours() * 60 + entry.clockIn.getMinutes();
+            for (const [key, id] of shiftByHash.entries()) {
+              if (!key.startsWith(clockDate + "|")) continue;
+              const timePart = key.split("|")[1];
+              const [h, m] = timePart.split(":").map(Number);
+              if (Math.abs(h * 60 + m - clockMinutes) <= 30) {
+                shiftId = id;
+                break;
+              }
+            }
+          }
+
+          if (shiftId) results.timeClockLinked++;
 
           const notesParts: string[] = [];
           if (entry.employeeNotes) notesParts.push(`Empleado: ${entry.employeeNotes}`);
