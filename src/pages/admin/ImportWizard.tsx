@@ -14,7 +14,7 @@ import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import {
   Upload, FileSpreadsheet, CheckCircle2, AlertCircle, CalendarDays,
   Clock, DollarSign, ChevronRight, ChevronDown, Loader2, Users,
-  AlertTriangle, RotateCcw, History, Info, SkipForward, Car,
+  AlertTriangle, RotateCcw, History, Info, SkipForward, Car, Download,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
