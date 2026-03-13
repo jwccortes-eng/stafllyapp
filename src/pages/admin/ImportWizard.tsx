@@ -1284,64 +1284,106 @@ export default function ImportWizard() {
 
           {/* ═══ STEP: VALIDATION ═══ */}
           {step === "validation" && validation && (
-            <div className="space-y-4">
-              {/* KPIs */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {scheduleFiles.length > 0 && (
-                  <KpiCard label="Turnos a crear" value={validation.scheduleShifts - validation.scheduleDuplicates} icon={CalendarDays} />
-                )}
-                {scheduleFiles.length > 0 && (
-                  <KpiCard label="Asignaciones" value={validation.scheduleAssignments} icon={Users} />
-                )}
-                {clockFile && (
-                  <KpiCard label="Registros de reloj" value={validation.clockEntries} icon={Clock} color="text-emerald-500" />
-                )}
-                {payrollFile && (
-                  <KpiCard label="Movimientos nómina" value={validation.payrollMovements} icon={DollarSign} color="text-amber-500" />
-                )}
-              </div>
+            <div className="space-y-5">
+              {/* ── IMPORT PREVIEW header ── */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileSpreadsheet className="h-5 w-5 text-primary" />
+                    IMPORT PREVIEW
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Counts grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {scheduleFiles.length > 0 && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border">
+                        <CalendarDays className="h-5 w-5 text-primary shrink-0" />
+                        <div>
+                          <p className="text-2xl font-bold">{validation.scheduleShifts}</p>
+                          <p className="text-xs text-muted-foreground">Schedules detected</p>
+                        </div>
+                      </div>
+                    )}
+                    {clockFile && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/5 border">
+                        <Clock className="h-5 w-5 text-emerald-500 shrink-0" />
+                        <div>
+                          <p className="text-2xl font-bold">{validation.clockEntries}</p>
+                          <p className="text-xs text-muted-foreground">Clock records detected</p>
+                        </div>
+                      </div>
+                    )}
+                    {payrollFile && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border">
+                        <DollarSign className="h-5 w-5 text-amber-500 shrink-0" />
+                        <div>
+                          <p className="text-2xl font-bold">{validation.payrollMovements}</p>
+                          <p className="text-xs text-muted-foreground">Payroll entries detected</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-              {/* Detections */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {validation.scheduleWeekendJobs > 0 && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-violet-50 dark:bg-violet-900/15 border text-xs">
-                    <FileSpreadsheet className="h-4 w-4 text-violet-500" />
-                    <span><strong>{validation.scheduleWeekendJobs}</strong> Weekend Jobs</span>
-                  </div>
-                )}
-                {validation.schedulePayRides > 0 && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-sky-50 dark:bg-sky-900/15 border text-xs">
-                    <Car className="h-4 w-4 text-sky-500" />
-                    <span><strong>{validation.schedulePayRides}</strong> PayRides</span>
-                  </div>
-                )}
-                {validation.scheduleDuplicates > 0 && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/15 border text-xs">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <span><strong>{validation.scheduleDuplicates}</strong> duplicados</span>
-                  </div>
-                )}
-                {validation.scheduleUnavailable > 0 && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted border text-xs">
-                    <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                    <span><strong>{validation.scheduleUnavailable}</strong> no disponibles</span>
-                  </div>
-                )}
-              </div>
+                  {/* ── Warnings section ── */}
+                  {(validation.warnings.length > 0 || validation.scheduleDuplicates > 0 || validation.unmatchedEmployees.length > 0) && (
+                    <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 p-4 space-y-2">
+                      <p className="text-sm font-semibold flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                        <AlertTriangle className="h-4 w-4" />
+                        Warnings
+                      </p>
+                      <ul className="text-xs space-y-1.5 text-amber-900/80 dark:text-amber-300/80 pl-6 list-disc">
+                        {validation.unmatchedEmployees.length > 0 && (
+                          <li><strong>{validation.unmatchedEmployees.length}</strong> employees not found — se crearán automáticamente</li>
+                        )}
+                        {validation.scheduleDuplicates > 0 && (
+                          <li><strong>{validation.scheduleDuplicates}</strong> shifts duplicated — serán omitidos</li>
+                        )}
+                        {payrollExtras.filter(e => !e.employeeId).length > 0 && (
+                          <li><strong>{payrollExtras.filter(e => !e.employeeId).length}</strong> payroll entries without shift</li>
+                        )}
+                        {validation.clockUnpaid > 0 && (
+                          <li><strong>{validation.clockUnpaid}</strong> clock records unpaid — serán omitidos</li>
+                        )}
+                        {validation.warnings.filter(w =>
+                          !w.includes("empleados no encontrados") &&
+                          !w.includes("turnos ya existen")
+                        ).map((w, i) => <li key={i}>{w}</li>)}
+                      </ul>
+                    </div>
+                  )}
 
-              {/* Warnings */}
-              {validation.warnings.length > 0 && (
-                <Card className="border-amber-200 dark:border-amber-800">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                      <div className="text-xs space-y-1">
-                        {validation.warnings.map((w, i) => <p key={i}>{w}</p>)}
+                  {/* ── Special detections ── */}
+                  {(validation.scheduleWeekendJobs > 0 || validation.schedulePayRides > 0 || validation.scheduleUnavailable > 0) && (
+                    <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+                      <p className="text-sm font-semibold flex items-center gap-2">
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                        Special detections
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        {validation.scheduleWeekendJobs > 0 && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-xs font-medium">
+                            <span className="h-2 w-2 rounded-full bg-violet-500" />
+                            Weekend jobs: <strong>{validation.scheduleWeekendJobs}</strong>
+                          </div>
+                        )}
+                        {validation.schedulePayRides > 0 && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-sky-100 dark:bg-sky-900/30 text-xs font-medium">
+                            <span className="h-2 w-2 rounded-full bg-sky-500" />
+                            Payrides: <strong>{validation.schedulePayRides}</strong>
+                          </div>
+                        )}
+                        {validation.scheduleUnavailable > 0 && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-xs font-medium">
+                            <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+                            Unavailable: <strong>{validation.scheduleUnavailable}</strong>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Unmatched employees */}
               {validation.unmatchedEmployees.length > 0 && (
