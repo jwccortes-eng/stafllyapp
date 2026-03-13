@@ -964,6 +964,38 @@ export default function Shifts() {
                     </div>
                   </div>
 
+                  {/* Section: Payment (moved up for visibility) */}
+                  <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                      <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><CreditCard className="h-3 w-3 text-primary" /></div>
+                      <span className="text-[11px] font-semibold text-foreground">Tipo de pago</span>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <Select value={payType} onValueChange={v => setPayType(v as "hourly" | "daily")}>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
+                          <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {payType === "daily" && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] text-muted-foreground">Tarifa diaria automática al consolidar.</p>
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground font-medium">Jornada</Label>
+                            <Select value={dayType} onValueChange={v => setDayType(v as "full_day" | "half_day")}>
+                              <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="full_day">☀️ Día completo ($200)</SelectItem>
+                                <SelectItem value="half_day">🌤️ Medio día ($125)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Section: Transportation */}
                   <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
                     <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
@@ -1004,38 +1036,6 @@ export default function Shifts() {
                             <Input value={transportNotes} onChange={e => setTransportNotes(e.target.value)} placeholder="Ej: Recoger en oficina a las 7:30 AM" className="h-9 text-sm mt-1" />
                           </div>
                         </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Section: Payment */}
-                  <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
-                      <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><CreditCard className="h-3 w-3 text-primary" /></div>
-                      <span className="text-[11px] font-semibold text-foreground">Tipo de pago</span>
-                    </div>
-                    <div className="p-4 space-y-3">
-                      <Select value={payType} onValueChange={v => setPayType(v as "hourly" | "daily")}>
-                        <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
-                          <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {payType === "daily" && (
-                        <div className="space-y-2">
-                          <p className="text-[10px] text-muted-foreground">Tarifa diaria automática al consolidar.</p>
-                          <div>
-                            <Label className="text-[11px] text-muted-foreground font-medium">Jornada</Label>
-                            <Select value={dayType} onValueChange={v => setDayType(v as "full_day" | "half_day")}>
-                              <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="full_day">☀️ Día completo ($200)</SelectItem>
-                                <SelectItem value="half_day">🌤️ Medio día ($125)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
                       )}
                     </div>
                   </div>
