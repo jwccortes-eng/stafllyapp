@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
+import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile, parseAnyFileToJson } from "@/lib/safe-xlsx";
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import {
   Upload, FileSpreadsheet, CheckCircle2, AlertCircle, CalendarDays,
