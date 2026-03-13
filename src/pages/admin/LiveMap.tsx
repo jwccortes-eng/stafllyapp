@@ -80,10 +80,8 @@ export default function LiveMap() {
   const [alerts, setAlerts] = useState<ClockAlert[]>([]);
   const [showLayer, setShowLayer] = useState<"all" | "workers" | "locations" | "alerts">("all");
 
-  const allowedRoles = ["developer", "owner", "admin", "manager"];
-  if (!allowedRoles.includes(role ?? "")) {
-    return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">No tienes acceso a este módulo.</p></div>;
-  }
+  const hasAccess = ["developer", "owner", "admin", "manager"].includes(role ?? "");
+
 
   const fetchData = async () => {
     if (!selectedCompanyId) return;
