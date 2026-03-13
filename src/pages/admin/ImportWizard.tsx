@@ -935,17 +935,25 @@ export default function ImportWizard() {
         }
       }
 
-      // ── Mark shifts as closed if payroll was processed ──
-      if (payrollExtras.length > 0 && clockEntries.length > 0) {
-        setImportProgress("Cerrando turnos procesados...");
+      // ── Mark shifts as payroll_processed → closed ──
+      if (payrollExtras.length > 0) {
+        setImportProgress("Marcando turnos como payroll_processed...");
         const clockDatesSet = new Set(clockEntries.map(e => e.clockIn.toISOString().slice(0, 10)));
-        const datesToClose = [...clockDatesSet];
-        if (datesToClose.length > 0) {
+        const scheduleDates = shiftGroups.filter(g => !g.isPayRide).map(g => g.date);
+        const allProcessedDates = [...new Set([...clockDatesSet, ...scheduleDates])];
+        if (allProcessedDates.length > 0) {
+          // worked → payroll_processed
+          await supabase.from("scheduled_shifts")
+            .update({ status: "payroll_processed" })
+            .eq("company_id", selectedCompanyId)
+            .eq("status", "worked")
+            .in("date", allProcessedDates);
+          // payroll_processed → closed
           await supabase.from("scheduled_shifts")
             .update({ status: "closed" })
             .eq("company_id", selectedCompanyId)
-            .eq("status", "confirmed")
-            .in("date", datesToClose);
+            .eq("status", "payroll_processed")
+            .in("date", allProcessedDates);
         }
       }
 
