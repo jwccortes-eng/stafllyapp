@@ -397,9 +397,7 @@ export default function MyShifts() {
           )}
         </div>
 
-        {a.shift.notes && (
-          <p className="text-xs text-muted-foreground bg-muted/50 rounded-xl px-3 py-2 leading-relaxed">{a.shift.notes}</p>
-        )}
+        {/* Notes hidden from summary — visible only in detail drawer */}
 
         {/* Accept/Reject buttons for non-past shifts that can be changed */}
         {a.status === "pending" && !isBefore(parseISO(a.shift.date), today) && (
