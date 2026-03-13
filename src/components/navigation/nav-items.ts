@@ -47,6 +47,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "service-categories", to: "/app/service-categories", icon: Tags, label: "Categorías", module: null, section: "Comercial" },
   { id: "ai-workforce", to: "/app/ai-workforce", icon: Brain, label: "AI Workforce", module: null, section: "Operaciones" },
   { id: "live-map", to: "/app/live-map", icon: MapIcon, label: "Mapa en Vivo", module: null, section: "Operaciones" },
+  { id: "leaderboard", to: "/app/leaderboard", icon: Award, label: "Leaderboard", module: null, section: "Operaciones" },
 ];
 
 export const ADMIN_DEFAULT_PINS = ["dashboard", "shifts", "employees", "movements"];
