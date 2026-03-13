@@ -692,7 +692,7 @@ export default function ImportWizard() {
               notes: group.note || null,
               meeting_point: group.address || null,
               shift_code: numericCode || null,
-              status: "open",
+              status: "scheduled",
               slots: realEmployees.length || 1,
               claimable: false,
               pay_type: group.isWeekendJob ? "daily" : "hourly",
