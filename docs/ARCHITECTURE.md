@@ -101,6 +101,9 @@ supabase/
 | `notifications` | Sistema de notificaciones | ✅ |
 | `activity_log` | Registro de auditoría | ✅ |
 | `conversations` / `internal_messages` | Chat interno | ✅ |
+| `clock_events` | Eventos GPS de clock-in/out | ✅ |
+| `clock_alerts` | Alertas de geofencing y fraude | ✅ |
+| `employee_location_history` | Historial de ubicación en turno | ✅ |
 
 ## Autenticación y roles
 
