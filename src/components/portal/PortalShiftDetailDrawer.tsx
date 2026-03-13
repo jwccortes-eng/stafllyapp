@@ -171,6 +171,10 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                     <p className="text-sm font-medium">{shift.location.name}</p>
                   </div>
                 </div>
+                {/* Navigation buttons for location with coordinates */}
+                {locationCoords && (
+                  <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navegar a ubicación" />
+                )}
               )}
 
               {/* Meeting Point — clickable to Google Maps */}
