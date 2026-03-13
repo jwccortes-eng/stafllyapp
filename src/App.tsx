@@ -68,6 +68,7 @@ import UnpaidShiftsReport from "./pages/admin/UnpaidShiftsReport";
 import StaffingRequests from "./pages/admin/StaffingRequests";
 import InvoicesPage from "./pages/admin/Invoices";
 import ServiceCategories from "./pages/admin/ServiceCategories";
+import AIWorkforce from "./pages/admin/AIWorkforce";
 import ModuleGate from "./components/ModuleGate";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
