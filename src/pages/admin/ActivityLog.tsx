@@ -106,7 +106,7 @@ export default function ActivityLog() {
         .order("created_at", { ascending: false })
         .limit(limit);
 
-      if (role !== "owner" && selectedCompanyId) {
+      if (role !== "owner" && role !== "developer" && selectedCompanyId) {
         query = query.eq("company_id", selectedCompanyId);
       }
       if (filterEntity !== "all") {
