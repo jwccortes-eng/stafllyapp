@@ -1195,7 +1195,7 @@ export default function ImportWizard() {
 
               <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 text-xs text-muted-foreground">
                 <Info className="h-4 w-4 shrink-0" />
-                Puedes subir solo los archivos que necesites. No es obligatorio completar los 3 pasos.
+                Soporta Excel (.xlsx), CSV y TXT. Puedes subir solo los archivos que necesites — no es obligatorio completar los 3 pasos.
               </div>
 
               <div className="flex justify-end">
