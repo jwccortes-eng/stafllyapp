@@ -252,12 +252,7 @@ export default function ImportWizard() {
     let allUnavail: { name: string; date: string }[] = [];
 
     for (const f of files) {
-      const data = await f.arrayBuffer();
-      const wb = await safeRead(data);
-      const names = getSheetNames(wb);
-      const ws = getSheet(wb, names[0]);
-      if (!ws) continue;
-      const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+      const json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
 
       for (const row of json) {
         const dateRaw = row["Date"] ?? "";
