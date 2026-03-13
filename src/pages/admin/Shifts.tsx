@@ -1388,6 +1388,17 @@ export default function Shifts() {
         onDuplicate={(s) => {
           handleDuplicateToDay(s, s.date);
         }}
+        onDelete={async (s) => {
+          const { error } = await supabase.from("scheduled_shifts")
+            .update({ deleted_at: new Date().toISOString() } as any)
+            .eq("id", s.id);
+          if (error) { toast.error(error.message); return; }
+          await logShiftActivity("eliminar_turno", s.id, { title: s.title, date: s.date }, null);
+          toast.success("Turno eliminado");
+          setDetailOpen(false);
+          setSelectedShift(null);
+          loadData();
+        }}
         availabilityConfigs={availConfigs}
         availabilityOverrides={availOverrides}
       />

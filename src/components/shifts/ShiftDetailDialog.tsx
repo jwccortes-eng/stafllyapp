@@ -929,6 +929,31 @@ export function ShiftDetailDialog({
       </AlertDialogContent>
     </AlertDialog>
 
+    {/* Delete shift confirmation */}
+    <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
+      <AlertDialogContent className="rounded-2xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-base">
+            <Trash2 className="h-4 w-4 text-destructive" /> Eliminar turno
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            ¿Estás seguro de que deseas eliminar el turno <strong>"{shift.title}"</strong> del{" "}
+            <strong>{format(parseISO(shift.date), "d 'de' MMMM", { locale: es })}</strong>?
+            Esta acción no se puede deshacer.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => { onDelete?.(shift); setDeleteConfirm(false); onOpenChange(false); }}
+            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full"
+          >
+            Sí, eliminar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
     <SendNotificationDialog open={notifyOpen} onOpenChange={setNotifyOpen} shift={shift} assignments={assignments} employees={employees} />
     </>
   );
