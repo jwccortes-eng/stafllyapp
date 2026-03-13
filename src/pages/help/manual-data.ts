@@ -44,6 +44,8 @@ export const employeeSections: ManualSection[] = [
       { title: "Toca 'Fichar Entrada'", description: "El sistema registrará tu hora de entrada y ubicación GPS.", tip: "Asegúrate de tener la ubicación activada en tu teléfono." },
       { title: "Agrega notas (opcional)", description: "Puedes agregar una nota o comentario al fichar, como 'Llegué temprano' o 'Tráfico en ruta'." },
       { title: "Toca 'Fichar Salida' al terminar", description: "Al finalizar tu jornada, regresa a la pestaña Reloj y toca el botón de salida." },
+      { title: "Ubicación GPS automática", description: "Al fichar entrada y salida, el sistema captura tu ubicación GPS de forma automática. Esto permite a tu empresa verificar que estés en el lugar correcto.", tip: "Si tu teléfono pide permiso de ubicación, acéptalo para evitar alertas." },
+      { title: "Navegar al trabajo", description: "En la sección de tu turno puedes tocar 'Navegar' para abrir Google Maps, Apple Maps o Waze con la dirección exacta del trabajo." },
     ],
   },
   {
