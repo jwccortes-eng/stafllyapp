@@ -157,15 +157,7 @@ function parseName(raw: string): { first: string; last: string } | null {
   return { first: toTitleCase(parts[0]), last: toTitleCase(parts.slice(1).join(" ")) };
 }
 
-const PAYROLL_CONCEPT_MAP: Record<string, { conceptName: string; category: "extra" | "deduction" }> = {
-  "payper day": { conceptName: "Weekend Job", category: "extra" },
-  "ryde": { conceptName: "Pago de Transporte Regular", category: "extra" },
-  "tips": { conceptName: "Propinas", category: "extra" },
-  "reimbursements": { conceptName: "Reintegros", category: "extra" },
-  "travel hours": { conceptName: "Horas de viaje", category: "extra" },
-  "otros": { conceptName: "Otros pagos", category: "extra" },
-  "discount": { conceptName: "Descuentos", category: "deduction" },
-};
+// Payroll concept map is now loaded from platform config at runtime
 
 const parseCurrency = (val: string): number => {
   if (!val || typeof val !== "string") return 0;
