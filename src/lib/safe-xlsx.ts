@@ -123,5 +123,80 @@ export async function writeExcelFile(
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Parse a CSV or TXT string into an array of JSON objects.
+ * Uses the first line as headers. Handles quoted fields.
+ */
+export function parseCSVToJson<T extends Record<string, any>>(
+  text: string,
+  opts?: { delimiter?: string; defval?: string }
+): T[] {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  const delimiter = opts?.delimiter ?? (text.includes("\t") ? "\t" : ",");
+  const defval = opts?.defval ?? "";
+
+  const parseRow = (line: string): string[] => {
+    const fields: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+        else if (ch === '"') { inQuotes = false; }
+        else { current += ch; }
+      } else {
+        if (ch === '"') { inQuotes = true; }
+        else if (ch === delimiter) { fields.push(current.trim()); current = ""; }
+        else { current += ch; }
+      }
+    }
+    fields.push(current.trim());
+    return fields;
+  };
+
+  const headers = parseRow(lines[0]);
+  const rows: T[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseRow(lines[i]);
+    const obj = Object.create(null) as Record<string, any>;
+    headers.forEach((h, idx) => {
+      if (!h || h === "__proto__" || h === "constructor" || h === "prototype") return;
+      obj[h] = values[idx] ?? defval;
+    });
+    if (Object.values(obj).some(v => v !== "" && v != null)) {
+      rows.push(obj as T);
+    }
+  }
+  return rows;
+}
+
+/**
+ * Detect if a file is CSV/TXT (text) or Excel (binary) and parse to rows.
+ */
+export async function parseAnyFileToJson<T extends Record<string, any>>(
+  file: File,
+  opts?: { defval?: string; sheetIndex?: number }
+): Promise<T[]> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+  if (ext === "csv" || ext === "txt" || ext === "tsv") {
+    const text = await file.text();
+    return parseCSVToJson<T>(text, { defval: opts?.defval });
+  }
+
+  // Excel
+  const data = await file.arrayBuffer();
+  const wb = await safeRead(data);
+  const names = getSheetNames(wb);
+  const sheetIdx = opts?.sheetIndex ?? 0;
+  const ws = getSheet(wb, names[sheetIdx] ?? names[0]);
+  if (!ws) return [];
+  return safeSheetToJson<T>(ws, { defval: opts?.defval });
+}
+
 export type SafeWorkbook = ExcelJS.Workbook;
 export type SafeWorksheet = ExcelJS.Worksheet;

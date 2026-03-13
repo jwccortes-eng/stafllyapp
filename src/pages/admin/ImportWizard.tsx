@@ -9,12 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { safeRead, safeSheetToJson, getSheetNames, getSheet } from "@/lib/safe-xlsx";
+import { safeRead, safeSheetToJson, getSheetNames, getSheet, writeExcelFile, parseAnyFileToJson } from "@/lib/safe-xlsx";
 import type { SafeWorkbook } from "@/lib/safe-xlsx";
 import {
   Upload, FileSpreadsheet, CheckCircle2, AlertCircle, CalendarDays,
   Clock, DollarSign, ChevronRight, ChevronDown, Loader2, Users,
-  AlertTriangle, RotateCcw, History, Info, SkipForward, Car,
+  AlertTriangle, RotateCcw, History, Info, SkipForward, Car, Download,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -252,12 +252,7 @@ export default function ImportWizard() {
     let allUnavail: { name: string; date: string }[] = [];
 
     for (const f of files) {
-      const data = await f.arrayBuffer();
-      const wb = await safeRead(data);
-      const names = getSheetNames(wb);
-      const ws = getSheet(wb, names[0]);
-      if (!ws) continue;
-      const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+      const json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
 
       for (const row of json) {
         const dateRaw = row["Date"] ?? "";
@@ -339,12 +334,7 @@ export default function ImportWizard() {
 
   /* ─── Parse Time Clock file ─── */
   const parseClockFile = useCallback(async (f: File) => {
-    const data = await f.arrayBuffer();
-    const wb = await safeRead(data);
-    const names = getSheetNames(wb);
-    const ws = getSheet(wb, names[0]);
-    if (!ws) return [];
-    const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+    const json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
     const parsed: ClockEntry[] = [];
 
     for (const row of json) {
@@ -387,14 +377,20 @@ export default function ImportWizard() {
 
   /* ─── Parse Payroll file ─── */
   const parsePayrollFile = useCallback(async (f: File) => {
-    const data = await f.arrayBuffer();
-    const wb = await safeRead(data);
-    const names = getSheetNames(wb);
-    // Try second sheet (Nómina Final) first, then first sheet
-    const sheetName = names.length >= 2 ? names[1] : names[0];
-    const ws = getSheet(wb, sheetName);
-    if (!ws) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
-    const json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+    const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+    let json: Record<string, string>[];
+    if (ext === "csv" || ext === "txt" || ext === "tsv") {
+      json = await parseAnyFileToJson<Record<string, string>>(f, { defval: "" });
+    } else {
+      // For Excel payroll, try second sheet first
+      const data = await f.arrayBuffer();
+      const wb = await safeRead(data);
+      const names = getSheetNames(wb);
+      const sheetName = names.length >= 2 ? names[1] : names[0];
+      const ws = getSheet(wb, sheetName);
+      if (!ws) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
+      json = safeSheetToJson<Record<string, string>>(ws, { defval: "" });
+    }
     if (json.length === 0) return { extras: [] as PayrollExtra[], detectedCols: [] as string[] };
 
     const headers = Object.keys(json[0]);
@@ -772,12 +768,31 @@ export default function ImportWizard() {
         setImportProgress("Cargando turnos para vincular relojes...");
         const { data: shifts } = await supabase
           .from("scheduled_shifts")
-          .select("id, shift_code, date")
+          .select("id, shift_code, date, start_time, end_time")
           .eq("company_id", selectedCompanyId)
           .is("deleted_at", null);
-        const shiftMap = new Map<string, string>();
+
+        // Build multiple lookup maps for reconciliation
+        const shiftByCode = new Map<string, string>(); // shift_code|date → id
+        const shiftByHash = new Map<string, string>(); // date|start_time → id (fallback)
         (shifts ?? []).forEach(s => {
-          if (s.shift_code) shiftMap.set(`${s.shift_code}|${s.date}`, s.id);
+          if (s.shift_code) shiftByCode.set(`${s.shift_code}|${s.date}`, s.id);
+          if (s.start_time) shiftByHash.set(`${s.date}|${s.start_time.slice(0, 5)}`, s.id);
+        });
+
+        // Also build employee+date+time assignment map for precise matching
+        const { data: assignments } = await supabase
+          .from("shift_assignments")
+          .select("employee_id, shift_id, scheduled_shifts!inner(date, start_time)")
+          .eq("company_id", selectedCompanyId)
+          .in("status", ["accepted", "confirmed"]);
+
+        const assignmentMap = new Map<string, string>(); // empId|date|startTime → shiftId
+        (assignments as any[] ?? []).forEach((a: any) => {
+          const ss = a.scheduled_shifts;
+          if (ss && a.employee_id) {
+            assignmentMap.set(`${a.employee_id}|${ss.date}|${ss.start_time?.slice(0, 5)}`, a.shift_id);
+          }
         });
 
         for (let i = 0; i < validClock.length; i++) {
@@ -791,12 +806,34 @@ export default function ImportWizard() {
             continue;
           }
 
+          // Reconciliation: try multiple strategies
           let shiftId: string | null = null;
-          if (entry.scheduledShiftTitle) {
-            const clockDate = entry.clockIn.toISOString().slice(0, 10);
-            shiftId = shiftMap.get(`${entry.scheduledShiftTitle}|${clockDate}`) ?? null;
-            if (shiftId) results.timeClockLinked++;
+          const clockDate = entry.clockIn.toISOString().slice(0, 10);
+          const clockStartTime = `${String(entry.clockIn.getHours()).padStart(2, "0")}:${String(entry.clockIn.getMinutes()).padStart(2, "0")}`;
+
+          // Strategy 1: employee + date + start_time via assignment
+          shiftId = assignmentMap.get(`${empId}|${clockDate}|${clockStartTime}`) ?? null;
+
+          // Strategy 2: shift_code + date
+          if (!shiftId && entry.scheduledShiftTitle) {
+            shiftId = shiftByCode.get(`${entry.scheduledShiftTitle}|${clockDate}`) ?? null;
           }
+
+          // Strategy 3: date + approximate start_time (±30 min)
+          if (!shiftId) {
+            const clockMinutes = entry.clockIn.getHours() * 60 + entry.clockIn.getMinutes();
+            for (const [key, id] of shiftByHash.entries()) {
+              if (!key.startsWith(clockDate + "|")) continue;
+              const timePart = key.split("|")[1];
+              const [h, m] = timePart.split(":").map(Number);
+              if (Math.abs(h * 60 + m - clockMinutes) <= 30) {
+                shiftId = id;
+                break;
+              }
+            }
+          }
+
+          if (shiftId) results.timeClockLinked++;
 
           const notesParts: string[] = [];
           if (entry.employeeNotes) notesParts.push(`Empleado: ${entry.employeeNotes}`);
@@ -977,6 +1014,44 @@ export default function ImportWizard() {
   };
 
   const hasAnyFile = scheduleFiles.length > 0 || clockFile || payrollFile;
+  const ACCEPTED_FORMATS = ".xls,.xlsx,.csv,.txt,.tsv";
+
+  /* ─── Template downloads ─── */
+  const downloadTemplate = async (type: "schedule" | "timeclock" | "payroll") => {
+    const templates: Record<string, { headers: string[]; sample: Record<string, string>[] }> = {
+      schedule: {
+        headers: ["Date", "Shift title", "Start", "End", "Job", "Sub item", "Users", "Address", "Note", "Shift tags", "Availability status", "Last Status"],
+        sample: [
+          { Date: "01/15/2025", "Shift title": "101", Start: "8:00 AM", End: "5:00 PM", Job: "01 - ACME Corp", "Sub item": "", Users: "John Smith", Address: "123 Main St", Note: "", "Shift tags": "", "Availability status": "", "Last Status": "Accepted" },
+          { Date: "01/15/2025", "Shift title": "102", Start: "6:00 PM", End: "11:00 PM", Job: "02 - Beta Inc", "Sub item": "Weekend Job", Users: "Jane Doe", Address: "", Note: "", "Shift tags": "", "Availability status": "", "Last Status": "Accepted" },
+          { Date: "01/15/2025", "Shift title": "99", Start: "7:00 AM", End: "7:30 AM", Job: "99 - PAY RIDE", "Sub item": "PayRide", Users: "John Smith", Address: "", Note: "", "Shift tags": "", "Availability status": "", "Last Status": "" },
+        ],
+      },
+      timeclock: {
+        headers: ["Shift Number", "Type", "First name", "Last name", "Start Date", "In", "End Date", "Out", "Shift hours", "Hourly rate (USD)", "Scheduled shift title", "Employee notes", "Manager notes"],
+        sample: [
+          { "Shift Number": "1", Type: "Regular", "First name": "John", "Last name": "Smith", "Start Date": "01/15/2025", In: "8:00 AM", "End Date": "01/15/2025", Out: "5:00 PM", "Shift hours": "9", "Hourly rate (USD)": "18.50", "Scheduled shift title": "101", "Employee notes": "", "Manager notes": "" },
+        ],
+      },
+      payroll: {
+        headers: ["First name", "Last name", "PayPer Day", "Ryde", "Tips", "Reimbursements", "Travel Hours", "Discount"],
+        sample: [
+          { "First name": "John", "Last name": "Smith", "PayPer Day": "$525.00", Ryde: "$25.00", Tips: "$50.00", Reimbursements: "", "Travel Hours": "", Discount: "" },
+        ],
+      },
+    };
+
+    const tpl = templates[type];
+    const data = tpl.sample.map(row => {
+      const full: Record<string, string> = {};
+      tpl.headers.forEach(h => { full[h] = row[h] ?? ""; });
+      return full;
+    });
+
+    const names = { schedule: "Plantilla_Programaciones", timeclock: "Plantilla_Relojes", payroll: "Plantilla_Nomina" };
+    await writeExcelFile(data, "Template", `${names[type]}.xlsx`);
+    toast({ title: "Plantilla descargada", description: `${names[type]}.xlsx` });
+  };
 
   /* ─── Render helpers ─── */
   const KpiCard = ({ label, value, icon: Icon, color = "text-primary" }: { label: string; value: string | number; icon: any; color?: string }) => (
@@ -1050,15 +1125,18 @@ export default function ImportWizard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-xs text-muted-foreground mb-3">
-                      Schedule Export de Connecteam (.xlsx). Detecta turnos, Weekend Jobs y PayRide automáticamente.
+                      Schedule Export (.xlsx, .csv, .txt). Detecta turnos, Weekend Jobs y PayRide automáticamente.
                     </p>
                     <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
                       <Upload className="h-5 w-5 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
                         {scheduleFiles.length > 0 ? scheduleFiles.map(f => f.name).join(", ") : "Subir archivo(s)"}
                       </span>
-                      <input type="file" className="hidden" accept=".xls,.xlsx" multiple onChange={handleScheduleFiles} />
+                      <input type="file" className="hidden" accept={ACCEPTED_FORMATS} multiple onChange={handleScheduleFiles} />
                     </label>
+                    <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("schedule")}>
+                      <Download className="h-3.5 w-3.5" /> Descargar plantilla
+                    </Button>
                   </CardContent>
                 </Card>
 
@@ -1073,15 +1151,18 @@ export default function ImportWizard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-xs text-muted-foreground mb-3">
-                      Time Clock Shift Report (.xlsx). Crea entradas de reloj y vincula a turnos programados.
+                      Time Clock Report (.xlsx, .csv, .txt). Crea entradas de reloj y vincula a turnos.
                     </p>
                     <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
                       <Upload className="h-5 w-5 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
                         {clockFile ? clockFile.name : "Subir archivo"}
                       </span>
-                      <input type="file" className="hidden" accept=".xls,.xlsx" onChange={handleClockFile} />
+                      <input type="file" className="hidden" accept={ACCEPTED_FORMATS} onChange={handleClockFile} />
                     </label>
+                    <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("timeclock")}>
+                      <Download className="h-3.5 w-3.5" /> Descargar plantilla
+                    </Button>
                   </CardContent>
                 </Card>
 
@@ -1096,22 +1177,25 @@ export default function ImportWizard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-xs text-muted-foreground mb-3">
-                      Nómina Final (.xlsx). Detecta Weekend Job, Transporte, Tips, Descuentos y más.
+                      Nómina Final (.xlsx, .csv, .txt). Detecta Weekend Job, Transporte, Tips, Descuentos.
                     </p>
                     <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
                       <Upload className="h-5 w-5 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
                         {payrollFile ? payrollFile.name : "Subir archivo"}
                       </span>
-                      <input type="file" className="hidden" accept=".xls,.xlsx" onChange={handlePayrollFile} />
+                      <input type="file" className="hidden" accept={ACCEPTED_FORMATS} onChange={handlePayrollFile} />
                     </label>
+                    <Button variant="ghost" size="sm" className="mt-2 w-full text-xs gap-1.5 text-muted-foreground" onClick={() => downloadTemplate("payroll")}>
+                      <Download className="h-3.5 w-3.5" /> Descargar plantilla
+                    </Button>
                   </CardContent>
                 </Card>
               </div>
 
               <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 text-xs text-muted-foreground">
                 <Info className="h-4 w-4 shrink-0" />
-                Puedes subir solo los archivos que necesites. No es obligatorio completar los 3 pasos.
+                Soporta Excel (.xlsx), CSV y TXT. Puedes subir solo los archivos que necesites — no es obligatorio completar los 3 pasos.
               </div>
 
               <div className="flex justify-end">
