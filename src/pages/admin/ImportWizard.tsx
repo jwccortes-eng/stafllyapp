@@ -325,7 +325,7 @@ export default function ImportWizard() {
       }
     }
     return { groups: Object.values(dedupMap), unavail: allUnavail };
-  }, []);
+  }, [platformConfig]);
 
   /* ─── Parse Time Clock file ─── */
   const parseClockFile = useCallback(async (f: File) => {
