@@ -413,6 +413,155 @@ export type Database = {
           },
         ]
       }
+      clock_alerts: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          employee_id: string
+          id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          shift_id: string | null
+          type: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          employee_id: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          shift_id?: string | null
+          type: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          employee_id?: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          shift_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clock_alerts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_alerts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_alerts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_alerts_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clock_events: {
+        Row: {
+          accuracy: number | null
+          address: string | null
+          company_id: string
+          created_at: string
+          device: string | null
+          employee_id: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          shift_id: string | null
+          time_entry_id: string | null
+          type: string
+        }
+        Insert: {
+          accuracy?: number | null
+          address?: string | null
+          company_id: string
+          created_at?: string
+          device?: string | null
+          employee_id: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          shift_id?: string | null
+          time_entry_id?: string | null
+          type: string
+        }
+        Update: {
+          accuracy?: number | null
+          address?: string | null
+          company_id?: string
+          created_at?: string
+          device?: string | null
+          employee_id?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          shift_id?: string | null
+          time_entry_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clock_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_events_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_events_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           company_code: number | null
@@ -1027,6 +1176,68 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_location_history: {
+        Row: {
+          accuracy: number | null
+          company_id: string
+          employee_id: string
+          id: string
+          latitude: number
+          longitude: number
+          recorded_at: string
+          shift_id: string | null
+        }
+        Insert: {
+          accuracy?: number | null
+          company_id: string
+          employee_id: string
+          id?: string
+          latitude: number
+          longitude: number
+          recorded_at?: string
+          shift_id?: string | null
+        }
+        Update: {
+          accuracy?: number | null
+          company_id?: string
+          employee_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          recorded_at?: string
+          shift_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_location_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_location_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_location_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_location_history_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
             referencedColumns: ["id"]
           },
         ]
@@ -1815,6 +2026,8 @@ export type Database = {
           geofence_lng: number | null
           geofence_radius: number | null
           id: string
+          latitude: number | null
+          longitude: number | null
           name: string
           state: string | null
           status: string
@@ -1832,6 +2045,8 @@ export type Database = {
           geofence_lng?: number | null
           geofence_radius?: number | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name: string
           state?: string | null
           status?: string
@@ -1849,6 +2064,8 @@ export type Database = {
           geofence_lng?: number | null
           geofence_radius?: number | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           state?: string | null
           status?: string
