@@ -124,6 +124,21 @@ export default function EmployeeLayout() {
           variant="portal"
         />
 
+        {/* Floating Clock Button */}
+        {!isOnClockPage && (
+          <button
+            onClick={() => navigate("/portal/clock")}
+            className={cn(
+              "fixed z-40 right-5 bottom-24 h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-all active:scale-90",
+              isClockedIn
+                ? "bg-destructive text-destructive-foreground animate-pulse"
+                : "gradient-primary text-primary-foreground"
+            )}
+          >
+            {isClockedIn ? <LogOut className="h-6 w-6" /> : <LogIn className="h-6 w-6" />}
+          </button>
+        )}
+
         <EmployeeChatWidget />
       </div>
     );
