@@ -1031,7 +1031,7 @@ export default function ImportWizard() {
 
   /* ─── Reset ─── */
   const resetWizard = () => {
-    setStep("upload");
+    setStep("upload-schedule");
     setScheduleFiles([]);
     setClockFile(null);
     setPayrollFile(null);
