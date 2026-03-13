@@ -193,6 +193,8 @@ export default function ImportWizard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"wizard" | "history">("wizard");
+  const [platform, setPlatform] = useState<ImportPlatform>("connecteam");
+  const platformConfig = PLATFORM_CONFIGS[platform];
 
   // Step state
   const [step, setStep] = useState<WizardStep>("upload");
