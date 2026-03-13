@@ -1338,6 +1338,113 @@ export type Database = {
         }
         Relationships: []
       }
+      import_batches: {
+        Row: {
+          batch_type: string
+          company_id: string
+          created_at: string
+          created_by: string
+          date_range_from: string | null
+          date_range_to: string | null
+          errors: Json | null
+          id: string
+          payroll_duplicates_skipped: number | null
+          payroll_file_name: string | null
+          payroll_movements_created: number | null
+          rolled_back_at: string | null
+          rolled_back_by: string | null
+          schedule_assignments_created: number | null
+          schedule_clients_created: number | null
+          schedule_duplicates_skipped: number | null
+          schedule_employees_created: number | null
+          schedule_file_name: string | null
+          schedule_payrides: number | null
+          schedule_shifts_created: number | null
+          schedule_unavailable: number | null
+          schedule_weekend_jobs: number | null
+          status: string
+          timeclock_entries_created: number | null
+          timeclock_file_name: string | null
+          timeclock_linked_shifts: number | null
+          timeclock_overlaps_skipped: number | null
+          timeclock_unpaid_skipped: number | null
+          unmatched_employees: Json | null
+          warnings: Json | null
+        }
+        Insert: {
+          batch_type?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          date_range_from?: string | null
+          date_range_to?: string | null
+          errors?: Json | null
+          id?: string
+          payroll_duplicates_skipped?: number | null
+          payroll_file_name?: string | null
+          payroll_movements_created?: number | null
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
+          schedule_assignments_created?: number | null
+          schedule_clients_created?: number | null
+          schedule_duplicates_skipped?: number | null
+          schedule_employees_created?: number | null
+          schedule_file_name?: string | null
+          schedule_payrides?: number | null
+          schedule_shifts_created?: number | null
+          schedule_unavailable?: number | null
+          schedule_weekend_jobs?: number | null
+          status?: string
+          timeclock_entries_created?: number | null
+          timeclock_file_name?: string | null
+          timeclock_linked_shifts?: number | null
+          timeclock_overlaps_skipped?: number | null
+          timeclock_unpaid_skipped?: number | null
+          unmatched_employees?: Json | null
+          warnings?: Json | null
+        }
+        Update: {
+          batch_type?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          date_range_from?: string | null
+          date_range_to?: string | null
+          errors?: Json | null
+          id?: string
+          payroll_duplicates_skipped?: number | null
+          payroll_file_name?: string | null
+          payroll_movements_created?: number | null
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
+          schedule_assignments_created?: number | null
+          schedule_clients_created?: number | null
+          schedule_duplicates_skipped?: number | null
+          schedule_employees_created?: number | null
+          schedule_file_name?: string | null
+          schedule_payrides?: number | null
+          schedule_shifts_created?: number | null
+          schedule_unavailable?: number | null
+          schedule_weekend_jobs?: number | null
+          status?: string
+          timeclock_entries_created?: number | null
+          timeclock_file_name?: string | null
+          timeclock_linked_shifts?: number | null
+          timeclock_overlaps_skipped?: number | null
+          timeclock_unpaid_skipped?: number | null
+          unmatched_employees?: Json | null
+          warnings?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_rows: {
         Row: {
           created_at: string
