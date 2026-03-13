@@ -108,6 +108,22 @@ Eres un experto en documentación técnica y de usuario. Tu tarea es generar doc
 - Checkout, webhook, portal de cliente
 - Banner de upgrade
 
+### 11. Geolocalización y supervisión (GPS)
+- **Clock events**: Captura GPS (lat, lng, accuracy, device) en cada Clock In/Out
+- **Mapa en vivo**: Leaflet + OpenStreetMap, workers activos, ubicaciones, alertas
+- **Geofencing**: Radio permitido por ubicación, alerta automática si ficha fuera de zona
+- **Detección de fraude**: OUTSIDE_GEOFENCE, GPS_LOW_ACCURACY, DEVICE_DUPLICATION
+- **Navegación**: Botones directos a Google Maps, Apple Maps, Waze
+- **Historial de rutas**: Tabla `employee_location_history` con tracking durante turno
+- **Privacidad**: GPS solo entre Clock In → Clock Out, sin tracking continuo
+
+### 12. AI Workforce Optimization
+- Sugerencias inteligentes de empleados para turnos abiertos
+- Análisis: skills, certificaciones, experiencia, distancia, disponibilidad
+- Score de compatibilidad 0-100 con razonamiento IA
+- Optimización global de asignación de personal
+- Powered by Lovable AI (Gemini)
+
 ---
 
 ## FLUJOS PRINCIPALES
