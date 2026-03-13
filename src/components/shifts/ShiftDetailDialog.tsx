@@ -134,6 +134,7 @@ export function ShiftDetailDialog({
   const [removeConfirm, setRemoveConfirm] = useState<{ assignmentId: string; employeeName: string } | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const loadRequests = useCallback(async () => {
     if (!shift) return;
