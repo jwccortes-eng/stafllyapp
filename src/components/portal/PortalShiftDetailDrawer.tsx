@@ -164,17 +164,18 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
 
               {/* Location */}
               {shift.location && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                  <MapPin className="h-5 w-5 text-primary shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ubicación</p>
-                    <p className="text-sm font-medium">{shift.location.name}</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                    <MapPin className="h-5 w-5 text-primary shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ubicación</p>
+                      <p className="text-sm font-medium">{shift.location.name}</p>
+                    </div>
                   </div>
+                  {locationCoords && (
+                    <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navegar a ubicación" />
+                  )}
                 </div>
-                {/* Navigation buttons for location with coordinates */}
-                {locationCoords && (
-                  <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navegar a ubicación" />
-                )}
               )}
 
               {/* Meeting Point — clickable to Google Maps */}
