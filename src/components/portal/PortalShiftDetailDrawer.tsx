@@ -210,6 +210,22 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                   Marcar Entrada
                 </Button>
               )}
+
+              {/* Review button for completed shifts */}
+              {shift.status === "completed" && employeeId && shiftCompanyId && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <Star className="h-5 w-5 text-amber-400 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Evaluar este trabajo</p>
+                  </div>
+                  <ShiftReviewButton
+                    shiftId={shift.id}
+                    companyId={shiftCompanyId}
+                    reviewerType="employee"
+                    reviewerId={employeeId}
+                  />
+                </div>
+              )}
             </div>
           )}
 
