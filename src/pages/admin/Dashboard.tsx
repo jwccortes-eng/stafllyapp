@@ -8,7 +8,7 @@ import {
   ChevronRight, Activity, ThumbsUp, Plus,
   Inbox, MapPin, Building2, MessageCircle, Crown, ExternalLink,
   ClipboardList, UserCheck, AlertCircle, CheckCircle2,
-  Calendar, Timer, Shield, Receipt, Briefcase,
+  Calendar, Timer, Shield, Receipt, Briefcase, Camera,
 } from "lucide-react";
 import { PeriodStatusBanner } from "@/components/ui/period-status-banner";
 import { useCompany } from "@/hooks/useCompany";
