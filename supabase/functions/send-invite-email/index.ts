@@ -54,8 +54,12 @@ Deno.serve(async (req) => {
         to,
         subject,
         html,
-        from_name: "StaflyApps",
-        from_email: "noreply@notify.staflyapps.com",
+        from: "StaflyApps <noreply@notify.staflyapps.com>",
+        sender_domain: "notify.staflyapps.com",
+        purpose: "transactional",
+        label: "invite_email",
+        message_id: crypto.randomUUID(),
+        queued_at: new Date().toISOString(),
       },
     });
 
