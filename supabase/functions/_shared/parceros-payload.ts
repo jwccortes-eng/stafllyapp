@@ -159,32 +159,50 @@ export function toParcerosSyncBody(
   if (vis.show_last_name && w.profile.last_name) parts.push(w.profile.last_name);
   const displayName = parts.length > 0 ? parts.join(" ") : "Worker";
 
-  // Work history summary: compact string
-  const whSummary = w.work_history.length > 0
+  // Work history summary: compact string (null if hidden)
+  const whSummary = vis.show_work_history && w.work_history.length > 0
     ? w.work_history
         .slice(0, 5)
         .map((h) => `${h.company_name}${h.role_name ? ` (${h.role_name})` : ""}`)
         .join("; ")
-    : "No verified work history";
+    : vis.show_work_history
+      ? "No verified work history"
+      : null;
+
+  // Reputation: null everything if show_reputation is off
+  const repScore = vis.show_reputation ? w.reputation.overall_score : null;
+  const ratingsBreakdown = vis.show_reputation
+    ? {
+        punctuality: w.reputation.punctuality,
+        quality: w.reputation.quality,
+        service: w.reputation.service,
+        professionalism: w.reputation.professionalism,
+        teamwork: w.reputation.teamwork,
+        presentation: w.reputation.presentation,
+      }
+    : {
+        punctuality: null,
+        quality: null,
+        service: null,
+        professionalism: null,
+        teamwork: null,
+        presentation: null,
+      };
+
+  // Experience: null if hidden
+  const yearsExp = vis.show_experience ? w.profile.years_of_experience : null;
 
   return {
     external_worker_id: w.stafly_worker_id,
     display_name: displayName,
-    skills: w.skills.map((s) => s.name).filter(Boolean),
-    years_experience: w.profile.years_of_experience,
+    skills: vis.show_skills ? w.skills.map((s) => s.name).filter(Boolean) : [],
+    years_experience: yearsExp,
     english_level: w.profile.english_level,
     total_hours_worked: w.verified_metrics.total_verified_hours,
     total_verified_jobs: w.verified_metrics.total_verified_jobs,
     total_companies_worked: w.verified_metrics.total_companies_worked,
-    reputation_score: w.reputation.overall_score,
-    ratings_breakdown: {
-      punctuality: w.reputation.punctuality,
-      quality: w.reputation.quality,
-      service: w.reputation.service,
-      professionalism: w.reputation.professionalism,
-      teamwork: w.reputation.teamwork,
-      presentation: w.reputation.presentation,
-    },
+    reputation_score: repScore,
+    ratings_breakdown: ratingsBreakdown,
     certifications_count: w.verified_metrics.certifications_count,
     work_history_summary: whSummary,
     last_synced_at: payload.generated_at,
