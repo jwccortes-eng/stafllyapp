@@ -1,21 +1,29 @@
 /**
  * parceros-webhook
  *
- * Event dispatcher that forwards StaflyApps events to Parceros.
- * Called internally (service-role) when relevant events occur.
+ * Event dispatcher that forwards StaflyApps events to Parceros /webhook-receiver.
+ * Called internally via service-role when events occur (triggers, cron, manual).
  *
  * POST { event_type, stafly_worker_id, data? }
  *
- * In Phase 1 this stores events in a queue table.
- * In Phase 2 it will forward to Parceros' webhook endpoint.
+ * Outbound format to Parceros:
+ * {
+ *   event_type, source: "staflyapps", external_worker_id,
+ *   payload: {...}, timestamp: ISO-8601
+ * }
+ *
+ * Auth inbound: service-role bearer token.
+ * Auth outbound: x-api-key header with PARCEROS_API_KEY.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import type { ParcerosEventType } from "../_shared/parceros-payload.ts";
+import type { ParcerosEventType, ParcerosWebhookBody } from "../_shared/parceros-payload.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const PARCEROS_WEBHOOK_PATH = "/webhook-receiver";
 
 const VALID_EVENTS: ParcerosEventType[] = [
   "worker.updated",
@@ -39,10 +47,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth: service-role only (internal calls)
+    // ── Auth: service-role bearer only (internal) ──
     const authHeader = req.headers.get("authorization") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    if (!authHeader.includes(serviceRoleKey) || serviceRoleKey.length < 10) {
+
+    if (authHeader !== `Bearer ${serviceRoleKey}` || serviceRoleKey.length < 10) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -86,29 +95,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Phase 2: Forward to Parceros endpoint
-    const parcerosWebhookUrl = Deno.env.get("PARCEROS_WEBHOOK_URL");
+    // ── Forward to Parceros /webhook-receiver ──
+    const parcerosBaseUrl = Deno.env.get("PARCEROS_BASE_URL");
+    const parcerosApiKey = Deno.env.get("PARCEROS_API_KEY");
     let forwarded = false;
+    let forwardStatus: number | undefined;
+    let forwardError: string | undefined;
 
-    if (parcerosWebhookUrl) {
+    if (parcerosBaseUrl && parcerosApiKey) {
+      const webhookUrl = `${parcerosBaseUrl.replace(/\/$/, "")}${PARCEROS_WEBHOOK_PATH}`;
+
+      const webhookBody: ParcerosWebhookBody = {
+        event_type: event_type as ParcerosEventType,
+        source: "staflyapps",
+        external_worker_id: stafly_worker_id,
+        payload: data ?? {},
+        timestamp: new Date().toISOString(),
+      };
+
       try {
-        const parceroPayload = {
-          event_type,
-          occurred_at: new Date().toISOString(),
-          source: "stafly_apps",
-          stafly_worker_id,
-          data: data ?? {},
-        };
-
-        const resp = await fetch(parcerosWebhookUrl, {
+        const resp = await fetch(webhookUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Source": "stafly_apps",
-            "X-Parceros-Api-Key": Deno.env.get("PARCEROS_API_KEY") ?? "",
+            "x-api-key": parcerosApiKey,
           },
-          body: JSON.stringify(parceroPayload),
+          body: JSON.stringify(webhookBody),
         });
+
+        forwardStatus = resp.status;
 
         if (resp.ok) {
           forwarded = true;
@@ -121,10 +136,41 @@ Deno.serve(async (req) => {
             .order("created_at", { ascending: false })
             .limit(1);
         } else {
-          console.error(`Parceros webhook failed [${resp.status}]:`, await resp.text());
+          const errorText = await resp.text();
+          forwardError = `HTTP ${resp.status}: ${errorText.slice(0, 200)}`;
+          console.error(`Parceros webhook failed [${resp.status}]:`, errorText);
+
+          // Mark as failed for retry
+          await supabase
+            .from("parceros_event_queue")
+            .update({
+              status: "failed",
+              error_message: forwardError,
+              retry_count: 1,
+            })
+            .eq("worker_profile_id", stafly_worker_id)
+            .eq("event_type", event_type)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false })
+            .limit(1);
         }
-      } catch (fwdErr) {
-        console.error("Forward error:", fwdErr);
+      } catch (fwdErr: unknown) {
+        const msg = fwdErr instanceof Error ? fwdErr.message : "Network error";
+        forwardError = msg;
+        console.error("Forward error:", msg);
+
+        await supabase
+          .from("parceros_event_queue")
+          .update({
+            status: "failed",
+            error_message: msg.slice(0, 200),
+            retry_count: 1,
+          })
+          .eq("worker_profile_id", stafly_worker_id)
+          .eq("event_type", event_type)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1);
       }
     }
 
@@ -133,6 +179,8 @@ Deno.serve(async (req) => {
         success: true,
         queued: true,
         forwarded,
+        forward_status: forwardStatus,
+        forward_error: forwardError,
         event_type,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
