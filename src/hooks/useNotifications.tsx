@@ -110,10 +110,18 @@ export function useNotifications() {
 
   const playSound = useCallback(() => {
     try {
-      const ctx = new AudioContext();
+      // Reuse unlocked context if available, else create new one
+      const ctx = audioCtxRef.current?.state !== "closed"
+        ? audioCtxRef.current ?? new AudioContext()
+        : new AudioContext();
+
+      // Resume if suspended (autoplay policy)
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+
       const now = ctx.currentTime;
 
-      // Two-tone alert: ascending ding-ding
       const playTone = (freq: number, startAt: number, duration: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -122,21 +130,19 @@ export function useNotifications() {
         osc.frequency.value = freq;
         osc.type = "sine";
         gain.gain.setValueAtTime(0, startAt);
-        gain.gain.linearRampToValueAtTime(0.4, startAt + 0.02);
-        gain.gain.setValueAtTime(0.4, startAt + duration * 0.6);
+        gain.gain.linearRampToValueAtTime(0.5, startAt + 0.02);
+        gain.gain.setValueAtTime(0.5, startAt + duration * 0.6);
         gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
         osc.start(startAt);
         osc.stop(startAt + duration);
       };
 
-      // First tone (C6) + second tone higher (E6) — friendly alert
-      playTone(1047, now, 0.15);
-      playTone(1319, now + 0.18, 0.22);
-
-      // Cleanup audio context after sound finishes
-      setTimeout(() => ctx.close().catch(() => {}), 1000);
+      // Three-tone ascending alert for urgency
+      playTone(880, now, 0.12);
+      playTone(1109, now + 0.14, 0.12);
+      playTone(1319, now + 0.28, 0.2);
     } catch {
-      // Audio not available (e.g. no user interaction yet)
+      // Audio not available
     }
   }, []);
 
