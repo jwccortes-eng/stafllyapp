@@ -663,7 +663,7 @@ export default function AdminDashboard() {
                   a.priority === "urgent" && "border-destructive/30"
                 )}>
                   {a.priority === "urgent" && (
-                    <div className="bg-destructive/6 px-4 py-1.5 flex items-center gap-1.5 border-b border-destructive/10">
+                    <div className="bg-destructive/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-destructive/10">
                       <AlertTriangle className="h-3 w-3 text-destructive" />
                       <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
                     </div>
