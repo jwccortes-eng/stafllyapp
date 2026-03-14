@@ -490,6 +490,54 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         </div>
       )}
 
+      {/* Step: Force Change PIN */}
+      {step === "force_change_pin" && (
+        <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-warning/20 to-warning/5 flex items-center justify-center">
+              <ShieldCheck className="h-7 w-7 text-warning" />
+            </div>
+            <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
+              Cambia tu PIN
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {changePinPhase === "create"
+                ? "Por seguridad, crea un nuevo PIN de 4 dígitos"
+                : "Confirma tu nuevo PIN"}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-2">
+            <div className={cn("h-1.5 rounded-full transition-all", changePinPhase === "create" ? "w-8 bg-warning" : "w-4 bg-warning/30")} />
+            <div className={cn("h-1.5 rounded-full transition-all", changePinPhase === "confirm" ? "w-8 bg-warning" : "w-4 bg-border")} />
+          </div>
+
+          {changePinPhase === "create" ? (
+            <NumericKeypad
+              value={newPin}
+              maxLength={4}
+              onChange={setNewPin}
+              onComplete={handleForceChangePinCreate}
+              label="Nuevo PIN"
+            />
+          ) : (
+            <NumericKeypad
+              value={confirmNewPin}
+              maxLength={4}
+              onChange={setConfirmNewPin}
+              onComplete={handleForceChangePinConfirm}
+              label="Confirma tu nuevo PIN"
+            />
+          )}
+
+          {loading && (
+            <div className="flex justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Footer */}
       <div className="flex items-center justify-center gap-1.5 mt-8 text-muted-foreground/40">
         <Lock className="h-3 w-3" />
