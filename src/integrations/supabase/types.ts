@@ -1457,6 +1457,7 @@ export type Database = {
           is_active: boolean
           last_login: string | null
           last_name: string
+          passport_public: boolean
           phone_number: string | null
           professional_summary: string | null
           qualify: string | null
@@ -1497,6 +1498,7 @@ export type Database = {
           is_active?: boolean
           last_login?: string | null
           last_name: string
+          passport_public?: boolean
           phone_number?: string | null
           professional_summary?: string | null
           qualify?: string | null
@@ -1537,6 +1539,7 @@ export type Database = {
           is_active?: boolean
           last_login?: string | null
           last_name?: string
+          passport_public?: boolean
           phone_number?: string | null
           professional_summary?: string | null
           qualify?: string | null

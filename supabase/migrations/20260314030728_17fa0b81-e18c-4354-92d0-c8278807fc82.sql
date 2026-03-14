@@ -1,0 +1,1 @@
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS passport_public boolean NOT NULL DEFAULT false;
