@@ -1,0 +1,1 @@
+SELECT pgmq.purge_queue('transactional_emails');

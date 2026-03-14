@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendLovableEmail } from "npm:@lovable.dev/email-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,7 +23,14 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "Email service not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -45,31 +53,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use service role client to enqueue email
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    // Strip HTML tags for plain text fallback
+    const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
-    const { error: enqueueErr } = await adminClient.rpc("enqueue_email", {
-      queue_name: "transactional_emails",
-      payload: {
+    await sendLovableEmail(
+      {
         to,
         subject,
         html,
+        text,
         from: "StaflyApps <noreply@notify.staflyapps.com>",
         sender_domain: "notify.staflyapps.com",
         purpose: "transactional",
         label: "invite_email",
+        run_id: crypto.randomUUID(),
         message_id: crypto.randomUUID(),
-        queued_at: new Date().toISOString(),
       },
-    });
-
-    if (enqueueErr) {
-      console.error("Enqueue error:", enqueueErr);
-      return new Response(JSON.stringify({ error: enqueueErr.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+      { apiKey }
+    );
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
