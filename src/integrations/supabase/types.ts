@@ -5760,6 +5760,10 @@ export type Database = {
         Args: { _fields: string[]; _record_id: string; _table_name: string }
         Returns: undefined
       }
+      recalculate_rep_score: {
+        Args: { _worker_profile_id: string }
+        Returns: undefined
+      }
       user_company_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
