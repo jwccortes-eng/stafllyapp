@@ -713,8 +713,8 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-warning/8 flex items-center justify-center">
-              <Activity className="h-3.5 w-3.5 text-warning" />
+             <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
+               <Activity className="h-3.5 w-3.5 text-warning" />
             </div>
             <h2 className="text-sm font-semibold font-heading">Actividad reciente</h2>
           </div>

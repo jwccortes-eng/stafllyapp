@@ -66,7 +66,7 @@ export function WeekView({ weekDays, shifts, assignments, locations, clients, on
           >
             <div className={cn(
               "text-center mb-3 py-2 rounded-xl transition-colors",
-              isToday ? "bg-primary/8" : ""
+              isToday ? "bg-primary/[0.08]" : ""
             )}>
               <div className={cn(
                 "text-[9px] font-semibold uppercase tracking-[0.08em]",

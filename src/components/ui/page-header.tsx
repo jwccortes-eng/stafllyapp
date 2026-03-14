@@ -53,7 +53,7 @@ export function PageHeader({
                   "h-9 w-9 md:h-10 md:w-10 rounded-xl flex items-center justify-center shrink-0",
                   variant === "5"
                     ? "bg-primary/10 ring-1 ring-primary/20"
-                    : "bg-primary/8"
+                    : "bg-primary/[0.08]"
                 )}
               >
                 <Icon className="h-[18px] w-[18px] md:h-5 md:w-5 text-primary" strokeWidth={2} />

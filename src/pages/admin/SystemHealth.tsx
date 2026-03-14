@@ -46,7 +46,7 @@ const STATUS_CONFIG: Record<Status, { bg: string; border: string; text: string; 
     Icon: AlertTriangle,
   },
   red: {
-    bg: "bg-destructive/8",
+    bg: "bg-destructive/[0.08]",
     border: "border-destructive/25",
     text: "text-destructive",
     dot: "bg-destructive",

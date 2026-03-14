@@ -185,7 +185,7 @@ export function OnboardingChecklist() {
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
                   <div className={cn(
                     "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                    step.completed ? "bg-earning/8" : "bg-primary/8"
+                    step.completed ? "bg-earning/[0.08]" : "bg-primary/[0.08]"
                   )}>
                     <Icon className={cn("h-3.5 w-3.5", step.completed ? "text-earning" : "text-primary")} />
                   </div>
