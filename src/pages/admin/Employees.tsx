@@ -144,7 +144,39 @@ export default function Employees() {
   const [updating, setUpdating] = useState(false);
   const [updateMode, setUpdateMode] = useState<"diff" | "full">("full");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [bulkInviting, setBulkInviting] = useState(false);
   const { toast } = useToast();
+
+  const handleBulkPortalInvite = async () => {
+    if (!selectedCompanyId) return;
+    setBulkInviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("bulk-portal-invite", {
+        body: { company_id: selectedCompanyId },
+      });
+
+      if (error) {
+        toast({ title: "Error", description: "Error al enviar invitaciones", variant: "destructive" });
+        return;
+      }
+
+      if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+        return;
+      }
+
+      toast({
+        title: "Invitaciones enviadas ✅",
+        description: `${data.processed} empleados activados, ${data.emails_sent} emails enviados${data.skipped > 0 ? `, ${data.skipped} omitidos` : ""}`,
+      });
+
+      fetchEmployees();
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error de conexión", variant: "destructive" });
+    } finally {
+      setBulkInviting(false);
+    }
+  };
 
   const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
 
