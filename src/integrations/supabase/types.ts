@@ -485,13 +485,16 @@ export type Database = {
         Row: {
           accuracy: number | null
           address: string | null
+          clock_method: string
           company_id: string
           created_at: string
           device: string | null
           employee_id: string
           id: string
+          kiosk_device_id: string | null
           latitude: number | null
           longitude: number | null
+          photo_url: string | null
           shift_id: string | null
           time_entry_id: string | null
           type: string
@@ -499,13 +502,16 @@ export type Database = {
         Insert: {
           accuracy?: number | null
           address?: string | null
+          clock_method?: string
           company_id: string
           created_at?: string
           device?: string | null
           employee_id: string
           id?: string
+          kiosk_device_id?: string | null
           latitude?: number | null
           longitude?: number | null
+          photo_url?: string | null
           shift_id?: string | null
           time_entry_id?: string | null
           type: string
@@ -513,13 +519,16 @@ export type Database = {
         Update: {
           accuracy?: number | null
           address?: string | null
+          clock_method?: string
           company_id?: string
           created_at?: string
           device?: string | null
           employee_id?: string
           id?: string
+          kiosk_device_id?: string | null
           latitude?: number | null
           longitude?: number | null
+          photo_url?: string | null
           shift_id?: string | null
           time_entry_id?: string | null
           type?: string
@@ -544,6 +553,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_events_kiosk_device_id_fkey"
+            columns: ["kiosk_device_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_devices"
             referencedColumns: ["id"]
           },
           {
@@ -2220,6 +2236,54 @@ export type Database = {
           },
         ]
       }
+      kiosk_devices: {
+        Row: {
+          company_id: string
+          created_at: string
+          device_identifier: string
+          id: string
+          is_active: boolean
+          location_id: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          device_identifier?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          device_identifier?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_devices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_devices_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string | null
@@ -3650,6 +3714,7 @@ export type Database = {
           category_id: string | null
           claimable: boolean
           client_id: string | null
+          clock_method: string
           company_id: string
           created_at: string
           created_by: string | null
@@ -3680,6 +3745,7 @@ export type Database = {
           category_id?: string | null
           claimable?: boolean
           client_id?: string | null
+          clock_method?: string
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -3710,6 +3776,7 @@ export type Database = {
           category_id?: string | null
           claimable?: boolean
           client_id?: string | null
+          clock_method?: string
           company_id?: string
           created_at?: string
           created_by?: string | null
