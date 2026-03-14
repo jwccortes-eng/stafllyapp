@@ -350,7 +350,8 @@
   }
 
   .sidebar-link-active {
-    @apply bg-primary/8 text-primary font-semibold;
+    @apply text-primary font-semibold;
+    background-color: hsl(var(--primary) / 0.08);
   }
 
   .sidebar-link-idle {
