@@ -138,12 +138,7 @@ Deno.serve(async (req) => {
     let emailsSent = 0;
     const errors: string[] = [];
 
-    // Set up Resend for emails
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    let resend: any = null;
-    if (resendKey) {
-      resend = new Resend(resendKey);
-    }
+    // Email sending via queue
 
     for (const emp of employees) {
       try {
