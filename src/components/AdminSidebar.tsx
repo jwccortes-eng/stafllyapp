@@ -1,15 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 
 import {
   LayoutDashboard, Users, CalendarDays, Tags, FileSpreadsheet,
-  BarChart3, LogOut, ContactRound, DollarSign, Building2,
-  PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
+  BarChart3, DollarSign, Building2,
+  PanelLeftClose, PanelLeft, Settings2,
   Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
-  Map as MapIcon,
+  Map as MapIcon, ContactRound, Award, GitCompareArrows,
+  FileText, Bell, UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -25,10 +25,7 @@ import { useSidebarCollapsed } from "./AdminLayout";
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
-import { CommandPaletteTrigger } from "@/components/CommandPalette";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { StaflyLogo, StaflyMark } from "@/components/brand/StaflyBrand";
+import { StaflyMark } from "@/components/brand/StaflyBrand";
 import CompanyActionGuard from "@/components/CompanyActionGuard";
 
 interface LinkDef {
@@ -39,34 +36,47 @@ interface LinkDef {
   end?: boolean;
   section: string;
   badge?: string;
+  roles?: string[];
 }
 
-/* ── Simplified 3-group structure ── */
+/* ── New grouping: Operations / Business / Insights / System ── */
 const ALL_LINKS: LinkDef[] = [
-  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
+  // OPERATIONS
+  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Operaciones" },
   { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
   { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
-  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
-  { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
-  { to: "/app/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
-  { to: "/app/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
-  { to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
-  { to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Gestión" },
-  { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Gestión" },
-  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Gestión" },
-  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Gestión" },
-  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Gestión" },
-  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Gestión" },
-  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
-  { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Gestión", badge: "tickets" },
+  { to: "/app/employees", icon: Users, label: "Trabajadores", module: "employees", section: "Operaciones" },
+  { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Operaciones" },
+  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Operaciones" },
+  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Operaciones" },
   { to: "/app/live-map", icon: MapIcon, label: "Mapa en Vivo", module: null, section: "Operaciones" },
   { to: "/app/ai-workforce", icon: Brain, label: "AI Workforce", module: null, section: "Operaciones" },
-  { to: "/app/staffing-requests", icon: ClipboardList, label: "Solicitudes", module: null, section: "Comercial" },
-  { to: "/app/invoices", icon: Receipt, label: "Facturación", module: null, section: "Comercial" },
-  { to: "/app/service-categories", icon: Tags, label: "Categorías", module: null, section: "Comercial" },
+  { to: "/app/leaderboard", icon: Award, label: "Leaderboard", module: null, section: "Operaciones" },
+
+  // BUSINESS
+  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Negocio" },
+  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Negocio" },
+  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Negocio" },
+  { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Negocio" },
+  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Negocio" },
+  { to: "/app/staffing-requests", icon: ClipboardList, label: "Solicitudes", module: null, section: "Negocio" },
+  { to: "/app/invoices", icon: Receipt, label: "Facturación", module: null, section: "Negocio" },
+  { to: "/app/service-categories", icon: Tags, label: "Categorías", module: null, section: "Negocio" },
+  { to: "/app/w9", icon: FileText, label: "W-9", module: "employees", section: "Negocio" },
+  { to: "/app/1099", icon: FileText, label: "1099-NEC", module: "employees", section: "Negocio" },
+
+  // INSIGHTS
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes", module: "summary", section: "Insights" },
+  { to: "/app/comparison", icon: GitCompareArrows, label: "Comparación", module: "shifts", section: "Insights" },
+
+  // SYSTEM
+  { to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Sistema" },
+  { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Sistema", badge: "tickets" },
+  { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Sistema" },
+  { to: "/app/invite", icon: UserPlus, label: "Invitaciones", module: null, section: "Sistema" },
 ];
 
-const SECTION_ORDER = ["Inicio", "Operaciones", "Nómina", "Gestión", "Comercial"];
+const SECTION_ORDER = ["Operaciones", "Negocio", "Insights", "Sistema"];
 
 export default function AdminSidebar() {
   const { signOut, role, hasModuleAccess, user, fullName } = useAuth();
@@ -75,9 +85,8 @@ export default function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { collapsed, setCollapsed } = useSidebarCollapsed();
-  const { theme, setTheme } = useTheme();
 
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["Operaciones", "Nómina", "Gestión"]));
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(SECTION_ORDER));
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
@@ -100,12 +109,15 @@ export default function AdminSidebar() {
     return () => clearInterval(interval);
   }, [selectedCompanyId]);
 
-  const isLinkVisible = (module: string | null) => {
-    if (!module) return true;
-    if (!isModuleActive(module)) return false;
-    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
-    if (role === 'manager' || role === 'supervisor') return hasModuleAccess(module, 'view');
-    return false;
+  const isLinkVisible = (link: LinkDef) => {
+    if (link.module) {
+      if (!isModuleActive(link.module)) return false;
+      if (role === 'developer' || role === 'owner' || role === 'admin') return true;
+      if (role === 'manager' || role === 'supervisor') return hasModuleAccess(link.module, 'view');
+      return false;
+    }
+    if (link.roles && !link.roles.includes(role ?? '')) return false;
+    return true;
   };
 
   const isModuleLocked = (module: string | null): boolean => {
@@ -118,19 +130,12 @@ export default function AdminSidebar() {
     return location.pathname === to || location.pathname.startsWith(to + "/");
   };
 
-  const roleLabel = role === 'developer' ? 'Dev' : role === 'owner' ? 'Owner' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : role === 'supervisor' ? 'Supervisor' : 'User';
   const isOwner = role === 'developer' || role === 'owner';
-  const userEmail = user?.email ?? null;
-  const userPhone = user?.phone ?? null;
-  const userIdentifier = userEmail || userPhone || '';
-  const initials = fullName
-    ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : userEmail ? userEmail[0].toUpperCase() : '?';
 
   const visibleSections = useMemo(() => {
     const sectionMap = new Map<string, LinkDef[]>();
     for (const link of ALL_LINKS) {
-      if (!isLinkVisible(link.module)) continue;
+      if (!isLinkVisible(link)) continue;
       if (!sectionMap.has(link.section)) sectionMap.set(link.section, []);
       sectionMap.get(link.section)!.push(link);
     }
@@ -154,7 +159,6 @@ export default function AdminSidebar() {
   }, [location.pathname]);
 
   const toggleSection = (label: string) => {
-    if (label === "Inicio") return;
     setOpenSections(prev => {
       const next = new Set(prev);
       if (next.has(label)) next.delete(label);
@@ -170,10 +174,7 @@ export default function AdminSidebar() {
     const requiredPlan = link.module ? requiredPlanForModule(link.module) : null;
 
     const handleClick = (e: React.MouseEvent) => {
-      if (locked) {
-        e.preventDefault();
-        navigate("/app/pricing");
-      }
+      if (locked) { e.preventDefault(); navigate("/app/pricing"); }
     };
 
     const linkContent = (
@@ -187,9 +188,7 @@ export default function AdminSidebar() {
             collapsed ? "justify-center px-2 py-2.5" : "px-3 py-[7px]",
             locked
               ? "text-foreground/20 cursor-pointer hover:bg-accent/20"
-              : active
-                ? "sidebar-link-active"
-                : "sidebar-link-idle"
+              : active ? "sidebar-link-active" : "sidebar-link-idle"
           )}
         >
           {active && !locked && (
@@ -212,12 +211,12 @@ export default function AdminSidebar() {
             <>
               <span className={cn("flex-1 truncate leading-tight", locked && "line-through decoration-foreground/15")}>{link.label}</span>
               {locked && requiredPlan && (
-                <span className="ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/8 text-primary">
+                <span className="ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/[0.08] text-primary">
                   {requiredPlan}
                 </span>
               )}
               {!locked && badge > 0 && (
-                <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive/10 text-destructive text-[10px] font-bold tabular-nums px-1">
+                <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive/[0.1] text-destructive text-[10px] font-bold tabular-nums px-1">
                   {badge > 99 ? "99+" : badge}
                 </span>
               )}
@@ -233,9 +232,7 @@ export default function AdminSidebar() {
           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
           <TooltipContent side="right" className="text-xs font-medium flex items-center gap-2">
             {link.label}
-            {locked && requiredPlan && (
-              <span className="text-[9px] font-bold text-primary">🔒 {requiredPlan}</span>
-            )}
+            {locked && requiredPlan && <span className="text-[9px] font-bold text-primary">🔒 {requiredPlan}</span>}
             {!locked && badge > 0 && (
               <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
                 {badge}
@@ -249,14 +246,6 @@ export default function AdminSidebar() {
   };
 
   const renderSection = (section: { label: string; links: LinkDef[] }) => {
-    if (section.label === "Inicio") {
-      return (
-        <div key="Inicio" className="space-y-0.5 mb-1">
-          {section.links.map(l => renderLink(l))}
-        </div>
-      );
-    }
-
     if (collapsed) {
       return (
         <div key={section.label} className="space-y-0.5">
@@ -271,13 +260,13 @@ export default function AdminSidebar() {
 
     return (
       <Collapsible key={section.label} open={isOpen} onOpenChange={() => toggleSection(section.label)}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer mt-3 first:mt-0">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/35 group-hover/section:text-muted-foreground/55 transition-colors select-none">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer mt-4 first:mt-0">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/40 group-hover/section:text-muted-foreground/60 transition-colors select-none">
             {section.label}
           </span>
           <div className="flex items-center gap-1.5">
             {!isOpen && sectionBadge > 0 && (
-              <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-destructive/10 text-destructive text-[9px] font-bold px-1 tabular-nums">
+              <span className="min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-destructive/[0.1] text-destructive text-[9px] font-bold px-1 tabular-nums">
                 {sectionBadge}
               </span>
             )}
@@ -302,7 +291,7 @@ export default function AdminSidebar() {
     )}>
       {/* ── Brand + Company ── */}
       <div className={cn(
-        "flex items-center shrink-0 h-14",
+        "flex items-center shrink-0 h-14 border-b border-border/40",
         collapsed ? "justify-center px-2" : "px-4 gap-3"
       )}>
         {collapsed ? (
@@ -332,13 +321,8 @@ export default function AdminSidebar() {
         )}
       </div>
 
-      {/* Search */}
-      <div className={cn("shrink-0", collapsed ? "px-2 pb-2" : "px-3 pb-2")}>
-        <CommandPaletteTrigger collapsed={collapsed} />
-      </div>
-
       {/* ── Navigation ── */}
-      <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto scrollbar-thin">
         {visibleSections.map(renderSection)}
 
         {isOwner && (
@@ -351,7 +335,7 @@ export default function AdminSidebar() {
 
       {/* Trial banner */}
       {isTrial && trialDaysLeft !== null && !collapsed && (
-        <div className="mx-3 mb-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2.5 shrink-0">
+        <div className="mx-3 mb-2 rounded-xl border border-primary/15 bg-primary/[0.05] px-3 py-2.5 shrink-0">
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             <span className="text-[11px] font-bold text-primary">Prueba Pro</span>
@@ -370,99 +354,25 @@ export default function AdminSidebar() {
         </div>
       )}
 
-      {/* ── Footer ── */}
-      <div className="px-2 py-2 border-t border-border/40 space-y-0.5 shrink-0">
-        {/* User identity */}
-        <div className={cn(
-          "flex items-center rounded-xl transition-colors hover:bg-accent/40 cursor-default",
-          collapsed ? "justify-center p-2" : "px-3 py-2 gap-2.5"
-        )}>
-          {collapsed ? (
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Avatar className={cn("h-7 w-7 border", isOwner ? "border-accent-warm/30" : "border-primary/15")}>
-                  <AvatarFallback className={cn("text-[10px] font-bold", isOwner ? "bg-accent-warm/10 text-accent-warm" : "bg-primary/8 text-primary")}>
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs">
-                <p className="font-semibold">{fullName || 'Usuario'}</p>
-                <p className="text-muted-foreground text-[10px]">{roleLabel}</p>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <>
-              <Avatar className={cn("h-7 w-7 border shrink-0", isOwner ? "border-accent-warm/30" : "border-primary/15")}>
-                <AvatarFallback className={cn("text-[10px] font-bold", isOwner ? "bg-accent-warm/10 text-accent-warm" : "bg-primary/8 text-primary")}>
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-semibold text-foreground truncate leading-tight">
-                  {fullName || 'Usuario'}
-                </p>
-                <p className="text-[10px] text-muted-foreground/50 truncate leading-tight">
-                  {roleLabel}
-                </p>
-              </div>
-            </>
+      {/* ── Collapse toggle ── */}
+      <div className="px-2 py-2 border-t border-border/40 shrink-0">
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className={cn(
+                "flex items-center justify-center rounded-xl text-muted-foreground/50 hover:bg-accent/40 hover:text-foreground transition-all duration-200 w-full h-8",
+                !collapsed && "gap-2 px-3 justify-start"
+              )}
+            >
+              {collapsed ? <PanelLeft className="h-[15px] w-[15px]" /> : <PanelLeftClose className="h-[15px] w-[15px]" />}
+              {!collapsed && <span className="text-[12px]">Colapsar</span>}
+            </button>
+          </TooltipTrigger>
+          {collapsed && (
+            <TooltipContent side="right" className="text-xs">Expandir</TooltipContent>
           )}
-        </div>
-
-        {/* Actions row */}
-        <div className={cn("flex items-center", collapsed ? "flex-col gap-0.5" : "gap-0.5")}>
-          {/* Theme */}
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className={cn(
-                  "flex items-center justify-center rounded-xl text-muted-foreground/50 hover:bg-accent/40 hover:text-foreground transition-all duration-200",
-                  collapsed ? "h-8 w-full" : "h-8 w-8"
-                )}
-              >
-                {theme === "dark" ? <Sun className="h-[15px] w-[15px]" /> : <Moon className="h-[15px] w-[15px]" />}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">{theme === "dark" ? "Modo claro" : "Modo oscuro"}</TooltipContent>
-          </Tooltip>
-
-          {/* Collapse */}
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => setCollapsed(!collapsed)}
-                className={cn(
-                  "flex items-center justify-center rounded-xl text-muted-foreground/50 hover:bg-accent/40 hover:text-foreground transition-all duration-200",
-                  collapsed ? "h-8 w-full" : "h-8 w-8"
-                )}
-              >
-                {collapsed ? <PanelLeft className="h-[15px] w-[15px]" /> : <PanelLeftClose className="h-[15px] w-[15px]" />}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">{collapsed ? "Expandir" : "Colapsar"}</TooltipContent>
-          </Tooltip>
-
-          {/* Sign out */}
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <span className={collapsed ? "w-full" : ""}>
-                <LogoutConfirmDialog onConfirm={signOut}>
-                  <button
-                    className={cn(
-                      "flex items-center justify-center rounded-xl text-muted-foreground/50 hover:bg-destructive/8 hover:text-destructive transition-all duration-200",
-                      collapsed ? "h-8 w-full" : "h-8 w-8"
-                    )}
-                  >
-                    <LogOut className="h-[15px] w-[15px]" />
-                  </button>
-                </LogoutConfirmDialog>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">Cerrar sesión</TooltipContent>
-          </Tooltip>
-        </div>
+        </Tooltip>
       </div>
 
       {/* Company switch guard */}
