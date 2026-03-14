@@ -2487,6 +2487,50 @@ export type Database = {
           },
         ]
       }
+      parceros_event_queue: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          retry_count: number
+          sent_at: string | null
+          status: string
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          retry_count?: number
+          sent_at?: string | null
+          status?: string
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          retry_count?: number
+          sent_at?: string | null
+          status?: string
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parceros_event_queue_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       passport_metrics: {
         Row: {
           created_at: string | null
