@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useMemo, useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
@@ -18,7 +17,6 @@ import { supabase } from "@/integrations/supabase/client";
 import CompanyActionGuard from "@/components/CompanyActionGuard";
 import { NavItem } from "@/components/navigation/nav-items";
 
-/** Shows current page title in mobile header */
 function MobilePageTitle({ items }: { items: NavItem[] }) {
   const location = useLocation();
   const current = items.find(item => {
@@ -52,7 +50,6 @@ export default function AdminLayout() {
   const { pinnedIds, togglePin, maxPins } = useNavPreferences(ADMIN_DEFAULT_PINS);
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
-  // Badge counts
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -101,11 +98,10 @@ export default function AdminLayout() {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background pb-20">
-        {/* Compact top bar with page context */}
-        <header className="sticky top-0 z-30 bg-white/80 dark:bg-[hsl(222,18%,10%/0.8)] backdrop-blur-xl border-b border-[hsl(220,13%,93%)] dark:border-[hsl(222,14%,18%)]">
-          <div className="flex items-center justify-between px-4 h-14">
+        <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border/40">
+          <div className="flex items-center justify-between px-4 h-13">
             <div className="flex items-center gap-2.5">
-              <StaflyLogo size={24} />
+              <StaflyLogo size={22} markOnly />
               <MobilePageTitle items={visibleItems} />
             </div>
             <div className="flex items-center gap-1">
@@ -130,7 +126,6 @@ export default function AdminLayout() {
           <Outlet />
         </main>
 
-        {/* Floating Dock */}
         <FloatingDock
           items={visibleItems}
           pinnedIds={pinnedIds}
@@ -138,7 +133,6 @@ export default function AdminLayout() {
           variant="admin"
         />
 
-        {/* App Launcher */}
         <AppLauncher
           open={launcherOpen}
           onClose={() => setLauncherOpen(false)}
@@ -150,7 +144,6 @@ export default function AdminLayout() {
           variant="admin"
         />
 
-        {/* Company switch guard (mobile) */}
         <CompanyActionGuard
           open={!!pendingCompanyId && pendingCompanyId !== selectedCompanyId}
           onOpenChange={(v) => { if (!v) setPendingCompanyId(null); }}
@@ -166,17 +159,20 @@ export default function AdminLayout() {
     );
   }
 
-  // Desktop layout — sidebar only (no redundant dock)
+  // Desktop layout
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); localStorage.setItem("sidebar-collapsed", String(v)); } }}>
       <div className="min-h-screen bg-background">
         <AdminSidebar />
         <CommandPalette />
         <main className={cn(
-          "transition-all duration-300 ease-in-out p-6 lg:p-8 animate-fade-in",
-          collapsed ? "ml-[60px]" : "ml-[250px]"
+          "transition-all duration-300 ease-in-out min-h-screen",
+          collapsed ? "ml-[60px]" : "ml-[240px]",
+          "p-6 lg:p-8"
         )}>
-          <Outlet />
+          <div className="animate-fade-in max-w-[1400px]">
+            <Outlet />
+          </div>
         </main>
       </div>
     </SidebarContext.Provider>
