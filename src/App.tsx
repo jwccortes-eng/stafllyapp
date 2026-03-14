@@ -148,6 +148,7 @@ function App() {
               <Route path="/pricing" element={<PublicPricing />} />
               <Route path="/manual" element={<UserManual />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
+              <Route path="/kiosk" element={<KioskClock />} />
 
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
