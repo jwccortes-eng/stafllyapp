@@ -330,8 +330,9 @@ export function ShiftDetailDialog({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); setEditing(false); } }}>
-      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden max-h-[88vh] flex flex-col rounded-2xl border-border/30 shadow-xl">
+    <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); setEditing(false); } }}>
+      <SheetContent side="right" className="w-full sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col border-l border-border/30 shadow-xl">
+        <SheetTitle className="sr-only">{shift.title}</SheetTitle>
 
         {/* ── HERO HEADER ── */}
         <div className={cn("relative px-5 pt-5 pb-4 overflow-hidden")}>
