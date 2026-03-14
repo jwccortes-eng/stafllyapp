@@ -565,17 +565,13 @@ export default function Landing() {
             <p className="mt-4 text-white/75 text-[15px] max-w-xl mx-auto">{c.finalCta.sub}</p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button className="inline-flex items-center gap-2 rounded-full px-7 h-12 bg-white font-semibold text-[15px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all hover:bg-white/90 active:scale-[0.97]" style={{ color: "hsl(222,100%,59%)" }}>
-                    {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md rounded-2xl">
-                  <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                  <DemoForm lang={lang} />
-                </DialogContent>
-              </Dialog>
+              <Link
+                to="/auth?register=true"
+                className="inline-flex items-center gap-2 rounded-full px-7 h-12 bg-white font-semibold text-[15px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all hover:bg-white/90 active:scale-[0.97]"
+                style={{ color: "hsl(222,100%,59%)" }}
+              >
+                {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
+              </Link>
               <Dialog>
                 <DialogTrigger asChild>
                   <button className="inline-flex items-center gap-1.5 rounded-full h-12 px-7 border border-white/40 text-white hover:bg-white/10 font-semibold text-[15px] transition-all active:scale-[0.97]">
