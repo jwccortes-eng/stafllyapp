@@ -137,7 +137,7 @@ export default function KioskDevices() {
 
   const handleDelete = async (device: KioskDevice) => {
     if (!confirm(`¿Eliminar kiosk "${device.name}"?`)) return;
-    await supabase.from("kiosk_devices" as any).delete().eq("id", device.id);
+    await (supabase as any).from("kiosk_devices").delete().eq("id", device.id);
     toast({ title: "Kiosk eliminado" });
     fetchDevices();
   };
