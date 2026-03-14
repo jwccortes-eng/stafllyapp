@@ -966,14 +966,19 @@ export default function Shifts() {
         )}
       </div>
 
-      {/* Content */}
-      <div className="rounded-2xl bg-white/50 dark:bg-card/30 border border-border/15 shadow-sm p-4 sm:p-5 min-h-[420px]">
+      {/* ── CONTENT ── */}
+      <div className="rounded-2xl bg-card/40 border border-border/15 shadow-sm p-4 sm:p-5 min-h-[420px]">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <div className="space-y-4 animate-pulse">
+            <div className="grid grid-cols-7 gap-3">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-12 rounded-xl bg-muted/40" />
+                  <div className="h-20 rounded-xl bg-muted/30" />
+                  <div className="h-16 rounded-xl bg-muted/20" />
+                </div>
+              ))}
             </div>
-            <p className="text-xs text-muted-foreground/50">Cargando turnos…</p>
           </div>
         ) : viewMode === "day" ? (
           <DayView
@@ -1064,6 +1069,306 @@ export default function Shifts() {
       {/* Weekly Summary */}
       <WeeklySummaryBar shifts={filteredShifts} assignments={assignments} />
 
+      {/* ── FAB: Quick Create Shift ── */}
+      {canEdit && (
+        <button
+          onClick={() => { resetForm(); setCreateOpen(true); }}
+          className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      )}
+
+      {/* ── Create Shift Dialog ── */}
+      <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) resetForm(); }}>
+        <DialogContent className="max-w-lg max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col rounded-2xl border-border/30 shadow-xl">
+          {/* Hero header */}
+          <div className="relative px-5 pt-5 pb-4 overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-12 translate-x-12 blur-2xl" />
+            <div className="relative z-10">
+              <h2 className="text-base font-bold font-heading">Nuevo turno</h2>
+              <p className="text-[11px] text-muted-foreground">Configura los detalles del turno</p>
+            </div>
+          </div>
+
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
+
+            {/* Section: Basic info */}
+            <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Hash className="h-3 w-3 text-primary" /></div>
+                <span className="text-[11px] font-semibold text-foreground">Información básica</span>
+              </div>
+              <div className="p-4">
+                <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno</Label>
+                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Turno mañana" className="h-9 text-sm mt-1" />
+              </div>
+            </div>
+
+            {/* Section: Schedule */}
+            <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Clock className="h-3 w-3 text-primary" /></div>
+                <span className="text-[11px] font-semibold text-foreground">Horario</span>
+              </div>
+              <div className="p-4 space-y-3">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Fecha</Label>
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full h-9 text-sm justify-start font-normal mt-1", !date && "text-muted-foreground")}>
+                        <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                        {date ? format(parse(date, "yyyy-MM-dd", new Date()), "EEEE d 'de' MMMM yyyy", { locale: es }) : "Seleccionar"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarWidget
+                        mode="single"
+                        selected={date ? parse(date, "yyyy-MM-dd", new Date()) : undefined}
+                        onSelect={d => { if (d) { setDate(format(d, "yyyy-MM-dd")); setDatePickerOpen(false); } }}
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label className="text-[11px] text-muted-foreground font-medium">Entrada</Label><Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="h-9 text-sm mt-1" /></div>
+                  <div><Label className="text-[11px] text-muted-foreground font-medium">Salida</Label><Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="h-9 text-sm mt-1" /></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Assignment */}
+            <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Building2 className="h-3 w-3 text-primary" /></div>
+                <span className="text-[11px] font-semibold text-foreground">Asignación</span>
+              </div>
+              <div className="p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground font-medium">Cliente</Label>
+                    <div className="flex gap-1 mt-1">
+                      <Select value={clientId || "none"} onValueChange={handleClientChange}>
+                        <SelectTrigger className="h-9 text-sm flex-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {clients.map(c => <SelectItem key={c.id} value={c.id}>{formatDisplayText(c.name, "name")}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Popover open={showAddClient} onOpenChange={setShowAddClient}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar cliente">
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-3" align="end">
+                          <p className="text-xs font-medium mb-2">Nuevo cliente</p>
+                          <div className="flex gap-1.5">
+                            <Input
+                              value={newClientName}
+                              onChange={e => setNewClientName(e.target.value)}
+                              placeholder="Nombre del cliente"
+                              className="h-8 text-sm"
+                              onKeyDown={e => e.key === "Enter" && handleQuickAddClient()}
+                            />
+                            <Button size="sm" className="h-8 px-3 text-xs" onClick={handleQuickAddClient} disabled={addingClient || !newClientName.trim()}>
+                              {addingClient ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground font-medium">Ubicación</Label>
+                    <div className="flex gap-1 mt-1">
+                      <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
+                        <SelectTrigger className="h-9 text-sm flex-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Popover open={showAddLocation} onOpenChange={setShowAddLocation}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" title="Agregar ubicación">
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-3" align="end">
+                          <p className="text-xs font-medium mb-2">Nueva ubicación</p>
+                          <div className="space-y-1.5">
+                            <Input value={newLocationName} onChange={e => setNewLocationName(e.target.value)} placeholder="Nombre" className="h-8 text-sm" />
+                            <Input value={newLocationAddress} onChange={e => setNewLocationAddress(e.target.value)} placeholder="Dirección (opcional)" className="h-8 text-sm" onKeyDown={e => e.key === "Enter" && handleQuickAddLocation()} />
+                            <Button size="sm" className="h-8 w-full text-xs" onClick={handleQuickAddLocation} disabled={addingLocation || !newLocationName.trim()}>
+                              {addingLocation ? <Loader2 className="h-3 w-3 animate-spin" /> : "Crear"}
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 items-end">
+                  <div><Label className="text-[11px] text-muted-foreground font-medium">Plazas disponibles</Label><Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm mt-1" /></div>
+                  <div className="flex items-center gap-2 h-9">
+                    <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="claimable" />
+                    <Label htmlFor="claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Payment */}
+            <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><CreditCard className="h-3 w-3 text-primary" /></div>
+                <span className="text-[11px] font-semibold text-foreground">Tipo de pago</span>
+              </div>
+              <div className="p-4 space-y-3">
+                <Select value={payType} onValueChange={v => setPayType(v as "hourly" | "daily")}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
+                    <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {payType === "daily" && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-muted-foreground">Tarifa diaria automática al consolidar.</p>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Jornada</Label>
+                      <Select value={dayType} onValueChange={v => setDayType(v as "full_day" | "half_day")}>
+                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="full_day">☀️ Día completo ($200)</SelectItem>
+                          <SelectItem value="half_day">🌤️ Medio día ($125)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Section: Transportation */}
+            <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Car className="h-3 w-3 text-primary" /></div>
+                <span className="text-[11px] font-semibold text-foreground">Transporte</span>
+              </div>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={transportRequired} onCheckedChange={c => setTransportRequired(!!c)} id="transport" />
+                  <Label htmlFor="transport" className="text-xs font-normal cursor-pointer">¿Este turno requiere transporte?</Label>
+                </div>
+                {transportRequired && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground font-medium">Capacidad por vehículo</Label>
+                        <Input type="number" min="1" value={carCapacity} onChange={e => setCarCapacity(e.target.value)} className="h-9 text-sm mt-1" />
+                      </div>
+                      <div className="flex flex-col justify-end">
+                        <p className="text-[11px] text-muted-foreground font-medium mb-1">Vehículos necesarios</p>
+                        <div className="h-9 flex items-center px-3 rounded-md border border-border/30 bg-muted/20 text-sm font-semibold">
+                          {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 4))}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
+                      <Select value={driverEmployeeId || "none"} onValueChange={v => setDriverEmployeeId(v === "none" ? "" : v)}>
+                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
+                      <Input value={transportNotes} onChange={e => setTransportNotes(e.target.value)} placeholder="Ej: Recoger en oficina a las 7:30 AM" className="h-9 text-sm mt-1" />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Section: Admin & Details */}
+            <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><FileText className="h-3 w-3 text-primary" /></div>
+                <span className="text-[11px] font-semibold text-foreground">Detalles adicionales</span>
+              </div>
+              <div className="p-4 space-y-3">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Admin del turno</Label>
+                  <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {selectedEmployees.length > 0 && employees.filter(e => selectedEmployees.includes(e.id)).map(e => (
+                        <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
+                      ))}
+                      {employees.filter(e => !selectedEmployees.includes(e.id)).slice(0, 20).map(e => (
+                        <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Puede confirmar asistencia del equipo.</p>
+                </div>
+                <div><Label className="text-[11px] text-muted-foreground font-medium">Notas adicionales</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" /></div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Dirección / Punto de encuentro</Label>
+                  <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm mt-1" />
+                  {meetingPoint && clientId && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Autocompletada desde la ubicación del cliente. Puedes editarla.</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Instrucciones adicionales</Label>
+                  <Textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} rows={2} placeholder="Ej: Llevar uniforme negro, llegar 15 min antes..." className="text-sm resize-none mt-1" />
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Employees */}
+            <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
+                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center"><Users className="h-3 w-3 text-primary" /></div>
+                <span className="text-[11px] font-semibold text-foreground">Asignar empleados</span>
+              </div>
+              <div className="p-4">
+                <EmployeeCombobox
+                  employees={employees}
+                  selected={selectedEmployees}
+                  onToggle={toggleEmployee}
+                  shifts={shifts}
+                  assignments={assignments}
+                  shiftDate={date}
+                  shiftStart={startTime}
+                  shiftEnd={endTime}
+                  maxHeight="150px"
+                  availabilityConfigs={availConfigs}
+                  availabilityOverrides={availOverrides}
+                  availabilityBlockMode="warning"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
+            <Button onClick={() => setConfirmOpen(true)} disabled={saving || !date} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
+              Revisar y crear turno
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Pre-submit confirmation */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
@@ -1084,7 +1389,6 @@ export default function Shifts() {
                   {claimable && <p><span className="font-medium">Reclamable:</span> Sí</p>}
                   {notes && <p><span className="font-medium">Notas:</span> {notes}</p>}
                 </div>
-                {/* Warnings */}
                 {(() => {
                   const warnings: string[] = [];
                   if (startTime >= endTime) warnings.push("La hora de entrada es igual o posterior a la de salida.");
@@ -1094,7 +1398,6 @@ export default function Shifts() {
                   const slotsNum = parseInt(slots) || 1;
                   if (selectedEmployees.length > slotsNum) warnings.push(`Se asignaron ${selectedEmployees.length} empleados pero solo hay ${slotsNum} plaza(s).`);
                   if (date && new Date(date + "T00:00:00") < new Date(new Date().toDateString())) warnings.push("La fecha es anterior a hoy.");
-                  // Conflict detection
                   selectedEmployees.forEach(eid => {
                     const empAssigns = assignments.filter(a => a.employee_id === eid);
                     const empShiftIds = new Set(empAssigns.map(a => a.shift_id));
@@ -1177,16 +1480,6 @@ export default function Shifts() {
         locations={locations}
         onSave={handleEditShift}
       />
-
-      {/* Audit trail */}
-      <div className="mt-8">
-        <AuditPanel
-          entityType="shift"
-          title="Actividad de turnos"
-          hideViews
-          compact
-        />
-      </div>
     </div>
   );
 }
