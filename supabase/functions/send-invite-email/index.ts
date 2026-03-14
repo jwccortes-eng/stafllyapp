@@ -49,8 +49,8 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const { error: enqueueErr } = await adminClient.rpc("enqueue_email", {
-      p_queue_name: "transactional_emails",
-      p_message: {
+      queue_name: "transactional_emails",
+      payload: {
         to,
         subject,
         html,
