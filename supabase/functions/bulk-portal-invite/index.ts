@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     let emailsSent = 0;
     const errors: string[] = [];
 
-    // Email sending via queue
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
 
     for (const emp of employees) {
       try {
