@@ -193,6 +193,7 @@ export function useNotifications() {
           setNotifications(prev => [newNotif, ...prev].slice(0, 30));
           setUnreadCount(prev => prev + 1);
           playSound();
+          toast(newNotif.title, { description: newNotif.body, duration: 5000 });
         }
       )
       .subscribe();
@@ -213,6 +214,7 @@ export function useNotifications() {
               setNotifications(prev => [newNotif, ...prev].slice(0, 30));
               setUnreadCount(prev => prev + 1);
               playSound();
+              toast(newNotif.title, { description: newNotif.body, duration: 5000 });
             }
           )
           .subscribe();
