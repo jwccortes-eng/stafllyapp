@@ -316,9 +316,8 @@ export default function AdminSidebar() {
   return (
     <aside className={cn(
       "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
-      "bg-card border-r border-border/40",
+      "bg-white dark:bg-[hsl(222,18%,10%)] border-r border-[hsl(220,13%,93%)] dark:border-[hsl(222,14%,18%)]",
       collapsed ? "w-[60px]" : "w-[250px]",
-      // owner-sidebar dark theme removed per user request
     )}>
       {/* ── User identity header ── */}
       <div className={cn(
