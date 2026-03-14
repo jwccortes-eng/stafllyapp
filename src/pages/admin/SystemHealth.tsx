@@ -38,7 +38,7 @@ const STATUS_CONFIG: Record<Status, { bg: string; border: string; text: string; 
     Icon: CheckCircle2,
   },
   yellow: {
-    bg: "bg-warning/8",
+    bg: "bg-warning/[0.08]",
     border: "border-warning/25",
     text: "text-warning",
     dot: "bg-warning",
