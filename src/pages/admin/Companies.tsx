@@ -97,6 +97,7 @@ export default function CompaniesPage() {
   const [selectedPlan, setSelectedPlan] = useState("free");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [duplicating, setDuplicating] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const { toast } = useToast();
 
   const copyCode = (code: string) => {
