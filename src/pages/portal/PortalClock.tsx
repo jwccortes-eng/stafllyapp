@@ -108,8 +108,11 @@ export default function PortalClock() {
     if (!employeeId) { setLoading(false); return; }
 
     const { data: emp } = await supabase
-      .from("employees").select("company_id").eq("id", employeeId).maybeSingle();
-    if (emp) setCompanyId(emp.company_id);
+      .from("employees").select("company_id, avatar_url").eq("id", employeeId).maybeSingle();
+    if (emp) {
+      setCompanyId(emp.company_id);
+      setHasProfilePhoto(!!emp.avatar_url);
+    }
 
     const today = new Date();
     const dayStart = startOfDay(today).toISOString();
