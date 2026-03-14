@@ -22,7 +22,7 @@ import {
   Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid,
   FlaskConical, Copy, Check, CreditCard, ChevronDown, ChevronRight,
   DollarSign, TrendingUp, Shield, UserCog, User, Crown, CircleDot,
-  CopyPlus, Loader2,
+  CopyPlus, Loader2, RefreshCcw,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
