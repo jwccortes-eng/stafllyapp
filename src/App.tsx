@@ -130,6 +130,7 @@ function App() {
           <Toaster />
           <Sonner />
           <NetworkListener />
+          <OfflineBanner />
           <ErrorBoundary>
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
