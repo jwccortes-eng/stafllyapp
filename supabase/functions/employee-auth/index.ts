@@ -573,8 +573,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Update PIN in employees table
-      await adminClient.from("employees").update({ access_pin: new_pin }).eq("id", emp.id);
+      // Update PIN in employees table and clear must_change_pin flag
+      await adminClient.from("employees").update({ access_pin: new_pin, must_change_pin: false }).eq("id", emp.id);
 
       // Sync auth password
       const newPwd = authPassword(new_pin);
