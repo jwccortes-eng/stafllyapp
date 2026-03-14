@@ -222,8 +222,12 @@ Deno.serve(async (req) => {
                 to: emp.email,
                 subject: "Tu acceso al Portal de Empleados StaflyApps",
                 html: buildInviteHtml(emp, pin),
-                from_name: "StaflyApps",
-                from_email: "noreply@notify.staflyapps.com",
+                from: "StaflyApps <noreply@notify.staflyapps.com>",
+                sender_domain: "notify.staflyapps.com",
+                purpose: "transactional",
+                label: "portal_invite",
+                message_id: crypto.randomUUID(),
+                queued_at: new Date().toISOString(),
               },
             });
             emailsSent++;
