@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,97 +9,114 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CompanyProvider } from "@/hooks/useCompany";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
+import { Loader2 } from "lucide-react";
+
+// Eager: shell components needed immediately
 import AdminLayout from "./components/AdminLayout";
 import EmployeeLayout from "./components/EmployeeLayout";
-import AdminDashboard from "./pages/admin/Dashboard";
-import Employees from "./pages/admin/Employees";
-import PayPeriods from "./pages/admin/PayPeriods";
-import ImportConnecteam from "./pages/admin/ImportConnecteam";
-import Concepts from "./pages/admin/Concepts";
-import Movements from "./pages/admin/Movements";
-import PeriodSummary from "./pages/admin/PeriodSummary";
-import EmployeePeriodDetail from "./pages/admin/EmployeePeriodDetail";
-import Reports from "./pages/admin/Reports";
-import EmployeeReport from "./pages/admin/EmployeeReport";
-import UsersPage from "./pages/admin/Users";
-import CompaniesPage from "./pages/admin/Companies";
-import OwnerDashboard from "./pages/admin/OwnerDashboard";
-import InviteEmployees from "./pages/admin/InviteEmployees";
-import Directory from "./pages/admin/Directory";
-import Clients from "./pages/admin/Clients";
-import Locations from "./pages/admin/Locations";
-import Shifts from "./pages/admin/Shifts";
-import ImportSchedule from "./pages/admin/ImportSchedule";
-import ImportTimeClock from "./pages/admin/ImportTimeClock";
-import ImportPayrollExtras from "./pages/admin/ImportPayrollExtras";
-import BulkImportShifts from "./pages/admin/BulkImportShifts";
-import ImportWizard from "./pages/admin/ImportWizard";
-import TimeClock from "./pages/admin/TimeClock";
-import TodayView from "./pages/admin/TodayView";
-import Announcements from "./pages/admin/Announcements";
-import InternalChat from "./pages/admin/InternalChat";
-import PlatformSettings from "./pages/admin/PlatformSettings";
-import ActivityLog from "./pages/admin/ActivityLog";
-import OnboardingWizard from "./pages/admin/OnboardingWizard";
-import Permissions from "./pages/admin/Permissions";
-import CompanyConfig from "./pages/admin/CompanyConfig";
-import Automations from "./pages/admin/Automations";
-import MonetizationReport from "./pages/admin/MonetizationReport";
-import SystemHealth from "./pages/admin/SystemHealth";
-import Implementations from "./pages/admin/Implementations";
-import ShiftRequests from "./pages/admin/ShiftRequests";
-import PayrollSettings from "./pages/admin/PayrollSettings";
-import NotificationTemplates from "./pages/admin/NotificationTemplates";
-import NotificationsPage from "./pages/admin/Notifications";
-import Pricing from "./pages/admin/Pricing";
-import Billing from "./pages/admin/Billing";
-import Requests from "./pages/admin/Requests";
-import Leads from "./pages/admin/Leads";
-import AdminHub from "./pages/admin/AdminHub";
-import DiscrepancyReport from "./pages/admin/DiscrepancyReport";
-import ComparisonReport from "./pages/admin/ComparisonReport";
-import ContractorW9 from "./pages/admin/ContractorW9";
-import TaxForms1099 from "./pages/admin/TaxForms1099";
-import ImportInactiveEmployees from "./pages/admin/ImportInactiveEmployees";
-import UnpaidShiftsReport from "./pages/admin/UnpaidShiftsReport";
-import StaffingRequests from "./pages/admin/StaffingRequests";
-import InvoicesPage from "./pages/admin/Invoices";
-import ServiceCategories from "./pages/admin/ServiceCategories";
-import AIWorkforce from "./pages/admin/AIWorkforce";
-import LiveMap from "./pages/admin/LiveMap";
-import PublicPricing from "./pages/PublicPricing";
-import PublicPassport from "./pages/PublicPassport";
-import Leaderboard from "./pages/admin/Leaderboard";
-import WorkerPassport from "./pages/admin/WorkerPassport";
 import ModuleGate from "./components/ModuleGate";
-import MyPayments from "./pages/portal/MyPayments";
-import WeekDetail from "./pages/portal/WeekDetail";
-import Accumulated from "./pages/portal/Accumulated";
-import MyShifts from "./pages/portal/MyShifts";
-import MyAnnouncements from "./pages/portal/MyAnnouncements";
-import EmployeeDashboard from "./pages/portal/EmployeeDashboard";
-import PortalResources from "./pages/portal/PortalResources";
-import PortalProfile from "./pages/portal/PortalProfile";
-import PortalClock from "./pages/portal/PortalClock";
-import PayStub from "./pages/portal/PayStub";
-import PortalChat from "./pages/portal/PortalChat";
-import MyW9 from "./pages/portal/MyW9";
-import MyAvailability from "./pages/portal/MyAvailability";
-import Install from "./pages/Install";
-import TermsOfService from "./pages/legal/TermsOfService";
-import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
-import CookiePolicy from "./pages/legal/CookiePolicy";
-import HelpCenter from "./pages/help/HelpCenter";
-import UserManual from "./pages/help/UserManual";
+
+// Lazy: all pages
+const Index = lazy(() => import("./pages/Index"));
+const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Install = lazy(() => import("./pages/Install"));
+const PublicPricing = lazy(() => import("./pages/PublicPricing"));
+const PublicPassport = lazy(() => import("./pages/PublicPassport"));
+const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
+const CookiePolicy = lazy(() => import("./pages/legal/CookiePolicy"));
+const HelpCenter = lazy(() => import("./pages/help/HelpCenter"));
+const UserManual = lazy(() => import("./pages/help/UserManual"));
+
+// Admin pages
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const Employees = lazy(() => import("./pages/admin/Employees"));
+const PayPeriods = lazy(() => import("./pages/admin/PayPeriods"));
+const ImportConnecteam = lazy(() => import("./pages/admin/ImportConnecteam"));
+const Concepts = lazy(() => import("./pages/admin/Concepts"));
+const Movements = lazy(() => import("./pages/admin/Movements"));
+const PeriodSummary = lazy(() => import("./pages/admin/PeriodSummary"));
+const EmployeePeriodDetail = lazy(() => import("./pages/admin/EmployeePeriodDetail"));
+const EmployeeReport = lazy(() => import("./pages/admin/EmployeeReport"));
+const UsersPage = lazy(() => import("./pages/admin/Users"));
+const CompaniesPage = lazy(() => import("./pages/admin/Companies"));
+const OwnerDashboard = lazy(() => import("./pages/admin/OwnerDashboard"));
+const InviteEmployees = lazy(() => import("./pages/admin/InviteEmployees"));
+const Directory = lazy(() => import("./pages/admin/Directory"));
+const Clients = lazy(() => import("./pages/admin/Clients"));
+const Locations = lazy(() => import("./pages/admin/Locations"));
+const Shifts = lazy(() => import("./pages/admin/Shifts"));
+const ImportSchedule = lazy(() => import("./pages/admin/ImportSchedule"));
+const ImportTimeClock = lazy(() => import("./pages/admin/ImportTimeClock"));
+const ImportPayrollExtras = lazy(() => import("./pages/admin/ImportPayrollExtras"));
+const BulkImportShifts = lazy(() => import("./pages/admin/BulkImportShifts"));
+const ImportWizard = lazy(() => import("./pages/admin/ImportWizard"));
+const ShiftRequests = lazy(() => import("./pages/admin/ShiftRequests"));
+const TimeClock = lazy(() => import("./pages/admin/TimeClock"));
+const TodayView = lazy(() => import("./pages/admin/TodayView"));
+const Announcements = lazy(() => import("./pages/admin/Announcements"));
+const InternalChat = lazy(() => import("./pages/admin/InternalChat"));
+const PlatformSettings = lazy(() => import("./pages/admin/PlatformSettings"));
+const ActivityLog = lazy(() => import("./pages/admin/ActivityLog"));
+const OnboardingWizard = lazy(() => import("./pages/admin/OnboardingWizard"));
+const Permissions = lazy(() => import("./pages/admin/Permissions"));
+const CompanyConfig = lazy(() => import("./pages/admin/CompanyConfig"));
+const Automations = lazy(() => import("./pages/admin/Automations"));
+const PayrollSettings = lazy(() => import("./pages/admin/PayrollSettings"));
+const MonetizationReport = lazy(() => import("./pages/admin/MonetizationReport"));
+const Pricing = lazy(() => import("./pages/admin/Pricing"));
+const Billing = lazy(() => import("./pages/admin/Billing"));
+const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
+const Implementations = lazy(() => import("./pages/admin/Implementations"));
+const NotificationTemplates = lazy(() => import("./pages/admin/NotificationTemplates"));
+const NotificationsPage = lazy(() => import("./pages/admin/Notifications"));
+const Requests = lazy(() => import("./pages/admin/Requests"));
+const Leads = lazy(() => import("./pages/admin/Leads"));
+const AdminHub = lazy(() => import("./pages/admin/AdminHub"));
+const DiscrepancyReport = lazy(() => import("./pages/admin/DiscrepancyReport"));
+const ComparisonReport = lazy(() => import("./pages/admin/ComparisonReport"));
+const ContractorW9 = lazy(() => import("./pages/admin/ContractorW9"));
+const TaxForms1099 = lazy(() => import("./pages/admin/TaxForms1099"));
+const ImportInactiveEmployees = lazy(() => import("./pages/admin/ImportInactiveEmployees"));
+const UnpaidShiftsReport = lazy(() => import("./pages/admin/UnpaidShiftsReport"));
+const StaffingRequests = lazy(() => import("./pages/admin/StaffingRequests"));
+const InvoicesPage = lazy(() => import("./pages/admin/Invoices"));
+const ServiceCategories = lazy(() => import("./pages/admin/ServiceCategories"));
+const AIWorkforce = lazy(() => import("./pages/admin/AIWorkforce"));
+const LiveMap = lazy(() => import("./pages/admin/LiveMap"));
+const Leaderboard = lazy(() => import("./pages/admin/Leaderboard"));
+const WorkerPassport = lazy(() => import("./pages/admin/WorkerPassport"));
+
+// Portal pages
+const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
+const MyPayments = lazy(() => import("./pages/portal/MyPayments"));
+const WeekDetail = lazy(() => import("./pages/portal/WeekDetail"));
+const Accumulated = lazy(() => import("./pages/portal/Accumulated"));
+const MyShifts = lazy(() => import("./pages/portal/MyShifts"));
+const MyAnnouncements = lazy(() => import("./pages/portal/MyAnnouncements"));
+const PortalResources = lazy(() => import("./pages/portal/PortalResources"));
+const PortalProfile = lazy(() => import("./pages/portal/PortalProfile"));
+const PortalClock = lazy(() => import("./pages/portal/PortalClock"));
+const PayStub = lazy(() => import("./pages/portal/PayStub"));
+const PortalChat = lazy(() => import("./pages/portal/PortalChat"));
+const MyW9 = lazy(() => import("./pages/portal/MyW9"));
+const MyAvailability = lazy(() => import("./pages/portal/MyAvailability"));
+
 const queryClient = new QueryClient();
 
 function NetworkListener() {
   useNetworkStatus();
   return null;
+}
+
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  );
 }
 
 function App() {
@@ -113,6 +131,7 @@ function App() {
           <NetworkListener />
           <ErrorBoundary>
           <BrowserRouter>
+            <Suspense fallback={<PageFallback />}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/install" element={<Install />} />
@@ -207,6 +226,7 @@ function App() {
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
           </ErrorBoundary>
           </CompanyProvider>
