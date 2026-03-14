@@ -110,10 +110,58 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
         });
-        onSessionReady();
+
+        // Check if forced PIN change is required
+        if (data.must_change_pin) {
+          setStep("force_change_pin");
+        } else {
+          onSessionReady();
+        }
       }
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Error al iniciar sesión. Verifica tu internet.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForceChangePinCreate = (enteredPin: string) => {
+    if (changePinPhase === "create") {
+      setNewPin(enteredPin);
+      setChangePinPhase("confirm");
+      setConfirmNewPin("");
+    }
+  };
+
+  const handleForceChangePinConfirm = async (enteredPin: string) => {
+    if (enteredPin !== newPin) {
+      toast({ title: "No coinciden", description: "Los PINs no coinciden. Intenta de nuevo.", variant: "destructive" });
+      setChangePinPhase("create");
+      setNewPin("");
+      setConfirmNewPin("");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: { action: "change-pin", new_pin: newPin },
+      });
+
+      if (error) {
+        const msg = await extractErrorMsg(error);
+        toast({ title: "Error", description: msg, variant: "destructive" });
+        return;
+      }
+
+      if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      } else {
+        toast({ title: "¡PIN actualizado! 🔒", description: "Tu nuevo PIN ha sido guardado." });
+        onSessionReady();
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error al cambiar PIN.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
