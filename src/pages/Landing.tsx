@@ -326,17 +326,12 @@ export default function Landing() {
             <Link to="/auth" className="hidden sm:inline-flex text-[13px] font-medium px-3 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: "hsl(220,10%,50%)" }}>
               {c.login}
             </Link>
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="rounded-full px-5 h-9 text-[13px] font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_2px_8px_-2px_hsl(222,100%,59%/0.35)] transition-all active:scale-[0.97]">
-                  {c.ctaPrimary}
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md rounded-2xl">
-                <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                <DemoForm lang={lang} />
-              </DialogContent>
-            </Dialog>
+            <Link
+              to="/auth?register=true"
+              className="rounded-full px-5 h-9 text-[13px] font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_2px_8px_-2px_hsl(222,100%,59%/0.35)] transition-all active:scale-[0.97] inline-flex items-center"
+            >
+              {c.ctaPrimary}
+            </Link>
             <button className="lg:hidden p-2 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" onClick={() => setMobileMenu(!mobileMenu)}>
               {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
