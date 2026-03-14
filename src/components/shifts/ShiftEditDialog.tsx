@@ -244,6 +244,19 @@ export function ShiftEditDialog({
             )}
           </SectionCard>
 
+          {/* ── Section: Clock Method ── */}
+          <SectionCard icon={Clock} title="Método de fichaje">
+            <Select value={clockMethod} onValueChange={v => setClockMethod(v as "mobile" | "kiosk" | "both")}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="both">📱🖥 Ambos (Móvil + Kiosk)</SelectItem>
+                <SelectItem value="mobile">📱 Solo Móvil</SelectItem>
+                <SelectItem value="kiosk">🖥 Solo Kiosk</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">Define desde dónde pueden fichar los empleados en este turno.</p>
+          </SectionCard>
+
           {/* ── Section: Details ── */}
           <SectionCard icon={FileText} title="Detalles adicionales">
             <div>
