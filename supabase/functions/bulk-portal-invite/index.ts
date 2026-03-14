@@ -108,14 +108,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find eligible employees: active, has phone, no PIN
+    // Find eligible employees: active, has phone (force mode — resets all PINs)
     const { data: employees, error: fetchErr } = await adminClient
       .from("employees")
       .select("id, first_name, last_name, phone_number, email, access_pin, is_active")
       .eq("company_id", company_id)
       .eq("is_active", true)
-      .not("phone_number", "is", null)
-      .is("access_pin", null);
+      .not("phone_number", "is", null);
 
     if (fetchErr) {
       return new Response(JSON.stringify({ error: "Error al buscar empleados" }), {
