@@ -169,8 +169,10 @@ export default function ImportInactiveEmployees() {
 
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const html = evt.target?.result as string;
-      const rows = parseHtmlXls(html);
+      const text = evt.target?.result as string;
+      // Detect CSV (semicolon-delimited) vs HTML XLS
+      const isCsv = f.name.endsWith(".csv") || (!text.trim().startsWith("<") && text.includes(";"));
+      const rows = isCsv ? parseSemicolonCsv(text) : parseHtmlXls(text);
       setParsedRows(rows);
       toast({
         title: `${rows.length} filas detectadas`,
