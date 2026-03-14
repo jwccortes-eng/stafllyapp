@@ -73,6 +73,7 @@ import LiveMap from "./pages/admin/LiveMap";
 import PublicPricing from "./pages/PublicPricing";
 import Leaderboard from "./pages/admin/Leaderboard";
 import WorkerPassport from "./pages/admin/WorkerPassport";
+import WorkerMap from "./pages/admin/WorkerMap";
 import ModuleGate from "./components/ModuleGate";
 import MyPayments from "./pages/portal/MyPayments";
 import WeekDetail from "./pages/portal/WeekDetail";
@@ -183,6 +184,7 @@ function App() {
                 <Route path="live-map" element={<LiveMap />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
                 <Route path="passport" element={<WorkerPassport />} />
+                <Route path="worker-map" element={<WorkerMap />} />
               </Route>
 
               {/* Employee portal routes */}
