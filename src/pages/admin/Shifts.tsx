@@ -942,7 +942,7 @@ export default function Shifts() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div className="rounded-2xl bg-card/40 border border-border/15 shadow-sm p-4 sm:p-5 min-h-[420px]">
+      <div className="rounded-2xl bg-card border border-border/40 shadow-xs p-4 sm:p-5 min-h-[420px]">
         {loading ? (
           <div className="space-y-4 animate-pulse">
             <div className="grid grid-cols-7 gap-3">
