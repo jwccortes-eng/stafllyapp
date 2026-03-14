@@ -36,9 +36,21 @@ export default function EmployeeLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const { pinnedIds, togglePin, maxPins } = useNavPreferences(EMPLOYEE_DEFAULT_PINS);
   const [isClockedIn, setIsClockedIn] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(undefined); // undefined = loading
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // Fetch employee avatar
+  useEffect(() => {
+    if (!employeeId) return;
+    supabase.from("employees").select("avatar_url").eq("id", employeeId).single()
+      .then(({ data }) => setAvatarUrl(data?.avatar_url ?? null));
+  }, [employeeId]);
 
   // Check active clock entry
   const checkClockStatus = useCallback(async () => {
