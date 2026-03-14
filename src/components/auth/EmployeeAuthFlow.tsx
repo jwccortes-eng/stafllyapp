@@ -470,28 +470,18 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleActivate}
-              disabled={loading}
-              className="flex-1 h-11 rounded-xl text-sm"
-            >
-              Omitir
-            </Button>
-            <Button
-              onClick={handleActivate}
-              disabled={loading}
-              className="flex-1 h-11 rounded-xl text-sm font-semibold shadow-sm"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                  Activar cuenta
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handleActivate}
+            disabled={loading || !avatarFile}
+            className="w-full h-11 rounded-xl text-sm font-semibold shadow-sm"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                Activar cuenta
+              </>
+            )}
+          </Button>
         </div>
       )}
 
