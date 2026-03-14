@@ -29,7 +29,7 @@ interface ShiftEditDialogProps {
   onOpenChange: (open: boolean) => void;
   clients: SelectOption[];
   locations: LocationOption[];
-  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null; pay_type?: string; day_type?: string; shift_admin_id?: string | null }, oldShift: Shift) => Promise<void>;
+  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null; pay_type?: string; day_type?: string; shift_admin_id?: string | null; clock_method?: string }, oldShift: Shift) => Promise<void>;
 }
 
 function SectionCard({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) {
