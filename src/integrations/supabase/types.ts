@@ -4342,6 +4342,401 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_documents: {
+        Row: {
+          created_at: string | null
+          document_type: Database["public"]["Enums"]["document_type_enum"]
+          expires_at: string | null
+          file_name: string | null
+          file_url: string
+          id: string
+          is_private: boolean | null
+          notes: string | null
+          updated_at: string | null
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_type: Database["public"]["Enums"]["document_type_enum"]
+          expires_at?: string | null
+          file_name?: string | null
+          file_url: string
+          id?: string
+          is_private?: boolean | null
+          notes?: string | null
+          updated_at?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: Database["public"]["Enums"]["document_type_enum"]
+          expires_at?: string | null
+          file_name?: string | null
+          file_url?: string
+          id?: string
+          is_private?: boolean | null
+          notes?: string | null
+          updated_at?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_documents_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_experience_records: {
+        Row: {
+          company_name: string
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          is_current: boolean | null
+          source_type: Database["public"]["Enums"]["experience_source"] | null
+          start_date: string | null
+          title: string
+          worker_profile_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean | null
+          source_type?: Database["public"]["Enums"]["experience_source"] | null
+          start_date?: string | null
+          title: string
+          worker_profile_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean | null
+          source_type?: Database["public"]["Enums"]["experience_source"] | null
+          start_date?: string | null
+          title?: string
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_experience_records_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_languages: {
+        Row: {
+          created_at: string | null
+          id: string
+          language_code: string
+          proficiency_level: Database["public"]["Enums"]["proficiency_level"]
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          language_code: string
+          proficiency_level: Database["public"]["Enums"]["proficiency_level"]
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          language_code?: string
+          proficiency_level?: Database["public"]["Enums"]["proficiency_level"]
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_languages_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_profile_skills: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          proficiency_level:
+            | Database["public"]["Enums"]["proficiency_level"]
+            | null
+          skill_id: string
+          worker_profile_id: string
+          years_experience: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          proficiency_level?:
+            | Database["public"]["Enums"]["proficiency_level"]
+            | null
+          skill_id: string
+          worker_profile_id: string
+          years_experience?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          proficiency_level?:
+            | Database["public"]["Enums"]["proficiency_level"]
+            | null
+          skill_id?: string
+          worker_profile_id?: string
+          years_experience?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_profile_skills_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "worker_skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_profile_skills_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_profiles: {
+        Row: {
+          bio: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          deleted_at: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          employee_id: string | null
+          english_level:
+            | Database["public"]["Enums"]["english_level_enum"]
+            | null
+          gender: string | null
+          headline: string | null
+          id: string
+          is_available_for_marketplace: boolean | null
+          is_profile_public: boolean | null
+          primary_phone: string | null
+          profile_completion_percent: number | null
+          public_slug: string | null
+          referred_by: string | null
+          state: string | null
+          updated_at: string | null
+          user_id: string | null
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          years_of_experience: number | null
+          zip_code: string | null
+        }
+        Insert: {
+          bio?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          deleted_at?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employee_id?: string | null
+          english_level?:
+            | Database["public"]["Enums"]["english_level_enum"]
+            | null
+          gender?: string | null
+          headline?: string | null
+          id?: string
+          is_available_for_marketplace?: boolean | null
+          is_profile_public?: boolean | null
+          primary_phone?: string | null
+          profile_completion_percent?: number | null
+          public_slug?: string | null
+          referred_by?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          years_of_experience?: number | null
+          zip_code?: string | null
+        }
+        Update: {
+          bio?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          deleted_at?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employee_id?: string | null
+          english_level?:
+            | Database["public"]["Enums"]["english_level_enum"]
+            | null
+          gender?: string | null
+          headline?: string | null
+          id?: string
+          is_available_for_marketplace?: boolean | null
+          is_profile_public?: boolean | null
+          primary_phone?: string | null
+          profile_completion_percent?: number | null
+          public_slug?: string | null
+          referred_by?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          years_of_experience?: number | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_skills: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      worker_visibility_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          profile_visibility:
+            | Database["public"]["Enums"]["profile_visibility"]
+            | null
+          show_approximate_location: boolean | null
+          show_city: boolean | null
+          show_exact_location: boolean | null
+          show_experience: boolean | null
+          show_first_name: boolean | null
+          show_last_name: boolean | null
+          show_photo: boolean | null
+          show_reputation: boolean | null
+          show_skills: boolean | null
+          show_work_history: boolean | null
+          updated_at: string | null
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          profile_visibility?:
+            | Database["public"]["Enums"]["profile_visibility"]
+            | null
+          show_approximate_location?: boolean | null
+          show_city?: boolean | null
+          show_exact_location?: boolean | null
+          show_experience?: boolean | null
+          show_first_name?: boolean | null
+          show_last_name?: boolean | null
+          show_photo?: boolean | null
+          show_reputation?: boolean | null
+          show_skills?: boolean | null
+          show_work_history?: boolean | null
+          updated_at?: string | null
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          profile_visibility?:
+            | Database["public"]["Enums"]["profile_visibility"]
+            | null
+          show_approximate_location?: boolean | null
+          show_city?: boolean | null
+          show_exact_location?: boolean | null
+          show_experience?: boolean | null
+          show_first_name?: boolean | null
+          show_last_name?: boolean | null
+          show_photo?: boolean | null
+          show_reputation?: boolean | null
+          show_skills?: boolean | null
+          show_work_history?: boolean | null
+          updated_at?: string | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_visibility_settings_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: true
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       employees_safe: {
@@ -4612,6 +5007,25 @@ export type Database = {
       app_role: "admin" | "employee" | "developer" | "owner" | "manager"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
       concept_category: "extra" | "deduction"
+      document_type_enum:
+        | "id_card"
+        | "passport"
+        | "driver_license"
+        | "w9"
+        | "certification"
+        | "background_check"
+        | "other"
+      english_level_enum:
+        | "none"
+        | "basic"
+        | "intermediate"
+        | "advanced"
+        | "native"
+      experience_source:
+        | "manual"
+        | "stafly_import"
+        | "marketplace_import"
+        | "linkedin"
       invoice_status:
         | "draft"
         | "approved"
@@ -4622,6 +5036,8 @@ export type Database = {
         | "paid"
         | "overdue"
         | "voided"
+      proficiency_level: "beginner" | "intermediate" | "advanced" | "expert"
+      profile_visibility: "private" | "limited" | "public"
       rate_source: "concept_default" | "per_employee"
       staffing_request_status:
         | "draft"
@@ -4636,6 +5052,7 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+      verification_status: "unverified" | "pending" | "verified" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4766,6 +5183,28 @@ export const Constants = {
       app_role: ["admin", "employee", "developer", "owner", "manager"],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
       concept_category: ["extra", "deduction"],
+      document_type_enum: [
+        "id_card",
+        "passport",
+        "driver_license",
+        "w9",
+        "certification",
+        "background_check",
+        "other",
+      ],
+      english_level_enum: [
+        "none",
+        "basic",
+        "intermediate",
+        "advanced",
+        "native",
+      ],
+      experience_source: [
+        "manual",
+        "stafly_import",
+        "marketplace_import",
+        "linkedin",
+      ],
       invoice_status: [
         "draft",
         "approved",
@@ -4777,6 +5216,8 @@ export const Constants = {
         "overdue",
         "voided",
       ],
+      proficiency_level: ["beginner", "intermediate", "advanced", "expert"],
+      profile_visibility: ["private", "limited", "public"],
       rate_source: ["concept_default", "per_employee"],
       staffing_request_status: [
         "draft",
@@ -4792,6 +5233,7 @@ export const Constants = {
         "completed",
         "cancelled",
       ],
+      verification_status: ["unverified", "pending", "verified", "rejected"],
     },
   },
 } as const
