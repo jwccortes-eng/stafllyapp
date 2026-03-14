@@ -388,7 +388,7 @@ export default function Landing() {
 
           {/* Hero Dashboard Mockup */}
           <div className="mt-14 relative max-w-5xl mx-auto">
-            <div className="absolute inset-0 gradient-primary rounded-3xl blur-[60px] opacity-10 scale-95 translate-y-4" />
+            <div className="absolute inset-0 bg-primary-glow/10 rounded-3xl blur-[60px] scale-95 translate-y-4" />
             <div className="relative rounded-2xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/10 bg-card">
               <div className="flex items-center gap-1.5 px-4 py-2.5 bg-muted/50 border-b border-border/30">
                 <div className="w-3 h-3 rounded-full bg-destructive/60" />
