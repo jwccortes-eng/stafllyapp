@@ -14,9 +14,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Star, Shield, TrendingUp, Target, MapPin, Briefcase,
-  Clock, Building2, Globe, Lock, Award, Languages, Car,
+  Clock, Building2, Globe, Lock, Award, Languages, Car, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -96,6 +97,7 @@ export default function WorkerPassport() {
   const [history, setHistory] = useState<WorkHistory[]>([]);
   const [categories, setCategories] = useState<{ label: string; avg: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [consolidating, setConsolidating] = useState(false);
 
   // New hooks — connect to DB tables
   const wp = useWorkerProfile({ employeeId: employeeId ?? undefined });
@@ -201,6 +203,19 @@ export default function WorkerPassport() {
     toast.success(newVal ? "Passport is now public" : "Passport is now private");
   };
 
+  const handleConsolidate = async () => {
+    if (!wp.profile?.id) { toast.error("No worker profile found"); return; }
+    setConsolidating(true);
+    const { error } = await supabase.rpc("consolidate_passport", { _worker_profile_id: wp.profile.id });
+    if (error) {
+      toast.error("Error consolidating passport");
+    } else {
+      toast.success("Passport consolidado con datos reales");
+      passport.refetch();
+    }
+    setConsolidating(false);
+  };
+
   if (!employeeId) {
     return <div className="p-6"><PageHeader title="Worker Passport" subtitle="Select an employee to view their passport." /></div>;
   }
@@ -220,7 +235,13 @@ export default function WorkerPassport() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      <PageHeader title="Worker Passport" subtitle="Professional verified profile" />
+      <div className="flex items-center justify-between">
+        <PageHeader title="Worker Passport" subtitle="Professional verified profile" />
+        <Button variant="outline" size="sm" onClick={handleConsolidate} disabled={consolidating || !wp.profile?.id} className="gap-1.5 text-xs">
+          <RefreshCw className={cn("h-3.5 w-3.5", consolidating && "animate-spin")} />
+          {consolidating ? "Consolidando..." : "Consolidar"}
+        </Button>
+      </div>
 
       {/* ── Profile Header ── */}
       <Card className="border-border/40 overflow-hidden">
