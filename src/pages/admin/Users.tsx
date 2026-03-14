@@ -55,7 +55,7 @@ const MODULES = [
   { key: "chat", label: "Chat" },
 ];
 
-type RoleType = "developer" | "owner" | "admin" | "manager" | "employee";
+type RoleType = "developer" | "owner" | "admin" | "manager" | "supervisor" | "employee";
 
 interface CompanyAssignment {
   company_id: string;
