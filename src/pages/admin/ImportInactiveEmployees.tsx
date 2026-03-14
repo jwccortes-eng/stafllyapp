@@ -30,6 +30,73 @@ interface ParsedRow {
   tags?: string;
 }
 
+function parseSemicolonCsv(text: string): ParsedRow[] {
+  const lines = text.split("\n").filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  // Remove BOM
+  let headerLine = lines[0].replace(/^\uFEFF/, "");
+  
+  const parseRow = (line: string): string[] => {
+    const values: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        inQuotes = !inQuotes;
+      } else if (ch === ";" && !inQuotes) {
+        values.push(current.trim());
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    values.push(current.trim());
+    return values;
+  };
+
+  const headers = parseRow(headerLine);
+
+  const headerMap: Record<string, string> = {
+    "First name": "first_name",
+    "Last name": "last_name",
+    "Email": "email",
+    "Groups": "groups",
+    "Tags": "tags",
+    "Country code": "country_code",
+    "Mobile phone": "phone_number",
+    "Gender": "gender",
+    "Start Date": "start_date",
+    "English Level": "english_level",
+    "Role": "employee_role",
+    "Qualify": "qualify",
+    "Recommended by?": "recommended_by",
+    "Direct manager": "direct_manager",
+    "You have car?": "has_car",
+    "Driver Licence": "driver_licence",
+    "End Date": "end_date",
+    "Connecteam User ID": "connecteam_employee_id",
+    "Added via": "added_via",
+    "Added by": "added_by",
+  };
+
+  const rows: ParsedRow[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseRow(lines[i]);
+    const row: Record<string, string> = {};
+    values.forEach((val, idx) => {
+      const header = headers[idx];
+      const dbKey = headerMap[header];
+      if (dbKey) row[dbKey] = val;
+    });
+    if (row.first_name && row.last_name) {
+      rows.push(row as unknown as ParsedRow);
+    }
+  }
+  return rows;
+}
+
 function parseHtmlXls(html: string): ParsedRow[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
