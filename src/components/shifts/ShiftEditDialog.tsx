@@ -65,6 +65,7 @@ export function ShiftEditDialog({
   const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
   const [dayType, setDayType] = useState<"full_day" | "half_day">("full_day");
   const [shiftAdminId, setShiftAdminId] = useState("");
+  const [clockMethod, setClockMethod] = useState<"mobile" | "kiosk" | "both">("both");
   const [saving, setSaving] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
