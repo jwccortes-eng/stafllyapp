@@ -82,10 +82,10 @@ function KpiStatCard({ label, value, subtitle, icon: Icon, color, sparkData, onC
   onClick?: () => void;
 }) {
   const colorMap = {
-    primary: { bg: "bg-primary/8", text: "text-primary", icon: "text-primary", ring: "ring-primary/10", spark: "hsl(var(--primary))" },
-    warning: { bg: "bg-warning/8", text: "text-warning", icon: "text-warning", ring: "ring-warning/10", spark: "hsl(var(--warning))" },
-    deduction: { bg: "bg-deduction/8", text: "text-deduction", icon: "text-deduction", ring: "ring-deduction/10", spark: "hsl(var(--destructive))" },
-    earning: { bg: "bg-earning/8", text: "text-earning", icon: "text-earning", ring: "ring-earning/10", spark: "hsl(var(--earning))" },
+    primary: { bg: "bg-primary/[0.08]", text: "text-primary", icon: "text-primary", ring: "ring-primary/10", spark: "hsl(var(--primary))" },
+    warning: { bg: "bg-warning/[0.08]", text: "text-warning", icon: "text-warning", ring: "ring-warning/10", spark: "hsl(var(--warning))" },
+    deduction: { bg: "bg-deduction/[0.08]", text: "text-deduction", icon: "text-deduction", ring: "ring-deduction/10", spark: "hsl(var(--destructive))" },
+    earning: { bg: "bg-earning/[0.08]", text: "text-earning", icon: "text-earning", ring: "ring-earning/10", spark: "hsl(var(--earning))" },
   };
   const c = colorMap[color];
 
