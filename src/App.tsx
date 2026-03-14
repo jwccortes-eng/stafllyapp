@@ -86,6 +86,7 @@ import PortalClock from "./pages/portal/PortalClock";
 import PayStub from "./pages/portal/PayStub";
 import PortalChat from "./pages/portal/PortalChat";
 import MyW9 from "./pages/portal/MyW9";
+import MyAvailability from "./pages/portal/MyAvailability";
 import Install from "./pages/Install";
 import TermsOfService from "./pages/legal/TermsOfService";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
