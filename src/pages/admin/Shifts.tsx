@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { usePageView } from "@/hooks/useAuditLog";
-import AuditPanel from "@/components/audit/AuditPanel";
+// AuditPanel available via dropdown in future iteration
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
