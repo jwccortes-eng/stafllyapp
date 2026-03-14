@@ -2,17 +2,22 @@
  * StaflyApps Brand System — Crisp SVG logo that scales to any size.
  * Single source of truth for logo mark + wordmark across the entire app.
  */
+import React, { forwardRef } from "react";
 import staflySidebarLogo from "@/assets/stafly-sidebar-logo.png";
 
-interface MarkProps {
+interface MarkProps extends React.SVGProps<SVGSVGElement> {
   className?: string;
   size?: number;
 }
 
 /** Isotipo — SVG shield-calendar icon */
-export function StaflyMark({ className = "", size = 32 }: MarkProps) {
+export const StaflyMark = forwardRef<SVGSVGElement, MarkProps>(function StaflyMark(
+  { className = "", size = 32, ...rest },
+  ref,
+) {
   return (
     <svg
+      ref={ref}
       width={size}
       height={size}
       viewBox="0 0 40 40"
@@ -20,6 +25,7 @@ export function StaflyMark({ className = "", size = 32 }: MarkProps) {
       xmlns="http://www.w3.org/2000/svg"
       className={`shrink-0 ${className}`}
       aria-label="StaflyApps"
+      {...rest}
     >
       {/* Rounded square background with gradient */}
       <defs>
@@ -45,9 +51,9 @@ export function StaflyMark({ className = "", size = 32 }: MarkProps) {
       <path d="M23 30L25.5 32.5L30 27" stroke="hsl(163, 68%, 50%)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   );
-}
+});
 
-interface LogoProps {
+interface LogoProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
   size?: number;
   /** Hide wordmark, show only the mark */
@@ -59,10 +65,15 @@ interface LogoProps {
 }
 
 /** Full logo — Mark + "StaflyApps" wordmark */
-export function StaflyLogo({ className = "", size = 32, markOnly = false, muted = false, variant = "default" }: LogoProps) {
+export const StaflyLogo = forwardRef<HTMLDivElement, LogoProps>(function StaflyLogo(
+  { className = "", size = 32, markOnly = false, muted = false, variant = "default", style, ...rest },
+  ref,
+) {
+  const mergedStyle = { ...(muted ? { opacity: 0.4 } : {}), ...style };
+
   if (variant === "sidebar") {
     return (
-      <div className={`flex items-center ${className}`} style={muted ? { opacity: 0.4 } : undefined}>
+      <div ref={ref} className={`flex items-center ${className}`} style={mergedStyle} {...rest}>
         <img
           src={staflySidebarLogo}
           alt="StaflyApps"
@@ -75,7 +86,7 @@ export function StaflyLogo({ className = "", size = 32, markOnly = false, muted 
   }
 
   return (
-    <div className={`flex items-center gap-2.5 ${className}`} style={muted ? { opacity: 0.4 } : undefined}>
+    <div ref={ref} className={`flex items-center gap-2.5 ${className}`} style={mergedStyle} {...rest}>
       <StaflyMark size={size} />
       {!markOnly && (
         <span
@@ -87,4 +98,4 @@ export function StaflyLogo({ className = "", size = 32, markOnly = false, muted 
       )}
     </div>
   );
-}
+});
