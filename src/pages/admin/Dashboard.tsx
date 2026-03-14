@@ -155,7 +155,7 @@ function ActivityRow({ item }: { item: any }) {
   return (
     <div className="px-4 py-3 hover:bg-accent/20 transition-colors">
       <div className="flex items-start gap-3">
-        <div className="h-7 w-7 rounded-lg bg-primary/6 flex items-center justify-center shrink-0 mt-0.5">
+        <div className="h-7 w-7 rounded-lg bg-primary/[0.06] flex items-center justify-center shrink-0 mt-0.5">
           <IconComp className="h-3 w-3 text-primary/70" />
         </div>
         <div className="min-w-0 flex-1">
