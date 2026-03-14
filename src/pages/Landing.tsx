@@ -255,7 +255,7 @@ export default function Landing() {
       {/* ── HEADER ── */}
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)]" : "bg-transparent"}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-          <StaflyMark size={36} />
+          <div className="w-9" /> {/* spacer */}
 
           <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-[hsl(220,10%,50%)]">
             <a href="#producto" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.nav.product}</a>
