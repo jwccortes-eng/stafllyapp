@@ -22,6 +22,7 @@ import {
 import { EmployeePerformanceScore } from "@/components/reviews/EmployeePerformanceScore";
 import { EmployeeAccessTab } from "@/components/employee/EmployeeAccessTab";
 import { ReputationProfile } from "@/components/reviews/ReputationProfile";
+import { WorkerProfileTab } from "@/components/employee/WorkerProfileTab";
 import { useToast } from "@/hooks/use-toast";
 
 type EmployeeRecord = Record<string, any>;
@@ -657,10 +658,14 @@ export function EmployeeProfileTabs({
 }) {
   return (
     <Tabs defaultValue="info" className="w-full">
-      <TabsList className="w-full grid grid-cols-8 h-9 mb-4 bg-muted/40 rounded-xl">
+      <TabsList className="w-full grid grid-cols-9 h-9 mb-4 bg-muted/40 rounded-xl">
         <TabsTrigger value="info" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <User className="h-3 w-3" />
           <span className="hidden sm:inline">Info</span>
+        </TabsTrigger>
+        <TabsTrigger value="profile" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <Briefcase className="h-3 w-3" />
+          <span className="hidden sm:inline">Perfil</span>
         </TabsTrigger>
         <TabsTrigger value="reputation" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <TrendingUp className="h-3 w-3" />
@@ -694,6 +699,9 @@ export function EmployeeProfileTabs({
 
       <TabsContent value="info" className="mt-0">
         <InfoTab employee={employee} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} />
+      </TabsContent>
+      <TabsContent value="profile" className="mt-0">
+        <WorkerProfileTab employeeId={employee.id} readOnly={!isEditing} />
       </TabsContent>
       <TabsContent value="reputation" className="mt-0">
         <div className="space-y-4">
