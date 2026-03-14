@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-type AppRole = 'developer' | 'owner' | 'admin' | 'manager' | 'employee' | null;
+type AppRole = 'developer' | 'owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type EmployeeStatus = 'active' | 'inactive' | null;
 
 interface ModulePermission {
