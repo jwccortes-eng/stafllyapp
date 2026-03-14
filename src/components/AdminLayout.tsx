@@ -102,7 +102,7 @@ export default function AdminLayout() {
     return (
       <div className="min-h-screen bg-background pb-20">
         {/* Compact top bar with page context */}
-        <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-xl border-b border-border/30">
+        <header className="sticky top-0 z-30 bg-white/80 dark:bg-[hsl(222,18%,10%/0.8)] backdrop-blur-xl border-b border-[hsl(220,13%,93%)] dark:border-[hsl(222,14%,18%)]">
           <div className="flex items-center justify-between px-4 h-14">
             <div className="flex items-center gap-2.5">
               <StaflyLogo size={24} />
