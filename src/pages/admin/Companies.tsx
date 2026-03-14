@@ -22,7 +22,7 @@ import {
   Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid,
   FlaskConical, Copy, Check, CreditCard, ChevronDown, ChevronRight,
   DollarSign, TrendingUp, Shield, UserCog, User, Crown, CircleDot,
-  CopyPlus, Loader2,
+  CopyPlus, Loader2, RefreshCcw,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +30,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import CompanyUsersDialog from "@/components/CompanyUsersDialog";
 import CompanyModulesDialog from "@/components/CompanyModulesDialog";
+import SandboxSyncDialog from "@/components/SandboxSyncDialog";
 
 /* ── Types ── */
 interface CompanyUser {
@@ -96,6 +97,7 @@ export default function CompaniesPage() {
   const [selectedPlan, setSelectedPlan] = useState("free");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [duplicating, setDuplicating] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const { toast } = useToast();
 
   const copyCode = (code: string) => {
@@ -333,6 +335,11 @@ export default function CompaniesPage() {
         subtitle="Vista consolidada: planes, facturación, usuarios y cartera"
         rightSlot={
           <div className="flex gap-2">
+            {companies.some(c => c.is_sandbox) && (
+              <Button variant="outline" onClick={() => setSyncOpen(true)}>
+                <RefreshCcw className="h-4 w-4 mr-2" />Sync Sandbox
+              </Button>
+            )}
             {!companies.some(c => c.is_sandbox) && (
               <Button variant="outline" onClick={async () => {
                 const { error } = await supabase.from("companies").insert({ name: "Sandbox", slug: "sandbox", is_sandbox: true } as any);
@@ -652,6 +659,13 @@ export default function CompaniesPage() {
 
       <CompanyUsersDialog companyId={usersCompany?.id ?? null} companyName={usersCompany?.name ?? ""} open={!!usersCompany} onOpenChange={v => { if (!v) setUsersCompany(null); }} onUpdated={fetchCompanies} />
       <CompanyModulesDialog companyId={modulesCompany?.id ?? null} companyName={modulesCompany?.name ?? ""} isSandbox={modulesCompany?.is_sandbox ?? false} open={!!modulesCompany} onOpenChange={v => { if (!v) setModulesCompany(null); }} />
+      <SandboxSyncDialog
+        open={syncOpen}
+        onOpenChange={setSyncOpen}
+        sandboxId={companies.find(c => c.is_sandbox)?.id ?? ""}
+        companies={companies.map(c => ({ id: c.id, name: c.name, is_sandbox: c.is_sandbox }))}
+        onSynced={fetchCompanies}
+      />
 
       <Dialog open={!!planCompany} onOpenChange={v => { if (!v) setPlanCompany(null); }}>
         <DialogContent className="max-w-md">
