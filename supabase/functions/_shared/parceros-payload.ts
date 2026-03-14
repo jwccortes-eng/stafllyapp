@@ -119,7 +119,7 @@ export interface ParcerosSyncWorkerPassportBody {
     presentation: number | null;
   };
   certifications_count: number;
-  work_history_summary: string;
+  work_history_summary: string | null;
   last_synced_at: string;
   source: "staflyapps";
   external_data?: ParcerosSyncPayload;
