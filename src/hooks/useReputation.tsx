@@ -94,32 +94,50 @@ export function useReputation(options: UseReputationOptions = {}) {
       .eq("worker_profile_id", options.workerProfileId);
 
     if (allEvents && allEvents.length > 0) {
-      let totalWeightedDelta = 0;
-      let totalWeight = 0;
       const categoryScores: Record<string, { sum: number; count: number }> = {};
 
       for (const e of allEvents) {
-        const w = (e as any).weight ?? 1;
-        totalWeightedDelta += (e as any).delta * w;
-        totalWeight += w;
-
         const cat = (e as any).category ?? "general";
         if (!categoryScores[cat]) categoryScores[cat] = { sum: 0, count: 0 };
         categoryScores[cat].sum += (e as any).delta;
         categoryScores[cat].count += 1;
       }
 
-      const overallScore = totalWeight > 0 ? Math.max(0, Math.min(100, 50 + totalWeightedDelta / totalWeight)) : 50;
+      // Map categories to DB columns
+      const catToCol: Record<string, string> = {
+        punctuality: "punctuality_score",
+        quality: "quality_score",
+        service: "service_score",
+        professionalism: "communication_score",
+        attendance: "attendance_score",
+        presentation: "presentation_score",
+        teamwork: "reliability_score",
+      };
+
+      const scoreUpdates: Record<string, any> = {
+        worker_profile_id: options.workerProfileId,
+        total_reviews_count: allEvents.length,
+        last_calculated_at: new Date().toISOString(),
+      };
+
+      // Calculate overall as average of category averages
+      let totalScore = 0;
+      let catCount = 0;
+      for (const [cat, data] of Object.entries(categoryScores)) {
+        const avg = data.sum / data.count;
+        const col = catToCol[cat];
+        if (col) scoreUpdates[col] = Math.round(avg * 100) / 100;
+        totalScore += avg;
+        catCount++;
+      }
+
+      scoreUpdates.overall_score = catCount > 0
+        ? Math.round((Math.max(0, Math.min(100, 50 + totalScore / catCount))) * 100) / 100
+        : 50;
 
       const { error: scoreError } = await supabase
         .from("rep_scores")
-        .upsert({
-          worker_profile_id: options.workerProfileId,
-          overall_score: Math.round(overallScore * 100) / 100,
-          total_events: allEvents.length,
-          category_scores: categoryScores,
-          last_calculated_at: new Date().toISOString(),
-        } as any, { onConflict: "worker_profile_id" });
+        .upsert(scoreUpdates as any, { onConflict: "worker_profile_id" });
 
       if (scoreError) return scoreError;
     }
