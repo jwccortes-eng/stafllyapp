@@ -57,6 +57,7 @@ export const EMPLOYEE_NAV_ITEMS: NavItem[] = [
   { id: "portal-home", to: "/portal", icon: Home, label: "Inicio", module: null, end: true, section: "Principal" },
   { id: "portal-clock", to: "/portal/clock", icon: Clock, label: "Reloj", module: null, section: "Principal" },
   { id: "portal-shifts", to: "/portal/shifts", icon: CalendarDays, label: "Turnos", module: null, section: "Principal" },
+  { id: "portal-availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", module: null, section: "Principal" },
   { id: "portal-chat", to: "/portal/chat", icon: MessageSquare, label: "Chat", module: null, section: "Principal" },
   { id: "portal-profile", to: "/portal/profile", icon: User, label: "Perfil", module: null, section: "Principal" },
 ];
