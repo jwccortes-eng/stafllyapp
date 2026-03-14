@@ -37,8 +37,9 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data, error: claimsErr } = await callerClient.auth.getClaims(token);
-    if (claimsErr || !data?.claims) {
+    const { data: { user }, error: userErr } = await callerClient.auth.getUser(token);
+    if (userErr || !user) {
+      console.error("Auth error:", userErr?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
