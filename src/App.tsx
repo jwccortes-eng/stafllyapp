@@ -90,6 +90,7 @@ const LiveMap = lazy(() => import("./pages/admin/LiveMap"));
 const Leaderboard = lazy(() => import("./pages/admin/Leaderboard"));
 const WorkerPassport = lazy(() => import("./pages/admin/WorkerPassport"));
 const KioskDevices = lazy(() => import("./pages/admin/KioskDevices"));
+const Attendance = lazy(() => import("./pages/admin/Attendance"));
 const KioskClock = lazy(() => import("./pages/kiosk/KioskClock"));
 
 // Portal pages
@@ -210,6 +211,7 @@ function App() {
                 <Route path="live-map" element={<LiveMap />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
                 <Route path="passport" element={<WorkerPassport />} />
+                <Route path="attendance" element={<Attendance />} />
               </Route>
 
               {/* Employee portal routes */}
