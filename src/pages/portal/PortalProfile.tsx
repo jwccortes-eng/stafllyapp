@@ -138,6 +138,18 @@ export default function PortalProfile() {
         Volver
       </button>
 
+      {/* Profile photo required warning */}
+      {!profile.avatar_url && (
+        <ProfilePhotoUpload
+          employeeId={employeeId!}
+          currentAvatarUrl={profile.avatar_url}
+          firstName={profile.first_name}
+          lastName={profile.last_name}
+          onUploaded={(url) => setProfile(prev => prev ? { ...prev, avatar_url: url } : prev)}
+          required
+        />
+      )}
+
       {/* Profile header */}
       <div className="rounded-2xl gradient-primary p-6 text-primary-foreground relative overflow-hidden shadow-lg">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(200_85%_65%/0.4),transparent_60%)]" />

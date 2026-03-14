@@ -162,6 +162,16 @@ export default function PortalClock() {
   const handleClockIn = async () => {
     if (!employeeId || !companyId || !selectedShift) return;
 
+    // Check profile photo requirement
+    if (!hasProfilePhoto) {
+      toast({
+        title: "Foto de perfil requerida",
+        description: "Debes subir una foto de tu rostro antes de poder fichar. Ve a tu Perfil para agregarla.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Final validation
     const check = isClockInAllowed(selectedShift);
     if (!check.allowed) {
