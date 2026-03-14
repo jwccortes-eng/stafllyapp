@@ -828,50 +828,24 @@ export default function Shifts() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-border/20 bg-card/80 p-3.5 transition-all hover:shadow-sm">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-primary/8 flex items-center justify-center">
-                <CalendarDays className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-lg font-bold tabular-nums text-foreground leading-none">{loading ? "—" : kpiMetrics.todayShifts}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Turnos hoy</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-xl border border-border/20 bg-card/80 p-3.5 transition-all hover:shadow-sm">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-emerald-500/8 flex items-center justify-center">
-                <Users className="h-4 w-4 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-lg font-bold tabular-nums text-foreground leading-none">{loading ? "—" : kpiMetrics.uniqueWorkers}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Trabajadores</p>
+          {[
+            { icon: CalendarDays, value: loading ? "—" : kpiMetrics.todayShifts, label: "Turnos hoy", color: "text-primary", bg: "bg-primary/10" },
+            { icon: Users, value: loading ? "—" : kpiMetrics.uniqueWorkers, label: "Trabajadores", color: "text-earning", bg: "bg-earning/10" },
+            { icon: UserX, value: loading ? "—" : kpiMetrics.missingWorkers, label: "Faltantes", color: kpiMetrics.missingWorkers > 0 ? "text-destructive" : "text-earning", bg: kpiMetrics.missingWorkers > 0 ? "bg-destructive/10" : "bg-earning/10" },
+            { icon: Clock, value: loading ? "—" : kpiMetrics.totalHours, label: "Horas hoy", color: "text-status-completed", bg: "bg-status-completed/10" },
+          ].map(({ icon: Icon, value, label, color, bg }) => (
+            <div key={label} className="stat-card p-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center", bg)}>
+                  <Icon className={cn("h-4 w-4", color)} />
+                </div>
+                <div>
+                  <p className={cn("text-lg font-bold tabular-nums leading-none", kpiMetrics.missingWorkers > 0 && label === "Faltantes" ? "text-destructive" : "text-foreground")}>{value}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="rounded-xl border border-border/20 bg-card/80 p-3.5 transition-all hover:shadow-sm">
-            <div className="flex items-center gap-2.5">
-              <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center", kpiMetrics.missingWorkers > 0 ? "bg-rose-500/8" : "bg-emerald-500/8")}>
-                <UserX className={cn("h-4 w-4", kpiMetrics.missingWorkers > 0 ? "text-rose-500" : "text-emerald-500")} />
-              </div>
-              <div>
-                <p className={cn("text-lg font-bold tabular-nums leading-none", kpiMetrics.missingWorkers > 0 ? "text-rose-500" : "text-foreground")}>{loading ? "—" : kpiMetrics.missingWorkers}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Faltantes</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-xl border border-border/20 bg-card/80 p-3.5 transition-all hover:shadow-sm">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-sky-500/8 flex items-center justify-center">
-                <Clock className="h-4 w-4 text-sky-500" />
-              </div>
-              <div>
-                <p className="text-lg font-bold tabular-nums text-foreground leading-none">{loading ? "—" : kpiMetrics.totalHours}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Horas hoy</p>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
