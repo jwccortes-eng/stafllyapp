@@ -905,9 +905,9 @@ export default function Shifts() {
           <ShiftFilters filters={filters} onChange={setFilters} clients={clients} locations={locations} />
         </div>
         {canEdit && (
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {viewMode === "week" && (
-              <div className="flex items-center bg-muted/40 rounded-lg p-0.5 mr-1">
+              <div className="flex items-center bg-secondary rounded-xl p-0.5 mr-1">
                 {([
                   { key: "grid" as const, icon: LayoutGrid, label: "Grid" },
                   { key: "job" as const, icon: Building2, label: "Clientes" },
@@ -917,10 +917,10 @@ export default function Shifts() {
                     key={key}
                     onClick={() => setWeekViewMode(key)}
                     className={cn(
-                      "flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md transition-all",
+                      "flex items-center gap-1 text-[10px] font-medium px-2.5 py-1.5 rounded-lg transition-all",
                       weekViewMode === key
-                        ? "bg-background shadow-sm text-foreground"
-                        : "text-muted-foreground/60 hover:text-foreground/80"
+                        ? "bg-card shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <Icon className="h-3 w-3" /> {label}
@@ -928,14 +928,14 @@ export default function Shifts() {
                 ))}
               </div>
             )}
-            <Button variant="outline" size="sm" className="h-7 text-[10px] px-2.5 gap-1 rounded-lg" onClick={handlePublishAll} disabled={bulkPublishing}>
-              {bulkPublishing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />} Publicar
+            <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl" onClick={handlePublishAll} disabled={bulkPublishing}>
+              {bulkPublishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Publicar
             </Button>
-            <Button variant="outline" size="sm" className="h-7 text-[10px] px-2.5 gap-1 rounded-lg text-amber-600 border-amber-200/50 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800" onClick={handleLockAll} disabled={bulkLocking}>
-              {bulkLocking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />} Bloquear
+            <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl text-warning border-warning/30 hover:bg-warning/5" onClick={handleLockAll} disabled={bulkLocking}>
+              {bulkLocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />} Bloquear
             </Button>
-            <Button variant="outline" size="sm" className="h-7 text-[10px] px-2.5 gap-1 rounded-lg text-emerald-600 border-emerald-200/50 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800" onClick={handleUnlockAll} disabled={bulkUnlocking}>
-              {bulkUnlocking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlock className="h-3 w-3" />} Desbloquear
+            <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl text-earning border-earning/30 hover:bg-earning/5" onClick={handleUnlockAll} disabled={bulkUnlocking}>
+              {bulkUnlocking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlock className="h-3.5 w-3.5" />} Desbloquear
             </Button>
           </div>
         )}
