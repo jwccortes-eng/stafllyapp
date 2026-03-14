@@ -203,6 +203,20 @@ export default function WorkerPassport() {
     toast.success(newVal ? "Passport is now public" : "Passport is now private");
   };
 
+  const handleConsolidate = async () => {
+    if (!wp.profile?.id) { toast.error("No worker profile found"); return; }
+    setConsolidating(true);
+    const { error } = await supabase.rpc("consolidate_passport", { _worker_profile_id: wp.profile.id });
+    if (error) {
+      toast.error("Error consolidating passport");
+    } else {
+      toast.success("Passport consolidado con datos reales");
+      passport.refetch();
+    }
+    setConsolidating(false);
+  };
+  };
+
   if (!employeeId) {
     return <div className="p-6"><PageHeader title="Worker Passport" subtitle="Select an employee to view their passport." /></div>;
   }
