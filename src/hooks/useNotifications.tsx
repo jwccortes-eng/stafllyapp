@@ -23,14 +23,24 @@ export function useNotifications() {
   const [loading, setLoading] = useState(true);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioUnlockedRef = useRef(false);
+  const notifPermissionRef = useRef<NotificationPermission>("default");
 
-  // Warm-up AudioContext on first user interaction (bypasses autoplay policy)
+  // Request browser notification permission + warm-up AudioContext on first interaction
   useEffect(() => {
+    // Request notification permission
+    if ("Notification" in window) {
+      notifPermissionRef.current = Notification.permission;
+      if (Notification.permission === "default") {
+        Notification.requestPermission().then((perm) => {
+          notifPermissionRef.current = perm;
+        });
+      }
+    }
+
     const unlock = () => {
       if (audioUnlockedRef.current) return;
       try {
         const ctx = new AudioContext();
-        // Create a silent buffer to unlock
         const buffer = ctx.createBuffer(1, 1, 22050);
         const source = ctx.createBufferSource();
         source.buffer = buffer;
@@ -40,6 +50,12 @@ export function useNotifications() {
         audioUnlockedRef.current = true;
       } catch {
         // ignore
+      }
+      // Re-request notification permission on interaction if still default
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().then((perm) => {
+          notifPermissionRef.current = perm;
+        });
       }
     };
     document.addEventListener("click", unlock, { once: true });
@@ -146,6 +162,26 @@ export function useNotifications() {
     }
   }, []);
 
+  // Show native browser/OS notification (appears in notification shade on mobile)
+  const showSystemNotification = useCallback((title: string, body: string) => {
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        const options: NotificationOptions = {
+          body,
+          icon: "/pwa-192x192.png",
+          badge: "/pwa-192x192.png",
+          tag: `stafly-${Date.now()}`,
+          requireInteraction: false,
+        };
+        const notif = new Notification(title, options);
+        // Auto-close after 6 seconds
+        setTimeout(() => notif.close(), 6000);
+      }
+    } catch {
+      // System notifications not supported in this context
+    }
+  }, []);
+
   const markAsRead = useCallback(async (id: string) => {
     await supabase
       .from("notifications")
@@ -193,6 +229,7 @@ export function useNotifications() {
           setNotifications(prev => [newNotif, ...prev].slice(0, 30));
           setUnreadCount(prev => prev + 1);
           playSound();
+          showSystemNotification(newNotif.title, newNotif.body);
           toast(newNotif.title, { description: newNotif.body, duration: 5000 });
         }
       )
@@ -214,6 +251,7 @@ export function useNotifications() {
               setNotifications(prev => [newNotif, ...prev].slice(0, 30));
               setUnreadCount(prev => prev + 1);
               playSound();
+              showSystemNotification(newNotif.title, newNotif.body);
               toast(newNotif.title, { description: newNotif.body, duration: 5000 });
             }
           )
@@ -226,7 +264,7 @@ export function useNotifications() {
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [user, playSound]);
+  }, [user, playSound, showSystemNotification]);
 
   return {
     notifications,
