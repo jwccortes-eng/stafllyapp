@@ -388,21 +388,12 @@ export default function Landing() {
 
           {/* Hero Dashboard Mockup */}
           <div className="mt-14 relative max-w-5xl mx-auto">
-            <div className="absolute inset-0 bg-primary-glow/10 rounded-3xl blur-[60px] scale-95 translate-y-4" />
-            <div className="relative rounded-2xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/10 bg-card">
-              <div className="flex items-center gap-1.5 px-4 py-2.5 bg-muted/50 border-b border-border/30">
-                <div className="w-3 h-3 rounded-full bg-destructive/60" />
-                <div className="w-3 h-3 rounded-full bg-warning/60" />
-                <div className="w-3 h-3 rounded-full bg-success/60" />
-                <span className="ml-3 text-[11px] text-muted-foreground font-mono">staflyapps.com/app</span>
-              </div>
-              <img
-                src={heroDashboard}
-                alt="StaflyApps Dashboard"
-                className="w-full h-auto"
-                loading="eager"
-              />
-            </div>
+            <img
+              src={heroDashboard}
+              alt="StaflyApps Dashboard"
+              className="w-full h-auto rounded-2xl shadow-2xl shadow-primary/10"
+              loading="eager"
+            />
           </div>
         </div>
       </section>
