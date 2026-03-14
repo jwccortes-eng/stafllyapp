@@ -113,6 +113,7 @@ export function ShiftEditDialog({
         special_instructions: specialInstructions.trim() || null,
         pay_type: payType, day_type: payType === "daily" ? dayType : "full_day",
         shift_admin_id: shiftAdminId || null,
+        clock_method: clockMethod,
       }, shift);
       onOpenChange(false);
     } finally {
