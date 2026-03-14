@@ -33,28 +33,32 @@ export default function Auth() {
     if (authLoading || !user || settingUp) return;
 
     const autoSetup = async () => {
-      if (role === null || role === undefined) {
-        const metaCompanyName = user.user_metadata?.company_name;
-        if (metaCompanyName) {
-          setSettingUp(true);
-          try {
-            const { data, error } = await supabase.functions.invoke("setup-company", {
-              body: { company_name: metaCompanyName },
-            });
-            if (error) throw error;
-            if (data?.already_setup) { window.location.reload(); return; }
-            if (data?.success) {
-              toast({ title: "¡Empresa creada!", description: `${metaCompanyName} está lista.` });
-              window.location.reload();
-              return;
-            }
-          } catch (err: any) {
-            console.error("Auto-setup error:", err);
-          } finally {
-            setSettingUp(false);
+      // Check if this is a self-service signup that needs company setup
+      const metaCompanyName = user.user_metadata?.company_name;
+      if (metaCompanyName && !needsSetupChecked) {
+        setNeedsSetupChecked(true);
+        setSettingUp(true);
+        try {
+          const { data, error } = await supabase.functions.invoke("setup-company", {
+            body: { company_name: metaCompanyName },
+          });
+          if (error) throw error;
+          if (data?.already_setup) {
+            // Already has a company, just redirect
+          } else if (data?.success) {
+            toast({ title: "¡Empresa creada!", description: `${metaCompanyName} está lista. Tienes 14 días de prueba Pro.` });
           }
+          // Reload to pick up new role and company
+          window.location.reload();
+          return;
+        } catch (err: any) {
+          console.error("Auto-setup error:", err);
+        } finally {
+          setSettingUp(false);
         }
       }
+
+      // Standard role-based redirect
       if (role === "employee") navigate("/portal");
       else if (role === "developer" || role === "admin" || role === "owner" || role === "manager") navigate("/app");
     };
