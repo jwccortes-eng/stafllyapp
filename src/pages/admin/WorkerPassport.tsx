@@ -215,7 +215,6 @@ export default function WorkerPassport() {
     }
     setConsolidating(false);
   };
-  };
 
   if (!employeeId) {
     return <div className="p-6"><PageHeader title="Worker Passport" subtitle="Select an employee to view their passport." /></div>;
