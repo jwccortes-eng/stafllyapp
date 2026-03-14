@@ -658,10 +658,14 @@ export function EmployeeProfileTabs({
 }) {
   return (
     <Tabs defaultValue="info" className="w-full">
-      <TabsList className="w-full grid grid-cols-8 h-9 mb-4 bg-muted/40 rounded-xl">
+      <TabsList className="w-full grid grid-cols-9 h-9 mb-4 bg-muted/40 rounded-xl">
         <TabsTrigger value="info" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <User className="h-3 w-3" />
           <span className="hidden sm:inline">Info</span>
+        </TabsTrigger>
+        <TabsTrigger value="profile" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <Briefcase className="h-3 w-3" />
+          <span className="hidden sm:inline">Perfil</span>
         </TabsTrigger>
         <TabsTrigger value="reputation" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <TrendingUp className="h-3 w-3" />
