@@ -17,12 +17,13 @@ type AuthMode = "admin" | "employee";
 export default function Auth() {
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("admin");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(!searchParams.get("register"));
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [settingUp, setSettingUp] = useState(false);
