@@ -124,6 +124,7 @@ function App() {
               <Route path="/help" element={<HelpCenter />} />
               <Route path="/pricing" element={<PublicPricing />} />
               <Route path="/manual" element={<UserManual />} />
+              <Route path="/passport/:slug" element={<PublicPassport />} />
 
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
