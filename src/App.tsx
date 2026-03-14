@@ -71,6 +71,7 @@ import ServiceCategories from "./pages/admin/ServiceCategories";
 import AIWorkforce from "./pages/admin/AIWorkforce";
 import LiveMap from "./pages/admin/LiveMap";
 import PublicPricing from "./pages/PublicPricing";
+import PublicPassport from "./pages/PublicPassport";
 import Leaderboard from "./pages/admin/Leaderboard";
 import WorkerPassport from "./pages/admin/WorkerPassport";
 import ModuleGate from "./components/ModuleGate";
