@@ -192,6 +192,11 @@ export default function Auth() {
                   <p className="text-sm text-muted-foreground">
                     {isLogin ? "Inicia sesión con tu email" : "Completa los datos para registrarte"}
                   </p>
+                  {!isLogin && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full mt-1">
+                      <Sparkles className="h-3 w-3" /> 14 días de prueba Pro gratis
+                    </span>
+                  )}
                   <p className="text-[10px] text-muted-foreground/60 flex items-center justify-center gap-1">
                     <ShieldCheck className="h-3 w-3" /> Acceso seguro por roles
                   </p>
