@@ -67,8 +67,8 @@ export default function KioskDevices() {
 
   const fetchLocations = async () => {
     if (!selectedCompanyId) return;
-    const { data } = await supabase.from("locations").select("id, name").eq("company_id", selectedCompanyId).eq("is_active", true).order("name");
-    setLocations(data ?? []);
+    const res = await kioskFetch(`locations?company_id=eq.${selectedCompanyId}&is_active=eq.true&order=name&select=id,name`);
+    setLocations(res.ok ? await res.json() : []);
   };
 
   useEffect(() => { fetchDevices(); fetchLocations(); }, [selectedCompanyId]);
