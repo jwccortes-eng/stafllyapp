@@ -6,161 +6,153 @@ import {
   CalendarDays, DollarSign, Users, Clock, BarChart3, Shield,
   ArrowRight, CheckCircle2, Globe, MapPin,
   Lock, Send, Eye, Download,
-  Menu, X, Star, Zap, ChevronRight,
+  Menu, X, Zap, ChevronRight, Smartphone, Building2, Utensils,
+  HardHat, Briefcase, History, ClipboardCheck,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { StaflyMark, StaflyLogo } from "@/components/brand/StaflyBrand";
+import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import heroDashboard from "@/assets/stafly-hero-dashboard.png";
 
 /* ───────── i18n ───────── */
 const i18n = {
   es: {
-    nav: { product: "Producto", modules: "Módulos", pricing: "Precios", security: "Seguridad" },
+    nav: { product: "Producto", pricing: "Precios", security: "Seguridad" },
     login: "Iniciar sesión",
-    portal: "Portal Empleados",
+    portal: "Portal empleados",
     ctaPrimary: "Empezar gratis",
     ctaSecondary: "Agendar demo",
     ctaMicro: "Sin tarjeta · Setup en minutos · Cancela cuando quieras",
     hero: {
-      eyebrow: "Gestión de personal inteligente",
-      h1: "Control total de tu equipo, sin el caos.",
-      sub: "Turnos, clock-in/out con GPS, nómina semanal, reportes y permisos — todo en una plataforma que tu equipo realmente va a usar.",
-      badges: ["Setup en minutos", "GPS verificado", "Exportación lista", "Permisos granulares"],
+      badge: "Gestión de personal inteligente",
+      h1: "Control total de tu equipo.\nSin el caos.",
+      sub: "Programa turnos, registra asistencia con GPS, controla nómina semanal y genera reportes automáticamente desde una sola plataforma.",
+      pills: ["Setup en minutos", "GPS verificado", "Exportación lista", "Permisos granulares"],
     },
-    chaos: {
-      title: "Adiós al caos operativo",
-      subtitle: "De hojas de Excel y WhatsApp a una plataforma profesional",
-      before: "Antes",
-      after: "Ahora con StaflyApps",
-      beforeItems: ["Hojas de Excel dispersas", "Grupos de WhatsApp", "Llamadas telefónicas", "Papeles y recibos"],
-      afterItems: [
-        { label: "Turnos", desc: "Programa y asigna en segundos" },
-        { label: "Tiempo", desc: "Clock-in/out con GPS" },
-        { label: "Nómina", desc: "Cálculo semanal automático" },
-        { label: "Reportes", desc: "Exporta con un clic" },
-      ],
+    problem: {
+      title: "Administrar personal no debería ser complicado.",
+      p1: "Muchas empresas aún gestionan turnos, asistencia y pagos con hojas de cálculo, mensajes y múltiples herramientas.",
+      p2: "Esto genera errores, desorden y pérdida de tiempo.",
+      p3: "StaflyApps centraliza todo en un solo lugar.",
     },
-    modules: {
-      title: "Todo lo que necesitas",
-      subtitle: "Módulos diseñados para operaciones de staffing",
-      tabs: [
-        { label: "Turnos", icon: "calendar", title: "Programación de turnos", bullets: ["Vista semanal con drag & drop", "Asignación por cliente y ubicación", "Copiar semana y detección de conflictos"] },
-        { label: "Clock-in/out", icon: "clock", title: "Control de tiempo", bullets: ["Clock-in/out desde el celular con GPS", "Verificación de ubicación y dispositivo", "Registro de descansos y notas"] },
-        { label: "Nómina", icon: "dollar", title: "Nómina semanal", bullets: ["Cálculo automático regular/overtime", "Novedades: bonos, deducciones, ajustes", "Cierre semanal controlado"] },
-        { label: "Reportes", icon: "chart", title: "Reportes y exportación", bullets: ["Nómina semanal, horas por ubicación", "Exportación a CSV y PDF", "Filtros avanzados y búsqueda"] },
-        { label: "Admin", icon: "shield", title: "Permisos y admin", bullets: ["Roles: Owner, Admin, Manager, Employee", "Permisos granulares por módulo", "Registro de auditoría completo"] },
-      ],
-    },
-    security: {
-      title: "Control y trazabilidad",
-      subtitle: "Tu información segura, siempre accesible",
+    benefits: {
+      title: "Todo lo que necesitas para administrar tu equipo.",
       cards: [
-        { icon: "lock", title: "Roles y permisos granulares", desc: "Define exactamente quién puede ver, editar o eliminar en cada módulo." },
-        { icon: "map", title: "Verificación GPS", desc: "Confirma que los empleados están donde deben al registrar entrada." },
-        { icon: "eye", title: "Registro de auditoría", desc: "Cada acción queda registrada: quién, qué, cuándo y desde dónde." },
-        { icon: "download", title: "Exportaciones y respaldos", desc: "Exporta datos en cualquier momento. Tu información siempre accesible." },
+        { icon: "calendar", title: "Programación de turnos", desc: "Crea y organiza horarios en segundos." },
+        { icon: "mapPin", title: "Clock-in / Clock-out con GPS", desc: "Verifica ubicación al registrar asistencia." },
+        { icon: "dollar", title: "Nómina semanal", desc: "Controla horas trabajadas fácilmente." },
+        { icon: "chart", title: "Reportes automáticos", desc: "Exporta datos claros para administración." },
+        { icon: "shield", title: "Permisos por rol", desc: "Controla accesos y autorizaciones." },
+        { icon: "smartphone", title: "Portal para empleados", desc: "Tus trabajadores pueden ver turnos y marcar asistencia desde su teléfono." },
       ],
     },
-    testimonials: {
-      title: "Lo que dicen nuestros clientes",
-      items: [
-        { name: "María González", role: "Directora de Operaciones", company: "CleanPro Services", quote: "StaflyApps transformó nuestra gestión de turnos. Lo que antes tomaba horas ahora se hace en minutos.", rating: 5 },
-        { name: "Carlos Rodríguez", role: "Gerente General", company: "Spotless Group", quote: "La verificación GPS nos dio tranquilidad total. Sabemos exactamente dónde está cada empleado.", rating: 5 },
-        { name: "Ana Martínez", role: "HR Manager", company: "BrightClean Co.", quote: "La nómina semanal automática nos ahorró errores y disputas. Nuestro equipo está más contento.", rating: 5 },
+    howItWorks: {
+      title: "Empieza en minutos.",
+      steps: [
+        { num: "01", title: "Crea tu equipo", desc: "Agrega empleados y configura roles." },
+        { num: "02", title: "Programa turnos", desc: "Asigna horarios por cliente y ubicación." },
+        { num: "03", title: "Controla asistencia y reportes", desc: "Monitorea en tiempo real y exporta datos." },
       ],
     },
-    pricing: {
-      title: "Planes simples, sin sorpresas",
-      subtitle: "Elige el plan que se adapta a tu operación",
-      plans: [
-        { name: "Starter", price: "$—", period: "/mes", desc: "Hasta 25 empleados", features: ["Turnos y asistencia", "Nómina semanal", "1 usuario admin", "Soporte por email"], cta: "Empezar gratis" },
-        { name: "Pro", price: "$—", period: "/mes", desc: "Hasta 100 empleados", features: ["Todo en Starter", "Múltiples ubicaciones", "Roles y permisos", "Importación CSV", "Soporte prioritario"], cta: "Empezar gratis", recommended: true },
-        { name: "Enterprise", price: "Custom", period: "", desc: "Empleados ilimitados", features: ["Todo en Pro", "API access", "SSO", "Onboarding dedicado", "SLA garantizado"], cta: "Agendar demo" },
-      ],
+    audience: {
+      title: "Diseñado para equipos operativos.",
+      chips: ["Empresas de limpieza", "Eventos y catering", "Hospitalidad", "Administración de edificios", "Equipos de campo", "Contratistas"],
+    },
+    capabilities: {
+      title: "Capacidades clave",
+      items: ["GPS al marcar asistencia", "Historial completo", "Auditoría de cambios", "Exportación de reportes", "Control por empresa", "Permisos avanzados", "Experiencia móvil"],
+    },
+    trust: {
+      title: "Diseñado para operaciones reales.",
+      sub: "StaflyApps fue construido para empresas que gestionan equipos operativos.",
+      p1: "Simple para empleados.",
+      p2: "Poderoso para administradores.",
     },
     finalCta: {
-      h2: "Lleva tu operación al siguiente nivel",
-      sub: "Empieza gratis hoy. Sin tarjeta de crédito.",
+      h2: "Empieza a organizar tu equipo hoy.",
+      sub: "Configura tu cuenta en minutos y comienza a controlar turnos, asistencia y reportes.",
     },
     form: { name: "Nombre", company: "Empresa", email: "Email", phone: "Teléfono", employees: "# Empleados", submit: "Agendar demo" },
-    footer: { privacy: "Privacidad", terms: "Términos", contact: "Contacto", portal: "Portal Empleados" },
+    footer: { product: "Producto", pricing: "Precios", demo: "Demo", contact: "Contacto", portal: "Portal empleados", privacy: "Privacidad", terms: "Términos" },
   },
   en: {
-    nav: { product: "Product", modules: "Modules", pricing: "Pricing", security: "Security" },
+    nav: { product: "Product", pricing: "Pricing", security: "Security" },
     login: "Sign in",
-    portal: "Employee Portal",
+    portal: "Employee portal",
     ctaPrimary: "Start free",
     ctaSecondary: "Book a demo",
     ctaMicro: "No card required · Setup in minutes · Cancel anytime",
     hero: {
-      eyebrow: "Smart workforce management",
-      h1: "Total control of your team — without the chaos.",
-      sub: "Scheduling, GPS clock-in/out, weekly payroll, reports and permissions — all in one platform your team will actually use.",
-      badges: ["Setup in minutes", "GPS verified", "Export-ready", "Granular permissions"],
+      badge: "Smart workforce management",
+      h1: "Total control of your team.\nWithout the chaos.",
+      sub: "Schedule shifts, track attendance with GPS, manage weekly payroll and generate reports automatically from a single platform.",
+      pills: ["Setup in minutes", "GPS verified", "Export-ready", "Granular permissions"],
     },
-    chaos: {
-      title: "Goodbye to operational chaos",
-      subtitle: "From spreadsheets and WhatsApp to a professional platform",
-      before: "Before",
-      after: "Now with StaflyApps",
-      beforeItems: ["Scattered Excel sheets", "WhatsApp groups", "Phone calls", "Paper receipts"],
-      afterItems: [
-        { label: "Scheduling", desc: "Plan & assign in seconds" },
-        { label: "Time", desc: "Clock-in/out with GPS" },
-        { label: "Payroll", desc: "Automatic weekly calc" },
-        { label: "Reports", desc: "Export with one click" },
-      ],
+    problem: {
+      title: "Managing staff shouldn't be complicated.",
+      p1: "Many businesses still manage shifts, attendance and payments with spreadsheets, messages and multiple tools.",
+      p2: "This leads to errors, disorder and wasted time.",
+      p3: "StaflyApps centralizes everything in one place.",
     },
-    modules: {
-      title: "Everything you need",
-      subtitle: "Modules designed for staffing operations",
-      tabs: [
-        { label: "Scheduling", icon: "calendar", title: "Shift scheduling", bullets: ["Weekly calendar with drag & drop", "Assign by client and location", "Copy week and conflict detection"] },
-        { label: "Clock-in/out", icon: "clock", title: "Time tracking", bullets: ["Clock-in/out from mobile with GPS", "Location and device verification", "Break tracking and notes"] },
-        { label: "Payroll", icon: "dollar", title: "Weekly payroll", bullets: ["Auto-calculate regular/overtime", "Adjustments: bonuses, deductions", "Controlled weekly close"] },
-        { label: "Reports", icon: "chart", title: "Reports & export", bullets: ["Weekly payroll, hours by location", "Export to CSV and PDF", "Advanced filters and search"] },
-        { label: "Admin", icon: "shield", title: "Permissions & admin", bullets: ["Roles: Owner, Admin, Manager, Employee", "Granular per-module permissions", "Complete audit log"] },
-      ],
-    },
-    security: {
-      title: "Control and traceability",
-      subtitle: "Your data secure, always accessible",
+    benefits: {
+      title: "Everything you need to manage your team.",
       cards: [
-        { icon: "lock", title: "Granular roles & permissions", desc: "Define exactly who can view, edit, or delete in each module." },
-        { icon: "map", title: "GPS verification", desc: "Confirm employees are where they should be when clocking in." },
-        { icon: "eye", title: "Audit log", desc: "Every action is logged: who, what, when, and from where." },
-        { icon: "download", title: "Exports & backups", desc: "Export data anytime. Your information is always accessible." },
+        { icon: "calendar", title: "Shift scheduling", desc: "Create and organize schedules in seconds." },
+        { icon: "mapPin", title: "Clock-in / Clock-out with GPS", desc: "Verify location when recording attendance." },
+        { icon: "dollar", title: "Weekly payroll", desc: "Track hours worked easily." },
+        { icon: "chart", title: "Automatic reports", desc: "Export clear data for management." },
+        { icon: "shield", title: "Role-based permissions", desc: "Control access and authorizations." },
+        { icon: "smartphone", title: "Employee portal", desc: "Your workers can view shifts and clock in from their phone." },
       ],
     },
-    testimonials: {
-      title: "What our clients say",
-      items: [
-        { name: "Maria González", role: "Director of Operations", company: "CleanPro Services", quote: "StaflyApps transformed our shift management. What used to take hours now happens in minutes.", rating: 5 },
-        { name: "Carlos Rodríguez", role: "General Manager", company: "Spotless Group", quote: "GPS verification gave us total peace of mind. We know exactly where each employee is.", rating: 5 },
-        { name: "Ana Martínez", role: "HR Manager", company: "BrightClean Co.", quote: "Automatic weekly payroll eliminated errors and disputes. Our team is happier.", rating: 5 },
+    howItWorks: {
+      title: "Get started in minutes.",
+      steps: [
+        { num: "01", title: "Create your team", desc: "Add employees and configure roles." },
+        { num: "02", title: "Schedule shifts", desc: "Assign schedules by client and location." },
+        { num: "03", title: "Track attendance & reports", desc: "Monitor in real time and export data." },
       ],
     },
-    pricing: {
-      title: "Simple plans, no surprises",
-      subtitle: "Choose the plan that fits your operation",
-      plans: [
-        { name: "Starter", price: "$—", period: "/mo", desc: "Up to 25 employees", features: ["Shifts & attendance", "Weekly payroll", "1 admin user", "Email support"], cta: "Start free" },
-        { name: "Pro", price: "$—", period: "/mo", desc: "Up to 100 employees", features: ["Everything in Starter", "Multiple locations", "Roles & permissions", "CSV import", "Priority support"], cta: "Start free", recommended: true },
-        { name: "Enterprise", price: "Custom", period: "", desc: "Unlimited employees", features: ["Everything in Pro", "API access", "SSO", "Dedicated onboarding", "SLA guaranteed"], cta: "Book a demo" },
-      ],
+    audience: {
+      title: "Built for operational teams.",
+      chips: ["Cleaning companies", "Events & catering", "Hospitality", "Building management", "Field teams", "Contractors"],
+    },
+    capabilities: {
+      title: "Key capabilities",
+      items: ["GPS clock-in", "Complete history", "Change audit", "Report export", "Multi-company control", "Advanced permissions", "Mobile experience"],
+    },
+    trust: {
+      title: "Built for real operations.",
+      sub: "StaflyApps was built for businesses managing operational teams.",
+      p1: "Simple for employees.",
+      p2: "Powerful for administrators.",
     },
     finalCta: {
-      h2: "Take your operation to the next level",
-      sub: "Start free today. No credit card required.",
+      h2: "Start organizing your team today.",
+      sub: "Set up your account in minutes and start managing shifts, attendance and reports.",
     },
     form: { name: "Name", company: "Company", email: "Email", phone: "Phone", employees: "# Employees", submit: "Book a demo" },
-    footer: { privacy: "Privacy", terms: "Terms", contact: "Contact", portal: "Employee Portal" },
+    footer: { product: "Product", pricing: "Pricing", demo: "Demo", contact: "Contact", portal: "Employee portal", privacy: "Privacy", terms: "Terms" },
   },
 };
+
+const iconComponents: Record<string, React.ReactNode> = {
+  calendar: <CalendarDays className="h-5 w-5" />,
+  clock: <Clock className="h-5 w-5" />,
+  dollar: <DollarSign className="h-5 w-5" />,
+  chart: <BarChart3 className="h-5 w-5" />,
+  shield: <Shield className="h-5 w-5" />,
+  mapPin: <MapPin className="h-5 w-5" />,
+  smartphone: <Smartphone className="h-5 w-5" />,
+  lock: <Lock className="h-5 w-5" />,
+  eye: <Eye className="h-5 w-5" />,
+  download: <Download className="h-5 w-5" />,
+};
+
+const audienceIcons = [Building2, Utensils, Building2, Building2, HardHat, Briefcase];
 
 /* ───────── Demo Form ───────── */
 function DemoForm({ lang }: { lang: "es" | "en" }) {
@@ -184,54 +176,19 @@ function DemoForm({ lang }: { lang: "es" | "en" }) {
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <Input placeholder={c.name} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
-      <Input placeholder={c.company} required value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
+      <Input placeholder={c.name} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 rounded-xl border-[hsl(220,13%,87%)]" />
+      <Input placeholder={c.company} required value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="h-11 rounded-xl border-[hsl(220,13%,87%)]" />
       <div className="grid grid-cols-2 gap-3">
-        <Input placeholder={c.email} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
-        <Input placeholder={c.phone} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
+        <Input placeholder={c.email} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-11 rounded-xl border-[hsl(220,13%,87%)]" />
+        <Input placeholder={c.phone} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-11 rounded-xl border-[hsl(220,13%,87%)]" />
       </div>
-      <Input placeholder={c.employees} value={form.employee_count} onChange={(e) => setForm({ ...form, employee_count: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
-      <Button type="submit" className="w-full !rounded-xl h-12 text-base font-semibold !bg-[hsl(222,100%,59%)] !text-white hover:!bg-[hsl(222,100%,52%)] !shadow-[0_4px_14px_-3px_hsl(222,100%,59%/0.4)]" disabled={loading}>
-        {loading ? "..." : c.submit} <Send className="ml-2 h-4 w-4" />
-      </Button>
+      <Input placeholder={c.employees} value={form.employee_count} onChange={(e) => setForm({ ...form, employee_count: e.target.value })} className="h-11 rounded-xl border-[hsl(220,13%,87%)]" />
+      <button type="submit" disabled={loading} className="w-full rounded-xl h-12 text-base font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_14px_-3px_hsl(222,100%,59%/0.4)] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+        {loading ? "..." : c.submit} <Send className="h-4 w-4" />
+      </button>
     </form>
   );
 }
-
-/* ───────── Icon Map ───────── */
-const iconMap: Record<string, React.ReactNode> = {
-  calendar: <CalendarDays className="h-5 w-5" />,
-  clock: <Clock className="h-5 w-5" />,
-  dollar: <DollarSign className="h-5 w-5" />,
-  chart: <BarChart3 className="h-5 w-5" />,
-  shield: <Shield className="h-5 w-5" />,
-  lock: <Lock className="h-6 w-6" />,
-  map: <MapPin className="h-6 w-6" />,
-  eye: <Eye className="h-6 w-6" />,
-  download: <Download className="h-6 w-6" />,
-};
-
-const chaosIcons = [CalendarDays, Clock, DollarSign, BarChart3];
-
-/* ───────── Stats ───────── */
-const stats = {
-  es: [
-    { value: "500+", label: "Empleados gestionados" },
-    { value: "10k+", label: "Turnos asignados" },
-    { value: "99.9%", label: "Uptime garantizado" },
-  ],
-  en: [
-    { value: "500+", label: "Employees managed" },
-    { value: "10k+", label: "Shifts assigned" },
-    { value: "99.9%", label: "Guaranteed uptime" },
-  ],
-};
-
-/* ─── Landing-scoped style overrides (avoids mutating global brutalist tokens) ─── */
-const BLUE = "hsl(222, 100%, 59%)";
-const BLUE_DARK = "hsl(226, 76%, 49%)";
-const BLUE_LIGHT = "hsl(222, 100%, 96%)";
-const BLUE_GLOW = "hsl(212, 100%, 73%)";
 
 /* ───────── LANDING ───────── */
 export default function Landing() {
@@ -240,7 +197,6 @@ export default function Landing() {
     return nav === "en" ? "en" : "es";
   });
   const c = i18n[lang];
-  const [activeModule, setActiveModule] = useState(0);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -251,37 +207,37 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-white text-[hsl(220,15%,15%)] overflow-x-clip" style={{ fontFamily: "var(--font-heading), system-ui, sans-serif" }}>
-      {/* ── HEADER ── */}
-      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)]" : "bg-transparent"}`}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-          <div className="w-9" /> {/* spacer */}
+    <div className="min-h-screen w-full overflow-x-hidden" style={{ fontFamily: "var(--font-heading), system-ui, sans-serif", background: "#ffffff", color: "hsl(220,20%,14%)" }}>
 
-          <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-[hsl(220,10%,50%)]">
-            <a href="#producto" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.nav.product}</a>
-            <a href="#modulos" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.nav.modules}</a>
-            <a href="#precios" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.nav.pricing}</a>
-            <a href="#seguridad" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.nav.security}</a>
+      {/* ── HEADER ── */}
+      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 backdrop-blur-xl shadow-[0_1px_2px_rgba(0,0,0,0.04)]" : "bg-transparent"}`}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+          <StaflyLogo size={28} />
+
+          <nav className="hidden lg:flex items-center gap-8 text-[13px] font-medium" style={{ color: "hsl(220,10%,50%)" }}>
+            <a href="#producto" className="hover:text-[hsl(220,20%,14%)] transition-colors">{c.nav.product}</a>
+            <a href="#precios" className="hover:text-[hsl(220,20%,14%)] transition-colors">{c.nav.pricing}</a>
+            <a href="#seguridad" className="hover:text-[hsl(220,20%,14%)] transition-colors">{c.nav.security}</a>
           </nav>
 
           <div className="flex items-center gap-2">
-            <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="hidden sm:flex items-center gap-1 text-sm text-[hsl(220,10%,50%)] hover:text-[hsl(220,15%,15%)] px-2 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">
-              <Globe className="h-4 w-4" />
+            <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="hidden sm:flex items-center gap-1 text-[13px] px-2.5 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: "hsl(220,10%,50%)" }}>
+              <Globe className="h-3.5 w-3.5" />
               <span className="font-medium">{lang === "es" ? "EN" : "ES"}</span>
             </button>
-            <Link to="/portal" className="hidden sm:inline-flex text-sm font-medium text-[hsl(220,10%,50%)] hover:text-[hsl(220,15%,15%)] px-3 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">
+            <Link to="/portal" className="hidden sm:inline-flex text-[13px] font-medium px-3 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: "hsl(220,10%,50%)" }}>
               {c.portal}
             </Link>
-            <Link to="/auth" className="hidden sm:inline-flex text-sm font-medium text-[hsl(220,10%,50%)] hover:text-[hsl(220,15%,15%)] px-3 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">
+            <Link to="/auth" className="hidden sm:inline-flex text-[13px] font-medium px-3 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: "hsl(220,10%,50%)" }}>
               {c.login}
             </Link>
             <Dialog>
               <DialogTrigger asChild>
-                <button className="rounded-full px-5 h-9 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.97]" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})`, boxShadow: `0 4px 14px -3px hsl(222 100% 59% / 0.35)` }}>
+                <button className="rounded-full px-5 h-9 text-[13px] font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_2px_8px_-2px_hsl(222,100%,59%/0.35)] transition-all active:scale-[0.97]">
                   {c.ctaPrimary}
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-md !rounded-2xl">
+              <DialogContent className="max-w-md rounded-2xl">
                 <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
                 <DemoForm lang={lang} />
               </DialogContent>
@@ -294,22 +250,17 @@ export default function Landing() {
 
         {mobileMenu && (
           <div className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-[hsl(220,13%,93%)]">
-            <div className="max-w-6xl mx-auto px-4 py-4 space-y-1">
+            <div className="max-w-6xl mx-auto px-4 py-3 space-y-1">
               {[
                 { href: "#producto", label: c.nav.product },
-                { href: "#modulos", label: c.nav.modules },
                 { href: "#precios", label: c.nav.pricing },
                 { href: "#seguridad", label: c.nav.security },
               ].map(item => (
                 <a key={item.href} href={item.href} onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">{item.label}</a>
               ))}
-              <Link to="/portal" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: BLUE }}>
-                {c.portal}
-              </Link>
-              <Link to="/auth" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: BLUE }}>
-                {c.login}
-              </Link>
-              <button onClick={() => { setLang(lang === "es" ? "en" : "es"); setMobileMenu(false); }} className="flex items-center gap-2 text-sm py-2.5 px-3 text-[hsl(220,10%,50%)] w-full rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">
+              <Link to="/portal" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)]" style={{ color: "hsl(222,100%,59%)" }}>{c.portal}</Link>
+              <Link to="/auth" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)]" style={{ color: "hsl(222,100%,59%)" }}>{c.login}</Link>
+              <button onClick={() => { setLang(lang === "es" ? "en" : "es"); setMobileMenu(false); }} className="flex items-center gap-2 text-sm py-2.5 px-3 w-full rounded-lg hover:bg-[hsl(220,20%,96%)]" style={{ color: "hsl(220,10%,50%)" }}>
                 <Globe className="h-4 w-4" /> {lang === "es" ? "English" : "Español"}
               </button>
             </div>
@@ -318,335 +269,252 @@ export default function Landing() {
       </header>
 
       {/* ── HERO ── */}
-      <section className="relative pt-28 pb-10 sm:pt-36 sm:pb-16 overflow-hidden" id="producto">
-        {/* Soft gradient background */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${BLUE_LIGHT}, transparent 70%)` }} />
+      <section className="relative pt-28 pb-12 sm:pt-36 sm:pb-20" id="producto">
+        {/* Soft radial glow — no solid blocks */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 0%, hsl(222,100%,96%), transparent 70%)" }} />
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide mb-5 px-3 py-1 rounded-full" style={{ color: BLUE, background: `hsl(222 100% 59% / 0.08)` }}>
-              <Zap className="h-3.5 w-3.5" />
-              {c.hero.eyebrow}
-            </span>
+        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          {/* Badge */}
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide mb-6 px-3.5 py-1.5 rounded-full" style={{ color: "hsl(222,100%,59%)", background: "hsl(222,100%,59%/0.07)" }}>
+            <Zap className="h-3.5 w-3.5" />
+            {c.hero.badge}
+          </span>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] text-[hsl(220,25%,10%)]">
-              {c.hero.h1}
-            </h1>
-            <p className="mt-6 text-base sm:text-lg text-[hsl(220,10%,45%)] leading-relaxed max-w-2xl mx-auto">
-              {c.hero.sub}
-            </p>
+          {/* Headline */}
+          <h1 className="text-[28px] sm:text-5xl lg:text-[56px] font-extrabold tracking-tight leading-[1.12] whitespace-pre-line" style={{ color: "hsl(220,25%,10%)" }}>
+            {c.hero.h1}
+          </h1>
 
-            {/* CTAs */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button className="inline-flex items-center rounded-full px-8 h-12 text-base font-semibold text-white transition-all hover:opacity-90 active:scale-[0.97]" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})`, boxShadow: `0 6px 20px -4px hsl(222 100% 59% / 0.4)` }}>
-                    {c.ctaPrimary} <ArrowRight className="ml-2 h-4 w-4" />
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md !rounded-2xl">
-                  <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                  <DemoForm lang={lang} />
-                </DialogContent>
-              </Dialog>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button className="inline-flex items-center rounded-full h-12 px-8 text-base font-semibold border-2 transition-all hover:bg-[hsl(220,20%,96%)] active:scale-[0.97]" style={{ borderColor: "hsl(220,13%,86%)", color: "hsl(220,15%,25%)" }}>
-                    {c.ctaSecondary} <ChevronRight className="ml-1 h-4 w-4" />
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md !rounded-2xl">
-                  <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                  <DemoForm lang={lang} />
-                </DialogContent>
-              </Dialog>
-            </div>
-            <p className="mt-4 text-sm text-[hsl(220,10%,55%)]">{c.ctaMicro}</p>
+          {/* Subheadline */}
+          <p className="mt-5 sm:mt-6 text-[15px] sm:text-lg leading-relaxed max-w-2xl mx-auto" style={{ color: "hsl(220,10%,45%)" }}>
+            {c.hero.sub}
+          </p>
 
-            {/* Badges */}
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              {c.hero.badges.map((b, i) => (
-                <span key={i} className="inline-flex items-center gap-1.5 text-xs font-medium text-[hsl(220,10%,45%)] bg-white border border-[hsl(220,13%,90%)] rounded-full px-3 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(163,68%,50%)]" /> {b}
-                </span>
-              ))}
-            </div>
+          {/* CTAs */}
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="inline-flex items-center gap-2 rounded-full px-7 h-12 text-[15px] font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_16px_-4px_hsl(222,100%,59%/0.4)] transition-all active:scale-[0.97]">
+                  {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md rounded-2xl">
+                <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
+                <DemoForm lang={lang} />
+              </DialogContent>
+            </Dialog>
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="inline-flex items-center gap-1.5 rounded-full h-12 px-7 text-[15px] font-semibold border border-[hsl(220,13%,86%)] hover:bg-[hsl(220,20%,97%)] transition-all active:scale-[0.97]" style={{ color: "hsl(220,15%,25%)" }}>
+                  {c.ctaSecondary} <ChevronRight className="h-4 w-4" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md rounded-2xl">
+                <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
+                <DemoForm lang={lang} />
+              </DialogContent>
+            </Dialog>
           </div>
 
-          {/* Hero Dashboard Mockup */}
-          <div className="mt-12 relative max-w-5xl mx-auto">
-            <div className="absolute -inset-4 rounded-3xl blur-[40px] opacity-30" style={{ background: `linear-gradient(135deg, ${BLUE_GLOW}, transparent)` }} />
+          <p className="mt-4 text-xs" style={{ color: "hsl(220,10%,58%)" }}>{c.ctaMicro}</p>
+
+          {/* Pills */}
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {c.hero.pills.map((pill, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-[hsl(220,13%,91%)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]" style={{ color: "hsl(220,10%,42%)" }}>
+                <CheckCircle2 className="h-3.5 w-3.5" style={{ color: "hsl(163,68%,45%)" }} /> {pill}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Dashboard mockup */}
+        <div className="relative max-w-5xl mx-auto mt-14 px-4 sm:px-6">
+          <div className="rounded-2xl overflow-hidden border border-[hsl(220,13%,91%)] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)]">
             <img
               src={heroDashboard}
               alt="StaflyApps Dashboard"
-              className="relative w-full h-auto rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-[hsl(220,13%,90%)]"
+              className="w-full h-auto block"
               loading="eager"
             />
           </div>
         </div>
       </section>
 
-      {/* ── STATS BAR ── */}
-      <section className="py-12 border-y border-[hsl(220,13%,93%)] bg-[hsl(220,30%,98%)]">
+      {/* ── PROBLEM ── */}
+      <section className="py-16 sm:py-24">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: "hsl(220,25%,10%)" }}>
+            {c.problem.title}
+          </h2>
+          <div className="mt-6 space-y-4 text-[15px] leading-relaxed" style={{ color: "hsl(220,10%,45%)" }}>
+            <p>{c.problem.p1}</p>
+            <p>{c.problem.p2}</p>
+            <p className="font-semibold" style={{ color: "hsl(222,100%,59%)" }}>{c.problem.p3}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── BENEFITS ── */}
+      <section className="py-16 sm:py-24" style={{ background: "hsl(220,30%,98%)" }} id="seguridad">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-3 gap-8 max-w-3xl mx-auto text-center">
-            {stats[lang].map((s, i) => (
-              <div key={i}>
-                <div className="text-2xl sm:text-3xl font-extrabold" style={{ color: BLUE }}>{s.value}</div>
-                <div className="text-xs sm:text-sm text-[hsl(220,10%,50%)] mt-1">{s.label}</div>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-center" style={{ color: "hsl(220,25%,10%)" }}>
+            {c.benefits.title}
+          </h2>
+          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {c.benefits.cards.map((card, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-[hsl(220,13%,91%)] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300">
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center mb-4" style={{ background: "hsl(222,100%,59%/0.08)", color: "hsl(222,100%,59%)" }}>
+                  {iconComponents[card.icon]}
+                </div>
+                <h3 className="font-semibold text-[15px] mb-1.5" style={{ color: "hsl(220,25%,10%)" }}>{card.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: "hsl(220,10%,50%)" }}>{card.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── GOODBYE TO CHAOS ── */}
-      <section className="py-16 sm:py-24" id="caos">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.chaos.title}</h2>
-            <p className="text-[hsl(220,10%,50%)] mt-2 text-sm">{c.chaos.subtitle}</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {/* Before */}
-            <div className="rounded-2xl border border-[hsl(0,60%,90%)] bg-[hsl(0,80%,98%)] p-6">
-              <span className="text-xs font-bold tracking-wide text-[hsl(0,70%,55%)]">{c.chaos.before}</span>
-              <div className="mt-5 space-y-3">
-                {c.chaos.beforeItems.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 text-sm text-[hsl(220,10%,45%)]">
-                    <div className="h-6 w-6 rounded-lg bg-[hsl(0,70%,93%)] flex items-center justify-center shrink-0">
-                      <X className="h-3.5 w-3.5 text-[hsl(0,70%,55%)]" />
-                    </div>
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* After */}
-            <div className="rounded-2xl border border-[hsl(163,50%,85%)] bg-[hsl(163,50%,97%)] p-6">
-              <span className="text-xs font-bold tracking-wide text-[hsl(163,68%,40%)]">{c.chaos.after}</span>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {c.chaos.afterItems.map((item, i) => {
-                  const Icon = chaosIcons[i];
-                  return (
-                    <div key={i} className="bg-white rounded-xl border border-[hsl(220,13%,90%)] p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all">
-                      <div className="h-8 w-8 rounded-lg flex items-center justify-center mb-2" style={{ background: `hsl(222 100% 59% / 0.1)` }}>
-                        <Icon className="h-4 w-4" style={{ color: BLUE }} />
-                      </div>
-                      <p className="text-sm font-semibold text-[hsl(220,25%,10%)]">{item.label}</p>
-                      <p className="text-[11px] text-[hsl(220,10%,50%)] mt-0.5">{item.desc}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── MODULES ── */}
-      <section className="py-16 sm:py-24 bg-[hsl(220,30%,98%)] border-y border-[hsl(220,13%,93%)]" id="modulos">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.modules.title}</h2>
-            <p className="text-[hsl(220,10%,50%)] mt-2 text-sm">{c.modules.subtitle}</p>
-          </div>
-          <div className="grid lg:grid-cols-[260px_1fr] gap-6 max-w-5xl mx-auto">
-            <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
-              {c.modules.tabs.map((tab, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveModule(i)}
-                  className="flex items-center gap-3 text-left px-4 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
-                  style={activeModule === i
-                    ? { background: BLUE, color: "white", boxShadow: `0 4px 14px -3px hsl(222 100% 59% / 0.3)` }
-                    : { background: "white", border: "1px solid hsl(220,13%,90%)", color: "hsl(220,10%,45%)" }
-                  }
-                >
-                  <span style={{ color: activeModule === i ? "white" : BLUE }}>
-                    {iconMap[tab.icon]}
-                  </span>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            <div className="bg-white rounded-2xl border border-[hsl(220,13%,90%)] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]" key={activeModule}>
-              <h3 className="text-xl font-bold mb-5 text-[hsl(220,25%,10%)]">{c.modules.tabs[activeModule].title}</h3>
-              <ul className="space-y-3.5">
-                {c.modules.tabs[activeModule].bullets.map((b, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-[hsl(220,10%,45%)]">
-                    <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" style={{ color: BLUE }} /> {b}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-8 rounded-xl bg-[hsl(220,30%,98%)] border border-[hsl(220,13%,93%)] h-44 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="h-12 w-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: `hsl(222 100% 59% / 0.1)` }}>
-                    <span style={{ color: BLUE }}>{iconMap[c.modules.tabs[activeModule].icon]}</span>
-                  </div>
-                  <span className="text-sm text-[hsl(220,10%,65%)]">{lang === "es" ? "Vista previa del módulo" : "Module preview"}</span>
+      {/* ── HOW IT WORKS ── */}
+      <section className="py-16 sm:py-24">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-center" style={{ color: "hsl(220,25%,10%)" }}>
+            {c.howItWorks.title}
+          </h2>
+          <div className="mt-12 grid md:grid-cols-3 gap-8">
+            {c.howItWorks.steps.map((step, i) => (
+              <div key={i} className="text-center">
+                <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl text-xl font-bold mb-5" style={{ background: "hsl(222,100%,59%/0.08)", color: "hsl(222,100%,59%)" }}>
+                  {step.num}
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SECURITY ── */}
-      <section className="py-16 sm:py-24" id="seguridad">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.security.title}</h2>
-            <p className="text-[hsl(220,10%,50%)] mt-2 text-sm">{c.security.subtitle}</p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
-            {c.security.cards.map((card, i) => (
-              <div key={i} className="group bg-white rounded-2xl border border-[hsl(220,13%,90%)] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300">
-                <div className="h-12 w-12 rounded-xl flex items-center justify-center mb-4 transition-all duration-300" style={{ background: `hsl(222 100% 59% / 0.1)`, color: BLUE }}>
-                  {iconMap[card.icon]}
-                </div>
-                <h3 className="font-semibold text-sm mb-2 text-[hsl(220,25%,10%)]">{card.title}</h3>
-                <p className="text-xs text-[hsl(220,10%,50%)] leading-relaxed">{card.desc}</p>
+                <h3 className="font-semibold text-base mb-2" style={{ color: "hsl(220,25%,10%)" }}>{step.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: "hsl(220,10%,50%)" }}>{step.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ── */}
-      <section className="py-16 sm:py-24 bg-[hsl(220,30%,98%)] border-y border-[hsl(220,13%,93%)]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.testimonials.title}</h2>
+      {/* ── AUDIENCE ── */}
+      <section className="py-16 sm:py-24" style={{ background: "hsl(220,30%,98%)" }}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: "hsl(220,25%,10%)" }}>
+            {c.audience.title}
+          </h2>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            {c.audience.chips.map((chip, i) => {
+              const Icon = audienceIcons[i];
+              return (
+                <span key={i} className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-full border border-[hsl(220,13%,91%)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]" style={{ color: "hsl(220,15%,25%)" }}>
+                  <Icon className="h-4 w-4" style={{ color: "hsl(222,100%,59%)" }} /> {chip}
+                </span>
+              );
+            })}
           </div>
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {c.testimonials.items.map((t, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-[hsl(220,13%,90%)] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all">
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} className="h-4 w-4 fill-[hsl(36,100%,56%)] text-[hsl(36,100%,56%)]" />
-                  ))}
-                </div>
-                <p className="text-sm text-[hsl(220,10%,45%)] leading-relaxed mb-6">"{t.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})` }}>
-                    {t.name.charAt(0)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[hsl(220,25%,10%)] truncate">{t.name}</p>
-                    <p className="text-xs text-[hsl(220,10%,50%)] truncate">{t.role}, {t.company}</p>
-                  </div>
-                </div>
+        </div>
+      </section>
+
+      {/* ── CAPABILITIES ── */}
+      <section className="py-16 sm:py-24">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-center" style={{ color: "hsl(220,25%,10%)" }}>
+            {c.capabilities.title}
+          </h2>
+          <div className="mt-10 grid sm:grid-cols-2 gap-x-8 gap-y-4 max-w-2xl mx-auto">
+            {c.capabilities.items.map((item, i) => (
+              <div key={i} className="flex items-center gap-3 py-2">
+                <CheckCircle2 className="h-5 w-5 shrink-0" style={{ color: "hsl(163,68%,45%)" }} />
+                <span className="text-sm font-medium" style={{ color: "hsl(220,15%,25%)" }}>{item}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── PRICING ── */}
-      <section id="precios" className="py-16 sm:py-24">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.pricing.title}</h2>
-            <p className="text-[hsl(220,10%,50%)] mt-2 text-sm">{c.pricing.subtitle}</p>
+      {/* ── PRODUCT VISUAL ── */}
+      <section className="py-16 sm:py-24" style={{ background: "hsl(220,30%,98%)" }}>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="rounded-2xl overflow-hidden border border-[hsl(220,13%,91%)] shadow-[0_12px_40px_-10px_rgba(0,0,0,0.08)]">
+            <img
+              src={heroDashboard}
+              alt="StaflyApps Dashboard"
+              className="w-full h-auto block"
+              loading="lazy"
+            />
           </div>
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
-            {c.pricing.plans.map((plan, i) => (
-              <div key={i} className={`bg-white rounded-2xl border p-7 relative transition-all ${(plan as any).recommended ? "border-[hsl(222,100%,59%)] ring-2 ring-[hsl(222,100%,59%/0.1)] shadow-[0_8px_30px_-6px_hsl(222,100%,59%/0.15)] scale-[1.02]" : "border-[hsl(220,13%,90%)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"}`}>
-                {(plan as any).recommended && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[11px] font-semibold px-3 py-0.5 rounded-full" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})` }}>
-                    {lang === "es" ? "Recomendado" : "Recommended"}
-                  </span>
-                )}
-                <h3 className="font-bold text-xl mb-1 text-[hsl(220,25%,10%)]">{plan.name}</h3>
-                <p className="text-sm text-[hsl(220,10%,50%)] mb-5">{plan.desc}</p>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-3xl font-extrabold text-[hsl(220,25%,10%)]">{plan.price}</span>
-                  <span className="text-[hsl(220,10%,50%)] text-sm">{plan.period}</span>
-                </div>
-                <ul className="space-y-2.5 mb-7">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-2.5 text-sm text-[hsl(220,10%,45%)]">
-                      <CheckCircle2 className="h-4 w-4 text-[hsl(163,68%,50%)] shrink-0" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <button
-                      className={`w-full rounded-xl h-11 font-semibold text-sm transition-all active:scale-[0.97] ${(plan as any).recommended ? "text-white" : "border-2 border-[hsl(220,13%,86%)] text-[hsl(220,15%,25%)] hover:bg-[hsl(220,20%,96%)]"}`}
-                      style={(plan as any).recommended ? { background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})`, boxShadow: `0 4px 14px -3px hsl(222 100% 59% / 0.3)` } : undefined}
-                    >
-                      {plan.cta}
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md !rounded-2xl">
-                    <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                    <DemoForm lang={lang} />
-                  </DialogContent>
-                </Dialog>
-              </div>
-            ))}
+        </div>
+      </section>
+
+      {/* ── TRUST ── */}
+      <section className="py-16 sm:py-24">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: "hsl(220,25%,10%)" }}>
+            {c.trust.title}
+          </h2>
+          <p className="mt-4 text-[15px] leading-relaxed" style={{ color: "hsl(220,10%,45%)" }}>
+            {c.trust.sub}
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-6">
+            <span className="text-sm font-semibold" style={{ color: "hsl(220,15%,25%)" }}>{c.trust.p1}</span>
+            <span className="h-4 w-px bg-[hsl(220,13%,86%)]" />
+            <span className="text-sm font-semibold" style={{ color: "hsl(220,15%,25%)" }}>{c.trust.p2}</span>
           </div>
         </div>
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section className="py-16 sm:py-24">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="relative rounded-3xl p-10 sm:p-16 overflow-hidden max-w-5xl mx-auto" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})` }}>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_50%)]" />
-            <div className="absolute bottom-0 right-0 w-60 h-60 bg-white/5 rounded-full blur-3xl" />
-            <div className="relative flex flex-col md:flex-row items-center gap-10">
-              <div className="flex-1 text-center md:text-left">
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
-                  {c.finalCta.h2}
-                </h2>
-                <p className="mt-3 text-white/75 text-base">{c.finalCta.sub}</p>
-                <div className="mt-7 flex flex-col sm:flex-row items-center md:items-start gap-3">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button className="inline-flex items-center rounded-xl px-8 h-12 bg-white font-semibold shadow-lg transition-all hover:bg-white/90 active:scale-[0.97]" style={{ color: BLUE }}>
-                        {c.ctaPrimary} <ArrowRight className="ml-2 h-4 w-4" />
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md !rounded-2xl">
-                      <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                      <DemoForm lang={lang} />
-                    </DialogContent>
-                  </Dialog>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button className="inline-flex items-center rounded-xl h-12 px-8 border-2 border-white/50 text-white hover:bg-white/15 font-semibold backdrop-blur-sm transition-all active:scale-[0.97]">
-                        {c.ctaSecondary}
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md !rounded-2xl">
-                      <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                      <DemoForm lang={lang} />
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
+      <section className="py-16 sm:py-24" id="precios">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="rounded-3xl px-6 py-14 sm:px-14 sm:py-20 text-center" style={{ background: "linear-gradient(135deg, hsl(222,100%,59%), hsl(226,76%,49%))" }}>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
+              {c.finalCta.h2}
+            </h2>
+            <p className="mt-4 text-white/75 text-[15px] max-w-xl mx-auto">{c.finalCta.sub}</p>
+
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="inline-flex items-center gap-2 rounded-full px-7 h-12 bg-white font-semibold text-[15px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all hover:bg-white/90 active:scale-[0.97]" style={{ color: "hsl(222,100%,59%)" }}>
+                    {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md rounded-2xl">
+                  <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
+                  <DemoForm lang={lang} />
+                </DialogContent>
+              </Dialog>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="inline-flex items-center gap-1.5 rounded-full h-12 px-7 border border-white/40 text-white hover:bg-white/10 font-semibold text-[15px] transition-all active:scale-[0.97]">
+                    {c.ctaSecondary}
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md rounded-2xl">
+                  <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
+                  <DemoForm lang={lang} />
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-[hsl(220,13%,93%)] py-10">
+      <footer className="border-t border-[hsl(220,13%,93%)] py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <StaflyLogo size={28} />
-            <div className="flex items-center gap-6 text-sm text-[hsl(220,10%,50%)]">
-              <Link to="/portal" className="hover:text-[hsl(220,15%,15%)] transition-colors font-medium" style={{ color: BLUE }}>{c.footer.portal}</Link>
-              <Link to="/privacy" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.footer.privacy}</Link>
-              <Link to="/terms" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.footer.terms}</Link>
-              <Link to="/help" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.footer.contact}</Link>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+            <StaflyLogo size={26} />
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]" style={{ color: "hsl(220,10%,50%)" }}>
+              <a href="#producto" className="hover:text-[hsl(220,20%,14%)] transition-colors">{c.footer.product}</a>
+              <a href="#precios" className="hover:text-[hsl(220,20%,14%)] transition-colors">{c.footer.pricing}</a>
+              <Link to="/portal" className="font-medium hover:text-[hsl(220,20%,14%)] transition-colors" style={{ color: "hsl(222,100%,59%)" }}>{c.footer.portal}</Link>
+              <Link to="/help" className="hover:text-[hsl(220,20%,14%)] transition-colors">{c.footer.contact}</Link>
+              <Link to="/privacy" className="hover:text-[hsl(220,20%,14%)] transition-colors">{c.footer.privacy}</Link>
+              <Link to="/terms" className="hover:text-[hsl(220,20%,14%)] transition-colors">{c.footer.terms}</Link>
             </div>
-            <p className="text-sm text-[hsl(220,10%,55%)]">
-              © {new Date().getFullYear()} StaflyApps
-            </p>
+          </div>
+          <div className="mt-8 pt-6 border-t border-[hsl(220,13%,93%)] text-center">
+            <p className="text-xs" style={{ color: "hsl(220,10%,58%)" }}>© {new Date().getFullYear()} StaflyApps. All rights reserved.</p>
           </div>
         </div>
       </footer>
