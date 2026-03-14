@@ -627,6 +627,12 @@ export default function Employees() {
         title="Empleados"
         subtitle={`${filtered.length} de ${employees.length} empleados`}
         rightSlot={<div className="flex gap-2 flex-wrap">
+          {isPrivileged && (
+            <Button variant="outline" onClick={handleBulkPortalInvite} disabled={bulkInviting}>
+              {bulkInviting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Enviar Invitaciones Portal
+            </Button>
+          )}
           <BulkRateAssignment />
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
             <Download className="h-4 w-4 mr-2" />Exportar Excel
