@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   CalendarDays, DollarSign, Users, Clock, BarChart3, Shield,
   ArrowRight, CheckCircle2, Globe, MapPin,
@@ -27,11 +26,10 @@ const i18n = {
     ctaSecondary: "Agendar demo",
     ctaMicro: "Sin tarjeta · Setup en minutos · Cancela cuando quieras",
     hero: {
-      eyebrow: "GESTIÓN DE PERSONAL INTELIGENTE",
+      eyebrow: "Gestión de personal inteligente",
       h1: "Control total de tu equipo, sin el caos.",
       sub: "Turnos, clock-in/out con GPS, nómina semanal, reportes y permisos — todo en una plataforma que tu equipo realmente va a usar.",
       badges: ["Setup en minutos", "GPS verificado", "Exportación lista", "Permisos granulares"],
-      trusted: "Empresas de staffing confían en StaflyApps",
     },
     chaos: {
       title: "Adiós al caos operativo",
@@ -47,18 +45,18 @@ const i18n = {
       ],
     },
     modules: {
-      title: "Todo lo que necesitas, nada que sobre",
+      title: "Todo lo que necesitas",
       subtitle: "Módulos diseñados para operaciones de staffing",
       tabs: [
-        { label: "Turnos", icon: "calendar", title: "Programación de turnos", bullets: ["Vista semanal tipo calendario con drag & drop", "Asignación por cliente, ubicación y rol", "Copiar semana y detección de conflictos"] },
-        { label: "Clock-in/out", icon: "clock", title: "Control de tiempo con ubicación", bullets: ["Clock-in/out desde el celular con GPS", "Verificación de ubicación y dispositivo", "Registro de descansos y notas"] },
-        { label: "Nómina", icon: "dollar", title: "Nómina semanal automatizada", bullets: ["Cálculo automático regular/overtime", "Novedades: bonos, deducciones, ajustes", "Cierre semanal controlado con estados"] },
-        { label: "Reportes", icon: "chart", title: "Reportes & Exportación", bullets: ["Nómina semanal, horas por ubicación, overtime", "Exportación a CSV, PDF y plantillas", "Filtros avanzados y búsqueda"] },
-        { label: "Admin", icon: "shield", title: "Permisos y administración", bullets: ["Roles: Owner, Admin, Manager, Supervisor, Employee", "Permisos granulares por módulo y acción", "Registro de auditoría completo"] },
+        { label: "Turnos", icon: "calendar", title: "Programación de turnos", bullets: ["Vista semanal con drag & drop", "Asignación por cliente y ubicación", "Copiar semana y detección de conflictos"] },
+        { label: "Clock-in/out", icon: "clock", title: "Control de tiempo", bullets: ["Clock-in/out desde el celular con GPS", "Verificación de ubicación y dispositivo", "Registro de descansos y notas"] },
+        { label: "Nómina", icon: "dollar", title: "Nómina semanal", bullets: ["Cálculo automático regular/overtime", "Novedades: bonos, deducciones, ajustes", "Cierre semanal controlado"] },
+        { label: "Reportes", icon: "chart", title: "Reportes y exportación", bullets: ["Nómina semanal, horas por ubicación", "Exportación a CSV y PDF", "Filtros avanzados y búsqueda"] },
+        { label: "Admin", icon: "shield", title: "Permisos y admin", bullets: ["Roles: Owner, Admin, Manager, Employee", "Permisos granulares por módulo", "Registro de auditoría completo"] },
       ],
     },
     security: {
-      title: "Diseñado para control y trazabilidad",
+      title: "Control y trazabilidad",
       subtitle: "Tu información segura, siempre accesible",
       cards: [
         { icon: "lock", title: "Roles y permisos granulares", desc: "Define exactamente quién puede ver, editar o eliminar en cada módulo." },
@@ -78,9 +76,6 @@ const i18n = {
     pricing: {
       title: "Planes simples, sin sorpresas",
       subtitle: "Elige el plan que se adapta a tu operación",
-      monthly: "Mensual",
-      annual: "Anual",
-      save: "Ahorra 20%",
       plans: [
         { name: "Starter", price: "$—", period: "/mes", desc: "Hasta 25 empleados", features: ["Turnos y asistencia", "Nómina semanal", "1 usuario admin", "Soporte por email"], cta: "Empezar gratis" },
         { name: "Pro", price: "$—", period: "/mes", desc: "Hasta 100 empleados", features: ["Todo en Starter", "Múltiples ubicaciones", "Roles y permisos", "Importación CSV", "Soporte prioritario"], cta: "Empezar gratis", recommended: true },
@@ -102,11 +97,10 @@ const i18n = {
     ctaSecondary: "Book a demo",
     ctaMicro: "No card required · Setup in minutes · Cancel anytime",
     hero: {
-      eyebrow: "SMART WORKFORCE MANAGEMENT",
-      h1: "Total control of your team—without the chaos.",
+      eyebrow: "Smart workforce management",
+      h1: "Total control of your team — without the chaos.",
       sub: "Scheduling, GPS clock-in/out, weekly payroll, reports and permissions — all in one platform your team will actually use.",
       badges: ["Setup in minutes", "GPS verified", "Export-ready", "Granular permissions"],
-      trusted: "Staffing companies trust StaflyApps",
     },
     chaos: {
       title: "Goodbye to operational chaos",
@@ -122,18 +116,18 @@ const i18n = {
       ],
     },
     modules: {
-      title: "Everything you need, nothing you don't",
+      title: "Everything you need",
       subtitle: "Modules designed for staffing operations",
       tabs: [
-        { label: "Scheduling", icon: "calendar", title: "Shift scheduling", bullets: ["Weekly calendar view with drag & drop", "Assign by client, location, and role", "Copy week and conflict detection"] },
-        { label: "Clock-in/out", icon: "clock", title: "Time tracking with location", bullets: ["Clock-in/out from mobile with GPS", "Location and device verification", "Break tracking and notes"] },
-        { label: "Payroll", icon: "dollar", title: "Automated weekly payroll", bullets: ["Auto-calculate regular/overtime", "Adjustments: bonuses, deductions", "Controlled weekly close with states"] },
-        { label: "Reports", icon: "chart", title: "Reports & Export", bullets: ["Weekly payroll, hours by location, overtime", "Export to CSV, PDF, and templates", "Advanced filters and search"] },
-        { label: "Admin", icon: "shield", title: "Permissions & administration", bullets: ["Roles: Owner, Admin, Manager, Supervisor, Employee", "Granular per-module permissions", "Complete audit log"] },
+        { label: "Scheduling", icon: "calendar", title: "Shift scheduling", bullets: ["Weekly calendar with drag & drop", "Assign by client and location", "Copy week and conflict detection"] },
+        { label: "Clock-in/out", icon: "clock", title: "Time tracking", bullets: ["Clock-in/out from mobile with GPS", "Location and device verification", "Break tracking and notes"] },
+        { label: "Payroll", icon: "dollar", title: "Weekly payroll", bullets: ["Auto-calculate regular/overtime", "Adjustments: bonuses, deductions", "Controlled weekly close"] },
+        { label: "Reports", icon: "chart", title: "Reports & export", bullets: ["Weekly payroll, hours by location", "Export to CSV and PDF", "Advanced filters and search"] },
+        { label: "Admin", icon: "shield", title: "Permissions & admin", bullets: ["Roles: Owner, Admin, Manager, Employee", "Granular per-module permissions", "Complete audit log"] },
       ],
     },
     security: {
-      title: "Designed for control and traceability",
+      title: "Control and traceability",
       subtitle: "Your data secure, always accessible",
       cards: [
         { icon: "lock", title: "Granular roles & permissions", desc: "Define exactly who can view, edit, or delete in each module." },
@@ -153,9 +147,6 @@ const i18n = {
     pricing: {
       title: "Simple plans, no surprises",
       subtitle: "Choose the plan that fits your operation",
-      monthly: "Monthly",
-      annual: "Annual",
-      save: "Save 20%",
       plans: [
         { name: "Starter", price: "$—", period: "/mo", desc: "Up to 25 employees", features: ["Shifts & attendance", "Weekly payroll", "1 admin user", "Email support"], cta: "Start free" },
         { name: "Pro", price: "$—", period: "/mo", desc: "Up to 100 employees", features: ["Everything in Starter", "Multiple locations", "Roles & permissions", "CSV import", "Priority support"], cta: "Start free", recommended: true },
@@ -172,7 +163,7 @@ const i18n = {
 };
 
 /* ───────── Demo Form ───────── */
-function DemoForm({ lang, onSuccess }: { lang: "es" | "en"; onSuccess?: () => void }) {
+function DemoForm({ lang }: { lang: "es" | "en" }) {
   const c = i18n[lang].form;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: "", company: "", email: "", phone: "", employee_count: "" });
@@ -188,20 +179,19 @@ function DemoForm({ lang, onSuccess }: { lang: "es" | "en"; onSuccess?: () => vo
     } else {
       toast.success(lang === "es" ? "¡Solicitud enviada! Te contactaremos pronto." : "Request sent! We'll contact you soon.");
       setForm({ name: "", company: "", email: "", phone: "", employee_count: "" });
-      onSuccess?.();
     }
   };
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <Input placeholder={c.name} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 rounded-xl" />
-      <Input placeholder={c.company} required value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="h-11 rounded-xl" />
+      <Input placeholder={c.name} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
+      <Input placeholder={c.company} required value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
       <div className="grid grid-cols-2 gap-3">
-        <Input placeholder={c.email} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-11 rounded-xl" />
-        <Input placeholder={c.phone} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-11 rounded-xl" />
+        <Input placeholder={c.email} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
+        <Input placeholder={c.phone} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
       </div>
-      <Input placeholder={c.employees} value={form.employee_count} onChange={(e) => setForm({ ...form, employee_count: e.target.value })} className="h-11 rounded-xl" />
-      <Button type="submit" className="w-full rounded-xl h-12 text-base font-semibold gradient-primary text-white shadow-md hover:shadow-lg transition-all" disabled={loading}>
+      <Input placeholder={c.employees} value={form.employee_count} onChange={(e) => setForm({ ...form, employee_count: e.target.value })} className="h-11 !rounded-xl !border-[hsl(220,13%,87%)]" />
+      <Button type="submit" className="w-full !rounded-xl h-12 text-base font-semibold !bg-[hsl(222,100%,59%)] !text-white hover:!bg-[hsl(222,100%,52%)] !shadow-[0_4px_14px_-3px_hsl(222,100%,59%/0.4)]" disabled={loading}>
         {loading ? "..." : c.submit} <Send className="ml-2 h-4 w-4" />
       </Button>
     </form>
@@ -223,7 +213,7 @@ const iconMap: Record<string, React.ReactNode> = {
 
 const chaosIcons = [CalendarDays, Clock, DollarSign, BarChart3];
 
-/* ───────── Stat Counter ───────── */
+/* ───────── Stats ───────── */
 const stats = {
   es: [
     { value: "500+", label: "Empleados gestionados" },
@@ -237,6 +227,12 @@ const stats = {
   ],
 };
 
+/* ─── Landing-scoped style overrides (avoids mutating global brutalist tokens) ─── */
+const BLUE = "hsl(222, 100%, 59%)";
+const BLUE_DARK = "hsl(226, 76%, 49%)";
+const BLUE_LIGHT = "hsl(222, 100%, 96%)";
+const BLUE_GLOW = "hsl(212, 100%, 73%)";
+
 /* ───────── LANDING ───────── */
 export default function Landing() {
   const [lang, setLang] = useState<"es" | "en">(() => {
@@ -245,7 +241,6 @@ export default function Landing() {
   });
   const c = i18n[lang];
   const [activeModule, setActiveModule] = useState(0);
-  const [isAnnual, setIsAnnual] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -256,68 +251,65 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div className="min-h-screen bg-white text-[hsl(220,15%,15%)] overflow-x-hidden" style={{ fontFamily: "var(--font-heading), system-ui, sans-serif" }}>
       {/* ── HEADER ── */}
-      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-card/90 backdrop-blur-2xl shadow-xs border-b border-border/40" : "bg-transparent"}`}>
-        <div className="container flex items-center justify-between h-16">
-          <div className="flex items-center gap-2.5">
-            <div className="sm:hidden"><StaflyMark size={36} /></div>
-            <div className="hidden sm:flex"><StaflyLogo size={36} /></div>
-          </div>
+      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)]" : "bg-transparent"}`}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+          <StaflyMark size={36} />
 
-          <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-            <a href="#producto" className="hover:text-foreground transition-colors">{c.nav.product}</a>
-            <a href="#modulos" className="hover:text-foreground transition-colors">{c.nav.modules}</a>
-            <a href="#precios" className="hover:text-foreground transition-colors">{c.nav.pricing}</a>
-            <a href="#seguridad" className="hover:text-foreground transition-colors">{c.nav.security}</a>
+          <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-[hsl(220,10%,50%)]">
+            <a href="#producto" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.nav.product}</a>
+            <a href="#modulos" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.nav.modules}</a>
+            <a href="#precios" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.nav.pricing}</a>
+            <a href="#seguridad" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.nav.security}</a>
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-xl hover:bg-muted">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="hidden sm:flex items-center gap-1 text-sm text-[hsl(220,10%,50%)] hover:text-[hsl(220,15%,15%)] px-2 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">
               <Globe className="h-4 w-4" />
               <span className="font-medium">{lang === "es" ? "EN" : "ES"}</span>
             </button>
-            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-sm">
-              <Link to="/portal">{c.portal}</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-sm">
-              <Link to="/auth">{c.login}</Link>
-            </Button>
+            <Link to="/portal" className="hidden sm:inline-flex text-sm font-medium text-[hsl(220,10%,50%)] hover:text-[hsl(220,15%,15%)] px-3 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">
+              {c.portal}
+            </Link>
+            <Link to="/auth" className="hidden sm:inline-flex text-sm font-medium text-[hsl(220,10%,50%)] hover:text-[hsl(220,15%,15%)] px-3 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">
+              {c.login}
+            </Link>
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="rounded-full px-4 sm:px-6 h-8 sm:h-9 text-xs sm:text-sm font-semibold gradient-primary text-white shadow-sm hover:shadow-md transition-all">
+                <button className="rounded-full px-5 h-9 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.97]" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})`, boxShadow: `0 4px 14px -3px hsl(222 100% 59% / 0.35)` }}>
                   {c.ctaPrimary}
-                </Button>
+                </button>
               </DialogTrigger>
-              <DialogContent className="max-w-md rounded-2xl">
+              <DialogContent className="max-w-md !rounded-2xl">
                 <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
                 <DemoForm lang={lang} />
               </DialogContent>
             </Dialog>
-            <button className="lg:hidden p-2 rounded-xl hover:bg-muted transition-colors shrink-0" onClick={() => setMobileMenu(!mobileMenu)}>
+            <button className="lg:hidden p-2 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" onClick={() => setMobileMenu(!mobileMenu)}>
               {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
         {mobileMenu && (
-          <div className="lg:hidden bg-card/95 backdrop-blur-2xl border-t border-border/40 animate-fade-in">
-            <div className="container py-4 space-y-1">
+          <div className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-[hsl(220,13%,93%)]">
+            <div className="max-w-6xl mx-auto px-4 py-4 space-y-1">
               {[
                 { href: "#producto", label: c.nav.product },
                 { href: "#modulos", label: c.nav.modules },
                 { href: "#precios", label: c.nav.pricing },
                 { href: "#seguridad", label: c.nav.security },
               ].map(item => (
-                <a key={item.href} href={item.href} onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-xl hover:bg-muted transition-colors">{item.label}</a>
+                <a key={item.href} href={item.href} onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">{item.label}</a>
               ))}
-              <Link to="/portal" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-xl hover:bg-muted transition-colors text-primary">
+              <Link to="/portal" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: BLUE }}>
                 {c.portal}
               </Link>
-              <Link to="/auth" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-xl hover:bg-muted transition-colors text-primary">
+              <Link to="/auth" onClick={() => setMobileMenu(false)} className="block text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: BLUE }}>
                 {c.login}
               </Link>
-              <button onClick={() => { setLang(lang === "es" ? "en" : "es"); setMobileMenu(false); }} className="flex items-center gap-2 text-sm py-2.5 px-3 text-muted-foreground w-full rounded-xl hover:bg-muted transition-colors">
+              <button onClick={() => { setLang(lang === "es" ? "en" : "es"); setMobileMenu(false); }} className="flex items-center gap-2 text-sm py-2.5 px-3 text-[hsl(220,10%,50%)] w-full rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors">
                 <Globe className="h-4 w-4" /> {lang === "es" ? "English" : "Español"}
               </button>
             </div>
@@ -326,26 +318,21 @@ export default function Landing() {
       </header>
 
       {/* ── HERO ── */}
-      <section className="relative pt-28 pb-8 sm:pt-36 sm:pb-12 overflow-hidden" id="producto">
-        {/* Background effects */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="hidden sm:block absolute -top-40 -left-20 w-[600px] h-[600px] rounded-full bg-primary/[0.07] blur-[120px]" />
-          <div className="hidden sm:block absolute top-20 right-0 w-[500px] h-[500px] rounded-full bg-primary-glow/[0.05] blur-[100px]" />
-          <div className="hidden sm:block absolute bottom-0 left-1/3 w-[400px] h-[300px] rounded-full bg-success/[0.04] blur-[80px]" />
-        </div>
+      <section className="relative pt-28 pb-10 sm:pt-36 sm:pb-16 overflow-hidden" id="producto">
+        {/* Soft gradient background */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${BLUE_LIGHT}, transparent 70%)` }} />
 
-        <div className="container relative">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div className="max-w-3xl mx-auto text-center">
-            {/* Eyebrow */}
-            <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-primary">
+            <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide mb-5 px-3 py-1 rounded-full" style={{ color: BLUE, background: `hsl(222 100% 59% / 0.08)` }}>
               <Zap className="h-3.5 w-3.5" />
               {c.hero.eyebrow}
             </span>
 
-            <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.08] text-foreground">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] text-[hsl(220,25%,10%)]">
               {c.hero.h1}
             </h1>
-            <p className="mt-6 text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+            <p className="mt-6 text-base sm:text-lg text-[hsl(220,10%,45%)] leading-relaxed max-w-2xl mx-auto">
               {c.hero.sub}
             </p>
 
@@ -353,45 +340,46 @@ export default function Landing() {
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button size="lg" className="rounded-full px-10 h-13 text-base font-semibold gradient-primary text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all press-scale">
+                  <button className="inline-flex items-center rounded-full px-8 h-12 text-base font-semibold text-white transition-all hover:opacity-90 active:scale-[0.97]" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})`, boxShadow: `0 6px 20px -4px hsl(222 100% 59% / 0.4)` }}>
                     {c.ctaPrimary} <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  </button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md rounded-2xl">
+                <DialogContent className="max-w-md !rounded-2xl">
                   <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
                   <DemoForm lang={lang} />
                 </DialogContent>
               </Dialog>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button size="lg" variant="outline" className="rounded-full h-13 px-10 text-base border-2">
+                  <button className="inline-flex items-center rounded-full h-12 px-8 text-base font-semibold border-2 transition-all hover:bg-[hsl(220,20%,96%)] active:scale-[0.97]" style={{ borderColor: "hsl(220,13%,86%)", color: "hsl(220,15%,25%)" }}>
                     {c.ctaSecondary} <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
+                  </button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md rounded-2xl">
+                <DialogContent className="max-w-md !rounded-2xl">
                   <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
                   <DemoForm lang={lang} />
                 </DialogContent>
               </Dialog>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">{c.ctaMicro}</p>
+            <p className="mt-4 text-sm text-[hsl(220,10%,55%)]">{c.ctaMicro}</p>
 
             {/* Badges */}
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               {c.hero.badges.map((b, i) => (
-                <span key={i} className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-card border border-border/50 rounded-full px-3.5 py-1.5 shadow-2xs">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-success" /> {b}
+                <span key={i} className="inline-flex items-center gap-1.5 text-xs font-medium text-[hsl(220,10%,45%)] bg-white border border-[hsl(220,13%,90%)] rounded-full px-3 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(163,68%,50%)]" /> {b}
                 </span>
               ))}
             </div>
           </div>
 
           {/* Hero Dashboard Mockup */}
-          <div className="mt-14 relative max-w-5xl mx-auto">
+          <div className="mt-12 relative max-w-5xl mx-auto">
+            <div className="absolute -inset-4 rounded-3xl blur-[40px] opacity-30" style={{ background: `linear-gradient(135deg, ${BLUE_GLOW}, transparent)` }} />
             <img
               src={heroDashboard}
               alt="StaflyApps Dashboard"
-              className="w-full h-auto rounded-2xl shadow-2xl shadow-primary/10"
+              className="relative w-full h-auto rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-[hsl(220,13%,90%)]"
               loading="eager"
             />
           </div>
@@ -399,13 +387,13 @@ export default function Landing() {
       </section>
 
       {/* ── STATS BAR ── */}
-      <section className="py-12 border-y border-border/40 bg-card/50">
-        <div className="container">
+      <section className="py-12 border-y border-[hsl(220,13%,93%)] bg-[hsl(220,30%,98%)]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-3 gap-8 max-w-3xl mx-auto text-center">
             {stats[lang].map((s, i) => (
               <div key={i}>
-                <div className="text-2xl sm:text-3xl font-heading font-extrabold text-foreground">{s.value}</div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1">{s.label}</div>
+                <div className="text-2xl sm:text-3xl font-extrabold" style={{ color: BLUE }}>{s.value}</div>
+                <div className="text-xs sm:text-sm text-[hsl(220,10%,50%)] mt-1">{s.label}</div>
               </div>
             ))}
           </div>
@@ -413,39 +401,40 @@ export default function Landing() {
       </section>
 
       {/* ── GOODBYE TO CHAOS ── */}
-      <section className="py-20 sm:py-24" id="caos">
-        <div className="container">
+      <section className="py-16 sm:py-24" id="caos">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "PRODUCTO" : "PRODUCT"}</span>
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.chaos.title}</h2>
-            <p className="text-muted-foreground mt-2 text-sm">{c.chaos.subtitle}</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.chaos.title}</h2>
+            <p className="text-[hsl(220,10%,50%)] mt-2 text-sm">{c.chaos.subtitle}</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="rounded-2xl border border-destructive/15 bg-destructive/[0.02] p-7 shadow-xs">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-destructive">{c.chaos.before}</span>
-              <div className="mt-5 space-y-3.5">
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {/* Before */}
+            <div className="rounded-2xl border border-[hsl(0,60%,90%)] bg-[hsl(0,80%,98%)] p-6">
+              <span className="text-xs font-bold tracking-wide text-[hsl(0,70%,55%)]">{c.chaos.before}</span>
+              <div className="mt-5 space-y-3">
                 {c.chaos.beforeItems.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <div className="h-6 w-6 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
-                      <X className="h-3.5 w-3.5 text-destructive" />
+                  <div key={i} className="flex items-center gap-3 text-sm text-[hsl(220,10%,45%)]">
+                    <div className="h-6 w-6 rounded-lg bg-[hsl(0,70%,93%)] flex items-center justify-center shrink-0">
+                      <X className="h-3.5 w-3.5 text-[hsl(0,70%,55%)]" />
                     </div>
                     {item}
                   </div>
                 ))}
               </div>
             </div>
-            <div className="rounded-2xl border border-success/15 bg-success/[0.02] p-7 shadow-xs">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-success">{c.chaos.after}</span>
+            {/* After */}
+            <div className="rounded-2xl border border-[hsl(163,50%,85%)] bg-[hsl(163,50%,97%)] p-6">
+              <span className="text-xs font-bold tracking-wide text-[hsl(163,68%,40%)]">{c.chaos.after}</span>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 {c.chaos.afterItems.map((item, i) => {
                   const Icon = chaosIcons[i];
                   return (
-                    <div key={i} className="bg-card rounded-xl border border-border/40 p-3.5 shadow-xs hover-lift transition-all">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-                        <Icon className="h-4 w-4 text-primary" />
+                    <div key={i} className="bg-white rounded-xl border border-[hsl(220,13%,90%)] p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all">
+                      <div className="h-8 w-8 rounded-lg flex items-center justify-center mb-2" style={{ background: `hsl(222 100% 59% / 0.1)` }}>
+                        <Icon className="h-4 w-4" style={{ color: BLUE }} />
                       </div>
-                      <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{item.desc}</p>
+                      <p className="text-sm font-semibold text-[hsl(220,25%,10%)]">{item.label}</p>
+                      <p className="text-[11px] text-[hsl(220,10%,50%)] mt-0.5">{item.desc}</p>
                     </div>
                   );
                 })}
@@ -456,47 +445,46 @@ export default function Landing() {
       </section>
 
       {/* ── MODULES ── */}
-      <section className="py-20 sm:py-24 bg-card border-y border-border/40" id="modulos">
-        <div className="container">
+      <section className="py-16 sm:py-24 bg-[hsl(220,30%,98%)] border-y border-[hsl(220,13%,93%)]" id="modulos">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "MÓDULOS" : "MODULES"}</span>
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.modules.title}</h2>
-            <p className="text-muted-foreground mt-2 text-sm">{c.modules.subtitle}</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.modules.title}</h2>
+            <p className="text-[hsl(220,10%,50%)] mt-2 text-sm">{c.modules.subtitle}</p>
           </div>
-          <div className="grid lg:grid-cols-[280px_1fr] gap-8 max-w-5xl mx-auto">
+          <div className="grid lg:grid-cols-[260px_1fr] gap-6 max-w-5xl mx-auto">
             <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
               {c.modules.tabs.map((tab, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveModule(i)}
-                  className={`flex items-center gap-3 text-left px-4 py-3.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-                    activeModule === i
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                      : "bg-background border border-border/40 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                  }`}
+                  className="flex items-center gap-3 text-left px-4 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
+                  style={activeModule === i
+                    ? { background: BLUE, color: "white", boxShadow: `0 4px 14px -3px hsl(222 100% 59% / 0.3)` }
+                    : { background: "white", border: "1px solid hsl(220,13%,90%)", color: "hsl(220,10%,45%)" }
+                  }
                 >
-                  <span className={activeModule === i ? "text-primary-foreground" : "text-primary"}>
+                  <span style={{ color: activeModule === i ? "white" : BLUE }}>
                     {iconMap[tab.icon]}
                   </span>
                   {tab.label}
                 </button>
               ))}
             </div>
-            <div className="bg-background rounded-2xl border border-border/40 p-8 shadow-xs animate-fade-in" key={activeModule}>
-              <h3 className="font-heading text-xl font-bold mb-5">{c.modules.tabs[activeModule].title}</h3>
+            <div className="bg-white rounded-2xl border border-[hsl(220,13%,90%)] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]" key={activeModule}>
+              <h3 className="text-xl font-bold mb-5 text-[hsl(220,25%,10%)]">{c.modules.tabs[activeModule].title}</h3>
               <ul className="space-y-3.5">
                 {c.modules.tabs[activeModule].bullets.map((b, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" /> {b}
+                  <li key={i} className="flex items-start gap-3 text-sm text-[hsl(220,10%,45%)]">
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" style={{ color: BLUE }} /> {b}
                   </li>
                 ))}
               </ul>
-              <div className="mt-8 rounded-xl bg-muted/30 border border-border/20 h-52 flex items-center justify-center overflow-hidden">
+              <div className="mt-8 rounded-xl bg-[hsl(220,30%,98%)] border border-[hsl(220,13%,93%)] h-44 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                    <span className="text-primary">{iconMap[c.modules.tabs[activeModule].icon]}</span>
+                  <div className="h-12 w-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: `hsl(222 100% 59% / 0.1)` }}>
+                    <span style={{ color: BLUE }}>{iconMap[c.modules.tabs[activeModule].icon]}</span>
                   </div>
-                  <span className="text-sm text-muted-foreground/50 font-heading">{lang === "es" ? "Vista previa del módulo" : "Module preview"}</span>
+                  <span className="text-sm text-[hsl(220,10%,65%)]">{lang === "es" ? "Vista previa del módulo" : "Module preview"}</span>
                 </div>
               </div>
             </div>
@@ -505,21 +493,20 @@ export default function Landing() {
       </section>
 
       {/* ── SECURITY ── */}
-      <section className="py-20 sm:py-24" id="seguridad">
-        <div className="container">
+      <section className="py-16 sm:py-24" id="seguridad">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "SEGURIDAD" : "SECURITY"}</span>
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.security.title}</h2>
-            <p className="text-muted-foreground mt-2 text-sm">{c.security.subtitle}</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.security.title}</h2>
+            <p className="text-[hsl(220,10%,50%)] mt-2 text-sm">{c.security.subtitle}</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
             {c.security.cards.map((card, i) => (
-              <div key={i} className="group bg-card rounded-2xl border border-border/40 p-6 shadow-xs hover-lift">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+              <div key={i} className="group bg-white rounded-2xl border border-[hsl(220,13%,90%)] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300">
+                <div className="h-12 w-12 rounded-xl flex items-center justify-center mb-4 transition-all duration-300" style={{ background: `hsl(222 100% 59% / 0.1)`, color: BLUE }}>
                   {iconMap[card.icon]}
                 </div>
-                <h3 className="font-heading font-semibold text-sm mb-2">{card.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{card.desc}</p>
+                <h3 className="font-semibold text-sm mb-2 text-[hsl(220,25%,10%)]">{card.title}</h3>
+                <p className="text-xs text-[hsl(220,10%,50%)] leading-relaxed">{card.desc}</p>
               </div>
             ))}
           </div>
@@ -527,28 +514,27 @@ export default function Landing() {
       </section>
 
       {/* ── TESTIMONIALS ── */}
-      <section className="py-20 bg-card border-y border-border/40">
-        <div className="container">
+      <section className="py-16 sm:py-24 bg-[hsl(220,30%,98%)] border-y border-[hsl(220,13%,93%)]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "TESTIMONIOS" : "TESTIMONIALS"}</span>
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.testimonials.title}</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.testimonials.title}</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {c.testimonials.items.map((t, i) => (
-              <div key={i} className="bg-background rounded-2xl border border-border/40 p-6 shadow-xs hover-lift">
+              <div key={i} className="bg-white rounded-2xl border border-[hsl(220,13%,90%)] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all">
                 <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} className="h-4 w-4 fill-warning text-warning" />
+                    <Star key={j} className="h-4 w-4 fill-[hsl(36,100%,56%)] text-[hsl(36,100%,56%)]" />
                   ))}
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-6">"{t.quote}"</p>
+                <p className="text-sm text-[hsl(220,10%,45%)] leading-relaxed mb-6">"{t.quote}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  <div className="h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})` }}>
                     {t.name.charAt(0)}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{t.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{t.role}, {t.company}</p>
+                    <p className="text-sm font-semibold text-[hsl(220,25%,10%)] truncate">{t.name}</p>
+                    <p className="text-xs text-[hsl(220,10%,50%)] truncate">{t.role}, {t.company}</p>
                   </div>
                 </div>
               </div>
@@ -558,50 +544,43 @@ export default function Landing() {
       </section>
 
       {/* ── PRICING ── */}
-      <section id="precios" className="py-20 sm:py-24">
-        <div className="container">
+      <section id="precios" className="py-16 sm:py-24">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{lang === "es" ? "PRECIOS" : "PRICING"}</span>
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">{c.pricing.title}</h2>
-            <p className="text-muted-foreground mt-2 text-sm">{c.pricing.subtitle}</p>
-            <div className="mt-5 inline-flex items-center bg-muted/50 rounded-xl p-1 border border-border/40">
-              <button onClick={() => setIsAnnual(false)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${!isAnnual ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                {c.pricing.monthly}
-              </button>
-              <button onClick={() => setIsAnnual(true)} className={`px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${isAnnual ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                {c.pricing.annual}
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-success/15 text-success border-0">{c.pricing.save}</Badge>
-              </button>
-            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[hsl(220,25%,10%)]">{c.pricing.title}</h2>
+            <p className="text-[hsl(220,10%,50%)] mt-2 text-sm">{c.pricing.subtitle}</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
             {c.pricing.plans.map((plan, i) => (
-              <div key={i} className={`bg-card rounded-2xl border p-7 relative transition-all ${(plan as any).recommended ? "border-primary ring-2 ring-primary/10 shadow-lg shadow-primary/10 scale-[1.02]" : "border-border/40 shadow-xs"}`}>
+              <div key={i} className={`bg-white rounded-2xl border p-7 relative transition-all ${(plan as any).recommended ? "border-[hsl(222,100%,59%)] ring-2 ring-[hsl(222,100%,59%/0.1)] shadow-[0_8px_30px_-6px_hsl(222,100%,59%/0.15)] scale-[1.02]" : "border-[hsl(220,13%,90%)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"}`}>
                 {(plan as any).recommended && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 gradient-primary text-white border-0 px-3 text-[11px]">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[11px] font-semibold px-3 py-0.5 rounded-full" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})` }}>
                     {lang === "es" ? "Recomendado" : "Recommended"}
-                  </Badge>
+                  </span>
                 )}
-                <h3 className="font-heading font-bold text-xl mb-1">{plan.name}</h3>
-                <p className="text-sm text-muted-foreground mb-5">{plan.desc}</p>
+                <h3 className="font-bold text-xl mb-1 text-[hsl(220,25%,10%)]">{plan.name}</h3>
+                <p className="text-sm text-[hsl(220,10%,50%)] mb-5">{plan.desc}</p>
                 <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-3xl font-heading font-extrabold">{plan.price}</span>
-                  <span className="text-muted-foreground text-sm">{plan.period}</span>
+                  <span className="text-3xl font-extrabold text-[hsl(220,25%,10%)]">{plan.price}</span>
+                  <span className="text-[hsl(220,10%,50%)] text-sm">{plan.period}</span>
                 </div>
                 <ul className="space-y-2.5 mb-7">
                   {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-2.5 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-success shrink-0" /> {f}
+                    <li key={j} className="flex items-center gap-2.5 text-sm text-[hsl(220,10%,45%)]">
+                      <CheckCircle2 className="h-4 w-4 text-[hsl(163,68%,50%)] shrink-0" /> {f}
                     </li>
                   ))}
                 </ul>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button className={`w-full rounded-xl h-11 font-semibold ${(plan as any).recommended ? "gradient-primary text-white shadow-sm" : ""}`} variant={(plan as any).recommended ? "default" : "outline"}>
+                    <button
+                      className={`w-full rounded-xl h-11 font-semibold text-sm transition-all active:scale-[0.97] ${(plan as any).recommended ? "text-white" : "border-2 border-[hsl(220,13%,86%)] text-[hsl(220,15%,25%)] hover:bg-[hsl(220,20%,96%)]"}`}
+                      style={(plan as any).recommended ? { background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})`, boxShadow: `0 4px 14px -3px hsl(222 100% 59% / 0.3)` } : undefined}
+                    >
                       {plan.cta}
-                    </Button>
+                    </button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md rounded-2xl">
+                  <DialogContent className="max-w-md !rounded-2xl">
                     <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
                     <DemoForm lang={lang} />
                   </DialogContent>
@@ -613,36 +592,36 @@ export default function Landing() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section className="py-20 sm:py-28">
-        <div className="container">
-          <div className="relative rounded-3xl gradient-primary p-10 sm:p-16 overflow-hidden max-w-5xl mx-auto">
+      <section className="py-16 sm:py-24">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="relative rounded-3xl p-10 sm:p-16 overflow-hidden max-w-5xl mx-auto" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_DARK})` }}>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_50%)]" />
             <div className="absolute bottom-0 right-0 w-60 h-60 bg-white/5 rounded-full blur-3xl" />
             <div className="relative flex flex-col md:flex-row items-center gap-10">
               <div className="flex-1 text-center md:text-left">
-                <h2 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
                   {c.finalCta.h2}
                 </h2>
                 <p className="mt-3 text-white/75 text-base">{c.finalCta.sub}</p>
                 <div className="mt-7 flex flex-col sm:flex-row items-center md:items-start gap-3">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="lg" className="rounded-xl px-8 h-12 bg-white text-primary hover:bg-white/90 font-semibold shadow-lg press-scale">
+                      <button className="inline-flex items-center rounded-xl px-8 h-12 bg-white font-semibold shadow-lg transition-all hover:bg-white/90 active:scale-[0.97]" style={{ color: BLUE }}>
                         {c.ctaPrimary} <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
+                      </button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-md rounded-2xl">
+                    <DialogContent className="max-w-md !rounded-2xl">
                       <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
                       <DemoForm lang={lang} />
                     </DialogContent>
                   </Dialog>
-                   <Dialog>
+                  <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="lg" variant="outline" className="rounded-xl h-12 px-8 border-2 border-white/60 text-white hover:bg-white/20 font-semibold backdrop-blur-sm">
+                      <button className="inline-flex items-center rounded-xl h-12 px-8 border-2 border-white/50 text-white hover:bg-white/15 font-semibold backdrop-blur-sm transition-all active:scale-[0.97]">
                         {c.ctaSecondary}
-                      </Button>
+                      </button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-md rounded-2xl">
+                    <DialogContent className="max-w-md !rounded-2xl">
                       <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
                       <DemoForm lang={lang} />
                     </DialogContent>
@@ -655,17 +634,17 @@ export default function Landing() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-border/40 py-10">
-        <div className="container">
+      <footer className="border-t border-[hsl(220,13%,93%)] py-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <StaflyLogo size={28} />
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link to="/portal" className="hover:text-foreground transition-colors font-medium text-primary">{c.footer.portal}</Link>
-              <Link to="/privacy" className="hover:text-foreground transition-colors">{c.footer.privacy}</Link>
-              <Link to="/terms" className="hover:text-foreground transition-colors">{c.footer.terms}</Link>
-              <Link to="/help" className="hover:text-foreground transition-colors">{c.footer.contact}</Link>
+            <div className="flex items-center gap-6 text-sm text-[hsl(220,10%,50%)]">
+              <Link to="/portal" className="hover:text-[hsl(220,15%,15%)] transition-colors font-medium" style={{ color: BLUE }}>{c.footer.portal}</Link>
+              <Link to="/privacy" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.footer.privacy}</Link>
+              <Link to="/terms" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.footer.terms}</Link>
+              <Link to="/help" className="hover:text-[hsl(220,15%,15%)] transition-colors">{c.footer.contact}</Link>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[hsl(220,10%,55%)]">
               © {new Date().getFullYear()} StaflyApps
             </p>
           </div>
