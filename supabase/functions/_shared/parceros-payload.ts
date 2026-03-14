@@ -168,24 +168,22 @@ export function toParcerosSyncBody(
       ? "No verified work history"
       : null;
 
-  // Reputation: null everything if show_reputation is off
+  // Reputation: map to Parceros fields. Full StaflyApps breakdown lives in external_data.
+  // Mapping: punctuality→punctuality, communication_score→communication,
+  //          service→service_attitude, professionalism→professionalism
   const repScore = vis.show_reputation ? w.reputation.overall_score : null;
   const ratingsBreakdown = vis.show_reputation
     ? {
         punctuality: w.reputation.punctuality,
-        quality: w.reputation.quality,
-        service: w.reputation.service,
-        professionalism: w.reputation.professionalism,
-        teamwork: w.reputation.teamwork,
-        presentation: w.reputation.presentation,
+        communication: w.reputation.professionalism, // StaflyApps "professionalism" ≈ Parceros "communication"
+        professionalism: w.reputation.quality,        // StaflyApps "quality" ≈ Parceros "professionalism"
+        service_attitude: w.reputation.service,       // StaflyApps "service" → Parceros "service_attitude"
       }
     : {
         punctuality: null,
-        quality: null,
-        service: null,
+        communication: null,
         professionalism: null,
-        teamwork: null,
-        presentation: null,
+        service_attitude: null,
       };
 
   // Experience: null if hidden
