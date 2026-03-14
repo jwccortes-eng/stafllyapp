@@ -28,7 +28,11 @@ Deno.serve(async (req) => {
     const anonClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: userErr } = await anonClient.auth.getUser();
+    const {
+      data: { user },
+      error: userErr,
+    } = await anonClient.auth.getUser();
+
     if (userErr || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -48,8 +52,10 @@ Deno.serve(async (req) => {
 
     // Use service role client to enqueue email via pgmq
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const runIdHeader = req.headers.get("x-lovable-run-id");
 
-    const payload = {
+    const payload: Record<string, unknown> = {
+      queued_at: new Date().toISOString(),
       to,
       subject,
       html,
@@ -61,6 +67,10 @@ Deno.serve(async (req) => {
       message_id: crypto.randomUUID(),
     };
 
+    if (runIdHeader) {
+      payload.run_id = runIdHeader;
+    }
+
     const { data: msgId, error: enqueueErr } = await adminClient.rpc("enqueue_email", {
       queue_name: "transactional_emails",
       payload,
@@ -71,13 +81,16 @@ Deno.serve(async (req) => {
       throw new Error(enqueueErr.message);
     }
 
-    // Log to email_send_log
     await adminClient.from("email_send_log").insert({
       recipient_email: to,
       template_name: "invite_email",
       status: "pending",
-      message_id: payload.message_id,
-      metadata: { subject, enqueued_by: user.id },
+      message_id: payload.message_id as string,
+      metadata: {
+        subject,
+        enqueued_by: user.id,
+        has_run_id: Boolean(runIdHeader),
+      },
     });
 
     console.log("Email enqueued successfully, msg_id:", msgId);

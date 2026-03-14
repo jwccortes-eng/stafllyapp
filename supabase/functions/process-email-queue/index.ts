@@ -25,6 +25,59 @@ function getRetryAfterSeconds(error: unknown): number {
   return 60
 }
 
+function canUseResendFallback(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  return (
+    error.message.includes('run_not_found') ||
+    (error.message.includes('missing_parameter') && error.message.includes('run_id'))
+  )
+}
+
+async function sendWithResend(payload: any, resendApiKey: string): Promise<void> {
+  const endpoint = 'https://api.resend.com/emails'
+  const baseHeaders = {
+    Authorization: `Bearer ${resendApiKey}`,
+    'Content-Type': 'application/json',
+  }
+
+  const body = {
+    from: payload.from ?? 'StaflyApps <noreply@notify.staflyapps.com>',
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.html,
+    text: payload.text,
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: baseHeaders,
+    body: JSON.stringify(body),
+  })
+
+  if (response.ok) return
+
+  const raw = await response.text()
+
+  // Domain fallback: if custom domain is not verified in Resend, retry with the default sender.
+  if (response.status === 403 && raw.toLowerCase().includes('domain is not verified')) {
+    const retry = await fetch(endpoint, {
+      method: 'POST',
+      headers: baseHeaders,
+      body: JSON.stringify({
+        ...body,
+        from: 'StaflyApps <onboarding@resend.dev>',
+      }),
+    })
+
+    if (retry.ok) return
+
+    const retryRaw = await retry.text()
+    throw new Error(`Resend fallback error: ${retry.status} ${retryRaw}`)
+  }
+
+  throw new Error(`Resend API error: ${response.status} ${raw}`)
+}
+
 function parseJwtClaims(token: string): Record<string, unknown> | null {
   const parts = token.split('.')
   if (parts.length < 2) {
@@ -45,10 +98,11 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
 
 Deno.serve(async (req) => {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
+  const resendApiKey = Deno.env.get('RESEND_API_KEY')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-  if (!apiKey || !supabaseUrl || !supabaseServiceKey) {
+  if ((!apiKey && !resendApiKey) || !supabaseUrl || !supabaseServiceKey) {
     console.error('Missing required environment variables')
     return new Response(
       JSON.stringify({ error: 'Server configuration error' }),
@@ -242,26 +296,40 @@ Deno.serve(async (req) => {
       }
 
       try {
-        await sendLovableEmail(
-          {
-            run_id: payload.run_id,
-            to: payload.to,
-            from: payload.from,
-            sender_domain: payload.sender_domain,
-            subject: payload.subject,
-            html: payload.html,
-            text: payload.text,
-            purpose: payload.purpose,
-            label: payload.label,
-            idempotency_key: payload.idempotency_key,
-            unsubscribe_token: payload.unsubscribe_token,
-            message_id: payload.message_id,
-          },
-          // sendUrl is optional — when LOVABLE_SEND_URL is not set, the library
-          // falls back to the default Lovable API endpoint (https://api.lovable.dev).
-          // Set LOVABLE_SEND_URL as a Supabase secret to override (e.g. for local dev).
-          { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') }
-        )
+        if (payload?.run_id && apiKey) {
+          try {
+            await sendLovableEmail(
+              {
+                run_id: payload.run_id,
+                to: payload.to,
+                from: payload.from,
+                sender_domain: payload.sender_domain,
+                subject: payload.subject,
+                html: payload.html,
+                text: payload.text,
+                purpose: payload.purpose,
+                label: payload.label,
+                idempotency_key: payload.idempotency_key,
+                unsubscribe_token: payload.unsubscribe_token,
+                message_id: payload.message_id,
+              },
+              // sendUrl is optional — when LOVABLE_SEND_URL is not set, the library
+              // falls back to the default Lovable API endpoint (https://api.lovable.dev).
+              // Set LOVABLE_SEND_URL as a Supabase secret to override (e.g. for local dev).
+              { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') }
+            )
+          } catch (providerError) {
+            if (!resendApiKey || !canUseResendFallback(providerError)) {
+              throw providerError
+            }
+            await sendWithResend(payload, resendApiKey)
+          }
+        } else {
+          if (!resendApiKey) {
+            throw new Error('Missing run_id and RESEND_API_KEY is not configured')
+          }
+          await sendWithResend(payload, resendApiKey)
+        }
 
         // Log success
         await supabase.from('email_send_log').insert({
