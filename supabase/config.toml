@@ -33,3 +33,7 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.ai-workforce]
     verify_jwt = false
+  [functions.parceros-sync]
+    verify_jwt = false
+  [functions.parceros-webhook]
+    verify_jwt = false
