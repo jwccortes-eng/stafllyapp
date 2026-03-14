@@ -162,6 +162,26 @@ export function useNotifications() {
     }
   }, []);
 
+  // Show native browser/OS notification (appears in notification shade on mobile)
+  const showSystemNotification = useCallback((title: string, body: string) => {
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        const notif = new Notification(title, {
+          body,
+          icon: "/pwa-192x192.png",
+          badge: "/pwa-192x192.png",
+          tag: `stafly-${Date.now()}`,
+          vibrate: [200, 100, 200],
+          requireInteraction: false,
+        });
+        // Auto-close after 6 seconds
+        setTimeout(() => notif.close(), 6000);
+      }
+    } catch {
+      // System notifications not supported in this context
+    }
+  }, []);
+
   const markAsRead = useCallback(async (id: string) => {
     await supabase
       .from("notifications")
