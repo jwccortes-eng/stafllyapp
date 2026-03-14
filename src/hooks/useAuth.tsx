@@ -93,14 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       setFullName(profileData?.full_name ?? null);
 
-      // Fetch module permissions for managers
-      if (resolvedRole === 'manager') {
+      // Fetch module permissions for managers and supervisors
+      if (resolvedRole === 'manager' || resolvedRole === 'supervisor') {
         const { data: permsData } = await supabase
           .from('module_permissions')
           .select('module, can_view, can_edit, can_delete')
           .eq('user_id', userId);
         setPermissions((permsData as ModulePermission[]) ?? []);
-        // Also fetch action permissions for managers
         const { data: actionPermsData } = await supabase
           .from('action_permissions')
           .select('action, granted')
