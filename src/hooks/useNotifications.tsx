@@ -229,6 +229,7 @@ export function useNotifications() {
           setNotifications(prev => [newNotif, ...prev].slice(0, 30));
           setUnreadCount(prev => prev + 1);
           playSound();
+          showSystemNotification(newNotif.title, newNotif.body);
           toast(newNotif.title, { description: newNotif.body, duration: 5000 });
         }
       )
@@ -250,6 +251,7 @@ export function useNotifications() {
               setNotifications(prev => [newNotif, ...prev].slice(0, 30));
               setUnreadCount(prev => prev + 1);
               playSound();
+              showSystemNotification(newNotif.title, newNotif.body);
               toast(newNotif.title, { description: newNotif.body, duration: 5000 });
             }
           )
@@ -262,7 +264,7 @@ export function useNotifications() {
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [user, playSound]);
+  }, [user, playSound, showSystemNotification]);
 
   return {
     notifications,
