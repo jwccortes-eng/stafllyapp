@@ -596,8 +596,8 @@ export default function AdminDashboard() {
       <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
         <CardHeader className="pb-2 px-5 pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
+             <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
+               <TrendingUp className="h-3.5 w-3.5 text-primary" />
             </div>
             <CardTitle className="text-sm font-semibold font-heading">Tendencia de pagos</CardTitle>
           </div>
