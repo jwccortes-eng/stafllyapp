@@ -85,6 +85,7 @@ export function ShiftEditDialog({
       setPayType((shift as any).pay_type || "hourly");
       setDayType((shift as any).day_type || "full_day");
       setShiftAdminId((shift as any).shift_admin_id || "");
+      setClockMethod((shift as any).clock_method || "both");
     }
   }, [shift, open]);
 
