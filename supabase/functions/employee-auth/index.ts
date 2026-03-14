@@ -330,7 +330,7 @@ Deno.serve(async (req) => {
 
       const { data: employee, error: empError } = await adminClient
         .from("employees")
-        .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id")
+        .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id, must_change_pin")
         .eq("phone_number", cleanPhone)
         .maybeSingle();
 
