@@ -56,16 +56,18 @@ export function WorkerProfileTab({ employeeId, readOnly = false }: Props) {
   // If no worker profile exists yet, offer to create one
   if (!wp.profile) {
     return (
-      <EmptyState
-        icon={User}
-        title="Sin perfil profesional"
-        description="Crea un perfil profesional para este empleado"
-        compact
-      >
+      <div className="space-y-3">
+        <EmptyState
+          icon={User}
+          title="Sin perfil profesional"
+          description="Crea un perfil profesional para este empleado"
+          compact
+        />
         {!readOnly && (
           <Button
             size="sm"
-            className="mt-3"
+            variant="outline"
+            className="w-full border-dashed"
             onClick={async () => {
               setSaving(true);
               const { error } = await wp.createProfile({ employee_id: employeeId });
@@ -79,7 +81,7 @@ export function WorkerProfileTab({ employeeId, readOnly = false }: Props) {
             Crear perfil profesional
           </Button>
         )}
-      </EmptyState>
+      </div>
     );
   }
 
