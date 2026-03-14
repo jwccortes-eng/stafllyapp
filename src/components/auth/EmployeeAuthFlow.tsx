@@ -46,6 +46,9 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newPin, setNewPin] = useState("");
+  const [confirmNewPin, setConfirmNewPin] = useState("");
+  const [changePinPhase, setChangePinPhase] = useState<"create" | "confirm">("create");
 
   const handlePhoneCheck = async () => {
     if (!phone.trim() || phone.replace(/\D/g, "").length < 7) {
