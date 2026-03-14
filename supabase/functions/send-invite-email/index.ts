@@ -126,6 +126,34 @@ Deno.serve(async (req) => {
       }
     }
 
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (resendKey) {
+      const resendResponse = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "StaflyApps <noreply@notify.staflyapps.com>",
+          to: [to],
+          subject,
+          html,
+          text,
+        }),
+      });
+
+      if (resendResponse.ok) {
+        return new Response(JSON.stringify({ success: true, provider: "resend_fallback" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const resendErrorText = await resendResponse.text();
+      throw new Error(`Email fallback error: ${resendResponse.status} ${resendErrorText}`);
+    }
+
     throw lastRunError ?? new Error("No valid run_id available for email API");
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
