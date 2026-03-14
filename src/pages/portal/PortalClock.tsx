@@ -90,6 +90,7 @@ export default function PortalClock() {
   const [requestMessage, setRequestMessage] = useState("");
   const [sendingRequest, setSendingRequest] = useState(false);
   const [clockInBlocked, setClockInBlocked] = useState<string | null>(null);
+  const [hasProfilePhoto, setHasProfilePhoto] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
