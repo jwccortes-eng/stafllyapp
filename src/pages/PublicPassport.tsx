@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@/lib/utils";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
+import { downloadPassportPDF } from "@/lib/passport-pdf";
 
 interface PassportData {
   passport: any;
