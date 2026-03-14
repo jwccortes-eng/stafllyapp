@@ -94,6 +94,7 @@ export default function CompaniesPage() {
   const [planCompany, setPlanCompany] = useState<CompanyRecord | null>(null);
   const [selectedPlan, setSelectedPlan] = useState("free");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [duplicating, setDuplicating] = useState(false);
   const { toast } = useToast();
 
   const copyCode = (code: string) => {
