@@ -119,16 +119,24 @@ export default {
   				'2': 'hsl(var(--surface-2))',
   				'3': 'hsl(var(--surface-3))'
   			},
-  			sidebar: {
-  				DEFAULT: 'hsl(var(--sidebar-background))',
-  				foreground: 'hsl(var(--sidebar-foreground))',
-  				primary: 'hsl(var(--sidebar-primary))',
-  				'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-  				accent: 'hsl(var(--sidebar-accent))',
-  				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-  				border: 'hsl(var(--sidebar-border))',
-  				ring: 'hsl(var(--sidebar-ring))'
-  			}
+			status: {
+				confirmed: 'hsl(var(--status-confirmed))',
+				pending: 'hsl(var(--status-pending))',
+				missing: 'hsl(var(--status-missing))',
+				completed: 'hsl(var(--status-completed))',
+				cancelled: 'hsl(var(--status-cancelled))',
+				active: 'hsl(var(--status-active))',
+			},
+			sidebar: {
+				DEFAULT: 'hsl(var(--sidebar-background))',
+				foreground: 'hsl(var(--sidebar-foreground))',
+				primary: 'hsl(var(--sidebar-primary))',
+				'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+				accent: 'hsl(var(--sidebar-accent))',
+				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+				border: 'hsl(var(--sidebar-border))',
+				ring: 'hsl(var(--sidebar-ring))'
+			}
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

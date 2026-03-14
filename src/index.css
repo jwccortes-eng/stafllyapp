@@ -27,6 +27,14 @@
     --accent-warm: 32 100% 56%;
     --accent-warm-foreground: 0 0% 100%;
 
+    /* Status palette */
+    --status-confirmed: 163 68% 44%;
+    --status-pending: 36 100% 50%;
+    --status-missing: 0 84% 60%;
+    --status-completed: 222 60% 55%;
+    --status-cancelled: 220 10% 55%;
+    --status-active: 163 68% 44%;
+
     --status-open: 222 100% 59%;
     --status-closed: 220 10% 60%;
     --status-published: 222 70% 45%;
@@ -135,6 +143,14 @@
     --input: 222 14% 18%;
     --ring: 222 100% 65%;
 
+    /* Status palette – dark */
+    --status-confirmed: 163 68% 50%;
+    --status-pending: 36 100% 56%;
+    --status-missing: 0 72% 55%;
+    --status-completed: 222 80% 65%;
+    --status-cancelled: 220 10% 50%;
+    --status-active: 163 68% 50%;
+
     /* Surface elevation - dark */
     --surface-1: 222 18% 10%;
     --surface-2: 222 16% 13%;
@@ -175,8 +191,6 @@
   }
 }
 
-/* Owner sidebar theme removed — uses default light theme */
-
 @layer base {
   * {
     @apply border-border;
@@ -192,6 +206,21 @@
 }
 
 @layer components {
+  /* ── Page structure ── */
+  .page-header {
+    @apply mb-8;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold tracking-tight leading-tight;
+    font-family: var(--font-heading);
+  }
+
+  .page-subtitle {
+    @apply text-muted-foreground text-sm mt-1;
+  }
+
+  /* ── Cards & Surfaces ── */
   .stat-card {
     @apply bg-card rounded-2xl border p-5 shadow-xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
   }
@@ -208,23 +237,52 @@
   .surface-2 { background: hsl(var(--surface-2)); }
   .surface-3 { background: hsl(var(--surface-3)); }
 
-  .page-header {
-    @apply mb-6;
-  }
-
-  .page-title {
-    @apply text-2xl font-bold tracking-tight;
-    font-family: var(--font-heading);
-  }
-
-  .page-subtitle {
-    @apply text-muted-foreground text-sm mt-1;
-  }
-
   .data-table-wrapper {
     @apply bg-card rounded-2xl border shadow-xs overflow-hidden;
   }
 
+  /* ── Status badges — consistent across all modules ── */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide;
+  }
+
+  .status-confirmed {
+    @apply status-badge;
+    background: hsl(var(--status-confirmed) / 0.1);
+    color: hsl(var(--status-confirmed));
+  }
+
+  .status-pending {
+    @apply status-badge;
+    background: hsl(var(--status-pending) / 0.1);
+    color: hsl(var(--status-pending));
+  }
+
+  .status-missing {
+    @apply status-badge;
+    background: hsl(var(--status-missing) / 0.1);
+    color: hsl(var(--status-missing));
+  }
+
+  .status-completed {
+    @apply status-badge;
+    background: hsl(var(--status-completed) / 0.1);
+    color: hsl(var(--status-completed));
+  }
+
+  .status-cancelled {
+    @apply status-badge;
+    background: hsl(var(--status-cancelled) / 0.1);
+    color: hsl(var(--status-cancelled));
+  }
+
+  .status-active {
+    @apply status-badge;
+    background: hsl(var(--status-active) / 0.1);
+    color: hsl(var(--status-active));
+  }
+
+  /* ── Semantic badges ── */
   .earning-badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-earning/15 text-earning;
   }
@@ -241,6 +299,7 @@
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/15 text-primary;
   }
 
+  /* ── Glass & Gradients ── */
   .glass {
     @apply bg-card/70 backdrop-blur-xl border border-border/50;
   }
@@ -279,6 +338,23 @@
     &:focus-visible {
       box-shadow: var(--focus-ring);
     }
+  }
+
+  /* ── Premium sidebar styles ── */
+  .sidebar-section-label {
+    @apply text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/40 px-3 py-1.5;
+  }
+
+  .sidebar-link {
+    @apply relative flex items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-200 w-full min-w-0;
+  }
+
+  .sidebar-link-active {
+    @apply bg-primary/8 text-primary font-semibold;
+  }
+
+  .sidebar-link-idle {
+    @apply text-foreground/55 hover:bg-accent/50 hover:text-foreground;
   }
 }
 
@@ -323,7 +399,7 @@
 /* ── Print styles ── */
 @media print {
   body { background: white !important; }
-  .print\\:hidden, nav, aside, header, [data-sidebar], .floating-dock,
+  .print\:hidden, nav, aside, header, [data-sidebar], .floating-dock,
   .print-hide { display: none !important; }
   main { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
   .print-header { display: block !important; }

@@ -1,13 +1,13 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 
 import {
   LayoutDashboard, Users, CalendarDays, Tags, FileSpreadsheet,
-  BarChart3, LogOut, ContactRound, DollarSign, Shield, Building2,
+  BarChart3, LogOut, ContactRound, DollarSign, Building2,
   PanelLeftClose, PanelLeft, Moon, Sun, Settings2,
-  MessageSquare, Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
+  Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon,
 } from "lucide-react";
@@ -43,21 +43,14 @@ interface LinkDef {
 
 /* ── Simplified 3-group structure ── */
 const ALL_LINKS: LinkDef[] = [
-  // Inicio (always visible, no group header)
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Inicio" },
-
-  // Operaciones — scheduling, field ops
   { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
   { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
-
-  // Nómina — payroll, reports
   { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
   { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/app/summary", icon: FileSpreadsheet, label: "Resumen", module: "summary", section: "Nómina" },
   { to: "/app/reports", icon: BarChart3, label: "Reportes", module: "reports", section: "Nómina" },
   { to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Nómina" },
-
-  // Gestión — people, communication, requests, catalogs
   { to: "/app/employees", icon: Users, label: "Empleados", module: "employees", section: "Gestión" },
   { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Gestión" },
   { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Gestión" },
@@ -66,12 +59,8 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Gestión" },
   { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Gestión" },
   { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Gestión", badge: "tickets" },
-
-  // AI & Maps
   { to: "/app/live-map", icon: MapIcon, label: "Mapa en Vivo", module: null, section: "Operaciones" },
   { to: "/app/ai-workforce", icon: Brain, label: "AI Workforce", module: null, section: "Operaciones" },
-
-  // Comercial — staffing requests, invoicing
   { to: "/app/staffing-requests", icon: ClipboardList, label: "Solicitudes", module: null, section: "Comercial" },
   { to: "/app/invoices", icon: Receipt, label: "Facturación", module: null, section: "Comercial" },
   { to: "/app/service-categories", icon: Tags, label: "Categorías", module: null, section: "Comercial" },
@@ -92,7 +81,6 @@ export default function AdminSidebar() {
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
-  // Fetch badge counts
   useEffect(() => {
     if (!selectedCompanyId) return;
     async function fetchBadges() {
@@ -120,7 +108,6 @@ export default function AdminSidebar() {
     return false;
   };
 
-  /** Whether a module is locked behind a higher plan */
   const isModuleLocked = (module: string | null): boolean => {
     if (!module) return false;
     return !canAccessModule(module);
@@ -131,9 +118,8 @@ export default function AdminSidebar() {
     return location.pathname === to || location.pathname.startsWith(to + "/");
   };
 
-  // User identity display
-  const roleLabel = role === 'developer' ? 'Desarrollador' : role === 'owner' ? 'Super Admin' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : role === 'supervisor' ? 'Supervisor' : 'Usuario';
-  const roleBg = role === 'developer' ? 'bg-destructive text-destructive-foreground' : role === 'owner' ? 'owner-badge bg-accent-warm text-accent-warm-foreground' : role === 'admin' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground';
+  const roleLabel = role === 'developer' ? 'Dev' : role === 'owner' ? 'Owner' : role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : role === 'supervisor' ? 'Supervisor' : 'User';
+  const isOwner = role === 'developer' || role === 'owner';
   const userEmail = user?.email ?? null;
   const userPhone = user?.phone ?? null;
   const userIdentifier = userEmail || userPhone || '';
@@ -155,7 +141,6 @@ export default function AdminSidebar() {
     return result;
   }, [role, selectedCompanyId]);
 
-  // Auto-open section with active route
   useEffect(() => {
     const activeSection = visibleSections.find(s => s.links.some(l => isActive(l.to, l.end)));
     if (activeSection) {
@@ -169,7 +154,7 @@ export default function AdminSidebar() {
   }, [location.pathname]);
 
   const toggleSection = (label: string) => {
-    if (label === "Inicio") return; // never collapse
+    if (label === "Inicio") return;
     setOpenSections(prev => {
       const next = new Set(prev);
       if (next.has(label)) next.delete(label);
@@ -177,7 +162,6 @@ export default function AdminSidebar() {
       return next;
     });
   };
-
 
   const renderLink = (link: LinkDef) => {
     const active = isActive(link.to, link.end);
@@ -199,25 +183,25 @@ export default function AdminSidebar() {
           onClick={handleClick}
           data-active={active || undefined}
           className={cn(
-            "relative flex items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-200 w-full min-w-0",
-            collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2",
+            "sidebar-link",
+            collapsed ? "justify-center px-2 py-2.5" : "px-3 py-[7px]",
             locked
-              ? "text-sidebar-foreground/25 cursor-pointer hover:bg-sidebar-accent/20"
+              ? "text-foreground/20 cursor-pointer hover:bg-accent/20"
               : active
-                ? cn("bg-sidebar-primary/8 text-sidebar-primary font-semibold")
-                : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+                ? "sidebar-link-active"
+                : "sidebar-link-idle"
           )}
         >
           {active && !locked && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-sidebar-primary" />
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-primary transition-all" />
           )}
-          <div className="relative">
+          <div className="relative flex items-center justify-center">
             {locked ? (
-              <Lock className="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/20" />
+              <Lock className="h-[17px] w-[17px] shrink-0 text-foreground/20" />
             ) : (
               <link.icon className={cn(
-                "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
-                active ? "text-sidebar-primary" : "text-sidebar-foreground/40 group-hover/link:text-sidebar-foreground"
+                "h-[17px] w-[17px] shrink-0 transition-colors duration-200",
+                active ? "text-primary" : "text-foreground/35 group-hover/link:text-foreground/70"
               )} />
             )}
             {collapsed && badge > 0 && !locked && (
@@ -226,7 +210,7 @@ export default function AdminSidebar() {
           </div>
           {!collapsed && (
             <>
-              <span className={cn("flex-1 truncate leading-tight", locked && "line-through decoration-sidebar-foreground/15")}>{link.label}</span>
+              <span className={cn("flex-1 truncate leading-tight", locked && "line-through decoration-foreground/15")}>{link.label}</span>
               {locked && requiredPlan && (
                 <span className="ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/8 text-primary">
                   {requiredPlan}
@@ -265,10 +249,9 @@ export default function AdminSidebar() {
   };
 
   const renderSection = (section: { label: string; links: LinkDef[] }) => {
-    // "Inicio" renders flat, no collapsible
     if (section.label === "Inicio") {
       return (
-        <div key="Inicio" className="space-y-0.5">
+        <div key="Inicio" className="space-y-0.5 mb-1">
           {section.links.map(l => renderLink(l))}
         </div>
       );
@@ -277,7 +260,7 @@ export default function AdminSidebar() {
     if (collapsed) {
       return (
         <div key={section.label} className="space-y-0.5">
-          <div className="border-t border-sidebar-border/30 my-2" />
+          <div className="border-t border-border/20 my-2.5" />
           {section.links.map(l => renderLink(l))}
         </div>
       );
@@ -288,8 +271,8 @@ export default function AdminSidebar() {
 
     return (
       <Collapsible key={section.label} open={isOpen} onOpenChange={() => toggleSection(section.label)}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer mt-2">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 group-hover/section:text-muted-foreground/60 transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 group/section cursor-pointer mt-3 first:mt-0">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/35 group-hover/section:text-muted-foreground/55 transition-colors select-none">
             {section.label}
           </span>
           <div className="flex items-center gap-1.5">
@@ -299,7 +282,7 @@ export default function AdminSidebar() {
               </span>
             )}
             <ChevronDown className={cn(
-              "h-3 w-3 text-muted-foreground/25 transition-transform duration-300 ease-in-out",
+              "h-3 w-3 text-muted-foreground/20 transition-transform duration-300 ease-in-out",
               isOpen && "rotate-180"
             )} />
           </div>
@@ -311,117 +294,56 @@ export default function AdminSidebar() {
     );
   };
 
-  const isOwner = role === 'developer' || role === 'owner';
-
   return (
     <aside className={cn(
       "fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
-      "bg-white dark:bg-[hsl(222,18%,10%)] border-r border-[hsl(220,13%,93%)] dark:border-[hsl(222,14%,18%)]",
-      collapsed ? "w-[60px]" : "w-[250px]",
+      "bg-card border-r border-border/60",
+      collapsed ? "w-[60px]" : "w-[240px]",
     )}>
-      {/* ── User identity header ── */}
+      {/* ── Brand + Company ── */}
       <div className={cn(
-        "flex items-center shrink-0 border-b border-border/30",
-        collapsed ? "px-2 py-3 justify-center" : "px-3 py-3 gap-3"
+        "flex items-center shrink-0 h-14",
+        collapsed ? "justify-center px-2" : "px-4 gap-3"
       )}>
         {collapsed ? (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <div className="relative">
-                <Avatar className={cn("h-8 w-8 border-2", isOwner ? "border-amber-500/40" : "border-primary/20")}>
-                  <AvatarFallback className={cn("text-[11px] font-bold", isOwner ? "bg-amber-500/15 text-amber-400" : "bg-primary/8 text-primary")}>
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <span className={cn(
-                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
-                  isOwner ? "bg-amber-500" : role === 'admin' ? "bg-accent-foreground" : "bg-muted-foreground"
-                )} />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">
-              <p className="font-semibold">{fullName || 'Usuario'}</p>
-              <p className="text-muted-foreground">{userIdentifier}</p>
-              <p className="mt-1 text-[10px] font-medium">{roleLabel}</p>
-            </TooltipContent>
-          </Tooltip>
+          <StaflyMark size={28} />
         ) : (
-          <>
-            <div className="relative shrink-0">
-              <Avatar className={cn("h-9 w-9 border-2", isOwner ? "border-amber-500/40" : "border-primary/20")}>
-                <AvatarFallback className={cn("text-[11px] font-bold", isOwner ? "bg-amber-500/15 text-amber-400" : "bg-primary/8 text-primary")}>
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <span className={cn(
-                "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
-                isOwner ? "bg-amber-500" : role === 'admin' ? "bg-accent-foreground" : "bg-muted-foreground"
-              )} />
-            </div>
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <StaflyMark size={28} />
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold text-foreground truncate leading-tight">
-                {fullName || 'Usuario'}
-              </p>
-              <p className="text-[10px] text-muted-foreground/60 truncate leading-tight mt-0.5">
-                {userIdentifier}
-              </p>
-              <span className={cn(
-                "inline-block mt-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md",
-                roleBg
-              )}>
-                {roleLabel}
-              </span>
+              {companies.length > 1 ? (
+                <Select value={selectedCompanyId ?? ""} onValueChange={(id) => setPendingCompanyId(id)}>
+                  <SelectTrigger className="h-7 text-[12px] font-semibold bg-transparent border-0 shadow-none px-0 hover:bg-accent/30 rounded-lg transition-colors">
+                    <SelectValue placeholder="Empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : companies.length === 1 ? (
+                <span className="text-[13px] font-semibold text-foreground truncate block">{companies[0].name}</span>
+              ) : (
+                <span className="text-[13px] font-semibold text-foreground">StaflyApps</span>
+              )}
             </div>
-          </>
+          </div>
         )}
       </div>
 
       {/* Search */}
-      <div className={cn("shrink-0 border-b border-border/30", collapsed ? "px-2 py-2" : "px-3 py-2")}>
+      <div className={cn("shrink-0", collapsed ? "px-2 pb-2" : "px-3 pb-2")}>
         <CommandPaletteTrigger collapsed={collapsed} />
       </div>
 
-      {/* Company selector / Company context */}
-      {!collapsed && (
-        <div className="px-3 py-3 border-b border-border/30">
-          {companies.length > 1 ? (
-            <Select value={selectedCompanyId ?? ""} onValueChange={(id) => setPendingCompanyId(id)}>
-              <SelectTrigger className="h-8 text-xs bg-muted/30 border-border/30 rounded-xl hover:bg-muted/50 transition-colors">
-                <SelectValue placeholder="Empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : companies.length === 1 ? (
-            <div className="flex items-center gap-2 px-1">
-              <Building2 className="h-4 w-4 text-primary/60 shrink-0" />
-              <span className="text-xs font-semibold text-foreground truncate">{companies[0].name}</span>
-            </div>
-          ) : null}
-        </div>
-      )}
-      {collapsed && companies.length === 1 && (
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <div className="px-2 py-3 border-b border-border/30 flex justify-center">
-              <Building2 className="h-4 w-4 text-primary/60" />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="text-xs font-medium">{companies[0].name}</TooltipContent>
-        </Tooltip>
-      )}
-
       {/* ── Navigation ── */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-y-auto scrollbar-thin">
         {visibleSections.map(renderSection)}
 
-        {/* Owner admin hub link */}
-        {(role === 'developer' || role === 'owner') && (
+        {isOwner && (
           <>
-            <div className="border-t border-sidebar-border/30 my-2" />
+            <div className="border-t border-border/20 my-2.5" />
             {renderLink({ to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "", end: true })}
           </>
         )}
@@ -429,14 +351,14 @@ export default function AdminSidebar() {
 
       {/* Trial banner */}
       {isTrial && trialDaysLeft !== null && !collapsed && (
-        <div className="mx-2 mb-1 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 shrink-0">
+        <div className="mx-3 mb-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2.5 shrink-0">
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             <span className="text-[11px] font-bold text-primary">Prueba Pro</span>
           </div>
           <p className="text-[10px] text-muted-foreground leading-tight">
             {trialDaysLeft > 0
-              ? `Te quedan ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''} de prueba gratuita.`
+              ? `Te quedan ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''} de prueba.`
               : 'Tu prueba ha expirado.'}
           </p>
           <button
@@ -449,69 +371,98 @@ export default function AdminSidebar() {
       )}
 
       {/* ── Footer ── */}
-      <div className="px-2 py-2.5 border-t border-border/30 space-y-0.5 shrink-0">
-        {/* Brand */}
-        <div className={cn("flex items-center mb-1", collapsed ? "justify-center" : "px-3")}>
+      <div className="px-2 py-2 border-t border-border/40 space-y-0.5 shrink-0">
+        {/* User identity */}
+        <div className={cn(
+          "flex items-center rounded-xl transition-colors hover:bg-accent/40 cursor-default",
+          collapsed ? "justify-center p-2" : "px-3 py-2 gap-2.5"
+        )}>
           {collapsed ? (
-            <StaflyMark size={20} className="opacity-40" />
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Avatar className={cn("h-7 w-7 border", isOwner ? "border-accent-warm/30" : "border-primary/15")}>
+                  <AvatarFallback className={cn("text-[10px] font-bold", isOwner ? "bg-accent-warm/10 text-accent-warm" : "bg-primary/8 text-primary")}>
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">
+                <p className="font-semibold">{fullName || 'Usuario'}</p>
+                <p className="text-muted-foreground text-[10px]">{roleLabel}</p>
+              </TooltipContent>
+            </Tooltip>
           ) : (
-            <StaflyLogo size={20} muted />
+            <>
+              <Avatar className={cn("h-7 w-7 border shrink-0", isOwner ? "border-accent-warm/30" : "border-primary/15")}>
+                <AvatarFallback className={cn("text-[10px] font-bold", isOwner ? "bg-accent-warm/10 text-accent-warm" : "bg-primary/8 text-primary")}>
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-semibold text-foreground truncate leading-tight">
+                  {fullName || 'Usuario'}
+                </p>
+                <p className="text-[10px] text-muted-foreground/50 truncate leading-tight">
+                  {roleLabel}
+                </p>
+              </div>
+            </>
           )}
         </div>
 
-        {/* Theme */}
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className={cn(
-                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground/60 hover:bg-muted/30 hover:text-foreground transition-all duration-200 w-full",
-                collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
-              )}
-            >
-              {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
-              {!collapsed && (theme === "dark" ? "Modo claro" : "Modo oscuro")}
-            </button>
-          </TooltipTrigger>
-          {collapsed && <TooltipContent side="right" className="text-xs">{theme === "dark" ? "Modo claro" : "Modo oscuro"}</TooltipContent>}
-        </Tooltip>
+        {/* Actions row */}
+        <div className={cn("flex items-center", collapsed ? "flex-col gap-0.5" : "gap-0.5")}>
+          {/* Theme */}
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className={cn(
+                  "flex items-center justify-center rounded-xl text-muted-foreground/50 hover:bg-accent/40 hover:text-foreground transition-all duration-200",
+                  collapsed ? "h-8 w-full" : "h-8 w-8"
+                )}
+              >
+                {theme === "dark" ? <Sun className="h-[15px] w-[15px]" /> : <Moon className="h-[15px] w-[15px]" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">{theme === "dark" ? "Modo claro" : "Modo oscuro"}</TooltipContent>
+          </Tooltip>
 
-        {/* Collapse */}
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className={cn(
-                "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground/60 hover:bg-muted/30 hover:text-foreground transition-all duration-200 w-full",
-                collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
-              )}
-            >
-              {collapsed ? <PanelLeft className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
-              {!collapsed && "Colapsar"}
-            </button>
-          </TooltipTrigger>
-          {collapsed && <TooltipContent side="right" className="text-xs">{collapsed ? "Expandir" : "Colapsar"}</TooltipContent>}
-        </Tooltip>
+          {/* Collapse */}
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                className={cn(
+                  "flex items-center justify-center rounded-xl text-muted-foreground/50 hover:bg-accent/40 hover:text-foreground transition-all duration-200",
+                  collapsed ? "h-8 w-full" : "h-8 w-8"
+                )}
+              >
+                {collapsed ? <PanelLeft className="h-[15px] w-[15px]" /> : <PanelLeftClose className="h-[15px] w-[15px]" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">{collapsed ? "Expandir" : "Colapsar"}</TooltipContent>
+          </Tooltip>
 
-        {/* Sign out */}
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <span className="w-full">
-              <LogoutConfirmDialog onConfirm={signOut}>
-                <button
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl text-[13px] font-medium text-muted-foreground/60 hover:bg-destructive/8 hover:text-destructive transition-all duration-200 w-full",
-                    collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
-                  )}
-                >
-                  <LogOut className="h-[18px] w-[18px]" />
-                  {!collapsed && "Cerrar sesión"}
-                </button>
-              </LogoutConfirmDialog>
-            </span>
-          </TooltipTrigger>
-          {collapsed && <TooltipContent side="right" className="text-xs">Cerrar sesión</TooltipContent>}
-        </Tooltip>
+          {/* Sign out */}
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <span className={collapsed ? "w-full" : ""}>
+                <LogoutConfirmDialog onConfirm={signOut}>
+                  <button
+                    className={cn(
+                      "flex items-center justify-center rounded-xl text-muted-foreground/50 hover:bg-destructive/8 hover:text-destructive transition-all duration-200",
+                      collapsed ? "h-8 w-full" : "h-8 w-8"
+                    )}
+                  >
+                    <LogOut className="h-[15px] w-[15px]" />
+                  </button>
+                </LogoutConfirmDialog>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">Cerrar sesión</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Company switch guard */}
