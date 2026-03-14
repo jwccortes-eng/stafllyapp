@@ -36,7 +36,7 @@ export function useWorkerPassport(options: UseWorkerPassportOptions = {}) {
     setError(null);
 
     try {
-      let passportQuery = supabase.from("passport_profiles").select("*");
+      let passportQuery = supabase.from("passport_profiles").select("*") as any;
 
       if (options.slug) {
         passportQuery = passportQuery.eq("slug", options.slug);
