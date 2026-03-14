@@ -918,8 +918,8 @@ export function ShiftDetailDialog({
             )}
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
 
     {/* Remove assignment confirmation */}
     <AlertDialog open={!!removeConfirm} onOpenChange={(o) => { if (!o) setRemoveConfirm(null); }}>
