@@ -337,10 +337,10 @@ export default function Landing() {
         <div className="container relative">
           <div className="max-w-3xl mx-auto text-center">
             {/* Eyebrow */}
-            <div className="inline-flex items-center gap-2 bg-primary/[0.08] border border-primary/15 rounded-full px-4 py-1.5 mb-6">
-              <Zap className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-semibold tracking-wide text-primary uppercase">{c.hero.eyebrow}</span>
-            </div>
+            <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-primary">
+              <Zap className="h-3.5 w-3.5" />
+              {c.hero.eyebrow}
+            </span>
 
             <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.08] text-foreground">
               {c.hero.h1}
