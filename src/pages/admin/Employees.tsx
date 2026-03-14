@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown, LayoutGrid, List, MessageCircle, Send } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, Filter, X, Phone, Mail, ChevronDown, LayoutGrid, List, MessageCircle, Send, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -144,7 +144,39 @@ export default function Employees() {
   const [updating, setUpdating] = useState(false);
   const [updateMode, setUpdateMode] = useState<"diff" | "full">("full");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [bulkInviting, setBulkInviting] = useState(false);
   const { toast } = useToast();
+
+  const handleBulkPortalInvite = async () => {
+    if (!selectedCompanyId) return;
+    setBulkInviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("bulk-portal-invite", {
+        body: { company_id: selectedCompanyId },
+      });
+
+      if (error) {
+        toast({ title: "Error", description: "Error al enviar invitaciones", variant: "destructive" });
+        return;
+      }
+
+      if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+        return;
+      }
+
+      toast({
+        title: "Invitaciones enviadas ✅",
+        description: `${data.processed} empleados activados, ${data.emails_sent} emails enviados${data.skipped > 0 ? `, ${data.skipped} omitidos` : ""}`,
+      });
+
+      fetchEmployees();
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error de conexión", variant: "destructive" });
+    } finally {
+      setBulkInviting(false);
+    }
+  };
 
   const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
 
@@ -595,6 +627,12 @@ export default function Employees() {
         title="Empleados"
         subtitle={`${filtered.length} de ${employees.length} empleados`}
         rightSlot={<div className="flex gap-2 flex-wrap">
+          {isPrivileged && (
+            <Button variant="outline" onClick={handleBulkPortalInvite} disabled={bulkInviting}>
+              {bulkInviting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Enviar Invitaciones Portal
+            </Button>
+          )}
           <BulkRateAssignment />
           <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
             <Download className="h-4 w-4 mr-2" />Exportar Excel

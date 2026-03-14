@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin";
+type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin" | "force_change_pin";
 
 interface EmployeeInfo {
   found: boolean;
@@ -46,6 +46,9 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newPin, setNewPin] = useState("");
+  const [confirmNewPin, setConfirmNewPin] = useState("");
+  const [changePinPhase, setChangePinPhase] = useState<"create" | "confirm">("create");
 
   const handlePhoneCheck = async () => {
     if (!phone.trim() || phone.replace(/\D/g, "").length < 7) {
@@ -107,10 +110,58 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
         });
-        onSessionReady();
+
+        // Check if forced PIN change is required
+        if (data.must_change_pin) {
+          setStep("force_change_pin");
+        } else {
+          onSessionReady();
+        }
       }
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Error al iniciar sesión. Verifica tu internet.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForceChangePinCreate = (enteredPin: string) => {
+    if (changePinPhase === "create") {
+      setNewPin(enteredPin);
+      setChangePinPhase("confirm");
+      setConfirmNewPin("");
+    }
+  };
+
+  const handleForceChangePinConfirm = async (enteredPin: string) => {
+    if (enteredPin !== newPin) {
+      toast({ title: "No coinciden", description: "Los PINs no coinciden. Intenta de nuevo.", variant: "destructive" });
+      setChangePinPhase("create");
+      setNewPin("");
+      setConfirmNewPin("");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("employee-auth", {
+        body: { action: "change-pin", new_pin: newPin },
+      });
+
+      if (error) {
+        const msg = await extractErrorMsg(error);
+        toast({ title: "Error", description: msg, variant: "destructive" });
+        return;
+      }
+
+      if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      } else {
+        toast({ title: "¡PIN actualizado! 🔒", description: "Tu nuevo PIN ha sido guardado." });
+        onSessionReady();
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Error al cambiar PIN.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -436,6 +487,54 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               )}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Step: Force Change PIN */}
+      {step === "force_change_pin" && (
+        <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-warning/20 to-warning/5 flex items-center justify-center">
+              <ShieldCheck className="h-7 w-7 text-warning" />
+            </div>
+            <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
+              Cambia tu PIN
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {changePinPhase === "create"
+                ? "Por seguridad, crea un nuevo PIN de 4 dígitos"
+                : "Confirma tu nuevo PIN"}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-2">
+            <div className={cn("h-1.5 rounded-full transition-all", changePinPhase === "create" ? "w-8 bg-warning" : "w-4 bg-warning/30")} />
+            <div className={cn("h-1.5 rounded-full transition-all", changePinPhase === "confirm" ? "w-8 bg-warning" : "w-4 bg-border")} />
+          </div>
+
+          {changePinPhase === "create" ? (
+            <NumericKeypad
+              value={newPin}
+              maxLength={4}
+              onChange={setNewPin}
+              onComplete={handleForceChangePinCreate}
+              label="Nuevo PIN"
+            />
+          ) : (
+            <NumericKeypad
+              value={confirmNewPin}
+              maxLength={4}
+              onChange={setConfirmNewPin}
+              onComplete={handleForceChangePinConfirm}
+              label="Confirma tu nuevo PIN"
+            />
+          )}
+
+          {loading && (
+            <div className="flex justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          )}
         </div>
       )}
 

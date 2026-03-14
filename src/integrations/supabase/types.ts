@@ -1510,8 +1510,10 @@ export type Database = {
           is_active: boolean
           last_login: string | null
           last_name: string
+          must_change_pin: boolean
           passport_public: boolean
           phone_number: string | null
+          portal_access_enabled: boolean
           professional_summary: string | null
           qualify: string | null
           recommended_by: string | null
@@ -1554,8 +1556,10 @@ export type Database = {
           is_active?: boolean
           last_login?: string | null
           last_name: string
+          must_change_pin?: boolean
           passport_public?: boolean
           phone_number?: string | null
+          portal_access_enabled?: boolean
           professional_summary?: string | null
           qualify?: string | null
           recommended_by?: string | null
@@ -1598,8 +1602,10 @@ export type Database = {
           is_active?: boolean
           last_login?: string | null
           last_name?: string
+          must_change_pin?: boolean
           passport_public?: boolean
           phone_number?: string | null
+          portal_access_enabled?: boolean
           professional_summary?: string | null
           qualify?: string | null
           recommended_by?: string | null

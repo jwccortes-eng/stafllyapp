@@ -330,7 +330,7 @@ Deno.serve(async (req) => {
 
       const { data: employee, error: empError } = await adminClient
         .from("employees")
-        .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id")
+        .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id, must_change_pin")
         .eq("phone_number", cleanPhone)
         .maybeSingle();
 
@@ -411,6 +411,7 @@ Deno.serve(async (req) => {
           success: true,
           session: signInData.session,
           user: signInData.user,
+          must_change_pin: employee.must_change_pin === true,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -572,8 +573,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Update PIN in employees table
-      await adminClient.from("employees").update({ access_pin: new_pin }).eq("id", emp.id);
+      // Update PIN in employees table and clear must_change_pin flag
+      await adminClient.from("employees").update({ access_pin: new_pin, must_change_pin: false }).eq("id", emp.id);
 
       // Sync auth password
       const newPwd = authPassword(new_pin);
