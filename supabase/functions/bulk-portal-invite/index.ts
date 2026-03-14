@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@4";
+import { sendLovableEmail } from "npm:@lovable.dev/email-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,12 +139,7 @@ Deno.serve(async (req) => {
     let emailsSent = 0;
     const errors: string[] = [];
 
-    // Set up Resend for emails
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    let resend: any = null;
-    if (resendKey) {
-      resend = new Resend(resendKey);
-    }
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
 
     for (const emp of employees) {
       try {
@@ -220,14 +215,25 @@ Deno.serve(async (req) => {
         processed++;
 
         // Send invitation email if employee has a real email
-        if (emp.email && resend) {
+        if (emp.email && apiKey) {
           try {
-            await resend.emails.send({
-              from: "StaflyApps <noreply@notify.staflyapps.com>",
-              to: [emp.email],
-              subject: "Tu acceso al Portal de Empleados StaflyApps",
-              html: buildInviteHtml(emp, pin),
-            });
+            const inviteHtml = buildInviteHtml(emp, pin);
+            const text = inviteHtml.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+            await sendLovableEmail(
+              {
+                to: emp.email,
+                subject: "Tu acceso al Portal de Empleados StaflyApps",
+                html: inviteHtml,
+                text,
+                from: "StaflyApps <noreply@notify.staflyapps.com>",
+                sender_domain: "notify.staflyapps.com",
+                purpose: "transactional",
+                label: "portal_invite",
+                run_id: crypto.randomUUID(),
+                message_id: crypto.randomUUID(),
+              },
+              { apiKey }
+            );
             emailsSent++;
           } catch (emailErr: any) {
             errors.push(`Email a ${emp.first_name}: ${emailErr.message}`);
