@@ -110,13 +110,12 @@ export interface ParcerosSyncWorkerPassportBody {
   total_verified_jobs: number;
   total_companies_worked: number;
   reputation_score: number | null;
+  /** Parceros contract fields (mapped from StaflyApps dimensions) */
   ratings_breakdown: {
     punctuality: number | null;
-    quality: number | null;
-    service: number | null;
+    communication: number | null;
     professionalism: number | null;
-    teamwork: number | null;
-    presentation: number | null;
+    service_attitude: number | null;
   };
   certifications_count: number;
   work_history_summary: string | null;
