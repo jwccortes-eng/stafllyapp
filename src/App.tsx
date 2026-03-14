@@ -199,6 +199,7 @@ function App() {
                 <Route path="paystub/:periodId" element={<PayStub />} />
                 <Route path="chat" element={<PortalChat />} />
                 <Route path="profile" element={<PortalProfile />} />
+                <Route path="availability" element={<MyAvailability />} />
                 <Route path="w9" element={<MyW9 />} />
               </Route>
 

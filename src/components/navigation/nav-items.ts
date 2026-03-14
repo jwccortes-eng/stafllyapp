@@ -62,4 +62,4 @@ export const EMPLOYEE_NAV_ITEMS: NavItem[] = [
   { id: "portal-profile", to: "/portal/profile", icon: User, label: "Perfil", module: null, section: "Principal" },
 ];
 
-export const EMPLOYEE_DEFAULT_PINS = ["portal-home", "portal-clock", "portal-shifts", "portal-chat", "portal-profile"];
+export const EMPLOYEE_DEFAULT_PINS = ["portal-home", "portal-clock", "portal-shifts", "portal-availability", "portal-profile"];
