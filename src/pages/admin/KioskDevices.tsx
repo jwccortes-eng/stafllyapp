@@ -23,9 +23,23 @@ interface KioskDevice {
   created_at: string;
 }
 
-interface Location {
-  id: string;
-  name: string;
+interface Location { id: string; name: string; }
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+async function kioskFetch(path: string, opts?: RequestInit) {
+  const session = (await supabase.auth.getSession()).data.session;
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${session?.access_token ?? SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: opts?.method === "POST" ? "return=representation" : "return=minimal",
+      ...(opts?.headers ?? {}),
+    },
+  });
 }
 
 export default function KioskDevices() {
@@ -43,181 +57,80 @@ export default function KioskDevices() {
   const [formDeviceId, setFormDeviceId] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const sb = supabase as any;
-
   const fetchDevices = async () => {
     if (!selectedCompanyId) return;
     setLoading(true);
-    const { data } = await supabase.rpc("read_email_batch" as any, {}).catch(() => ({ data: null }));
-    // Use raw fetch for new table not yet in types
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/kiosk_devices?company_id=eq.${selectedCompanyId}&order=created_at.desc`,
-      {
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-      }
-    );
-    const json = res.ok ? await res.json() : [];
-    setDevices(json as KioskDevice[]);
+    const res = await kioskFetch(`kiosk_devices?company_id=eq.${selectedCompanyId}&order=created_at.desc`);
+    setDevices(res.ok ? await res.json() : []);
     setLoading(false);
   };
 
   const fetchLocations = async () => {
     if (!selectedCompanyId) return;
-    const { data } = await supabase
-      .from("locations")
-      .select("id, name")
-      .eq("company_id", selectedCompanyId)
-      .eq("is_active", true)
-      .order("name");
+    const { data } = await supabase.from("locations").select("id, name").eq("company_id", selectedCompanyId).eq("is_active", true).order("name");
     setLocations(data ?? []);
   };
 
-  useEffect(() => {
-    fetchDevices();
-    fetchLocations();
-  }, [selectedCompanyId]);
+  useEffect(() => { fetchDevices(); fetchLocations(); }, [selectedCompanyId]);
 
-  const openCreate = () => {
-    setEditing(null);
-    setFormName("");
-    setFormLocation("");
-    setFormDeviceId(crypto.randomUUID().slice(0, 8).toUpperCase());
-    setDialogOpen(true);
-  };
-
-  const openEdit = (device: KioskDevice) => {
-    setEditing(device);
-    setFormName(device.name);
-    setFormLocation(device.location_id ?? "");
-    setFormDeviceId(device.device_identifier);
-    setDialogOpen(true);
-  };
+  const openCreate = () => { setEditing(null); setFormName(""); setFormLocation(""); setFormDeviceId(crypto.randomUUID().slice(0, 8).toUpperCase()); setDialogOpen(true); };
+  const openEdit = (d: KioskDevice) => { setEditing(d); setFormName(d.name); setFormLocation(d.location_id ?? ""); setFormDeviceId(d.device_identifier); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!formName.trim() || !selectedCompanyId) return;
     setSaving(true);
-
-    const payload = {
-      company_id: selectedCompanyId,
-      name: formName.trim(),
-      location_id: formLocation && formLocation !== "none" ? formLocation : null,
-      device_identifier: formDeviceId || crypto.randomUUID().slice(0, 8).toUpperCase(),
-    };
+    const payload = { company_id: selectedCompanyId, name: formName.trim(), location_id: formLocation && formLocation !== "none" ? formLocation : null, device_identifier: formDeviceId || crypto.randomUUID().slice(0, 8).toUpperCase() };
 
     if (editing) {
-      const { error } = await sb.from("kiosk_devices").update(payload).eq("id", editing.id);
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Kiosk actualizado" });
-      }
+      await kioskFetch(`kiosk_devices?id=eq.${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      toast({ title: "Kiosk actualizado" });
     } else {
-      const { error } = await sb.from("kiosk_devices").insert(payload);
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Kiosk creado" });
-      }
+      await kioskFetch("kiosk_devices", { method: "POST", body: JSON.stringify(payload) });
+      toast({ title: "Kiosk creado" });
     }
-
-    setSaving(false);
-    setDialogOpen(false);
-    fetchDevices();
+    setSaving(false); setDialogOpen(false); fetchDevices();
   };
 
-  const toggleActive = async (device: KioskDevice) => {
-    await sb.from("kiosk_devices").update({ is_active: !device.is_active }).eq("id", device.id);
-    fetchDevices();
+  const handleDelete = async (d: KioskDevice) => {
+    if (!confirm(`¿Eliminar kiosk "${d.name}"?`)) return;
+    await kioskFetch(`kiosk_devices?id=eq.${d.id}`, { method: "DELETE" });
+    toast({ title: "Kiosk eliminado" }); fetchDevices();
   };
 
-  const handleDelete = async (device: KioskDevice) => {
-    if (!confirm(`¿Eliminar kiosk "${device.name}"?`)) return;
-    await sb.from("kiosk_devices").delete().eq("id", device.id);
-    toast({ title: "Kiosk eliminado" });
-    fetchDevices();
+  const copyKioskUrl = (d: KioskDevice) => {
+    navigator.clipboard.writeText(`${window.location.origin}/kiosk?device=${d.device_identifier}`);
+    setCopied(d.id); toast({ title: "URL copiada" }); setTimeout(() => setCopied(null), 2000);
   };
-
-  const copyKioskUrl = (device: KioskDevice) => {
-    const url = `${window.location.origin}/kiosk?device=${device.device_identifier}`;
-    navigator.clipboard.writeText(url);
-    setCopied(device.id);
-    toast({ title: "URL copiada" });
-    setTimeout(() => setCopied(null), 2000);
-  };
-
-  const kioskUrl = `${window.location.origin}/kiosk`;
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dispositivos Kiosk"
-        subtitle="Gestiona los terminales de fichaje compartido"
-        icon={Monitor}
-        rightSlot={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <a href={kioskUrl} target="_blank" rel="noopener">
-                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                Abrir Kiosk
-              </a>
-            </Button>
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Nuevo Kiosk
-            </Button>
-          </div>
-        }
+      <PageHeader title="Dispositivos Kiosk" subtitle="Gestiona los terminales de fichaje compartido" icon={Monitor}
+        rightSlot={<div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild><a href={`${window.location.origin}/kiosk`} target="_blank" rel="noopener"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Abrir Kiosk</a></Button>
+          <Button size="sm" onClick={openCreate}><Plus className="h-3.5 w-3.5 mr-1.5" />Nuevo Kiosk</Button>
+        </div>}
       />
 
       {devices.length === 0 && !loading ? (
-        <EmptyState
-          icon={Monitor}
-          title="Sin dispositivos kiosk"
-          description="Registra un dispositivo compartido para que los empleados puedan fichar desde una tablet."
-          actionLabel="Crear Kiosk"
-          onAction={openCreate}
-        />
+        <EmptyState icon={Monitor} title="Sin dispositivos kiosk" description="Registra un dispositivo compartido para que los empleados puedan fichar desde una tablet." actionLabel="Crear Kiosk" onAction={openCreate} />
       ) : (
         <div className="bg-card rounded-xl border border-border/40 overflow-hidden">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Ubicación</TableHead>
-                <TableHead>ID</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Ubicación</TableHead><TableHead>ID</TableHead><TableHead>Estado</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
             <TableBody>
-              {devices.map((device) => {
-                const loc = locations.find((l) => l.id === device.location_id);
+              {devices.map((d) => {
+                const loc = locations.find((l) => l.id === d.location_id);
                 return (
-                  <TableRow key={device.id}>
-                    <TableCell className="font-medium">{device.name}</TableCell>
+                  <TableRow key={d.id}>
+                    <TableCell className="font-medium">{d.name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{loc?.name ?? "—"}</TableCell>
-                    <TableCell>
-                      <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{device.device_identifier}</code>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={device.is_active ? "default" : "secondary"} className="text-[10px]">
-                        {device.is_active ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </TableCell>
+                    <TableCell><code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{d.device_identifier}</code></TableCell>
+                    <TableCell><Badge variant={d.is_active ? "default" : "secondary"} className="text-[10px]">{d.is_active ? "Activo" : "Inactivo"}</Badge></TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyKioskUrl(device)}>
-                          {copied === device.id ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(device)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(device)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyKioskUrl(d)}>{copied === d.id ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}</Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(d)}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(d)}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -230,50 +143,15 @@ export default function KioskDevices() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Editar Kiosk" : "Nuevo Kiosk"}</DialogTitle>
-            <DialogDescription>Configura un dispositivo de fichaje compartido</DialogDescription>
-          </DialogHeader>
-
+          <DialogHeader><DialogTitle>{editing ? "Editar Kiosk" : "Nuevo Kiosk"}</DialogTitle><DialogDescription>Configura un dispositivo de fichaje compartido</DialogDescription></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nombre del Kiosk</Label>
-              <Input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Ej: Tablet Entrada Principal"
-              />
-            </div>
-
+            <div className="space-y-2"><Label>Nombre del Kiosk</Label><Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Ej: Tablet Entrada Principal" /></div>
             <div className="space-y-2">
               <Label>Ubicación</Label>
-              <Select value={formLocation} onValueChange={setFormLocation}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar ubicación" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin ubicación</SelectItem>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Select value={formLocation} onValueChange={setFormLocation}><SelectTrigger><SelectValue placeholder="Seleccionar ubicación" /></SelectTrigger><SelectContent><SelectItem value="none">Sin ubicación</SelectItem>{locations.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select>
             </div>
-
-            <div className="space-y-2">
-              <Label>Device ID</Label>
-              <Input
-                value={formDeviceId}
-                onChange={(e) => setFormDeviceId(e.target.value)}
-                placeholder="Identificador del dispositivo"
-                className="font-mono"
-              />
-              <p className="text-[10px] text-muted-foreground">Se genera automáticamente si se deja vacío</p>
-            </div>
-
-            <Button onClick={handleSave} disabled={!formName.trim() || saving} className="w-full">
-              {saving ? "Guardando..." : editing ? "Guardar Cambios" : "Crear Kiosk"}
-            </Button>
+            <div className="space-y-2"><Label>Device ID</Label><Input value={formDeviceId} onChange={(e) => setFormDeviceId(e.target.value)} placeholder="Identificador" className="font-mono" /><p className="text-[10px] text-muted-foreground">Se genera automáticamente si se deja vacío</p></div>
+            <Button onClick={handleSave} disabled={!formName.trim() || saving} className="w-full">{saving ? "Guardando..." : editing ? "Guardar Cambios" : "Crear Kiosk"}</Button>
           </div>
         </DialogContent>
       </Dialog>
