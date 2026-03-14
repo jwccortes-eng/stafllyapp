@@ -514,7 +514,7 @@ export default function PortalClock() {
       ) : (
         <Button
           onClick={handleClockIn}
-          disabled={acting || !companyId || !selectedShift || !!clockInBlocked}
+          disabled={acting || !companyId || !selectedShift || !!clockInBlocked || !hasProfilePhoto}
           className="w-full h-16 rounded-2xl text-lg font-bold gap-3 shadow-xl transition-all active:scale-[0.95] gradient-primary text-white hover:shadow-2xl disabled:opacity-50"
         >
           {acting ? <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <><LogIn className="h-5 w-5" /> Marcar Entrada</>}
