@@ -23,14 +23,24 @@ export function useNotifications() {
   const [loading, setLoading] = useState(true);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioUnlockedRef = useRef(false);
+  const notifPermissionRef = useRef<NotificationPermission>("default");
 
-  // Warm-up AudioContext on first user interaction (bypasses autoplay policy)
+  // Request browser notification permission + warm-up AudioContext on first interaction
   useEffect(() => {
+    // Request notification permission
+    if ("Notification" in window) {
+      notifPermissionRef.current = Notification.permission;
+      if (Notification.permission === "default") {
+        Notification.requestPermission().then((perm) => {
+          notifPermissionRef.current = perm;
+        });
+      }
+    }
+
     const unlock = () => {
       if (audioUnlockedRef.current) return;
       try {
         const ctx = new AudioContext();
-        // Create a silent buffer to unlock
         const buffer = ctx.createBuffer(1, 1, 22050);
         const source = ctx.createBufferSource();
         source.buffer = buffer;
@@ -40,6 +50,12 @@ export function useNotifications() {
         audioUnlockedRef.current = true;
       } catch {
         // ignore
+      }
+      // Re-request notification permission on interaction if still default
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().then((perm) => {
+          notifPermissionRef.current = perm;
+        });
       }
     };
     document.addEventListener("click", unlock, { once: true });
