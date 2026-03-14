@@ -61,7 +61,7 @@ export function useReputation(options: UseReputationOptions = {}) {
     fetchReputation();
   }, [fetchReputation]);
 
-  /** Record a reputation event and update the aggregated score */
+  /** Record a reputation event — score is recalculated automatically by DB trigger */
   const recordEvent = async (event: {
     source: string;
     source_entity_id?: string;
@@ -72,8 +72,7 @@ export function useReputation(options: UseReputationOptions = {}) {
   }) => {
     if (!options.workerProfileId) return;
 
-    // Insert the event
-    const { error: eventError } = await supabase
+    const { error } = await supabase
       .from("rep_events")
       .insert({
         worker_profile_id: options.workerProfileId,
@@ -85,63 +84,9 @@ export function useReputation(options: UseReputationOptions = {}) {
         note: event.note,
       } as any);
 
-    if (eventError) return eventError;
+    if (error) return error;
 
-    // Recalculate the score from all events
-    const { data: allEvents } = await supabase
-      .from("rep_events")
-      .select("category, delta, weight")
-      .eq("worker_profile_id", options.workerProfileId);
-
-    if (allEvents && allEvents.length > 0) {
-      const categoryScores: Record<string, { sum: number; count: number }> = {};
-
-      for (const e of allEvents) {
-        const cat = (e as any).category ?? "general";
-        if (!categoryScores[cat]) categoryScores[cat] = { sum: 0, count: 0 };
-        categoryScores[cat].sum += (e as any).delta;
-        categoryScores[cat].count += 1;
-      }
-
-      // Map categories to DB columns
-      const catToCol: Record<string, string> = {
-        punctuality: "punctuality_score",
-        quality: "quality_score",
-        service: "service_score",
-        professionalism: "communication_score",
-        attendance: "attendance_score",
-        presentation: "presentation_score",
-        teamwork: "reliability_score",
-      };
-
-      const scoreUpdates: Record<string, any> = {
-        worker_profile_id: options.workerProfileId,
-        total_reviews_count: allEvents.length,
-        last_calculated_at: new Date().toISOString(),
-      };
-
-      // Calculate overall as average of category averages
-      let totalScore = 0;
-      let catCount = 0;
-      for (const [cat, data] of Object.entries(categoryScores)) {
-        const avg = data.sum / data.count;
-        const col = catToCol[cat];
-        if (col) scoreUpdates[col] = Math.round(avg * 100) / 100;
-        totalScore += avg;
-        catCount++;
-      }
-
-      scoreUpdates.overall_score = catCount > 0
-        ? Math.round((Math.max(0, Math.min(100, 50 + totalScore / catCount))) * 100) / 100
-        : 50;
-
-      const { error: scoreError } = await supabase
-        .from("rep_scores")
-        .upsert(scoreUpdates as any, { onConflict: "worker_profile_id" });
-
-      if (scoreError) return scoreError;
-    }
-
+    // Refetch — DB trigger already recalculated rep_scores
     await fetchReputation();
     return null;
   };
