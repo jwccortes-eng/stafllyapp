@@ -233,7 +233,7 @@ export default function ImportInactiveEmployees() {
         <CardContent className="space-y-4">
           <input
             type="file"
-            accept=".xls,.xlsx,.html"
+            accept=".xls,.xlsx,.html,.csv"
             onChange={handleFileUpload}
             className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
           />
