@@ -365,6 +365,20 @@ export default function PortalClock() {
         Volver
       </button>
 
+      {/* Missing photo warning */}
+      {!hasProfilePhoto && (
+        <button
+          onClick={() => navigate("/portal/profile")}
+          className="w-full rounded-xl border-2 border-destructive/30 bg-destructive/5 p-3 flex items-center gap-3 hover:bg-destructive/10 transition-colors active:scale-[0.98]"
+        >
+          <Camera className="h-5 w-5 text-destructive shrink-0" />
+          <div className="text-left flex-1">
+            <p className="text-xs font-semibold text-destructive">Foto de perfil requerida</p>
+            <p className="text-[10px] text-muted-foreground">No podrás fichar sin subir tu foto. Toca aquí para agregarla.</p>
+          </div>
+        </button>
+      )}
+
       {/* Current time */}
       <div className="text-center space-y-0.5">
         <p className="text-4xl font-bold font-heading tracking-tight tabular-nums text-foreground">
