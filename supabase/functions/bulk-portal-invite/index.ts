@@ -215,22 +215,25 @@ Deno.serve(async (req) => {
         processed++;
 
         // Send invitation email if employee has a real email
-        if (emp.email) {
+        if (emp.email && apiKey) {
           try {
-            await adminClient.rpc("enqueue_email", {
-              queue_name: "transactional_emails",
-              payload: {
+            const inviteHtml = buildInviteHtml(emp, pin);
+            const text = inviteHtml.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+            await sendLovableEmail(
+              {
                 to: emp.email,
                 subject: "Tu acceso al Portal de Empleados StaflyApps",
-                html: buildInviteHtml(emp, pin),
+                html: inviteHtml,
+                text,
                 from: "StaflyApps <noreply@notify.staflyapps.com>",
                 sender_domain: "notify.staflyapps.com",
                 purpose: "transactional",
                 label: "portal_invite",
+                run_id: crypto.randomUUID(),
                 message_id: crypto.randomUUID(),
-                queued_at: new Date().toISOString(),
               },
-            });
+              { apiKey }
+            );
             emailsSent++;
           } catch (emailErr: any) {
             errors.push(`Email a ${emp.first_name}: ${emailErr.message}`);
