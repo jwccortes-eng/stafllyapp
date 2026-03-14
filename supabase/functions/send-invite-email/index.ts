@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,17 +20,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const {
-      data: { user },
-      error: userErr,
-    } = await supabase.auth.getUser();
+    const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
+    const { data: { user }, error: userErr } = await callerClient.auth.getUser();
     if (userErr || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -48,25 +45,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) {
-      return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Use service role client to enqueue email
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const resend = new Resend(resendKey);
-
-    const { error: sendErr } = await resend.emails.send({
-      from: "StaflyApps <noreply@notify.staflyapps.com>",
-      to: [to],
-      subject,
-      html,
+    const { error: enqueueErr } = await adminClient.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        to,
+        subject,
+        html,
+        from_name: "StaflyApps",
+        from_email: "noreply@notify.staflyapps.com",
+      },
     });
 
-    if (sendErr) {
-      return new Response(JSON.stringify({ error: sendErr.message }), {
+    if (enqueueErr) {
+      console.error("Enqueue error:", enqueueErr);
+      return new Response(JSON.stringify({ error: enqueueErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

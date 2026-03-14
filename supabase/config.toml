@@ -37,3 +37,19 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.parceros-webhook]
     verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.bulk-portal-invite]
+    verify_jwt = false
+  [functions.seed-test-users]
+    verify_jwt = false
+  [functions.auto-close-periods]
+    verify_jwt = false
+  [functions.shift-reminders]
+    verify_jwt = false
+  [functions.import-inactive-employees]
+    verify_jwt = false
+  [functions.import-payroll-extras]
+    verify_jwt = false
+  [functions.invite-admin]
+    verify_jwt = false
