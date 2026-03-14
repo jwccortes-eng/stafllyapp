@@ -9,6 +9,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CompanyProvider } from "@/hooks/useCompany";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { Loader2 } from "lucide-react";
 
 // Eager: shell components needed immediately
