@@ -489,7 +489,7 @@ export default function AdminDashboard() {
           <CardHeader className="pb-3 px-5 pt-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-destructive/8 flex items-center justify-center">
+                <div className="h-7 w-7 rounded-lg bg-destructive/[0.08] flex items-center justify-center">
                   <Inbox className="h-3.5 w-3.5 text-destructive" />
                 </div>
                 <CardTitle className="text-sm font-semibold font-heading">Pendientes</CardTitle>
