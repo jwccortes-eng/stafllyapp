@@ -633,8 +633,8 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-              <Megaphone className="h-3.5 w-3.5 text-primary" />
+             <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
+               <Megaphone className="h-3.5 w-3.5 text-primary" />
             </div>
             <h2 className="text-sm font-semibold font-heading">Comunicados</h2>
           </div>
