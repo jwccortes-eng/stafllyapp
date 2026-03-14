@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import heroDashboard from "@/assets/stafly-hero-dashboard.png";
+import heroVideo from "@/assets/stafly-landing-video.mp4";
 import demoDashboard from "@/assets/demo/demo-dashboard.jpg";
 import demoShifts from "@/assets/demo/demo-shifts.jpg";
 import demoEmployees from "@/assets/demo/demo-employees.jpg";
@@ -426,11 +427,14 @@ export default function Landing() {
         {/* Dashboard mockup */}
         <div className="relative max-w-5xl mx-auto mt-14 px-4 sm:px-6">
           <div className="rounded-2xl overflow-hidden border border-[hsl(220,13%,91%)] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)]">
-            <img
-              src={heroDashboard}
-              alt="StaflyApps Dashboard"
+            <video
+              src={heroVideo}
+              autoPlay
+              loop
+              muted
+              playsInline
+              poster={heroDashboard}
               className="w-full h-auto block"
-              loading="eager"
             />
           </div>
         </div>
