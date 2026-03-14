@@ -401,7 +401,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               Completa tu perfil
             </h1>
             <p className="text-sm text-muted-foreground">
-              Opcional — puedes hacerlo después
+              Sube una foto clara de tu rostro para activar tu cuenta
             </p>
           </div>
 
@@ -433,7 +433,12 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
                 <Camera className="h-3 w-3" />
               </div>
             </button>
-            <span className="text-xs text-muted-foreground">Toca para agregar foto</span>
+            <span className="text-xs text-muted-foreground">
+              {avatarPreview ? "✓ Foto seleccionada" : "Toca para agregar foto (obligatorio)"}
+            </span>
+            {!avatarPreview && (
+              <p className="text-[10px] text-warning font-medium">⚠️ La foto es requerida para activar tu cuenta</p>
+            )}
           </div>
 
           {/* Email */}
@@ -465,28 +470,18 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleActivate}
-              disabled={loading}
-              className="flex-1 h-11 rounded-xl text-sm"
-            >
-              Omitir
-            </Button>
-            <Button
-              onClick={handleActivate}
-              disabled={loading}
-              className="flex-1 h-11 rounded-xl text-sm font-semibold shadow-sm"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                  Activar cuenta
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handleActivate}
+            disabled={loading || !avatarFile}
+            className="w-full h-11 rounded-xl text-sm font-semibold shadow-sm"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                Activar cuenta
+              </>
+            )}
+          </Button>
         </div>
       )}
 
