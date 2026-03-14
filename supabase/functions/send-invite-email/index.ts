@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
 
     await sendLovableEmail(
       {
+        run_id: runId,
         to,
         subject,
         html,
@@ -82,6 +83,7 @@ Deno.serve(async (req) => {
         sender_domain: "notify.staflyapps.com",
         purpose: "transactional",
         label: "invite_email",
+        message_id: crypto.randomUUID(),
       },
       { apiKey }
     );
