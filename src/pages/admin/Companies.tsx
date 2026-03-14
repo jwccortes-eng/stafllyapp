@@ -229,6 +229,85 @@ export default function CompaniesPage() {
 
   const openAssignPlan = (c: CompanyRecord) => { setPlanCompany(c); setSelectedPlan(c.plan || "free"); };
 
+  const handleDuplicate = async (source: CompanyRecord) => {
+    setDuplicating(true);
+    try {
+      const newName = `${source.name} (copia)`;
+      const newSlug = `${source.slug}-copy-${Date.now().toString(36)}`;
+
+      // 1. Create company
+      const { data: newCompany, error: compErr } = await supabase
+        .from("companies")
+        .insert({ name: newName, slug: newSlug, is_sandbox: source.is_sandbox } as any)
+        .select("id")
+        .single();
+
+      if (compErr || !newCompany) {
+        toast({ title: "Error al duplicar", description: compErr?.message, variant: "destructive" });
+        setDuplicating(false);
+        return;
+      }
+
+      const newId = newCompany.id;
+
+      // 2. Copy modules
+      const { data: srcModules } = await supabase
+        .from("company_modules")
+        .select("module, is_active")
+        .eq("company_id", source.id);
+
+      if (srcModules && srcModules.length > 0) {
+        await supabase.from("company_modules").insert(
+          srcModules.map(m => ({ company_id: newId, module: m.module, is_active: m.is_active })) as any
+        );
+      }
+
+      // 3. Copy company_users
+      const { data: srcUsers } = await supabase
+        .from("company_users")
+        .select("user_id, role")
+        .eq("company_id", source.id);
+
+      if (srcUsers && srcUsers.length > 0) {
+        await supabase.from("company_users").insert(
+          srcUsers.map(u => ({ company_id: newId, user_id: u.user_id, role: u.role })) as any
+        );
+      }
+
+      // 4. Copy subscription/plan
+      const { data: srcSub } = await supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("company_id", source.id)
+        .maybeSingle();
+
+      if (srcSub) {
+        await supabase.from("subscriptions").insert({
+          company_id: newId, plan: srcSub.plan, status: srcSub.status,
+        } as any);
+      }
+
+      // 5. Copy company_settings
+      const { data: srcSettings } = await supabase
+        .from("company_settings")
+        .select("key, value")
+        .eq("company_id", source.id);
+
+      if (srcSettings && srcSettings.length > 0) {
+        await supabase.from("company_settings").insert(
+          srcSettings.map(s => ({ company_id: newId, key: s.key, value: s.value })) as any
+        );
+      }
+
+      toast({ title: "Empresa duplicada", description: `"${newName}" creada con módulos, usuarios y configuración.` });
+      fetchCompanies();
+      refetch();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+    setDuplicating(false);
+  };
+
   const handleAssignPlan = async () => {
     if (!planCompany) return;
     setLoading(true);
