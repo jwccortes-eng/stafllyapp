@@ -142,20 +142,18 @@ export function useNotifications() {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Realtime subscription
+  // Realtime subscription — listen for both user.id and employeeId recipients
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+
+    // Channel for user-targeted notifications
+    const userChannel = supabase
       .channel("user-notifications")
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient_id=eq.${user.id}`,
-        },
+        { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_id=eq.${user.id}` },
         (payload) => {
           const newNotif = payload.new as AppNotification;
           setNotifications(prev => [newNotif, ...prev].slice(0, 30));
@@ -164,9 +162,33 @@ export function useNotifications() {
         }
       )
       .subscribe();
+    channels.push(userChannel);
+
+    // Channel for employee-targeted notifications (different recipient_id)
+    const getEmployeeId = async () => {
+      const { data } = await supabase.from("employees").select("id").eq("user_id", user.id).limit(1);
+      const empId = data?.[0]?.id;
+      if (empId && empId !== user.id) {
+        const empChannel = supabase
+          .channel("employee-notifications")
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_id=eq.${empId}` },
+            (payload) => {
+              const newNotif = payload.new as AppNotification;
+              setNotifications(prev => [newNotif, ...prev].slice(0, 30));
+              setUnreadCount(prev => prev + 1);
+              playSound();
+            }
+          )
+          .subscribe();
+        channels.push(empChannel);
+      }
+    };
+    getEmployeeId();
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach(ch => supabase.removeChannel(ch));
     };
   }, [user, playSound]);
 
