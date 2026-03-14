@@ -97,6 +97,7 @@ export default function WorkerPassport() {
   const [history, setHistory] = useState<WorkHistory[]>([]);
   const [categories, setCategories] = useState<{ label: string; avg: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [consolidating, setConsolidating] = useState(false);
 
   // New hooks — connect to DB tables
   const wp = useWorkerProfile({ employeeId: employeeId ?? undefined });
