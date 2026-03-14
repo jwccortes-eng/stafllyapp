@@ -49,6 +49,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "live-map", to: "/app/live-map", icon: MapIcon, label: "Mapa en Vivo", module: null, section: "Operaciones" },
   { id: "leaderboard", to: "/app/leaderboard", icon: Award, label: "Leaderboard", module: null, section: "Operaciones" },
   { id: "kiosk-devices", to: "/app/kiosk-devices", icon: Monitor, label: "Kiosk", module: null, section: "Operaciones" },
+  { id: "attendance", to: "/app/attendance", icon: ScanEye, label: "Asistencia", module: null, section: "Operaciones" },
 ];
 
 export const ADMIN_DEFAULT_PINS = ["dashboard", "shifts", "employees", "movements"];

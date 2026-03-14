@@ -211,6 +211,7 @@ function App() {
                 <Route path="live-map" element={<LiveMap />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
                 <Route path="passport" element={<WorkerPassport />} />
+                <Route path="attendance" element={<Attendance />} />
               </Route>
 
               {/* Employee portal routes */}
