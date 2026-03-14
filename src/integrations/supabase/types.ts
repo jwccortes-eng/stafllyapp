@@ -1434,6 +1434,9 @@ export type Database = {
           added_by: string | null
           added_via: string | null
           address: string | null
+          approx_latitude: number | null
+          approx_longitude: number | null
+          available_for_work: boolean
           avatar_url: string | null
           birthday: string | null
           certifications: string[] | null
@@ -1475,6 +1478,9 @@ export type Database = {
           added_by?: string | null
           added_via?: string | null
           address?: string | null
+          approx_latitude?: number | null
+          approx_longitude?: number | null
+          available_for_work?: boolean
           avatar_url?: string | null
           birthday?: string | null
           certifications?: string[] | null
@@ -1516,6 +1522,9 @@ export type Database = {
           added_by?: string | null
           added_via?: string | null
           address?: string | null
+          approx_latitude?: number | null
+          approx_longitude?: number | null
+          available_for_work?: boolean
           avatar_url?: string | null
           birthday?: string | null
           certifications?: string[] | null
