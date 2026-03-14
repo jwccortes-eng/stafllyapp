@@ -36,14 +36,17 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
   const companyName = company?.name ?? "la empresa";
 
   const portalUrl = `${PRODUCTION_URL}/auth`;
-  const pin = employee.access_pin ?? "—";
+  const pin = typeof employee.access_pin === "string" && employee.access_pin.trim()
+    ? employee.access_pin.trim()
+    : "—";
 
-  const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Enlace: ${portalUrl}\n🔑 Tu PIN: ${pin}\n\nIngresa con tu número de teléfono y PIN. Selecciona "Acceso empleado" al entrar.`;
+  const message = `Hola ${employee.first_name}!\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\nEnlace: ${portalUrl}\nTu PIN: ${pin}\n\nIngresa con tu número de teléfono y PIN. Selecciona "Acceso empleado" al entrar.`;
 
   const phoneDigits = (employee.phone_number ?? "").replace(/\D/g, "");
-  const fullPhone = phoneDigits.length === 10 ? `1${phoneDigits}` : phoneDigits;
+  const normalizedPhone = phoneDigits.startsWith("00") ? phoneDigits.slice(2) : phoneDigits;
+  const fullPhone = normalizedPhone.length === 10 ? `1${normalizedPhone}` : normalizedPhone;
 
-  const waLink = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+  const waLink = `https://api.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(message)}`;
   const smsLink = `sms:${employee.phone_number ?? ""}?body=${encodeURIComponent(message)}`;
 
   const copyLink = async () => {
