@@ -408,7 +408,7 @@ export default function AdminDashboard() {
   const canAccess = (module: string) => {
     if (!isModuleActive(module)) return false;
     if (role === 'developer' || role === 'owner' || role === 'admin') return true;
-    if (role === 'manager') return hasModuleAccess(module, 'view');
+    if (role === 'manager' || role === 'supervisor') return hasModuleAccess(module, 'view');
     return false;
   };
 

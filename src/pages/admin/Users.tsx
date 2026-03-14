@@ -55,7 +55,7 @@ const MODULES = [
   { key: "chat", label: "Chat" },
 ];
 
-type RoleType = "developer" | "owner" | "admin" | "manager" | "employee";
+type RoleType = "developer" | "owner" | "admin" | "manager" | "supervisor" | "employee";
 
 interface CompanyAssignment {
   company_id: string;
@@ -88,13 +88,14 @@ interface PromoCode {
   created_at: string;
 }
 
-const ROLE_LABELS: Record<RoleType, string> = { developer: "Desarrollador", owner: "Dueño", admin: "Admin", manager: "Manager", employee: "Empleado" };
-const ROLE_ICONS: Record<RoleType, typeof Shield> = { developer: ShieldCheck, owner: ShieldCheck, admin: Shield, manager: UserCog, employee: User };
+const ROLE_LABELS: Record<RoleType, string> = { developer: "Desarrollador", owner: "Dueño", admin: "Admin", manager: "Manager", supervisor: "Supervisor", employee: "Empleado" };
+const ROLE_ICONS: Record<RoleType, typeof Shield> = { developer: ShieldCheck, owner: ShieldCheck, admin: Shield, manager: UserCog, supervisor: UserCog, employee: User };
 const ROLE_COLORS: Record<RoleType, string> = {
   developer: "bg-destructive/10 text-destructive border-destructive/20",
   owner: "bg-chart-1/10 text-chart-1 border-chart-1/20",
   admin: "bg-primary/10 text-primary border-primary/20",
   manager: "bg-chart-4/10 text-chart-4 border-chart-4/20",
+  supervisor: "bg-chart-3/10 text-chart-3 border-chart-3/20",
   employee: "bg-muted text-muted-foreground border-border",
 };
 
@@ -482,7 +483,7 @@ export default function UsersPage() {
     return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">No tienes acceso a este módulo.</p></div>;
   }
 
-  const roleCounts: Record<RoleType, number> = { developer: 0, owner: 0, admin: 0, manager: 0, employee: 0 };
+  const roleCounts: Record<RoleType, number> = { developer: 0, owner: 0, admin: 0, manager: 0, supervisor: 0, employee: 0 };
   users.forEach(u => { roleCounts[u.role] = (roleCounts[u.role] || 0) + 1; });
 
   return (
@@ -523,7 +524,7 @@ export default function UsersPage() {
             >
               Todos ({users.length})
             </button>
-            {(["developer", "owner", "admin", "manager", "employee"] as RoleType[]).map(r => {
+            {(["developer", "owner", "admin", "manager", "supervisor", "employee"] as RoleType[]).map(r => {
               const Icon = ROLE_ICONS[r];
               return (
                 <button

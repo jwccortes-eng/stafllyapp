@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-type AppRole = 'developer' | 'owner' | 'admin' | 'manager' | 'employee' | null;
+type AppRole = 'developer' | 'owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type EmployeeStatus = 'active' | 'inactive' | null;
 
 interface ModulePermission {
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) throw roleError;
 
-      const rolePriority: AppRole[] = ["developer", "owner", "admin", "manager", "employee", null];
+      const rolePriority: AppRole[] = ["developer", "owner", "admin", "manager", "supervisor", "employee", null];
       const availableRoles = new Set((roleRows ?? []).map((row) => row.role as Exclude<AppRole, null>));
       let resolvedRole = rolePriority.find(
         (candidate) => candidate && availableRoles.has(candidate)
@@ -93,14 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       setFullName(profileData?.full_name ?? null);
 
-      // Fetch module permissions for managers
-      if (resolvedRole === 'manager') {
+      // Fetch module permissions for managers and supervisors
+      if (resolvedRole === 'manager' || resolvedRole === 'supervisor') {
         const { data: permsData } = await supabase
           .from('module_permissions')
           .select('module, can_view, can_edit, can_delete')
           .eq('user_id', userId);
         setPermissions((permsData as ModulePermission[]) ?? []);
-        // Also fetch action permissions for managers
         const { data: actionPermsData } = await supabase
           .from('action_permissions')
           .select('action, granted')
@@ -175,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
     if (role === 'developer' || role === 'owner' || role === 'admin') return true;
-    if (role === 'manager') {
+    if (role === 'manager' || role === 'supervisor') {
       const perm = permissions.find(p => p.module === module);
       if (!perm) return false;
       if (permission === 'view') return perm.can_view;
@@ -187,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasActionPermission = (action: string): boolean => {
     if (role === 'developer' || role === 'owner' || role === 'admin') return true;
-    if (role === 'manager') {
+    if (role === 'manager' || role === 'supervisor') {
       const perm = actionPermissions.find(p => p.action === action);
       return perm?.granted ?? false;
     }
