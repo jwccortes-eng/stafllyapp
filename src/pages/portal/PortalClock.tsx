@@ -172,7 +172,7 @@ export default function PortalClock() {
       return;
     }
 
-    // Final validation
+    // Final time validation
     const check = isClockInAllowed(selectedShift);
     if (!check.allowed) {
       toast({ title: "No permitido", description: check.message, variant: "destructive" });
@@ -181,10 +181,87 @@ export default function PortalClock() {
 
     setActing(true);
     try {
-      // Capture GPS position
+      // Capture GPS position FIRST (needed for geofence check)
       const pos = await capturePosition();
       const device = getDeviceId();
 
+      // ── Geofence enforcement: check BEFORE creating the time entry ──
+      if (selectedShift.id) {
+        const { data: shiftData } = await supabase
+          .from("scheduled_shifts")
+          .select("location_id, locations(latitude, longitude, geofence_radius)")
+          .eq("id", selectedShift.id)
+          .maybeSingle();
+
+        const loc = (shiftData as any)?.locations;
+        if (loc?.latitude && loc?.longitude) {
+          // Check if geofence enforcement is enabled for this company
+          const { data: geoSetting } = await supabase
+            .from("company_settings")
+            .select("value")
+            .eq("company_id", companyId)
+            .eq("key", "geofence")
+            .maybeSingle();
+
+          const enforcementEnabled = geoSetting?.value != null
+            && typeof geoSetting.value === "object"
+            && (geoSetting.value as any)?.enforce === true;
+
+          if (!pos) {
+            if (enforcementEnabled) {
+              toast({
+                title: "Ubicación requerida",
+                description: "No se pudo obtener tu ubicación GPS. Activa los servicios de ubicación e intenta de nuevo.",
+                variant: "destructive",
+              });
+              setActing(false);
+              return;
+            }
+          } else {
+            const dist = distanceMeters(pos.latitude, pos.longitude, loc.latitude, loc.longitude);
+            const radius = loc.geofence_radius ?? 200;
+
+            if (dist > radius) {
+              if (enforcementEnabled) {
+                toast({
+                  title: "Fuera del área permitida",
+                  description: `Estás a ${Math.round(dist)}m de la ubicación del turno (radio permitido: ${radius}m). Acércate para poder fichar.`,
+                  variant: "destructive",
+                });
+                // Still log the attempt as an alert
+                await supabase.from("clock_alerts").insert({
+                  employee_id: employeeId, company_id: companyId,
+                  shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE",
+                  severity: "high",
+                  description: `Clock-in bloqueado a ${Math.round(dist)}m de la ubicación (radio: ${radius}m)`,
+                } as any);
+                setActing(false);
+                return;
+              } else {
+                // Soft mode: allow but create alert
+                await supabase.from("clock_alerts").insert({
+                  employee_id: employeeId, company_id: companyId,
+                  shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE",
+                  severity: "high",
+                  description: `Clock-in a ${Math.round(dist)}m de la ubicación (radio: ${radius}m)`,
+                } as any);
+              }
+            }
+          }
+
+          // Check GPS accuracy
+          if (pos && pos.accuracy > 100) {
+            await supabase.from("clock_alerts").insert({
+              employee_id: employeeId, company_id: companyId,
+              shift_id: selectedShift.id, type: "GPS_LOW_ACCURACY",
+              severity: "low",
+              description: `Precisión GPS: ±${Math.round(pos.accuracy)}m`,
+            } as any);
+          }
+        }
+      }
+
+      // ── Create time entry ──
       const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
         employee_id: employeeId, company_id: companyId,
         clock_in: new Date().toISOString(), status: "pending",
@@ -203,40 +280,6 @@ export default function PortalClock() {
           accuracy: pos?.accuracy ?? null,
           device,
         } as any);
-
-        // Check geofence if location has coordinates
-        if (pos && selectedShift.id) {
-          const { data: shiftData } = await supabase
-            .from("scheduled_shifts")
-            .select("location_id, locations(latitude, longitude, geofence_radius)")
-            .eq("id", selectedShift.id)
-            .maybeSingle();
-
-          const loc = (shiftData as any)?.locations;
-          if (loc?.latitude && loc?.longitude) {
-            const dist = distanceMeters(pos.latitude, pos.longitude, loc.latitude, loc.longitude);
-            const radius = loc.geofence_radius ?? 200;
-            if (dist > radius) {
-              // Create alert for outside geofence
-              await supabase.from("clock_alerts").insert({
-                employee_id: employeeId, company_id: companyId,
-                shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE",
-                severity: "high",
-                description: `Clock-in a ${Math.round(dist)}m de la ubicación (radio: ${radius}m)`,
-              } as any);
-            }
-          }
-        }
-
-        // Check GPS accuracy
-        if (pos && pos.accuracy > 100) {
-          await supabase.from("clock_alerts").insert({
-            employee_id: employeeId, company_id: companyId,
-            shift_id: selectedShift.id, type: "GPS_LOW_ACCURACY",
-            severity: "low",
-            description: `Precisión GPS: ±${Math.round(pos.accuracy)}m`,
-          } as any);
-        }
       }
 
       toast({ title: "Entrada registrada", description: `Turno: ${selectedShift.title} (#${(selectedShift.shift_code || "").padStart(4, "0")})` });
