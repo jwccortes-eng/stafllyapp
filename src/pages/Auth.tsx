@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck, Building2, Phone } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck, Building2, Phone, Sparkles } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 
 import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
@@ -17,15 +17,17 @@ type AuthMode = "admin" | "employee";
 export default function Auth() {
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("admin");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(!searchParams.get("register"));
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [settingUp, setSettingUp] = useState(false);
+  const [needsSetupChecked, setNeedsSetupChecked] = useState(false);
   const { toast } = useToast();
 
   // Auto-setup and redirect
@@ -33,28 +35,32 @@ export default function Auth() {
     if (authLoading || !user || settingUp) return;
 
     const autoSetup = async () => {
-      if (role === null || role === undefined) {
-        const metaCompanyName = user.user_metadata?.company_name;
-        if (metaCompanyName) {
-          setSettingUp(true);
-          try {
-            const { data, error } = await supabase.functions.invoke("setup-company", {
-              body: { company_name: metaCompanyName },
-            });
-            if (error) throw error;
-            if (data?.already_setup) { window.location.reload(); return; }
-            if (data?.success) {
-              toast({ title: "¡Empresa creada!", description: `${metaCompanyName} está lista.` });
-              window.location.reload();
-              return;
-            }
-          } catch (err: any) {
-            console.error("Auto-setup error:", err);
-          } finally {
-            setSettingUp(false);
+      // Check if this is a self-service signup that needs company setup
+      const metaCompanyName = user.user_metadata?.company_name;
+      if (metaCompanyName && !needsSetupChecked) {
+        setNeedsSetupChecked(true);
+        setSettingUp(true);
+        try {
+          const { data, error } = await supabase.functions.invoke("setup-company", {
+            body: { company_name: metaCompanyName },
+          });
+          if (error) throw error;
+          if (data?.already_setup) {
+            // Already has a company, just redirect
+          } else if (data?.success) {
+            toast({ title: "¡Empresa creada!", description: `${metaCompanyName} está lista. Tienes 14 días de prueba Pro.` });
           }
+          // Reload to pick up new role and company
+          window.location.reload();
+          return;
+        } catch (err: any) {
+          console.error("Auto-setup error:", err);
+        } finally {
+          setSettingUp(false);
         }
       }
+
+      // Standard role-based redirect
       if (role === "employee") navigate("/portal");
       else if (role === "developer" || role === "admin" || role === "owner" || role === "manager") navigate("/app");
     };
@@ -186,6 +192,11 @@ export default function Auth() {
                   <p className="text-sm text-muted-foreground">
                     {isLogin ? "Inicia sesión con tu email" : "Completa los datos para registrarte"}
                   </p>
+                  {!isLogin && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full mt-1">
+                      <Sparkles className="h-3 w-3" /> 14 días de prueba Pro gratis
+                    </span>
+                  )}
                   <p className="text-[10px] text-muted-foreground/60 flex items-center justify-center gap-1">
                     <ShieldCheck className="h-3 w-3" /> Acceso seguro por roles
                   </p>

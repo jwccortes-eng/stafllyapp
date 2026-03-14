@@ -326,17 +326,12 @@ export default function Landing() {
             <Link to="/auth" className="hidden sm:inline-flex text-[13px] font-medium px-3 py-1.5 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" style={{ color: "hsl(220,10%,50%)" }}>
               {c.login}
             </Link>
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="rounded-full px-5 h-9 text-[13px] font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_2px_8px_-2px_hsl(222,100%,59%/0.35)] transition-all active:scale-[0.97]">
-                  {c.ctaPrimary}
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md rounded-2xl">
-                <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                <DemoForm lang={lang} />
-              </DialogContent>
-            </Dialog>
+            <Link
+              to="/auth?register=true"
+              className="rounded-full px-5 h-9 text-[13px] font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_2px_8px_-2px_hsl(222,100%,59%/0.35)] transition-all active:scale-[0.97] inline-flex items-center"
+            >
+              {c.ctaPrimary}
+            </Link>
             <button className="lg:hidden p-2 rounded-lg hover:bg-[hsl(220,20%,96%)] transition-colors" onClick={() => setMobileMenu(!mobileMenu)}>
               {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -387,17 +382,12 @@ export default function Landing() {
 
           {/* CTAs */}
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="inline-flex items-center gap-2 rounded-full px-7 h-12 text-[15px] font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_16px_-4px_hsl(222,100%,59%/0.4)] transition-all active:scale-[0.97]">
-                  {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md rounded-2xl">
-                <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                <DemoForm lang={lang} />
-              </DialogContent>
-            </Dialog>
+            <Link
+              to="/auth?register=true"
+              className="inline-flex items-center gap-2 rounded-full px-7 h-12 text-[15px] font-semibold text-white bg-[hsl(222,100%,59%)] hover:bg-[hsl(222,100%,52%)] shadow-[0_4px_16px_-4px_hsl(222,100%,59%/0.4)] transition-all active:scale-[0.97]"
+            >
+              {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
+            </Link>
             <Dialog>
               <DialogTrigger asChild>
                 <button className="inline-flex items-center gap-1.5 rounded-full h-12 px-7 text-[15px] font-semibold border border-[hsl(220,13%,86%)] hover:bg-[hsl(220,20%,97%)] transition-all active:scale-[0.97]" style={{ color: "hsl(220,15%,25%)" }}>
@@ -570,17 +560,13 @@ export default function Landing() {
             <p className="mt-4 text-white/75 text-[15px] max-w-xl mx-auto">{c.finalCta.sub}</p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button className="inline-flex items-center gap-2 rounded-full px-7 h-12 bg-white font-semibold text-[15px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all hover:bg-white/90 active:scale-[0.97]" style={{ color: "hsl(222,100%,59%)" }}>
-                    {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md rounded-2xl">
-                  <DialogHeader><DialogTitle>{c.ctaSecondary}</DialogTitle></DialogHeader>
-                  <DemoForm lang={lang} />
-                </DialogContent>
-              </Dialog>
+              <Link
+                to="/auth?register=true"
+                className="inline-flex items-center gap-2 rounded-full px-7 h-12 bg-white font-semibold text-[15px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all hover:bg-white/90 active:scale-[0.97]"
+                style={{ color: "hsl(222,100%,59%)" }}
+              >
+                {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
+              </Link>
               <Dialog>
                 <DialogTrigger asChild>
                   <button className="inline-flex items-center gap-1.5 rounded-full h-12 px-7 border border-white/40 text-white hover:bg-white/10 font-semibold text-[15px] transition-all active:scale-[0.97]">
