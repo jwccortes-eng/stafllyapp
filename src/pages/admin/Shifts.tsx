@@ -850,9 +850,9 @@ export default function Shifts() {
       </div>
 
       {/* ── TOOLBAR: View switcher + Navigation + Actions ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl bg-card/60 border border-border/15 shadow-sm px-3 py-2.5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl bg-card border border-border/40 shadow-xs px-4 py-3">
         {/* View tabs */}
-        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-0.5">
+        <div className="flex items-center gap-0.5 bg-secondary rounded-xl p-1">
           {([
             { key: "day" as ViewMode, icon: Calendar, label: "Día" },
             { key: "week" as ViewMode, icon: LayoutGrid, label: "Semana" },
@@ -864,10 +864,10 @@ export default function Shifts() {
               key={key}
               onClick={() => setViewMode(key)}
               className={cn(
-                "flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-md transition-all",
+                "flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all duration-200",
                 viewMode === key
-                  ? "bg-background shadow-sm text-foreground"
-                  : "text-muted-foreground/60 hover:text-foreground/80"
+                  ? "bg-card shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Icon className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{label}</span>
@@ -876,22 +876,23 @@ export default function Shifts() {
         </div>
 
         {/* Date navigation */}
-        <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={navigateBack}>
-            <ChevronLeft className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateBack}>
+            <ChevronLeft className="h-4 w-4" />
           </Button>
           <button
             onClick={navigateToday}
-            className="text-xs font-semibold capitalize min-w-[140px] text-center px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors"
+            className="text-[13px] font-semibold capitalize min-w-[160px] text-center px-3 py-1.5 rounded-xl hover:bg-accent/50 transition-colors"
           >
             {navLabel}
           </button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={navigateForward}>
-            <ChevronRight className="h-3.5 w-3.5" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateForward}>
+            <ChevronRight className="h-4 w-4" />
           </Button>
+          <div className="w-px h-5 bg-border/40 mx-1" />
           <button
             onClick={navigateToday}
-            className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 hover:bg-primary/15 px-2.5 py-1 rounded-full transition-colors"
+            className="text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/15 px-3 py-1.5 rounded-xl transition-colors"
           >
             Hoy
           </button>
