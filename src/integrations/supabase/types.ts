@@ -5706,6 +5706,11 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
+      consolidate_all_passports: { Args: never; Returns: Json }
+      consolidate_passport: {
+        Args: { _worker_profile_id: string }
+        Returns: undefined
+      }
       consolidate_period_base_pay: {
         Args: { _company_id: string; _period_id: string }
         Returns: Json
