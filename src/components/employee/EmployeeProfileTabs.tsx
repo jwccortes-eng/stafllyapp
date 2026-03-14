@@ -658,6 +658,7 @@ export function EmployeeProfileTabs({
   isPrivileged: boolean;
   onEmployeeUpdate?: (updates: Partial<EmployeeRecord>) => void;
 }) {
+  const wpHook = useWorkerProfile({ employeeId: employee.id });
   return (
     <Tabs defaultValue="info" className="w-full">
       <TabsList className="w-full grid grid-cols-9 h-9 mb-4 bg-muted/40 rounded-xl">
@@ -714,6 +715,13 @@ export function EmployeeProfileTabs({
               <EmployeePerformanceScore employeeId={employee.id} />
             </CardContent>
           </Card>
+          {wpHook.profile && isPrivileged && (
+            <ReputationAdminPanel
+              workerProfileId={wpHook.profile.id}
+              employeeId={employee.id}
+              employeeName={`${employee.first_name ?? ""} ${employee.last_name ?? ""}`}
+            />
+          )}
         </div>
       </TabsContent>
       <TabsContent value="pay" className="mt-0">
