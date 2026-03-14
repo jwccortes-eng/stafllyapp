@@ -26,6 +26,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [settingUp, setSettingUp] = useState(false);
+  const [needsSetupChecked, setNeedsSetupChecked] = useState(false);
   const { toast } = useToast();
 
   // Auto-setup and redirect
