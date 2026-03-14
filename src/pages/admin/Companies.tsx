@@ -659,6 +659,13 @@ export default function CompaniesPage() {
 
       <CompanyUsersDialog companyId={usersCompany?.id ?? null} companyName={usersCompany?.name ?? ""} open={!!usersCompany} onOpenChange={v => { if (!v) setUsersCompany(null); }} onUpdated={fetchCompanies} />
       <CompanyModulesDialog companyId={modulesCompany?.id ?? null} companyName={modulesCompany?.name ?? ""} isSandbox={modulesCompany?.is_sandbox ?? false} open={!!modulesCompany} onOpenChange={v => { if (!v) setModulesCompany(null); }} />
+      <SandboxSyncDialog
+        open={syncOpen}
+        onOpenChange={setSyncOpen}
+        sandboxId={companies.find(c => c.is_sandbox)?.id ?? ""}
+        companies={companies.map(c => ({ id: c.id, name: c.name, is_sandbox: c.is_sandbox }))}
+        onSynced={fetchCompanies}
+      />
 
       <Dialog open={!!planCompany} onOpenChange={v => { if (!v) setPlanCompany(null); }}>
         <DialogContent className="max-w-md">
