@@ -90,20 +90,28 @@ export function ReputationAdminPanel({ workerProfileId, employeeId, employeeName
 
           {rep.score && (
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div><span className="text-muted-foreground">Total eventos:</span> <span className="font-medium">{rep.score.total_events}</span></div>
-              <div><span className="text-muted-foreground">Último cálculo:</span> <span className="font-medium">{rep.score.last_calculated_at ? new Date(rep.score.last_calculated_at).toLocaleDateString("es") : "—"}</span></div>
-              {rep.score.category_scores && typeof rep.score.category_scores === "object" && (
-                <div className="col-span-2 pt-2 border-t border-border/30">
-                  <p className="text-[10px] text-muted-foreground mb-1">Scores por categoría:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(rep.score.category_scores as Record<string, any>).map(([cat, data]) => (
-                      <Badge key={cat} variant="outline" className="text-[10px]">
-                        {catEmoji(cat)} {cat}: {typeof data === "object" ? `${data.count} eventos` : data}
-                      </Badge>
-                    ))}
-                  </div>
+              <div><span className="text-muted-foreground">Reseñas:</span> <span className="font-medium">{rep.score.total_reviews_count ?? 0}</span></div>
+              <div><span className="text-muted-foreground">Turnos completados:</span> <span className="font-medium">{rep.score.total_completed_shifts ?? 0}</span></div>
+              <div><span className="text-muted-foreground">Horas trabajadas:</span> <span className="font-medium">{rep.score.total_hours_worked ?? 0}</span></div>
+              <div><span className="text-muted-foreground">Cancelaciones:</span> <span className="font-medium">{rep.score.cancellation_count ?? 0}</span></div>
+              <div className="col-span-2 pt-2 border-t border-border/30">
+                <p className="text-[10px] text-muted-foreground mb-1">Scores por categoría:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "Puntualidad", val: rep.score.punctuality_score },
+                    { label: "Calidad", val: rep.score.quality_score },
+                    { label: "Servicio", val: rep.score.service_score },
+                    { label: "Comunicación", val: rep.score.communication_score },
+                    { label: "Presentación", val: rep.score.presentation_score },
+                    { label: "Asistencia", val: rep.score.attendance_score },
+                    { label: "Confiabilidad", val: rep.score.reliability_score },
+                  ].filter(c => c.val != null).map(c => (
+                    <Badge key={c.label} variant="outline" className="text-[10px]">
+                      {c.label}: {c.val?.toFixed(1)}
+                    </Badge>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
           )}
 
