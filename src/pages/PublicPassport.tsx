@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, MapPin, Clock, Building2, Star, Award, Briefcase, Globe, Shield } from "lucide-react";
+import { Loader2, CheckCircle2, MapPin, Clock, Building2, Star, Award, Briefcase, Globe, Shield, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { QRCodeSVG } from "qrcode.react";
