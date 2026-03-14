@@ -281,12 +281,53 @@ export default function PublicPassport() {
           <p className="text-[10px] text-muted-foreground text-center max-w-xs">
             Escanea el código QR o comparte el enlace para verificar este perfil profesional.
           </p>
-          <button
-            onClick={() => { navigator.clipboard.writeText(pageUrl); }}
-            className="text-xs text-primary hover:underline font-medium"
-          >
-            Copiar enlace
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => { navigator.clipboard.writeText(pageUrl); }}
+              className="text-xs text-primary hover:underline font-medium"
+            >
+              Copiar enlace
+            </button>
+            <button
+              onClick={() => {
+                const visibleMetrics = metrics
+                  .filter(m => {
+                    if (m.metric_code === "total_hours" && pub.publish_hours === false) return false;
+                    if (m.metric_code === "total_companies" && pub.publish_companies_count === false) return false;
+                    if (m.metric_code === "rep_score" && pub.publish_reputation === false) return false;
+                    return true;
+                  })
+                  .map(m => ({ label: m.metric_label, value: m.metric_value }));
+
+                downloadPassportPDF({
+                  displayName: passport.display_name,
+                  primaryRole: passport.primary_role,
+                  summaryText: passport.summary_text,
+                  city: pub.publish_city !== false ? workerProfile?.city : null,
+                  repScore: pub.publish_reputation !== false ? repScore : null,
+                  tier: tier.label,
+                  metrics: visibleMetrics,
+                  skills: pub.publish_skills !== false ? (workerProfile?.skills ?? []) : [],
+                  languages: pub.publish_languages !== false ? (workerProfile?.languages ?? []) : [],
+                  workHistory: pub.publish_work_history !== false
+                    ? workHistory.map(wh => ({
+                        companyName: wh.company_name,
+                        roleName: wh.role_name,
+                        dateStart: wh.date_start,
+                        dateEnd: wh.date_end,
+                        totalHours: pub.publish_hours !== false ? wh.total_hours : null,
+                        isVerified: wh.is_verified,
+                      }))
+                    : [],
+                  pageUrl,
+                  generatedAt: passport.generated_at,
+                });
+              }}
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+            >
+              <Download className="h-3.5 w-3.5" /> Descargar PDF
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
