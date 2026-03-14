@@ -223,6 +223,7 @@ export default function EmployeeLayout() {
       </div>
     );
   }
+  if (isMobile) {
     return (
       <div className="min-h-[100dvh] bg-[hsl(var(--background))] flex flex-col">
         {/* Top bar with page context */}
