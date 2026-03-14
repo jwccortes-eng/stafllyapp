@@ -22,7 +22,9 @@ import {
 import { EmployeePerformanceScore } from "@/components/reviews/EmployeePerformanceScore";
 import { EmployeeAccessTab } from "@/components/employee/EmployeeAccessTab";
 import { ReputationProfile } from "@/components/reviews/ReputationProfile";
+import { ReputationAdminPanel } from "@/components/reviews/ReputationAdminPanel";
 import { WorkerProfileTab } from "@/components/employee/WorkerProfileTab";
+import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import { useToast } from "@/hooks/use-toast";
 
 type EmployeeRecord = Record<string, any>;
