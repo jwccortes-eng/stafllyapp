@@ -88,13 +88,14 @@ interface PromoCode {
   created_at: string;
 }
 
-const ROLE_LABELS: Record<RoleType, string> = { developer: "Desarrollador", owner: "Dueño", admin: "Admin", manager: "Manager", employee: "Empleado" };
-const ROLE_ICONS: Record<RoleType, typeof Shield> = { developer: ShieldCheck, owner: ShieldCheck, admin: Shield, manager: UserCog, employee: User };
+const ROLE_LABELS: Record<RoleType, string> = { developer: "Desarrollador", owner: "Dueño", admin: "Admin", manager: "Manager", supervisor: "Supervisor", employee: "Empleado" };
+const ROLE_ICONS: Record<RoleType, typeof Shield> = { developer: ShieldCheck, owner: ShieldCheck, admin: Shield, manager: UserCog, supervisor: UserCog, employee: User };
 const ROLE_COLORS: Record<RoleType, string> = {
   developer: "bg-destructive/10 text-destructive border-destructive/20",
   owner: "bg-chart-1/10 text-chart-1 border-chart-1/20",
   admin: "bg-primary/10 text-primary border-primary/20",
   manager: "bg-chart-4/10 text-chart-4 border-chart-4/20",
+  supervisor: "bg-chart-3/10 text-chart-3 border-chart-3/20",
   employee: "bg-muted text-muted-foreground border-border",
 };
 
