@@ -182,6 +182,7 @@ function App() {
                 <Route path="ai-workforce" element={<AIWorkforce />} />
                 <Route path="live-map" element={<LiveMap />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
+                <Route path="passport" element={<WorkerPassport />} />
               </Route>
 
               {/* Employee portal routes */}
