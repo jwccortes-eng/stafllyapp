@@ -6,6 +6,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function parseJwtClaims(token: string): Record<string, unknown> | null {
+  const parts = token.split(".");
+  if (parts.length < 2) return null;
+
+  try {
+    const payload = parts[1]
+      .replaceAll("-", "+")
+      .replaceAll("_", "/")
+      .padEnd(Math.ceil(parts[1].length / 4) * 4, "=");
+
+    return JSON.parse(atob(payload)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -16,6 +32,17 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const token = authHeader.slice("Bearer ".length).trim();
+    const claims = parseJwtClaims(token);
+    const runId = typeof claims?.session_id === "string" ? claims.session_id : null;
+
+    if (!runId) {
+      return new Response(JSON.stringify({ error: "No se pudo obtener session_id para el envío" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -50,6 +77,8 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const payload = {
+      run_id: runId,
+      queued_at: new Date().toISOString(),
       to,
       subject,
       html,
@@ -77,7 +106,7 @@ Deno.serve(async (req) => {
       template_name: "invite_email",
       status: "pending",
       message_id: payload.message_id,
-      metadata: { subject, enqueued_by: user.id },
+      metadata: { subject, enqueued_by: user.id, run_id: runId },
     });
 
     console.log("Email enqueued successfully, msg_id:", msgId);
