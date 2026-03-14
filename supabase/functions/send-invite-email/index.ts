@@ -68,8 +68,6 @@ Deno.serve(async (req) => {
         sender_domain: "notify.staflyapps.com",
         purpose: "transactional",
         label: "invite_email",
-        run_id: crypto.randomUUID(),
-        message_id: crypto.randomUUID(),
       },
       { apiKey }
     );
