@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
-import { Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck, Building2, Phone } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck, Building2, Phone, Sparkles } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 
 import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
