@@ -34,25 +34,48 @@ function canUseResendFallback(error: unknown): boolean {
 }
 
 async function sendWithResend(payload: any, resendApiKey: string): Promise<void> {
-  const response = await fetch('https://api.resend.com/emails', {
+  const endpoint = 'https://api.resend.com/emails'
+  const baseHeaders = {
+    Authorization: `Bearer ${resendApiKey}`,
+    'Content-Type': 'application/json',
+  }
+
+  const body = {
+    from: payload.from ?? 'StaflyApps <noreply@notify.staflyapps.com>',
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.html,
+    text: payload.text,
+  }
+
+  const response = await fetch(endpoint, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: payload.from ?? 'StaflyApps <noreply@notify.staflyapps.com>',
-      to: payload.to,
-      subject: payload.subject,
-      html: payload.html,
-      text: payload.text,
-    }),
+    headers: baseHeaders,
+    body: JSON.stringify(body),
   })
 
-  if (!response.ok) {
-    const raw = await response.text()
-    throw new Error(`Resend API error: ${response.status} ${raw}`)
+  if (response.ok) return
+
+  const raw = await response.text()
+
+  // Domain fallback: if custom domain is not verified in Resend, retry with the default sender.
+  if (response.status === 403 && raw.toLowerCase().includes('domain is not verified')) {
+    const retry = await fetch(endpoint, {
+      method: 'POST',
+      headers: baseHeaders,
+      body: JSON.stringify({
+        ...body,
+        from: 'StaflyApps <onboarding@resend.dev>',
+      }),
+    })
+
+    if (retry.ok) return
+
+    const retryRaw = await retry.text()
+    throw new Error(`Resend fallback error: ${retry.status} ${retryRaw}`)
   }
+
+  throw new Error(`Resend API error: ${response.status} ${raw}`)
 }
 
 function parseJwtClaims(token: string): Record<string, unknown> | null {
