@@ -8,6 +8,7 @@ import {
   Lock, Send, Eye, Download,
   Menu, X, Zap, ChevronRight, Smartphone, Building2, Utensils,
   HardHat, Briefcase, History, ClipboardCheck,
+  LayoutDashboard, FileText,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -16,6 +17,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import heroDashboard from "@/assets/stafly-hero-dashboard.png";
+import demoDashboard from "@/assets/demo/demo-dashboard.jpg";
+import demoShifts from "@/assets/demo/demo-shifts.jpg";
+import demoEmployees from "@/assets/demo/demo-employees.jpg";
+import demoReports from "@/assets/demo/demo-reports.jpg";
+import demoMobile from "@/assets/demo/demo-mobile.jpg";
 
 /* ───────── i18n ───────── */
 const i18n = {
@@ -187,6 +193,95 @@ function DemoForm({ lang }: { lang: "es" | "en" }) {
         {loading ? "..." : c.submit} <Send className="h-4 w-4" />
       </button>
     </form>
+  );
+}
+
+/* ───────── Interactive Demo ───────── */
+const demoTabs = [
+  { key: "dashboard", icon: LayoutDashboard, img: demoDashboard },
+  { key: "shifts", icon: CalendarDays, img: demoShifts },
+  { key: "employees", icon: Users, img: demoEmployees },
+  { key: "reports", icon: BarChart3, img: demoReports },
+  { key: "mobile", icon: Smartphone, img: demoMobile },
+] as const;
+
+const demoLabels: Record<string, Record<string, string>> = {
+  es: { dashboard: "Dashboard", shifts: "Calendario de turnos", employees: "Gestión de empleados", reports: "Reportes", mobile: "Portal móvil" },
+  en: { dashboard: "Dashboard", shifts: "Shift calendar", employees: "Employee management", reports: "Reports", mobile: "Mobile portal" },
+};
+
+function InteractiveDemo({ lang }: { lang: "es" | "en" }) {
+  const [active, setActive] = useState(0);
+  const labels = demoLabels[lang];
+
+  return (
+    <section className="py-16 sm:py-24">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: "hsl(220,25%,10%)" }}>
+            {lang === "es" ? "Explora la plataforma" : "Explore the platform"}
+          </h2>
+          <p className="mt-3 text-[15px]" style={{ color: "hsl(220,10%,45%)" }}>
+            {lang === "es" ? "Descubre cómo StaflyApps te ayuda a gestionar tu equipo." : "See how StaflyApps helps you manage your team."}
+          </p>
+        </div>
+
+        {/* Tab buttons */}
+        <div className="flex flex-wrap justify-center gap-2 mb-8">
+          {demoTabs.map((tab, i) => {
+            const Icon = tab.icon;
+            const isActive = active === i;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActive(i)}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-[0_2px_8px_-2px_hsl(222,100%,59%/0.35)]"
+                    : "bg-muted/40 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{labels[tab.key]}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Preview */}
+        <div className="relative rounded-2xl overflow-hidden border border-border shadow-[0_12px_40px_-10px_rgba(0,0,0,0.08)]">
+          <div className="bg-muted/30 border-b border-border px-4 py-2.5 flex items-center gap-2">
+            <div className="flex gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-[hsl(0,70%,65%)]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[hsl(45,80%,60%)]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[hsl(140,50%,55%)]" />
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground ml-2">
+              {labels[demoTabs[active].key]}
+            </span>
+          </div>
+          <img
+            src={demoTabs[active].img}
+            alt={labels[demoTabs[active].key]}
+            className="w-full h-auto block"
+            loading="lazy"
+          />
+        </div>
+
+        {/* Navigation dots */}
+        <div className="flex justify-center gap-2 mt-6">
+          {demoTabs.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              className={`h-2 rounded-full transition-all ${
+                active === i ? "w-6 bg-primary" : "w-2 bg-muted-foreground/20"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -444,6 +539,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* ── INTERACTIVE DEMO ── */}
+      <InteractiveDemo lang={lang} />
 
       {/* ── TRUST ── */}
       <section className="py-16 sm:py-24">
