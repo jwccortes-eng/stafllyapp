@@ -433,7 +433,12 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
                 <Camera className="h-3 w-3" />
               </div>
             </button>
-            <span className="text-xs text-muted-foreground">Toca para agregar foto</span>
+            <span className="text-xs text-muted-foreground">
+              {avatarPreview ? "✓ Foto seleccionada" : "Toca para agregar foto (obligatorio)"}
+            </span>
+            {!avatarPreview && (
+              <p className="text-[10px] text-warning font-medium">⚠️ La foto es requerida para activar tu cuenta</p>
+            )}
           </div>
 
           {/* Email */}
