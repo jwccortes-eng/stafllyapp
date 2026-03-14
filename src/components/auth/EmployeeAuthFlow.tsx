@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin";
+type EmployeeStep = "phone" | "activate_pin" | "activate_profile" | "login_pin" | "force_change_pin";
 
 interface EmployeeInfo {
   found: boolean;
