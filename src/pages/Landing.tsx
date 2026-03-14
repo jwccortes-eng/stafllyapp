@@ -451,6 +451,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── INTERACTIVE DEMO ── */}
+      <InteractiveDemo lang={lang} />
+
       {/* ── TRUST ── */}
       <section className="py-16 sm:py-24">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
