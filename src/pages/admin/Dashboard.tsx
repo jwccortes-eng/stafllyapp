@@ -311,6 +311,18 @@ export default function AdminDashboard() {
     }
     fetchPendingCounts();
 
+    // Fetch employees missing profile photo
+    async function fetchMissingPhotos() {
+      const { count } = await supabase
+        .from("employees")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", selectedCompanyId!)
+        .eq("is_active", true)
+        .is("avatar_url", null);
+      setMissingPhotoCount(count ?? 0);
+    }
+    fetchMissingPhotos();
+
     // Fetch today summary
     async function fetchTodaySummary() {
       const today = new Date().toISOString().split("T")[0];
