@@ -8,6 +8,7 @@ import {
   Lock, Send, Eye, Download,
   Menu, X, Zap, ChevronRight, Smartphone, Building2, Utensils,
   HardHat, Briefcase, History, ClipboardCheck,
+  LayoutDashboard, FileText,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -16,6 +17,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import heroDashboard from "@/assets/stafly-hero-dashboard.png";
+import demoDashboard from "@/assets/demo/demo-dashboard.jpg";
+import demoShifts from "@/assets/demo/demo-shifts.jpg";
+import demoEmployees from "@/assets/demo/demo-employees.jpg";
+import demoReports from "@/assets/demo/demo-reports.jpg";
+import demoMobile from "@/assets/demo/demo-mobile.jpg";
 
 /* ───────── i18n ───────── */
 const i18n = {
