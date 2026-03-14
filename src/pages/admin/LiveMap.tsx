@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -273,7 +273,7 @@ export default function LiveMap() {
 
             {/* Location geofences */}
             {(showLayer === "all" || showLayer === "locations") && locations.map((loc) => (
-              <div key={loc.id}>
+              <React.Fragment key={loc.id}>
                 <Circle
                   center={[loc.latitude, loc.longitude]}
                   radius={loc.geofence_radius}
@@ -291,7 +291,7 @@ export default function LiveMap() {
                     </div>
                   </Popup>
                 </Marker>
-              </div>
+              </React.Fragment>
             ))}
 
             {/* Active workers */}
