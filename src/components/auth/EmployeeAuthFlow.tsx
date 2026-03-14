@@ -401,7 +401,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               Completa tu perfil
             </h1>
             <p className="text-sm text-muted-foreground">
-              Opcional — puedes hacerlo después
+              Sube una foto clara de tu rostro para activar tu cuenta
             </p>
           </div>
 
