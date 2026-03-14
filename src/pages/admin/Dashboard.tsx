@@ -504,7 +504,7 @@ export default function AdminDashboard() {
           <CardContent className="px-3 pb-4">
             {totalPending === 0 ? (
               <div className="text-center py-6">
-                <div className="h-10 w-10 rounded-xl bg-earning/8 flex items-center justify-center mx-auto mb-2">
+                <div className="h-10 w-10 rounded-xl bg-earning/[0.08] flex items-center justify-center mx-auto mb-2">
                   <CheckCircle2 className="h-4 w-4 text-earning" />
                 </div>
                 <p className="text-xs font-medium text-earning">¡Todo al día!</p>
