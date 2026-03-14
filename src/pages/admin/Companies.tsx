@@ -335,6 +335,11 @@ export default function CompaniesPage() {
         subtitle="Vista consolidada: planes, facturación, usuarios y cartera"
         rightSlot={
           <div className="flex gap-2">
+            {companies.some(c => c.is_sandbox) && (
+              <Button variant="outline" onClick={() => setSyncOpen(true)}>
+                <RefreshCcw className="h-4 w-4 mr-2" />Sync Sandbox
+              </Button>
+            )}
             {!companies.some(c => c.is_sandbox) && (
               <Button variant="outline" onClick={async () => {
                 const { error } = await supabase.from("companies").insert({ name: "Sandbox", slug: "sandbox", is_sandbox: true } as any);
