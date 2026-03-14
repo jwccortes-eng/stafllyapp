@@ -201,6 +201,7 @@ export default function AdminDashboard() {
   const [pendingCounts, setPendingCounts] = useState({ shiftRequests: 0, pendingMovements: 0, openTickets: 0, pendingAttendance: 0 });
   const [todaySummary, setTodaySummary] = useState({ shiftsToday: 0, assignedToday: 0, clockedIn: 0, openEntries: 0 });
   const [commercialKpis, setCommercialKpis] = useState({ activeClients: 0, openRequests: 0, unpaidInvoices: 0, overdueInvoices: 0, unpaidTotal: 0, overdueTotal: 0 });
+  const [missingPhotoCount, setMissingPhotoCount] = useState(0);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
