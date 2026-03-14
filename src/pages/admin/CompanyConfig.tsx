@@ -42,7 +42,8 @@ const SETTINGS_CONFIG: SettingConfig[] = [
     icon: MapPin,
     fields: [
       { path: "enabled", label: "Geofence activo", type: "boolean" },
-      { path: "radius_meters", label: "Radio", type: "number", suffix: "metros", min: 50, max: 5000 },
+      { path: "enforce", label: "Bloquear fichaje fuera del radio", type: "boolean" },
+      { path: "radius_meters", label: "Radio por defecto", type: "number", suffix: "metros", min: 50, max: 5000 },
     ],
   },
   {
