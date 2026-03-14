@@ -817,6 +817,9 @@ export default function AdminDashboard() {
       {/* ── Onboarding Checklist ── */}
       <OnboardingChecklist />
 
+      {/* ── Pending Reviews ── */}
+      <PendingReviewsWidget />
+
       {/* ── Owner: Company Cards ── */}
       {(role === 'developer' || role === 'owner') && companies.length > 1 && (
         <div>
