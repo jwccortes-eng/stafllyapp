@@ -235,7 +235,13 @@ export default function WorkerPassport() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      <PageHeader title="Worker Passport" subtitle="Professional verified profile" />
+      <div className="flex items-center justify-between">
+        <PageHeader title="Worker Passport" subtitle="Professional verified profile" />
+        <Button variant="outline" size="sm" onClick={handleConsolidate} disabled={consolidating || !wp.profile?.id} className="gap-1.5 text-xs">
+          <RefreshCw className={cn("h-3.5 w-3.5", consolidating && "animate-spin")} />
+          {consolidating ? "Consolidando..." : "Consolidar"}
+        </Button>
+      </div>
 
       {/* ── Profile Header ── */}
       <Card className="border-border/40 overflow-hidden">
