@@ -25,6 +25,36 @@ function getRetryAfterSeconds(error: unknown): number {
   return 60
 }
 
+function canUseResendFallback(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  return (
+    error.message.includes('run_not_found') ||
+    (error.message.includes('missing_parameter') && error.message.includes('run_id'))
+  )
+}
+
+async function sendWithResend(payload: any, resendApiKey: string): Promise<void> {
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: payload.from ?? 'StaflyApps <noreply@notify.staflyapps.com>',
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.html,
+      text: payload.text,
+    }),
+  })
+
+  if (!response.ok) {
+    const raw = await response.text()
+    throw new Error(`Resend API error: ${response.status} ${raw}`)
+  }
+}
+
 function parseJwtClaims(token: string): Record<string, unknown> | null {
   const parts = token.split('.')
   if (parts.length < 2) {
