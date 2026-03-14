@@ -30,6 +30,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import CompanyUsersDialog from "@/components/CompanyUsersDialog";
 import CompanyModulesDialog from "@/components/CompanyModulesDialog";
+import SandboxSyncDialog from "@/components/SandboxSyncDialog";
 
 /* ── Types ── */
 interface CompanyUser {
