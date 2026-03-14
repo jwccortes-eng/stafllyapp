@@ -24,6 +24,7 @@ import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
 import { Badge } from "@/components/ui/badge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { PendingReviewsWidget } from "@/components/reviews/PendingReviewsWidget";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
 
