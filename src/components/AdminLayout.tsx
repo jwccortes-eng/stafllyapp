@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
+import TopBar from "./TopBar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -159,16 +160,17 @@ export default function AdminLayout() {
     );
   }
 
-  // Desktop layout
+  // Desktop layout: Sidebar + TopBar + Content
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); localStorage.setItem("sidebar-collapsed", String(v)); } }}>
       <div className="min-h-screen bg-background">
         <AdminSidebar />
+        <TopBar collapsed={collapsed} />
         <CommandPalette />
         <main className={cn(
-          "transition-all duration-300 ease-in-out min-h-screen",
+          "transition-all duration-300 ease-in-out min-h-[calc(100vh-3.5rem)]",
           collapsed ? "ml-[60px]" : "ml-[240px]",
-          "p-6 lg:p-8"
+          "p-6 lg:p-8 pt-6"
         )}>
           <div className="animate-fade-in max-w-[1400px]">
             <Outlet />
