@@ -467,6 +467,9 @@ export default function CompaniesPage() {
                         <DropdownMenuItem onClick={() => openAssignPlan(c)}><CreditCard className="h-4 w-4 mr-2" />Asignar plan</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUsersCompany(c)}><Users className="h-4 w-4 mr-2" />Usuarios</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setModulesCompany(c)}><LayoutGrid className="h-4 w-4 mr-2" />Módulos</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicate(c)} disabled={duplicating}>
+                          <CopyPlus className="h-4 w-4 mr-2" />{duplicating ? "Duplicando..." : "Duplicar empresa"}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleActive(c)}>{c.is_active ? "Desactivar" : "Activar"}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
