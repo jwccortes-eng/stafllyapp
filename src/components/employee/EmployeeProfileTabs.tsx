@@ -623,7 +623,7 @@ function ActivityTab({ employee }: { employee: EmployeeRecord }) {
     <div className="space-y-1">
       {items.map(item => (
         <div key={item.id} className="flex items-start gap-3 py-2.5 border-b border-border/30 last:border-0">
-          <div className="h-6 w-6 rounded-md bg-primary/6 flex items-center justify-center shrink-0 mt-0.5">
+          <div className="h-6 w-6 rounded-md bg-primary/[0.06] flex items-center justify-center shrink-0 mt-0.5">
             <Activity className="h-3 w-3 text-primary/70" />
           </div>
           <div className="min-w-0 flex-1">

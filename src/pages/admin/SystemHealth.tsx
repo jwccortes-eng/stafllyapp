@@ -30,7 +30,7 @@ interface HealthCheck {
 
 const STATUS_CONFIG: Record<Status, { bg: string; border: string; text: string; dot: string; label: string; Icon: any }> = {
   green: {
-    bg: "bg-earning/8",
+    bg: "bg-earning/[0.08]",
     border: "border-earning/25",
     text: "text-earning",
     dot: "bg-earning",
@@ -38,7 +38,7 @@ const STATUS_CONFIG: Record<Status, { bg: string; border: string; text: string; 
     Icon: CheckCircle2,
   },
   yellow: {
-    bg: "bg-warning/8",
+    bg: "bg-warning/[0.08]",
     border: "border-warning/25",
     text: "text-warning",
     dot: "bg-warning",
@@ -46,7 +46,7 @@ const STATUS_CONFIG: Record<Status, { bg: string; border: string; text: string; 
     Icon: AlertTriangle,
   },
   red: {
-    bg: "bg-destructive/8",
+    bg: "bg-destructive/[0.08]",
     border: "border-destructive/25",
     text: "text-destructive",
     dot: "bg-destructive",

@@ -121,9 +121,9 @@ const EMOJI_OPTIONS = [
 ];
 
 const priorityConfig: Record<string, { cls: string; bgCls: string; label: string; icon: any }> = {
-  urgent: { cls: "text-destructive", bgCls: "bg-destructive/8", label: "Urgente", icon: AlertTriangle },
-  high: { cls: "text-warning", bgCls: "bg-warning/8", label: "Importante", icon: Bell },
-  important: { cls: "text-warning", bgCls: "bg-warning/8", label: "Importante", icon: Bell },
+  urgent: { cls: "text-destructive", bgCls: "bg-destructive/[0.08]", label: "Urgente", icon: AlertTriangle },
+  high: { cls: "text-warning", bgCls: "bg-warning/[0.08]", label: "Importante", icon: Bell },
+  important: { cls: "text-warning", bgCls: "bg-warning/[0.08]", label: "Importante", icon: Bell },
   normal: { cls: "text-muted-foreground", bgCls: "bg-muted", label: "Normal", icon: Megaphone },
 };
 
@@ -453,7 +453,7 @@ export default function EmployeeDashboard() {
                 )}
               >
                 {a.priority === "urgent" && (
-                  <div className="bg-destructive/6 px-4 py-2 flex items-center gap-1.5">
+                  <div className="bg-destructive/[0.06] px-4 py-2 flex items-center gap-1.5">
                     <AlertTriangle className="h-3 w-3 text-destructive" />
                     <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
                   </div>

@@ -82,10 +82,10 @@ function KpiStatCard({ label, value, subtitle, icon: Icon, color, sparkData, onC
   onClick?: () => void;
 }) {
   const colorMap = {
-    primary: { bg: "bg-primary/8", text: "text-primary", icon: "text-primary", ring: "ring-primary/10", spark: "hsl(var(--primary))" },
-    warning: { bg: "bg-warning/8", text: "text-warning", icon: "text-warning", ring: "ring-warning/10", spark: "hsl(var(--warning))" },
-    deduction: { bg: "bg-deduction/8", text: "text-deduction", icon: "text-deduction", ring: "ring-deduction/10", spark: "hsl(var(--destructive))" },
-    earning: { bg: "bg-earning/8", text: "text-earning", icon: "text-earning", ring: "ring-earning/10", spark: "hsl(var(--earning))" },
+    primary: { bg: "bg-primary/[0.08]", text: "text-primary", icon: "text-primary", ring: "ring-primary/10", spark: "hsl(var(--primary))" },
+    warning: { bg: "bg-warning/[0.08]", text: "text-warning", icon: "text-warning", ring: "ring-warning/10", spark: "hsl(var(--warning))" },
+    deduction: { bg: "bg-deduction/[0.08]", text: "text-deduction", icon: "text-deduction", ring: "ring-deduction/10", spark: "hsl(var(--destructive))" },
+    earning: { bg: "bg-earning/[0.08]", text: "text-earning", icon: "text-earning", ring: "ring-earning/10", spark: "hsl(var(--earning))" },
   };
   const c = colorMap[color];
 
@@ -155,7 +155,7 @@ function ActivityRow({ item }: { item: any }) {
   return (
     <div className="px-4 py-3 hover:bg-accent/20 transition-colors">
       <div className="flex items-start gap-3">
-        <div className="h-7 w-7 rounded-lg bg-primary/6 flex items-center justify-center shrink-0 mt-0.5">
+        <div className="h-7 w-7 rounded-lg bg-primary/[0.06] flex items-center justify-center shrink-0 mt-0.5">
           <IconComp className="h-3 w-3 text-primary/70" />
         </div>
         <div className="min-w-0 flex-1">
@@ -478,18 +478,18 @@ export default function AdminDashboard() {
     pending_requests: () => {
       const totalPending = pendingCounts.shiftRequests + pendingCounts.pendingMovements + pendingCounts.openTickets + pendingCounts.pendingAttendance + missingPhotoCount;
       const items = [
-        { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/8", to: "/app/shift-requests" },
-        { label: "Novedades pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/8", to: "/app/movements" },
-        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/8", to: "/app/requests" },
-        { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/8", to: "/app/shifts" },
-        { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-warning", bg: "bg-warning/8", to: "/app/employees" },
+        { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
+        { label: "Novedades pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
+        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/[0.08]", to: "/app/requests" },
+        { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
+        { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/employees" },
       ];
       return (
         <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
           <CardHeader className="pb-3 px-5 pt-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-destructive/8 flex items-center justify-center">
+                <div className="h-7 w-7 rounded-lg bg-destructive/[0.08] flex items-center justify-center">
                   <Inbox className="h-3.5 w-3.5 text-destructive" />
                 </div>
                 <CardTitle className="text-sm font-semibold font-heading">Pendientes</CardTitle>
@@ -504,7 +504,7 @@ export default function AdminDashboard() {
           <CardContent className="px-3 pb-4">
             {totalPending === 0 ? (
               <div className="text-center py-6">
-                <div className="h-10 w-10 rounded-xl bg-earning/8 flex items-center justify-center mx-auto mb-2">
+                <div className="h-10 w-10 rounded-xl bg-earning/[0.08] flex items-center justify-center mx-auto mb-2">
                   <CheckCircle2 className="h-4 w-4 text-earning" />
                 </div>
                 <p className="text-xs font-medium text-earning">¡Todo al día!</p>
@@ -557,8 +557,8 @@ export default function AdminDashboard() {
           <CardHeader className="pb-3 px-5 pt-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-                  <Calendar className="h-3.5 w-3.5 text-primary" />
+                 <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
+                   <Calendar className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold font-heading">Hoy</CardTitle>
@@ -596,8 +596,8 @@ export default function AdminDashboard() {
       <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
         <CardHeader className="pb-2 px-5 pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
+             <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
+               <TrendingUp className="h-3.5 w-3.5 text-primary" />
             </div>
             <CardTitle className="text-sm font-semibold font-heading">Tendencia de pagos</CardTitle>
           </div>
@@ -633,8 +633,8 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-              <Megaphone className="h-3.5 w-3.5 text-primary" />
+             <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
+               <Megaphone className="h-3.5 w-3.5 text-primary" />
             </div>
             <h2 className="text-sm font-semibold font-heading">Comunicados</h2>
           </div>
@@ -663,7 +663,7 @@ export default function AdminDashboard() {
                   a.priority === "urgent" && "border-destructive/30"
                 )}>
                   {a.priority === "urgent" && (
-                    <div className="bg-destructive/6 px-4 py-1.5 flex items-center gap-1.5 border-b border-destructive/10">
+                    <div className="bg-destructive/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-destructive/10">
                       <AlertTriangle className="h-3 w-3 text-destructive" />
                       <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
                     </div>
@@ -713,8 +713,8 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-warning/8 flex items-center justify-center">
-              <Activity className="h-3.5 w-3.5 text-warning" />
+             <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
+               <Activity className="h-3.5 w-3.5 text-warning" />
             </div>
             <h2 className="text-sm font-semibold font-heading">Actividad reciente</h2>
           </div>

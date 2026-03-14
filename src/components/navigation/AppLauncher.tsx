@@ -137,7 +137,7 @@ export function AppLauncher({
             {theme === "dark" ? "Claro" : "Oscuro"}
           </button>
           <LogoutConfirmDialog onConfirm={() => { onSignOut(); onClose(); }}>
-            <button className="flex items-center gap-2 text-xs text-destructive/70 hover:text-destructive transition-colors px-2 py-1.5 rounded-lg hover:bg-destructive/8">
+            <button className="flex items-center gap-2 text-xs text-destructive/70 hover:text-destructive transition-colors px-2 py-1.5 rounded-lg hover:bg-destructive/[0.08]">
               <LogOut className="h-3.5 w-3.5" />
               Cerrar sesión
             </button>
