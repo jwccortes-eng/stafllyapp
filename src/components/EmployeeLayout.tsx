@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
-import { User, LogOut, LogIn } from "lucide-react";
+import { User, LogOut, LogIn, Camera, Upload, RotateCcw, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -13,6 +13,8 @@ import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { EMPLOYEE_NAV_ITEMS, EMPLOYEE_DEFAULT_PINS } from "@/components/navigation/nav-items";
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 /** Shows current page title in mobile portal header */
 function PortalPageTitle() {
