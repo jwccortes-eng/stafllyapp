@@ -411,6 +411,7 @@ Deno.serve(async (req) => {
           success: true,
           session: signInData.session,
           user: signInData.user,
+          must_change_pin: employee.must_change_pin === true,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
