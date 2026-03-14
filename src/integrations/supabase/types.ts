@@ -2437,6 +2437,221 @@ export type Database = {
           },
         ]
       }
+      passport_metrics: {
+        Row: {
+          created_at: string | null
+          id: string
+          metric_code: string
+          metric_display_order: number | null
+          metric_label: string
+          metric_value: string
+          passport_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metric_code: string
+          metric_display_order?: number | null
+          metric_label: string
+          metric_value: string
+          passport_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metric_code?: string
+          metric_display_order?: number | null
+          metric_label?: string
+          metric_value?: string
+          passport_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passport_metrics_passport_id_fkey"
+            columns: ["passport_id"]
+            isOneToOne: false
+            referencedRelation: "passport_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      passport_profiles: {
+        Row: {
+          display_name: string
+          english_level:
+            | Database["public"]["Enums"]["english_level_enum"]
+            | null
+          generated_at: string | null
+          id: string
+          overall_reputation_score: number | null
+          passport_slug: string
+          passport_visibility:
+            | Database["public"]["Enums"]["profile_visibility"]
+            | null
+          primary_role: string | null
+          summary_text: string | null
+          total_companies_worked: number | null
+          total_marketplace_jobs: number | null
+          total_verified_hours: number | null
+          total_verified_jobs: number | null
+          updated_at: string | null
+          worker_profile_id: string
+        }
+        Insert: {
+          display_name: string
+          english_level?:
+            | Database["public"]["Enums"]["english_level_enum"]
+            | null
+          generated_at?: string | null
+          id?: string
+          overall_reputation_score?: number | null
+          passport_slug: string
+          passport_visibility?:
+            | Database["public"]["Enums"]["profile_visibility"]
+            | null
+          primary_role?: string | null
+          summary_text?: string | null
+          total_companies_worked?: number | null
+          total_marketplace_jobs?: number | null
+          total_verified_hours?: number | null
+          total_verified_jobs?: number | null
+          updated_at?: string | null
+          worker_profile_id: string
+        }
+        Update: {
+          display_name?: string
+          english_level?:
+            | Database["public"]["Enums"]["english_level_enum"]
+            | null
+          generated_at?: string | null
+          id?: string
+          overall_reputation_score?: number | null
+          passport_slug?: string
+          passport_visibility?:
+            | Database["public"]["Enums"]["profile_visibility"]
+            | null
+          primary_role?: string | null
+          summary_text?: string | null
+          total_companies_worked?: number | null
+          total_marketplace_jobs?: number | null
+          total_verified_hours?: number | null
+          total_verified_jobs?: number | null
+          updated_at?: string | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passport_profiles_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: true
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      passport_publications: {
+        Row: {
+          created_at: string | null
+          id: string
+          passport_id: string
+          publish_city: boolean | null
+          publish_companies_count: boolean | null
+          publish_hours: boolean | null
+          publish_languages: boolean | null
+          publish_photo: boolean | null
+          publish_reputation: boolean | null
+          publish_skills: boolean | null
+          publish_work_history: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          passport_id: string
+          publish_city?: boolean | null
+          publish_companies_count?: boolean | null
+          publish_hours?: boolean | null
+          publish_languages?: boolean | null
+          publish_photo?: boolean | null
+          publish_reputation?: boolean | null
+          publish_skills?: boolean | null
+          publish_work_history?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          passport_id?: string
+          publish_city?: boolean | null
+          publish_companies_count?: boolean | null
+          publish_hours?: boolean | null
+          publish_languages?: boolean | null
+          publish_photo?: boolean | null
+          publish_reputation?: boolean | null
+          publish_skills?: boolean | null
+          publish_work_history?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passport_publications_passport_id_fkey"
+            columns: ["passport_id"]
+            isOneToOne: true
+            referencedRelation: "passport_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      passport_work_history: {
+        Row: {
+          company_name: string
+          created_at: string | null
+          date_end: string | null
+          date_start: string | null
+          id: string
+          is_verified: boolean | null
+          passport_id: string
+          role_name: string | null
+          source_id: string | null
+          source_type: Database["public"]["Enums"]["passport_source"]
+          total_hours: number | null
+        }
+        Insert: {
+          company_name: string
+          created_at?: string | null
+          date_end?: string | null
+          date_start?: string | null
+          id?: string
+          is_verified?: boolean | null
+          passport_id: string
+          role_name?: string | null
+          source_id?: string | null
+          source_type: Database["public"]["Enums"]["passport_source"]
+          total_hours?: number | null
+        }
+        Update: {
+          company_name?: string
+          created_at?: string | null
+          date_end?: string | null
+          date_start?: string | null
+          id?: string
+          is_verified?: boolean | null
+          passport_id?: string
+          role_name?: string | null
+          source_id?: string | null
+          source_type?: Database["public"]["Enums"]["passport_source"]
+          total_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passport_work_history_passport_id_fkey"
+            columns: ["passport_id"]
+            isOneToOne: false
+            referencedRelation: "passport_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pay_periods: {
         Row: {
           closed_at: string | null
@@ -2800,6 +3015,196 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rep_badges: {
+        Row: {
+          badge_code: string
+          badge_name: string
+          created_at: string | null
+          description: string | null
+          emoji: string | null
+          id: string
+          is_active: boolean | null
+        }
+        Insert: {
+          badge_code: string
+          badge_name: string
+          created_at?: string | null
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean | null
+        }
+        Update: {
+          badge_code?: string
+          badge_name?: string
+          created_at?: string | null
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean | null
+        }
+        Relationships: []
+      }
+      rep_events: {
+        Row: {
+          created_at: string | null
+          event_score: number | null
+          event_weight: number | null
+          id: string
+          notes: string | null
+          source_id: string | null
+          source_type: Database["public"]["Enums"]["reputation_source"]
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_score?: number | null
+          event_weight?: number | null
+          id?: string
+          notes?: string | null
+          source_id?: string | null
+          source_type: Database["public"]["Enums"]["reputation_source"]
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_score?: number | null
+          event_weight?: number | null
+          id?: string
+          notes?: string | null
+          source_id?: string | null
+          source_type?: Database["public"]["Enums"]["reputation_source"]
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_events_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rep_scores: {
+        Row: {
+          attendance_score: number | null
+          cancellation_count: number | null
+          communication_score: number | null
+          created_at: string | null
+          id: string
+          last_calculated_at: string | null
+          no_show_count: number | null
+          overall_score: number | null
+          presentation_score: number | null
+          punctuality_score: number | null
+          quality_score: number | null
+          reliability_score: number | null
+          score_version: number | null
+          service_score: number | null
+          total_completed_jobs: number | null
+          total_completed_shifts: number | null
+          total_hours_worked: number | null
+          total_reviews_count: number | null
+          updated_at: string | null
+          worker_profile_id: string
+        }
+        Insert: {
+          attendance_score?: number | null
+          cancellation_count?: number | null
+          communication_score?: number | null
+          created_at?: string | null
+          id?: string
+          last_calculated_at?: string | null
+          no_show_count?: number | null
+          overall_score?: number | null
+          presentation_score?: number | null
+          punctuality_score?: number | null
+          quality_score?: number | null
+          reliability_score?: number | null
+          score_version?: number | null
+          service_score?: number | null
+          total_completed_jobs?: number | null
+          total_completed_shifts?: number | null
+          total_hours_worked?: number | null
+          total_reviews_count?: number | null
+          updated_at?: string | null
+          worker_profile_id: string
+        }
+        Update: {
+          attendance_score?: number | null
+          cancellation_count?: number | null
+          communication_score?: number | null
+          created_at?: string | null
+          id?: string
+          last_calculated_at?: string | null
+          no_show_count?: number | null
+          overall_score?: number | null
+          presentation_score?: number | null
+          punctuality_score?: number | null
+          quality_score?: number | null
+          reliability_score?: number | null
+          score_version?: number | null
+          service_score?: number | null
+          total_completed_jobs?: number | null
+          total_completed_shifts?: number | null
+          total_hours_worked?: number | null
+          total_reviews_count?: number | null
+          updated_at?: string | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_scores_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: true
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rep_worker_badges: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          granted_at: string | null
+          id: string
+          reputation_badge_id: string
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          granted_at?: string | null
+          id?: string
+          reputation_badge_id: string
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          granted_at?: string | null
+          id?: string
+          reputation_badge_id?: string
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_worker_badges_reputation_badge_id_fkey"
+            columns: ["reputation_badge_id"]
+            isOneToOne: false
+            referencedRelation: "rep_badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rep_worker_badges_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -5036,9 +5441,21 @@ export type Database = {
         | "paid"
         | "overdue"
         | "voided"
+      passport_source:
+        | "stafly_shift"
+        | "marketplace_booking"
+        | "imported_experience"
       proficiency_level: "beginner" | "intermediate" | "advanced" | "expert"
       profile_visibility: "private" | "limited" | "public"
       rate_source: "concept_default" | "per_employee"
+      reputation_source:
+        | "shift_review"
+        | "marketplace_review"
+        | "attendance"
+        | "no_show"
+        | "cancellation"
+        | "completion_bonus"
+        | "manual_adjustment"
       staffing_request_status:
         | "draft"
         | "submitted"
@@ -5216,9 +5633,23 @@ export const Constants = {
         "overdue",
         "voided",
       ],
+      passport_source: [
+        "stafly_shift",
+        "marketplace_booking",
+        "imported_experience",
+      ],
       proficiency_level: ["beginner", "intermediate", "advanced", "expert"],
       profile_visibility: ["private", "limited", "public"],
       rate_source: ["concept_default", "per_employee"],
+      reputation_source: [
+        "shift_review",
+        "marketplace_review",
+        "attendance",
+        "no_show",
+        "cancellation",
+        "completion_bonus",
+        "manual_adjustment",
+      ],
       staffing_request_status: [
         "draft",
         "submitted",
