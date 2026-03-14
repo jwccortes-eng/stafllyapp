@@ -6,14 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Monitor, Plus, Pencil, Trash2, Copy, Check, QrCode, ExternalLink } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Monitor, Plus, Pencil, Trash2, Copy, Check, ExternalLink } from "lucide-react";
 
 interface KioskDevice {
   id: string;
@@ -40,21 +38,22 @@ export default function KioskDevices() {
   const [editing, setEditing] = useState<KioskDevice | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
-  // Form state
   const [formName, setFormName] = useState("");
   const [formLocation, setFormLocation] = useState<string>("");
   const [formDeviceId, setFormDeviceId] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const sb = supabase as any;
+
   const fetchDevices = async () => {
     if (!selectedCompanyId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("kiosk_devices" as any)
+    const { data } = await sb
+      .from("kiosk_devices")
       .select("*")
       .eq("company_id", selectedCompanyId)
       .order("created_at", { ascending: false });
-    setDevices((data as any[]) ?? []);
+    setDevices((data as KioskDevice[]) ?? []);
     setLoading(false);
   };
 
@@ -94,27 +93,22 @@ export default function KioskDevices() {
     if (!formName.trim() || !selectedCompanyId) return;
     setSaving(true);
 
-    const payload: any = {
+    const payload = {
       company_id: selectedCompanyId,
       name: formName.trim(),
-      location_id: formLocation || null,
+      location_id: formLocation && formLocation !== "none" ? formLocation : null,
       device_identifier: formDeviceId || crypto.randomUUID().slice(0, 8).toUpperCase(),
     };
 
     if (editing) {
-      const { error } = await supabase
-        .from("kiosk_devices" as any)
-        .update(payload)
-        .eq("id", editing.id);
+      const { error } = await sb.from("kiosk_devices").update(payload).eq("id", editing.id);
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
         toast({ title: "Kiosk actualizado" });
       }
     } else {
-      const { error } = await supabase
-        .from("kiosk_devices" as any)
-        .insert(payload);
+      const { error } = await sb.from("kiosk_devices").insert(payload);
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
@@ -128,16 +122,13 @@ export default function KioskDevices() {
   };
 
   const toggleActive = async (device: KioskDevice) => {
-    await supabase
-      .from("kiosk_devices" as any)
-      .update({ is_active: !device.is_active })
-      .eq("id", device.id);
+    await sb.from("kiosk_devices").update({ is_active: !device.is_active }).eq("id", device.id);
     fetchDevices();
   };
 
   const handleDelete = async (device: KioskDevice) => {
     if (!confirm(`¿Eliminar kiosk "${device.name}"?`)) return;
-    await (supabase as any).from("kiosk_devices").delete().eq("id", device.id);
+    await sb.from("kiosk_devices").delete().eq("id", device.id);
     toast({ title: "Kiosk eliminado" });
     fetchDevices();
   };
@@ -156,29 +147,31 @@ export default function KioskDevices() {
     <div className="space-y-6">
       <PageHeader
         title="Dispositivos Kiosk"
-        description="Gestiona los terminales de fichaje compartido"
-        icon={<Monitor className="h-5 w-5" />}
-      >
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <a href={kioskUrl} target="_blank" rel="noopener">
-              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-              Abrir Kiosk
-            </a>
-          </Button>
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Nuevo Kiosk
-          </Button>
-        </div>
-      </PageHeader>
+        subtitle="Gestiona los terminales de fichaje compartido"
+        icon={Monitor}
+        rightSlot={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <a href={kioskUrl} target="_blank" rel="noopener">
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                Abrir Kiosk
+              </a>
+            </Button>
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Nuevo Kiosk
+            </Button>
+          </div>
+        }
+      />
 
       {devices.length === 0 && !loading ? (
         <EmptyState
-          icon={<Monitor className="h-10 w-10" />}
+          icon={Monitor}
           title="Sin dispositivos kiosk"
           description="Registra un dispositivo compartido para que los empleados puedan fichar desde una tablet."
-          action={<Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Crear Kiosk</Button>}
+          actionLabel="Crear Kiosk"
+          onAction={openCreate}
         />
       ) : (
         <div className="bg-card rounded-xl border border-border/40 overflow-hidden">
