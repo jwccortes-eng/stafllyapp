@@ -658,7 +658,11 @@ export function EmployeeProfileTabs({
   isPrivileged: boolean;
   onEmployeeUpdate?: (updates: Partial<EmployeeRecord>) => void;
 }) {
-  const wpHook = useWorkerProfile({ employeeId: employee.id });
+  const wpHook = useWorkerProfile({ employeeId: employee?.id });
+
+  if (!employee?.id) {
+    return <div className="py-8 text-center text-xs text-muted-foreground">Selecciona un empleado</div>;
+  }
   return (
     <Tabs defaultValue="info" className="w-full">
       <TabsList className="w-full grid grid-cols-9 h-9 mb-4 bg-muted/40 rounded-xl">
