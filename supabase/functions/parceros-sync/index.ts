@@ -1,22 +1,28 @@
 /**
  * parceros-sync
  *
- * Assembles the clean, authorized Parceros payload for a worker.
+ * Two modes:
+ *   1. READ: Assembles ParcerosSyncPayload for inspection/debug (GET or POST with worker_profile_ids)
+ *   2. PUSH: Pushes worker passport to Parceros /sync-worker-passport (POST with push: true)
  *
- * Modes:
- *   GET  ?worker_profile_id=xxx  → returns the payload for one worker
- *   POST { worker_profile_ids: [...] } → returns payloads for multiple workers (max 50)
- *
- * Auth: Requires service-role key OR a valid PARCEROS_API_KEY header.
+ * Auth: getClaims() for authenticated admin users (internal), or service-role header.
+ * Outbound to Parceros: x-api-key header with PARCEROS_API_KEY.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import type { ParcerosSyncPayload, ParceroWorkerData } from "../_shared/parceros-payload.ts";
+import type {
+  ParcerosSyncPayload,
+  ParceroWorkerData,
+  ParcerosSyncWorkerPassportBody,
+} from "../_shared/parceros-payload.ts";
+import { toParcerosSyncBody } from "../_shared/parceros-payload.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-parceros-api-key",
+    "authorization, x-client-info, apikey, content-type",
 };
+
+const PARCEROS_SYNC_PATH = "/sync-worker-passport";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,16 +30,40 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ── Auth ──
-    const parcerosKey = req.headers.get("x-parceros-api-key");
-    const expectedKey = Deno.env.get("PARCEROS_API_KEY");
-    const authHeader = req.headers.get("authorization") ?? "";
+    // ── Auth: service-role OR authenticated user via getClaims ──
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const authHeader = req.headers.get("authorization") ?? "";
 
-    const isServiceRole = authHeader.includes(serviceRoleKey) && serviceRoleKey.length > 10;
-    const isParcerosAuth = expectedKey && parcerosKey === expectedKey;
+    let isAuthorized = false;
 
-    if (!isServiceRole && !isParcerosAuth) {
+    // Option A: service-role bearer
+    if (authHeader === `Bearer ${serviceRoleKey}` && serviceRoleKey.length > 10) {
+      isAuthorized = true;
+    }
+
+    // Option B: authenticated user (admin)
+    if (!isAuthorized && authHeader.startsWith("Bearer ")) {
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+      if (!claimsErr && claimsData?.claims?.sub) {
+        // Verify admin/owner role
+        const adminClient = createClient(supabaseUrl, serviceRoleKey);
+        const { data: roleData } = await adminClient
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", claimsData.claims.sub)
+          .in("role", ["owner", "admin", "developer"])
+          .maybeSingle();
+        if (roleData) isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -41,11 +71,11 @@ Deno.serve(async (req) => {
     }
 
     // ── Supabase admin client ──
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // ── Parse request ──
     let workerProfileIds: string[] = [];
+    let pushToParceros = false;
 
     if (req.method === "GET") {
       const url = new URL(req.url);
@@ -57,9 +87,11 @@ Deno.serve(async (req) => {
         );
       }
       workerProfileIds = [id];
+      pushToParceros = url.searchParams.get("push") === "true";
     } else {
       const body = await req.json();
       workerProfileIds = body.worker_profile_ids ?? [];
+      pushToParceros = body.push === true;
       if (!Array.isArray(workerProfileIds) || workerProfileIds.length === 0) {
         return new Response(
           JSON.stringify({ error: "worker_profile_ids array required" }),
@@ -76,7 +108,6 @@ Deno.serve(async (req) => {
 
     // ── Build payloads ──
     const payloads: ParcerosSyncPayload[] = [];
-
     for (const wpId of workerProfileIds) {
       const payload = await buildWorkerPayload(supabase, wpId);
       if (payload) payloads.push(payload);
@@ -86,15 +117,61 @@ Deno.serve(async (req) => {
     for (const wpId of workerProfileIds) {
       await supabase.from("profile_access_log").insert({
         worker_profile_id: wpId,
-        access_type: "parceros_sync",
+        access_type: pushToParceros ? "parceros_push" : "parceros_sync",
         ip_address: req.headers.get("x-forwarded-for")?.split(",")[0] ?? null,
       });
     }
 
+    // ── PUSH to Parceros if requested ──
+    const pushResults: Array<{
+      worker_profile_id: string;
+      pushed: boolean;
+      status?: number;
+      error?: string;
+    }> = [];
+
+    if (pushToParceros && payloads.length > 0) {
+      const parcerosBaseUrl = Deno.env.get("PARCEROS_BASE_URL");
+      const parcerosApiKey = Deno.env.get("PARCEROS_API_KEY");
+
+      if (!parcerosBaseUrl || !parcerosApiKey) {
+        return new Response(
+          JSON.stringify({
+            error: "PARCEROS_BASE_URL and PARCEROS_API_KEY secrets required for push",
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      for (const payload of payloads) {
+        const syncBody = toParcerosSyncBody(payload);
+        const result = await pushWorkerPassportToParceros(
+          supabase,
+          parcerosBaseUrl,
+          parcerosApiKey,
+          payload.worker.stafly_worker_id,
+          syncBody
+        );
+        pushResults.push(result);
+      }
+    }
+
+    // ── Response ──
     const result =
       req.method === "GET"
-        ? payloads[0] ?? { error: "Worker not found or not eligible" }
-        : { workers: payloads, count: payloads.length };
+        ? {
+            payload: payloads[0] ?? null,
+            parceros_body: payloads[0] ? toParcerosSyncBody(payloads[0]) : null,
+            push: pushResults[0] ?? null,
+          }
+        : {
+            workers: payloads.map((p) => ({
+              payload: p,
+              parceros_body: toParcerosSyncBody(p),
+            })),
+            count: payloads.length,
+            push_results: pushToParceros ? pushResults : undefined,
+          };
 
     return new Response(JSON.stringify(result), {
       status: payloads.length > 0 || req.method === "POST" ? 200 : 404,
@@ -109,13 +186,80 @@ Deno.serve(async (req) => {
   }
 });
 
-// ── Payload builder ──────────────────────────────────────────
+// ── Push to Parceros /sync-worker-passport ──────────────────────
+
+async function pushWorkerPassportToParceros(
+  supabase: ReturnType<typeof createClient>,
+  parcerosBaseUrl: string,
+  parcerosApiKey: string,
+  workerProfileId: string,
+  syncBody: ParcerosSyncWorkerPassportBody
+): Promise<{ worker_profile_id: string; pushed: boolean; status?: number; error?: string }> {
+  const url = `${parcerosBaseUrl.replace(/\/$/, "")}${PARCEROS_SYNC_PATH}`;
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": parcerosApiKey,
+      },
+      body: JSON.stringify(syncBody),
+    });
+
+    if (resp.ok) {
+      // Queue success event
+      await supabase.from("parceros_event_queue").insert({
+        event_type: "worker.updated",
+        worker_profile_id: workerProfileId,
+        payload: { action: "sync_push", status: resp.status },
+        status: "sent",
+        sent_at: new Date().toISOString(),
+      });
+
+      return { worker_profile_id: workerProfileId, pushed: true, status: resp.status };
+    }
+
+    const errorText = await resp.text();
+    console.error(`Parceros sync failed [${resp.status}]:`, errorText);
+
+    // Queue failure for retry
+    await supabase.from("parceros_event_queue").insert({
+      event_type: "worker.updated",
+      worker_profile_id: workerProfileId,
+      payload: { action: "sync_push", error: errorText.slice(0, 500) },
+      status: "failed",
+      error_message: `HTTP ${resp.status}: ${errorText.slice(0, 200)}`,
+    });
+
+    return {
+      worker_profile_id: workerProfileId,
+      pushed: false,
+      status: resp.status,
+      error: errorText.slice(0, 200),
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("Push error:", msg);
+
+    await supabase.from("parceros_event_queue").insert({
+      event_type: "worker.updated",
+      worker_profile_id: workerProfileId,
+      payload: { action: "sync_push", error: msg },
+      status: "failed",
+      error_message: msg.slice(0, 200),
+    });
+
+    return { worker_profile_id: workerProfileId, pushed: false, error: msg };
+  }
+}
+
+// ── Payload builder (unchanged logic, builds internal rich payload) ──
 
 async function buildWorkerPayload(
   supabase: ReturnType<typeof createClient>,
   workerProfileId: string
 ): Promise<ParcerosSyncPayload | null> {
-  // 1. Worker profile
   const { data: wp } = await supabase
     .from("worker_profiles")
     .select("*")
@@ -124,12 +268,9 @@ async function buildWorkerPayload(
     .single();
 
   if (!wp) return null;
-
-  // Must opt-in to marketplace OR have public profile
   if (!wp.is_available_for_marketplace && !wp.is_profile_public) return null;
 
-  // 2. Fetch all related data in parallel
-  const [visRes, skillsRes, repRes, badgesRes, passportRes, historyRes, employeeRes] =
+  const [visRes, skillsRes, repRes, badgesRes, passportRes, employeeRes] =
     await Promise.all([
       supabase
         .from("worker_visibility_settings")
@@ -154,11 +295,6 @@ async function buildWorkerPayload(
         .select("*")
         .eq("worker_profile_id", workerProfileId)
         .maybeSingle(),
-      supabase
-        .from("passport_work_history")
-        .select("company_name, role_name, date_start, date_end, total_hours, is_verified")
-        .eq("passport_id", workerProfileId), // Will refine below
-      // Get employee for avatar
       wp.employee_id
         ? supabase
             .from("employees")
@@ -172,7 +308,6 @@ async function buildWorkerPayload(
   const rep = repRes.data;
   const passport = passportRes.data;
 
-  // Fetch work history using passport_id if we have passport
   let workHistory: any[] = [];
   if (passport?.id) {
     const { data: wh } = await supabase
@@ -182,7 +317,6 @@ async function buildWorkerPayload(
     workHistory = wh ?? [];
   }
 
-  // 3. Apply visibility filters
   const showFirstName = vis?.show_first_name !== false;
   const showLastName = vis?.show_last_name !== false;
   const showSkills = vis?.show_skills !== false;
@@ -192,11 +326,9 @@ async function buildWorkerPayload(
   const showCity = vis?.show_city !== false;
   const showPhoto = vis?.show_photo !== false;
 
-  // Get employee avatar and certs
   const emp = employeeRes.data as any;
   const certCount = emp?.certifications?.length ?? 0;
 
-  // 4. Assemble clean payload
   const workerData: ParceroWorkerData = {
     stafly_worker_id: workerProfileId,
     public_slug: wp.public_slug,
@@ -248,18 +380,10 @@ async function buildWorkerPayload(
           last_calculated_at: rep?.last_calculated_at ?? null,
         }
       : {
-          overall_score: null,
-          punctuality: null,
-          quality: null,
-          service: null,
-          professionalism: null,
-          teamwork: null,
-          presentation: null,
-          total_reviews: null,
-          no_show_count: null,
-          cancellation_count: null,
-          score_version: null,
-          last_calculated_at: null,
+          overall_score: null, punctuality: null, quality: null,
+          service: null, professionalism: null, teamwork: null,
+          presentation: null, total_reviews: null, no_show_count: null,
+          cancellation_count: null, score_version: null, last_calculated_at: null,
         },
 
     badges: (badgesRes.data ?? []).map((b: any) => ({
@@ -301,7 +425,7 @@ async function buildWorkerPayload(
   return {
     schema_version: "1.0",
     generated_at: new Date().toISOString(),
-    source: "stafly_apps",
+    source: "staflyapps",
     worker: workerData,
   };
 }

@@ -1,32 +1,25 @@
 /**
- * Parceros Integration – Shared Payload Types & Builder
+ * Parceros Integration – Shared Payload Types & Helpers
  *
- * This module defines the EXACT contract between StaflyApps and Parceros.
+ * Defines the EXACT contract between StaflyApps and Parceros.
  * Only public, verified, and worker-authorized data leaves this boundary.
  *
  * ❌ NEVER export: payroll, client details, private addresses, documents, notes
  */
 
-// ── Payload Types ──────────────────────────────────────────────
+// ── Internal StaflyApps payload (rich, for buildWorkerPayload) ──
 
 export interface ParcerosSyncPayload {
-  /** Schema version for forward compatibility */
   schema_version: "1.0";
-  /** ISO-8601 timestamp when payload was generated */
   generated_at: string;
-  /** StaflyApps source identifier */
-  source: "stafly_apps";
-  /** The worker data */
+  source: "staflyapps";
   worker: ParceroWorkerData;
 }
 
 export interface ParceroWorkerData {
-  /** StaflyApps internal worker_profile_id (UUID) */
   stafly_worker_id: string;
-  /** Public slug for cross-platform linking */
   public_slug: string | null;
 
-  // ── Profile (filtered by visibility) ──
   profile: {
     first_name: string | null;
     last_name: string | null;
@@ -42,7 +35,6 @@ export interface ParceroWorkerData {
     avatar_url: string | null;
   };
 
-  // ── Skills ──
   skills: Array<{
     name: string;
     category: string | null;
@@ -50,7 +42,6 @@ export interface ParceroWorkerData {
     years_experience: number | null;
   }>;
 
-  // ── Verified Metrics (from passport) ──
   verified_metrics: {
     total_verified_hours: number;
     total_verified_jobs: number;
@@ -58,7 +49,6 @@ export interface ParceroWorkerData {
     certifications_count: number;
   };
 
-  // ── Reputation ──
   reputation: {
     overall_score: number | null;
     punctuality: number | null;
@@ -74,7 +64,6 @@ export interface ParceroWorkerData {
     last_calculated_at: string | null;
   };
 
-  // ── Badges ──
   badges: Array<{
     badge_code: string;
     badge_name: string;
@@ -82,7 +71,6 @@ export interface ParceroWorkerData {
     earned_at: string | null;
   }>;
 
-  // ── Work History Summary (anonymized companies) ──
   work_history: Array<{
     company_name: string;
     role_name: string | null;
@@ -92,7 +80,6 @@ export interface ParceroWorkerData {
     is_verified: boolean;
   }>;
 
-  // ── Visibility Permissions (what Parceros can show) ──
   visibility: {
     show_first_name: boolean;
     show_last_name: boolean;
@@ -106,13 +93,49 @@ export interface ParceroWorkerData {
     profile_visibility: string | null;
   };
 
-  // ── Timestamps ──
   profile_updated_at: string | null;
   passport_updated_at: string | null;
   reputation_updated_at: string | null;
 }
 
-// ── Event Types for future webhook dispatching ──
+// ── Parceros /sync-worker-passport contract (what Parceros actually expects) ──
+
+export interface ParcerosSyncWorkerPassportBody {
+  external_worker_id: string;
+  display_name: string;
+  skills: string[];
+  years_experience: number | null;
+  english_level: string | null;
+  total_hours_worked: number;
+  total_verified_jobs: number;
+  total_companies_worked: number;
+  reputation_score: number | null;
+  ratings_breakdown: {
+    punctuality: number | null;
+    quality: number | null;
+    service: number | null;
+    professionalism: number | null;
+    teamwork: number | null;
+    presentation: number | null;
+  };
+  certifications_count: number;
+  work_history_summary: string;
+  last_synced_at: string;
+  source: "staflyapps";
+  external_data?: ParcerosSyncPayload;
+}
+
+// ── Parceros /webhook-receiver contract ──
+
+export interface ParcerosWebhookBody {
+  event_type: ParcerosEventType;
+  source: "staflyapps";
+  external_worker_id: string;
+  payload: Record<string, unknown>;
+  timestamp: string;
+}
+
+// ── Event types ──
 
 export type ParcerosEventType =
   | "worker.updated"
@@ -122,17 +145,56 @@ export type ParcerosEventType =
   | "badge.earned"
   | "passport.consolidated";
 
-export interface ParcerosEvent {
-  event_type: ParcerosEventType;
-  occurred_at: string;
-  source: "stafly_apps";
-  stafly_worker_id: string;
-  /** Partial or full payload depending on event */
-  data: Partial<ParceroWorkerData> | Record<string, unknown>;
+// ── Transform helper: internal payload → Parceros sync body ──
+
+export function toParcerosSyncBody(
+  payload: ParcerosSyncPayload
+): ParcerosSyncWorkerPassportBody {
+  const w = payload.worker;
+  const vis = w.visibility;
+
+  // Build display name respecting visibility
+  const parts: string[] = [];
+  if (vis.show_first_name && w.profile.first_name) parts.push(w.profile.first_name);
+  if (vis.show_last_name && w.profile.last_name) parts.push(w.profile.last_name);
+  const displayName = parts.length > 0 ? parts.join(" ") : "Worker";
+
+  // Work history summary: compact string
+  const whSummary = w.work_history.length > 0
+    ? w.work_history
+        .slice(0, 5)
+        .map((h) => `${h.company_name}${h.role_name ? ` (${h.role_name})` : ""}`)
+        .join("; ")
+    : "No verified work history";
+
+  return {
+    external_worker_id: w.stafly_worker_id,
+    display_name: displayName,
+    skills: w.skills.map((s) => s.name).filter(Boolean),
+    years_experience: w.profile.years_of_experience,
+    english_level: w.profile.english_level,
+    total_hours_worked: w.verified_metrics.total_verified_hours,
+    total_verified_jobs: w.verified_metrics.total_verified_jobs,
+    total_companies_worked: w.verified_metrics.total_companies_worked,
+    reputation_score: w.reputation.overall_score,
+    ratings_breakdown: {
+      punctuality: w.reputation.punctuality,
+      quality: w.reputation.quality,
+      service: w.reputation.service,
+      professionalism: w.reputation.professionalism,
+      teamwork: w.reputation.teamwork,
+      presentation: w.reputation.presentation,
+    },
+    certifications_count: w.verified_metrics.certifications_count,
+    work_history_summary: whSummary,
+    last_synced_at: payload.generated_at,
+    source: "staflyapps",
+    external_data: payload,
+  };
 }
 
 // ── Data Exclusion List (documentation) ──
-// The following data is NEVER included in any Parceros payload:
+// NEVER included in any Parceros payload:
 // - payroll amounts, rates, movements, period_base_pay
 // - client IDs, client names (from clients table), internal client details
 // - employee exact addresses, phone numbers, email
