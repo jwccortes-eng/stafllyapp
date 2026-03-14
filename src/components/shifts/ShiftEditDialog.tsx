@@ -29,7 +29,7 @@ interface ShiftEditDialogProps {
   onOpenChange: (open: boolean) => void;
   clients: SelectOption[];
   locations: LocationOption[];
-  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null; pay_type?: string; day_type?: string; shift_admin_id?: string | null }, oldShift: Shift) => Promise<void>;
+  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null; pay_type?: string; day_type?: string; shift_admin_id?: string | null; clock_method?: string }, oldShift: Shift) => Promise<void>;
 }
 
 function SectionCard({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) {
@@ -65,6 +65,7 @@ export function ShiftEditDialog({
   const [payType, setPayType] = useState<"hourly" | "daily">("hourly");
   const [dayType, setDayType] = useState<"full_day" | "half_day">("full_day");
   const [shiftAdminId, setShiftAdminId] = useState("");
+  const [clockMethod, setClockMethod] = useState<"mobile" | "kiosk" | "both">("both");
   const [saving, setSaving] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
@@ -84,6 +85,7 @@ export function ShiftEditDialog({
       setPayType((shift as any).pay_type || "hourly");
       setDayType((shift as any).day_type || "full_day");
       setShiftAdminId((shift as any).shift_admin_id || "");
+      setClockMethod((shift as any).clock_method || "both");
     }
   }, [shift, open]);
 
@@ -111,6 +113,7 @@ export function ShiftEditDialog({
         special_instructions: specialInstructions.trim() || null,
         pay_type: payType, day_type: payType === "daily" ? dayType : "full_day",
         shift_admin_id: shiftAdminId || null,
+        clock_method: clockMethod,
       }, shift);
       onOpenChange(false);
     } finally {
@@ -239,6 +242,19 @@ export function ShiftEditDialog({
                 </div>
               </div>
             )}
+          </SectionCard>
+
+          {/* ── Section: Clock Method ── */}
+          <SectionCard icon={Clock} title="Método de fichaje">
+            <Select value={clockMethod} onValueChange={v => setClockMethod(v as "mobile" | "kiosk" | "both")}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="both">📱🖥 Ambos (Móvil + Kiosk)</SelectItem>
+                <SelectItem value="mobile">📱 Solo Móvil</SelectItem>
+                <SelectItem value="kiosk">🖥 Solo Kiosk</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">Define desde dónde pueden fichar los empleados en este turno.</p>
           </SectionCard>
 
           {/* ── Section: Details ── */}
