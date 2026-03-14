@@ -557,8 +557,8 @@ export default function AdminDashboard() {
           <CardHeader className="pb-3 px-5 pt-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-                  <Calendar className="h-3.5 w-3.5 text-primary" />
+                 <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
+                   <Calendar className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold font-heading">Hoy</CardTitle>
