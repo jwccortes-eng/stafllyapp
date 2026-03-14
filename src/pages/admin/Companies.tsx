@@ -22,6 +22,7 @@ import {
   Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid,
   FlaskConical, Copy, Check, CreditCard, ChevronDown, ChevronRight,
   DollarSign, TrendingUp, Shield, UserCog, User, Crown, CircleDot,
+  CopyPlus, Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
@@ -94,6 +95,7 @@ export default function CompaniesPage() {
   const [planCompany, setPlanCompany] = useState<CompanyRecord | null>(null);
   const [selectedPlan, setSelectedPlan] = useState("free");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [duplicating, setDuplicating] = useState(false);
   const { toast } = useToast();
 
   const copyCode = (code: string) => {
@@ -226,6 +228,85 @@ export default function CompaniesPage() {
   const openEdit = (c: CompanyRecord) => { setEditCompany(c); setFormName(c.name); setFormSlug(c.slug); };
 
   const openAssignPlan = (c: CompanyRecord) => { setPlanCompany(c); setSelectedPlan(c.plan || "free"); };
+
+  const handleDuplicate = async (source: CompanyRecord) => {
+    setDuplicating(true);
+    try {
+      const newName = `${source.name} (copia)`;
+      const newSlug = `${source.slug}-copy-${Date.now().toString(36)}`;
+
+      // 1. Create company
+      const { data: newCompany, error: compErr } = await supabase
+        .from("companies")
+        .insert({ name: newName, slug: newSlug, is_sandbox: source.is_sandbox } as any)
+        .select("id")
+        .single();
+
+      if (compErr || !newCompany) {
+        toast({ title: "Error al duplicar", description: compErr?.message, variant: "destructive" });
+        setDuplicating(false);
+        return;
+      }
+
+      const newId = newCompany.id;
+
+      // 2. Copy modules
+      const { data: srcModules } = await supabase
+        .from("company_modules")
+        .select("module, is_active")
+        .eq("company_id", source.id);
+
+      if (srcModules && srcModules.length > 0) {
+        await supabase.from("company_modules").insert(
+          srcModules.map(m => ({ company_id: newId, module: m.module, is_active: m.is_active })) as any
+        );
+      }
+
+      // 3. Copy company_users
+      const { data: srcUsers } = await supabase
+        .from("company_users")
+        .select("user_id, role")
+        .eq("company_id", source.id);
+
+      if (srcUsers && srcUsers.length > 0) {
+        await supabase.from("company_users").insert(
+          srcUsers.map(u => ({ company_id: newId, user_id: u.user_id, role: u.role })) as any
+        );
+      }
+
+      // 4. Copy subscription/plan
+      const { data: srcSub } = await supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("company_id", source.id)
+        .maybeSingle();
+
+      if (srcSub) {
+        await supabase.from("subscriptions").insert({
+          company_id: newId, plan: srcSub.plan, status: srcSub.status,
+        } as any);
+      }
+
+      // 5. Copy company_settings
+      const { data: srcSettings } = await supabase
+        .from("company_settings")
+        .select("key, value")
+        .eq("company_id", source.id);
+
+      if (srcSettings && srcSettings.length > 0) {
+        await supabase.from("company_settings").insert(
+          srcSettings.map(s => ({ company_id: newId, key: s.key, value: s.value })) as any
+        );
+      }
+
+      toast({ title: "Empresa duplicada", description: `"${newName}" creada con módulos, usuarios y configuración.` });
+      fetchCompanies();
+      refetch();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+    setDuplicating(false);
+  };
 
   const handleAssignPlan = async () => {
     if (!planCompany) return;
@@ -386,6 +467,9 @@ export default function CompaniesPage() {
                         <DropdownMenuItem onClick={() => openAssignPlan(c)}><CreditCard className="h-4 w-4 mr-2" />Asignar plan</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUsersCompany(c)}><Users className="h-4 w-4 mr-2" />Usuarios</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setModulesCompany(c)}><LayoutGrid className="h-4 w-4 mr-2" />Módulos</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicate(c)} disabled={duplicating}>
+                          <CopyPlus className="h-4 w-4 mr-2" />{duplicating ? "Duplicando..." : "Duplicar empresa"}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleActive(c)}>{c.is_active ? "Desactivar" : "Activar"}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
