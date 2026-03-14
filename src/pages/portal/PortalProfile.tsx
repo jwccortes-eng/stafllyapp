@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
+import { ProfilePhotoUpload } from "@/components/employee/ProfilePhotoUpload";
 
 interface EmployeeProfile {
   first_name: string;
@@ -136,6 +137,18 @@ export default function PortalProfile() {
         <ArrowLeft className="h-3.5 w-3.5" />
         Volver
       </button>
+
+      {/* Profile photo required warning */}
+      {!profile.avatar_url && (
+        <ProfilePhotoUpload
+          employeeId={employeeId!}
+          currentAvatarUrl={profile.avatar_url}
+          firstName={profile.first_name}
+          lastName={profile.last_name}
+          onUploaded={(url) => setProfile(prev => prev ? { ...prev, avatar_url: url } : prev)}
+          required
+        />
+      )}
 
       {/* Profile header */}
       <div className="rounded-2xl gradient-primary p-6 text-primary-foreground relative overflow-hidden shadow-lg">

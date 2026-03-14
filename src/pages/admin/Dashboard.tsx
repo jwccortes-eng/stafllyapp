@@ -8,7 +8,7 @@ import {
   ChevronRight, Activity, ThumbsUp, Plus,
   Inbox, MapPin, Building2, MessageCircle, Crown, ExternalLink,
   ClipboardList, UserCheck, AlertCircle, CheckCircle2,
-  Calendar, Timer, Shield, Receipt, Briefcase,
+  Calendar, Timer, Shield, Receipt, Briefcase, Camera,
 } from "lucide-react";
 import { PeriodStatusBanner } from "@/components/ui/period-status-banner";
 import { useCompany } from "@/hooks/useCompany";
@@ -201,6 +201,7 @@ export default function AdminDashboard() {
   const [pendingCounts, setPendingCounts] = useState({ shiftRequests: 0, pendingMovements: 0, openTickets: 0, pendingAttendance: 0 });
   const [todaySummary, setTodaySummary] = useState({ shiftsToday: 0, assignedToday: 0, clockedIn: 0, openEntries: 0 });
   const [commercialKpis, setCommercialKpis] = useState({ activeClients: 0, openRequests: 0, unpaidInvoices: 0, overdueInvoices: 0, unpaidTotal: 0, overdueTotal: 0 });
+  const [missingPhotoCount, setMissingPhotoCount] = useState(0);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -309,6 +310,18 @@ export default function AdminDashboard() {
       });
     }
     fetchPendingCounts();
+
+    // Fetch employees missing profile photo
+    async function fetchMissingPhotos() {
+      const { count } = await supabase
+        .from("employees")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", selectedCompanyId!)
+        .eq("is_active", true)
+        .is("avatar_url", null);
+      setMissingPhotoCount(count ?? 0);
+    }
+    fetchMissingPhotos();
 
     // Fetch today summary
     async function fetchTodaySummary() {
@@ -462,12 +475,13 @@ export default function AdminDashboard() {
       </div>
     ) : null,
     pending_requests: () => {
-      const totalPending = pendingCounts.shiftRequests + pendingCounts.pendingMovements + pendingCounts.openTickets + pendingCounts.pendingAttendance;
+      const totalPending = pendingCounts.shiftRequests + pendingCounts.pendingMovements + pendingCounts.openTickets + pendingCounts.pendingAttendance + missingPhotoCount;
       const items = [
         { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/8", to: "/app/shift-requests" },
         { label: "Novedades pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/8", to: "/app/movements" },
         { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/8", to: "/app/requests" },
         { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/8", to: "/app/shifts" },
+        { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-warning", bg: "bg-warning/8", to: "/app/employees" },
       ];
       return (
         <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
