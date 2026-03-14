@@ -976,6 +976,56 @@ export type Database = {
           },
         ]
       }
+      data_export_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          download_url: string | null
+          expires_at: string | null
+          id: string
+          notes: string | null
+          request_type: string
+          requested_at: string | null
+          status: string
+          user_id: string
+          worker_profile_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          download_url?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          request_type?: string
+          requested_at?: string | null
+          status?: string
+          user_id: string
+          worker_profile_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          download_url?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          request_type?: string
+          requested_at?: string | null
+          status?: string
+          user_id?: string
+          worker_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_export_requests_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       demo_requests: {
         Row: {
           company: string
@@ -2882,6 +2932,98 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_access_log: {
+        Row: {
+          access_type: string
+          accessed_by: string | null
+          company_id: string | null
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          worker_profile_id: string
+        }
+        Insert: {
+          access_type?: string
+          accessed_by?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          worker_profile_id: string
+        }
+        Update: {
+          access_type?: string
+          accessed_by?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_access_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_access_log_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_verification_log: {
+        Row: {
+          created_at: string | null
+          evidence_url: string | null
+          expires_at: string | null
+          field_name: string
+          id: string
+          notes: string | null
+          verification_method: Database["public"]["Enums"]["verification_method"]
+          verified_at: string | null
+          verified_by: string | null
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          evidence_url?: string | null
+          expires_at?: string | null
+          field_name: string
+          id?: string
+          notes?: string | null
+          verification_method?: Database["public"]["Enums"]["verification_method"]
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          evidence_url?: string | null
+          expires_at?: string | null
+          field_name?: string
+          id?: string
+          notes?: string | null
+          verification_method?: Database["public"]["Enums"]["verification_method"]
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_verification_log_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -4747,6 +4889,56 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_consent_records: {
+        Row: {
+          consent_type: Database["public"]["Enums"]["consent_type"]
+          created_at: string | null
+          document_version: string | null
+          granted: boolean
+          granted_at: string | null
+          id: string
+          ip_address: string | null
+          revoked_at: string | null
+          updated_at: string | null
+          user_agent: string | null
+          worker_profile_id: string
+        }
+        Insert: {
+          consent_type: Database["public"]["Enums"]["consent_type"]
+          created_at?: string | null
+          document_version?: string | null
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          updated_at?: string | null
+          user_agent?: string | null
+          worker_profile_id: string
+        }
+        Update: {
+          consent_type?: Database["public"]["Enums"]["consent_type"]
+          created_at?: string | null
+          document_version?: string | null
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          updated_at?: string | null
+          user_agent?: string | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_consent_records_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_documents: {
         Row: {
           created_at: string | null
@@ -5044,6 +5236,124 @@ export type Database = {
           },
         ]
       }
+      worker_schedule_preferences: {
+        Row: {
+          blocked_weekdays: number[] | null
+          created_at: string | null
+          holiday_ok: boolean | null
+          id: string
+          max_hours_per_week: number | null
+          min_hours_per_week: number | null
+          notes: string | null
+          overnight_ok: boolean | null
+          preferred_shift_end: string | null
+          preferred_shift_start: string | null
+          preferred_weekdays: number[] | null
+          updated_at: string | null
+          weekend_ok: boolean | null
+          worker_profile_id: string
+        }
+        Insert: {
+          blocked_weekdays?: number[] | null
+          created_at?: string | null
+          holiday_ok?: boolean | null
+          id?: string
+          max_hours_per_week?: number | null
+          min_hours_per_week?: number | null
+          notes?: string | null
+          overnight_ok?: boolean | null
+          preferred_shift_end?: string | null
+          preferred_shift_start?: string | null
+          preferred_weekdays?: number[] | null
+          updated_at?: string | null
+          weekend_ok?: boolean | null
+          worker_profile_id: string
+        }
+        Update: {
+          blocked_weekdays?: number[] | null
+          created_at?: string | null
+          holiday_ok?: boolean | null
+          id?: string
+          max_hours_per_week?: number | null
+          min_hours_per_week?: number | null
+          notes?: string | null
+          overnight_ok?: boolean | null
+          preferred_shift_end?: string | null
+          preferred_shift_start?: string | null
+          preferred_weekdays?: number[] | null
+          updated_at?: string | null
+          weekend_ok?: boolean | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_schedule_preferences_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: true
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_service_zones: {
+        Row: {
+          center_lat: number | null
+          center_lng: number | null
+          city: string | null
+          county: string | null
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          label: string | null
+          polygon_geojson: Json | null
+          radius_km: number | null
+          state: string | null
+          updated_at: string | null
+          worker_profile_id: string
+          zone_type: Database["public"]["Enums"]["service_zone_type"]
+        }
+        Insert: {
+          center_lat?: number | null
+          center_lng?: number | null
+          city?: string | null
+          county?: string | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          label?: string | null
+          polygon_geojson?: Json | null
+          radius_km?: number | null
+          state?: string | null
+          updated_at?: string | null
+          worker_profile_id: string
+          zone_type?: Database["public"]["Enums"]["service_zone_type"]
+        }
+        Update: {
+          center_lat?: number | null
+          center_lng?: number | null
+          city?: string | null
+          county?: string | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          label?: string | null
+          polygon_geojson?: Json | null
+          radius_km?: number | null
+          state?: string | null
+          updated_at?: string | null
+          worker_profile_id?: string
+          zone_type?: Database["public"]["Enums"]["service_zone_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_service_zones_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_skills: {
         Row: {
           category: string | null
@@ -5073,6 +5383,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      worker_travel_preferences: {
+        Row: {
+          created_at: string | null
+          has_own_transport: boolean | null
+          id: string
+          max_commute_km: number | null
+          max_commute_minutes: number | null
+          transport_type: string | null
+          updated_at: string | null
+          willing_to_relocate: boolean | null
+          worker_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          has_own_transport?: boolean | null
+          id?: string
+          max_commute_km?: number | null
+          max_commute_minutes?: number | null
+          transport_type?: string | null
+          updated_at?: string | null
+          willing_to_relocate?: boolean | null
+          worker_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          has_own_transport?: boolean | null
+          id?: string
+          max_commute_km?: number | null
+          max_commute_minutes?: number | null
+          transport_type?: string | null
+          updated_at?: string | null
+          willing_to_relocate?: boolean | null
+          worker_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_travel_preferences_worker_profile_id_fkey"
+            columns: ["worker_profile_id"]
+            isOneToOne: true
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       worker_visibility_settings: {
         Row: {
@@ -5412,6 +5766,14 @@ export type Database = {
       app_role: "admin" | "employee" | "developer" | "owner" | "manager"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
       concept_category: "extra" | "deduction"
+      consent_type:
+        | "terms_of_service"
+        | "privacy_policy"
+        | "background_check"
+        | "drug_test"
+        | "gps_tracking"
+        | "data_sharing"
+        | "photo_release"
       document_type_enum:
         | "id_card"
         | "passport"
@@ -5456,6 +5818,7 @@ export type Database = {
         | "cancellation"
         | "completion_bonus"
         | "manual_adjustment"
+      service_zone_type: "radius" | "polygon" | "city" | "county" | "state"
       staffing_request_status:
         | "draft"
         | "submitted"
@@ -5469,6 +5832,12 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+      verification_method:
+        | "manual"
+        | "ai"
+        | "third_party"
+        | "document_scan"
+        | "reference_check"
       verification_status: "unverified" | "pending" | "verified" | "rejected"
     }
     CompositeTypes: {
@@ -5600,6 +5969,15 @@ export const Constants = {
       app_role: ["admin", "employee", "developer", "owner", "manager"],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
       concept_category: ["extra", "deduction"],
+      consent_type: [
+        "terms_of_service",
+        "privacy_policy",
+        "background_check",
+        "drug_test",
+        "gps_tracking",
+        "data_sharing",
+        "photo_release",
+      ],
       document_type_enum: [
         "id_card",
         "passport",
@@ -5650,6 +6028,7 @@ export const Constants = {
         "completion_bonus",
         "manual_adjustment",
       ],
+      service_zone_type: ["radius", "polygon", "city", "county", "state"],
       staffing_request_status: [
         "draft",
         "submitted",
@@ -5663,6 +6042,13 @@ export const Constants = {
         "in_progress",
         "completed",
         "cancelled",
+      ],
+      verification_method: [
+        "manual",
+        "ai",
+        "third_party",
+        "document_scan",
+        "reference_check",
       ],
       verification_status: ["unverified", "pending", "verified", "rejected"],
     },
