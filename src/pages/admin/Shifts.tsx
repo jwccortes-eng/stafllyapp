@@ -195,6 +195,28 @@ export default function Shifts() {
     return result;
   }, [shifts, assignments, filters]);
 
+  // ── KPI metrics ──
+  const kpiMetrics = useMemo(() => {
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const todayShifts = filteredShifts.filter(s => s.date === todayStr);
+    const todayAssignments = assignments.filter(a => todayShifts.some(s => s.id === a.shift_id));
+    const uniqueWorkers = new Set(todayAssignments.map(a => a.employee_id)).size;
+    const missingWorkers = todayShifts.reduce((sum, s) => {
+      const assigned = assignments.filter(a => a.shift_id === s.id).length;
+      return sum + Math.max(0, (s.slots ?? 1) - assigned);
+    }, 0);
+    let totalMinutes = 0;
+    for (const s of todayShifts) {
+      const [sh, sm] = s.start_time.split(":").map(Number);
+      const [eh, em] = s.end_time.split(":").map(Number);
+      let diff = (eh * 60 + em) - (sh * 60 + sm);
+      if (diff < 0) diff += 24 * 60;
+      totalMinutes += diff;
+    }
+    const totalHours = `${Math.floor(totalMinutes / 60)}h ${String(totalMinutes % 60).padStart(2, "0")}m`;
+    return { todayShifts: todayShifts.length, uniqueWorkers, missingWorkers, totalHours };
+  }, [filteredShifts, assignments]);
+
   const weekDays = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart]
