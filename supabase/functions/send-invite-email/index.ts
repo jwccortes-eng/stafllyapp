@@ -46,6 +46,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    let runId = user.id;
+    try {
+      const payload = token.split(".")[1]
+        ?.replaceAll("-", "+")
+        .replaceAll("_", "/")
+        .padEnd(Math.ceil(token.split(".")[1].length / 4) * 4, "=");
+      const claims = payload ? JSON.parse(atob(payload)) : null;
+      if (typeof claims?.session_id === "string" && claims.session_id.length > 0) {
+        runId = claims.session_id;
+      }
+    } catch {
+      // fallback to user.id
+    }
+
     const { to, subject, html } = await req.json();
 
     if (!to || !subject || !html) {
