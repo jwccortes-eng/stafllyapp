@@ -119,6 +119,7 @@ function App() {
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/cookies" element={<CookiePolicy />} />
               <Route path="/help" element={<HelpCenter />} />
+              <Route path="/pricing" element={<PublicPricing />} />
               <Route path="/manual" element={<UserManual />} />
 
               {/* Admin routes */}
