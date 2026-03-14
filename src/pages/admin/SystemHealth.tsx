@@ -30,7 +30,7 @@ interface HealthCheck {
 
 const STATUS_CONFIG: Record<Status, { bg: string; border: string; text: string; dot: string; label: string; Icon: any }> = {
   green: {
-    bg: "bg-earning/8",
+    bg: "bg-earning/[0.08]",
     border: "border-earning/25",
     text: "text-earning",
     dot: "bg-earning",
