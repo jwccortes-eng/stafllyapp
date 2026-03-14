@@ -48,12 +48,19 @@ export default function KioskDevices() {
   const fetchDevices = async () => {
     if (!selectedCompanyId) return;
     setLoading(true);
-    const { data } = await sb
-      .from("kiosk_devices")
-      .select("*")
-      .eq("company_id", selectedCompanyId)
-      .order("created_at", { ascending: false });
-    setDevices((data as KioskDevice[]) ?? []);
+    const { data } = await supabase.rpc("read_email_batch" as any, {}).catch(() => ({ data: null }));
+    // Use raw fetch for new table not yet in types
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/kiosk_devices?company_id=eq.${selectedCompanyId}&order=created_at.desc`,
+      {
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      }
+    );
+    const json = res.ok ? await res.json() : [];
+    setDevices(json as KioskDevice[]);
     setLoading(false);
   };
 
