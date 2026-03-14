@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
+import { ProfilePhotoUpload } from "@/components/employee/ProfilePhotoUpload";
 
 interface EmployeeProfile {
   first_name: string;
