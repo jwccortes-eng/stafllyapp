@@ -61,7 +61,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       // Non-owners only see companies they belong to via company_users
       const { data } = await supabase
         .from("company_users")
-        .select("company_id, companies(id, name, slug, is_active)")
+        .select("company_id, companies(id, name, slug, is_active, brand_color, logo_url)")
         .eq("user_id", user.id);
 
       list = ((data ?? [])
