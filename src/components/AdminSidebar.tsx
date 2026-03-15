@@ -16,9 +16,6 @@ import { useCompany } from "@/hooks/useCompany";
 import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSidebarCollapsed } from "./AdminLayout";
@@ -26,7 +23,7 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { StaflyMark } from "@/components/brand/StaflyBrand";
-import CompanyActionGuard from "@/components/CompanyActionGuard";
+import CompanySwitcher from "@/components/CompanySwitcher";
 
 interface LinkDef {
   to: string;
