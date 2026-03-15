@@ -23,9 +23,11 @@ const CREATE_OPTIONS = [
 
 export default function TopBar({ collapsed }: { collapsed: boolean }) {
   const { user, role, fullName, signOut } = useAuth();
+  const { selectedCompany } = useCompany();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
+  const companyColor = selectedCompany?.brand_color || "#6366f1";
   const isOwner = role === "developer" || role === "owner";
   const initials = fullName
     ? fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
