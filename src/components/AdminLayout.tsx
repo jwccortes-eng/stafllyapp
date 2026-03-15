@@ -137,17 +137,7 @@ export default function AdminLayout() {
           variant="admin"
         />
 
-        <CompanyActionGuard
-          open={!!pendingCompanyId && pendingCompanyId !== selectedCompanyId}
-          onOpenChange={(v) => { if (!v) setPendingCompanyId(null); }}
-          title="Cambiar de empresa"
-          description="Estás a punto de cambiar el contexto a otra empresa. Confirma tu contraseña para continuar."
-          requirePassword
-          onConfirm={() => {
-            if (pendingCompanyId) setSelectedCompanyId(pendingCompanyId);
-            setPendingCompanyId(null);
-          }}
-        />
+        {/* CompanyActionGuard is now inside CompanySwitcher */}
       </div>
     );
   }
