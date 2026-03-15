@@ -49,7 +49,6 @@ export default function AdminLayout() {
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const { pinnedIds, togglePin, maxPins } = useNavPreferences(ADMIN_DEFAULT_PINS);
-  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   useEffect(() => {
