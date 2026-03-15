@@ -16,9 +16,6 @@ import { useCompany } from "@/hooks/useCompany";
 import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSidebarCollapsed } from "./AdminLayout";
@@ -26,7 +23,7 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { StaflyMark } from "@/components/brand/StaflyBrand";
-import CompanyActionGuard from "@/components/CompanyActionGuard";
+import CompanySwitcher from "@/components/CompanySwitcher";
 
 interface LinkDef {
   to: string;
@@ -88,7 +85,6 @@ export default function AdminSidebar() {
 
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(SECTION_ORDER));
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
-  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -289,36 +285,12 @@ export default function AdminSidebar() {
       "bg-card border-r border-border/60",
       collapsed ? "w-[60px]" : "w-[240px]",
     )}>
-      {/* ── Brand + Company ── */}
+      {/* ── Brand + Company Switcher ── */}
       <div className={cn(
-        "flex items-center shrink-0 h-14 border-b border-border/40",
-        collapsed ? "justify-center px-2" : "px-4 gap-3"
+        "shrink-0 border-b border-border/40",
+        collapsed ? "px-2 py-3 flex justify-center" : "px-3 py-3"
       )}>
-        {collapsed ? (
-          <StaflyMark size={28} />
-        ) : (
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <StaflyMark size={28} />
-            <div className="min-w-0 flex-1">
-              {companies.length > 1 ? (
-                <Select value={selectedCompanyId ?? ""} onValueChange={(id) => setPendingCompanyId(id)}>
-                  <SelectTrigger className="h-7 text-[12px] font-semibold bg-transparent border-0 shadow-none px-0 hover:bg-accent/30 rounded-lg transition-colors">
-                    <SelectValue placeholder="Empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : companies.length === 1 ? (
-                <span className="text-[13px] font-semibold text-foreground truncate block">{companies[0].name}</span>
-              ) : (
-                <span className="text-[13px] font-semibold text-foreground">StaflyApps</span>
-              )}
-            </div>
-          </div>
-        )}
+        <CompanySwitcher collapsed={collapsed} />
       </div>
 
       {/* ── Navigation ── */}
@@ -375,18 +347,7 @@ export default function AdminSidebar() {
         </Tooltip>
       </div>
 
-      {/* Company switch guard */}
-      <CompanyActionGuard
-        open={!!pendingCompanyId && pendingCompanyId !== selectedCompanyId}
-        onOpenChange={(v) => { if (!v) setPendingCompanyId(null); }}
-        title="Cambiar de empresa"
-        description="Estás a punto de cambiar el contexto a otra empresa. Confirma tu contraseña para continuar."
-        requirePassword
-        onConfirm={() => {
-          if (pendingCompanyId) setSelectedCompanyId(pendingCompanyId);
-          setPendingCompanyId(null);
-        }}
-      />
+      {/* CompanyActionGuard is now inside CompanySwitcher */}
     </aside>
   );
 }

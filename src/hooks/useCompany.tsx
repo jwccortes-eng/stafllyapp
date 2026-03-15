@@ -8,6 +8,8 @@ interface Company {
   slug: string;
   is_active: boolean;
   invite_code?: string;
+  brand_color?: string | null;
+  logo_url?: string | null;
 }
 
 interface CompanyContextType {
@@ -52,14 +54,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       // Owners see all companies
       const { data } = await supabase
         .from("companies")
-        .select("id, name, slug, is_active, invite_code")
+        .select("id, name, slug, is_active, invite_code, brand_color, logo_url")
         .order("name");
       list = (data as Company[]) ?? [];
     } else {
       // Non-owners only see companies they belong to via company_users
       const { data } = await supabase
         .from("company_users")
-        .select("company_id, companies(id, name, slug, is_active)")
+        .select("company_id, companies(id, name, slug, is_active, brand_color, logo_url)")
         .eq("user_id", user.id);
 
       list = ((data ?? [])

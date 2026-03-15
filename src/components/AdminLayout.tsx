@@ -8,15 +8,14 @@ import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NotificationBell from "@/components/NotificationBell";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { FloatingDock } from "@/components/navigation/FloatingDock";
 import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS } from "@/components/navigation/nav-items";
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
-import CompanyActionGuard from "@/components/CompanyActionGuard";
 import { NavItem } from "@/components/navigation/nav-items";
+import CompanySwitcher from "@/components/CompanySwitcher";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
   const location = useLocation();
@@ -49,7 +48,6 @@ export default function AdminLayout() {
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const { pinnedIds, togglePin, maxPins } = useNavPreferences(ADMIN_DEFAULT_PINS);
-  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -107,16 +105,9 @@ export default function AdminLayout() {
             </div>
             <div className="flex items-center gap-1">
               {companies.length > 1 && (
-                <Select value={selectedCompanyId ?? ""} onValueChange={(id) => setPendingCompanyId(id)}>
-                  <SelectTrigger className="h-8 w-auto max-w-[130px] text-[11px] rounded-xl bg-muted/30 border-border/30">
-                    <SelectValue placeholder="Empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="max-w-[140px]">
+                  <CompanySwitcher collapsed={false} />
+                </div>
               )}
               <NotificationBell />
             </div>
@@ -145,17 +136,7 @@ export default function AdminLayout() {
           variant="admin"
         />
 
-        <CompanyActionGuard
-          open={!!pendingCompanyId && pendingCompanyId !== selectedCompanyId}
-          onOpenChange={(v) => { if (!v) setPendingCompanyId(null); }}
-          title="Cambiar de empresa"
-          description="Estás a punto de cambiar el contexto a otra empresa. Confirma tu contraseña para continuar."
-          requirePassword
-          onConfirm={() => {
-            if (pendingCompanyId) setSelectedCompanyId(pendingCompanyId);
-            setPendingCompanyId(null);
-          }}
-        />
+        {/* CompanyActionGuard is now inside CompanySwitcher */}
       </div>
     );
   }

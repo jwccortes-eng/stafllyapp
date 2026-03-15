@@ -4,13 +4,14 @@ import {
   LayoutDashboard, Users, CalendarDays, Upload, Tags, FileSpreadsheet,
   BarChart3, ContactRound, DollarSign, Shield, Building2, Globe,
   Smartphone, Settings2, Clock, MapPin, Megaphone, MessageCircle,
-  ScanEye, Activity, ListChecks, Search, Inbox, Star,
+  ScanEye, Activity, ListChecks, Search, Inbox, Star, ArrowRightLeft,
 } from "lucide-react";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import CompanyActionGuard from "@/components/CompanyActionGuard";
 
 interface SearchableLink {
   to: string;
@@ -59,7 +60,8 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const { role, hasModuleAccess } = useAuth();
-  const { isModuleActive } = useCompany();
+  const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
+  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -95,32 +97,70 @@ export function CommandPalette() {
     return Array.from(map.entries());
   }, [links]);
 
+  const otherCompanies = companies.filter(c => c.id !== selectedCompanyId);
+
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Buscar módulo, acción..." />
-      <CommandList>
-        <CommandEmpty>No se encontraron resultados.</CommandEmpty>
-        {sections.map(([section, items]) => (
-          <CommandGroup key={section} heading={section}>
-            {items.map(item => (
-              <CommandItem
-                key={item.to}
-                value={`${item.label} ${item.keywords}`}
-                onSelect={() => {
-                  navigate(item.to);
-                  setOpen(false);
-                }}
-                className="gap-3 cursor-pointer"
-              >
-                <item.icon className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-                <span className="text-sm">{item.label}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground/40">{item.section}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        ))}
-      </CommandList>
-    </CommandDialog>
+    <>
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput placeholder="Buscar módulo, empresa, acción..." />
+        <CommandList>
+          <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+
+          {/* Company switching section */}
+          {otherCompanies.length > 0 && (
+            <CommandGroup heading="Cambiar empresa">
+              {otherCompanies.map(company => (
+                <CommandItem
+                  key={`company-${company.id}`}
+                  value={`cambiar empresa ${company.name}`}
+                  onSelect={() => {
+                    setOpen(false);
+                    setPendingCompanyId(company.id);
+                  }}
+                  className="gap-3 cursor-pointer"
+                >
+                  <ArrowRightLeft className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+                  <span className="text-sm">{company.name}</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground/40">Empresa</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {sections.map(([section, items]) => (
+            <CommandGroup key={section} heading={section}>
+              {items.map(item => (
+                <CommandItem
+                  key={item.to}
+                  value={`${item.label} ${item.keywords}`}
+                  onSelect={() => {
+                    navigate(item.to);
+                    setOpen(false);
+                  }}
+                  className="gap-3 cursor-pointer"
+                >
+                  <item.icon className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+                  <span className="text-sm">{item.label}</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground/40">{item.section}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ))}
+        </CommandList>
+      </CommandDialog>
+
+      <CompanyActionGuard
+        open={!!pendingCompanyId && pendingCompanyId !== selectedCompanyId}
+        onOpenChange={(v) => { if (!v) setPendingCompanyId(null); }}
+        title="Cambiar de empresa"
+        description="Estás a punto de cambiar el contexto a otra empresa. Confirma tu contraseña para continuar."
+        requirePassword
+        onConfirm={() => {
+          if (pendingCompanyId) setSelectedCompanyId(pendingCompanyId);
+          setPendingCompanyId(null);
+        }}
+      />
+    </>
   );
 }
 

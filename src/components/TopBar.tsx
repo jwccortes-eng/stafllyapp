@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Plus, CalendarDays, Users, Building2, MapPin, Search, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
 import { CommandPaletteTrigger } from "@/components/CommandPalette";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -22,9 +23,11 @@ const CREATE_OPTIONS = [
 
 export default function TopBar({ collapsed }: { collapsed: boolean }) {
   const { user, role, fullName, signOut } = useAuth();
+  const { selectedCompany } = useCompany();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
+  const companyColor = selectedCompany?.brand_color || "#6366f1";
   const isOwner = role === "developer" || role === "owner";
   const initials = fullName
     ? fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
@@ -38,8 +41,16 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
         collapsed ? "ml-[60px]" : "ml-[240px]"
       )}
     >
-      {/* Left: Search */}
-      <div className="flex items-center gap-3 flex-1 max-w-md">
+      {/* Left: Company indicator + Search */}
+      <div className="flex items-center gap-3 flex-1 max-w-lg">
+        {selectedCompany && (
+          <div className="flex items-center gap-2 pr-3 border-r border-border/30 shrink-0">
+            <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: companyColor }} />
+            <span className="text-[12px] font-medium text-foreground/70 truncate max-w-[140px] hidden sm:inline">
+              {selectedCompany.name}
+            </span>
+          </div>
+        )}
         <CommandPaletteTrigger collapsed={false} />
       </div>
 
