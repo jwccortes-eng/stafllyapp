@@ -16,7 +16,6 @@ import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { NavItem } from "@/components/navigation/nav-items";
 import CompanySwitcher from "@/components/CompanySwitcher";
-import { NavItem } from "@/components/navigation/nav-items";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
   const location = useLocation();
