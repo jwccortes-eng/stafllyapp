@@ -106,16 +106,9 @@ export default function AdminLayout() {
             </div>
             <div className="flex items-center gap-1">
               {companies.length > 1 && (
-                <Select value={selectedCompanyId ?? ""} onValueChange={(id) => setPendingCompanyId(id)}>
-                  <SelectTrigger className="h-8 w-auto max-w-[130px] text-[11px] rounded-xl bg-muted/30 border-border/30">
-                    <SelectValue placeholder="Empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="max-w-[140px]">
+                  <CompanySwitcher collapsed={false} />
+                </div>
               )}
               <NotificationBell />
             </div>
