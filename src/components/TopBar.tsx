@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Plus, CalendarDays, Users, Building2, MapPin, Search, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
 import { CommandPaletteTrigger } from "@/components/CommandPalette";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
