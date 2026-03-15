@@ -85,7 +85,6 @@ export default function AdminSidebar() {
 
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(SECTION_ORDER));
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
-  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
