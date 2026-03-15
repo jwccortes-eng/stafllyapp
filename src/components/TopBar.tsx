@@ -41,8 +41,16 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
         collapsed ? "ml-[60px]" : "ml-[240px]"
       )}
     >
-      {/* Left: Search */}
-      <div className="flex items-center gap-3 flex-1 max-w-md">
+      {/* Left: Company indicator + Search */}
+      <div className="flex items-center gap-3 flex-1 max-w-lg">
+        {selectedCompany && (
+          <div className="flex items-center gap-2 pr-3 border-r border-border/30 shrink-0">
+            <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: companyColor }} />
+            <span className="text-[12px] font-medium text-foreground/70 truncate max-w-[140px] hidden sm:inline">
+              {selectedCompany.name}
+            </span>
+          </div>
+        )}
         <CommandPaletteTrigger collapsed={false} />
       </div>
 
