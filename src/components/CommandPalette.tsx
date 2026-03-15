@@ -4,13 +4,14 @@ import {
   LayoutDashboard, Users, CalendarDays, Upload, Tags, FileSpreadsheet,
   BarChart3, ContactRound, DollarSign, Shield, Building2, Globe,
   Smartphone, Settings2, Clock, MapPin, Megaphone, MessageCircle,
-  ScanEye, Activity, ListChecks, Search, Inbox, Star,
+  ScanEye, Activity, ListChecks, Search, Inbox, Star, ArrowRightLeft,
 } from "lucide-react";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import CompanyActionGuard from "@/components/CompanyActionGuard";
 
 interface SearchableLink {
   to: string;
