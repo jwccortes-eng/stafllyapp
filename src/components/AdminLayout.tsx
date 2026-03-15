@@ -8,14 +8,14 @@ import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NotificationBell from "@/components/NotificationBell";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { FloatingDock } from "@/components/navigation/FloatingDock";
 import { AppLauncher } from "@/components/navigation/AppLauncher";
 import { ADMIN_NAV_ITEMS, ADMIN_DEFAULT_PINS } from "@/components/navigation/nav-items";
 import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
-import CompanyActionGuard from "@/components/CompanyActionGuard";
+import { NavItem } from "@/components/navigation/nav-items";
+import CompanySwitcher from "@/components/CompanySwitcher";
 import { NavItem } from "@/components/navigation/nav-items";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
