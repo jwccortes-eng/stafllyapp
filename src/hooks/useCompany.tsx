@@ -8,6 +8,8 @@ interface Company {
   slug: string;
   is_active: boolean;
   invite_code?: string;
+  brand_color?: string | null;
+  logo_url?: string | null;
 }
 
 interface CompanyContextType {
