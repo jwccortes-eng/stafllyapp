@@ -54,7 +54,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       // Owners see all companies
       const { data } = await supabase
         .from("companies")
-        .select("id, name, slug, is_active, invite_code")
+        .select("id, name, slug, is_active, invite_code, brand_color, logo_url")
         .order("name");
       list = (data as Company[]) ?? [];
     } else {
