@@ -7,7 +7,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import CompanyActionGuard from "@/components/CompanyActionGuard";
+
 
 const COMPANY_COLORS = [
   "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
@@ -31,7 +31,7 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
   const { role } = useAuth();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
+  
 
   const filtered = useMemo(() => {
     if (!search.trim()) return companies;
@@ -45,7 +45,7 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
       return;
     }
     setOpen(false);
-    setPendingCompanyId(companyId);
+    setSelectedCompanyId(companyId);
   };
 
   if (companies.length === 0) return null;
@@ -177,17 +177,6 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
         </PopoverContent>
       </Popover>
 
-      <CompanyActionGuard
-        open={!!pendingCompanyId && pendingCompanyId !== selectedCompanyId}
-        onOpenChange={(v) => { if (!v) setPendingCompanyId(null); }}
-        title="Cambiar de empresa"
-        description="Estás a punto de cambiar el contexto a otra empresa. Confirma tu contraseña para continuar."
-        requirePassword
-        onConfirm={() => {
-          if (pendingCompanyId) setSelectedCompanyId(pendingCompanyId);
-          setPendingCompanyId(null);
-        }}
-      />
     </>
   );
 }
