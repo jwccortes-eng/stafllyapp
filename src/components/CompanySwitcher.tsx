@@ -45,7 +45,7 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
       return;
     }
     setOpen(false);
-    setPendingCompanyId(companyId);
+    setSelectedCompanyId(companyId);
   };
 
   if (companies.length === 0) return null;
