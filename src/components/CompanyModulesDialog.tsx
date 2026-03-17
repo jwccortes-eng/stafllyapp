@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   CalendarDays, Upload, DollarSign, FileSpreadsheet, BarChart3,
-  Users, Tags, Smartphone, Copy, Loader2, MapPin, Megaphone,
+  Users, Tags, Smartphone, MapPin, Megaphone,
 } from "lucide-react";
 
 const ALL_MODULES = [
@@ -46,25 +46,14 @@ interface Props {
 export default function CompanyModulesDialog({ companyId, companyName, isSandbox, open, onOpenChange }: Props) {
   const [modules, setModules] = useState<ModuleRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [replicating, setReplicating] = useState(false);
-  const [sandboxId, setSandboxId] = useState<string | null>(null);
+  
   const { toast } = useToast();
 
   useEffect(() => {
     if (open && companyId) {
       fetchModules();
-      fetchSandbox();
     }
   }, [open, companyId]);
-
-  const fetchSandbox = async () => {
-    const { data } = await supabase
-      .from("companies")
-      .select("id")
-      .eq("is_sandbox", true)
-      .maybeSingle();
-    setSandboxId(data?.id ?? null);
-  };
 
   const fetchModules = async () => {
     if (!companyId) return;
@@ -134,75 +123,6 @@ export default function CompanyModulesDialog({ companyId, companyName, isSandbox
     setLoading(false);
   };
 
-  const replicateFromSandbox = async () => {
-    if (!companyId || !sandboxId || companyId === sandboxId) return;
-    setReplicating(true);
-
-    try {
-      // Copy concepts from sandbox
-      const { data: sandboxConcepts } = await supabase
-        .from("concepts")
-        .select("name, category, calc_mode, rate_source, default_rate, unit_label, is_active")
-        .eq("company_id", sandboxId);
-
-      if (sandboxConcepts && sandboxConcepts.length > 0) {
-        // Check existing concepts to avoid duplicates
-        const { data: existingConcepts } = await supabase
-          .from("concepts")
-          .select("name")
-          .eq("company_id", companyId);
-
-        const existingNames = new Set((existingConcepts ?? []).map(c => c.name.toLowerCase()));
-        const toInsert = sandboxConcepts
-          .filter(c => !existingNames.has(c.name.toLowerCase()))
-          .map(c => ({ ...c, company_id: companyId }));
-
-        if (toInsert.length > 0) {
-          const { error } = await supabase.from("concepts").insert(toInsert as any);
-          if (error) throw error;
-        }
-
-        toast({
-          title: "Datos replicados",
-          description: `${toInsert.length} conceptos copiados desde Sandbox. ${sandboxConcepts.length - toInsert.length} ya existían.`,
-        });
-      } else {
-        toast({ title: "Sin datos", description: "El Sandbox no tiene conceptos configurados" });
-      }
-
-      // Also activate the same modules
-      const { data: sandboxModules } = await supabase
-        .from("company_modules")
-        .select("module, is_active")
-        .eq("company_id", sandboxId);
-
-      if (sandboxModules) {
-        for (const sm of sandboxModules) {
-          const existing = modules.find(m => m.module === sm.module);
-          if (existing?.id) {
-            await supabase
-              .from("company_modules")
-              .update({ is_active: sm.is_active, activated_at: sm.is_active ? new Date().toISOString() : null } as any)
-              .eq("id", existing.id);
-          } else {
-            await supabase
-              .from("company_modules")
-              .insert({
-                company_id: companyId,
-                module: sm.module,
-                is_active: sm.is_active,
-                activated_at: sm.is_active ? new Date().toISOString() : null,
-              } as any);
-          }
-        }
-        await fetchModules();
-      }
-    } catch (err: any) {
-      toast({ title: "Error al replicar", description: err.message, variant: "destructive" });
-    }
-
-    setReplicating(false);
-  };
 
   const groups = [...new Set(ALL_MODULES.map(m => m.group))];
 
@@ -248,20 +168,6 @@ export default function CompanyModulesDialog({ companyId, companyName, isSandbox
           <Button variant="outline" size="sm" onClick={activateAll} disabled={loading}>
             Activar todos
           </Button>
-          {sandboxId && companyId !== sandboxId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={replicateFromSandbox}
-              disabled={replicating}
-            >
-              {replicating ? (
-                <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Replicando...</>
-              ) : (
-                <><Copy className="h-3.5 w-3.5 mr-1.5" />Replicar desde Sandbox</>
-              )}
-            </Button>
-          )}
         </div>
       </DialogContent>
     </Dialog>
