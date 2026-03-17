@@ -25,6 +25,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Install = lazy(() => import("./pages/Install"));
 const PublicPricing = lazy(() => import("./pages/PublicPricing"));
 const PublicPassport = lazy(() => import("./pages/PublicPassport"));
+const JoinCompany = lazy(() => import("./pages/JoinCompany"));
 const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
 const CookiePolicy = lazy(() => import("./pages/legal/CookiePolicy"));
@@ -150,6 +151,7 @@ function App() {
               <Route path="/manual" element={<UserManual />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
               <Route path="/kiosk" element={<KioskClock />} />
+              <Route path="/join/:inviteCode" element={<JoinCompany />} />
 
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
