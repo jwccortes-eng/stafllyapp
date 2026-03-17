@@ -10,96 +10,96 @@
     --font-heading: 'Sora', sans-serif;
     --font-body: 'Inter', sans-serif;
 
-    --background: 220 20% 98%;
-    --foreground: 220 20% 14%;
+    --background: 216 25% 97%;
+    --foreground: 220 25% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 14%;
+    --card-foreground: 220 25% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 14%;
+    --popover-foreground: 220 25% 12%;
 
-    --primary: 222 100% 59%;
-    --primary-dark: 226 76% 49%;
-    --primary-glow: 212 100% 73%;
+    --primary: 210 100% 50%;
+    --primary-dark: 215 90% 42%;
+    --primary-glow: 200 100% 62%;
     --primary-foreground: 0 0% 100%;
 
-    --accent-warm: 32 100% 56%;
+    --accent-warm: 28 100% 54%;
     --accent-warm-foreground: 0 0% 100%;
 
     /* Status palette */
-    --status-confirmed: 163 68% 44%;
+    --status-confirmed: 158 64% 42%;
     --status-pending: 36 100% 50%;
-    --status-missing: 0 84% 60%;
-    --status-completed: 222 60% 55%;
+    --status-missing: 0 78% 58%;
+    --status-completed: 210 80% 52%;
     --status-cancelled: 220 10% 55%;
-    --status-active: 163 68% 44%;
+    --status-active: 158 64% 42%;
 
-    --status-open: 222 100% 59%;
+    --status-open: 210 100% 50%;
     --status-closed: 220 10% 60%;
-    --status-published: 222 70% 45%;
-    --status-paid: 163 68% 50%;
-    --status-overdue: 32 100% 56%;
+    --status-published: 215 70% 45%;
+    --status-paid: 158 64% 48%;
+    --status-overdue: 28 100% 54%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 20% 14%;
+    --secondary: 216 20% 95%;
+    --secondary-foreground: 220 25% 12%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 46%;
+    --muted: 216 20% 95%;
+    --muted-foreground: 220 12% 48%;
 
-    --accent: 220 14% 93%;
-    --accent-foreground: 220 20% 14%;
+    --accent: 216 18% 92%;
+    --accent-foreground: 220 25% 12%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 78% 58%;
     --destructive-foreground: 0 0% 98%;
 
-    --success: 163 68% 50%;
+    --success: 158 64% 48%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 36 100% 56%;
+    --warning: 36 100% 54%;
     --warning-foreground: 0 0% 100%;
 
-    --earning: 163 68% 50%;
+    --earning: 158 64% 48%;
     --earning-foreground: 0 0% 100%;
-    --earning-bg: 163 50% 96%;
+    --earning-bg: 158 45% 96%;
 
-    --deduction: 352 80% 63%;
+    --deduction: 350 75% 60%;
     --deduction-foreground: 0 0% 100%;
-    --deduction-bg: 352 60% 97%;
+    --deduction-bg: 350 55% 97%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 222 100% 59%;
+    --border: 216 16% 90%;
+    --input: 216 16% 90%;
+    --ring: 210 100% 50%;
 
     --radius: 0.75rem;
 
     /* Surface elevation system */
     --surface-1: 0 0% 100%;
-    --surface-2: 220 20% 98%;
-    --surface-3: 220 14% 96%;
+    --surface-2: 216 25% 97%;
+    --surface-3: 216 20% 95%;
 
     /* Glass tokens */
-    --glass-bg: 0 0% 100% / 0.7;
-    --glass-border: 220 14% 93% / 0.5;
+    --glass-bg: 0 0% 100% / 0.75;
+    --glass-border: 216 16% 92% / 0.5;
     --glass-blur: 20px;
 
     /* Focus ring */
     --focus-ring: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 20% 14%;
-    --sidebar-primary: 222 100% 59%;
+    --sidebar-foreground: 220 25% 12%;
+    --sidebar-primary: 210 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 220 20% 14%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 222 100% 59%;
+    --sidebar-accent: 216 20% 95%;
+    --sidebar-accent-foreground: 220 25% 12%;
+    --sidebar-border: 216 16% 90%;
+    --sidebar-ring: 210 100% 50%;
 
-    --chart-1: 222 100% 59%;
-    --chart-2: 163 68% 50%;
-    --chart-3: 32 100% 56%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 352 80% 63%;
+    --chart-1: 210 100% 50%;
+    --chart-2: 158 64% 48%;
+    --chart-3: 28 100% 54%;
+    --chart-4: 270 60% 58%;
+    --chart-5: 350 75% 60%;
 
     --sidebar: 0 0% 100%;
 
@@ -108,86 +108,86 @@
     --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 
     --shadow-2xs: 0 1px 2px 0 rgba(0,0,0,0.03);
-    --shadow-xs: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.03);
-    --shadow-sm: 0 2px 4px -1px rgba(0,0,0,0.05), 0 1px 2px -1px rgba(0,0,0,0.03);
-    --shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.03);
-    --shadow-md: 0 6px 12px -2px rgba(0,0,0,0.06), 0 3px 6px -3px rgba(0,0,0,0.04);
-    --shadow-lg: 0 10px 20px -3px rgba(0,0,0,0.06), 0 4px 8px -4px rgba(0,0,0,0.04);
-    --shadow-xl: 0 16px 32px -4px rgba(0,0,0,0.08), 0 6px 12px -6px rgba(0,0,0,0.04);
-    --shadow-2xl: 0 24px 48px -6px rgba(0,0,0,0.1);
-    --shadow-primary: 0 4px 14px -3px hsl(222 100% 59% / 0.25);
+    --shadow-xs: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.02);
+    --shadow-sm: 0 2px 6px -1px rgba(0,0,0,0.05), 0 1px 3px -1px rgba(0,0,0,0.03);
+    --shadow: 0 4px 8px -2px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.03);
+    --shadow-md: 0 8px 16px -3px rgba(0,0,0,0.07), 0 4px 8px -4px rgba(0,0,0,0.04);
+    --shadow-lg: 0 12px 28px -4px rgba(0,0,0,0.08), 0 6px 12px -6px rgba(0,0,0,0.04);
+    --shadow-xl: 0 20px 40px -6px rgba(0,0,0,0.1), 0 8px 16px -8px rgba(0,0,0,0.05);
+    --shadow-2xl: 0 28px 56px -8px rgba(0,0,0,0.12);
+    --shadow-primary: 0 4px 16px -4px hsl(210 100% 50% / 0.25);
 
     --tracking-normal: 0em;
     --spacing: 0.25rem;
   }
 
   .dark {
-    --background: 222 20% 7%;
-    --foreground: 220 14% 96%;
-    --card: 222 18% 10%;
-    --card-foreground: 220 14% 96%;
-    --popover: 222 18% 10%;
-    --popover-foreground: 220 14% 96%;
-    --primary: 222 100% 65%;
+    --background: 220 22% 7%;
+    --foreground: 216 18% 95%;
+    --card: 220 20% 10%;
+    --card-foreground: 216 18% 95%;
+    --popover: 220 20% 10%;
+    --popover-foreground: 216 18% 95%;
+    --primary: 210 100% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 212 80% 75%;
-    --secondary: 222 14% 15%;
-    --secondary-foreground: 220 14% 96%;
-    --muted: 222 14% 15%;
-    --muted-foreground: 220 10% 60%;
-    --accent: 222 14% 18%;
-    --accent-foreground: 220 14% 96%;
-    --destructive: 0 62% 50%;
+    --primary-glow: 200 85% 70%;
+    --secondary: 220 16% 15%;
+    --secondary-foreground: 216 18% 95%;
+    --muted: 220 16% 15%;
+    --muted-foreground: 220 12% 58%;
+    --accent: 220 16% 18%;
+    --accent-foreground: 216 18% 95%;
+    --destructive: 0 65% 52%;
     --destructive-foreground: 0 0% 100%;
-    --border: 222 14% 18%;
-    --input: 222 14% 18%;
-    --ring: 222 100% 65%;
+    --border: 220 16% 18%;
+    --input: 220 16% 18%;
+    --ring: 210 100% 60%;
 
     /* Status palette – dark */
-    --status-confirmed: 163 68% 50%;
-    --status-pending: 36 100% 56%;
-    --status-missing: 0 72% 55%;
-    --status-completed: 222 80% 65%;
+    --status-confirmed: 158 64% 48%;
+    --status-pending: 36 100% 54%;
+    --status-missing: 0 68% 54%;
+    --status-completed: 210 80% 62%;
     --status-cancelled: 220 10% 50%;
-    --status-active: 163 68% 50%;
+    --status-active: 158 64% 48%;
 
     /* Surface elevation - dark */
-    --surface-1: 222 18% 10%;
-    --surface-2: 222 16% 13%;
-    --surface-3: 222 14% 16%;
+    --surface-1: 220 20% 10%;
+    --surface-2: 220 18% 13%;
+    --surface-3: 220 16% 16%;
 
     /* Glass tokens - dark */
-    --glass-bg: 222 18% 10% / 0.75;
-    --glass-border: 222 14% 20% / 0.5;
+    --glass-bg: 220 20% 10% / 0.8;
+    --glass-border: 220 16% 20% / 0.5;
     --glass-blur: 20px;
 
     /* Focus ring - dark */
     --focus-ring: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
 
-    --sidebar-background: 222 20% 8%;
-    --sidebar-foreground: 220 14% 96%;
-    --sidebar-primary: 222 100% 65%;
+    --sidebar-background: 220 22% 8%;
+    --sidebar-foreground: 216 18% 95%;
+    --sidebar-primary: 210 100% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 14% 15%;
-    --sidebar-accent-foreground: 220 14% 96%;
-    --sidebar-border: 222 14% 18%;
-    --sidebar-ring: 222 100% 65%;
-    --chart-1: 222 100% 59%;
-    --chart-2: 163 68% 50%;
-    --chart-3: 32 100% 56%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 352 80% 63%;
-    --sidebar: 222 20% 5%;
+    --sidebar-accent: 220 16% 15%;
+    --sidebar-accent-foreground: 216 18% 95%;
+    --sidebar-border: 220 16% 18%;
+    --sidebar-ring: 210 100% 60%;
+    --chart-1: 210 100% 55%;
+    --chart-2: 158 64% 48%;
+    --chart-3: 28 100% 54%;
+    --chart-4: 270 60% 58%;
+    --chart-5: 350 75% 60%;
+    --sidebar: 220 22% 6%;
     --radius: 0.75rem;
     --shadow-2xs: 0 1px 2px 0 rgba(0,0,0,0.15);
     --shadow-xs: 0 1px 3px 0 rgba(0,0,0,0.2);
-    --shadow-sm: 0 2px 4px -1px rgba(0,0,0,0.2);
-    --shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
-    --shadow-md: 0 6px 12px -2px rgba(0,0,0,0.25);
-    --shadow-lg: 0 10px 20px -3px rgba(0,0,0,0.3);
-    --shadow-xl: 0 16px 32px -4px rgba(0,0,0,0.35);
-    --shadow-2xl: 0 24px 48px -6px rgba(0,0,0,0.4);
-    --shadow-primary: 0 4px 14px -3px hsl(222 85% 65% / 0.2);
+    --shadow-sm: 0 2px 6px -1px rgba(0,0,0,0.22);
+    --shadow: 0 4px 8px -2px rgba(0,0,0,0.22);
+    --shadow-md: 0 8px 16px -3px rgba(0,0,0,0.28);
+    --shadow-lg: 0 12px 28px -4px rgba(0,0,0,0.32);
+    --shadow-xl: 0 20px 40px -6px rgba(0,0,0,0.38);
+    --shadow-2xl: 0 28px 56px -8px rgba(0,0,0,0.42);
+    --shadow-primary: 0 4px 16px -4px hsl(210 85% 60% / 0.2);
   }
 }
 
@@ -222,7 +222,7 @@
 
   /* ── Cards & Surfaces ── */
   .stat-card {
-    @apply bg-card rounded-2xl border p-5 shadow-xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
+    @apply bg-card rounded-2xl border p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
   }
 
   .glass-card {
@@ -238,7 +238,7 @@
   .surface-3 { background: hsl(var(--surface-3)); }
 
   .data-table-wrapper {
-    @apply bg-card rounded-2xl border shadow-xs overflow-hidden;
+    @apply bg-card rounded-2xl border shadow-sm overflow-hidden;
   }
 
   /* ── Status badges — consistent across all modules ── */
