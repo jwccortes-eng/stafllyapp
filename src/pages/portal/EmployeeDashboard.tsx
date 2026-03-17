@@ -137,8 +137,8 @@ export default function EmployeeDashboard() {
       setEstimatedPay(base + extras - deductions);
     }
 
-    setUpcomingCount(upcomingRes.count ?? 0);
-    setUnreadAlerts(notifRes.count ?? 0);
+    setUpcomingCount((upcomingRes.data ?? []).length);
+    setUnreadAlerts((notifRes?.data ?? []).length);
     setLoading(false);
   }, [employeeId]);
 
