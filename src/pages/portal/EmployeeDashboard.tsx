@@ -293,7 +293,7 @@ export default function EmployeeDashboard() {
       </div>
 
       {/* ── Next shift card ── */}
-      {isModuleEnabled("shifts") && nextShift && (
+      {isModuleEnabled("my_shifts") && nextShift && (
         <Link to="/portal/shifts" className="block group">
           <div className={cn(
             "rounded-2xl border border-border/40 bg-card p-4 hover-lift transition-all",
