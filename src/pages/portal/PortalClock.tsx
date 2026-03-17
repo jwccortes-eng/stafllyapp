@@ -111,11 +111,27 @@ export default function PortalClock() {
   const loadData = useCallback(async () => {
     if (!employeeId) { setLoading(false); return; }
 
-    const { data: emp } = await supabase
-      .from("employees").select("company_id, avatar_url").eq("id", employeeId).maybeSingle();
+    const [empRes, geoSettingRes] = await Promise.all([
+      supabase.from("employees").select("company_id, avatar_url").eq("id", employeeId).maybeSingle(),
+      null, // placeholder, we'll fetch after getting company_id
+    ]);
+    const emp = empRes.data;
     if (emp) {
       setCompanyId(emp.company_id);
       setHasProfilePhoto(!!emp.avatar_url);
+
+      // Check if clock photo is required
+      const { data: clockPhotoSetting } = await supabase
+        .from("company_settings")
+        .select("value")
+        .eq("company_id", emp.company_id)
+        .eq("key", "clock_photo")
+        .maybeSingle();
+      setClockPhotoRequired(
+        clockPhotoSetting?.value != null &&
+        typeof clockPhotoSetting.value === "object" &&
+        (clockPhotoSetting.value as any)?.required === true
+      );
     }
 
     const today = new Date();
