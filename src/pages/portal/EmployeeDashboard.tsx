@@ -200,7 +200,7 @@ export default function EmployeeDashboard() {
       </div>
 
       {/* ── Clock action card — most prominent ── */}
-      {isModuleEnabled("clock") && (
+      {isModuleEnabled("my_clock") && (
         <div
           className={cn(
             "rounded-2xl border p-4 transition-all active:scale-[0.98] cursor-pointer",
