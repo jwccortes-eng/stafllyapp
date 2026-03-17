@@ -601,7 +601,7 @@ export default function PortalClock() {
       {/* Clock in/out button */}
       {isClockedIn ? (
         <Button
-          onClick={handleClockOut}
+          onClick={initiateClockOut}
           disabled={acting}
           className="w-full h-16 rounded-2xl text-lg font-bold gap-3 shadow-xl transition-all active:scale-[0.95] bg-destructive hover:bg-destructive/90 text-destructive-foreground"
         >
@@ -609,7 +609,7 @@ export default function PortalClock() {
         </Button>
       ) : (
         <Button
-          onClick={handleClockIn}
+          onClick={initiateClockIn}
           disabled={acting || !companyId || !selectedShift || !!clockInBlocked || !hasProfilePhoto}
           className="w-full h-16 rounded-2xl text-lg font-bold gap-3 shadow-xl transition-all active:scale-[0.95] gradient-primary text-white hover:shadow-2xl disabled:opacity-50"
         >
