@@ -36,44 +36,32 @@ interface LinkDef {
   roles?: string[];
 }
 
-/* ── New grouping: Operations / Business / Insights / System ── */
+/* ── Simplified grouping: Principal / Nómina / Más ── */
 const ALL_LINKS: LinkDef[] = [
-  // OPERATIONS
-  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Operaciones" },
-  { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Operaciones" },
-  { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Operaciones" },
-  { to: "/app/employees", icon: Users, label: "Trabajadores", module: "employees", section: "Operaciones" },
-  { to: "/app/directory", icon: ContactRound, label: "Directorio", module: "employees", section: "Operaciones" },
-  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Operaciones" },
-  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Operaciones" },
-  { to: "/app/live-map", icon: MapIcon, label: "Mapa en Vivo", module: null, section: "Operaciones" },
-  { to: "/app/ai-workforce", icon: Brain, label: "AI Workforce", module: null, section: "Operaciones" },
-  { to: "/app/leaderboard", icon: Award, label: "Leaderboard", module: null, section: "Operaciones" },
+  // PRINCIPAL — core daily operations
+  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Principal" },
+  { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Principal" },
+  { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Principal" },
+  { to: "/app/employees", icon: Users, label: "Trabajadores", module: "employees", section: "Principal" },
+  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Principal" },
+  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Principal" },
 
-  // BUSINESS
-  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Negocio" },
-  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Negocio" },
-  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Negocio" },
-  { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Negocio" },
-  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Negocio" },
-  { to: "/app/staffing-requests", icon: ClipboardList, label: "Solicitudes", module: null, section: "Negocio" },
-  { to: "/app/invoices", icon: Receipt, label: "Facturación", module: null, section: "Negocio" },
-  { to: "/app/service-categories", icon: Tags, label: "Categorías", module: null, section: "Negocio" },
-  { to: "/app/w9", icon: FileText, label: "W-9", module: "employees", section: "Negocio" },
-  { to: "/app/1099", icon: FileText, label: "1099-NEC", module: "employees", section: "Negocio" },
+  // NÓMINA — payroll & finance
+  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
+  { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
+  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Nómina" },
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes", module: "summary", section: "Nómina" },
 
-  // INSIGHTS
-  { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes", module: "summary", section: "Insights" },
-  { to: "/app/comparison", icon: GitCompareArrows, label: "Comparación", module: "shifts", section: "Insights" },
-
-  // SYSTEM
-  { to: "/app/payroll-settings", icon: Settings2, label: "Config Nómina", module: null, section: "Sistema" },
-  { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Sistema", badge: "tickets" },
-  { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Sistema" },
-  { to: "/app/invite", icon: UserPlus, label: "Invitaciones", module: null, section: "Sistema" },
+  // MÁS — communication, monitoring & config
+  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Más" },
+  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Más" },
+  { to: "/app/live-map", icon: MapIcon, label: "Mapa en Vivo", module: null, section: "Más" },
+  { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Más" },
+  { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Más", badge: "tickets" },
+  { to: "/app/payroll-settings", icon: Settings2, label: "Configuración", module: null, section: "Más" },
 ];
 
-const SECTION_ORDER = ["Operaciones", "Negocio", "Insights", "Sistema"];
+const SECTION_ORDER = ["Principal", "Nómina", "Más"];
 
 export default function AdminSidebar() {
   const { signOut, role, hasModuleAccess, user, fullName } = useAuth();
