@@ -1453,6 +1453,7 @@ export default function Shifts() {
         onOpenChange={setEditOpen}
         clients={clients}
         locations={locations}
+        employees={employees}
         onSave={handleEditShift}
       />
     </div>
