@@ -31,7 +31,7 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
   const { role } = useAuth();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
+  
 
   const filtered = useMemo(() => {
     if (!search.trim()) return companies;
