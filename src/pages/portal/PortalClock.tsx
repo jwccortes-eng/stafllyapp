@@ -732,6 +732,18 @@ export default function PortalClock() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Photo capture dialog */}
+      {employeeId && companyId && (
+        <ClockPhotoCapture
+          open={photoDialogOpen}
+          onClose={() => { setPhotoDialogOpen(false); setPendingClockAction(null); }}
+          onCaptured={onPhotoCaptured}
+          employeeId={employeeId}
+          companyId={companyId}
+          clockType={pendingClockAction === "out" ? "clock_out" : "clock_in"}
+        />
+      )}
     </div>
   );
 }
