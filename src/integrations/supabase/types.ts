@@ -3734,6 +3734,8 @@ export type Database = {
           meeting_point: string | null
           notes: string | null
           pay_type: string
+          qr_attendance_mode: string
+          qr_token: string | null
           reconciliation_hash: string | null
           shift_admin_id: string | null
           shift_code: string | null
@@ -3765,6 +3767,8 @@ export type Database = {
           meeting_point?: string | null
           notes?: string | null
           pay_type?: string
+          qr_attendance_mode?: string
+          qr_token?: string | null
           reconciliation_hash?: string | null
           shift_admin_id?: string | null
           shift_code?: string | null
@@ -3796,6 +3800,8 @@ export type Database = {
           meeting_point?: string | null
           notes?: string | null
           pay_type?: string
+          qr_attendance_mode?: string
+          qr_token?: string | null
           reconciliation_hash?: string | null
           shift_admin_id?: string | null
           shift_code?: string | null
