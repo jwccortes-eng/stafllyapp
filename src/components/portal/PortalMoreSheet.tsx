@@ -26,11 +26,11 @@ interface PortalMoreSheetProps {
 
 const ALL_MORE_ITEMS: (MoreItem & { moduleKey?: string })[] = [
   { id: "profile", to: "/portal/profile", icon: User, label: "Mi Perfil", description: "Datos personales" },
-  { id: "availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", description: "Gestiona tu horario", moduleKey: "availability" },
-  { id: "announcements", to: "/portal/announcements", icon: Megaphone, label: "Anuncios", description: "Noticias de la empresa", moduleKey: "announcements" },
-  { id: "chat", to: "/portal/chat", icon: MessageSquare, label: "Chat", description: "Mensajes internos", moduleKey: "chat" },
-  { id: "w9", to: "/portal/w9", icon: FileText, label: "Formulario W-9", description: "Información fiscal", moduleKey: "w9" },
-  { id: "resources", to: "/portal/resources", icon: BookOpen, label: "Recursos", description: "Material de apoyo", moduleKey: "resources" },
+  { id: "availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", description: "Gestiona tu horario", moduleKey: "my_availability" },
+  { id: "announcements", to: "/portal/announcements", icon: Megaphone, label: "Anuncios", description: "Noticias de la empresa", moduleKey: "my_announcements" },
+  { id: "chat", to: "/portal/chat", icon: MessageSquare, label: "Chat", description: "Mensajes internos", moduleKey: "my_chat" },
+  { id: "w9", to: "/portal/w9", icon: FileText, label: "Formulario W-9", description: "Información fiscal", moduleKey: "my_w9" },
+  { id: "resources", to: "/portal/resources", icon: BookOpen, label: "Recursos", description: "Material de apoyo", moduleKey: "my_resources" },
 ];
 
 export function PortalMoreSheet({
