@@ -7,7 +7,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import CompanyActionGuard from "@/components/CompanyActionGuard";
+
 
 const COMPANY_COLORS = [
   "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
