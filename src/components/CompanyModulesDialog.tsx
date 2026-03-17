@@ -46,8 +46,7 @@ interface Props {
 export default function CompanyModulesDialog({ companyId, companyName, isSandbox, open, onOpenChange }: Props) {
   const [modules, setModules] = useState<ModuleRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [replicating, setReplicating] = useState(false);
-  const [sandboxId, setSandboxId] = useState<string | null>(null);
+  
   const { toast } = useToast();
 
   useEffect(() => {
