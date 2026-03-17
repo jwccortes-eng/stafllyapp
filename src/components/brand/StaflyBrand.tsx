@@ -10,7 +10,7 @@ interface MarkProps extends React.SVGProps<SVGSVGElement> {
   size?: number;
 }
 
-/** Isotipo — SVG shield-calendar icon */
+/** Isotipo — SVG shield-clock icon */
 export const StaflyMark = forwardRef<SVGSVGElement, MarkProps>(function StaflyMark(
   { className = "", size = 32, ...rest },
   ref,
@@ -27,28 +27,27 @@ export const StaflyMark = forwardRef<SVGSVGElement, MarkProps>(function StaflyMa
       aria-label="StaflyApps"
       {...rest}
     >
-      {/* Rounded square background with gradient */}
+      {/* Shield shape with gradient */}
       <defs>
-        <linearGradient id="stafly-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="hsl(222, 100%, 59%)" />
-          <stop offset="100%" stopColor="hsl(226, 76%, 49%)" />
+        <linearGradient id="stafly-grad" x1="4" y1="2" x2="36" y2="38" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="hsl(210, 100%, 55%)" />
+          <stop offset="100%" stopColor="hsl(215, 90%, 42%)" />
         </linearGradient>
       </defs>
-      <rect width="40" height="40" rx="10" fill="url(#stafly-grad)" />
-      {/* Calendar top bar */}
-      <rect x="9" y="10" width="22" height="3" rx="1.5" fill="white" opacity="0.9" />
-      {/* Calendar pins */}
-      <rect x="14" y="8" width="2.5" height="5" rx="1.25" fill="white" />
-      <rect x="23.5" y="8" width="2.5" height="5" rx="1.25" fill="white" />
-      {/* Grid dots — representing shifts/schedule */}
-      <circle cx="15" cy="20" r="2" fill="white" opacity="0.95" />
-      <circle cx="20" cy="20" r="2" fill="white" opacity="0.75" />
-      <circle cx="25" cy="20" r="2" fill="white" opacity="0.95" />
-      <circle cx="15" cy="26" r="2" fill="white" opacity="0.75" />
-      <circle cx="20" cy="26" r="2" fill="white" opacity="0.95" />
-      <circle cx="25" cy="26" r="2" fill="white" opacity="0.75" />
-      {/* Checkmark accent */}
-      <path d="M23 30L25.5 32.5L30 27" stroke="hsl(163, 68%, 50%)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      {/* Shield path */}
+      <path
+        d="M20 2L6 9v10c0 9.5 5.5 17.5 14 20 8.5-2.5 14-10.5 14-20V9L20 2z"
+        fill="url(#stafly-grad)"
+      />
+      {/* Clock circle */}
+      <circle cx="20" cy="19" r="8" fill="none" stroke="white" strokeWidth="1.8" opacity="0.9" />
+      {/* Clock hands */}
+      <line x1="20" y1="19" x2="20" y2="14" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="20" y1="19" x2="24" y2="19" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+      {/* Clock center dot */}
+      <circle cx="20" cy="19" r="1.2" fill="white" />
+      {/* Checkmark accent at bottom */}
+      <path d="M16 28l2.5 2.5L23 26" stroke="hsl(158, 64%, 48%)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   );
 });
