@@ -111,9 +111,9 @@ export default function EmployeeLayout() {
         {/* Bottom nav */}
         <PortalBottomNav
           onOpenMore={() => setMoreOpen(true)}
-          showShifts={isModuleEnabled("shifts")}
-          showClock={isModuleEnabled("clock")}
-          showEarnings={isModuleEnabled("earnings")}
+          showShifts={isModuleEnabled("my_shifts")}
+          showClock={isModuleEnabled("my_clock")}
+          showEarnings={isModuleEnabled("my_payments")}
         />
 
         {/* More sheet */}
