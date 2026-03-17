@@ -168,20 +168,6 @@ export default function CompanyModulesDialog({ companyId, companyName, isSandbox
           <Button variant="outline" size="sm" onClick={activateAll} disabled={loading}>
             Activar todos
           </Button>
-          {sandboxId && companyId !== sandboxId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={replicateFromSandbox}
-              disabled={replicating}
-            >
-              {replicating ? (
-                <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Replicando...</>
-              ) : (
-                <><Copy className="h-3.5 w-3.5 mr-1.5" />Replicar desde Sandbox</>
-              )}
-            </Button>
-          )}
         </div>
       </DialogContent>
     </Dialog>
