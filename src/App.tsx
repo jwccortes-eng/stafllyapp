@@ -151,6 +151,7 @@ function App() {
               <Route path="/manual" element={<UserManual />} />
               <Route path="/passport/:slug" element={<PublicPassport />} />
               <Route path="/kiosk" element={<KioskClock />} />
+              <Route path="/join/:inviteCode" element={<JoinCompany />} />
 
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
