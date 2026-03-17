@@ -5,9 +5,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
 import { usePortalModules } from "@/hooks/usePortalModules";
 import {
-  Wallet, Clock, Megaphone, CalendarDays,
+  Wallet, Clock, CalendarDays,
   ArrowRight, LogIn, LogOut, MapPin, Timer,
-  AlertTriangle, Bell, ChevronRight,
+  Bell, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -23,15 +23,6 @@ interface NextShift {
   end_time: string;
   location_name: string | null;
   status: string;
-}
-
-interface Notification {
-  id: string;
-  title: string;
-  body: string;
-  type: string;
-  created_at: string;
-  is_read: boolean;
 }
 
 export default function EmployeeDashboard() {
@@ -84,7 +75,6 @@ export default function EmployeeDashboard() {
         .eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
     ]);
 
-    // Separate queries to avoid TS2589
     const upcomingRes = await supabase.from("shift_assignments").select("id")
       .eq("employee_id", employeeId).neq("status", "rejected");
     const notifRes = await (supabase.from("notifications").select("id")
@@ -92,7 +82,6 @@ export default function EmployeeDashboard() {
 
     setCompanyName(companyRes.data?.name ?? "");
 
-    // Clock status
     const activeClocks = (clockRes.data ?? []) as any[];
     if (activeClocks.length > 0) {
       setClockStatus({ isClockedIn: true, clockInTime: activeClocks[0].clock_in, shiftTitle: activeClocks[0].scheduled_shifts?.title ?? null });
@@ -100,7 +89,6 @@ export default function EmployeeDashboard() {
       setClockStatus({ isClockedIn: false, clockInTime: null, shiftTitle: null });
     }
 
-    // Weekly hours
     let totalSec = 0;
     for (const e of (weekRes.data ?? []) as any[]) {
       const end = e.clock_out ? new Date(e.clock_out) : new Date();
@@ -110,7 +98,6 @@ export default function EmployeeDashboard() {
     const wm = Math.floor((totalSec % 3600) / 60);
     setWeeklyHours(wm > 0 ? `${wh}h ${wm}m` : `${wh}h`);
 
-    // Next shift
     const shifts = (assignRes.data ?? []) as any[];
     if (shifts.length > 0) {
       const s = shifts[0].scheduled_shifts;
@@ -121,7 +108,6 @@ export default function EmployeeDashboard() {
       });
     }
 
-    // Pay estimate
     if (periodRes.data) {
       const p = periodRes.data;
       const [bpRes, movRes] = await Promise.all([
@@ -154,59 +140,49 @@ export default function EmployeeDashboard() {
   const firstName = empName.split(" ")[0] || "";
   const lastName = empName.split(" ").slice(1).join(" ") || "";
 
-  const getDateLabel = (dateStr: string) => {
-    const d = parseISO(dateStr);
-    if (isToday(d)) return "Hoy";
-    if (isTomorrow(d)) return "Mañana";
-    return format(d, "EEE d MMM", { locale: es });
-  };
-
   if (loading) {
     return (
       <div className="space-y-4 pt-2">
+        <div className="h-20 animate-pulse bg-muted rounded-2xl" />
         <div className="h-28 animate-pulse bg-muted rounded-2xl" />
         <div className="grid grid-cols-2 gap-3">
-          <div className="h-32 animate-pulse bg-muted rounded-2xl" />
-          <div className="h-32 animate-pulse bg-muted rounded-2xl" />
+          <div className="h-24 animate-pulse bg-muted rounded-2xl" />
+          <div className="h-24 animate-pulse bg-muted rounded-2xl" />
         </div>
-        <div className="h-24 animate-pulse bg-muted rounded-2xl" />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* ── Greeting hero ── */}
-      <div className="rounded-2xl gradient-primary p-5 text-primary-foreground relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,hsl(212_100%_73%/0.4),transparent_55%)]" />
-        <div className="relative flex items-center gap-3.5">
-          <EmployeeAvatar
-            firstName={firstName}
-            lastName={lastName}
-            avatarUrl={empAvatar}
-            size="lg"
-            className="ring-2 ring-white/30 shadow-lg"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-medium opacity-80">{greeting}</p>
-            <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">
-              {firstName}
-            </h1>
-            {companyName && (
-              <p className="text-[11px] opacity-70 mt-0.5">{companyName}</p>
-            )}
-          </div>
+      {/* ── Greeting ── */}
+      <div className="flex items-center gap-3.5 pt-1">
+        <EmployeeAvatar
+          firstName={firstName}
+          lastName={lastName}
+          avatarUrl={empAvatar}
+          size="lg"
+          className="ring-2 ring-primary/15 shadow-md"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-medium text-muted-foreground">{greeting}</p>
+          <h1 className="text-xl font-bold font-heading tracking-tight leading-tight text-foreground">
+            {firstName}
+          </h1>
+          {companyName && (
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5">{companyName}</p>
+          )}
         </div>
       </div>
 
-      {/* ── Clock action card — most prominent ── */}
+      {/* ── Clock hero action ── */}
       {isModuleEnabled("my_clock") && (
-        <div
+        <button
           className={cn(
-            "rounded-2xl border p-4 transition-all active:scale-[0.98] cursor-pointer",
+            "w-full rounded-2xl p-4 transition-all active:scale-[0.98]",
             clockStatus.isClockedIn
-              ? "border-earning/30 bg-earning/5"
-              : "border-primary/20 bg-primary/[0.03]"
+              ? "bg-earning/8 border-2 border-earning/20"
+              : "gradient-primary text-primary-foreground shadow-[0_4px_20px_-4px_hsl(var(--primary)/0.35)]"
           )}
           onClick={() => navigate("/portal/clock")}
         >
@@ -214,15 +190,21 @@ export default function EmployeeDashboard() {
             <div className="flex items-center gap-3">
               <div className={cn(
                 "h-12 w-12 rounded-2xl flex items-center justify-center",
-                clockStatus.isClockedIn ? "bg-earning/10" : "bg-primary/10"
+                clockStatus.isClockedIn ? "bg-earning/15" : "bg-white/15"
               )}>
-                <Clock className={cn("h-6 w-6", clockStatus.isClockedIn ? "text-earning" : "text-primary")} />
+                <Clock className={cn("h-6 w-6", clockStatus.isClockedIn ? "text-earning" : "text-primary-foreground")} />
               </div>
-              <div>
+              <div className="text-left">
                 <div className="flex items-center gap-2">
-                  <div className={cn("h-2 w-2 rounded-full", clockStatus.isClockedIn ? "bg-earning animate-pulse" : "bg-muted-foreground/30")} />
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {clockStatus.isClockedIn ? "En turno" : "Fuera de turno"}
+                  <div className={cn(
+                    "h-2 w-2 rounded-full",
+                    clockStatus.isClockedIn ? "bg-earning animate-pulse" : "bg-white/40"
+                  )} />
+                  <span className={cn(
+                    "text-xs font-semibold",
+                    clockStatus.isClockedIn ? "text-foreground" : "text-primary-foreground/80"
+                  )}>
+                    {clockStatus.isClockedIn ? "En turno" : "Listo para trabajar"}
                   </span>
                 </div>
                 {clockStatus.isClockedIn && clockStatus.shiftTitle && (
@@ -230,19 +212,82 @@ export default function EmployeeDashboard() {
                 )}
               </div>
             </div>
-            <Button
-              size="sm"
-              variant={clockStatus.isClockedIn ? "destructive" : "default"}
-              className="h-10 px-5 text-sm gap-2 font-bold rounded-xl"
-              onClick={e => { e.stopPropagation(); navigate("/portal/clock"); }}
-            >
+            <div className={cn(
+              "h-10 px-5 rounded-xl flex items-center gap-2 font-bold text-sm",
+              clockStatus.isClockedIn
+                ? "bg-earning text-earning-foreground"
+                : "bg-white/20 text-primary-foreground"
+            )}>
               {clockStatus.isClockedIn ? <><LogOut className="h-4 w-4" /> Salida</> : <><LogIn className="h-4 w-4" /> Entrada</>}
-            </Button>
+            </div>
           </div>
-        </div>
+        </button>
       )}
 
-      {/* ── Stats row ── */}
+      {/* ── Next shift card ── */}
+      {isModuleEnabled("my_shifts") && nextShift && (
+        <Link to="/portal/shifts" className="block group">
+          <div className={cn(
+            "rounded-2xl border bg-card p-4 transition-all",
+            isToday(parseISO(nextShift.date))
+              ? "border-primary/25 shadow-[0_0_0_1px_hsl(var(--primary)/0.08)]"
+              : "border-border/40"
+          )}>
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "h-12 w-12 rounded-2xl flex flex-col items-center justify-center shrink-0",
+                isToday(parseISO(nextShift.date)) ? "bg-primary text-primary-foreground" : "bg-muted/60"
+              )}>
+                <span className="text-[9px] font-bold uppercase leading-none">
+                  {format(parseISO(nextShift.date), "MMM", { locale: es })}
+                </span>
+                <span className="text-lg font-bold leading-none">
+                  {format(parseISO(nextShift.date), "d")}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  {isToday(parseISO(nextShift.date)) && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground">HOY</span>
+                  )}
+                  {isTomorrow(parseISO(nextShift.date)) && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-accent text-accent-foreground">MAÑANA</span>
+                  )}
+                  <p className="text-sm font-semibold text-foreground truncate">{nextShift.title}</p>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {nextShift.start_time?.slice(0, 5)} – {nextShift.end_time?.slice(0, 5)}
+                  </span>
+                  {nextShift.location_name && (
+                    <span className="flex items-center gap-1 truncate">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      {nextShift.location_name}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* ── No shifts placeholder ── */}
+      {isModuleEnabled("my_shifts") && !nextShift && (
+        <Link to="/portal/shifts" className="block">
+          <div className="rounded-2xl border border-dashed border-border/50 bg-muted/30 p-6 flex flex-col items-center gap-2">
+            <CalendarDays className="h-7 w-7 text-muted-foreground/30" />
+            <p className="text-sm font-medium text-muted-foreground">Sin turnos programados</p>
+            <span className="text-[11px] text-primary font-medium flex items-center gap-1">
+              Ver turnos disponibles <ArrowRight className="h-3 w-3" />
+            </span>
+          </div>
+        </Link>
+      )}
+
+      {/* ── Stats grid ── */}
       <div className="grid grid-cols-2 gap-3">
         {/* Weekly hours */}
         <div className="rounded-2xl border border-border/40 bg-card p-4">
@@ -258,7 +303,7 @@ export default function EmployeeDashboard() {
         {/* Pay estimate */}
         {isModuleEnabled("my_payments") && estimatedPay !== null && (
           <Link to="/portal/payments" className="block group">
-            <div className="rounded-2xl border border-border/40 bg-card p-4 h-full hover-lift">
+            <div className="rounded-2xl border border-border/40 bg-card p-4 h-full transition-shadow hover:shadow-md">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
                   <Wallet className="h-4 w-4 text-primary" />
@@ -266,17 +311,13 @@ export default function EmployeeDashboard() {
               </div>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pago estimado</p>
               <p className="text-2xl font-bold font-heading tabular-nums leading-none mt-1">${estimatedPay.toFixed(2)}</p>
-              <div className="flex items-center gap-1 mt-2 text-[10px] font-medium text-primary opacity-60 group-hover:opacity-100 transition-opacity">
-                Ver nómina <ArrowRight className="h-2.5 w-2.5" />
-              </div>
             </div>
           </Link>
         )}
 
-        {/* If earnings not enabled, show upcoming shifts count */}
         {(!isModuleEnabled("my_payments") || estimatedPay === null) && isModuleEnabled("my_shifts") && (
           <Link to="/portal/shifts" className="block group">
-            <div className="rounded-2xl border border-border/40 bg-card p-4 h-full hover-lift">
+            <div className="rounded-2xl border border-border/40 bg-card p-4 h-full transition-shadow hover:shadow-md">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-8 w-8 rounded-xl bg-accent flex items-center justify-center">
                   <CalendarDays className="h-4 w-4 text-accent-foreground" />
@@ -284,75 +325,12 @@ export default function EmployeeDashboard() {
               </div>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Turnos próximos</p>
               <p className="text-2xl font-bold font-heading tabular-nums leading-none mt-1">{upcomingCount}</p>
-              <div className="flex items-center gap-1 mt-2 text-[10px] font-medium text-primary opacity-60 group-hover:opacity-100 transition-opacity">
-                Ver turnos <ArrowRight className="h-2.5 w-2.5" />
-              </div>
             </div>
           </Link>
         )}
       </div>
 
-      {/* ── Next shift card ── */}
-      {isModuleEnabled("my_shifts") && nextShift && (
-        <Link to="/portal/shifts" className="block group">
-          <div className={cn(
-            "rounded-2xl border border-border/40 bg-card p-4 hover-lift transition-all",
-            isToday(parseISO(nextShift.date)) && "ring-2 ring-primary/20 border-primary/20"
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className={cn(
-                  "h-12 w-12 rounded-2xl flex flex-col items-center justify-center shrink-0",
-                  isToday(parseISO(nextShift.date)) ? "bg-primary text-primary-foreground" : "bg-muted/60"
-                )}>
-                  <span className="text-[9px] font-bold uppercase leading-none">
-                    {format(parseISO(nextShift.date), "MMM", { locale: es })}
-                  </span>
-                  <span className="text-lg font-bold leading-none">
-                    {format(parseISO(nextShift.date), "d")}
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    {isToday(parseISO(nextShift.date)) && (
-                      <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground">HOY</span>
-                    )}
-                    <p className="text-sm font-semibold text-foreground truncate">{nextShift.title}</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {nextShift.start_time?.slice(0, 5)} – {nextShift.end_time?.slice(0, 5)}
-                    </span>
-                    {nextShift.location_name && (
-                      <span className="flex items-center gap-1 truncate">
-                        <MapPin className="h-3 w-3 shrink-0" />
-                        {nextShift.location_name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground/30 shrink-0" />
-            </div>
-          </div>
-        </Link>
-      )}
-
-      {/* ── No shifts placeholder ── */}
-      {isModuleEnabled("my_shifts") && !nextShift && (
-        <Link to="/portal/shifts" className="block">
-          <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.02] p-6 flex flex-col items-center gap-2">
-            <CalendarDays className="h-8 w-8 text-primary/30" />
-            <p className="text-sm font-medium text-muted-foreground">Sin turnos programados</p>
-            <span className="text-[11px] text-primary/60 font-medium flex items-center gap-1">
-              Ver turnos disponibles <ArrowRight className="h-3 w-3" />
-            </span>
-          </div>
-        </Link>
-      )}
-
-      {/* ── Quick alerts ── */}
+      {/* ── Alerts ── */}
       {unreadAlerts > 0 && (
         <div className="rounded-2xl border border-warning/20 bg-warning/[0.04] p-4 flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
@@ -360,7 +338,7 @@ export default function EmployeeDashboard() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">
-              {unreadAlerts} {unreadAlerts === 1 ? "notificación pendiente" : "notificaciones pendientes"}
+              {unreadAlerts} {unreadAlerts === 1 ? "notificación" : "notificaciones"}
             </p>
             <p className="text-[11px] text-muted-foreground">Revisa tus alertas</p>
           </div>
