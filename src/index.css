@@ -20,9 +20,13 @@
     --popover-foreground: 220 25% 12%;
 
     --primary: 210 100% 50%;
+    --primary-hover: 212 95% 45%;
     --primary-dark: 215 90% 42%;
     --primary-glow: 200 100% 62%;
     --primary-foreground: 0 0% 100%;
+
+    --info: 210 80% 52%;
+    --info-foreground: 0 0% 100%;
 
     --accent-warm: 28 100% 54%;
     --accent-warm-foreground: 0 0% 100%;
@@ -150,6 +154,10 @@
     --status-completed: 210 80% 62%;
     --status-cancelled: 220 10% 50%;
     --status-active: 158 64% 48%;
+
+    --info: 210 80% 62%;
+    --info-foreground: 0 0% 100%;
+    --primary-hover: 212 95% 55%;
 
     /* Surface elevation - dark */
     --surface-1: 220 20% 10%;
