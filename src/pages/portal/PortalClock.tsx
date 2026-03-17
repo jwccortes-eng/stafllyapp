@@ -179,7 +179,7 @@ export default function PortalClock() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleClockIn = async () => {
+  const initiateClockIn = () => {
     if (!employeeId || !companyId || !selectedShift) return;
 
     // Check profile photo requirement
@@ -198,6 +198,37 @@ export default function PortalClock() {
       toast({ title: "No permitido", description: check.message, variant: "destructive" });
       return;
     }
+
+    if (clockPhotoRequired) {
+      setPendingClockAction("in");
+      setPhotoDialogOpen(true);
+    } else {
+      handleClockIn(null);
+    }
+  };
+
+  const initiateClockOut = () => {
+    if (!activeEntry || !companyId || !employeeId) return;
+    if (clockPhotoRequired) {
+      setPendingClockAction("out");
+      setPhotoDialogOpen(true);
+    } else {
+      handleClockOut(null);
+    }
+  };
+
+  const onPhotoCaptured = (photoUrl: string) => {
+    setPhotoDialogOpen(false);
+    if (pendingClockAction === "in") {
+      handleClockIn(photoUrl);
+    } else if (pendingClockAction === "out") {
+      handleClockOut(photoUrl);
+    }
+    setPendingClockAction(null);
+  };
+
+  const handleClockIn = async (photoUrl: string | null) => {
+    if (!employeeId || !companyId || !selectedShift) return;
 
     setActing(true);
     try {
