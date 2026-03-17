@@ -52,18 +52,8 @@ export default function CompanyModulesDialog({ companyId, companyName, isSandbox
   useEffect(() => {
     if (open && companyId) {
       fetchModules();
-      fetchSandbox();
     }
   }, [open, companyId]);
-
-  const fetchSandbox = async () => {
-    const { data } = await supabase
-      .from("companies")
-      .select("id")
-      .eq("is_sandbox", true)
-      .maybeSingle();
-    setSandboxId(data?.id ?? null);
-  };
 
   const fetchModules = async () => {
     if (!companyId) return;
