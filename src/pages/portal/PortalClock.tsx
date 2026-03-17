@@ -235,6 +235,69 @@ export default function PortalClock() {
     setPendingClockAction(null);
   };
 
+  const handleQrScanned = async (data: string) => {
+    setQrScannerOpen(false);
+    if (!employeeId || !companyId) return;
+
+    // Parse QR: format is "stafly:shift:{shiftId}:{qrToken}"
+    const parts = data.split(":");
+    if (parts.length !== 4 || parts[0] !== "stafly" || parts[1] !== "shift") {
+      toast({ title: "QR inválido", description: "Este código no es un QR de turno válido.", variant: "destructive" });
+      return;
+    }
+    const [, , scannedShiftId, scannedToken] = parts;
+
+    // Validate the QR token against the shift
+    const { data: shiftData } = await supabase
+      .from("scheduled_shifts")
+      .select("id, title, qr_token, qr_attendance_mode, start_time, end_time, date")
+      .eq("id", scannedShiftId)
+      .maybeSingle();
+
+    if (!shiftData) {
+      toast({ title: "Turno no encontrado", description: "El turno asociado a este QR no existe.", variant: "destructive" });
+      return;
+    }
+    if (shiftData.qr_token !== scannedToken) {
+      toast({ title: "QR expirado", description: "Este código QR ya no es válido. Solicita uno nuevo al administrador.", variant: "destructive" });
+      return;
+    }
+
+    // Check employee is assigned
+    const { data: assignment } = await supabase
+      .from("shift_assignments")
+      .select("id, status")
+      .eq("shift_id", scannedShiftId)
+      .eq("employee_id", employeeId)
+      .neq("status", "rejected")
+      .maybeSingle();
+
+    if (!assignment) {
+      toast({ title: "No asignado", description: "No estás asignado a este turno.", variant: "destructive" });
+      return;
+    }
+
+    // Determine action: clock in or clock out
+    const matchingShift = todayShifts.find(s => s.id === scannedShiftId);
+    if (matchingShift) setSelectedShift(matchingShift);
+
+    if (activeEntry && activeEntry.shift_id === scannedShiftId) {
+      // Clock out via QR
+      initiateClockOut();
+    } else if (!activeEntry) {
+      // Clock in via QR — auto-select the shift
+      if (matchingShift) {
+        // Small delay to let state update, then initiate
+        setTimeout(() => initiateClockIn(), 100);
+      } else {
+        toast({ title: "Turno no disponible hoy", description: "Este turno no está programado para hoy.", variant: "destructive" });
+      }
+    } else {
+      toast({ title: "Ya fichado", description: "Ya tienes un turno activo. Marca salida primero.", variant: "destructive" });
+    }
+  };
+
+
   const handleClockIn = async (photoUrl: string | null) => {
     if (!employeeId || !companyId || !selectedShift) return;
 
