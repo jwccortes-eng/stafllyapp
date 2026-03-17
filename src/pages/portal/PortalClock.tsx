@@ -669,6 +669,16 @@ export default function PortalClock() {
         </div>
       )}
 
+      {/* QR Scan button */}
+      <Button
+        variant="outline"
+        onClick={() => setQrScannerOpen(true)}
+        className="w-full h-12 rounded-2xl text-sm font-semibold gap-2.5 border-primary/20 text-primary hover:bg-primary/5"
+      >
+        <ScanLine className="h-5 w-5" />
+        Escanear QR
+      </Button>
+
       {/* Clock in/out button */}
       {isClockedIn ? (
         <Button
