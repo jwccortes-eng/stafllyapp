@@ -71,7 +71,7 @@ export default function EmployeeDashboard() {
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
     const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
 
-    const [companyRes, periodRes, assignRes, clockRes, weekRes, upcomingRes, notifRes] = await Promise.all([
+    const [companyRes, periodRes, assignRes, clockRes, weekRes] = await Promise.all([
       supabase.from("companies").select("name").eq("id", emp.company_id).maybeSingle(),
       supabase.from("pay_periods").select("id, start_date, end_date, status, published_at")
         .eq("company_id", emp.company_id).order("start_date", { ascending: false }).limit(1).maybeSingle(),
@@ -82,11 +82,13 @@ export default function EmployeeDashboard() {
       supabase.from("time_entries").select("id, clock_in, clock_out, shift_id").eq("employee_id", employeeId).is("clock_out", null).limit(1) as any,
       supabase.from("time_entries").select("clock_in, clock_out")
         .eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
-      supabase.from("shift_assignments").select("id")
-        .eq("employee_id", employeeId).neq("status", "rejected"),
-      supabase.from("notifications").select("id")
-        .eq("recipient_id", employeeId).eq("is_read", false),
     ]);
+
+    // Separate queries to avoid TS2589
+    const upcomingRes = await supabase.from("shift_assignments").select("id")
+      .eq("employee_id", employeeId).neq("status", "rejected");
+    const notifRes = await supabase.from("notifications").select("id")
+      .eq("recipient_id", employeeId!).eq("is_read", false);
 
     setCompanyName(companyRes.data?.name ?? "");
 
