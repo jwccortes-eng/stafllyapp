@@ -420,3 +420,9 @@
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* ── QR Scanner scan line animation ── */
+@keyframes scan {
+  0%, 100% { top: 10%; }
+  50% { top: 85%; }
+}
