@@ -7,16 +7,17 @@ import { useAuth } from "@/hooks/useAuth";
  * "home" and "profile" are always visible.
  */
 export const PORTAL_MODULE_KEYS = [
-  "shifts",
-  "clock",
-  "earnings",
-  "availability",
-  "announcements",
-  "chat",
-  "documents",
-  "reviews",
-  "w9",
-  "resources",
+  "my_shifts",
+  "my_clock",
+  "my_payments",
+  "my_chat",
+  "my_announcements",
+  "my_w9",
+  "my_profile",
+  "my_resources",
+  "my_availability",
+  "my_documents",
+  "my_reviews",
 ] as const;
 
 export type PortalModuleKey = (typeof PORTAL_MODULE_KEYS)[number];
