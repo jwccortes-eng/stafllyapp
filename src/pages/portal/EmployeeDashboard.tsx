@@ -340,7 +340,7 @@ export default function EmployeeDashboard() {
       )}
 
       {/* ── No shifts placeholder ── */}
-      {isModuleEnabled("shifts") && !nextShift && (
+      {isModuleEnabled("my_shifts") && !nextShift && (
         <Link to="/portal/shifts" className="block">
           <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.02] p-6 flex flex-col items-center gap-2">
             <CalendarDays className="h-8 w-8 text-primary/30" />
