@@ -406,8 +406,8 @@ export default function AdminDashboard() {
       if (periodRes.data) {
         const { data: basePays } = await supabase
           .from("period_base_pay").select("base_total_pay, total_hours").eq("period_id", periodRes.data.id);
-        periodTotal = (basePays ?? []).reduce((s, bp) => s + Number(bp.base_total_pay || 0), 0);
-        const hours = (basePays ?? []).reduce((s, bp) => s + Number(bp.total_hours || 0), 0);
+        periodTotal = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.base_total_pay || 0), 0);
+        const hours = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.total_hours || 0), 0);
         setTotalHoursWorked(Math.round(hours * 10) / 10);
       }
 
