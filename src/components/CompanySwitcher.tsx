@@ -177,17 +177,6 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
         </PopoverContent>
       </Popover>
 
-      <CompanyActionGuard
-        open={!!pendingCompanyId && pendingCompanyId !== selectedCompanyId}
-        onOpenChange={(v) => { if (!v) setPendingCompanyId(null); }}
-        title="Cambiar de empresa"
-        description="Estás a punto de cambiar el contexto a otra empresa. Confirma tu contraseña para continuar."
-        requirePassword
-        onConfirm={() => {
-          if (pendingCompanyId) setSelectedCompanyId(pendingCompanyId);
-          setPendingCompanyId(null);
-        }}
-      />
     </>
   );
 }
