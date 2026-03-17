@@ -16,7 +16,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StaflyLogo, StaflyMark } from "@/components/brand/StaflyBrand";
-import heroDashboard from "@/assets/stafly-hero-dashboard.png";
+import heroDashboard from "@/assets/hero-dashboard-premium.png";
 import demoDashboard from "@/assets/demo/demo-dashboard.jpg";
 import demoShifts from "@/assets/demo/demo-shifts.jpg";
 import demoEmployees from "@/assets/demo/demo-employees.jpg";
