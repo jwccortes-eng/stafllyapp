@@ -256,7 +256,7 @@ export default function EmployeeDashboard() {
         </div>
 
         {/* Pay estimate */}
-        {isModuleEnabled("earnings") && estimatedPay !== null && (
+        {isModuleEnabled("my_payments") && estimatedPay !== null && (
           <Link to="/portal/payments" className="block group">
             <div className="rounded-2xl border border-border/40 bg-card p-4 h-full hover-lift">
               <div className="flex items-center gap-2 mb-2">
