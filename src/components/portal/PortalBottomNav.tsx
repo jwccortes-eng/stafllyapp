@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 
 interface PortalBottomNavProps {
   onOpenMore: () => void;
-  showEarnings?: boolean;
-  showShifts?: boolean;
-  showClock?: boolean;
+  showEarnings?: boolean; // my_payments
+  showShifts?: boolean;   // my_shifts
+  showClock?: boolean;    // my_clock
 }
 
 interface TabItem {

@@ -27,7 +27,7 @@ const ALWAYS_VISIBLE: Set<string> = new Set(["home", "profile"]);
 
 /** Default modules shown when admin hasn't configured anything */
 const DEFAULT_ENABLED: Set<string> = new Set([
-  "shifts", "clock", "earnings",
+  "my_shifts", "my_clock", "my_payments",
 ]);
 
 interface UsePortalModulesReturn {
