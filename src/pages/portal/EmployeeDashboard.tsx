@@ -3,90 +3,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPersonName } from "@/lib/format-helpers";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
+import { usePortalModules } from "@/hooks/usePortalModules";
 import {
   Wallet, Clock, Megaphone, CalendarDays,
-  ArrowRight, Pin,
-  ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper,
-  Timer, LogIn, LogOut, MapPin,
+  ArrowRight, LogIn, LogOut, MapPin, Timer,
+  AlertTriangle, Bell, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { format, parseISO, isToday, isTomorrow, formatDistanceToNow, isAfter, subDays, startOfWeek, endOfWeek } from "date-fns";
+import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-// --- Types (unchanged) ---
-interface PayPeriod {
-  id: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  published_at: string;
-}
-
-interface Employee {
-  id: string;
-  first_name: string;
-  last_name: string;
-  company_id: string;
-  avatar_url: string | null;
-}
-
-interface ScheduledShift {
-  id: string;
-  title: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  status: string;
-  locations: Location | null;
-}
-
-interface ShiftAssignment {
-  id: string;
-  employee_id: string;
-  scheduled_shift_id: string;
-  status: string;
-  scheduled_shifts: ScheduledShift;
-}
-
-interface Location {
-  id: string;
-  name: string;
-}
-
-interface PeriodBasePay {
-  id: string;
-  employee_id: string;
-  period_id: string;
-  base_total_pay: number;
-}
-
-interface Movement {
-  id: string;
-  employee_id: string;
-  period_id: string;
-  concept_id: string;
-  total_value: number;
-  concepts: Concept | null;
-}
-
-interface Concept {
-  id: string;
-  name: string;
-  category: string;
-}
-
-interface AnnouncementReaction {
-  id: string;
-  announcement_id: string;
-  employee_id: string;
-  emoji: string;
-}
-
 interface NextShift {
+  id: string;
   title: string;
   date: string;
   start_time: string;
@@ -95,78 +25,72 @@ interface NextShift {
   status: string;
 }
 
-interface Announcement {
+interface Notification {
   id: string;
   title: string;
   body: string;
-  priority: string;
-  pinned: boolean;
-  published_at: string;
-  link_url: string | null;
-  link_label: string | null;
-  media_urls: string[] | null;
+  type: string;
+  created_at: string;
+  is_read: boolean;
 }
-
-interface ReactionCount {
-  emoji: string;
-  count: number;
-  reacted: boolean;
-}
-
-const EMOJI_OPTIONS = [
-  { emoji: "👍", icon: ThumbsUp, label: "Me gusta" },
-  { emoji: "❤️", icon: Heart, label: "Me encanta" },
-  { emoji: "😂", icon: Laugh, label: "Jaja" },
-  { emoji: "🎉", icon: PartyPopper, label: "Celebrar" },
-];
-
-const priorityConfig: Record<string, { cls: string; bgCls: string; label: string; icon: any }> = {
-  urgent: { cls: "text-destructive", bgCls: "bg-destructive/[0.08]", label: "Urgente", icon: AlertTriangle },
-  high: { cls: "text-warning", bgCls: "bg-warning/[0.08]", label: "Importante", icon: Bell },
-  important: { cls: "text-warning", bgCls: "bg-warning/[0.08]", label: "Importante", icon: Bell },
-  normal: { cls: "text-muted-foreground", bgCls: "bg-muted", label: "Normal", icon: Megaphone },
-};
 
 export default function EmployeeDashboard() {
   const { employeeId } = useAuth();
   const navigate = useNavigate();
+  const { isModuleEnabled } = usePortalModules();
   const [empName, setEmpName] = useState("");
   const [empAvatar, setEmpAvatar] = useState<string | null>(null);
-  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState("");
   const [nextShift, setNextShift] = useState<NextShift | null>(null);
   const [estimatedPay, setEstimatedPay] = useState<number | null>(null);
-  const [periodInfo, setPeriodInfo] = useState<{ status: string; startDate: string; endDate: string } | null>(null);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [reactions, setReactions] = useState<Record<string, ReactionCount[]>>({});
   const [loading, setLoading] = useState(true);
-  const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
-  const [clockStatus, setClockStatus] = useState<{ isClockedIn: boolean; clockInTime: string | null; shiftTitle: string | null }>({ isClockedIn: false, clockInTime: null, shiftTitle: null });
-  const [weeklyHours, setWeeklyHours] = useState<string>("0h");
+  const [clockStatus, setClockStatus] = useState<{
+    isClockedIn: boolean;
+    clockInTime: string | null;
+    shiftTitle: string | null;
+  }>({ isClockedIn: false, clockInTime: null, shiftTitle: null });
+  const [weeklyHours, setWeeklyHours] = useState("0h");
+  const [upcomingCount, setUpcomingCount] = useState(0);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
 
-  const loadFeed = useCallback(async () => {
-    if (!employeeId) {
-      setEmpName(""); setCompanyId(null); setNextShift(null); setEstimatedPay(null);
-      setAnnouncements([]); setReactions({}); setLoading(false); return;
-    }
+  const loadData = useCallback(async () => {
+    if (!employeeId) { setLoading(false); return; }
     setLoading(true);
-    const { data: emp } = await supabase.from("employees").select("first_name, last_name, company_id, avatar_url").eq("id", employeeId).maybeSingle();
+
+    const { data: emp } = await supabase
+      .from("employees")
+      .select("first_name, last_name, company_id, avatar_url")
+      .eq("id", employeeId)
+      .maybeSingle();
     if (!emp) { setLoading(false); return; }
+
     setEmpName(formatPersonName(`${emp.first_name} ${emp.last_name}`));
     setEmpAvatar(emp.avatar_url);
-    setCompanyId(emp.company_id);
+
     const today = new Date().toISOString().split("T")[0];
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
     const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
 
-    const [periodRes, assignRes, annRes, clockRes, weekRes] = await Promise.all([
-      supabase.from("pay_periods").select("id, start_date, end_date, status, published_at").eq("company_id", emp.company_id).order("start_date", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("shift_assignments").select(`status, scheduled_shifts!inner (title, date, start_time, end_time, status, locations (name))`).eq("employee_id", employeeId).neq("status", "rejected").gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(1),
-      supabase.from("announcements").select("id, title, body, priority, pinned, published_at, link_url, link_label, media_urls").eq("company_id", emp.company_id).not("published_at", "is", null).is("deleted_at", null).order("pinned", { ascending: false }).order("published_at", { ascending: false }).limit(20),
-      // Active clock entry
-      supabase.from("time_entries").select("id, clock_in, clock_out, shift_id, scheduled_shifts(title)").eq("employee_id", employeeId).is("clock_out", null).limit(1),
-      // Weekly hours
-      supabase.from("time_entries").select("clock_in, clock_out").eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
+    const [companyRes, periodRes, assignRes, clockRes, weekRes] = await Promise.all([
+      supabase.from("companies").select("name").eq("id", emp.company_id).maybeSingle(),
+      supabase.from("pay_periods").select("id, start_date, end_date, status, published_at")
+        .eq("company_id", emp.company_id).order("start_date", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("shift_assignments")
+        .select("status, scheduled_shifts!inner (id, title, date, start_time, end_time, status, locations (name))")
+        .eq("employee_id", employeeId).neq("status", "rejected")
+        .gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(1),
+      supabase.from("time_entries").select("id, clock_in, clock_out, shift_id").eq("employee_id", employeeId).is("clock_out", null).limit(1) as any,
+      supabase.from("time_entries").select("clock_in, clock_out")
+        .eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
     ]);
+
+    // Separate queries to avoid TS2589
+    const upcomingRes = await supabase.from("shift_assignments").select("id")
+      .eq("employee_id", employeeId).neq("status", "rejected");
+    const notifRes = await (supabase.from("notifications").select("id")
+      .eq("recipient_id", employeeId!) as any).eq("is_read", false);
+
+    setCompanyName(companyRes.data?.name ?? "");
 
     // Clock status
     const activeClocks = (clockRes.data ?? []) as any[];
@@ -176,7 +100,7 @@ export default function EmployeeDashboard() {
       setClockStatus({ isClockedIn: false, clockInTime: null, shiftTitle: null });
     }
 
-    // Weekly hours calc
+    // Weekly hours
     let totalSec = 0;
     for (const e of (weekRes.data ?? []) as any[]) {
       const end = e.clock_out ? new Date(e.clock_out) : new Date();
@@ -186,9 +110,20 @@ export default function EmployeeDashboard() {
     const wm = Math.floor((totalSec % 3600) / 60);
     setWeeklyHours(wm > 0 ? `${wh}h ${wm}m` : `${wh}h`);
 
+    // Next shift
+    const shifts = (assignRes.data ?? []) as any[];
+    if (shifts.length > 0) {
+      const s = shifts[0].scheduled_shifts;
+      setNextShift({
+        id: s.id, title: s.title, date: s.date,
+        start_time: s.start_time, end_time: s.end_time,
+        location_name: s.locations?.name ?? null, status: shifts[0].status,
+      });
+    }
+
+    // Pay estimate
     if (periodRes.data) {
       const p = periodRes.data;
-      setPeriodInfo({ status: p.status, startDate: p.start_date, endDate: p.end_date });
       const [bpRes, movRes] = await Promise.all([
         supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", employeeId!).eq("period_id", p.id).maybeSingle(),
         supabase.from("movements").select("total_value, concepts(category)").eq("employee_id", employeeId!).eq("period_id", p.id),
@@ -202,356 +137,236 @@ export default function EmployeeDashboard() {
       setEstimatedPay(base + extras - deductions);
     }
 
-    const shifts = (assignRes.data ?? []) as any[];
-    if (shifts.length > 0) {
-      const s = shifts[0].scheduled_shifts;
-      setNextShift({ title: s.title, date: s.date, start_time: s.start_time, end_time: s.end_time, location_name: s.locations?.name ?? null, status: shifts[0].status });
-    }
-
-    const anns = (annRes.data as Announcement[]) ?? [];
-    setAnnouncements(anns);
-    if (anns.length > 0) {
-      const annIds = anns.map(a => a.id);
-      const { data: allReactions } = await supabase.from("announcement_reactions").select("announcement_id, emoji, employee_id").in("announcement_id", annIds);
-      const grouped: Record<string, ReactionCount[]> = {};
-      anns.forEach(a => {
-        const annReactions = (allReactions ?? []).filter(r => r.announcement_id === a.id);
-        const emojiMap: Record<string, { count: number; reacted: boolean }> = {};
-        annReactions.forEach(r => {
-          if (!emojiMap[r.emoji]) emojiMap[r.emoji] = { count: 0, reacted: false };
-          emojiMap[r.emoji].count++;
-          if (r.employee_id === employeeId) emojiMap[r.emoji].reacted = true;
-        });
-        grouped[a.id] = Object.entries(emojiMap).map(([emoji, data]) => ({ emoji, count: data.count, reacted: data.reacted }));
-      });
-      setReactions(grouped);
-    }
+    setUpcomingCount((upcomingRes.data ?? []).length);
+    setUnreadAlerts((notifRes?.data ?? []).length);
     setLoading(false);
   }, [employeeId]);
 
-  useEffect(() => { loadFeed(); }, [loadFeed]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  useEffect(() => {
-    if (!companyId) return;
-    const channel = supabase.channel("employee-feed-home")
-      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => loadFeed())
-      .on("postgres_changes", { event: "*", schema: "public", table: "announcement_reactions" }, () => loadFeed())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [companyId, loadFeed]);
-
-  const toggleReaction = async (announcementId: string, emoji: string) => {
-    if (!employeeId) return;
-    const existing = reactions[announcementId]?.find(r => r.emoji === emoji && r.reacted);
-    if (existing) {
-      await supabase.from("announcement_reactions").delete().eq("announcement_id", announcementId).eq("employee_id", employeeId).eq("emoji", emoji);
-    } else {
-      const { error } = await supabase.from("announcement_reactions").insert({ announcement_id: announcementId, employee_id: employeeId, emoji } as any);
-      if (error && !error.message.includes("duplicate")) toast.error(error.message);
-    }
-  };
-
-  const greeting = (() => { const h = new Date().getHours(); if (h < 12) return "Buenos días"; if (h < 18) return "Buenas tardes"; return "Buenas noches"; })();
-  const getDateLabel = (dateStr: string) => { const d = parseISO(dateStr); if (isToday(d)) return "Hoy"; if (isTomorrow(d)) return "Mañana"; return format(d, "EEEE d MMM", { locale: es }); };
-  const isVideo = (url: string) => /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url);
-  const isNew = (publishedAt: string) => isAfter(parseISO(publishedAt), subDays(new Date(), 2));
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse bg-muted rounded-2xl" />)}
-      </div>
-    );
-  }
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Buenos días";
+    if (h < 18) return "Buenas tardes";
+    return "Buenas noches";
+  })();
 
   const firstName = empName.split(" ")[0] || "";
   const lastName = empName.split(" ").slice(1).join(" ") || "";
 
+  const getDateLabel = (dateStr: string) => {
+    const d = parseISO(dateStr);
+    if (isToday(d)) return "Hoy";
+    if (isTomorrow(d)) return "Mañana";
+    return format(d, "EEE d MMM", { locale: es });
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="h-28 animate-pulse bg-muted rounded-2xl" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="h-32 animate-pulse bg-muted rounded-2xl" />
+          <div className="h-32 animate-pulse bg-muted rounded-2xl" />
+        </div>
+        <div className="h-24 animate-pulse bg-muted rounded-2xl" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-5">
-      {/* ── Greeting — premium gradient card ── */}
-      <div className="rounded-2xl gradient-primary p-5 text-primary-foreground relative overflow-hidden shadow-lg">
+    <div className="space-y-4">
+      {/* ── Greeting hero ── */}
+      <div className="rounded-2xl gradient-primary p-5 text-primary-foreground relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,hsl(212_100%_73%/0.4),transparent_55%)]" />
         <div className="relative flex items-center gap-3.5">
-          <EmployeeAvatar firstName={firstName} lastName={lastName} avatarUrl={empAvatar} size="lg" className="ring-2 ring-white/30 shadow-lg" />
+          <EmployeeAvatar
+            firstName={firstName}
+            lastName={lastName}
+            avatarUrl={empAvatar}
+            size="lg"
+            className="ring-2 ring-white/30 shadow-lg"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-medium opacity-80">{greeting}</p>
-            <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">{firstName}</h1>
+            <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">
+              {firstName}
+            </h1>
+            {companyName && (
+              <p className="text-[11px] opacity-70 mt-0.5">{companyName}</p>
+            )}
           </div>
-          
         </div>
       </div>
 
-      {/* ── Clock status + weekly hours ── */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Clock status */}
+      {/* ── Clock action card — most prominent ── */}
+      {isModuleEnabled("my_clock") && (
         <div
           className={cn(
-            "rounded-2xl border p-4 cursor-pointer active:scale-[0.98] transition-all",
+            "rounded-2xl border p-4 transition-all active:scale-[0.98] cursor-pointer",
             clockStatus.isClockedIn
               ? "border-earning/30 bg-earning/5"
-              : "border-border/40 bg-card"
+              : "border-primary/20 bg-primary/[0.03]"
           )}
           onClick={() => navigate("/portal/clock")}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div className={cn("h-2.5 w-2.5 rounded-full", clockStatus.isClockedIn ? "bg-earning animate-pulse" : "bg-muted-foreground/30")} />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {clockStatus.isClockedIn ? "En turno" : "Fuera de turno"}
-            </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "h-12 w-12 rounded-2xl flex items-center justify-center",
+                clockStatus.isClockedIn ? "bg-earning/10" : "bg-primary/10"
+              )}>
+                <Clock className={cn("h-6 w-6", clockStatus.isClockedIn ? "text-earning" : "text-primary")} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className={cn("h-2 w-2 rounded-full", clockStatus.isClockedIn ? "bg-earning animate-pulse" : "bg-muted-foreground/30")} />
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {clockStatus.isClockedIn ? "En turno" : "Fuera de turno"}
+                  </span>
+                </div>
+                {clockStatus.isClockedIn && clockStatus.shiftTitle && (
+                  <p className="text-sm font-medium text-foreground mt-0.5 truncate max-w-[180px]">{clockStatus.shiftTitle}</p>
+                )}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant={clockStatus.isClockedIn ? "destructive" : "default"}
+              className="h-10 px-5 text-sm gap-2 font-bold rounded-xl"
+              onClick={e => { e.stopPropagation(); navigate("/portal/clock"); }}
+            >
+              {clockStatus.isClockedIn ? <><LogOut className="h-4 w-4" /> Salida</> : <><LogIn className="h-4 w-4" /> Entrada</>}
+            </Button>
           </div>
-          {clockStatus.isClockedIn && clockStatus.shiftTitle && (
-            <p className="text-xs font-medium text-foreground truncate">{clockStatus.shiftTitle}</p>
-          )}
-          <Button
-            size="sm"
-            variant={clockStatus.isClockedIn ? "destructive" : "default"}
-            className="w-full mt-2 h-9 text-xs gap-1.5 font-bold"
-            onClick={e => { e.stopPropagation(); navigate("/portal/clock"); }}
-          >
-            {clockStatus.isClockedIn ? <><LogOut className="h-3.5 w-3.5" /> Marcar Salida</> : <><LogIn className="h-3.5 w-3.5" /> Marcar Entrada</>}
-          </Button>
         </div>
+      )}
 
+      {/* ── Stats row ── */}
+      <div className="grid grid-cols-2 gap-3">
         {/* Weekly hours */}
         <div className="rounded-2xl border border-border/40 bg-card p-4">
-          <div className="flex items-center gap-1.5 mb-2">
-            <div className="h-7 w-7 rounded-xl bg-accent flex items-center justify-center">
-              <Timer className="h-3.5 w-3.5 text-accent-foreground" />
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-8 w-8 rounded-xl bg-accent flex items-center justify-center">
+              <Timer className="h-4 w-4 text-accent-foreground" />
             </div>
           </div>
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Horas esta semana</p>
-          <p className="text-xl font-bold font-heading tabular-nums leading-none mt-1 text-foreground">{weeklyHours}</p>
-          <div className="flex items-center gap-1 mt-2.5 text-[10px] font-medium text-primary opacity-60">
-            <Clock className="h-2.5 w-2.5" /> Reloj
-          </div>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Esta semana</p>
+          <p className="text-2xl font-bold font-heading tabular-nums leading-none mt-1">{weeklyHours}</p>
         </div>
-      </div>
 
-      {/* ── Hero cards: pay + next shift ── */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Pay */}
-        {estimatedPay !== null && (
+        {/* Pay estimate */}
+        {isModuleEnabled("my_payments") && estimatedPay !== null && (
           <Link to="/portal/payments" className="block group">
-            <div className="rounded-2xl bg-card border border-border/40 p-4 relative overflow-hidden h-full shadow-xs hover-lift">
-              <div className="flex items-center gap-1.5 mb-2">
-                <div className="h-7 w-7 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Wallet className="h-3.5 w-3.5 text-primary" />
+            <div className="rounded-2xl border border-border/40 bg-card p-4 h-full hover-lift">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Wallet className="h-4 w-4 text-primary" />
                 </div>
               </div>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pago estimado</p>
-              <p className="text-xl font-bold font-heading tabular-nums leading-none mt-1 text-foreground">${estimatedPay.toFixed(2)}</p>
-              <div className="flex items-center gap-1 mt-2.5 text-[10px] font-medium text-primary opacity-60 group-hover:opacity-100 transition-opacity">
+              <p className="text-2xl font-bold font-heading tabular-nums leading-none mt-1">${estimatedPay.toFixed(2)}</p>
+              <div className="flex items-center gap-1 mt-2 text-[10px] font-medium text-primary opacity-60 group-hover:opacity-100 transition-opacity">
                 Ver nómina <ArrowRight className="h-2.5 w-2.5" />
               </div>
             </div>
           </Link>
         )}
 
-        {/* Next shift */}
-        {nextShift ? (
+        {/* If earnings not enabled, show upcoming shifts count */}
+        {(!isModuleEnabled("my_payments") || estimatedPay === null) && isModuleEnabled("my_shifts") && (
           <Link to="/portal/shifts" className="block group">
-            <div className={cn(
-              "rounded-2xl border border-border/40 bg-card p-4 h-full flex flex-col justify-between shadow-xs hover-lift",
-              isToday(parseISO(nextShift.date)) && "ring-2 ring-primary/20 border-primary/20"
-            )}>
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="h-7 w-7 rounded-xl bg-accent flex items-center justify-center">
-                    <CalendarDays className="h-3.5 w-3.5 text-accent-foreground" />
-                  </div>
-                  {isToday(parseISO(nextShift.date)) && (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground">HOY</span>
-                  )}
+            <div className="rounded-2xl border border-border/40 bg-card p-4 h-full hover-lift">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-8 w-8 rounded-xl bg-accent flex items-center justify-center">
+                  <CalendarDays className="h-4 w-4 text-accent-foreground" />
                 </div>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Próximo turno</p>
-                <p className="text-[13px] font-semibold leading-snug text-foreground mt-1">{nextShift.title}</p>
               </div>
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-2">
-                <Clock className="h-3 w-3" />
-                {nextShift.start_time?.slice(0, 5)} – {nextShift.end_time?.slice(0, 5)}
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Turnos próximos</p>
+              <p className="text-2xl font-bold font-heading tabular-nums leading-none mt-1">{upcomingCount}</p>
+              <div className="flex items-center gap-1 mt-2 text-[10px] font-medium text-primary opacity-60 group-hover:opacity-100 transition-opacity">
+                Ver turnos <ArrowRight className="h-2.5 w-2.5" />
               </div>
-            </div>
-          </Link>
-        ) : estimatedPay === null ? null : (
-          <Link to="/portal/shifts" className="block group">
-            <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.03] p-4 flex flex-col items-center justify-center h-full gap-1.5 hover-lift">
-              <CalendarDays className="h-5 w-5 text-primary/50" />
-              <p className="text-[10px] text-primary/70 font-semibold text-center leading-tight">Sin turnos hoy</p>
-              <span className="text-[9px] text-primary/50 font-medium flex items-center gap-0.5">
-                Ver disponibles <ArrowRight className="h-2.5 w-2.5" />
-              </span>
             </div>
           </Link>
         )}
       </div>
 
-      {/* ── Period info ── */}
-      {periodInfo && (
-        <div className="rounded-2xl border border-border/40 bg-card px-4 py-3 flex items-center gap-3 shadow-xs">
+      {/* ── Next shift card ── */}
+      {isModuleEnabled("my_shifts") && nextShift && (
+        <Link to="/portal/shifts" className="block group">
           <div className={cn(
-            "h-9 w-9 rounded-xl flex items-center justify-center shrink-0",
-            periodInfo.status === "open" ? "bg-earning/10" :
-            periodInfo.status === "closed" ? "bg-warning/10" : "bg-primary/10"
+            "rounded-2xl border border-border/40 bg-card p-4 hover-lift transition-all",
+            isToday(parseISO(nextShift.date)) && "ring-2 ring-primary/20 border-primary/20"
           )}>
-            <CalendarDays className={cn("h-4 w-4",
-              periodInfo.status === "open" ? "text-earning" :
-              periodInfo.status === "closed" ? "text-warning" : "text-primary"
-            )} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] text-muted-foreground font-medium">Periodo actual</p>
-            <p className="text-[12px] font-semibold tabular-nums">{periodInfo.startDate} → {periodInfo.endDate}</p>
-          </div>
-          <Badge variant="outline" className={cn("text-[9px] shrink-0 h-6 rounded-full px-2.5",
-            periodInfo.status === "open" ? "border-earning/20 text-earning" :
-            periodInfo.status === "closed" ? "border-warning/20 text-warning" : "border-primary/20 text-primary"
-          )}>
-            <span className={cn("h-1.5 w-1.5 rounded-full mr-1.5",
-              periodInfo.status === "open" ? "bg-earning" :
-              periodInfo.status === "closed" ? "bg-warning" : "bg-primary"
-            )} />
-            {periodInfo.status === "open" ? "Abierto" : periodInfo.status === "closed" ? "Cerrado" : "Publicado"}
-          </Badge>
-        </div>
-      )}
-
-      {/* ── Feed header ── */}
-      <div className="flex items-center gap-2 pt-1">
-        <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Megaphone className="h-3.5 w-3.5 text-primary" />
-        </div>
-        <h2 className="text-sm font-bold text-foreground tracking-tight font-heading">Muro</h2>
-        <div className="flex-1 h-px bg-border/50 ml-1" />
-      </div>
-
-      {/* ── Feed ── */}
-      {announcements.length === 0 ? (
-        <div className="text-center py-12 space-y-3">
-          <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center">
-            <Megaphone className="h-8 w-8 text-primary/40" />
-          </div>
-          <p className="text-sm font-semibold text-foreground">Sin publicaciones aún</p>
-          <p className="text-xs text-muted-foreground max-w-[240px] mx-auto">Las novedades y anuncios de tu empresa aparecerán aquí.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {announcements.map(a => {
-            const pCfg = priorityConfig[a.priority] || priorityConfig.normal;
-            const PriorityIcon = pCfg.icon;
-            const fresh = isNew(a.published_at);
-            const mediaList = Array.isArray(a.media_urls) ? a.media_urls.filter(Boolean) : [];
-            const annReactions = reactions[a.id] ?? [];
-
-            return (
-              <article
-                key={a.id}
-                className={cn(
-                  "rounded-2xl border bg-card overflow-hidden transition-all shadow-sm",
-                  a.pinned && "border-primary/15 shadow-md",
-                  a.priority === "urgent" && "border-destructive/20"
-                )}
-              >
-                {a.priority === "urgent" && (
-                  <div className="bg-destructive/[0.06] px-4 py-2 flex items-center gap-1.5">
-                    <AlertTriangle className="h-3 w-3 text-destructive" />
-                    <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className={cn(
+                  "h-12 w-12 rounded-2xl flex flex-col items-center justify-center shrink-0",
+                  isToday(parseISO(nextShift.date)) ? "bg-primary text-primary-foreground" : "bg-muted/60"
+                )}>
+                  <span className="text-[9px] font-bold uppercase leading-none">
+                    {format(parseISO(nextShift.date), "MMM", { locale: es })}
+                  </span>
+                  <span className="text-lg font-bold leading-none">
+                    {format(parseISO(nextShift.date), "d")}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    {isToday(parseISO(nextShift.date)) && (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground">HOY</span>
+                    )}
+                    <p className="text-sm font-semibold text-foreground truncate">{nextShift.title}</p>
                   </div>
-                )}
-
-                <div className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {a.pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
-                        <h3 className="text-[14px] font-bold text-foreground leading-snug font-heading">{a.title}</h3>
-                        {fresh && (
-                          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground shrink-0">
-                            NUEVO
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: es })}
-                      </p>
-                    </div>
-                    {(a.priority === "high" || a.priority === "important") && (
-                      <span className={cn("flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-semibold shrink-0", pCfg.cls, pCfg.bgCls)}>
-                        <PriorityIcon className="h-2.5 w-2.5" />
-                        {pCfg.label}
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {nextShift.start_time?.slice(0, 5)} – {nextShift.end_time?.slice(0, 5)}
+                    </span>
+                    {nextShift.location_name && (
+                      <span className="flex items-center gap-1 truncate">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        {nextShift.location_name}
                       </span>
                     )}
                   </div>
-
-                  <p className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-wrap">{a.body}</p>
-
-                  {/* Media */}
-                  {mediaList.length > 0 && (
-                    <div className={cn("grid gap-1.5", mediaList.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
-                      {mediaList.map((url, i) => (
-                        <div key={i} className="relative rounded-xl overflow-hidden bg-muted">
-                          {isVideo(url) ? (
-                            <video src={url} controls preload="metadata" className="w-full max-h-56 object-cover rounded-xl">
-                              Tu navegador no soporta video.
-                            </video>
-                          ) : (
-                            <img
-                              src={url} alt=""
-                              className={cn("w-full object-cover rounded-xl cursor-pointer transition-transform hover:scale-[1.02]",
-                                mediaList.length === 1 ? "max-h-72" : "max-h-44"
-                              )}
-                              loading="lazy"
-                              onClick={() => setExpandedMedia(expandedMedia === url ? null : url)}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {expandedMedia && mediaList.includes(expandedMedia) && !isVideo(expandedMedia) && (
-                    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setExpandedMedia(null)}>
-                      <img src={expandedMedia} alt="" className="max-w-full max-h-full rounded-xl" />
-                    </div>
-                  )}
-
-                  {a.link_url && (
-                    <a href={a.link_url} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline bg-primary/5 px-3 py-2 rounded-xl">
-                      <ExternalLink className="h-3 w-3" />
-                      {a.link_label || "Ver más"}
-                    </a>
-                  )}
-
-                  {/* Reactions */}
-                  <div className="flex items-center gap-1 pt-1.5 border-t border-border/30">
-                    {annReactions.map(r => (
-                      <button key={r.emoji} onClick={() => toggleReaction(a.id, r.emoji)}
-                        className={cn("flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full transition-all",
-                          r.reacted ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/20" : "bg-muted text-muted-foreground hover:bg-accent"
-                        )}>
-                        <span>{r.emoji}</span><span>{r.count}</span>
-                      </button>
-                    ))}
-                    <div className="flex items-center gap-0.5 ml-auto">
-                      {EMOJI_OPTIONS.map(opt => {
-                        if (annReactions.find(r => r.emoji === opt.emoji)) return null;
-                        return (
-                          <button key={opt.emoji} onClick={() => toggleReaction(a.id, opt.emoji)}
-                            className="p-1.5 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-accent transition-all" title={opt.label}>
-                            <span className="text-sm">{opt.emoji}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
                 </div>
-              </article>
-            );
-          })}
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/30 shrink-0" />
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* ── No shifts placeholder ── */}
+      {isModuleEnabled("my_shifts") && !nextShift && (
+        <Link to="/portal/shifts" className="block">
+          <div className="rounded-2xl border border-dashed border-primary/20 bg-primary/[0.02] p-6 flex flex-col items-center gap-2">
+            <CalendarDays className="h-8 w-8 text-primary/30" />
+            <p className="text-sm font-medium text-muted-foreground">Sin turnos programados</p>
+            <span className="text-[11px] text-primary/60 font-medium flex items-center gap-1">
+              Ver turnos disponibles <ArrowRight className="h-3 w-3" />
+            </span>
+          </div>
+        </Link>
+      )}
+
+      {/* ── Quick alerts ── */}
+      {unreadAlerts > 0 && (
+        <div className="rounded-2xl border border-warning/20 bg-warning/[0.04] p-4 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+            <Bell className="h-5 w-5 text-warning" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              {unreadAlerts} {unreadAlerts === 1 ? "notificación pendiente" : "notificaciones pendientes"}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Revisa tus alertas</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
         </div>
       )}
     </div>
   );
 }
-
