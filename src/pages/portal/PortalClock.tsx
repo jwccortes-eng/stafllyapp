@@ -5,6 +5,7 @@ import { format, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users, AlertCircle, FileText, Hash, ArrowLeft, ShieldAlert, Navigation, Camera } from "lucide-react";
 import { capturePosition, getDeviceId, distanceMeters } from "@/lib/geo-helpers";
+import { ClockPhotoCapture } from "@/components/portal/ClockPhotoCapture";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -91,6 +92,9 @@ export default function PortalClock() {
   const [sendingRequest, setSendingRequest] = useState(false);
   const [clockInBlocked, setClockInBlocked] = useState<string | null>(null);
   const [hasProfilePhoto, setHasProfilePhoto] = useState(true);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [pendingClockAction, setPendingClockAction] = useState<"in" | "out" | null>(null);
+  const [clockPhotoRequired, setClockPhotoRequired] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -107,11 +111,27 @@ export default function PortalClock() {
   const loadData = useCallback(async () => {
     if (!employeeId) { setLoading(false); return; }
 
-    const { data: emp } = await supabase
-      .from("employees").select("company_id, avatar_url").eq("id", employeeId).maybeSingle();
+    const [empRes, geoSettingRes] = await Promise.all([
+      supabase.from("employees").select("company_id, avatar_url").eq("id", employeeId).maybeSingle(),
+      null, // placeholder, we'll fetch after getting company_id
+    ]);
+    const emp = empRes.data;
     if (emp) {
       setCompanyId(emp.company_id);
       setHasProfilePhoto(!!emp.avatar_url);
+
+      // Check if clock photo is required
+      const { data: clockPhotoSetting } = await supabase
+        .from("company_settings")
+        .select("value")
+        .eq("company_id", emp.company_id)
+        .eq("key", "clock_photo")
+        .maybeSingle();
+      setClockPhotoRequired(
+        clockPhotoSetting?.value != null &&
+        typeof clockPhotoSetting.value === "object" &&
+        (clockPhotoSetting.value as any)?.required === true
+      );
     }
 
     const today = new Date();
@@ -159,7 +179,7 @@ export default function PortalClock() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleClockIn = async () => {
+  const initiateClockIn = () => {
     if (!employeeId || !companyId || !selectedShift) return;
 
     // Check profile photo requirement
@@ -178,6 +198,37 @@ export default function PortalClock() {
       toast({ title: "No permitido", description: check.message, variant: "destructive" });
       return;
     }
+
+    if (clockPhotoRequired) {
+      setPendingClockAction("in");
+      setPhotoDialogOpen(true);
+    } else {
+      handleClockIn(null);
+    }
+  };
+
+  const initiateClockOut = () => {
+    if (!activeEntry || !companyId || !employeeId) return;
+    if (clockPhotoRequired) {
+      setPendingClockAction("out");
+      setPhotoDialogOpen(true);
+    } else {
+      handleClockOut(null);
+    }
+  };
+
+  const onPhotoCaptured = (photoUrl: string) => {
+    setPhotoDialogOpen(false);
+    if (pendingClockAction === "in") {
+      handleClockIn(photoUrl);
+    } else if (pendingClockAction === "out") {
+      handleClockOut(photoUrl);
+    }
+    setPendingClockAction(null);
+  };
+
+  const handleClockIn = async (photoUrl: string | null) => {
+    if (!employeeId || !companyId || !selectedShift) return;
 
     setActing(true);
     try {
@@ -279,6 +330,7 @@ export default function PortalClock() {
           longitude: pos?.longitude ?? null,
           accuracy: pos?.accuracy ?? null,
           device,
+          photo_url: photoUrl,
         } as any);
       }
 
@@ -290,7 +342,7 @@ export default function PortalClock() {
     } finally { setActing(false); }
   };
 
-  const handleClockOut = async () => {
+  const handleClockOut = async (photoUrl: string | null) => {
     if (!activeEntry || !companyId || !employeeId) return;
 
     const activeShift = todayShifts.find(s => s.id === activeEntry.shift_id) ?? null;
@@ -311,6 +363,7 @@ export default function PortalClock() {
         longitude: pos?.longitude ?? null,
         accuracy: pos?.accuracy ?? null,
         device,
+        photo_url: photoUrl,
       } as any);
 
       if (!scheduleCheck.withinSchedule) {
@@ -548,7 +601,7 @@ export default function PortalClock() {
       {/* Clock in/out button */}
       {isClockedIn ? (
         <Button
-          onClick={handleClockOut}
+          onClick={initiateClockOut}
           disabled={acting}
           className="w-full h-16 rounded-2xl text-lg font-bold gap-3 shadow-xl transition-all active:scale-[0.95] bg-destructive hover:bg-destructive/90 text-destructive-foreground"
         >
@@ -556,7 +609,7 @@ export default function PortalClock() {
         </Button>
       ) : (
         <Button
-          onClick={handleClockIn}
+          onClick={initiateClockIn}
           disabled={acting || !companyId || !selectedShift || !!clockInBlocked || !hasProfilePhoto}
           className="w-full h-16 rounded-2xl text-lg font-bold gap-3 shadow-xl transition-all active:scale-[0.95] gradient-primary text-white hover:shadow-2xl disabled:opacity-50"
         >
@@ -679,6 +732,18 @@ export default function PortalClock() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Photo capture dialog */}
+      {employeeId && companyId && (
+        <ClockPhotoCapture
+          open={photoDialogOpen}
+          onClose={() => { setPhotoDialogOpen(false); setPendingClockAction(null); }}
+          onCaptured={onPhotoCaptured}
+          employeeId={employeeId}
+          companyId={companyId}
+          clockType={pendingClockAction === "out" ? "clock_out" : "clock_in"}
+        />
+      )}
     </div>
   );
 }
