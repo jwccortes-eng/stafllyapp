@@ -330,6 +330,7 @@ export default function PortalClock() {
           longitude: pos?.longitude ?? null,
           accuracy: pos?.accuracy ?? null,
           device,
+          photo_url: photoUrl,
         } as any);
       }
 
