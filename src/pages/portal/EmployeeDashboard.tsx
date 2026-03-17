@@ -274,7 +274,7 @@ export default function EmployeeDashboard() {
         )}
 
         {/* If earnings not enabled, show upcoming shifts count */}
-        {(!isModuleEnabled("earnings") || estimatedPay === null) && isModuleEnabled("shifts") && (
+        {(!isModuleEnabled("my_payments") || estimatedPay === null) && isModuleEnabled("my_shifts") && (
           <Link to="/portal/shifts" className="block group">
             <div className="rounded-2xl border border-border/40 bg-card p-4 h-full hover-lift">
               <div className="flex items-center gap-2 mb-2">
