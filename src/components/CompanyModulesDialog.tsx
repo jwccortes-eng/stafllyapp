@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   CalendarDays, Upload, DollarSign, FileSpreadsheet, BarChart3,
-  Users, Tags, Smartphone, Copy, Loader2, MapPin, Megaphone,
+  Users, Tags, Smartphone, MapPin, Megaphone,
 } from "lucide-react";
 
 const ALL_MODULES = [
