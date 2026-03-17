@@ -342,7 +342,7 @@ export default function PortalClock() {
     } finally { setActing(false); }
   };
 
-  const handleClockOut = async () => {
+  const handleClockOut = async (photoUrl: string | null) => {
     if (!activeEntry || !companyId || !employeeId) return;
 
     const activeShift = todayShifts.find(s => s.id === activeEntry.shift_id) ?? null;
