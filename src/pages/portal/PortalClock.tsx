@@ -825,6 +825,13 @@ export default function PortalClock() {
           clockType={pendingClockAction === "out" ? "clock_out" : "clock_in"}
         />
       )}
+
+      {/* QR Scanner dialog */}
+      <QRScannerDialog
+        open={qrScannerOpen}
+        onClose={() => setQrScannerOpen(false)}
+        onScanned={handleQrScanned}
+      />
     </div>
   );
 }
