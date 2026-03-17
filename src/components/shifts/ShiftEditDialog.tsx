@@ -10,13 +10,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import {
   Loader2, Save, CalendarIcon, Clock, Building2, MapPin, Users,
-  StickyNote, CreditCard, Compass, FileText, X,
+  StickyNote, CreditCard, Compass, FileText, X, Car, QrCode,
 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
-import type { Shift, SelectOption } from "./types";
+import { ShiftQRSection } from "./ShiftQRSection";
+import type { Shift, SelectOption, Employee } from "./types";
 
 interface LocationOption extends SelectOption {
   address?: string;
@@ -29,7 +30,8 @@ interface ShiftEditDialogProps {
   onOpenChange: (open: boolean) => void;
   clients: SelectOption[];
   locations: LocationOption[];
-  onSave: (shiftId: string, updates: Partial<Shift> & { meeting_point?: string | null; special_instructions?: string | null; pay_type?: string; day_type?: string; shift_admin_id?: string | null; clock_method?: string }, oldShift: Shift) => Promise<void>;
+  employees?: Employee[];
+  onSave: (shiftId: string, updates: Partial<Shift> & Record<string, any>, oldShift: Shift) => Promise<void>;
 }
 
 function SectionCard({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) {
@@ -41,15 +43,13 @@ function SectionCard({ icon: Icon, title, children }: { icon: any; title: string
         </div>
         <span className="text-[11px] font-semibold text-foreground">{title}</span>
       </div>
-      <div className="p-4 space-y-3">
-        {children}
-      </div>
+      <div className="p-4 space-y-3">{children}</div>
     </div>
   );
 }
 
 export function ShiftEditDialog({
-  shift, open, onOpenChange, clients, locations, onSave,
+  shift, open, onOpenChange, clients, locations, employees = [], onSave,
 }: ShiftEditDialogProps) {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
@@ -66,26 +66,42 @@ export function ShiftEditDialog({
   const [dayType, setDayType] = useState<"full_day" | "half_day">("full_day");
   const [shiftAdminId, setShiftAdminId] = useState("");
   const [clockMethod, setClockMethod] = useState<"mobile" | "kiosk" | "both">("both");
+  // Transportation
+  const [transportRequired, setTransportRequired] = useState(false);
+  const [carCapacity, setCarCapacity] = useState("4");
+  const [transportNotes, setTransportNotes] = useState("");
+  const [driverEmployeeId, setDriverEmployeeId] = useState("");
+  // QR
+  const [qrAttendanceMode, setQrAttendanceMode] = useState("disabled");
+  const [qrToken, setQrToken] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   useEffect(() => {
     if (shift && open) {
-      setTitle(shift.title);
-      setDate(shift.date);
-      setStartTime(shift.start_time.slice(0, 5));
-      setEndTime(shift.end_time.slice(0, 5));
-      setSlots(String(shift.slots ?? 1));
-      setClientId(shift.client_id || "");
-      setLocationId(shift.location_id || "");
-      setNotes(shift.notes || "");
-      setClaimable(shift.claimable);
-      setMeetingPoint((shift as any).meeting_point || "");
-      setSpecialInstructions((shift as any).special_instructions || "");
-      setPayType((shift as any).pay_type || "hourly");
-      setDayType((shift as any).day_type || "full_day");
-      setShiftAdminId((shift as any).shift_admin_id || "");
-      setClockMethod((shift as any).clock_method || "both");
+      const s = shift as any;
+      setTitle(s.title);
+      setDate(s.date);
+      setStartTime(s.start_time.slice(0, 5));
+      setEndTime(s.end_time.slice(0, 5));
+      setSlots(String(s.slots ?? 1));
+      setClientId(s.client_id || "");
+      setLocationId(s.location_id || "");
+      setNotes(s.notes || "");
+      setClaimable(s.claimable);
+      setMeetingPoint(s.meeting_point || "");
+      setSpecialInstructions(s.special_instructions || "");
+      setPayType(s.pay_type || "hourly");
+      setDayType(s.day_type || "full_day");
+      setShiftAdminId(s.shift_admin_id || "");
+      setClockMethod(s.clock_method || "both");
+      setTransportRequired(!!s.transportation_required);
+      setCarCapacity(String(s.car_capacity ?? 4));
+      setTransportNotes(s.transportation_notes || "");
+      setDriverEmployeeId(s.driver_employee_id || "");
+      setQrAttendanceMode(s.qr_attendance_mode || "disabled");
+      setQrToken(s.qr_token || null);
     }
   }, [shift, open]);
 
@@ -114,6 +130,11 @@ export function ShiftEditDialog({
         pay_type: payType, day_type: payType === "daily" ? dayType : "full_day",
         shift_admin_id: shiftAdminId || null,
         clock_method: clockMethod,
+        transportation_required: transportRequired,
+        car_capacity: parseInt(carCapacity) || 4,
+        transportation_notes: transportNotes.trim() || null,
+        driver_employee_id: driverEmployeeId || null,
+        qr_attendance_mode: qrAttendanceMode,
       }, shift);
       onOpenChange(false);
     } finally {
@@ -141,7 +162,7 @@ export function ShiftEditDialog({
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
 
-          {/* ── Section: Basic info ── */}
+          {/* ── Basic info ── */}
           <SectionCard icon={StickyNote} title="Información básica">
             <div>
               <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno</Label>
@@ -149,7 +170,7 @@ export function ShiftEditDialog({
             </div>
           </SectionCard>
 
-          {/* ── Section: Schedule ── */}
+          {/* ── Schedule ── */}
           <SectionCard icon={Clock} title="Horario">
             <div>
               <Label className="text-[11px] text-muted-foreground font-medium">Fecha</Label>
@@ -182,7 +203,7 @@ export function ShiftEditDialog({
             </div>
           </SectionCard>
 
-          {/* ── Section: Assignment ── */}
+          {/* ── Assignment ── */}
           <SectionCard icon={Building2} title="Asignación">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -218,7 +239,7 @@ export function ShiftEditDialog({
             </div>
           </SectionCard>
 
-          {/* ── Section: Payment ── */}
+          {/* ── Payment ── */}
           <SectionCard icon={CreditCard} title="Tipo de pago">
             <Select value={payType} onValueChange={v => setPayType(v as "hourly" | "daily")}>
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
@@ -244,7 +265,7 @@ export function ShiftEditDialog({
             )}
           </SectionCard>
 
-          {/* ── Section: Clock Method ── */}
+          {/* ── Clock Method ── */}
           <SectionCard icon={Clock} title="Método de fichaje">
             <Select value={clockMethod} onValueChange={v => setClockMethod(v as "mobile" | "kiosk" | "both")}>
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
@@ -254,11 +275,73 @@ export function ShiftEditDialog({
                 <SelectItem value="kiosk">🖥 Solo Kiosk</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-[10px] text-muted-foreground">Define desde dónde pueden fichar los empleados en este turno.</p>
+            <p className="text-[10px] text-muted-foreground">Define desde dónde pueden fichar los empleados.</p>
           </SectionCard>
 
-          {/* ── Section: Details ── */}
+          {/* ── QR Attendance ── */}
+          <SectionCard icon={QrCode} title="Asistencia por QR">
+            <ShiftQRSection
+              shiftId={shift.id}
+              qrToken={qrToken}
+              qrAttendanceMode={qrAttendanceMode}
+              onUpdate={(updates) => {
+                if (updates.qr_attendance_mode !== undefined) setQrAttendanceMode(updates.qr_attendance_mode);
+                if (updates.qr_token !== undefined) setQrToken(updates.qr_token);
+              }}
+            />
+          </SectionCard>
+
+          {/* ── Transportation ── */}
+          <SectionCard icon={Car} title="Transporte">
+            <div className="flex items-center gap-2">
+              <Checkbox checked={transportRequired} onCheckedChange={c => setTransportRequired(!!c)} id="edit-transport" />
+              <Label htmlFor="edit-transport" className="text-xs font-normal cursor-pointer">¿Este turno requiere transporte?</Label>
+            </div>
+            {transportRequired && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground font-medium">Capacidad por vehículo</Label>
+                    <Input type="number" min="1" value={carCapacity} onChange={e => setCarCapacity(e.target.value)} className="h-9 text-sm mt-1" />
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <p className="text-[11px] text-muted-foreground font-medium mb-1">Vehículos necesarios</p>
+                    <div className="h-9 flex items-center px-3 rounded-md border border-border/30 bg-muted/20 text-sm font-semibold">
+                      {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 4))}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
+                  <Select value={driverEmployeeId || "none"} onValueChange={v => setDriverEmployeeId(v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
+                  <Input value={transportNotes} onChange={e => setTransportNotes(e.target.value)} placeholder="Ej: Recoger en oficina a las 7:30 AM" className="h-9 text-sm mt-1" />
+                </div>
+              </>
+            )}
+          </SectionCard>
+
+          {/* ── Details ── */}
           <SectionCard icon={FileText} title="Detalles adicionales">
+            <div>
+              <Label className="text-[11px] text-muted-foreground font-medium">Admin del turno</Label>
+              <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
+                <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Puede confirmar asistencia del equipo.</p>
+            </div>
             <div>
               <Label className="text-[11px] text-muted-foreground font-medium">Notas</Label>
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" />
@@ -268,9 +351,6 @@ export function ShiftEditDialog({
                 <Compass className="h-3 w-3" /> Punto de encuentro
               </Label>
               <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm mt-1" />
-              {meetingPoint && clientId && (
-                <p className="text-[10px] text-muted-foreground mt-0.5">Puedes editar la dirección manualmente.</p>
-              )}
             </div>
             <div>
               <Label className="text-[11px] text-muted-foreground font-medium">Instrucciones especiales</Label>
@@ -279,7 +359,7 @@ export function ShiftEditDialog({
           </SectionCard>
         </div>
 
-        {/* ── Footer ── */}
+        {/* Footer */}
         <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
           <Button onClick={handleSave} disabled={saving || !date} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

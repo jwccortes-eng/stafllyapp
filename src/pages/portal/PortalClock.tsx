@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users, AlertCircle, FileText, Hash, ArrowLeft, ShieldAlert, Navigation, Camera } from "lucide-react";
+import { Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users, AlertCircle, FileText, Hash, ArrowLeft, ShieldAlert, Navigation, Camera, ScanLine } from "lucide-react";
 import { capturePosition, getDeviceId, distanceMeters } from "@/lib/geo-helpers";
 import { ClockPhotoCapture } from "@/components/portal/ClockPhotoCapture";
+import { QRScannerDialog } from "@/components/portal/QRScannerDialog";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,6 +96,8 @@ export default function PortalClock() {
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [pendingClockAction, setPendingClockAction] = useState<"in" | "out" | null>(null);
   const [clockPhotoRequired, setClockPhotoRequired] = useState(false);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
+  const [shiftQrModes, setShiftQrModes] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -146,7 +149,7 @@ export default function PortalClock() {
         .gte("clock_in", dayStart).lte("clock_in", dayEnd)
         .order("clock_in", { ascending: false }),
       supabase.from("shift_assignments")
-        .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, pay_type, locations(name), clients(name))")
+        .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, pay_type, qr_attendance_mode, qr_token, locations(name), clients(name))")
         .eq("employee_id", employeeId)
         .eq("scheduled_shifts.date", todayStr)
         .in("status", ["confirmed", "pending"]),
@@ -156,16 +159,21 @@ export default function PortalClock() {
     setTodayEntries(list);
     setActiveEntry(list.find((e) => !e.clock_out) ?? null);
 
-    const mappedShifts: TodayShift[] = (shiftsRes.data ?? []).map((sa: any) => ({
-      id: sa.scheduled_shifts.id,
-      title: sa.scheduled_shifts.title,
-      start_time: sa.scheduled_shifts.start_time,
-      end_time: sa.scheduled_shifts.end_time,
-      shift_code: sa.scheduled_shifts.shift_code,
-      location_name: sa.scheduled_shifts.locations?.name,
-      client_name: sa.scheduled_shifts.clients?.name,
-      pay_type: sa.scheduled_shifts.pay_type,
-    }));
+    const qrModes: Record<string, string> = {};
+    const mappedShifts: TodayShift[] = (shiftsRes.data ?? []).map((sa: any) => {
+      qrModes[sa.scheduled_shifts.id] = sa.scheduled_shifts.qr_attendance_mode || "disabled";
+      return {
+        id: sa.scheduled_shifts.id,
+        title: sa.scheduled_shifts.title,
+        start_time: sa.scheduled_shifts.start_time,
+        end_time: sa.scheduled_shifts.end_time,
+        shift_code: sa.scheduled_shifts.shift_code,
+        location_name: sa.scheduled_shifts.locations?.name,
+        client_name: sa.scheduled_shifts.clients?.name,
+        pay_type: sa.scheduled_shifts.pay_type,
+      };
+    });
+    setShiftQrModes(qrModes);
     // Filter: only hourly shifts show clock, daily shifts use attendance confirmation
     const clockableShifts = mappedShifts.filter(s => s.pay_type !== "daily");
     setTodayShifts(clockableShifts);
@@ -226,6 +234,69 @@ export default function PortalClock() {
     }
     setPendingClockAction(null);
   };
+
+  const handleQrScanned = async (data: string) => {
+    setQrScannerOpen(false);
+    if (!employeeId || !companyId) return;
+
+    // Parse QR: format is "stafly:shift:{shiftId}:{qrToken}"
+    const parts = data.split(":");
+    if (parts.length !== 4 || parts[0] !== "stafly" || parts[1] !== "shift") {
+      toast({ title: "QR inválido", description: "Este código no es un QR de turno válido.", variant: "destructive" });
+      return;
+    }
+    const [, , scannedShiftId, scannedToken] = parts;
+
+    // Validate the QR token against the shift
+    const { data: shiftData } = await supabase
+      .from("scheduled_shifts")
+      .select("id, title, qr_token, qr_attendance_mode, start_time, end_time, date")
+      .eq("id", scannedShiftId)
+      .maybeSingle();
+
+    if (!shiftData) {
+      toast({ title: "Turno no encontrado", description: "El turno asociado a este QR no existe.", variant: "destructive" });
+      return;
+    }
+    if (shiftData.qr_token !== scannedToken) {
+      toast({ title: "QR expirado", description: "Este código QR ya no es válido. Solicita uno nuevo al administrador.", variant: "destructive" });
+      return;
+    }
+
+    // Check employee is assigned
+    const { data: assignment } = await supabase
+      .from("shift_assignments")
+      .select("id, status")
+      .eq("shift_id", scannedShiftId)
+      .eq("employee_id", employeeId)
+      .neq("status", "rejected")
+      .maybeSingle();
+
+    if (!assignment) {
+      toast({ title: "No asignado", description: "No estás asignado a este turno.", variant: "destructive" });
+      return;
+    }
+
+    // Determine action: clock in or clock out
+    const matchingShift = todayShifts.find(s => s.id === scannedShiftId);
+    if (matchingShift) setSelectedShift(matchingShift);
+
+    if (activeEntry && activeEntry.shift_id === scannedShiftId) {
+      // Clock out via QR
+      initiateClockOut();
+    } else if (!activeEntry) {
+      // Clock in via QR — auto-select the shift
+      if (matchingShift) {
+        // Small delay to let state update, then initiate
+        setTimeout(() => initiateClockIn(), 100);
+      } else {
+        toast({ title: "Turno no disponible hoy", description: "Este turno no está programado para hoy.", variant: "destructive" });
+      }
+    } else {
+      toast({ title: "Ya fichado", description: "Ya tienes un turno activo. Marca salida primero.", variant: "destructive" });
+    }
+  };
+
 
   const handleClockIn = async (photoUrl: string | null) => {
     if (!employeeId || !companyId || !selectedShift) return;
@@ -598,6 +669,16 @@ export default function PortalClock() {
         </div>
       )}
 
+      {/* QR Scan button */}
+      <Button
+        variant="outline"
+        onClick={() => setQrScannerOpen(true)}
+        className="w-full h-12 rounded-2xl text-sm font-semibold gap-2.5 border-primary/20 text-primary hover:bg-primary/5"
+      >
+        <ScanLine className="h-5 w-5" />
+        Escanear QR
+      </Button>
+
       {/* Clock in/out button */}
       {isClockedIn ? (
         <Button
@@ -744,6 +825,13 @@ export default function PortalClock() {
           clockType={pendingClockAction === "out" ? "clock_out" : "clock_in"}
         />
       )}
+
+      {/* QR Scanner dialog */}
+      <QRScannerDialog
+        open={qrScannerOpen}
+        onClose={() => setQrScannerOpen(false)}
+        onScanned={handleQrScanned}
+      />
     </div>
   );
 }
