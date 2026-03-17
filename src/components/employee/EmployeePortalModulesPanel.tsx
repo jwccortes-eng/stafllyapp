@@ -7,22 +7,28 @@ import { useToast } from "@/hooks/use-toast";
 import {
   CalendarDays, Clock, Wallet, CalendarCheck, Megaphone,
   MessageSquare, FileText, Star, BookOpen, Smartphone, RotateCcw,
+  Zap,
 } from "lucide-react";
 
+/** Module keys must match usePortalModules.tsx PORTAL_MODULE_KEYS */
 const PORTAL_MODULES = [
-  { key: "shifts", label: "Turnos", icon: CalendarDays, description: "Ver turnos asignados y disponibles" },
-  { key: "clock", label: "Reloj de fichaje", icon: Clock, description: "Marcar entrada y salida" },
-  { key: "earnings", label: "Pagos / Nómina", icon: Wallet, description: "Ver resumen de pagos y recibos" },
-  { key: "availability", label: "Disponibilidad", icon: CalendarCheck, description: "Gestionar horarios disponibles" },
-  { key: "announcements", label: "Anuncios", icon: Megaphone, description: "Noticias de la empresa" },
-  { key: "chat", label: "Chat interno", icon: MessageSquare, description: "Mensajes con el equipo" },
-  { key: "w9", label: "Formulario W-9", icon: FileText, description: "Información fiscal" },
-  { key: "documents", label: "Documentos", icon: FileText, description: "Documentos personales" },
-  { key: "reviews", label: "Evaluaciones", icon: Star, description: "Reputación y evaluaciones" },
-  { key: "resources", label: "Recursos", icon: BookOpen, description: "Material de apoyo" },
+  { key: "my_shifts", label: "Turnos", icon: CalendarDays, description: "Ver turnos asignados y disponibles" },
+  { key: "my_clock", label: "Reloj de fichaje", icon: Clock, description: "Marcar entrada y salida" },
+  { key: "my_payments", label: "Pagos / Nómina", icon: Wallet, description: "Ver resumen de pagos y recibos" },
+  { key: "my_availability", label: "Disponibilidad", icon: CalendarCheck, description: "Gestionar horarios disponibles" },
+  { key: "my_announcements", label: "Anuncios", icon: Megaphone, description: "Noticias de la empresa" },
+  { key: "my_chat", label: "Chat interno", icon: MessageSquare, description: "Mensajes con el equipo" },
+  { key: "my_w9", label: "Formulario W-9", icon: FileText, description: "Información fiscal" },
+  { key: "my_documents", label: "Documentos", icon: FileText, description: "Documentos personales" },
+  { key: "my_reviews", label: "Evaluaciones", icon: Star, description: "Reputación y evaluaciones" },
+  { key: "my_resources", label: "Recursos", icon: BookOpen, description: "Material de apoyo" },
 ];
 
-const DEFAULT_ENABLED = new Set(["shifts", "clock", "earnings"]);
+const PRESETS: { label: string; icon: React.ElementType; keys: string[] }[] = [
+  { label: "Básico", icon: Smartphone, keys: ["my_shifts", "my_clock", "my_payments"] },
+  { label: "Operacional", icon: Zap, keys: ["my_shifts", "my_clock", "my_payments", "my_availability", "my_announcements"] },
+  { label: "Completo", icon: Star, keys: PORTAL_MODULES.map(m => m.key) },
+];
 
 interface Props {
   employeeId: string;
@@ -41,9 +47,7 @@ export function EmployeePortalModulesPanel({ employeeId, companyId }: Props) {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchModules();
-  }, [employeeId]);
+  useEffect(() => { fetchModules(); }, [employeeId]);
 
   const fetchModules = async () => {
     setLoading(true);
@@ -86,9 +90,36 @@ export function EmployeePortalModulesPanel({ employeeId, companyId }: Props) {
     setSaving(false);
   };
 
+  const applyPreset = async (keys: string[]) => {
+    setSaving(true);
+    const keySet = new Set(keys);
+
+    for (const mod of PORTAL_MODULES) {
+      const existing = modules.find((m) => m.module === mod.key);
+      const enabled = keySet.has(mod.key);
+      if (existing?.id) {
+        await supabase
+          .from("employee_portal_modules")
+          .update({ enabled, updated_at: new Date().toISOString() } as any)
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("employee_portal_modules").insert({
+          employee_id: employeeId,
+          company_id: companyId,
+          module: mod.key,
+          enabled,
+        } as any);
+      }
+    }
+
+    setModules((prev) => prev.map((m) => ({ ...m, enabled: keySet.has(m.module) })));
+    toast({ title: "Preset aplicado" });
+    setSaving(false);
+    fetchModules();
+  };
+
   const resetToDefaults = async () => {
     setSaving(true);
-    // Delete all existing configs so it falls back to defaults
     await supabase
       .from("employee_portal_modules")
       .delete()
@@ -100,29 +131,6 @@ export function EmployeePortalModulesPanel({ employeeId, companyId }: Props) {
       id: undefined,
     })));
     toast({ title: "Módulos restablecidos a valores por defecto" });
-    setSaving(false);
-  };
-
-  const enableAll = async () => {
-    setSaving(true);
-    for (const mod of PORTAL_MODULES) {
-      const existing = modules.find((m) => m.module === mod.key);
-      if (existing?.id) {
-        await supabase
-          .from("employee_portal_modules")
-          .update({ enabled: true, updated_at: new Date().toISOString() } as any)
-          .eq("id", existing.id);
-      } else {
-        await supabase.from("employee_portal_modules").insert({
-          employee_id: employeeId,
-          company_id: companyId,
-          module: mod.key,
-          enabled: true,
-        } as any);
-      }
-    }
-    setModules((prev) => prev.map((m) => ({ ...m, enabled: true })));
-    toast({ title: "Todos los módulos activados" });
     setSaving(false);
   };
 
@@ -161,11 +169,28 @@ export function EmployeePortalModulesPanel({ employeeId, companyId }: Props) {
         )}
       </div>
 
+      {/* Quick presets */}
+      <div className="flex gap-2">
+        {PRESETS.map((preset) => (
+          <Button
+            key={preset.label}
+            variant="outline"
+            size="sm"
+            className="flex-1 gap-1.5 text-xs h-9"
+            onClick={() => applyPreset(preset.keys)}
+            disabled={saving}
+          >
+            <preset.icon className="h-3.5 w-3.5" />
+            {preset.label}
+          </Button>
+        ))}
+      </div>
+
       {/* Module list */}
       <div className="space-y-1.5">
         {PORTAL_MODULES.map((mod) => {
           const state = modules.find((m) => m.module === mod.key);
-          const isEnabled = state?.enabled ?? DEFAULT_ENABLED.has(mod.key);
+          const isEnabled = state?.enabled ?? false;
 
           return (
             <div
@@ -193,9 +218,6 @@ export function EmployeePortalModulesPanel({ employeeId, companyId }: Props) {
 
       {/* Actions */}
       <div className="flex gap-2 pt-2 border-t border-border/30">
-        <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={enableAll} disabled={saving}>
-          Activar todos
-        </Button>
         <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={resetToDefaults} disabled={saving}>
           <RotateCcw className="h-3 w-3" />
           Restablecer

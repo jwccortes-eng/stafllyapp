@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
-import { User, Camera, Upload, RotateCcw, Check, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Outlet, Navigate } from "react-router-dom";
+import { User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePortalModules } from "@/hooks/usePortalModules";
@@ -10,8 +10,6 @@ import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { PortalBottomNav } from "@/components/portal/PortalBottomNav";
 import { PortalMoreSheet } from "@/components/portal/PortalMoreSheet";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { PortalPageTitle } from "@/components/portal/PortalPageTitle";
 import { PhotoGate } from "@/components/portal/PhotoGate";
 import { formatPersonName } from "@/lib/format-helpers";
@@ -19,13 +17,11 @@ import { formatPersonName } from "@/lib/format-helpers";
 export default function EmployeeLayout() {
   const { user, role, employeeActive, employeeId, loading, signOut, fullName } = useAuth();
   const isMobile = useIsMobile();
-  const { toast } = useToast();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
   const [moreOpen, setMoreOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(undefined);
   const [empName, setEmpName] = useState<string>("");
 
-  // Fetch employee avatar + name
   useEffect(() => {
     if (!employeeId) return;
     supabase
@@ -69,7 +65,6 @@ export default function EmployeeLayout() {
     );
   }
 
-  // Loading avatar status
   if (avatarUrl === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -78,7 +73,6 @@ export default function EmployeeLayout() {
     );
   }
 
-  // Photo gate
   if (!avatarUrl) {
     return (
       <PhotoGate
@@ -89,50 +83,52 @@ export default function EmployeeLayout() {
     );
   }
 
+  // Shared nav + sheet
+  const navAndSheet = (
+    <>
+      <PortalBottomNav
+        onOpenMore={() => setMoreOpen(true)}
+        showShifts={isModuleEnabled("my_shifts")}
+        showClock={isModuleEnabled("my_clock")}
+        showEarnings={isModuleEnabled("my_payments")}
+      />
+      <PortalMoreSheet
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        onSignOut={signOut}
+        employeeName={empName}
+        avatarUrl={avatarUrl}
+        enabledModules={enabledModules}
+        isModuleEnabled={isModuleEnabled}
+      />
+      <EmployeeChatWidget />
+    </>
+  );
+
   if (isMobile) {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col">
-        {/* Slim top bar */}
-        <header className="sticky top-0 z-30 shrink-0 bg-card/95 backdrop-blur-2xl border-b border-border/40">
-          <div className="flex items-center justify-between px-4 h-12">
-            <div className="flex items-center gap-2">
-              <StaflyLogo size={22} />
+        {/* Minimal top bar */}
+        <header className="sticky top-0 z-30 shrink-0 bg-background/80 backdrop-blur-2xl">
+          <div className="flex items-center justify-between px-5 h-12">
+            <div className="flex items-center gap-2.5">
+              <StaflyLogo size={20} />
               <PortalPageTitle />
             </div>
             <NotificationBell />
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto px-4 py-4 pb-20 animate-fade-in">
+        <main className="flex-1 overflow-y-auto px-4 py-3 pb-24 animate-fade-in">
           <Outlet />
         </main>
 
-        {/* Bottom nav */}
-        <PortalBottomNav
-          onOpenMore={() => setMoreOpen(true)}
-          showShifts={isModuleEnabled("my_shifts")}
-          showClock={isModuleEnabled("my_clock")}
-          showEarnings={isModuleEnabled("my_payments")}
-        />
-
-        {/* More sheet */}
-        <PortalMoreSheet
-          open={moreOpen}
-          onClose={() => setMoreOpen(false)}
-          onSignOut={signOut}
-          employeeName={empName}
-          avatarUrl={avatarUrl}
-          enabledModules={enabledModules}
-          isModuleEnabled={isModuleEnabled}
-        />
-
-        <EmployeeChatWidget />
+        {navAndSheet}
       </div>
     );
   }
 
-  // Desktop — centered clean layout with bottom nav
+  // Desktop — centered clean layout
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-xl border-b border-border/50 shadow-2xs">
@@ -145,28 +141,10 @@ export default function EmployeeLayout() {
           </div>
         </div>
       </header>
-      <main className="max-w-3xl mx-auto px-6 py-8 pb-24 animate-fade-in">
+      <main className="max-w-3xl mx-auto px-6 py-8 pb-28 animate-fade-in">
         <Outlet />
       </main>
-
-      <PortalBottomNav
-        onOpenMore={() => setMoreOpen(true)}
-        showShifts={isModuleEnabled("my_shifts")}
-        showClock={isModuleEnabled("my_clock")}
-        showEarnings={isModuleEnabled("my_payments")}
-      />
-
-      <PortalMoreSheet
-        open={moreOpen}
-        onClose={() => setMoreOpen(false)}
-        onSignOut={signOut}
-        employeeName={empName}
-        avatarUrl={avatarUrl}
-        enabledModules={enabledModules}
-        isModuleEnabled={isModuleEnabled}
-      />
-
-      <EmployeeChatWidget />
+      {navAndSheet}
     </div>
   );
 }
