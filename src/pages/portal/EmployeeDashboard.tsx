@@ -87,8 +87,8 @@ export default function EmployeeDashboard() {
     // Separate queries to avoid TS2589
     const upcomingRes = await supabase.from("shift_assignments").select("id")
       .eq("employee_id", employeeId).neq("status", "rejected");
-    const notifRes = await supabase.from("notifications").select("id")
-      .eq("recipient_id", employeeId!).eq("is_read", false);
+    const notifRes = await (supabase.from("notifications").select("id")
+      .eq("recipient_id", employeeId!) as any).eq("is_read", false);
 
     setCompanyName(companyRes.data?.name ?? "");
 
