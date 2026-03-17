@@ -9,6 +9,7 @@ import {
   Inbox, MapPin, Building2, MessageCircle, Crown, ExternalLink,
   ClipboardList, UserCheck, AlertCircle, CheckCircle2,
   Calendar, Timer, Shield, Receipt, Briefcase, Camera,
+  Search, MoreVertical,
 } from "lucide-react";
 import { PeriodStatusBanner } from "@/components/ui/period-status-banner";
 import { useCompany } from "@/hooks/useCompany";
@@ -17,7 +18,7 @@ import { usePayrollConfig, calculateOverdue, DAY_NAMES, type PeriodOverdueInfo }
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { format, parseISO, formatDistanceToNow, startOfWeek, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
@@ -51,7 +52,7 @@ function Sparkline({ data, color = "hsl(var(--primary))" }: { data: number[]; co
   if (data.length < 2) return null;
   const chartData = data.map((v, i) => ({ v, i }));
   return (
-    <div className="h-8 w-20">
+    <div className="h-10 w-24">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
           <defs>
@@ -74,7 +75,41 @@ function Sparkline({ data, color = "hsl(var(--primary))" }: { data: number[]; co
   );
 }
 
-/* ─── KPI Card ─── */
+/* ─── Hero KPI Card (large, reference style) ─── */
+function HeroKpiCard({ label, value, icon: Icon, color, onClick }: {
+  label: string; value: string | number;
+  icon: any; color: "primary" | "warning" | "earning";
+  onClick?: () => void;
+}) {
+  const colorMap = {
+    primary: { iconBg: "bg-primary/[0.1]", iconColor: "text-primary", valueColor: "text-primary" },
+    warning: { iconBg: "bg-warning/[0.1]", iconColor: "text-warning", valueColor: "text-warning" },
+    earning: { iconBg: "bg-earning/[0.1]", iconColor: "text-earning", valueColor: "text-earning" },
+  };
+  const c = colorMap[color];
+
+  return (
+    <div
+      onClick={onClick}
+      className={cn(
+        "bg-card rounded-2xl border border-border/40 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5",
+        onClick && "cursor-pointer"
+      )}
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <div className={cn("h-11 w-11 rounded-xl flex items-center justify-center", c.iconBg)}>
+          <Icon className={cn("h-5 w-5", c.iconColor)} />
+        </div>
+      </div>
+      <p className={cn("text-3xl md:text-4xl font-bold font-heading tabular-nums leading-none", c.valueColor)}>
+        {value}
+      </p>
+      <p className="text-sm text-muted-foreground font-medium mt-2">{label}</p>
+    </div>
+  );
+}
+
+/* ─── Smaller KPI Card ─── */
 function KpiStatCard({ label, value, subtitle, icon: Icon, color, sparkData, onClick }: {
   label: string; value: string | number; subtitle: string;
   icon: any; color: "primary" | "warning" | "deduction" | "earning";
@@ -97,7 +132,6 @@ function KpiStatCard({ label, value, subtitle, icon: Icon, color, sparkData, onC
         onClick && "cursor-pointer"
       )}
     >
-      <div className={cn("absolute top-0 left-4 right-4 h-[2px] rounded-b-full opacity-40", c.bg.replace('/8', ''))} />
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3 mb-3">
           <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center ring-1", c.bg, c.ring)}>
@@ -110,6 +144,153 @@ function KpiStatCard({ label, value, subtitle, icon: Icon, color, sparkData, onC
       <p className={cn("text-2xl md:text-3xl font-bold font-heading tabular-nums leading-none", c.text)}>{value}</p>
       <p className="text-[11px] text-muted-foreground/70 mt-1.5">{subtitle}</p>
     </div>
+  );
+}
+
+/* ─── Weekly Shift Preview Card ─── */
+function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; navigate: (to: string) => void }) {
+  const [weekShifts, setWeekShifts] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+
+  const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), []);
+  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+
+  useEffect(() => {
+    if (!companyId) return;
+    const startStr = format(weekDays[0], "yyyy-MM-dd");
+    const endStr = format(weekDays[6], "yyyy-MM-dd");
+
+    async function fetchWeek() {
+      const [shiftsRes, empRes] = await Promise.all([
+        supabase.from("scheduled_shifts").select("id, date, start_time, end_time, title, client_id, status")
+          .eq("company_id", companyId).gte("date", startStr).lte("date", endStr).is("deleted_at", null)
+          .order("start_time"),
+        supabase.from("employees").select("id, first_name, last_name").eq("company_id", companyId).eq("is_active", true),
+      ]);
+      
+      const shifts = shiftsRes.data ?? [];
+      setWeekShifts(shifts);
+      setEmployees(empRes.data ?? []);
+
+      if (shifts.length > 0) {
+        const shiftIds = shifts.map(s => s.id);
+        const { data: assigns } = await supabase.from("shift_assignments")
+          .select("id, shift_id, employee_id, status")
+          .in("shift_id", shiftIds);
+        setAssignments(assigns ?? []);
+      }
+    }
+    fetchWeek();
+  }, [companyId]);
+
+  const SHIFT_COLORS = [
+    "bg-green-100 text-green-700 border-green-200",
+    "bg-blue-100 text-blue-700 border-blue-200",
+    "bg-purple-100 text-purple-700 border-purple-200",
+    "bg-pink-100 text-pink-700 border-pink-200",
+    "bg-yellow-100 text-yellow-700 border-yellow-200",
+    "bg-orange-100 text-orange-700 border-orange-200",
+    "bg-teal-100 text-teal-700 border-teal-200",
+    "bg-indigo-100 text-indigo-700 border-indigo-200",
+    "bg-red-100 text-red-700 border-red-200",
+    "bg-cyan-100 text-cyan-700 border-cyan-200",
+  ];
+
+  const employeeColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    employees.forEach((emp, i) => {
+      map.set(emp.id, SHIFT_COLORS[i % SHIFT_COLORS.length]);
+    });
+    return map;
+  }, [employees]);
+
+  const getEmployeeName = (empId: string) => {
+    const emp = employees.find(e => e.id === empId);
+    return emp ? emp.first_name : "—";
+  };
+
+  // Group by date → list of assigned employees
+  const dayData = weekDays.map(day => {
+    const dateStr = format(day, "yyyy-MM-dd");
+    const dayShifts = weekShifts.filter(s => s.date === dateStr);
+    const dayAssigns = dayShifts.flatMap(s => 
+      assignments.filter(a => a.shift_id === s.id).map(a => ({
+        ...a,
+        shiftTitle: s.title,
+        startTime: s.start_time,
+      }))
+    );
+    return { date: day, dateStr, shifts: dayShifts, assigns: dayAssigns };
+  });
+
+  return (
+    <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
+      <CardHeader className="pb-3 px-6 pt-5">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-bold font-heading">Weekly Shift</CardTitle>
+          <div className="flex items-center gap-2">
+            <button className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-accent transition-colors text-muted-foreground">
+              <Search className="h-4 w-4" />
+            </button>
+            <button className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-accent transition-colors text-muted-foreground">
+              <MoreVertical className="h-4 w-4" />
+            </button>
+            <button 
+              onClick={() => navigate("/app/shifts")}
+              className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-accent transition-colors text-muted-foreground"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="px-4 pb-5">
+        <div className="overflow-x-auto">
+          <div className="grid grid-cols-7 gap-px min-w-[600px]">
+            {/* Day headers */}
+            {dayData.map(d => (
+              <div key={d.dateStr} className="text-center pb-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                  {format(d.date, "EEE", { locale: es })}
+                </p>
+                <p className="text-sm font-bold text-foreground mt-0.5">{format(d.date, "d")}</p>
+              </div>
+            ))}
+
+            {/* Shift cells */}
+            {dayData.map(d => (
+              <div key={`cells-${d.dateStr}`} className="space-y-1.5 px-0.5 min-h-[120px]">
+                {d.assigns.length === 0 && d.shifts.length === 0 ? (
+                  <div className="h-full" />
+                ) : (
+                  d.assigns.slice(0, 4).map(a => {
+                    const colorClasses = employeeColorMap.get(a.employee_id) || SHIFT_COLORS[0];
+                    return (
+                      <div
+                        key={a.id}
+                        className={cn(
+                          "rounded-lg px-2.5 py-1.5 text-[11px] font-medium border truncate cursor-pointer hover:opacity-80 transition-opacity",
+                          colorClasses
+                        )}
+                        onClick={() => navigate("/app/shifts")}
+                      >
+                        {getEmployeeName(a.employee_id)}
+                      </div>
+                    );
+                  })
+                )}
+                {d.assigns.length > 4 && (
+                  <p className="text-[10px] text-muted-foreground text-center font-medium">
+                    +{d.assigns.length - 4} más
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -203,6 +384,7 @@ export default function AdminDashboard() {
   const [todaySummary, setTodaySummary] = useState({ shiftsToday: 0, assignedToday: 0, clockedIn: 0, openEntries: 0 });
   const [commercialKpis, setCommercialKpis] = useState({ activeClients: 0, openRequests: 0, unpaidInvoices: 0, overdueInvoices: 0, unpaidTotal: 0, overdueTotal: 0 });
   const [missingPhotoCount, setMissingPhotoCount] = useState(0);
+  const [totalHoursWorked, setTotalHoursWorked] = useState(0);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -223,8 +405,10 @@ export default function AdminDashboard() {
       let periodTotal = 0;
       if (periodRes.data) {
         const { data: basePays } = await supabase
-          .from("period_base_pay").select("base_total_pay").eq("period_id", periodRes.data.id);
+          .from("period_base_pay").select("base_total_pay, total_hours").eq("period_id", periodRes.data.id);
         periodTotal = (basePays ?? []).reduce((s, bp) => s + Number(bp.base_total_pay || 0), 0);
+        const hours = (basePays ?? []).reduce((s, bp) => s + Number(bp.total_hours || 0), 0);
+        setTotalHoursWorked(Math.round(hours * 10) / 10);
       }
 
       setStats({
@@ -415,6 +599,7 @@ export default function AdminDashboard() {
 
   const animEmployees = useAnimatedNumber(stats.totalEmployees);
   const animMovements = useAnimatedNumber(stats.totalMovements);
+  const animHours = useAnimatedNumber(totalHoursWorked);
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
@@ -451,17 +636,40 @@ export default function AdminDashboard() {
       />
     ),
     kpis: () => loading ? (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[1, 2, 3, 4].map(i => <div key={i} className="h-32 animate-pulse bg-muted/50 rounded-2xl" />)}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[1, 2, 3].map(i => <div key={i} className="h-36 animate-pulse bg-muted/50 rounded-2xl" />)}
       </div>
     ) : (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiStatCard label="Empleados" value={animEmployees} subtitle="activos en nómina" icon={Users} color="primary" sparkData={sparkEmployees} onClick={() => navigate("/app/employees")} />
-        <KpiStatCard label="Pago base" value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle="periodo actual" icon={DollarSign} color="warning" sparkData={sparkPayments} onClick={() => navigate("/app/summary")} />
-        <KpiStatCard label="Novedades" value={animMovements} subtitle="registradas en total" icon={FileSpreadsheet} color="deduction" onClick={() => navigate("/app/movements")} />
-        <KpiStatCard label="Pendientes" value={stats.pendingTickets} subtitle="solicitudes abiertas" icon={Inbox} color="earning" onClick={() => navigate("/app/requests")} />
-      </div>
+      <>
+        {/* Hero KPI row — 3 large cards like reference */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <HeroKpiCard
+            label="Hours Worked"
+            value={animHours || animEmployees}
+            icon={Clock}
+            color="primary"
+            onClick={() => navigate("/app/timeclock")}
+          />
+          <HeroKpiCard
+            label="Employees Scheduled"
+            value={`${animEmployees}`}
+            icon={Users}
+            color="earning"
+            onClick={() => navigate("/app/employees")}
+          />
+          <HeroKpiCard
+            label="Payroll Total"
+            value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
+            icon={DollarSign}
+            color="warning"
+            onClick={() => navigate("/app/summary")}
+          />
+        </div>
+      </>
     ),
+    weekly_shifts: () => selectedCompanyId ? (
+      <WeeklyShiftPreview companyId={selectedCompanyId} navigate={navigate} />
+    ) : null,
     quick_actions: () => quickActions.length > 0 ? (
       <div>
         <div className="flex items-center gap-2 mb-3">
@@ -485,7 +693,7 @@ export default function AdminDashboard() {
         { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/employees" },
       ];
       return (
-        <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
+        <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
           <CardHeader className="pb-3 px-5 pt-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -553,7 +761,7 @@ export default function AdminDashboard() {
     today_summary: () => {
       const todayStr = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
       return (
-        <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
+        <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
           <CardHeader className="pb-3 px-5 pt-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -593,7 +801,7 @@ export default function AdminDashboard() {
       );
     },
     chart: () => chartData.length > 0 ? (
-      <Card className="rounded-2xl shadow-2xs border-border/50 overflow-hidden">
+      <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
         <CardHeader className="pb-2 px-5 pt-5">
           <div className="flex items-center gap-2">
              <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
@@ -643,7 +851,7 @@ export default function AdminDashboard() {
           </Link>
         </div>
         {feedAnnouncements.length === 0 ? (
-          <Card className="rounded-2xl shadow-2xs border-border/50">
+          <Card className="rounded-2xl shadow-sm border-border/40">
             <CardContent className="py-12 text-center text-muted-foreground">
               <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
                 <Megaphone className="h-5 w-5 opacity-30" />
@@ -658,7 +866,7 @@ export default function AdminDashboard() {
               const mediaList = a.media_urls.filter(Boolean);
               return (
                 <Card key={a.id} className={cn(
-                  "rounded-xl shadow-2xs overflow-hidden transition-all hover:shadow-xs border-border/50",
+                  "rounded-xl shadow-2xs overflow-hidden transition-all hover:shadow-xs border-border/40",
                   a.pinned && "border-primary/20",
                   a.priority === "urgent" && "border-destructive/30"
                 )}>
@@ -722,7 +930,7 @@ export default function AdminDashboard() {
             Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
-        <Card className="rounded-2xl shadow-2xs border-border/50">
+        <Card className="rounded-2xl shadow-sm border-border/40">
           <CardContent className="p-0">
             {activityItems.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">
@@ -757,60 +965,54 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* ── Hero (always visible) ── */}
-      <div className="relative rounded-2xl border border-border/50 bg-card overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-earning/[0.03]" />
-        <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-primary/[0.03] blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-earning/[0.04] blur-3xl" />
-
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5 p-6 md:p-8">
-          <div className="flex items-start gap-4 flex-1">
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mb-1">
-                <Sparkles className="h-3.5 w-3.5 text-primary/50" />
-                {greeting}
-              </p>
-              <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
-                {fullName || "Dashboard"}
-              </h1>
-              <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5">
-                <span>{selectedCompany?.name ?? "Selecciona una empresa"}</span>
+      {/* ── Compact greeting + settings ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mb-0.5">
+            <Sparkles className="h-3.5 w-3.5 text-primary/50" />
+            {greeting}
+          </p>
+          <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
+            {fullName || "Dashboard"}
+          </h1>
+          <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5">
+            <span>{selectedCompany?.name ?? "Selecciona una empresa"}</span>
+            {stats.activePeriod && (
+              <>
                 <span className="text-border">·</span>
                 <span className="tabular-nums">{DAY_NAMES[payrollConfig.payroll_week_start_day].slice(0, 3)} → {DAY_NAMES[payrollConfig.expected_close_day].slice(0, 3)}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <DashboardWidgetSettings
-              widgets={widgets}
-              toggleWidget={toggleWidget}
-              moveWidget={moveWidget}
-              resetWidgets={resetWidgets}
-            />
-
-            {stats.activePeriod && (
-              <div className="flex flex-col gap-2.5 min-w-[220px] p-4 rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Periodo activo</span>
-                  <span className={cn(
-                    "text-[10px] px-2.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-1.5",
-                    statusColor === 'earning' && "bg-earning/10 text-earning",
-                    statusColor === 'warning' && "bg-warning/10 text-warning",
-                    statusColor === 'primary' && "bg-primary/10 text-primary",
-                  )}>
-                    <span className={cn("h-1.5 w-1.5 rounded-full animate-pulse", `bg-${statusColor}`)} />
-                    {statusLabel}
-                  </span>
-                </div>
-                <p className="text-[13px] font-semibold text-foreground tabular-nums">{stats.activePeriod}</p>
-                <div className="flex items-center gap-2.5">
-                  <Progress value={periodProgress} className="h-1.5 flex-1 bg-muted/60 [&>div]:bg-primary [&>div]:rounded-full rounded-full" />
-                  <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium">{periodProgress}%</span>
-                </div>
-              </div>
+              </>
             )}
-          </div>
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <DashboardWidgetSettings
+            widgets={widgets}
+            toggleWidget={toggleWidget}
+            moveWidget={moveWidget}
+            resetWidgets={resetWidgets}
+          />
+          {stats.activePeriod && (
+            <div className="hidden md:flex flex-col gap-2 min-w-[200px] p-3.5 rounded-xl border border-border/40 bg-card shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Periodo</span>
+                <span className={cn(
+                  "text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1",
+                  statusColor === 'earning' && "bg-earning/10 text-earning",
+                  statusColor === 'warning' && "bg-warning/10 text-warning",
+                  statusColor === 'primary' && "bg-primary/10 text-primary",
+                )}>
+                  <span className={cn("h-1.5 w-1.5 rounded-full animate-pulse", `bg-${statusColor}`)} />
+                  {statusLabel}
+                </span>
+              </div>
+              <p className="text-[12px] font-semibold text-foreground tabular-nums">{stats.activePeriod}</p>
+              <div className="flex items-center gap-2">
+                <Progress value={periodProgress} className="h-1.5 flex-1 bg-muted/60 [&>div]:bg-primary [&>div]:rounded-full rounded-full" />
+                <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium">{periodProgress}%</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -839,7 +1041,7 @@ export default function AdminDashboard() {
                     "text-left p-4 rounded-2xl border transition-all duration-200 group active:scale-[0.98]",
                     isSelected
                       ? "border-primary/40 bg-primary/[0.04] ring-1 ring-primary/20 shadow-sm"
-                      : "border-border/50 bg-card hover:border-primary/20 hover:shadow-sm"
+                      : "border-border/40 bg-card hover:border-primary/20 hover:shadow-sm"
                   )}
                 >
                   <div className="flex items-start justify-between">
@@ -892,6 +1094,11 @@ export default function AdminDashboard() {
         if (!content) return null;
         return <div key={w.id}>{content}</div>;
       })}
+
+      {/* ── Weekly Shifts (always show after KPIs if not in widget list) ── */}
+      {!isWidgetEnabled("weekly_shifts") && selectedCompanyId && (
+        <WeeklyShiftPreview companyId={selectedCompanyId} navigate={navigate} />
+      )}
     </div>
   );
 }
