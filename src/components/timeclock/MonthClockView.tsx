@@ -310,6 +310,26 @@ export function MonthClockView() {
 
   const dayHeaders = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
+  // View mode: calendar heatmap or chip grid
+  const [viewMode, setViewMode] = useState<"calendar" | "chips">("chips");
+
+  // Current week for chip view
+  const chipWeekDays = useMemo(() => {
+    const ws = startOfWeek(currentMonth, { weekStartsOn: 0 });
+    return Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  }, [currentMonth]);
+
+  // For chip view: use current month's first week or navigate weeks
+  const chipWeeksForMonth = useMemo(() => {
+    const result: Date[][] = [];
+    let ws = startOfWeek(monthStart, { weekStartsOn: 0 });
+    while (ws <= monthEnd) {
+      result.push(Array.from({ length: 7 }, (_, i) => addDays(ws, i)));
+      ws = addDays(ws, 7);
+    }
+    return result;
+  }, [monthStart.toISOString(), monthEnd.toISOString()]);
+
   return (
     <div className="space-y-4">
       {/* KPIs */}
