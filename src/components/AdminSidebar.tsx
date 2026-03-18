@@ -9,7 +9,7 @@ import {
   Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon, ContactRound, Award, GitCompareArrows,
-  FileText, Bell, UserPlus,
+  FileText, Bell, UserPlus, Star,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -45,6 +45,7 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/employees", icon: Users, label: "Trabajadores", module: "employees", section: "Principal" },
   { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Principal" },
   { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Principal" },
+  { to: "/app/quality", icon: Star, label: "Calidad", module: null, section: "Principal" },
 
   // NÓMINA — payroll & finance
   { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
