@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -9,10 +9,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import {
   Settings, MapPin, Clock, CalendarDays, DollarSign, Zap, Shield,
-  Loader2, Save,
+  Loader2, Save, Palette, Upload, X, ImageIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -127,9 +128,198 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   },
 ];
 
+const BRAND_COLORS = [
+  "#6366f1", "#3b82f6", "#10b981", "#14b8a6", "#f59e0b",
+  "#ef4444", "#8b5cf6", "#ec4899", "#f97316", "#84cc16",
+  "#0ea5e9", "#a855f7", "#d946ef", "#059669", "#dc2626",
+];
+
+function BrandingCard({ companyId, company, onSaved }: {
+  companyId: string; company: any; onSaved: () => void;
+}) {
+  const [logoUrl, setLogoUrl] = useState<string | null>(company?.logo_url ?? null);
+  const [brandColor, setBrandColor] = useState<string>(company?.brand_color ?? "#6366f1");
+  const [customColor, setCustomColor] = useState(company?.brand_color ?? "#6366f1");
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setLogoUrl(company?.logo_url ?? null);
+    setBrandColor(company?.brand_color ?? "#6366f1");
+    setCustomColor(company?.brand_color ?? "#6366f1");
+  }, [company]);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("El logo no debe superar 2MB");
+      return;
+    }
+    setUploading(true);
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${companyId}/logo.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("company-logos")
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) {
+      toast.error("Error subiendo logo");
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("company-logos").getPublicUrl(path);
+    const url = urlData.publicUrl + "?t=" + Date.now();
+    setLogoUrl(url);
+
+    await supabase.from("companies").update({ logo_url: url }).eq("id", companyId);
+    toast.success("Logo actualizado");
+    onSaved();
+    setUploading(false);
+  };
+
+  const removeLogo = async () => {
+    await supabase.from("companies").update({ logo_url: null }).eq("id", companyId);
+    setLogoUrl(null);
+    toast.success("Logo eliminado");
+    onSaved();
+  };
+
+  const saveBrandColor = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("companies").update({ brand_color: brandColor }).eq("id", companyId);
+    if (error) toast.error("Error guardando color");
+    else { toast.success("Color guardado"); onSaved(); }
+    setSaving(false);
+  };
+
+  const initials = company?.name?.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2) || "?";
+
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Palette className="h-4 w-4" /> Identidad Visual
+        </CardTitle>
+        <CardDescription className="text-xs">Logo y color de marca para identificar tu empresa</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col sm:flex-row gap-8">
+          {/* Logo Section */}
+          <div className="flex flex-col items-center gap-3">
+            <Label className="text-xs font-semibold text-muted-foreground">Logo</Label>
+            <div className="relative group">
+              <Avatar className="h-20 w-20 rounded-2xl ring-2 ring-border/50">
+                {logoUrl ? (
+                  <AvatarImage src={logoUrl} alt="Logo" className="rounded-2xl object-cover" />
+                ) : null}
+                <AvatarFallback
+                  className="rounded-2xl text-lg font-bold"
+                  style={{ backgroundColor: `${brandColor}15`, color: brandColor }}
+                >
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              {logoUrl && (
+                <button
+                  onClick={removeLogo}
+                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="text-xs gap-1.5"
+            >
+              {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+              {uploading ? "Subiendo..." : logoUrl ? "Cambiar" : "Subir logo"}
+            </Button>
+            <p className="text-[10px] text-muted-foreground">PNG, JPG · Max 2MB</p>
+          </div>
+
+          <Separator orientation="vertical" className="hidden sm:block h-auto" />
+
+          {/* Color Section */}
+          <div className="flex-1 space-y-4">
+            <div>
+              <Label className="text-xs font-semibold text-muted-foreground">Color de marca</Label>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Se usa en el selector de empresa y elementos visuales</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {BRAND_COLORS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => { setBrandColor(c); setCustomColor(c); }}
+                  className="h-8 w-8 rounded-xl transition-all duration-200 hover:scale-110 ring-offset-2 ring-offset-background"
+                  style={{
+                    backgroundColor: c,
+                    boxShadow: brandColor === c ? `0 0 0 2px ${c}` : undefined,
+                    outline: brandColor === c ? `2px solid ${c}` : "1px solid transparent",
+                    outlineOffset: "2px",
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <Label className="text-xs shrink-0">Personalizado:</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={customColor}
+                  onChange={(e) => { setCustomColor(e.target.value); setBrandColor(e.target.value); }}
+                  className="h-8 w-10 rounded-lg border border-border cursor-pointer"
+                />
+                <Input
+                  value={customColor}
+                  onChange={(e) => { setCustomColor(e.target.value); if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setBrandColor(e.target.value); }}
+                  className="w-[100px] h-8 text-xs font-mono"
+                  placeholder="#6366f1"
+                />
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-muted/30">
+              <Avatar className="h-9 w-9 rounded-lg" style={{ borderColor: `${brandColor}30`, borderWidth: 1.5 }}>
+                {logoUrl ? (
+                  <AvatarImage src={logoUrl} className="rounded-lg object-cover" />
+                ) : null}
+                <AvatarFallback
+                  className="rounded-lg text-[10px] font-bold"
+                  style={{ backgroundColor: `${brandColor}15`, color: brandColor }}
+                >
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-xs font-semibold" style={{ color: brandColor }}>{company?.name}</p>
+                <p className="text-[10px] text-muted-foreground">Vista previa del selector</p>
+              </div>
+            </div>
+
+            <Button onClick={saveBrandColor} disabled={saving} size="sm" className="gap-1.5">
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              Guardar color
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function CompanyConfig() {
   const { role, user } = useAuth();
-  const { selectedCompanyId, selectedCompany } = useCompany();
+  const { selectedCompanyId, selectedCompany, refetch } = useCompany();
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -189,7 +379,7 @@ export default function CompanyConfig() {
     setSaving(false);
   };
 
-  if (role !== "owner" && role !== "developer" && role !== "admin") {
+  if (role !== "owner" && role !== "developer" && role !== "admin" && role !== "company_owner") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-muted-foreground">No tienes acceso a este módulo.</p>
@@ -220,6 +410,15 @@ export default function CompanyConfig() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Branding Card - full width */}
+          {selectedCompanyId && (
+            <BrandingCard
+              companyId={selectedCompanyId}
+              company={selectedCompany}
+              onSaved={refetch}
+            />
+          )}
+
           {SETTINGS_CONFIG.map(config => {
             const SectionIcon = config.icon;
             const values = settings[config.key] ?? {};
