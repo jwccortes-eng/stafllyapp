@@ -92,6 +92,7 @@ const Leaderboard = lazy(() => import("./pages/admin/Leaderboard"));
 const WorkerPassport = lazy(() => import("./pages/admin/WorkerPassport"));
 const KioskDevices = lazy(() => import("./pages/admin/KioskDevices"));
 const Attendance = lazy(() => import("./pages/admin/Attendance"));
+const QualityDashboard = lazy(() => import("./pages/admin/QualityDashboard"));
 const KioskClock = lazy(() => import("./pages/kiosk/KioskClock"));
 
 // Portal pages
