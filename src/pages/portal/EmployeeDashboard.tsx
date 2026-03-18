@@ -288,9 +288,6 @@ export default function EmployeeDashboard() {
         </Link>
       )}
 
-      {/* ── Stats grid ── */}
-      <div className="grid grid-cols-2 gap-3">
-
       {/* ── Admin summary (dual-access cross-context card) ── */}
       <AdminSummaryCard />
 
