@@ -19,7 +19,7 @@ interface WeekViewProps {
   onAddShift?: (date: string) => void;
 }
 
-const MAX_PILLS = 4;
+const DEFAULT_MAX_PILLS = 4;
 
 export function WeekView({
   weekDays, shifts, assignments, locations, clients, employees = [],
