@@ -36,6 +36,7 @@ const EMPTY_STATS: MigrationStats = {
 
 export default function MigrationCommandCenter() {
   usePageView("Migration Command Center");
+  const navigate = useNavigate();
   const { selectedCompanyId: companyId } = useCompany();
   const [stats, setStats] = useState<MigrationStats>(EMPTY_STATS);
   const [loading, setLoading] = useState(true);
