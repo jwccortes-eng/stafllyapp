@@ -9,7 +9,7 @@ import {
   Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon, ContactRound, Award, GitCompareArrows,
-  FileText, Bell, UserPlus,
+  FileText, Bell, UserPlus, Star,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
