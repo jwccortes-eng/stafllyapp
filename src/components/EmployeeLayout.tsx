@@ -142,6 +142,7 @@ export default function EmployeeLayout() {
             <StaflyLogo size={32} />
           </div>
           <div className="flex items-center gap-2">
+            <ModeSwitcher />
             <NotificationBell />
           </div>
         </div>
