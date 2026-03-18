@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       setFullName(profileData?.full_name ?? null);
 
-      // Fetch module permissions for managers and supervisors
+      // Fetch module permissions for managers and supervisors (company_owner gets full access like admin)
       if (resolvedRole === 'manager' || resolvedRole === 'supervisor') {
         const { data: permsData } = await supabase
           .from('module_permissions')
