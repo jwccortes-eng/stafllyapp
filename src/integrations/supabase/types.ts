@@ -840,7 +840,6 @@ export type Database = {
           status: string
           submitted_at: string | null
           tax_classification: string
-          tin_encrypted: string | null
           tin_last4: string | null
           updated_at: string
           w9_file_url: string | null
@@ -864,7 +863,6 @@ export type Database = {
           status?: string
           submitted_at?: string | null
           tax_classification?: string
-          tin_encrypted?: string | null
           tin_last4?: string | null
           updated_at?: string
           w9_file_url?: string | null
@@ -888,7 +886,6 @@ export type Database = {
           status?: string
           submitted_at?: string | null
           tax_classification?: string
-          tin_encrypted?: string | null
           tin_last4?: string | null
           updated_at?: string
           w9_file_url?: string | null
