@@ -44,7 +44,8 @@ export default function EmployeeLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (role !== "employee") return <Navigate to="/auth" replace />;
+  // Allow any user with an employee profile (dual access)
+  if (!employeeId) return <Navigate to={canAccessAdmin ? "/app" : "/auth"} replace />;
 
   if (!employeeActive) {
     return (
