@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { Outlet, Navigate } from "react-router-dom";
 import { User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
