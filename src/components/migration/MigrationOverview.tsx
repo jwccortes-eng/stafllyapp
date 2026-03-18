@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { RefreshCw, ArrowRight, CheckCircle2, AlertTriangle, Clock, Shield } from "lucide-react";
