@@ -106,6 +106,7 @@ export default function AdminLayout() {
               <MobilePageTitle items={visibleItems} />
             </div>
             <div className="flex items-center gap-1">
+              <ModeSwitcher compact />
               {companies.length > 1 && (
                 <div className="max-w-[140px]">
                   <CompanySwitcher collapsed={false} />
