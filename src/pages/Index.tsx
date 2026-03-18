@@ -4,18 +4,20 @@ import { useAuth } from "@/hooks/useAuth";
 import Landing from "./Landing";
 
 export default function Index() {
-  const { user, role, loading } = useAuth();
+  const { user, loading, canAccessAdmin, canAccessPortal, activeMode } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (loading) return;
     if (!user) return;
-    if (role === "developer" || role === "admin" || role === "owner" || role === "manager") {
+    if (canAccessAdmin && canAccessPortal) {
+      navigate(activeMode === 'employee' ? "/portal" : "/app");
+    } else if (canAccessAdmin) {
       navigate("/app");
-    } else if (role === "employee") {
+    } else if (canAccessPortal) {
       navigate("/portal");
     }
-  }, [user, role, loading, navigate]);
+  }, [user, loading, navigate, canAccessAdmin, canAccessPortal, activeMode]);
 
   if (loading) {
     return (

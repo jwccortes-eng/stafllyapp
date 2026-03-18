@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { Outlet, Navigate } from "react-router-dom";
 import { User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,7 +16,7 @@ import { PhotoGate } from "@/components/portal/PhotoGate";
 import { formatPersonName } from "@/lib/format-helpers";
 
 export default function EmployeeLayout() {
-  const { user, role, employeeActive, employeeId, loading, signOut, fullName } = useAuth();
+  const { user, role, employeeActive, employeeId, loading, signOut, fullName, canAccessAdmin } = useAuth();
   const isMobile = useIsMobile();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -44,7 +45,8 @@ export default function EmployeeLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (role !== "employee") return <Navigate to="/auth" replace />;
+  // Allow any user with an employee profile (dual access)
+  if (!employeeId) return <Navigate to={canAccessAdmin ? "/app" : "/auth"} replace />;
 
   if (!employeeActive) {
     return (
@@ -115,7 +117,10 @@ export default function EmployeeLayout() {
               <StaflyLogo size={20} />
               <PortalPageTitle />
             </div>
-            <NotificationBell />
+            <div className="flex items-center gap-1">
+              <ModeSwitcher compact />
+              <NotificationBell />
+            </div>
           </div>
         </header>
 
@@ -137,6 +142,7 @@ export default function EmployeeLayout() {
             <StaflyLogo size={32} />
           </div>
           <div className="flex items-center gap-2">
+            <ModeSwitcher />
             <NotificationBell />
           </div>
         </div>

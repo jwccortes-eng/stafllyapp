@@ -9,16 +9,15 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { Mail, Lock, Eye, EyeOff, Loader2, User, ShieldCheck, Building2, Phone, Sparkles } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
-
 import { EmployeeAuthFlow } from "@/components/auth/EmployeeAuthFlow";
 
-type AuthMode = "admin" | "employee";
+type LoginMethod = "email" | "phone";
 
 export default function Auth() {
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading, canAccessAdmin, canAccessPortal, activeMode } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<AuthMode>("admin");
+  const [method, setMethod] = useState<LoginMethod>("email");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -30,7 +29,7 @@ export default function Auth() {
   const [needsSetupChecked, setNeedsSetupChecked] = useState(false);
   const { toast } = useToast();
 
-  // Auto-setup and redirect
+  // Smart redirect after auth
   useEffect(() => {
     if (authLoading || !user || settingUp) return;
 
@@ -50,7 +49,6 @@ export default function Auth() {
           } else if (data?.success) {
             toast({ title: "¡Empresa creada!", description: `${metaCompanyName} está lista. Tienes 14 días de prueba Pro.` });
           }
-          // Reload to pick up new role and company
           window.location.reload();
           return;
         } catch (err: any) {
@@ -60,14 +58,21 @@ export default function Auth() {
         }
       }
 
-      // Standard role-based redirect
-      if (role === "employee") navigate("/portal");
-      else if (role === "developer" || role === "admin" || role === "owner" || role === "manager") navigate("/app");
+      // Smart redirect based on access + preferred mode
+      if (canAccessAdmin && canAccessPortal) {
+        // Dual access — go to preferred mode
+        navigate(activeMode === 'employee' ? "/portal" : "/app");
+      } else if (canAccessAdmin) {
+        navigate("/app");
+      } else if (canAccessPortal) {
+        navigate("/portal");
+      }
+      // else: user has no access yet — stay on auth
     };
     autoSetup();
-  }, [user, role, authLoading, navigate, settingUp]);
+  }, [user, role, authLoading, navigate, settingUp, canAccessAdmin, canAccessPortal, activeMode]);
 
-  const handleAdminSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -94,6 +99,12 @@ export default function Auth() {
     setLoading(false);
   };
 
+  const handlePhoneSessionReady = () => {
+    // After phone auth, redirect will happen via the useEffect above
+    // Force a small delay so useAuth can reload
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen flex bg-background">
       {/* Left — Branding panel (desktop) */}
@@ -109,21 +120,14 @@ export default function Auth() {
             <ShieldCheck className="h-12 w-12 text-primary/60" />
           </div>
           <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
-            {mode === "employee"
-              ? "Tu portal de trabajo, siempre contigo."
-              : "Control semanal de tu equipo, sin estrés."}
+            Una cuenta, todo el control.
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
-            {mode === "employee"
-              ? "Consulta tus turnos, pagos y fichajes desde cualquier dispositivo."
-              : "Turnos, clock-in/out con ubicación, nómina semanal y reportes. Todo en una app diseñada para tu operación."}
+            Administra tu equipo, revisa tus turnos, ficha y consulta tu nómina. Todo desde una misma cuenta.
           </p>
 
           <div className="flex items-center gap-6 mt-8">
-            {(mode === "employee"
-              ? ["Turnos", "Pagos", "Fichajes"]
-              : ["Turnos inteligentes", "Nómina automática", "Reportes al instante"]
-            ).map((feature) => (
+            {["Turnos", "Nómina", "Fichajes", "Multi-empresa"].map((feature) => (
               <div key={feature} className="flex items-center gap-1.5">
                 <ShieldCheck className="h-3.5 w-3.5 text-primary/60" />
                 <span className="text-xs text-muted-foreground/70 font-medium">{feature}</span>
@@ -135,41 +139,41 @@ export default function Auth() {
 
       {/* Right — Auth forms */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10">
-        {/* Mode toggle */}
+        {/* Method toggle — unified, not admin/employee */}
         <div className="w-full max-w-[400px] mb-6">
           <div className="flex bg-muted/50 rounded-xl p-1 border border-border/40">
             <button
-              onClick={() => setMode("employee")}
+              onClick={() => setMethod("email")}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-xs font-semibold transition-all ${
-                mode === "employee"
-                  ? "bg-card shadow-sm text-foreground border border-border/40"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Phone className="h-3.5 w-3.5" />
-              Empleado
-            </button>
-            <button
-              onClick={() => setMode("admin")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-xs font-semibold transition-all ${
-                mode === "admin"
+                method === "email"
                   ? "bg-card shadow-sm text-foreground border border-border/40"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <Mail className="h-3.5 w-3.5" />
-              Administrador
+              Email
+            </button>
+            <button
+              onClick={() => setMethod("phone")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-xs font-semibold transition-all ${
+                method === "phone"
+                  ? "bg-card shadow-sm text-foreground border border-border/40"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Phone className="h-3.5 w-3.5" />
+              Teléfono + PIN
             </button>
           </div>
         </div>
 
-        {/* Employee flow */}
-        {mode === "employee" && (
-          <EmployeeAuthFlow onSessionReady={() => navigate("/portal")} />
+        {/* Phone + PIN flow */}
+        {method === "phone" && (
+          <EmployeeAuthFlow onSessionReady={handlePhoneSessionReady} />
         )}
 
-        {/* Admin flow */}
-        {mode === "admin" && (
+        {/* Email flow */}
+        {method === "email" && (
           <div className="w-full max-w-[400px]">
             <div className="flex flex-col items-center mb-8">
               <StaflyLogo size={44} />
@@ -198,11 +202,11 @@ export default function Auth() {
                     </span>
                   )}
                   <p className="text-[10px] text-muted-foreground/60 flex items-center justify-center gap-1">
-                    <ShieldCheck className="h-3 w-3" /> Acceso seguro por roles
+                    <ShieldCheck className="h-3 w-3" /> Una cuenta · Múltiples roles
                   </p>
                 </div>
 
-                <form onSubmit={handleAdminSubmit} className="space-y-4">
+                <form onSubmit={handleEmailSubmit} className="space-y-4">
                   {!isLogin && (
                     <>
                       <div className="space-y-1.5">

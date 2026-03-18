@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { useNavigate } from "react-router-dom";
 import { Plus, CalendarDays, Users, Building2, MapPin, Search, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -56,6 +57,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
 
       {/* Right: actions */}
       <div className="flex items-center gap-1.5">
+        <ModeSwitcher />
         {/* Global Create */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

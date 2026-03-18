@@ -16,6 +16,7 @@ import { useNavPreferences } from "@/hooks/useNavPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { NavItem } from "@/components/navigation/nav-items";
 import CompanySwitcher from "@/components/CompanySwitcher";
+import { ModeSwitcher } from "@/components/ModeSwitcher";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
   const location = useLocation();
@@ -38,7 +39,7 @@ export function useSidebarCollapsed() {
 }
 
 export default function AdminLayout() {
-  const { user, role, loading, signOut, hasModuleAccess } = useAuth();
+  const { user, role, loading, signOut, hasModuleAccess, canAccessAdmin, canAccessPortal, employeeId } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -78,7 +79,8 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (role !== 'developer' && role !== 'owner' && role !== 'admin' && role !== 'manager') return <Navigate to="/auth" replace />;
+  // Allow any user with admin-level roles (canAccessAdmin computed in useAuth)
+  if (!canAccessAdmin) return <Navigate to={employeeId ? "/portal" : "/auth"} replace />;
 
   const isLinkVisible = (module: string | null) => {
     if (!module) return true;
@@ -104,6 +106,7 @@ export default function AdminLayout() {
               <MobilePageTitle items={visibleItems} />
             </div>
             <div className="flex items-center gap-1">
+              <ModeSwitcher compact />
               {companies.length > 1 && (
                 <div className="max-w-[140px]">
                   <CompanySwitcher collapsed={false} />
