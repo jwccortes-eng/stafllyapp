@@ -78,7 +78,8 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (role !== 'developer' && role !== 'owner' && role !== 'admin' && role !== 'manager') return <Navigate to="/auth" replace />;
+  // Allow any user with admin-level roles (canAccessAdmin computed in useAuth)
+  if (!canAccessAdmin) return <Navigate to={employeeId ? "/portal" : "/auth"} replace />;
 
   const isLinkVisible = (module: string | null) => {
     if (!module) return true;

@@ -15,7 +15,7 @@ import { PhotoGate } from "@/components/portal/PhotoGate";
 import { formatPersonName } from "@/lib/format-helpers";
 
 export default function EmployeeLayout() {
-  const { user, role, employeeActive, employeeId, loading, signOut, fullName } = useAuth();
+  const { user, role, employeeActive, employeeId, loading, signOut, fullName, canAccessAdmin } = useAuth();
   const isMobile = useIsMobile();
   const { isModuleEnabled, enabledModules, loading: modulesLoading } = usePortalModules();
   const [moreOpen, setMoreOpen] = useState(false);
