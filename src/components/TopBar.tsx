@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { useNavigate } from "react-router-dom";
 import { Plus, CalendarDays, Users, Building2, MapPin, Search, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
