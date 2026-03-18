@@ -97,7 +97,7 @@ export default function AdminSidebar() {
   const isLinkVisible = (link: LinkDef) => {
     if (link.module) {
       if (!isModuleActive(link.module)) return false;
-      if (role === 'developer' || role === 'owner' || role === 'admin') return true;
+      if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
       if (role === 'manager' || role === 'supervisor') return hasModuleAccess(link.module, 'view');
       return false;
     }
