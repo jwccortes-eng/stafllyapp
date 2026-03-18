@@ -1003,6 +1003,9 @@ export default function AdminDashboard() {
       {/* ── Onboarding Checklist ── */}
       <OnboardingChecklist />
 
+      {/* ── My Portal (dual-access cross-context card) ── */}
+      <MyShiftCard />
+
       {/* ── Pending Reviews ── */}
       <PendingReviewsWidget />
 
