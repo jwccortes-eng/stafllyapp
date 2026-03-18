@@ -101,10 +101,15 @@ export default function MigrationCommandCenter() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Migration Command Center"
-        subtitle="Connecteam → StaflyApps • Pilot Migration & Reconciliation"
-      />
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <PageHeader
+          title="Migration Command Center"
+          subtitle="Connecteam → StaflyApps • Pilot Migration & Reconciliation"
+        />
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/app/reconciliation-report")}>
+          <FileText className="h-4 w-4" /> Reconciliation Report
+        </Button>
+      </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
