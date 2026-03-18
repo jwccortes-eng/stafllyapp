@@ -143,7 +143,22 @@ export function LiveOperationsMap({ workers, locations, showLayer }: LiveOperati
       locations.forEach((location) => {
         const point: L.LatLngTuple = [location.latitude, location.longitude];
         bounds.push(point);
-...
+
+        const geofence = L.circle(point, {
+          radius: location.geofence_radius,
+          color: "#3b82f6",
+          fillColor: "#3b82f6",
+          fillOpacity: 0.1,
+          weight: 1,
+        });
+
+        const marker = L.marker(point, { icon: locationIcon }).bindPopup(buildLocationPopup(location));
+
+        geofence.addTo(layerGroup);
+        marker.addTo(layerGroup);
+      });
+    }
+
     if (showLayer === "all" || showLayer === "workers") {
       workers.forEach((worker) => {
         const point: L.LatLngTuple = [worker.latitude, worker.longitude];
