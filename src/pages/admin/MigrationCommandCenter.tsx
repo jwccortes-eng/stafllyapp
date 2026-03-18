@@ -13,7 +13,8 @@ import ClockMatchingTab from "@/components/migration/ClockMatchingTab";
 import PayrollReconciliationTab from "@/components/migration/PayrollReconciliationTab";
 import WeeklyCloseTab from "@/components/migration/WeeklyCloseTab";
 import ExceptionsTab from "@/components/migration/ExceptionsTab";
-import { ArrowLeftRight, Users, CalendarDays, Clock, DollarSign, CalendarCheck, AlertTriangle } from "lucide-react";
+import { ArrowLeftRight, Users, CalendarDays, Clock, DollarSign, CalendarCheck, AlertTriangle, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export interface MigrationStats {
   pilotStatus: any;
