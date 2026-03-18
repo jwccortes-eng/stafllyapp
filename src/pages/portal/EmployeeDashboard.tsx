@@ -14,6 +14,7 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { AdminSummaryCard } from "@/components/dashboard/AdminSummaryCard";
 
 interface NextShift {
   id: string;
@@ -286,6 +287,9 @@ export default function EmployeeDashboard() {
           </div>
         </Link>
       )}
+
+      {/* ── Admin summary (dual-access cross-context card) ── */}
+      <AdminSummaryCard />
 
       {/* ── Stats grid ── */}
       <div className="grid grid-cols-2 gap-3">
