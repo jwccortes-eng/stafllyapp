@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { usePageView } from "@/hooks/useAuditLog";
@@ -12,7 +13,8 @@ import ClockMatchingTab from "@/components/migration/ClockMatchingTab";
 import PayrollReconciliationTab from "@/components/migration/PayrollReconciliationTab";
 import WeeklyCloseTab from "@/components/migration/WeeklyCloseTab";
 import ExceptionsTab from "@/components/migration/ExceptionsTab";
-import { ArrowLeftRight, Users, CalendarDays, Clock, DollarSign, CalendarCheck, AlertTriangle } from "lucide-react";
+import { ArrowLeftRight, Users, CalendarDays, Clock, DollarSign, CalendarCheck, AlertTriangle, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export interface MigrationStats {
   pilotStatus: any;
@@ -34,6 +36,7 @@ const EMPTY_STATS: MigrationStats = {
 
 export default function MigrationCommandCenter() {
   usePageView("Migration Command Center");
+  const navigate = useNavigate();
   const { selectedCompanyId: companyId } = useCompany();
   const [stats, setStats] = useState<MigrationStats>(EMPTY_STATS);
   const [loading, setLoading] = useState(true);
@@ -98,10 +101,15 @@ export default function MigrationCommandCenter() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Migration Command Center"
-        subtitle="Connecteam → StaflyApps • Pilot Migration & Reconciliation"
-      />
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <PageHeader
+          title="Migration Command Center"
+          subtitle="Connecteam → StaflyApps • Pilot Migration & Reconciliation"
+        />
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/app/reconciliation-report")}>
+          <FileText className="h-4 w-4" /> Reconciliation Report
+        </Button>
+      </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">

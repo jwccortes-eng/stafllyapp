@@ -95,6 +95,7 @@ const Attendance = lazy(() => import("./pages/admin/Attendance"));
 const QualityDashboard = lazy(() => import("./pages/admin/QualityDashboard"));
 const KioskClock = lazy(() => import("./pages/kiosk/KioskClock"));
 const MigrationCommandCenter = lazy(() => import("./pages/admin/MigrationCommandCenter"));
+const ReconciliationReport = lazy(() => import("./pages/admin/ReconciliationReport"));
 
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
@@ -218,6 +219,7 @@ function App() {
                 <Route path="attendance" element={<Attendance />} />
                 <Route path="quality" element={<QualityDashboard />} />
                 <Route path="migration" element={<MigrationCommandCenter />} />
+                <Route path="reconciliation-report" element={<ReconciliationReport />} />
               </Route>
 
               {/* Employee portal routes */}
