@@ -290,6 +290,12 @@ export default function EmployeeDashboard() {
 
       {/* ── Stats grid ── */}
       <div className="grid grid-cols-2 gap-3">
+
+      {/* ── Admin summary (dual-access cross-context card) ── */}
+      <AdminSummaryCard />
+
+      {/* ── Stats grid ── */}
+      <div className="grid grid-cols-2 gap-3">
         {/* Weekly hours */}
         <div className="rounded-2xl border border-border/40 bg-card p-4">
           <div className="flex items-center gap-2 mb-2">
