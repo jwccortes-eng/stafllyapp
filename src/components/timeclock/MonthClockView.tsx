@@ -11,7 +11,7 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   ChevronLeft, ChevronRight, Search, Timer, Download,
-  Trophy, Clock, AlertTriangle, XCircle, TrendingUp,
+  Trophy, Clock, AlertTriangle, XCircle, TrendingUp, LayoutGrid, CalendarDays,
 } from "lucide-react";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -20,6 +20,8 @@ import {
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { WeekClockChipGrid } from "./WeekClockChipGrid";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface TimeEntry {
   id: string;
