@@ -60,6 +60,7 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Más" },
   { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Más", badge: "tickets" },
   { to: "/app/payroll-settings", icon: Settings2, label: "Configuración", module: null, section: "Más" },
+  { to: "/app/migration", icon: ArrowLeftRight, label: "Migración", module: null, section: "Más", roles: ["developer", "owner"] },
 ];
 
 const SECTION_ORDER = ["Principal", "Nómina", "Más"];
