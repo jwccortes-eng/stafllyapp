@@ -45,6 +45,7 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/employees", icon: Users, label: "Trabajadores", module: "employees", section: "Principal" },
   { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Principal" },
   { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Principal" },
+  { to: "/app/quality", icon: Star, label: "Calidad", module: null, section: "Principal" },
 
   // NÓMINA — payroll & finance
   { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },

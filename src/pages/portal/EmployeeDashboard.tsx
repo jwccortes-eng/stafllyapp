@@ -15,6 +15,7 @@ import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "d
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { AdminSummaryCard } from "@/components/dashboard/AdminSummaryCard";
+import { PendingReviewPrompt } from "@/components/reviews/PendingReviewPrompt";
 
 interface NextShift {
   id: string;
