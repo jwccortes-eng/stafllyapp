@@ -57,6 +57,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
 
       {/* Right: actions */}
       <div className="flex items-center gap-1.5">
+        <ModeSwitcher />
         {/* Global Create */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
