@@ -156,8 +156,22 @@ function UserRow({ u, onEdit, onResetPw, onDelete }: {
           <UserAvatar name={u.full_name} email={u.email} />
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">{u.full_name || "Sin nombre"}</p>
-            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold truncate">{u.full_name || "Sin nombre"}</p>
+              {u.has_admin_access && u.has_employee_access && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-chart-4 bg-chart-4/10 px-1.5 py-0.5 rounded-full shrink-0" title="Acceso dual: Admin + Empleado">
+                  <ArrowLeftRight className="h-2.5 w-2.5" />Dual
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+              {u.has_employee_access && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] text-emerald-600 dark:text-emerald-400" title={`Perfil empleado: ${u.employee_name}`}>
+                  <LinkIcon className="h-2.5 w-2.5" />
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Company count */}
@@ -167,6 +181,20 @@ function UserRow({ u, onEdit, onResetPw, onDelete }: {
               <span>{u.companies.length}</span>
             </div>
           )}
+
+          {/* Access mode badges */}
+          <div className="hidden sm:flex items-center gap-1">
+            {u.has_admin_access && (
+              <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20 px-1.5 py-0">
+                Admin
+              </Badge>
+            )}
+            {u.has_employee_access && (
+              <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", u.employee_active ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800" : "bg-muted text-muted-foreground border-border")}>
+                {u.employee_active ? "Empleado" : "Inactivo"}
+              </Badge>
+            )}
+          </div>
 
           <Badge variant="outline" className={cn("text-[10px] shrink-0", ROLE_COLORS[u.role])}>
             <Icon className="h-3 w-3 mr-1" />{ROLE_LABELS[u.role]}
