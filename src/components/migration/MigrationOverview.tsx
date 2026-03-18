@@ -116,8 +116,8 @@ export default function MigrationOverview({ stats, loading, onRefresh }: Props) 
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             <div className="flex justify-between"><span>Total</span><span className="font-medium">{stats.shiftCounts.total}</span></div>
-            <div className="flex justify-between"><span>Matched</span><span className="text-primary font-medium">{stats.shiftCounts.matched}</span></div>
-            <div className="flex justify-between"><span>Missing in Stafly</span><span className="text-amber-600">{stats.shiftCounts.missing}</span></div>
+          <div className="flex justify-between"><span>Matched</span><span className="text-primary font-medium">{stats.shiftCounts.matched}</span></div>
+            <div className="flex justify-between"><span>Missing in Stafly</span><span className="text-muted-foreground">{stats.shiftCounts.missing}</span></div>
             <div className="flex justify-between"><span>Conflicts</span><span className="text-destructive">{stats.shiftCounts.conflicts}</span></div>
           </CardContent>
         </Card>
