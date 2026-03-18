@@ -359,6 +359,25 @@
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/15 text-primary;
   }
 
+  /* ── Pastel pills — scheduling module ── */
+  .pastel-pill {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all cursor-pointer;
+    @apply hover:opacity-80 active:scale-[0.98];
+  }
+
+  .pastel-pill-rose { background: hsl(var(--pastel-rose)); color: hsl(var(--pastel-rose-text)); }
+  .pastel-pill-green { background: hsl(var(--pastel-green)); color: hsl(var(--pastel-green-text)); }
+  .pastel-pill-yellow { background: hsl(var(--pastel-yellow)); color: hsl(var(--pastel-yellow-text)); }
+  .pastel-pill-violet { background: hsl(var(--pastel-violet)); color: hsl(var(--pastel-violet-text)); }
+  .pastel-pill-sky { background: hsl(var(--pastel-sky)); color: hsl(var(--pastel-sky-text)); }
+  .pastel-pill-pink { background: hsl(var(--pastel-pink)); color: hsl(var(--pastel-pink-text)); }
+  .pastel-pill-teal { background: hsl(var(--pastel-teal)); color: hsl(var(--pastel-teal-text)); }
+  .pastel-pill-orange { background: hsl(var(--pastel-orange)); color: hsl(var(--pastel-orange-text)); }
+  .pastel-pill-indigo { background: hsl(var(--pastel-indigo)); color: hsl(var(--pastel-indigo-text)); }
+  .pastel-pill-cyan { background: hsl(var(--pastel-cyan)); color: hsl(var(--pastel-cyan-text)); }
+  .pastel-pill-peach { background: hsl(var(--pastel-peach)); color: hsl(var(--pastel-peach-text)); }
+  .pastel-pill-mint { background: hsl(var(--pastel-mint)); color: hsl(var(--pastel-mint-text)); }
+
   /* ── Glass & Gradients ── */
   .glass {
     @apply bg-card/70 backdrop-blur-xl border border-border/50;
