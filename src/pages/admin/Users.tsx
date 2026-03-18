@@ -74,6 +74,14 @@ interface UserRecord {
   role: RoleType;
   permissions: { module: string; can_view: boolean; can_edit: boolean; can_delete: boolean }[];
   companies: CompanyAssignment[];
+  /** Employee profile linkage */
+  employee_id: string | null;
+  employee_name: string | null;
+  employee_active: boolean;
+  /** Whether user has admin-level roles */
+  has_admin_access: boolean;
+  /** Whether user has employee profile */
+  has_employee_access: boolean;
 }
 
 interface PromoCode {
