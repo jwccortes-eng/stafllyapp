@@ -1,0 +1,1 @@
+ALTER TABLE public.contractor_w9 DROP COLUMN IF EXISTS tin_encrypted;
