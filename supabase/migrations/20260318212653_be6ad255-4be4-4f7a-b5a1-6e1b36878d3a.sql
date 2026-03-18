@@ -1,0 +1,1 @@
+ALTER TABLE migration_employee_mapping ALTER COLUMN connecteam_ref DROP NOT NULL;

@@ -2470,7 +2470,7 @@ export type Database = {
           connecteam_email: string | null
           connecteam_name: string | null
           connecteam_phone: string | null
-          connecteam_ref: string
+          connecteam_ref: string | null
           created_at: string
           id: string
           match_confidence: number | null
@@ -2487,7 +2487,7 @@ export type Database = {
           connecteam_email?: string | null
           connecteam_name?: string | null
           connecteam_phone?: string | null
-          connecteam_ref: string
+          connecteam_ref?: string | null
           created_at?: string
           id?: string
           match_confidence?: number | null
@@ -2504,7 +2504,7 @@ export type Database = {
           connecteam_email?: string | null
           connecteam_name?: string | null
           connecteam_phone?: string | null
-          connecteam_ref?: string
+          connecteam_ref?: string | null
           created_at?: string
           id?: string
           match_confidence?: number | null
