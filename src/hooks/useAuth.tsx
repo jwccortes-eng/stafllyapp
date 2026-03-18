@@ -247,7 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasActionPermission = (action: string): boolean => {
-    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
     if (role === 'manager' || role === 'supervisor') {
       const perm = actionPermissions.find(p => p.action === action);
       return perm?.granted ?? false;
