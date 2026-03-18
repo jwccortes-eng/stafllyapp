@@ -266,15 +266,21 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
                 ) : (
                   d.assigns.slice(0, 4).map(a => {
                     const colorClasses = employeeColorMap.get(a.employee_id) || SHIFT_COLORS[0];
+                    const statusDot = a.status === "confirmed"
+                      ? "bg-emerald-500"
+                      : a.status === "rejected"
+                        ? "bg-rose-500"
+                        : "bg-amber-400";
                     return (
                       <div
                         key={a.id}
                         className={cn(
-                          "rounded-lg px-2.5 py-1.5 text-[11px] font-medium border truncate cursor-pointer hover:opacity-80 transition-opacity",
+                          "rounded-lg px-2.5 py-1.5 text-[11px] font-medium border truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1.5",
                           colorClasses
                         )}
                         onClick={() => navigate("/app/shifts")}
                       >
+                        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", statusDot)} />
                         {getEmployeeName(a.employee_id)}
                       </div>
                     );
