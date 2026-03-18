@@ -1,8 +1,9 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
 type AppRole = 'developer' | 'owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
+type ActiveMode = 'admin' | 'employee';
 type EmployeeStatus = 'active' | 'inactive' | null;
 
 interface ModulePermission {
@@ -20,7 +21,17 @@ interface ActionPermission {
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  /** Highest-priority role (backward compat) */
   role: AppRole;
+  /** All roles the user has */
+  allRoles: Set<string>;
+  /** Active mode: admin panel or employee portal */
+  activeMode: ActiveMode;
+  setActiveMode: (mode: ActiveMode) => void;
+  /** Whether user can access admin panel */
+  canAccessAdmin: boolean;
+  /** Whether user has an employee profile */
+  canAccessPortal: boolean;
   employeeId: string | null;
   employeeActive: boolean;
   fullName: string | null;
@@ -32,10 +43,17 @@ interface AuthContextType {
   hasActionPermission: (action: string) => boolean;
 }
 
+const ADMIN_ROLES = new Set(['developer', 'owner', 'admin', 'manager', 'supervisor']);
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   role: null,
+  allRoles: new Set(),
+  activeMode: 'admin',
+  setActiveMode: () => {},
+  canAccessAdmin: false,
+  canAccessPortal: false,
   employeeId: null,
   employeeActive: true,
   fullName: null,
@@ -51,12 +69,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole>(null);
+  const [allRoles, setAllRoles] = useState<Set<string>>(new Set());
+  const [activeMode, setActiveModeState] = useState<ActiveMode>(() => {
+    return (localStorage.getItem("stafly-active-mode") as ActiveMode) || 'admin';
+  });
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [employeeActive, setEmployeeActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
   const [actionPermissions, setActionPermissions] = useState<ActionPermission[]>([]);
   const [fullName, setFullName] = useState<string | null>(null);
+
+  const setActiveMode = useCallback((mode: ActiveMode) => {
+    setActiveModeState(mode);
+    localStorage.setItem("stafly-active-mode", mode);
+  }, []);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -68,20 +95,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (roleError) throw roleError;
 
       const rolePriority: AppRole[] = ["developer", "owner", "admin", "manager", "supervisor", "employee", null];
-      const availableRoles = new Set((roleRows ?? []).map((row) => row.role as Exclude<AppRole, null>));
-      let resolvedRole = rolePriority.find(
-        (candidate) => candidate && availableRoles.has(candidate)
-      ) ?? null;
+      const availableRoles = new Set((roleRows ?? []).map((row) => row.role as string));
 
       const { data: empData } = await supabase
         .from("employees")
         .select("id, is_active")
         .eq("user_id", userId)
+        .eq("is_active", true)
         .maybeSingle();
 
-      if (!resolvedRole && empData?.id) {
-        resolvedRole = "employee";
+      // If has employee profile, add employee to role set
+      if (empData?.id) {
+        availableRoles.add("employee");
       }
+
+      setAllRoles(availableRoles);
+
+      // Resolve highest-priority role
+      let resolvedRole = rolePriority.find(
+        (candidate) => candidate && availableRoles.has(candidate)
+      ) ?? null;
 
       setRole(resolvedRole);
 
@@ -117,9 +150,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setEmployeeId(null);
         setEmployeeActive(true);
       }
+
+      // Auto-set active mode based on what access user has
+      const hasAdminRole = [...availableRoles].some(r => ADMIN_ROLES.has(r));
+      const hasEmployeeProfile = !!empData?.id;
+      const savedMode = localStorage.getItem("stafly-active-mode") as ActiveMode | null;
+
+      if (savedMode === 'employee' && hasEmployeeProfile) {
+        setActiveModeState('employee');
+      } else if (savedMode === 'admin' && hasAdminRole) {
+        setActiveModeState('admin');
+      } else if (hasAdminRole) {
+        setActiveModeState('admin');
+      } else if (hasEmployeeProfile) {
+        setActiveModeState('employee');
+      }
     } catch (err) {
       if (import.meta.env.DEV) console.error('Error fetching user data:', err);
       setRole(null);
+      setAllRoles(new Set());
       setEmployeeId(null);
       setPermissions([]);
       setActionPermissions([]);
@@ -138,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }, 0);
         } else {
           setRole(null);
+          setAllRoles(new Set());
           setEmployeeId(null);
           setPermissions([]);
           setLoading(false);
@@ -160,17 +210,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Sign out error:", err);
     }
-    // Always clear local state
     setUser(null);
     setSession(null);
     setRole(null);
+    setAllRoles(new Set());
     setEmployeeId(null);
     setPermissions([]);
     setActionPermissions([]);
     setFullName(null);
-    // Force redirect to auth page
     window.location.href = "/";
   };
+
+  const canAccessAdmin = [...allRoles].some(r => ADMIN_ROLES.has(r));
+  const canAccessPortal = !!employeeId;
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
     if (role === 'developer' || role === 'owner' || role === 'admin') return true;
@@ -194,7 +246,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, employeeId, employeeActive, fullName, loading, permissions, actionPermissions, signOut, hasModuleAccess, hasActionPermission }}>
+    <AuthContext.Provider value={{
+      user, session, role, allRoles, activeMode, setActiveMode,
+      canAccessAdmin, canAccessPortal,
+      employeeId, employeeActive, fullName, loading,
+      permissions, actionPermissions, signOut, hasModuleAccess, hasActionPermission,
+    }}>
       {children}
     </AuthContext.Provider>
   );
