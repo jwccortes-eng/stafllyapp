@@ -143,9 +143,9 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     }
   };
 
-  const handleRemove = (cuId: string) => {
+  const handleRemove = (cuId: string, cuRole: string) => {
     setGuardTitle("Remover usuario de " + companyName);
-    setGuardAction(() => () => doRemove(cuId));
+    setGuardAction(() => () => doRemove(cuId, cuRole));
   };
 
   const doRoleChange = async (cuId: string, newRole: string) => {
