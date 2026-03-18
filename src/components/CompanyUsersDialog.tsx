@@ -176,6 +176,7 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
 
   const roleColor = (role: string) => {
     switch (role) {
+      case "company_owner": return "bg-chart-5/10 text-chart-5 border-chart-5/20";
       case "admin": return "bg-primary/10 text-primary border-primary/20";
       case "manager": return "bg-chart-4/10 text-chart-4 border-chart-4/20";
       default: return "bg-muted text-muted-foreground border-border";
