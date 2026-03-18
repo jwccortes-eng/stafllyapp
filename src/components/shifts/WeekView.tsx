@@ -1,10 +1,10 @@
-import { isSameDay } from "date-fns";
-import { format } from "date-fns";
+import { useMemo } from "react";
+import { isSameDay, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Plus } from "lucide-react";
-import { ShiftCard } from "./ShiftCard";
-import type { Shift, Assignment, SelectOption } from "./types";
+import { Plus, Clock, CheckCircle2 } from "lucide-react";
+import { buildPastelMap, ASSIGNMENT_STATUS_CONFIG } from "./pastel-utils";
+import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
 interface WeekViewProps {
   weekDays: Date[];
@@ -12,127 +12,155 @@ interface WeekViewProps {
   assignments: Assignment[];
   locations: SelectOption[];
   clients: SelectOption[];
+  employees?: Employee[];
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
   onDuplicateToDay?: (shiftData: any, targetDate: string) => void;
   onAddShift?: (date: string) => void;
 }
 
-export function WeekView({ weekDays, shifts, assignments, locations, clients, onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift }: WeekViewProps) {
+const MAX_PILLS = 4;
+
+export function WeekView({
+  weekDays, shifts, assignments, locations, clients, employees = [],
+  onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift,
+}: WeekViewProps) {
   const getShiftsForDay = (day: Date) =>
     shifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
 
-  const getAssignmentCount = (shiftId: string) =>
-    assignments.filter(a => a.shift_id === shiftId).length;
+  const getEmployeeName = (empId: string) => {
+    const emp = employees.find(e => e.id === empId);
+    return emp ? emp.first_name : "—";
+  };
 
-  const getLocationName = (id: string | null) => locations.find(l => l.id === id)?.name;
-  const getClientName = (id: string | null) => clients.find(c => c.id === id)?.name;
-  const clientIds = clients.map(c => c.id);
+  // Stable pastel color per employee
+  const empIds = useMemo(() => employees.map(e => e.id), [employees]);
+  const colorMap = useMemo(() => buildPastelMap(empIds), [empIds]);
+
+  // Build day → pills data
+  const dayData = useMemo(() => {
+    return weekDays.map(day => {
+      const dayShifts = getShiftsForDay(day);
+      const dayAssigns = dayShifts.flatMap(s =>
+        assignments.filter(a => a.shift_id === s.id).map(a => ({
+          ...a,
+          shift: s,
+        }))
+      );
+      return { date: day, dateStr: format(day, "yyyy-MM-dd"), shifts: dayShifts, assigns: dayAssigns };
+    });
+  }, [weekDays, shifts, assignments]);
 
   const handleDayDrop = (e: React.DragEvent, day: Date) => {
     e.preventDefault();
     e.currentTarget.classList.remove("ring-2", "ring-primary/30", "bg-primary/5");
     const action = e.dataTransfer.getData("application/shift-action");
     const shiftDataStr = e.dataTransfer.getData("application/shift-data");
-    const assignmentData = e.dataTransfer.getData("application/assignment");
-
     if (action === "duplicate" && shiftDataStr && onDuplicateToDay) {
-      const shiftData = JSON.parse(shiftDataStr);
-      onDuplicateToDay(shiftData, format(day, "yyyy-MM-dd"));
-    } else if (assignmentData) {
-      // Existing assignment drop on a shift — handled per-shift below
+      onDuplicateToDay(JSON.parse(shiftDataStr), format(day, "yyyy-MM-dd"));
     }
   };
 
   return (
-    <div className="grid grid-cols-7 gap-3">
-      {weekDays.map(day => {
-        const dayShifts = getShiftsForDay(day);
-        const isToday = isSameDay(day, new Date());
-        return (
-          <div
-            key={day.toISOString()}
-            className={cn(
-              "min-h-[170px] rounded-xl transition-colors",
-              isToday && "bg-primary/[0.03]"
-            )}
-            onDragOver={e => {
-              e.preventDefault();
-              const action = e.dataTransfer.types.includes("application/shift-action") ? "shift" : "";
-              if (action) e.currentTarget.classList.add("ring-2", "ring-primary/30", "bg-primary/5");
-            }}
-            onDragLeave={e => { e.currentTarget.classList.remove("ring-2", "ring-primary/30", "bg-primary/5"); }}
-            onDrop={e => handleDayDrop(e, day)}
-          >
-            <div className={cn(
-              "text-center mb-3 py-2 rounded-xl transition-colors",
-              isToday ? "bg-primary/[0.08]" : ""
-            )}>
-              <div className={cn(
-                "text-[9px] font-semibold uppercase tracking-[0.08em]",
-                isToday ? "text-primary" : "text-muted-foreground/50"
+    <div className="overflow-x-auto">
+      <div className="grid grid-cols-7 gap-px min-w-[600px]">
+        {/* Day headers */}
+        {dayData.map(d => {
+          const isToday = isSameDay(d.date, new Date());
+          return (
+            <div key={d.dateStr} className="text-center pb-4">
+              <p className={cn(
+                "text-xs font-semibold uppercase tracking-wider",
+                isToday ? "text-primary" : "text-muted-foreground/60"
               )}>
-                {format(day, "EEE", { locale: es })}
-              </div>
-              <div className={cn(
+                {format(d.date, "EEE", { locale: es })}
+              </p>
+              <p className={cn(
                 "text-lg font-bold mt-0.5 leading-none",
-                isToday ? "text-primary" : "text-foreground/75"
+                isToday ? "text-primary" : "text-foreground"
               )}>
-                {format(day, "d")}
-              </div>
-              <div className="text-[8px] text-muted-foreground/35 mt-0.5 font-medium">
-                {format(day, "MMM", { locale: es })}
-              </div>
+                {format(d.date, "d")}
+              </p>
             </div>
-            <div className="space-y-2">
-              {dayShifts.map(shift => (
-                <div
-                  key={shift.id}
-                  onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-2", "ring-primary/30", "rounded-xl"); }}
-                  onDragLeave={e => { e.currentTarget.classList.remove("ring-2", "ring-primary/30", "rounded-xl"); }}
-                  onDrop={e => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.currentTarget.classList.remove("ring-2", "ring-primary/30", "rounded-xl");
-                    const action = e.dataTransfer.getData("application/shift-action");
-                    const shiftDataStr = e.dataTransfer.getData("application/shift-data");
-                    if (action === "duplicate" && shiftDataStr && onDuplicateToDay) {
-                      onDuplicateToDay(JSON.parse(shiftDataStr), format(day, "yyyy-MM-dd"));
-                      return;
-                    }
-                    const data = e.dataTransfer.getData("application/assignment");
-                    if (data) onDropOnShift(shift.id, data);
-                  }}
-                >
-                  <ShiftCard
-                    shift={shift}
-                    assignmentCount={getAssignmentCount(shift.id)}
-                    locationName={getLocationName(shift.location_id)}
-                    clientName={getClientName(shift.client_id)}
-                    clientIds={clientIds}
-                    onClick={() => onShiftClick(shift)}
-                    compact
-                    draggable
-                  />
-                </div>
-              ))}
-              {dayShifts.length === 0 && !onAddShift && (
-                <div className="flex items-center justify-center pt-8">
-                  <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/15" />
-                </div>
+          );
+        })}
+
+        {/* Pill columns */}
+        {dayData.map(d => {
+          const isToday = isSameDay(d.date, new Date());
+          return (
+            <div
+              key={`pills-${d.dateStr}`}
+              className={cn(
+                "space-y-1.5 px-1 min-h-[140px] rounded-xl transition-colors",
+                isToday && "bg-primary/[0.02]"
               )}
-              {onAddShift && (
+              onDragOver={e => {
+                e.preventDefault();
+                e.currentTarget.classList.add("ring-2", "ring-primary/30", "bg-primary/5");
+              }}
+              onDragLeave={e => {
+                e.currentTarget.classList.remove("ring-2", "ring-primary/30", "bg-primary/5");
+              }}
+              onDrop={e => handleDayDrop(e, d.date)}
+            >
+              {d.assigns.length === 0 && d.shifts.length === 0 ? (
+                onAddShift ? (
+                  <button
+                    onClick={() => onAddShift(d.dateStr)}
+                    className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-lg py-6 transition-all"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                ) : (
+                  <div className="h-full" />
+                )
+              ) : (
+                <>
+                  {d.assigns.slice(0, MAX_PILLS).map(a => {
+                    const pillClass = colorMap.get(a.employee_id) || "pastel-pill-sky";
+                    const statusDot = ASSIGNMENT_STATUS_CONFIG[a.status]?.dotClass || "bg-amber-400";
+                    return (
+                      <div
+                        key={a.id}
+                        className={cn("pastel-pill w-full", pillClass)}
+                        onClick={() => onShiftClick(a.shift)}
+                      >
+                        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", statusDot)} />
+                        <span className="truncate flex-1">{getEmployeeName(a.employee_id)}</span>
+                      </div>
+                    );
+                  })}
+                  {/* Unassigned shifts with no workers */}
+                  {d.shifts.filter(s => !d.assigns.some(a => a.shift.id === s.id)).slice(0, 2).map(s => (
+                    <div
+                      key={s.id}
+                      className="pastel-pill w-full pastel-pill-rose opacity-70"
+                      onClick={() => onShiftClick(s)}
+                    >
+                      <Clock className="h-3 w-3 shrink-0" />
+                      <span className="truncate flex-1">{s.start_time.slice(0, 5)}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+              {d.assigns.length > MAX_PILLS && (
+                <p className="text-[10px] text-muted-foreground/50 text-center font-medium pt-0.5">
+                  +{d.assigns.length - MAX_PILLS} más
+                </p>
+              )}
+              {onAddShift && d.assigns.length > 0 && (
                 <button
-                  onClick={() => onAddShift(format(day, "yyyy-MM-dd"))}
-                  className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/40 hover:text-primary hover:bg-primary/5 rounded-lg py-1.5 mt-1 transition-all"
+                  onClick={() => onAddShift(d.dateStr)}
+                  className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all"
                 >
-                  <Plus className="h-3 w-3" /> Agregar
+                  <Plus className="h-2.5 w-2.5" />
                 </button>
               )}
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
