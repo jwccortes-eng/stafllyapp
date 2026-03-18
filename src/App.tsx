@@ -217,6 +217,7 @@ function App() {
                 <Route path="passport" element={<WorkerPassport />} />
                 <Route path="attendance" element={<Attendance />} />
                 <Route path="quality" element={<QualityDashboard />} />
+                <Route path="migration" element={<MigrationCommandCenter />} />
               </Route>
 
               {/* Employee portal routes */}

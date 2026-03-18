@@ -130,8 +130,8 @@ export default function MigrationOverview({ stats, loading, onRefresh }: Props) 
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             <div className="flex justify-between"><span>Total</span><span className="font-medium">{stats.clockCounts.total}</span></div>
-            <div className="flex justify-between"><span>Matched</span><span className="text-primary font-medium">{stats.clockCounts.matched}</span></div>
-            <div className="flex justify-between"><span>Orphan Clocks</span><span className="text-amber-600">{stats.clockCounts.orphan}</span></div>
+          <div className="flex justify-between"><span>Matched</span><span className="text-primary font-medium">{stats.clockCounts.matched}</span></div>
+            <div className="flex justify-between"><span>Orphan Clocks</span><span className="text-muted-foreground">{stats.clockCounts.orphan}</span></div>
             <div className="flex justify-between"><span>Duration Mismatch</span><span className="text-destructive">{stats.clockCounts.mismatch}</span></div>
           </CardContent>
         </Card>
