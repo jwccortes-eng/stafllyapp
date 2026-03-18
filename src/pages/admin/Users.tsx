@@ -301,7 +301,7 @@ export default function UsersPage() {
   const atAdminLimit = !canAddAdmins(adminCount);
 
   const fetchUsers = async () => {
-    const [profilesRes, rolesRes, permsRes, companyUsersRes, subsRes, modulesRes, redemptionsRes, promoCodesRes] = await Promise.all([
+    const [profilesRes, rolesRes, permsRes, companyUsersRes, subsRes, modulesRes, redemptionsRes, promoCodesRes, employeesRes] = await Promise.all([
       supabase.from("profiles").select("user_id, email, full_name"),
       supabase.from("user_roles").select("user_id, role"),
       supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete"),
@@ -310,6 +310,7 @@ export default function UsersPage() {
       supabase.from("company_modules").select("company_id, module, is_active"),
       supabase.from("promo_redemptions").select("company_id, promo_codes(code, modules)"),
       supabase.from("promo_codes").select("*").order("created_at", { ascending: false }),
+      supabase.from("employees").select("id, user_id, first_name, last_name, is_active"),
     ]);
 
     const profiles = profilesRes.data ?? [];
@@ -319,12 +320,19 @@ export default function UsersPage() {
     const subs = subsRes.data ?? [];
     const modules = modulesRes.data ?? [];
     const redemptions = redemptionsRes.data ?? [];
+    const employees = employeesRes.data ?? [];
 
     setPromoCodes((promoCodesRes.data ?? []) as unknown as PromoCode[]);
+
+    const ADMIN_ROLE_SET = new Set(['developer', 'owner', 'admin', 'manager', 'supervisor']);
 
     const userList: UserRecord[] = profiles.map(p => {
       const roleRec = roles.find(r => r.user_id === p.user_id);
       const userPerms = perms.filter(pm => pm.user_id === p.user_id);
+      const resolvedRole = (roleRec?.role as RoleType) ?? "employee";
+
+      // Employee profile linkage
+      const linkedEmployee = employees.find(e => e.user_id === p.user_id);
 
       // Build company assignments
       const userCompanies = companyUsers
@@ -354,9 +362,14 @@ export default function UsersPage() {
         user_id: p.user_id,
         email: p.email ?? "",
         full_name: p.full_name ?? "",
-        role: (roleRec?.role as RoleType) ?? "employee",
+        role: resolvedRole,
         permissions: userPerms,
         companies: userCompanies,
+        employee_id: linkedEmployee?.id ?? null,
+        employee_name: linkedEmployee ? `${linkedEmployee.first_name} ${linkedEmployee.last_name}` : null,
+        employee_active: linkedEmployee?.is_active ?? false,
+        has_admin_access: ADMIN_ROLE_SET.has(resolvedRole),
+        has_employee_access: !!linkedEmployee,
       };
     });
 
