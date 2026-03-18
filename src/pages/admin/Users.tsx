@@ -219,6 +219,31 @@ function UserRow({ u, onEdit, onResetPw, onDelete }: {
         {/* Expanded detail */}
         <CollapsibleContent>
           <div className="border-t border-border/50 px-4 py-3 space-y-3">
+            {/* Access summary */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground font-medium">Acceso:</span>
+                {u.has_admin_access && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                    <Shield className="h-3 w-3" />Panel Admin
+                  </span>
+                )}
+                {u.has_employee_access && (
+                  <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold", u.employee_active ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-muted text-muted-foreground")}>
+                    <User className="h-3 w-3" />Portal Empleado {!u.employee_active && "(inactivo)"}
+                  </span>
+                )}
+                {!u.has_admin_access && !u.has_employee_access && (
+                  <span className="text-muted-foreground italic">Sin acceso configurado</span>
+                )}
+              </div>
+              {u.employee_id && (
+                <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <Link2 className="h-3 w-3" />Perfil: {u.employee_name}
+                </span>
+              )}
+            </div>
+
             {u.companies.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">Sin empresas asignadas</p>
             ) : (
