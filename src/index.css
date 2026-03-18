@@ -185,6 +185,32 @@
     --info-foreground: 0 0% 100%;
     --primary-hover: 212 95% 55%;
 
+    /* Pastel palette — dark */
+    --pastel-rose: 350 40% 22%;
+    --pastel-rose-text: 350 60% 72%;
+    --pastel-green: 145 35% 20%;
+    --pastel-green-text: 145 50% 65%;
+    --pastel-yellow: 45 45% 20%;
+    --pastel-yellow-text: 40 70% 68%;
+    --pastel-violet: 270 35% 22%;
+    --pastel-violet-text: 270 50% 72%;
+    --pastel-sky: 200 40% 20%;
+    --pastel-sky-text: 200 60% 68%;
+    --pastel-pink: 320 35% 22%;
+    --pastel-pink-text: 320 50% 72%;
+    --pastel-teal: 175 35% 18%;
+    --pastel-teal-text: 175 50% 62%;
+    --pastel-orange: 25 45% 20%;
+    --pastel-orange-text: 25 70% 70%;
+    --pastel-indigo: 235 35% 22%;
+    --pastel-indigo-text: 235 50% 72%;
+    --pastel-cyan: 185 35% 18%;
+    --pastel-cyan-text: 185 55% 65%;
+    --pastel-peach: 15 40% 22%;
+    --pastel-peach-text: 15 60% 72%;
+    --pastel-mint: 160 35% 18%;
+    --pastel-mint-text: 160 50% 62%;
+
     /* Surface elevation - dark */
     --surface-1: 220 20% 10%;
     --surface-2: 220 18% 13%;
