@@ -257,7 +257,7 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Select value={cu.role} onValueChange={(v) => handleRoleChange(cu.id, v)}>
+                      <Select value={cu.role} onValueChange={(v) => handleRoleChange(cu.id, cu.role, v)}>
                         <SelectTrigger className="h-7 text-xs w-28">
                           <SelectValue />
                         </SelectTrigger>
