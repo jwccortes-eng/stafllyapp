@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) throw roleError;
 
-      const rolePriority: AppRole[] = ["developer", "owner", "admin", "manager", "supervisor", "employee", null];
+      const rolePriority: AppRole[] = ["developer", "owner", "company_owner", "admin", "manager", "supervisor", "employee", null];
       const availableRoles = new Set((roleRows ?? []).map((row) => row.role as string));
 
       const { data: empData } = await supabase
