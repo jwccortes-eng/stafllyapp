@@ -25,6 +25,16 @@ export function WeekView({
   weekDays, shifts, assignments, locations, clients, employees = [],
   onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift,
 }: WeekViewProps) {
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+
+  const toggleExpand = useCallback((dateStr: string) => {
+    setExpandedDays(prev => {
+      const next = new Set(prev);
+      next.has(dateStr) ? next.delete(dateStr) : next.add(dateStr);
+      return next;
+    });
+  }, []);
+
   const getShiftsForDay = (day: Date) =>
     shifts.filter(s => isSameDay(new Date(s.date + "T00:00:00"), day));
 
@@ -88,6 +98,10 @@ export function WeekView({
         {/* Pill columns */}
         {dayData.map(d => {
           const isToday = isSameDay(d.date, new Date());
+          const isExpanded = expandedDays.has(d.dateStr);
+          const maxPills = isExpanded ? Infinity : DEFAULT_MAX_PILLS;
+          const overflow = d.assigns.length - DEFAULT_MAX_PILLS;
+
           return (
             <div
               key={`pills-${d.dateStr}`}
@@ -117,7 +131,7 @@ export function WeekView({
                 )
               ) : (
                 <>
-                  {d.assigns.slice(0, MAX_PILLS).map(a => {
+                  {d.assigns.slice(0, maxPills).map(a => {
                     const pillClass = colorMap.get(a.employee_id) || "pastel-pill-sky";
                     const statusDot = ASSIGNMENT_STATUS_CONFIG[a.status]?.dotClass || "bg-amber-400";
                     return (
@@ -144,10 +158,13 @@ export function WeekView({
                   ))}
                 </>
               )}
-              {d.assigns.length > MAX_PILLS && (
-                <p className="text-[10px] text-muted-foreground/50 text-center font-medium pt-0.5">
-                  +{d.assigns.length - MAX_PILLS} más
-                </p>
+              {overflow > 0 && (
+                <button
+                  onClick={() => toggleExpand(d.dateStr)}
+                  className="w-full text-[10px] text-primary/70 hover:text-primary font-semibold text-center py-1 rounded-lg hover:bg-primary/5 transition-colors cursor-pointer"
+                >
+                  {isExpanded ? "− Ver menos" : `+${overflow} más`}
+                </button>
               )}
               {onAddShift && d.assigns.length > 0 && (
                 <button
