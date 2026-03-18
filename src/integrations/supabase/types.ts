@@ -6430,6 +6430,14 @@ export type Database = {
         Args: { _worker_profile_id: string }
         Returns: undefined
       }
+      recalculate_review_score: {
+        Args: {
+          _company_id: string
+          _entity_id: string
+          _entity_type: Database["public"]["Enums"]["review_entity_type"]
+        }
+        Returns: undefined
+      }
       user_company_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
