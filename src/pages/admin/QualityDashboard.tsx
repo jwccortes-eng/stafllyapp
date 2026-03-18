@@ -130,7 +130,7 @@ export default function QualityDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Calidad y Evaluaciones" description="Motor de evaluaciones bidireccionales con muestreo inteligente" />
+        <PageHeader title="Calidad y Evaluaciones" subtitle="Motor de evaluaciones bidireccionales con muestreo inteligente" />
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-24 rounded-xl bg-muted/30 animate-pulse" />
