@@ -235,7 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const canAccessPortal = !!employeeId;
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
-    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
     if (role === 'manager' || role === 'supervisor') {
       const perm = permissions.find(p => p.module === module);
       if (!perm) return false;
