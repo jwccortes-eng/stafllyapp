@@ -185,10 +185,8 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
     fetchWeek();
   }, [companyId]);
 
-  const { buildPastelMap: buildMap } = await import("@/components/shifts/pastel-utils").then(m => ({ buildPastelMap: m.buildPastelMap }));
-
   const employeeColorMap = useMemo(() => {
-    return buildMap(employees.map(e => e.id));
+    return buildPastelMap(employees.map(e => e.id));
   }, [employees]);
 
   const getEmployeeName = (empId: string) => {
