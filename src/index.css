@@ -45,6 +45,32 @@
     --status-paid: 158 64% 48%;
     --status-overdue: 28 100% 54%;
 
+    /* Pastel palette — scheduling module */
+    --pastel-rose: 350 80% 92%;
+    --pastel-rose-text: 350 60% 45%;
+    --pastel-green: 145 60% 90%;
+    --pastel-green-text: 145 50% 35%;
+    --pastel-yellow: 45 90% 90%;
+    --pastel-yellow-text: 40 70% 38%;
+    --pastel-violet: 270 60% 92%;
+    --pastel-violet-text: 270 50% 42%;
+    --pastel-sky: 200 80% 92%;
+    --pastel-sky-text: 200 60% 38%;
+    --pastel-pink: 320 60% 92%;
+    --pastel-pink-text: 320 50% 42%;
+    --pastel-teal: 175 55% 90%;
+    --pastel-teal-text: 175 50% 32%;
+    --pastel-orange: 25 85% 91%;
+    --pastel-orange-text: 25 70% 40%;
+    --pastel-indigo: 235 60% 92%;
+    --pastel-indigo-text: 235 50% 42%;
+    --pastel-cyan: 185 65% 90%;
+    --pastel-cyan-text: 185 55% 35%;
+    --pastel-peach: 15 80% 92%;
+    --pastel-peach-text: 15 60% 42%;
+    --pastel-mint: 160 55% 90%;
+    --pastel-mint-text: 160 50% 32%;
+
     --secondary: 216 20% 95%;
     --secondary-foreground: 220 25% 12%;
 
@@ -158,6 +184,32 @@
     --info: 210 80% 62%;
     --info-foreground: 0 0% 100%;
     --primary-hover: 212 95% 55%;
+
+    /* Pastel palette — dark */
+    --pastel-rose: 350 40% 22%;
+    --pastel-rose-text: 350 60% 72%;
+    --pastel-green: 145 35% 20%;
+    --pastel-green-text: 145 50% 65%;
+    --pastel-yellow: 45 45% 20%;
+    --pastel-yellow-text: 40 70% 68%;
+    --pastel-violet: 270 35% 22%;
+    --pastel-violet-text: 270 50% 72%;
+    --pastel-sky: 200 40% 20%;
+    --pastel-sky-text: 200 60% 68%;
+    --pastel-pink: 320 35% 22%;
+    --pastel-pink-text: 320 50% 72%;
+    --pastel-teal: 175 35% 18%;
+    --pastel-teal-text: 175 50% 62%;
+    --pastel-orange: 25 45% 20%;
+    --pastel-orange-text: 25 70% 70%;
+    --pastel-indigo: 235 35% 22%;
+    --pastel-indigo-text: 235 50% 72%;
+    --pastel-cyan: 185 35% 18%;
+    --pastel-cyan-text: 185 55% 65%;
+    --pastel-peach: 15 40% 22%;
+    --pastel-peach-text: 15 60% 72%;
+    --pastel-mint: 160 35% 18%;
+    --pastel-mint-text: 160 50% 62%;
 
     /* Surface elevation - dark */
     --surface-1: 220 20% 10%;
@@ -306,6 +358,25 @@
   .info-badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/15 text-primary;
   }
+
+  /* ── Pastel pills — scheduling module ── */
+  .pastel-pill {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all cursor-pointer;
+    @apply hover:opacity-80 active:scale-[0.98];
+  }
+
+  .pastel-pill-rose { background: hsl(var(--pastel-rose)); color: hsl(var(--pastel-rose-text)); }
+  .pastel-pill-green { background: hsl(var(--pastel-green)); color: hsl(var(--pastel-green-text)); }
+  .pastel-pill-yellow { background: hsl(var(--pastel-yellow)); color: hsl(var(--pastel-yellow-text)); }
+  .pastel-pill-violet { background: hsl(var(--pastel-violet)); color: hsl(var(--pastel-violet-text)); }
+  .pastel-pill-sky { background: hsl(var(--pastel-sky)); color: hsl(var(--pastel-sky-text)); }
+  .pastel-pill-pink { background: hsl(var(--pastel-pink)); color: hsl(var(--pastel-pink-text)); }
+  .pastel-pill-teal { background: hsl(var(--pastel-teal)); color: hsl(var(--pastel-teal-text)); }
+  .pastel-pill-orange { background: hsl(var(--pastel-orange)); color: hsl(var(--pastel-orange-text)); }
+  .pastel-pill-indigo { background: hsl(var(--pastel-indigo)); color: hsl(var(--pastel-indigo-text)); }
+  .pastel-pill-cyan { background: hsl(var(--pastel-cyan)); color: hsl(var(--pastel-cyan-text)); }
+  .pastel-pill-peach { background: hsl(var(--pastel-peach)); color: hsl(var(--pastel-peach-text)); }
+  .pastel-pill-mint { background: hsl(var(--pastel-mint)); color: hsl(var(--pastel-mint-text)); }
 
   /* ── Glass & Gradients ── */
   .glass {

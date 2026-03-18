@@ -181,12 +181,12 @@ export function ShiftCard({
                       key={i}
                       variant={b.variant as any}
                       className={cn(
-                        "text-[7px] px-1.5 py-0 h-3.5 font-bold uppercase tracking-wider leading-none rounded-full",
-                        b.variant === "warning" && "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border-0",
-                        b.variant === "destructive" && "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 border-0",
-                        b.variant === "default" && "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 border-0",
-                        b.variant === "secondary" && "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-0",
-                        b.variant === "outline" && "bg-muted/50 text-muted-foreground/60 border-border/30",
+                        "text-[7px] px-1.5 py-0 h-3.5 font-bold uppercase tracking-wider leading-none rounded-full border-0",
+                        b.variant === "warning" && "bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]",
+                        b.variant === "destructive" && "bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]",
+                        b.variant === "default" && "bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]",
+                        b.variant === "secondary" && "bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]",
+                        b.variant === "outline" && "bg-[hsl(var(--pastel-violet))] text-[hsl(var(--pastel-violet-text))]",
                       )}
                     >
                       {b.label}
@@ -195,7 +195,7 @@ export function ShiftCard({
                   {coverageStatus && coverageStatus.percent < 100 && (
                     <Badge
                       variant="outline"
-                      className="text-[7px] px-1.5 py-0 h-3.5 font-bold uppercase tracking-wider leading-none rounded-full bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800"
+                      className="text-[7px] px-1.5 py-0 h-3.5 font-bold uppercase tracking-wider leading-none rounded-full bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))] border-0"
                     >
                       <AlertTriangle className="h-2 w-2 mr-0.5" />
                       {coverageStatus.missing > 0 ? `${coverageStatus.missing} sin fichar` : `${coverageStatus.percent}%`}
