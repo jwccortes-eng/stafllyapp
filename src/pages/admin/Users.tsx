@@ -566,7 +566,7 @@ export default function UsersPage() {
         variant="5"
         icon={ShieldCheck}
         title="Gestión de Usuarios"
-        subtitle="Usuarios, empresas, permisos y códigos promocionales"
+        subtitle="Identidad única · Roles múltiples · Acceso dual admin/empleado"
         rightSlot={
           <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={exportUsersCsv} title="Exportar CSV">
