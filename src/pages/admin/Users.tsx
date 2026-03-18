@@ -794,8 +794,8 @@ export default function UsersPage() {
       <Dialog open={inviteOpen} onOpenChange={v => { setInviteOpen(v); if (!v) { setInviteEmail(""); setInviteName(""); setInvitePassword(""); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Invitar Administrador</DialogTitle>
-            <DialogDescription>Crea una cuenta con rol de admin o manager</DialogDescription>
+            <DialogTitle>Invitar Usuario</DialogTitle>
+            <DialogDescription>Crea una cuenta con acceso al panel administrativo</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1"><Label className="text-xs">Nombre completo</Label><Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Juan Pérez" className="h-9" /></div>
@@ -803,11 +803,12 @@ export default function UsersPage() {
             <div className="space-y-1"><Label className="text-xs">Contraseña</Label><Input type="password" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="h-9" /></div>
             <div className="space-y-1">
               <Label className="text-xs">Rol</Label>
-              <Select value={inviteRole} onValueChange={v => setInviteRole(v as "admin" | "manager")}>
+              <Select value={inviteRole} onValueChange={v => setInviteRole(v as "admin" | "manager" | "supervisor")}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="admin">Administrador — Acceso completo</SelectItem>
+                  <SelectItem value="manager">Manager — Permisos selectivos</SelectItem>
+                  <SelectItem value="supervisor">Supervisor — Permisos limitados</SelectItem>
                 </SelectContent>
               </Select>
             </div>
