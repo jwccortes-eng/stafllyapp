@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User,
   KeyRound, UserPlus, Smartphone, Mail, Building2, ChevronDown, ChevronRight,
-  Package, Ticket, Copy, Plus, ToggleLeft, Download,
+  Package, Ticket, Copy, Plus, ToggleLeft, Download, ArrowLeftRight, Link2, LinkIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
