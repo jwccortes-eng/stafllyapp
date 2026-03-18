@@ -124,7 +124,15 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     setGuardAction(() => doAdd);
   };
 
-  const doRemove = async (cuId: string) => {
+  const doRemove = async (cuId: string, cuRole: string) => {
+    // Prevent removing last company_owner
+    if (cuRole === 'company_owner') {
+      const ownerCount = companyUsers.filter(u => u.role === 'company_owner').length;
+      if (ownerCount <= 1) {
+        toast({ title: "No permitido", description: "No puedes remover al último Company Owner. Asigna un reemplazo primero.", variant: "destructive" });
+        return;
+      }
+    }
     const { error } = await supabase.from("company_users").delete().eq("id", cuId);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
