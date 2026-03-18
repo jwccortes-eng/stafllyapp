@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, UserCog, User } from "lucide-react";
+import { Trash2, Plus, Shield, UserCog, User, Crown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CompanyActionGuard from "@/components/CompanyActionGuard";
 
@@ -32,6 +32,7 @@ interface AvailableUser {
 }
 
 const ROLE_OPTIONS = [
+  { value: "company_owner", label: "Company Owner", icon: Crown },
   { value: "admin", label: "Admin", icon: Shield },
   { value: "manager", label: "Manager", icon: UserCog },
   { value: "employee", label: "Empleado", icon: User },
