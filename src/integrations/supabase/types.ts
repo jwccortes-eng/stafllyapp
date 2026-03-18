@@ -3632,6 +3632,402 @@ export type Database = {
           },
         ]
       }
+      review_dimension_scores: {
+        Row: {
+          category_key: string
+          created_at: string
+          id: string
+          rating: number
+          submission_id: string
+        }
+        Insert: {
+          category_key: string
+          created_at?: string
+          id?: string
+          rating: number
+          submission_id: string
+        }
+        Update: {
+          category_key?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_dimension_scores_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "review_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_flags: {
+        Row: {
+          company_id: string
+          created_at: string
+          flag_type: string
+          id: string
+          note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: Database["public"]["Enums"]["review_flag_severity"]
+          status: string
+          submission_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          flag_type: string
+          id?: string
+          note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: Database["public"]["Enums"]["review_flag_severity"]
+          status?: string
+          submission_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          flag_type?: string
+          id?: string
+          note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: Database["public"]["Enums"]["review_flag_severity"]
+          status?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_flags_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_flags_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "review_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_form_dimensions: {
+        Row: {
+          category_key: string
+          display_order: number
+          form_type: Database["public"]["Enums"]["review_form_type"]
+          id: string
+          is_active: boolean
+          label_en: string
+          label_es: string
+        }
+        Insert: {
+          category_key: string
+          display_order?: number
+          form_type: Database["public"]["Enums"]["review_form_type"]
+          id?: string
+          is_active?: boolean
+          label_en: string
+          label_es: string
+        }
+        Update: {
+          category_key?: string
+          display_order?: number
+          form_type?: Database["public"]["Enums"]["review_form_type"]
+          id?: string
+          is_active?: boolean
+          label_en?: string
+          label_es?: string
+        }
+        Relationships: []
+      }
+      review_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          deadline_at: string
+          evaluated_entity_id: string
+          evaluated_entity_type: Database["public"]["Enums"]["review_entity_type"]
+          evaluated_role: string | null
+          evaluator_employee_id: string | null
+          evaluator_user_id: string | null
+          id: string
+          priority: number
+          review_form_type: Database["public"]["Enums"]["review_form_type"]
+          sampling_reason: string | null
+          source_event_id: string
+          source_event_type: string
+          source_product: Database["public"]["Enums"]["review_product"]
+          status: Database["public"]["Enums"]["review_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          deadline_at: string
+          evaluated_entity_id: string
+          evaluated_entity_type: Database["public"]["Enums"]["review_entity_type"]
+          evaluated_role?: string | null
+          evaluator_employee_id?: string | null
+          evaluator_user_id?: string | null
+          id?: string
+          priority?: number
+          review_form_type: Database["public"]["Enums"]["review_form_type"]
+          sampling_reason?: string | null
+          source_event_id: string
+          source_event_type: string
+          source_product?: Database["public"]["Enums"]["review_product"]
+          status?: Database["public"]["Enums"]["review_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          deadline_at?: string
+          evaluated_entity_id?: string
+          evaluated_entity_type?: Database["public"]["Enums"]["review_entity_type"]
+          evaluated_role?: string | null
+          evaluator_employee_id?: string | null
+          evaluator_user_id?: string | null
+          id?: string
+          priority?: number
+          review_form_type?: Database["public"]["Enums"]["review_form_type"]
+          sampling_reason?: string | null
+          source_event_id?: string
+          source_event_type?: string
+          source_product?: Database["public"]["Enums"]["review_product"]
+          status?: Database["public"]["Enums"]["review_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_requests_evaluator_employee_id_fkey"
+            columns: ["evaluator_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_requests_evaluator_employee_id_fkey"
+            columns: ["evaluator_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_sampling_config: {
+        Row: {
+          base_sample_rate: number
+          company_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          incident_boost: number
+          low_score_boost: number
+          min_interval_days: number
+          new_entity_boost: number
+          review_window_hours: number
+          source_product: Database["public"]["Enums"]["review_product"]
+          updated_at: string
+        }
+        Insert: {
+          base_sample_rate?: number
+          company_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          incident_boost?: number
+          low_score_boost?: number
+          min_interval_days?: number
+          new_entity_boost?: number
+          review_window_hours?: number
+          source_product?: Database["public"]["Enums"]["review_product"]
+          updated_at?: string
+        }
+        Update: {
+          base_sample_rate?: number
+          company_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          incident_boost?: number
+          low_score_boost?: number
+          min_interval_days?: number
+          new_entity_boost?: number
+          review_window_hours?: number
+          source_product?: Database["public"]["Enums"]["review_product"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_sampling_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_scores: {
+        Row: {
+          company_id: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["review_entity_type"]
+          id: string
+          last_review_at: string | null
+          score_count: number
+          score_type: string
+          score_value: number
+          trend: string | null
+          updated_at: string
+          weighted_score: number | null
+        }
+        Insert: {
+          company_id: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["review_entity_type"]
+          id?: string
+          last_review_at?: string | null
+          score_count?: number
+          score_type?: string
+          score_value?: number
+          trend?: string | null
+          updated_at?: string
+          weighted_score?: number | null
+        }
+        Update: {
+          company_id?: string
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["review_entity_type"]
+          id?: string
+          last_review_at?: string | null
+          score_count?: number
+          score_type?: string
+          score_value?: number
+          trend?: string | null
+          updated_at?: string
+          weighted_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_scores_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_submissions: {
+        Row: {
+          comment: string | null
+          company_id: string
+          created_at: string
+          evaluated_entity_id: string
+          evaluated_entity_type: Database["public"]["Enums"]["review_entity_type"]
+          evaluated_role: string | null
+          evaluator_employee_id: string | null
+          evaluator_user_id: string
+          id: string
+          low_rating_reason: string | null
+          low_rating_reasons: string[] | null
+          overall_rating: number
+          review_form_type: Database["public"]["Enums"]["review_form_type"]
+          review_request_id: string | null
+          source_event_id: string | null
+          source_event_type: string | null
+          source_product: Database["public"]["Enums"]["review_product"]
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          company_id: string
+          created_at?: string
+          evaluated_entity_id: string
+          evaluated_entity_type: Database["public"]["Enums"]["review_entity_type"]
+          evaluated_role?: string | null
+          evaluator_employee_id?: string | null
+          evaluator_user_id: string
+          id?: string
+          low_rating_reason?: string | null
+          low_rating_reasons?: string[] | null
+          overall_rating: number
+          review_form_type: Database["public"]["Enums"]["review_form_type"]
+          review_request_id?: string | null
+          source_event_id?: string | null
+          source_event_type?: string | null
+          source_product?: Database["public"]["Enums"]["review_product"]
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          company_id?: string
+          created_at?: string
+          evaluated_entity_id?: string
+          evaluated_entity_type?: Database["public"]["Enums"]["review_entity_type"]
+          evaluated_role?: string | null
+          evaluator_employee_id?: string | null
+          evaluator_user_id?: string
+          id?: string
+          low_rating_reason?: string | null
+          low_rating_reasons?: string[] | null
+          overall_rating?: number
+          review_form_type?: Database["public"]["Enums"]["review_form_type"]
+          review_request_id?: string | null
+          source_event_id?: string | null
+          source_event_type?: string | null
+          source_product?: Database["public"]["Enums"]["review_product"]
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_submissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_submissions_evaluator_employee_id_fkey"
+            columns: ["evaluator_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_submissions_evaluator_employee_id_fkey"
+            columns: ["evaluator_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_submissions_review_request_id_fkey"
+            columns: ["review_request_id"]
+            isOneToOne: true
+            referencedRelation: "review_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_templates: {
         Row: {
           actions: string[]
@@ -6098,6 +6494,32 @@ export type Database = {
         | "cancellation"
         | "completion_bonus"
         | "manual_adjustment"
+      review_entity_type:
+        | "employee"
+        | "captain"
+        | "supervisor"
+        | "shift"
+        | "client"
+        | "worker"
+        | "location"
+      review_flag_severity: "low" | "medium" | "high" | "critical"
+      review_form_type:
+        | "captain_to_employee"
+        | "employee_to_captain"
+        | "employee_to_shift"
+        | "captain_to_shift"
+        | "admin_to_employee"
+        | "client_to_worker"
+        | "worker_to_client"
+        | "service_experience"
+      review_product: "stafly" | "parceros"
+      review_status:
+        | "generated"
+        | "pending"
+        | "submitted"
+        | "expired"
+        | "dismissed"
+        | "flagged"
       service_zone_type: "radius" | "polygon" | "city" | "county" | "state"
       staffing_request_status:
         | "draft"
@@ -6314,6 +6736,35 @@ export const Constants = {
         "cancellation",
         "completion_bonus",
         "manual_adjustment",
+      ],
+      review_entity_type: [
+        "employee",
+        "captain",
+        "supervisor",
+        "shift",
+        "client",
+        "worker",
+        "location",
+      ],
+      review_flag_severity: ["low", "medium", "high", "critical"],
+      review_form_type: [
+        "captain_to_employee",
+        "employee_to_captain",
+        "employee_to_shift",
+        "captain_to_shift",
+        "admin_to_employee",
+        "client_to_worker",
+        "worker_to_client",
+        "service_experience",
+      ],
+      review_product: ["stafly", "parceros"],
+      review_status: [
+        "generated",
+        "pending",
+        "submitted",
+        "expired",
+        "dismissed",
+        "flagged",
       ],
       service_zone_type: ["radius", "polygon", "city", "county", "state"],
       staffing_request_status: [
