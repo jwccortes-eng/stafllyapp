@@ -336,7 +336,7 @@ export default function UsersPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "manager">("admin");
+  const [inviteRole, setInviteRole] = useState<"admin" | "manager" | "supervisor">("admin");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
 
