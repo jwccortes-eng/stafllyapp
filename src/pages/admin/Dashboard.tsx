@@ -29,6 +29,7 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { PendingReviewsWidget } from "@/components/reviews/PendingReviewsWidget";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ErrorBlock } from "@/components/ui/error-block";
+import { MyShiftCard } from "@/components/dashboard/MyShiftCard";
 
 /* ─── animated counter hook ─── */
 function useAnimatedNumber(target: number, duration = 800) {
