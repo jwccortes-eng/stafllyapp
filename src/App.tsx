@@ -215,6 +215,7 @@ function App() {
                 <Route path="leaderboard" element={<Leaderboard />} />
                 <Route path="passport" element={<WorkerPassport />} />
                 <Route path="attendance" element={<Attendance />} />
+                <Route path="quality" element={<QualityDashboard />} />
               </Route>
 
               {/* Employee portal routes */}
