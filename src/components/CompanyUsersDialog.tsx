@@ -148,7 +148,15 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     setGuardAction(() => () => doRemove(cuId, cuRole));
   };
 
-  const doRoleChange = async (cuId: string, newRole: string) => {
+  const doRoleChange = async (cuId: string, oldRole: string, newRole: string) => {
+    // Prevent removing last company_owner via role change
+    if (oldRole === 'company_owner' && newRole !== 'company_owner') {
+      const ownerCount = companyUsers.filter(u => u.role === 'company_owner').length;
+      if (ownerCount <= 1) {
+        toast({ title: "No permitido", description: "No puedes cambiar el rol del último Company Owner. Asigna un reemplazo primero.", variant: "destructive" });
+        return;
+      }
+    }
     const { error } = await supabase
       .from("company_users")
       .update({ role: newRole } as any)
