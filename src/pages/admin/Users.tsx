@@ -454,7 +454,7 @@ export default function UsersPage() {
     }
     const { error: roleError } = await supabase.from("user_roles").update({ role: editRole } as any).eq("user_id", editUser.user_id);
     if (roleError) { toast({ title: "Error", description: getUserFriendlyError(roleError), variant: "destructive" }); setLoading(false); return; }
-    if (editRole === "manager") {
+    if (editRole === "manager" || editRole === "supervisor") {
       for (const mod of MODULES) {
         const perm = editPerms[mod.key];
         await supabase.from("module_permissions").upsert({ user_id: editUser.user_id, module: mod.key, can_view: perm.can_view, can_edit: perm.can_edit, can_delete: perm.can_delete } as any, { onConflict: "user_id,module" });
