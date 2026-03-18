@@ -335,6 +335,9 @@ export default function EmployeeDashboard() {
         )}
       </div>
 
+      {/* ── Pending Reviews ── */}
+      <PendingReviewPrompt />
+
       {/* ── Alerts ── */}
       {unreadAlerts > 0 && (
         <div className="rounded-2xl border border-warning/20 bg-warning/[0.04] p-4 flex items-center gap-3">
