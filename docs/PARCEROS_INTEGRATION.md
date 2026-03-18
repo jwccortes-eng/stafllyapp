@@ -36,7 +36,7 @@ Only public, verified, and worker-authorized data leaves StaflyApps.
 | Secret | Purpose | Where Used |
 |---|---|---|
 | `PARCEROS_API_KEY` | Authenticate all calls TO Parceros | `x-api-key` header on outbound |
-| `PARCEROS_BASE_URL` | Base URL of Parceros API (e.g. `https://api.parceros.com`) | URL construction |
+| `PARCEROS_BASE_URL` | Base URL of Parceros API (e.g. `https://api.parceros.app`) | URL construction |
 
 ---
 
