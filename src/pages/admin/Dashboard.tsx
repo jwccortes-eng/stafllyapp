@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { buildPastelMap, ASSIGNMENT_STATUS_CONFIG } from "@/components/shifts/pastel-utils";
 import {
   CalendarDays, Users, DollarSign, FileSpreadsheet,
   Upload, Tags, BarChart3, ArrowRight, TrendingUp,
