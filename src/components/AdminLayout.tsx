@@ -38,7 +38,7 @@ export function useSidebarCollapsed() {
 }
 
 export default function AdminLayout() {
-  const { user, role, loading, signOut, hasModuleAccess } = useAuth();
+  const { user, role, loading, signOut, hasModuleAccess, canAccessAdmin, canAccessPortal, employeeId } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
