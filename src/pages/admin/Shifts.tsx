@@ -999,6 +999,7 @@ export default function Shifts() {
               assignments={assignments}
               locations={locations}
               clients={clients}
+              employees={employees}
               onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
               onDropOnShift={handleDropOnShift}
               onDuplicateToDay={handleDuplicateToDay}
