@@ -43,7 +43,7 @@ interface AuthContextType {
   hasActionPermission: (action: string) => boolean;
 }
 
-const ADMIN_ROLES = new Set(['developer', 'owner', 'admin', 'manager', 'supervisor']);
+const ADMIN_ROLES = new Set(['developer', 'owner', 'company_owner', 'admin', 'manager', 'supervisor']);
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
