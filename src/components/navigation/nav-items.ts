@@ -3,7 +3,7 @@ import {
   BarChart3, Users, Tags, ContactRound, Building2,
   Clock, MapPin, Megaphone, MessageCircle, ScanEye, Inbox, Bell, Monitor,
   MessageSquare, Settings2, Home, User, Wrench, UserPlus, FileText, GitCompareArrows,
-  ClipboardList, Receipt, Brain, Map as MapIcon, Award, CalendarCheck,
+  ClipboardList, Receipt, Brain, Map as MapIcon, Award, CalendarCheck, ArrowLeftRight,
 } from "lucide-react";
 
 export interface NavItem {
