@@ -696,17 +696,40 @@ export default function UsersPage() {
               <div className="space-y-1"><Label className="text-xs">Email</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="h-9" /></div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Rol</Label>
+              <Label className="text-xs">Rol principal</Label>
               <Select value={editRole} onValueChange={v => setEditRole(v as RoleType)}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Administrador — Acceso completo</SelectItem>
                   <SelectItem value="manager">Manager — Permisos selectivos</SelectItem>
+                  <SelectItem value="supervisor">Supervisor — Permisos limitados</SelectItem>
                   <SelectItem value="employee">Empleado — Solo portal</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {editRole === "manager" && (
+
+            {/* Employee profile linkage info */}
+            {editUser && (
+              <div className="rounded-lg border border-border/50 bg-muted/30 p-3 space-y-1">
+                <p className="text-xs font-semibold flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  Perfil de empleado
+                </p>
+                {editUser.has_employee_access ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
+                      Vinculado
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{editUser.employee_name}</span>
+                    {!editUser.employee_active && <Badge variant="outline" className="text-[9px] text-destructive">Inactivo</Badge>}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Sin perfil de empleado vinculado. El usuario no podrá acceder al portal empleado.</p>
+                )}
+              </div>
+            )}
+
+            {(editRole === "manager" || editRole === "supervisor") && (
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Permisos por módulo</Label>
                 <div className="border rounded-xl overflow-hidden">
