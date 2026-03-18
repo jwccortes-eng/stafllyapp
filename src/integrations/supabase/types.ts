@@ -2394,6 +2394,570 @@ export type Database = {
           },
         ]
       }
+      migration_clock_mapping: {
+        Row: {
+          company_id: string
+          connecteam_data: Json
+          connecteam_ref: string
+          created_at: string
+          id: string
+          match_status: string
+          notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          stafly_clock_event_id: string | null
+          stafly_time_entry_id: string | null
+          tolerance_minutes: number | null
+          variance_data: Json | null
+        }
+        Insert: {
+          company_id: string
+          connecteam_data?: Json
+          connecteam_ref: string
+          created_at?: string
+          id?: string
+          match_status?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stafly_clock_event_id?: string | null
+          stafly_time_entry_id?: string | null
+          tolerance_minutes?: number | null
+          variance_data?: Json | null
+        }
+        Update: {
+          company_id?: string
+          connecteam_data?: Json
+          connecteam_ref?: string
+          created_at?: string
+          id?: string
+          match_status?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stafly_clock_event_id?: string | null
+          stafly_time_entry_id?: string | null
+          tolerance_minutes?: number | null
+          variance_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_clock_mapping_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_clock_mapping_stafly_clock_event_id_fkey"
+            columns: ["stafly_clock_event_id"]
+            isOneToOne: false
+            referencedRelation: "clock_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_clock_mapping_stafly_time_entry_id_fkey"
+            columns: ["stafly_time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_employee_mapping: {
+        Row: {
+          company_id: string
+          connecteam_email: string | null
+          connecteam_name: string | null
+          connecteam_phone: string | null
+          connecteam_ref: string
+          created_at: string
+          id: string
+          match_confidence: number | null
+          match_method: string | null
+          match_status: string
+          notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          stafly_employee_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          connecteam_email?: string | null
+          connecteam_name?: string | null
+          connecteam_phone?: string | null
+          connecteam_ref: string
+          created_at?: string
+          id?: string
+          match_confidence?: number | null
+          match_method?: string | null
+          match_status?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stafly_employee_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          connecteam_email?: string | null
+          connecteam_name?: string | null
+          connecteam_phone?: string | null
+          connecteam_ref?: string
+          created_at?: string
+          id?: string
+          match_confidence?: number | null
+          match_method?: string | null
+          match_status?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stafly_employee_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_employee_mapping_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_employee_mapping_stafly_employee_id_fkey"
+            columns: ["stafly_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_employee_mapping_stafly_employee_id_fkey"
+            columns: ["stafly_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_exceptions: {
+        Row: {
+          assigned_to: string | null
+          company_id: string
+          created_at: string
+          exception_type: string
+          id: string
+          period_reconciliation_id: string | null
+          resolution_action: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          source_data: Json | null
+          source_record_ref: string | null
+          source_record_type: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          company_id: string
+          created_at?: string
+          exception_type: string
+          id?: string
+          period_reconciliation_id?: string | null
+          resolution_action?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_data?: Json | null
+          source_record_ref?: string | null
+          source_record_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          company_id?: string
+          created_at?: string
+          exception_type?: string
+          id?: string
+          period_reconciliation_id?: string | null
+          resolution_action?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_data?: Json | null
+          source_record_ref?: string | null
+          source_record_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_exceptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_exceptions_period_reconciliation_id_fkey"
+            columns: ["period_reconciliation_id"]
+            isOneToOne: false
+            referencedRelation: "migration_period_reconciliation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_location_mapping: {
+        Row: {
+          company_id: string
+          connecteam_address: string | null
+          connecteam_name: string | null
+          connecteam_ref: string
+          created_at: string
+          id: string
+          match_status: string
+          notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          stafly_location_id: string | null
+        }
+        Insert: {
+          company_id: string
+          connecteam_address?: string | null
+          connecteam_name?: string | null
+          connecteam_ref: string
+          created_at?: string
+          id?: string
+          match_status?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stafly_location_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          connecteam_address?: string | null
+          connecteam_name?: string | null
+          connecteam_ref?: string
+          created_at?: string
+          id?: string
+          match_status?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stafly_location_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_location_mapping_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_location_mapping_stafly_location_id_fkey"
+            columns: ["stafly_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_normalized_records: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          match_status: string
+          normalized_payload: Json
+          raw_import_id: string | null
+          record_type: string
+          source_reference: string | null
+          stafly_entity_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          match_status?: string
+          normalized_payload?: Json
+          raw_import_id?: string | null
+          record_type: string
+          source_reference?: string | null
+          stafly_entity_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          match_status?: string
+          normalized_payload?: Json
+          raw_import_id?: string | null
+          record_type?: string
+          source_reference?: string | null
+          stafly_entity_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_normalized_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_normalized_records_raw_import_id_fkey"
+            columns: ["raw_import_id"]
+            isOneToOne: false
+            referencedRelation: "migration_raw_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_period_reconciliation: {
+        Row: {
+          company_id: string
+          connecteam_totals: Json | null
+          created_at: string
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          stafly_period_id: string | null
+          stafly_totals: Json | null
+          status: string
+          total_variance: number | null
+          unresolved_count: number | null
+          updated_at: string
+          variance_details: Json | null
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          company_id: string
+          connecteam_totals?: Json | null
+          created_at?: string
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          stafly_period_id?: string | null
+          stafly_totals?: Json | null
+          status?: string
+          total_variance?: number | null
+          unresolved_count?: number | null
+          updated_at?: string
+          variance_details?: Json | null
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          company_id?: string
+          connecteam_totals?: Json | null
+          created_at?: string
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          stafly_period_id?: string | null
+          stafly_totals?: Json | null
+          status?: string
+          total_variance?: number | null
+          unresolved_count?: number | null
+          updated_at?: string
+          variance_details?: Json | null
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_period_reconciliation_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_period_reconciliation_stafly_period_id_fkey"
+            columns: ["stafly_period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_pilot_status: {
+        Row: {
+          company_id: string
+          created_at: string
+          date_range_end: string | null
+          date_range_start: string | null
+          id: string
+          notes: string | null
+          phase: string
+          readiness: string
+          sync_active: boolean | null
+          total_unresolved_issues: number | null
+          total_weeks_imported: number | null
+          total_weeks_reconciled: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          id?: string
+          notes?: string | null
+          phase?: string
+          readiness?: string
+          sync_active?: boolean | null
+          total_unresolved_issues?: number | null
+          total_weeks_imported?: number | null
+          total_weeks_reconciled?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          id?: string
+          notes?: string | null
+          phase?: string
+          readiness?: string
+          sync_active?: boolean | null
+          total_unresolved_issues?: number | null
+          total_weeks_imported?: number | null
+          total_weeks_reconciled?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_pilot_status_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_raw_imports: {
+        Row: {
+          company_id: string
+          file_name: string | null
+          id: string
+          imported_at: string
+          imported_by: string | null
+          raw_payload: Json
+          record_type: string
+          row_index: number | null
+          source_system: string
+        }
+        Insert: {
+          company_id: string
+          file_name?: string | null
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          raw_payload?: Json
+          record_type: string
+          row_index?: number | null
+          source_system?: string
+        }
+        Update: {
+          company_id?: string
+          file_name?: string | null
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          raw_payload?: Json
+          record_type?: string
+          row_index?: number | null
+          source_system?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_raw_imports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_shift_mapping: {
+        Row: {
+          company_id: string
+          connecteam_data: Json
+          connecteam_ref: string
+          created_at: string
+          id: string
+          match_status: string
+          notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          stafly_shift_id: string | null
+          variance_data: Json | null
+        }
+        Insert: {
+          company_id: string
+          connecteam_data?: Json
+          connecteam_ref: string
+          created_at?: string
+          id?: string
+          match_status?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stafly_shift_id?: string | null
+          variance_data?: Json | null
+        }
+        Update: {
+          company_id?: string
+          connecteam_data?: Json
+          connecteam_ref?: string
+          created_at?: string
+          id?: string
+          match_status?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          stafly_shift_id?: string | null
+          variance_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_shift_mapping_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_shift_mapping_stafly_shift_id_fkey"
+            columns: ["stafly_shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           can_delete: boolean
