@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search, MoreHorizontal, Pencil, Trash2, Shield, ShieldCheck, UserCog, User,
   KeyRound, UserPlus, Smartphone, Mail, Building2, ChevronDown, ChevronRight,
-  Package, Ticket, Copy, Plus, ToggleLeft, Download,
+  Package, Ticket, Copy, Plus, ToggleLeft, Download, ArrowLeftRight, Link2, LinkIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
@@ -74,6 +74,14 @@ interface UserRecord {
   role: RoleType;
   permissions: { module: string; can_view: boolean; can_edit: boolean; can_delete: boolean }[];
   companies: CompanyAssignment[];
+  /** Employee profile linkage */
+  employee_id: string | null;
+  employee_name: string | null;
+  employee_active: boolean;
+  /** Whether user has admin-level roles */
+  has_admin_access: boolean;
+  /** Whether user has employee profile */
+  has_employee_access: boolean;
 }
 
 interface PromoCode {
@@ -148,8 +156,22 @@ function UserRow({ u, onEdit, onResetPw, onDelete }: {
           <UserAvatar name={u.full_name} email={u.email} />
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">{u.full_name || "Sin nombre"}</p>
-            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold truncate">{u.full_name || "Sin nombre"}</p>
+              {u.has_admin_access && u.has_employee_access && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-chart-4 bg-chart-4/10 px-1.5 py-0.5 rounded-full shrink-0" title="Acceso dual: Admin + Empleado">
+                  <ArrowLeftRight className="h-2.5 w-2.5" />Dual
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+              {u.has_employee_access && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] text-emerald-600 dark:text-emerald-400" title={`Perfil empleado: ${u.employee_name}`}>
+                  <LinkIcon className="h-2.5 w-2.5" />
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Company count */}
@@ -159,6 +181,20 @@ function UserRow({ u, onEdit, onResetPw, onDelete }: {
               <span>{u.companies.length}</span>
             </div>
           )}
+
+          {/* Access mode badges */}
+          <div className="hidden sm:flex items-center gap-1">
+            {u.has_admin_access && (
+              <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20 px-1.5 py-0">
+                Admin
+              </Badge>
+            )}
+            {u.has_employee_access && (
+              <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", u.employee_active ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800" : "bg-muted text-muted-foreground border-border")}>
+                {u.employee_active ? "Empleado" : "Inactivo"}
+              </Badge>
+            )}
+          </div>
 
           <Badge variant="outline" className={cn("text-[10px] shrink-0", ROLE_COLORS[u.role])}>
             <Icon className="h-3 w-3 mr-1" />{ROLE_LABELS[u.role]}
@@ -183,6 +219,31 @@ function UserRow({ u, onEdit, onResetPw, onDelete }: {
         {/* Expanded detail */}
         <CollapsibleContent>
           <div className="border-t border-border/50 px-4 py-3 space-y-3">
+            {/* Access summary */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground font-medium">Acceso:</span>
+                {u.has_admin_access && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                    <Shield className="h-3 w-3" />Panel Admin
+                  </span>
+                )}
+                {u.has_employee_access && (
+                  <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold", u.employee_active ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-muted text-muted-foreground")}>
+                    <User className="h-3 w-3" />Portal Empleado {!u.employee_active && "(inactivo)"}
+                  </span>
+                )}
+                {!u.has_admin_access && !u.has_employee_access && (
+                  <span className="text-muted-foreground italic">Sin acceso configurado</span>
+                )}
+              </div>
+              {u.employee_id && (
+                <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <Link2 className="h-3 w-3" />Perfil: {u.employee_name}
+                </span>
+              )}
+            </div>
+
             {u.companies.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">Sin empresas asignadas</p>
             ) : (
@@ -275,7 +336,7 @@ export default function UsersPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "manager">("admin");
+  const [inviteRole, setInviteRole] = useState<"admin" | "manager" | "supervisor">("admin");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
 
@@ -293,7 +354,7 @@ export default function UsersPage() {
   const atAdminLimit = !canAddAdmins(adminCount);
 
   const fetchUsers = async () => {
-    const [profilesRes, rolesRes, permsRes, companyUsersRes, subsRes, modulesRes, redemptionsRes, promoCodesRes] = await Promise.all([
+    const [profilesRes, rolesRes, permsRes, companyUsersRes, subsRes, modulesRes, redemptionsRes, promoCodesRes, employeesRes] = await Promise.all([
       supabase.from("profiles").select("user_id, email, full_name"),
       supabase.from("user_roles").select("user_id, role"),
       supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete"),
@@ -302,6 +363,7 @@ export default function UsersPage() {
       supabase.from("company_modules").select("company_id, module, is_active"),
       supabase.from("promo_redemptions").select("company_id, promo_codes(code, modules)"),
       supabase.from("promo_codes").select("*").order("created_at", { ascending: false }),
+      supabase.from("employees").select("id, user_id, first_name, last_name, is_active"),
     ]);
 
     const profiles = profilesRes.data ?? [];
@@ -311,12 +373,19 @@ export default function UsersPage() {
     const subs = subsRes.data ?? [];
     const modules = modulesRes.data ?? [];
     const redemptions = redemptionsRes.data ?? [];
+    const employees = employeesRes.data ?? [];
 
     setPromoCodes((promoCodesRes.data ?? []) as unknown as PromoCode[]);
+
+    const ADMIN_ROLE_SET = new Set(['developer', 'owner', 'admin', 'manager', 'supervisor']);
 
     const userList: UserRecord[] = profiles.map(p => {
       const roleRec = roles.find(r => r.user_id === p.user_id);
       const userPerms = perms.filter(pm => pm.user_id === p.user_id);
+      const resolvedRole = (roleRec?.role as RoleType) ?? "employee";
+
+      // Employee profile linkage
+      const linkedEmployee = employees.find(e => e.user_id === p.user_id);
 
       // Build company assignments
       const userCompanies = companyUsers
@@ -346,9 +415,14 @@ export default function UsersPage() {
         user_id: p.user_id,
         email: p.email ?? "",
         full_name: p.full_name ?? "",
-        role: (roleRec?.role as RoleType) ?? "employee",
+        role: resolvedRole,
         permissions: userPerms,
         companies: userCompanies,
+        employee_id: linkedEmployee?.id ?? null,
+        employee_name: linkedEmployee ? `${linkedEmployee.first_name} ${linkedEmployee.last_name}` : null,
+        employee_active: linkedEmployee?.is_active ?? false,
+        has_admin_access: ADMIN_ROLE_SET.has(resolvedRole),
+        has_employee_access: !!linkedEmployee,
       };
     });
 
@@ -380,7 +454,7 @@ export default function UsersPage() {
     }
     const { error: roleError } = await supabase.from("user_roles").update({ role: editRole } as any).eq("user_id", editUser.user_id);
     if (roleError) { toast({ title: "Error", description: getUserFriendlyError(roleError), variant: "destructive" }); setLoading(false); return; }
-    if (editRole === "manager") {
+    if (editRole === "manager" || editRole === "supervisor") {
       for (const mod of MODULES) {
         const perm = editPerms[mod.key];
         await supabase.from("module_permissions").upsert({ user_id: editUser.user_id, module: mod.key, can_view: perm.can_view, can_edit: perm.can_edit, can_delete: perm.can_delete } as any, { onConflict: "user_id,module" });
@@ -492,7 +566,7 @@ export default function UsersPage() {
         variant="5"
         icon={ShieldCheck}
         title="Gestión de Usuarios"
-        subtitle="Usuarios, empresas, permisos y códigos promocionales"
+        subtitle="Identidad única · Roles múltiples · Acceso dual admin/empleado"
         rightSlot={
           <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={exportUsersCsv} title="Exportar CSV">
@@ -622,17 +696,40 @@ export default function UsersPage() {
               <div className="space-y-1"><Label className="text-xs">Email</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="h-9" /></div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Rol</Label>
+              <Label className="text-xs">Rol principal</Label>
               <Select value={editRole} onValueChange={v => setEditRole(v as RoleType)}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Administrador — Acceso completo</SelectItem>
                   <SelectItem value="manager">Manager — Permisos selectivos</SelectItem>
+                  <SelectItem value="supervisor">Supervisor — Permisos limitados</SelectItem>
                   <SelectItem value="employee">Empleado — Solo portal</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {editRole === "manager" && (
+
+            {/* Employee profile linkage info */}
+            {editUser && (
+              <div className="rounded-lg border border-border/50 bg-muted/30 p-3 space-y-1">
+                <p className="text-xs font-semibold flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  Perfil de empleado
+                </p>
+                {editUser.has_employee_access ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
+                      Vinculado
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{editUser.employee_name}</span>
+                    {!editUser.employee_active && <Badge variant="outline" className="text-[9px] text-destructive">Inactivo</Badge>}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Sin perfil de empleado vinculado. El usuario no podrá acceder al portal empleado.</p>
+                )}
+              </div>
+            )}
+
+            {(editRole === "manager" || editRole === "supervisor") && (
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Permisos por módulo</Label>
                 <div className="border rounded-xl overflow-hidden">
@@ -697,8 +794,8 @@ export default function UsersPage() {
       <Dialog open={inviteOpen} onOpenChange={v => { setInviteOpen(v); if (!v) { setInviteEmail(""); setInviteName(""); setInvitePassword(""); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Invitar Administrador</DialogTitle>
-            <DialogDescription>Crea una cuenta con rol de admin o manager</DialogDescription>
+            <DialogTitle>Invitar Usuario</DialogTitle>
+            <DialogDescription>Crea una cuenta con acceso al panel administrativo</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1"><Label className="text-xs">Nombre completo</Label><Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Juan Pérez" className="h-9" /></div>
@@ -706,11 +803,12 @@ export default function UsersPage() {
             <div className="space-y-1"><Label className="text-xs">Contraseña</Label><Input type="password" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="h-9" /></div>
             <div className="space-y-1">
               <Label className="text-xs">Rol</Label>
-              <Select value={inviteRole} onValueChange={v => setInviteRole(v as "admin" | "manager")}>
+              <Select value={inviteRole} onValueChange={v => setInviteRole(v as "admin" | "manager" | "supervisor")}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="admin">Administrador — Acceso completo</SelectItem>
+                  <SelectItem value="manager">Manager — Permisos selectivos</SelectItem>
+                  <SelectItem value="supervisor">Supervisor — Permisos limitados</SelectItem>
                 </SelectContent>
               </Select>
             </div>
