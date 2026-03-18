@@ -97,6 +97,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const rolePriority: AppRole[] = ["developer", "owner", "company_owner", "admin", "manager", "supervisor", "employee", null];
       const availableRoles = new Set((roleRows ?? []).map((row) => row.role as string));
 
+      // Check if user is company_owner in any company
+      const { data: companyUserRoles } = await supabase
+        .from("company_users")
+        .select("role")
+        .eq("user_id", userId);
+
+      if (companyUserRoles?.some(cu => cu.role === 'company_owner')) {
+        availableRoles.add("company_owner");
+      }
+
       const { data: empData } = await supabase
         .from("employees")
         .select("id, is_active")
