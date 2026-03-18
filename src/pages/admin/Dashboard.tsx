@@ -184,25 +184,10 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
     fetchWeek();
   }, [companyId]);
 
-  const SHIFT_COLORS = [
-    "bg-green-100 text-green-700 border-green-200",
-    "bg-blue-100 text-blue-700 border-blue-200",
-    "bg-purple-100 text-purple-700 border-purple-200",
-    "bg-pink-100 text-pink-700 border-pink-200",
-    "bg-yellow-100 text-yellow-700 border-yellow-200",
-    "bg-orange-100 text-orange-700 border-orange-200",
-    "bg-teal-100 text-teal-700 border-teal-200",
-    "bg-indigo-100 text-indigo-700 border-indigo-200",
-    "bg-red-100 text-red-700 border-red-200",
-    "bg-cyan-100 text-cyan-700 border-cyan-200",
-  ];
+  const { buildPastelMap: buildMap } = await import("@/components/shifts/pastel-utils").then(m => ({ buildPastelMap: m.buildPastelMap }));
 
   const employeeColorMap = useMemo(() => {
-    const map = new Map<string, string>();
-    employees.forEach((emp, i) => {
-      map.set(emp.id, SHIFT_COLORS[i % SHIFT_COLORS.length]);
-    });
-    return map;
+    return buildMap(employees.map(e => e.id));
   }, [employees]);
 
   const getEmployeeName = (empId: string) => {
