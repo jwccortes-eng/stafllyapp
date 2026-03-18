@@ -169,9 +169,9 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     }
   };
 
-  const handleRoleChange = (cuId: string, newRole: string) => {
+  const handleRoleChange = (cuId: string, oldRole: string, newRole: string) => {
     setGuardTitle("Cambiar rol en " + companyName);
-    setGuardAction(() => () => doRoleChange(cuId, newRole));
+    setGuardAction(() => () => doRoleChange(cuId, oldRole, newRole));
   };
 
   const roleColor = (role: string) => {
