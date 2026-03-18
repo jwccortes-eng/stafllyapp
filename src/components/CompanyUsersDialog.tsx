@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, UserCog, User } from "lucide-react";
+import { Trash2, Plus, Shield, UserCog, User, Crown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CompanyActionGuard from "@/components/CompanyActionGuard";
 
@@ -32,6 +32,7 @@ interface AvailableUser {
 }
 
 const ROLE_OPTIONS = [
+  { value: "company_owner", label: "Company Owner", icon: Crown },
   { value: "admin", label: "Admin", icon: Shield },
   { value: "manager", label: "Manager", icon: UserCog },
   { value: "employee", label: "Empleado", icon: User },
@@ -123,7 +124,15 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     setGuardAction(() => doAdd);
   };
 
-  const doRemove = async (cuId: string) => {
+  const doRemove = async (cuId: string, cuRole: string) => {
+    // Prevent removing last company_owner
+    if (cuRole === 'company_owner') {
+      const ownerCount = companyUsers.filter(u => u.role === 'company_owner').length;
+      if (ownerCount <= 1) {
+        toast({ title: "No permitido", description: "No puedes remover al último Company Owner. Asigna un reemplazo primero.", variant: "destructive" });
+        return;
+      }
+    }
     const { error } = await supabase.from("company_users").delete().eq("id", cuId);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -134,12 +143,20 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     }
   };
 
-  const handleRemove = (cuId: string) => {
+  const handleRemove = (cuId: string, cuRole: string) => {
     setGuardTitle("Remover usuario de " + companyName);
-    setGuardAction(() => () => doRemove(cuId));
+    setGuardAction(() => () => doRemove(cuId, cuRole));
   };
 
-  const doRoleChange = async (cuId: string, newRole: string) => {
+  const doRoleChange = async (cuId: string, oldRole: string, newRole: string) => {
+    // Prevent removing last company_owner via role change
+    if (oldRole === 'company_owner' && newRole !== 'company_owner') {
+      const ownerCount = companyUsers.filter(u => u.role === 'company_owner').length;
+      if (ownerCount <= 1) {
+        toast({ title: "No permitido", description: "No puedes cambiar el rol del último Company Owner. Asigna un reemplazo primero.", variant: "destructive" });
+        return;
+      }
+    }
     const { error } = await supabase
       .from("company_users")
       .update({ role: newRole } as any)
@@ -152,13 +169,14 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     }
   };
 
-  const handleRoleChange = (cuId: string, newRole: string) => {
+  const handleRoleChange = (cuId: string, oldRole: string, newRole: string) => {
     setGuardTitle("Cambiar rol en " + companyName);
-    setGuardAction(() => () => doRoleChange(cuId, newRole));
+    setGuardAction(() => () => doRoleChange(cuId, oldRole, newRole));
   };
 
   const roleColor = (role: string) => {
     switch (role) {
+      case "company_owner": return "bg-chart-5/10 text-chart-5 border-chart-5/20";
       case "admin": return "bg-primary/10 text-primary border-primary/20";
       case "manager": return "bg-chart-4/10 text-chart-4 border-chart-4/20";
       default: return "bg-muted text-muted-foreground border-border";
@@ -239,7 +257,7 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Select value={cu.role} onValueChange={(v) => handleRoleChange(cu.id, v)}>
+                      <Select value={cu.role} onValueChange={(v) => handleRoleChange(cu.id, cu.role, v)}>
                         <SelectTrigger className="h-7 text-xs w-28">
                           <SelectValue />
                         </SelectTrigger>
@@ -251,7 +269,7 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleRemove(cu.id)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleRemove(cu.id, cu.role)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </TableCell>

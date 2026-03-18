@@ -17,6 +17,7 @@ const COMPANY_COLORS = [
 const ROLE_LABELS: Record<string, string> = {
   developer: "Dev",
   owner: "Owner",
+  company_owner: "Company Owner",
   admin: "Admin",
   manager: "Manager",
   supervisor: "Supervisor",

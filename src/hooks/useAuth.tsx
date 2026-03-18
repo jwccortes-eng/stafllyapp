@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback 
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-type AppRole = 'developer' | 'owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
+type AppRole = 'developer' | 'owner' | 'company_owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type ActiveMode = 'admin' | 'employee';
 type EmployeeStatus = 'active' | 'inactive' | null;
 
@@ -43,7 +43,7 @@ interface AuthContextType {
   hasActionPermission: (action: string) => boolean;
 }
 
-const ADMIN_ROLES = new Set(['developer', 'owner', 'admin', 'manager', 'supervisor']);
+const ADMIN_ROLES = new Set(['developer', 'owner', 'company_owner', 'admin', 'manager', 'supervisor']);
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -94,8 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) throw roleError;
 
-      const rolePriority: AppRole[] = ["developer", "owner", "admin", "manager", "supervisor", "employee", null];
+      const rolePriority: AppRole[] = ["developer", "owner", "company_owner", "admin", "manager", "supervisor", "employee", null];
       const availableRoles = new Set((roleRows ?? []).map((row) => row.role as string));
+
+      // Check if user is company_owner in any company
+      const { data: companyUserRoles } = await supabase
+        .from("company_users")
+        .select("role")
+        .eq("user_id", userId);
+
+      if (companyUserRoles?.some(cu => cu.role === 'company_owner')) {
+        availableRoles.add("company_owner");
+      }
 
       const { data: empData } = await supabase
         .from("employees")
@@ -126,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       setFullName(profileData?.full_name ?? null);
 
-      // Fetch module permissions for managers and supervisors
+      // Fetch module permissions for managers and supervisors (company_owner gets full access like admin)
       if (resolvedRole === 'manager' || resolvedRole === 'supervisor') {
         const { data: permsData } = await supabase
           .from('module_permissions')
@@ -225,7 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const canAccessPortal = !!employeeId;
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
-    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
     if (role === 'manager' || role === 'supervisor') {
       const perm = permissions.find(p => p.module === module);
       if (!perm) return false;
@@ -237,7 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasActionPermission = (action: string): boolean => {
-    if (role === 'developer' || role === 'owner' || role === 'admin') return true;
+    if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
     if (role === 'manager' || role === 'supervisor') {
       const perm = actionPermissions.find(p => p.action === action);
       return perm?.granted ?? false;
