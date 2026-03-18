@@ -83,10 +83,27 @@ export default function MigrationOverview({ stats, loading, onRefresh }: Props) 
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard title="Overall Match Rate" value={`${matchPct}%`} subtitle={`${totalMatched} / ${totalRecords} records`} />
-        <KpiCard title="Employees Matched" value={stats.employeeCounts.matched} subtitle={`${stats.employeeCounts.unresolved} unresolved`} />
-        <KpiCard title="Periods Reconciled" value={stats.periodCounts.reconciled} subtitle={`${stats.periodCounts.locked} locked`} />
-        <KpiCard title="Open Exceptions" value={stats.exceptionCounts.open} subtitle={`${stats.exceptionCounts.critical} critical`} />
+        <Card className="p-4">
+          <div className="text-2xl font-bold text-primary">{matchPct}%</div>
+          <div className="text-xs text-muted-foreground">Overall Match Rate</div>
+          <Progress value={matchPct} className="mt-2 h-1.5" />
+          <div className="text-[10px] text-muted-foreground/70 mt-1">{totalMatched} / {totalRecords} records</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-2xl font-bold text-foreground">{stats.employeeCounts.matched}</div>
+          <div className="text-xs text-muted-foreground">Employees Matched</div>
+          <div className="text-[10px] text-muted-foreground/70 mt-1">{stats.employeeCounts.unresolved} unresolved</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-2xl font-bold text-foreground">{stats.periodCounts.reconciled}</div>
+          <div className="text-xs text-muted-foreground">Periods Reconciled</div>
+          <div className="text-[10px] text-muted-foreground/70 mt-1">{stats.periodCounts.locked} locked</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-2xl font-bold text-foreground">{stats.exceptionCounts.open}</div>
+          <div className="text-xs text-muted-foreground">Open Exceptions</div>
+          <div className="text-[10px] text-muted-foreground/70 mt-1">{stats.exceptionCounts.critical} critical</div>
+        </Card>
       </div>
 
       {/* Reconciliation Summary Cards */}
