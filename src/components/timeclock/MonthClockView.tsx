@@ -381,6 +381,16 @@ export function MonthClockView() {
           </Button>
         )}
 
+        {/* View toggle */}
+        <ToggleGroup type="single" value={viewMode} onValueChange={v => v && setViewMode(v as "calendar" | "chips")} className="h-8">
+          <ToggleGroupItem value="chips" aria-label="Vista chips" className="h-8 w-8 p-0">
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="calendar" aria-label="Vista calendario" className="h-8 w-8 p-0">
+            <CalendarDays className="h-3.5 w-3.5" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+
         <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 ml-auto" onClick={handleExport}>
           <Download className="h-3.5 w-3.5" /> Exportar
         </Button>
@@ -390,87 +400,109 @@ export function MonthClockView() {
         <PageSkeleton variant="table" />
       ) : (
         <div className="space-y-6">
-          <div className="flex gap-4">
-            {/* Employee sidebar */}
-            <div className="w-48 shrink-0 space-y-1 max-h-[500px] overflow-y-auto hidden sm:block">
-              <button
-                className={cn(
-                  "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
-                  !selectedEmpId ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted/50"
-                )}
-                onClick={() => setSelectedEmpId(null)}
-              >
-                Todos ({employees.length})
-              </button>
-              {filteredEmps.map(emp => {
-                const empMins = entries
-                  .filter(e => e.employee_id === emp.id && e.clock_out)
-                  .reduce((sum, e) => sum + Math.max(0, differenceInMinutes(new Date(e.clock_out!), new Date(e.clock_in)) - (e.break_minutes ?? 0)), 0);
-                return (
-                  <button
-                    key={emp.id}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors",
-                      selectedEmpId === emp.id ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted/50"
-                    )}
-                    onClick={() => setSelectedEmpId(emp.id)}
-                  >
-                    <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} size="sm" className="h-5 w-5 text-[8px]" />
-                    <span className="truncate flex-1">{formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.</span>
-                    {empMins > 0 && <span className="text-[10px] font-mono text-muted-foreground">{(empMins / 60).toFixed(0)}h</span>}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Calendar */}
-            <div className="flex-1">
-              <div className="grid grid-cols-7 gap-px bg-border/30 rounded-t-xl overflow-hidden">
-                {dayHeaders.map(dh => (
-                  <div key={dh} className="text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-2 bg-muted/30">{dh}</div>
-                ))}
-              </div>
-              <div className="border border-border/30 border-t-0 rounded-b-xl overflow-hidden">
-                {weeks.map((week, wi) => (
-                  <div key={wi} className="grid grid-cols-7 divide-x divide-border/20">
-                    {week.map(day => {
-                      const dateKey = format(day, "yyyy-MM-dd");
-                      const mins = dayHoursMap[dateKey] ?? 0;
-                      const isCurrentDay = isSameDay(day, new Date());
-                      const inMonth = isSameMonth(day, currentMonth);
-
-                      return (
-                        <div
-                          key={day.toISOString()}
-                          className={cn(
-                            "min-h-[60px] p-1.5 border-b border-border/20 transition-colors",
-                            !inMonth && "opacity-20",
-                            isCurrentDay && "bg-primary/[0.04]",
-                            inMonth && getIntensity(mins),
-                          )}
-                        >
-                          <div className={cn(
-                            "text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full mb-0.5",
-                            isCurrentDay && "bg-primary text-primary-foreground font-bold",
-                            !isCurrentDay && "text-muted-foreground/70"
-                          )}>
-                            {format(day, "d")}
-                          </div>
-                          {mins > 0 && inMonth && (
-                            <div className="text-center">
-                              <span className="text-[11px] font-mono font-bold text-foreground">
-                                {(mins / 60).toFixed(1)}h
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+          {viewMode === "chips" ? (
+            /* ── Chip Grid View (reference-style) ── */
+            <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
+              <CardContent className="p-4 sm:p-5">
+                {chipWeeksForMonth.map((week, wi) => (
+                  <div key={wi} className={cn(wi > 0 && "mt-6 pt-5 border-t border-border/20")}>
+                    <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-3">
+                      Semana {wi + 1}
+                    </p>
+                    <WeekClockChipGrid
+                      weekDays={week}
+                      entries={selectedEmpId ? entries.filter(e => e.employee_id === selectedEmpId) : entries}
+                      employees={filteredEmps}
+                      assignments={assignments}
+                    />
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+          ) : (
+            /* ── Calendar Heatmap View ── */
+            <div className="flex gap-4">
+              {/* Employee sidebar */}
+              <div className="w-48 shrink-0 space-y-1 max-h-[500px] overflow-y-auto hidden sm:block">
+                <button
+                  className={cn(
+                    "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
+                    !selectedEmpId ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted/50"
+                  )}
+                  onClick={() => setSelectedEmpId(null)}
+                >
+                  Todos ({employees.length})
+                </button>
+                {filteredEmps.map(emp => {
+                  const empMins = entries
+                    .filter(e => e.employee_id === emp.id && e.clock_out)
+                    .reduce((sum, e) => sum + Math.max(0, differenceInMinutes(new Date(e.clock_out!), new Date(e.clock_in)) - (e.break_minutes ?? 0)), 0);
+                  return (
+                    <button
+                      key={emp.id}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors",
+                        selectedEmpId === emp.id ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted/50"
+                      )}
+                      onClick={() => setSelectedEmpId(emp.id)}
+                    >
+                      <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} size="sm" className="h-5 w-5 text-[8px]" />
+                      <span className="truncate flex-1">{formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)?.charAt(0)}.</span>
+                      {empMins > 0 && <span className="text-[10px] font-mono text-muted-foreground">{(empMins / 60).toFixed(0)}h</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Calendar */}
+              <div className="flex-1">
+                <div className="grid grid-cols-7 gap-px bg-border/30 rounded-t-xl overflow-hidden">
+                  {dayHeaders.map(dh => (
+                    <div key={dh} className="text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-2 bg-muted/30">{dh}</div>
+                  ))}
+                </div>
+                <div className="border border-border/30 border-t-0 rounded-b-xl overflow-hidden">
+                  {weeks.map((week, wi) => (
+                    <div key={wi} className="grid grid-cols-7 divide-x divide-border/20">
+                      {week.map(day => {
+                        const dateKey = format(day, "yyyy-MM-dd");
+                        const mins = dayHoursMap[dateKey] ?? 0;
+                        const isCurrentDay = isSameDay(day, new Date());
+                        const inMonth = isSameMonth(day, currentMonth);
+
+                        return (
+                          <div
+                            key={day.toISOString()}
+                            className={cn(
+                              "min-h-[60px] p-1.5 border-b border-border/20 transition-colors",
+                              !inMonth && "opacity-20",
+                              isCurrentDay && "bg-primary/[0.04]",
+                              inMonth && getIntensity(mins),
+                            )}
+                          >
+                            <div className={cn(
+                              "text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full mb-0.5",
+                              isCurrentDay && "bg-primary text-primary-foreground font-bold",
+                              !isCurrentDay && "text-muted-foreground/70"
+                            )}>
+                              {format(day, "d")}
+                            </div>
+                            {mins > 0 && inMonth && (
+                              <div className="text-center">
+                                <span className="text-[11px] font-mono font-bold text-foreground">
+                                  {(mins / 60).toFixed(1)}h
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* ── TOP RANKINGS ── */}
           {!selectedEmpId && (
