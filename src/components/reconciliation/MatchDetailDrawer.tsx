@@ -255,8 +255,23 @@ export default function MatchDetailDrawer({ match, open, onOpenChange, onResolve
         ) : (
           <div className="space-y-4 mt-4">
 
+            {/* ── COMPENSATION CATEGORY BANNER ── */}
+            {isClockExempt && compCategoryLabel && (
+              <Card className="border-l-4 border-l-primary bg-primary/5">
+                <CardContent className="py-3 flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-semibold text-sm">{compCategoryLabel}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Categoría de compensación especial — no requiere fichaje (clock in/out). Se reconcilia como pago {flags.includes("daily_pay_weekend_job") ? "diario" : "de transporte"}.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* ── RECOMMENDATION BANNER ── */}
-            {recommendation && (
+            {recommendation && !isClockExempt && (
               <Card className={`border-l-4 ${recommendation.key === "likely_match" ? "border-l-primary bg-primary/5" : recommendation.key === "likely_unscheduled" ? "border-l-amber-500 bg-amber-50/50 dark:bg-amber-900/10" : recommendation.key === "likely_duplicate" ? "border-l-muted-foreground bg-muted/30" : "border-l-amber-400 bg-amber-50/30 dark:bg-amber-900/5"}`}>
                 <CardContent className="py-3 flex items-start gap-3">
                   <RecoIcon className={`h-5 w-5 mt-0.5 shrink-0 ${recommendation.color}`} />
