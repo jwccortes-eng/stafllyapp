@@ -27,8 +27,8 @@ interface DetectedFile {
 
 const FILE_TYPE_META: Record<FileType, { label: string; icon: typeof CalendarDays; color: string; description: string }> = {
   scheduling: { label: "Scheduling", icon: CalendarDays, color: "text-primary", description: "Shift dates, roles, locations, employee assignments" },
-  timeclock: { label: "Time Clock", icon: Clock, color: "text-amber-500", description: "Clock in/out timestamps, worked hours" },
-  payroll: { label: "Payroll", icon: DollarSign, color: "text-emerald-500", description: "Final paid amounts, adjustments, totals" },
+  timeclock: { label: "Time Clock", icon: Clock, color: "text-warning", description: "Clock in/out timestamps, worked hours" },
+  payroll: { label: "Payroll", icon: DollarSign, color: "text-earning", description: "Final paid amounts, adjustments, totals" },
   unknown: { label: "Unknown", icon: AlertCircle, color: "text-destructive", description: "Could not auto-detect file type" },
 };
 
