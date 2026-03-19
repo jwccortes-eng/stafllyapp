@@ -147,7 +147,7 @@ export default function StagedReconciliation() {
     const p = await createPeriod(newLabel, newStart, newEnd);
     if (p) {
       setActivePeriod(p);
-      setTab("checklist");
+      setTab("closedesk");
       setShowCreateDialog(false);
       setNewLabel(""); setNewStart(""); setNewEnd("");
     }
@@ -157,7 +157,7 @@ export default function StagedReconciliation() {
     setActivePeriod(p);
     loadFinalRecords(p.id);
     loadClosingReceipt(p.id);
-    setTab("checklist");
+    setTab("closedesk");
   };
 
   // ── Core actions with journal logging ──
