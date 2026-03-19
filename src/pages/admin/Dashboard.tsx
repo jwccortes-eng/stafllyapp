@@ -369,6 +369,7 @@ export default function AdminDashboard() {
   const [commercialKpis, setCommercialKpis] = useState({ activeClients: 0, openRequests: 0, unpaidInvoices: 0, overdueInvoices: 0, unpaidTotal: 0, overdueTotal: 0 });
   const [missingPhotoCount, setMissingPhotoCount] = useState(0);
   const [totalHoursWorked, setTotalHoursWorked] = useState(0);
+  const [compKpis, setCompKpis] = useState({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
 
   useEffect(() => {
     if (!selectedCompanyId) return;
