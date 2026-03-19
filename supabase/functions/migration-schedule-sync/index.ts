@@ -604,12 +604,29 @@ async function resyncAllPeriods(
     empMap.set(mv.employee_id, (empMap.get(mv.employee_id) || 0) + (mv.total_value || 0));
   }
 
-  // Helper: parse CT date "MM/DD/YYYY" → "YYYY-MM-DD"
+  // Helper: parse CT date in multiple formats → "YYYY-MM-DD"
+  // Supports: "MM/DD/YYYY", "Fri Feb 06 2026 19:00:00 GMT-0500 (...)"
   function ctDateToISO(d: string | unknown): string | null {
     if (!d || typeof d !== "string") return null;
-    const m = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (!m) return null;
-    return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+    // Format 1: MM/DD/YYYY
+    const m1 = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m1) return `${m1[3]}-${m1[1].padStart(2, "0")}-${m1[2].padStart(2, "0")}`;
+    // Format 2: JS Date string like "Fri Feb 06 2026 19:00:00 GMT-0500 (...)"
+    const m2 = d.match(/\w{3}\s+(\w{3})\s+(\d{1,2})\s+(\d{4})/);
+    if (m2) {
+      const months: Record<string, string> = {
+        Jan: "01", Feb: "02", Mar: "03", Apr: "04", May: "05", Jun: "06",
+        Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12",
+      };
+      const mon = months[m2[1]];
+      if (mon) return `${m2[3]}-${mon}-${m2[2].padStart(2, "0")}`;
+    }
+    // Format 3: try native Date parse as fallback
+    const parsed = new Date(d);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10);
+    }
+    return null;
   }
 
   const results: Record<string, unknown>[] = [];
