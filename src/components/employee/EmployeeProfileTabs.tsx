@@ -26,6 +26,7 @@ import { ReputationProfile } from "@/components/reviews/ReputationProfile";
 import { ReputationAdminPanel } from "@/components/reviews/ReputationAdminPanel";
 import { WorkerProfileTab } from "@/components/employee/WorkerProfileTab";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import EmployeeAdvancesTab from "@/components/advances/EmployeeAdvancesTab";
 import { useToast } from "@/hooks/use-toast";
 
 type EmployeeRecord = Record<string, any>;
