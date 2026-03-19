@@ -14,7 +14,14 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ArrowRight, Eye, 
 import UnmatchedResolutionPanel from "./UnmatchedResolutionPanel";
 import { parseAnyFileToJson } from "@/lib/safe-xlsx";
 import { hashRow, detectColumns, normalizeText, type ColumnMapping } from "@/lib/reconciliation-engine";
-import { normalizeScheduleRows, normalizeClockRows, normalizePayrollRows, type ImportDiagnostics, type EmployeeAlias } from "@/lib/reconciliation-normalizer";
+import {
+  normalizeScheduleRows,
+  normalizeClockRows,
+  normalizePayrollRows,
+  type ImportDiagnostics,
+  type EmployeeAlias,
+  type ManualNameResolution,
+} from "@/lib/reconciliation-normalizer";
 import type { EmployeeRecord } from "@/lib/reconciliation-engine";
 
 type SourceType = "schedule" | "clock" | "payroll";
