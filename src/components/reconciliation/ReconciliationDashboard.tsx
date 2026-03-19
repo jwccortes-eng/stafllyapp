@@ -39,12 +39,12 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard title="Importando" value={stats.importing} icon={Upload} />
-        <KpiCard title="En Revisión" value={stats.reviewing} icon={Eye} />
-        <KpiCard title="Bloqueados" value={stats.blocked} icon={AlertTriangle} trend={stats.blocked > 0 ? "down" : undefined} />
-        <KpiCard title="Aprobados" value={stats.approved} icon={CheckCircle2} />
-        <KpiCard title="Publicados" value={stats.posted} icon={FileText} />
-        <KpiCard title="Excepciones Abiertas" value={stats.totalExceptions} icon={AlertTriangle} trend={stats.totalExceptions > 0 ? "down" : undefined} />
+        <KpiCard label="Importando" value={stats.importing} icon={<Upload className="h-4 w-4" />} />
+        <KpiCard label="En Revisión" value={stats.reviewing} icon={<Eye className="h-4 w-4" />} />
+        <KpiCard label="Bloqueados" value={stats.blocked} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.blocked > 0 ? "warning" : "muted"} />
+        <KpiCard label="Aprobados" value={stats.approved} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" />
+        <KpiCard label="Publicados" value={stats.posted} icon={<FileText className="h-4 w-4" />} accent="earning" />
+        <KpiCard label="Excepciones Abiertas" value={stats.totalExceptions} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.totalExceptions > 0 ? "deduction" : "muted"} />
       </div>
 
       {/* Period List */}
