@@ -140,21 +140,23 @@ export default function AdvancesLoans() {
     <div className="space-y-6">
       <PageHeader
         title="Anticipos y Préstamos"
-        description="Gestión de anticipos de nómina y préstamos a empleados"
-      >
-        <Button onClick={() => setShowCreate(true)} className="press-scale gap-2">
-          <Plus className="h-4 w-4" /> Nuevo registro
-        </Button>
-      </PageHeader>
+        subtitle="Gestión de anticipos de nómina y préstamos a empleados"
+        icon={Banknote}
+        rightSlot={
+          <Button onClick={() => setShowCreate(true)} className="press-scale gap-2">
+            <Plus className="h-4 w-4" /> Nuevo registro
+          </Button>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard title="Saldo pendiente" value={fmt(kpis.totalOutstanding)} icon={DollarSign} />
-        <KpiCard title="Registros activos" value={kpis.activeCount} icon={Banknote} />
-        <KpiCard title="Cobrado este mes" value={fmt(kpis.paidThisMonth)} icon={DollarSign} />
-        <KpiCard title="Pendientes aprobación" value={kpis.pending} icon={Clock} />
-        <KpiCard title="Pausados" value={kpis.paused} icon={Pause} />
-        <KpiCard title="Empleados con saldo" value={kpis.employeesWithBalance} icon={Users} />
+        <KpiCard label="Saldo pendiente" value={fmt(kpis.totalOutstanding)} icon={<DollarSign className="h-4 w-4 text-primary" />} accent="primary" />
+        <KpiCard label="Registros activos" value={kpis.activeCount} icon={<Banknote className="h-4 w-4 text-earning" />} accent="earning" />
+        <KpiCard label="Cobrado este mes" value={fmt(kpis.paidThisMonth)} icon={<DollarSign className="h-4 w-4 text-earning" />} accent="earning" />
+        <KpiCard label="Pendientes aprobación" value={kpis.pending} icon={<Clock className="h-4 w-4 text-warning" />} accent="warning" />
+        <KpiCard label="Pausados" value={kpis.paused} icon={<Pause className="h-4 w-4 text-muted-foreground" />} accent="muted" />
+        <KpiCard label="Empleados con saldo" value={kpis.employeesWithBalance} icon={<Users className="h-4 w-4 text-primary" />} accent="primary" />
       </div>
 
       {/* Filters */}
