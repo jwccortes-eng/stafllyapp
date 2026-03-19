@@ -28,6 +28,8 @@ interface SuggestedMatch {
 interface Props {
   normalizedRows: any[];
   employees: EmployeeRecord[];
+  companyId?: string | null;
+  companyName?: string;
   onAssignAlias: (nameRaw: string, employeeId: string) => Promise<void>;
   onReNormalize: () => void;
 }
@@ -43,7 +45,14 @@ function computeSimilarity(a: string, b: string): number {
   return commonParts.length / Math.max(aParts.length, bParts.length);
 }
 
-export default function UnmatchedResolutionPanel({ normalizedRows, employees, onAssignAlias, onReNormalize }: Props) {
+function normalizeSearchText(value: string): string {
+  return normalizeText(value)
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export default function UnmatchedResolutionPanel({ normalizedRows, employees, companyId, companyName, onAssignAlias, onReNormalize }: Props) {
   const [expandedName, setExpandedName] = useState<string | null>(null);
   const [assigningName, setAssigningName] = useState<string | null>(null);
   const [searchEmp, setSearchEmp] = useState("");
