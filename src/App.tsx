@@ -96,6 +96,7 @@ const QualityDashboard = lazy(() => import("./pages/admin/QualityDashboard"));
 const KioskClock = lazy(() => import("./pages/kiosk/KioskClock"));
 const MigrationCommandCenter = lazy(() => import("./pages/admin/MigrationCommandCenter"));
 const ReconciliationReport = lazy(() => import("./pages/admin/ReconciliationReport"));
+const AdvancesLoans = lazy(() => import("./pages/admin/AdvancesLoans"));
 
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
