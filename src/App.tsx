@@ -225,6 +225,7 @@ function App() {
                 <Route path="migration" element={<MigrationCommandCenter />} />
                 <Route path="company-migration" element={<CompanyMigration />} />
                 <Route path="reconciliation-report" element={<ReconciliationReport />} />
+                <Route path="staged-reconciliation" element={<StagedReconciliation />} />
                 <Route path="advances-loans" element={<AdvancesLoans />} />
                 <Route path="kiosk-devices" element={<KioskDevices />} />
                 <Route path="shift-ops" element={<ShiftOperations />} />
