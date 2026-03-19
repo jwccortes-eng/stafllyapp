@@ -286,7 +286,8 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
