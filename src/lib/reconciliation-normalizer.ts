@@ -176,6 +176,10 @@ function parseTimestamp(dateStr: string | null, timeStr: string | null): string 
 
 // ─── Core normalizer with diagnostics ───
 
+function emptyDiagnostics(employees: EmployeeRecord[]): ImportDiagnostics {
+  return { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedActive: 0, matchedInactive: 0, matchedByAlias: 0, matchedByMethod: {}, matchedByStatus: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.filter(e => e.is_active !== false).length, companyEmployeesInactive: employees.filter(e => e.is_active === false).length };
+}
+
 function buildDiagnostics(
   totalRows: number,
   systemRowNames: string[],
