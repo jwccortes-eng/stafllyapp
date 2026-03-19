@@ -517,6 +517,22 @@ export default function StagedReconciliation() {
           )}
         </TabsContent>
 
+        <TabsContent value="notes">
+          {activePeriod ? (
+            <PeriodNotes period={activePeriod} companyId={selectedCompanyId} />
+          ) : (
+            <NoPeriodPlaceholder icon={StickyNote} text="Selecciona un periodo para agregar notas." />
+          )}
+        </TabsContent>
+
+        <TabsContent value="runbook">
+          {activePeriod ? (
+            <PilotRunbook period={activePeriod} onNavigate={setTab} />
+          ) : (
+            <NoPeriodPlaceholder icon={ListChecks} text="Selecciona un periodo para ver el runbook operativo." />
+          )}
+        </TabsContent>
+
         <TabsContent value="rollout">
           <RolloutReadiness periods={periods} />
         </TabsContent>
@@ -539,6 +555,10 @@ export default function StagedReconciliation() {
 
         <TabsContent value="stabilization">
           <StabilizationDashboard periods={periods} companyId={selectedCompanyId} />
+        </TabsContent>
+
+        <TabsContent value="priorities">
+          <StabilizationPriorities companyId={selectedCompanyId} />
         </TabsContent>
 
         <TabsContent value="history">
