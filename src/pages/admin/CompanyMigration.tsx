@@ -62,18 +62,99 @@ export default function CompanyMigration() {
 
   const [activePreview, setActivePreview] = useState<FileSlot | null>(null);
 
+  const parseBinaryXls = useCallback(async (file: File): Promise<ConnecteamParsedRecord[]> => {
+    const buffer = await file.arrayBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer);
+    const ws = wb.worksheets[0];
+    if (!ws || ws.rowCount < 2) return [];
+
+    // Read headers from first row
+    const headerRow = ws.getRow(1);
+    const headers: string[] = [];
+    headerRow.eachCell((cell, colNumber) => {
+      headers[colNumber - 1] = String(cell.value ?? "").trim();
+    });
+
+    const normalizeKey = (h: string) => h.toLowerCase().replace(/[_\s-]+/g, " ").replace(/[^\w\s().?]/g, "").trim();
+    const headerKeys = headers.map(h => HEADER_MAP[normalizeKey(h)] ?? null);
+
+    const records: ConnecteamParsedRecord[] = [];
+    ws.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const cells: string[] = [];
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        cells[colNumber - 1] = String(cell.value ?? "").trim();
+      });
+      if (cells.length < 2) return;
+
+      const record: any = {
+        first_name: "", last_name: "", email: "", phone_number: "",
+        country_code: "", gender: "", birthday: "", address: "",
+        county: "", start_date: "", end_date: "", english_level: "",
+        employee_role: "", qualify: "", recommended_by: "", direct_manager: "",
+        has_car: "", driver_licence: "", kiosk_code: "", date_added: "",
+        last_login: "", connecteam_employee_id: "", onboarding_status: "",
+        added_via: "", added_by: "", groups: "", tags: "",
+        archived_at: "", archived_by: "",
+        access_level: "", managed_groups: "", permissions: "",
+        admin_tab: "", accepted: "", _raw: {} as Record<string, string>,
+      };
+
+      headers.forEach((h, i) => { record._raw[h] = cells[i] ?? ""; });
+      headerKeys.forEach((key, i) => {
+        if (key && key !== "_raw") {
+          const val = (cells[i] ?? "").trim();
+          if (val && !/^[\s,]*$/.test(val)) record[key] = val;
+        }
+      });
+
+      if (record.email) record.email = record.email.toLowerCase().trim();
+      if (record.first_name) record.first_name = record.first_name.split(/\s+/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      if (record.last_name) record.last_name = record.last_name.split(/\s+/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+
+      if (!record.first_name && !record.last_name) return;
+      records.push(record as ConnecteamParsedRecord);
+    });
+
+    return records;
+  }, []);
+
   const handleFileUpload = useCallback(async (slot: FileSlot, file: File) => {
     try {
       console.log("[Migration] Uploading file:", file.name, "size:", file.size, "type:", file.type);
+
+      // Try reading as text first to check if it's HTML-based
       const text = await file.text();
-      console.log("[Migration] File text length:", text.length, "first 200 chars:", text.substring(0, 200));
-      const detectedType = detectFileType(text);
-      console.log("[Migration] Detected type:", detectedType);
-      const records = parseConnecteamHtmlXls(text);
-      console.log("[Migration] Parsed records:", records.length);
+      const isHtml = text.trimStart().startsWith("<") || text.includes("<html") || text.includes("<table");
+      console.log("[Migration] Is HTML:", isHtml);
+
+      let records: ConnecteamParsedRecord[];
+      let detectedType: "active" | "archived" | "admin" | "unknown";
+
+      if (isHtml) {
+        detectedType = detectFileType(text);
+        records = parseConnecteamHtmlXls(text);
+      } else {
+        // Binary XLS/XLSX — use ExcelJS
+        console.log("[Migration] Parsing as binary Excel...");
+        records = await parseBinaryXls(file);
+        // Detect type from column names in raw data
+        const sampleRaw = records[0]?._raw || {};
+        const rawKeys = Object.keys(sampleRaw).join(" ").toLowerCase();
+        if (rawKeys.includes("access level") || rawKeys.includes("managed groups")) {
+          detectedType = "admin";
+        } else if (rawKeys.includes("archived at") || rawKeys.includes("archived by")) {
+          detectedType = "archived";
+        } else {
+          detectedType = "active";
+        }
+      }
+
+      console.log("[Migration] Detected type:", detectedType, "Parsed records:", records.length);
 
       if (records.length === 0) {
-        toast({ title: "No records found", description: "The file was read but no employee records were detected. Make sure it's a Connecteam HTML export (.xls).", variant: "destructive" });
+        toast({ title: "No records found", description: "The file was read but no employee records were detected. Supported formats: Connecteam HTML exports (.xls) and standard .xlsx files.", variant: "destructive" });
         return;
       }
 
@@ -90,7 +171,7 @@ export default function CompanyMigration() {
       console.error("[Migration] Parse error:", err);
       toast({ title: "Parse error", description: err.message, variant: "destructive" });
     }
-  }, [toast]);
+  }, [toast, parseBinaryXls]);
 
   const runImport = useCallback(async (slot: FileSlot, dryRun: boolean) => {
     if (!selectedCompanyId) {
