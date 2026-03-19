@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
-  ChevronRight, Zap,
+  ChevronRight, Zap, BookOpen, TrendingUp,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -28,6 +28,10 @@ import VerificationReport from "@/components/reconciliation/VerificationReport";
 import BusinessRuleTuningPanel from "@/components/reconciliation/BusinessRuleTuningPanel";
 import VarianceWorkbench from "@/components/reconciliation/VarianceWorkbench";
 import PilotComparisonReport from "@/components/reconciliation/PilotComparisonReport";
+import WeeklyCloseChecklist from "@/components/reconciliation/WeeklyCloseChecklist";
+import PeriodScorecard from "@/components/reconciliation/PeriodScorecard";
+import PeriodJournal from "@/components/reconciliation/PeriodJournal";
+import PeriodComparison from "@/components/reconciliation/PeriodComparison";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 /* ── Status → workflow step mapping ── */
@@ -53,6 +57,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { value: "dashboard", label: "Dashboard", icon: BarChart3, alwaysEnabled: true },
+  { value: "checklist", label: "Guía", icon: ClipboardCheck, minStatus: null },
   { value: "import", label: "Importar", icon: Upload, minStatus: null },
   { value: "review", label: "Matching", icon: GitCompareArrows, minStatus: "importing" },
   { value: "exceptions", label: "Excepciones", icon: AlertTriangle, minStatus: "importing" },
@@ -62,13 +67,15 @@ const TABS: TabDef[] = [
   { value: "approve", label: "Aprobar", icon: CheckCircle2, minStatus: "reviewing" },
   { value: "validate", label: "Validar", icon: ClipboardCheck, minStatus: "reviewing" },
   { value: "publish", label: "Publicar", icon: Shield, minStatus: "approved" },
+  { value: "compare", label: "Comparar", icon: TrendingUp, alwaysEnabled: true },
+  { value: "journal", label: "Diario", icon: BookOpen, minStatus: null },
   { value: "pilot", label: "Piloto", icon: Rocket, minStatus: "reviewing" },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
 
 function isTabEnabled(tab: TabDef, periodStatus: string | null): boolean {
   if (tab.alwaysEnabled) return true;
-  if (!periodStatus) return tab.value === "import";
+  if (!periodStatus) return tab.value === "import" || tab.value === "checklist" || tab.value === "journal";
   if (!tab.minStatus) return true;
   return STATUS_ORDER.indexOf(periodStatus) >= STATUS_ORDER.indexOf(tab.minStatus);
 }
@@ -120,6 +127,18 @@ export default function StagedReconciliation() {
     loadPeriods();
   }, [loadPeriods]);
 
+  // ── Journal logging helper ──
+  const logJournal = useCallback(async (eventType: string, eventLabel: string, detail?: string) => {
+    if (!selectedCompanyId || !activePeriod) return;
+    await supabase.from("reconciliation_period_journal" as any).insert({
+      company_id: selectedCompanyId,
+      period_status_id: activePeriod.id,
+      event_type: eventType,
+      event_label: eventLabel,
+      detail: detail || null,
+    } as any);
+  }, [selectedCompanyId, activePeriod]);
+
   // ── Period creation ──
   const handleCreatePeriod = async () => {
     if (!newLabel || !newStart || !newEnd) {
@@ -129,7 +148,7 @@ export default function StagedReconciliation() {
     const p = await createPeriod(newLabel, newStart, newEnd);
     if (p) {
       setActivePeriod(p);
-      setTab("import");
+      setTab("checklist");
       setShowCreateDialog(false);
       setNewLabel(""); setNewStart(""); setNewEnd("");
     }
@@ -139,44 +158,49 @@ export default function StagedReconciliation() {
     setActivePeriod(p);
     loadFinalRecords(p.id);
     loadClosingReceipt(p.id);
-    // Navigate to the most relevant tab for this period's status
-    const step = WORKFLOW_STEPS.find(s => s.key === p.status);
-    setTab(step?.tab || "employees");
+    setTab("checklist");
   };
 
-  // ── Core actions ──
+  // ── Core actions with journal logging ──
   const handleGenerateRecords = async () => {
     if (!activePeriod) return;
     await generateFinalRecords(activePeriod.id);
+    await logJournal("matching", "Registros finales generados", `${finalRecords.length} empleados`);
   };
 
   const handleApprovePeriod = async () => {
     if (!activePeriod) return;
     await updatePeriodStatus(activePeriod.id, "approved");
+    await logJournal("approval", "Periodo aprobado");
     toast({ title: "Periodo aprobado" });
   };
 
   const handlePostPeriod = async () => {
     if (!activePeriod) return;
     setPublishing(true);
-    await postFinalRecords(activePeriod.id);
+    const success = await postFinalRecords(activePeriod.id);
+    if (success) await logJournal("publish", "Periodo publicado a producción");
     setPublishing(false);
   };
 
   const handleLockPeriod = async () => {
     if (!activePeriod) return;
     await updatePeriodStatus(activePeriod.id, "locked");
+    await logJournal("lock", "Periodo cerrado y bloqueado");
     toast({ title: "Periodo cerrado y bloqueado" });
   };
 
   const handleReopen = async (reason: string) => {
     if (!activePeriod) return;
     await reopenPeriod(activePeriod.id, reason);
+    await logJournal("reopen", "Periodo reabierto", reason);
   };
 
   const handleRunValidation = async (isDryRun: boolean, uat: Record<string, boolean>, notes?: string) => {
     if (!activePeriod) return null;
-    return runValidation(activePeriod.id, isDryRun, uat, employeeMap, notes);
+    const result = await runValidation(activePeriod.id, isDryRun, uat, employeeMap, notes);
+    await logJournal("validation", isDryRun ? "Dry-run ejecutado" : "Validación ejecutada", `Confianza: ${result?.confidence_score}%`);
+    return result;
   };
 
   const validation = validateBeforePublish(finalRecords);
@@ -215,7 +239,6 @@ export default function StagedReconciliation() {
       {/* ── Active Period Status Bar ── */}
       {activePeriod && (
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-muted/40 border">
-          {/* Mini workflow progress */}
           <div className="flex items-center gap-1 flex-1 min-w-0">
             {WORKFLOW_STEPS.map((step, i) => {
               const stepIdx = STATUS_ORDER.indexOf(step.key);
@@ -237,20 +260,10 @@ export default function StagedReconciliation() {
               );
             })}
           </div>
-
-          {/* Period name + quick info */}
           <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className="text-[11px] font-mono">
-              {activePeriod.period_label}
-            </Badge>
-            {activePeriod.reopen_count > 0 && (
-              <Badge variant="destructive" className="text-[10px]">
-                ↻{activePeriod.reopen_count}
-              </Badge>
-            )}
+            <Badge variant="outline" className="text-[11px] font-mono">{activePeriod.period_label}</Badge>
+            {activePeriod.reopen_count > 0 && <Badge variant="destructive" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
           </div>
-
-          {/* Next action button */}
           {nextAction && activePeriod.status !== "locked" && (
             <Button size="sm" variant="default" className="gap-1 text-xs shrink-0" onClick={() => setTab(nextAction.tab)}>
               <Zap className="h-3 w-3" /> {nextAction.label}
@@ -265,9 +278,7 @@ export default function StagedReconciliation() {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription className="text-xs flex items-center gap-2">
             {activePeriod.total_exceptions - activePeriod.resolved_exceptions} excepción(es) sin resolver
-            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setTab("exceptions")}>
-              Ver excepciones
-            </Button>
+            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setTab("exceptions")}>Ver excepciones</Button>
           </AlertDescription>
         </Alert>
       )}
@@ -279,12 +290,7 @@ export default function StagedReconciliation() {
               const enabled = isTabEnabled(t, activePeriod?.status || null);
               const Icon = t.icon;
               return (
-                <TabsTrigger
-                  key={t.value}
-                  value={t.value}
-                  disabled={!enabled}
-                  className="gap-1 text-[11px]"
-                >
+                <TabsTrigger key={t.value} value={t.value} disabled={!enabled} className="gap-1 text-[11px]">
                   <Icon className="h-3 w-3" /> {t.label}
                 </TabsTrigger>
               );
@@ -297,18 +303,31 @@ export default function StagedReconciliation() {
           <ReconciliationDashboard periods={periods} onSelectPeriod={handleSelectPeriod} onCreatePeriod={() => setShowCreateDialog(true)} />
         </TabsContent>
 
-        <TabsContent value="import">
-          {activePeriod && (
-            <ActivePeriodBar period={activePeriod} isLocked={!!isLocked} />
+        <TabsContent value="checklist">
+          {activePeriod ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2 space-y-4">
+                <WeeklyCloseChecklist period={activePeriod} finalRecords={finalRecords} onNavigate={setTab} />
+              </div>
+              <div className="space-y-4">
+                <PeriodScorecard period={activePeriod} finalRecords={finalRecords} variances={variances} onNavigate={setTab} />
+              </div>
+            </div>
+          ) : (
+            <NoPeriodPlaceholder icon={ClipboardCheck} text="Selecciona un periodo para ver la guía de cierre." />
           )}
+        </TabsContent>
+
+        <TabsContent value="import">
+          {activePeriod && <ActivePeriodBar period={activePeriod} isLocked={!!isLocked} />}
           {isLocked ? (
             <NoPeriodPlaceholder icon={Lock} text="Este periodo está cerrado. No se permiten nuevas importaciones." />
           ) : (
             <StagedImportWizard
               companyId={selectedCompanyId}
-              onComplete={refresh}
+              onComplete={() => { refresh(); logJournal("import", "Archivos importados"); }}
               activePeriodId={activePeriod?.id}
-              onBatchLinked={() => loadPeriods()}
+              onBatchLinked={() => { loadPeriods(); logJournal("import", "Batch vinculado al periodo"); }}
             />
           )}
         </TabsContent>
@@ -318,7 +337,7 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="exceptions">
-          <ExceptionQueue companyId={selectedCompanyId} onRefresh={refresh} key={refreshKey} />
+          <ExceptionQueue companyId={selectedCompanyId} onRefresh={() => { refresh(); logJournal("exception_resolved", "Excepciones actualizadas"); }} key={refreshKey} />
         </TabsContent>
 
         <TabsContent value="employees">
@@ -365,12 +384,7 @@ export default function StagedReconciliation() {
 
         <TabsContent value="approve">
           {activePeriod ? (
-            <ApproveTab
-              period={activePeriod}
-              onUpdateStatus={updatePeriodStatus}
-              onApprove={handleApprovePeriod}
-              onGoToPublish={() => setTab("publish")}
-            />
+            <ApproveTab period={activePeriod} onUpdateStatus={updatePeriodStatus} onApprove={handleApprovePeriod} onGoToPublish={() => setTab("publish")} />
           ) : (
             <NoPeriodPlaceholder icon={CheckCircle2} />
           )}
@@ -378,14 +392,7 @@ export default function StagedReconciliation() {
 
         <TabsContent value="validate">
           {activePeriod ? (
-            <VerificationReport
-              period={activePeriod}
-              finalRecords={finalRecords}
-              employees={employeeMap}
-              onRunValidation={handleRunValidation}
-              onPublish={handlePostPeriod}
-              publishing={publishing}
-            />
+            <VerificationReport period={activePeriod} finalRecords={finalRecords} employees={employeeMap} onRunValidation={handleRunValidation} onPublish={handlePostPeriod} publishing={publishing} />
           ) : (
             <NoPeriodPlaceholder icon={ClipboardCheck} text="Selecciona un periodo desde el Dashboard para validar." />
           )}
@@ -393,31 +400,31 @@ export default function StagedReconciliation() {
 
         <TabsContent value="publish">
           {activePeriod ? (
-            <PrePublishReview
-              period={activePeriod}
-              finalRecords={finalRecords}
-              closingReceipt={closingReceipt}
-              employees={employeeMap}
-              validation={validation}
-              onPublish={handlePostPeriod}
-              onLock={handleLockPeriod}
-              onReopen={handleReopen}
-              publishing={publishing}
-            />
+            <PrePublishReview period={activePeriod} finalRecords={finalRecords} closingReceipt={closingReceipt} employees={employeeMap} validation={validation} onPublish={handlePostPeriod} onLock={handleLockPeriod} onReopen={handleReopen} publishing={publishing} />
           ) : (
             <NoPeriodPlaceholder icon={Shield} />
           )}
         </TabsContent>
 
+        <TabsContent value="compare">
+          {activePeriod ? (
+            <PeriodComparison periods={periods} activePeriodId={activePeriod.id} />
+          ) : (
+            <PeriodComparison periods={periods} activePeriodId="" />
+          )}
+        </TabsContent>
+
+        <TabsContent value="journal">
+          {activePeriod ? (
+            <PeriodJournal period={activePeriod} companyId={selectedCompanyId} />
+          ) : (
+            <NoPeriodPlaceholder icon={BookOpen} text="Selecciona un periodo para ver su diario de actividad." />
+          )}
+        </TabsContent>
+
         <TabsContent value="pilot">
           {activePeriod ? (
-            <PilotComparisonReport
-              companyId={selectedCompanyId}
-              period={activePeriod}
-              finalRecords={finalRecords}
-              employees={employeeMap}
-              variances={variances}
-            />
+            <PilotComparisonReport companyId={selectedCompanyId} period={activePeriod} finalRecords={finalRecords} employees={employeeMap} variances={variances} />
           ) : (
             <NoPeriodPlaceholder icon={Rocket} text="Selecciona un periodo para generar el reporte piloto." />
           )}
