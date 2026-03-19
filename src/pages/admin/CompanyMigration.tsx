@@ -12,7 +12,7 @@ import { Upload, Users, Archive, Shield, CheckCircle2, AlertTriangle, Link2, Plu
 import { useToast } from "@/hooks/use-toast";
 import { parseConnecteamHtmlXls, detectFileType, normalizePhone, HEADER_MAP } from "@/lib/connecteam-html-parser";
 import type { ConnecteamParsedRecord } from "@/lib/connecteam-html-parser";
-import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 
 interface FileState {
   file: File | null;
