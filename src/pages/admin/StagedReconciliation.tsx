@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
-  ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool,
+  ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool, Bug,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -34,6 +34,9 @@ import PeriodJournal from "@/components/reconciliation/PeriodJournal";
 import PeriodComparison from "@/components/reconciliation/PeriodComparison";
 import FormalSignoffPanel from "@/components/reconciliation/FormalSignoffPanel";
 import RolloutReadiness from "@/components/reconciliation/RolloutReadiness";
+import UATIssueTracker from "@/components/reconciliation/UATIssueTracker";
+import PilotReviewReport from "@/components/reconciliation/PilotReviewReport";
+import StabilizationDashboard from "@/components/reconciliation/StabilizationDashboard";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 /* ── Status → workflow step mapping ── */
@@ -74,6 +77,8 @@ const TABS: TabDef[] = [
   { value: "journal", label: "Diario", icon: BookOpen, minStatus: null },
   { value: "rollout", label: "Rollout", icon: Award, alwaysEnabled: true },
   { value: "pilot", label: "Piloto", icon: Rocket, minStatus: "reviewing" },
+  { value: "uat", label: "UAT", icon: Bug, minStatus: null },
+  { value: "stabilization", label: "Estabilización", icon: TrendingUp, alwaysEnabled: true },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
 
@@ -511,10 +516,22 @@ export default function StagedReconciliation() {
 
         <TabsContent value="pilot">
           {activePeriod ? (
-            <PilotComparisonReport companyId={selectedCompanyId} period={activePeriod} finalRecords={finalRecords} employees={employeeMap} variances={variances} />
+            <PilotReviewReport companyId={selectedCompanyId} period={activePeriod} finalRecords={finalRecords} employees={employeeMap} variances={variances} />
           ) : (
             <NoPeriodPlaceholder icon={Rocket} text="Selecciona un periodo para generar el reporte piloto." />
           )}
+        </TabsContent>
+
+        <TabsContent value="uat">
+          {activePeriod ? (
+            <UATIssueTracker companyId={selectedCompanyId} period={activePeriod} employees={employeeMap} />
+          ) : (
+            <NoPeriodPlaceholder icon={Bug} text="Selecciona un periodo para gestionar issues UAT." />
+          )}
+        </TabsContent>
+
+        <TabsContent value="stabilization">
+          <StabilizationDashboard periods={periods} companyId={selectedCompanyId} />
         </TabsContent>
 
         <TabsContent value="history">
