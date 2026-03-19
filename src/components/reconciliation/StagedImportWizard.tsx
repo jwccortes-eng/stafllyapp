@@ -737,6 +737,8 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                           <TableCell>
                             <MatchAssignDropdown
                               employees={employees}
+                              companyId={companyId}
+                              companyName={companyName}
                               nameRaw={row.employee_name_raw}
                               onAssign={(empId) => handleSaveAlias(row.employee_name_raw, empId)}
                             />
