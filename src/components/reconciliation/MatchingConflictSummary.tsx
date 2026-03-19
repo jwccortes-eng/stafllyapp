@@ -421,6 +421,8 @@ export default function MatchingConflictSummary({ companyId }: Props) {
           </TabsContent>
         </Tabs>
 
+        <UniquenessBreakdown companyId={companyId} />
+
         <OverlapDiagnostic
           matches={matches}
           scheduleLabels={scheduleLabels}
