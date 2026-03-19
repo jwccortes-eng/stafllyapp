@@ -168,13 +168,7 @@ export default function PeriodSummary() {
         .eq("approval_status", "approved");
       const empMap = new Map<string, SummaryRow>();
       (basePays ?? []).forEach((bp: any) => {
-        empMap.set(bp.employee_id, {
-          employee_id: bp.employee_id,
-          first_name: bp.employees?.first_name ?? "",
-          last_name: bp.employees?.last_name ?? "",
-          base_total_pay: Number(bp.base_total_pay) || 0,
-          extras_total: 0, deductions_total: 0, total_final_pay: 0,
-        });
+        empMap.set(bp.employee_id, mkRow(bp.employee_id, bp.employees?.first_name ?? "", bp.employees?.last_name ?? "", Number(bp.base_total_pay) || 0));
       });
       const { data: movEmployees } = await supabase
         .from("movements")
@@ -182,12 +176,7 @@ export default function PeriodSummary() {
         .eq("period_id", selectedPeriod);
       (movEmployees ?? []).forEach((me: any) => {
         if (!empMap.has(me.employee_id) && me.employees) {
-          empMap.set(me.employee_id, {
-            employee_id: me.employee_id,
-            first_name: me.employees.first_name ?? "",
-            last_name: me.employees.last_name ?? "",
-            base_total_pay: 0, extras_total: 0, deductions_total: 0, total_final_pay: 0,
-          });
+          empMap.set(me.employee_id, mkRow(me.employee_id, me.employees.first_name ?? "", me.employees.last_name ?? ""));
         }
       });
       (movements ?? []).forEach((m: any) => {
@@ -196,7 +185,69 @@ export default function PeriodSummary() {
         if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0;
         else row.deductions_total += Number(m.total_value) || 0;
       });
-      empMap.forEach((row) => { row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total; });
+
+      // Fetch active advance/loan records for this company
+      if (selectedCompanyId) {
+        const periodObj = periods.find(p => p.id === selectedPeriod);
+        const { data: advRecords } = await supabase
+          .from("employee_financial_records")
+          .select("id, employee_id, reference_code, record_type, original_amount, balance_remaining, repayment_mode, fixed_amount_per_cut, percentage_per_cut, maximum_payment_per_cut, minimum_payment, protect_minimum_net_pay, protect_negative_payroll, auto_deduct_enabled, repayment_start_date, priority_order, status, employees(first_name, last_name)")
+          .eq("company_id", selectedCompanyId)
+          .in("status", ["active", "approved"])
+          .eq("auto_deduct_enabled", true)
+          .is("deleted_at", null);
+
+        const eligible = (advRecords ?? []).filter((r: any) => {
+          if (Number(r.balance_remaining) <= 0) return false;
+          if (r.repayment_start_date && periodObj && r.repayment_start_date > periodObj.end_date) return false;
+          return true;
+        });
+
+        setAdvanceRecords(eligible as any[]);
+
+        // Calculate proposed deductions per employee
+        eligible.forEach((r: any) => {
+          const empId = r.employee_id;
+          // Ensure employee exists in empMap
+          if (!empMap.has(empId) && r.employees) {
+            empMap.set(empId, mkRow(empId, r.employees.first_name ?? "", r.employees.last_name ?? ""));
+          }
+          const row = empMap.get(empId);
+          if (!row) return;
+
+          const netPay = row.base_total_pay + row.extras_total - row.deductions_total;
+          const balance = Number(r.balance_remaining);
+          let proposed = 0;
+
+          switch (r.repayment_mode) {
+            case "fixed_amount":
+              proposed = Number(r.fixed_amount_per_cut ?? 0);
+              break;
+            case "percentage_net":
+              proposed = netPay * (Number(r.percentage_per_cut ?? 0) / 100);
+              break;
+            case "one_time_next":
+              proposed = balance;
+              break;
+            case "manual":
+              return; // skip
+            default:
+              proposed = Number(r.fixed_amount_per_cut ?? 0);
+          }
+
+          // Apply caps
+          proposed = Math.min(proposed, balance);
+          if (r.maximum_payment_per_cut) proposed = Math.min(proposed, Number(r.maximum_payment_per_cut));
+          if (r.protect_negative_payroll) proposed = Math.min(proposed, Math.max(0, netPay - row.advance_deduction));
+          proposed = Math.max(0, Math.round(proposed * 100) / 100);
+
+          row.advance_deduction += proposed;
+        });
+      }
+
+      empMap.forEach((row) => {
+        row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total - row.advance_deduction;
+      });
       const allRows = Array.from(empMap.values());
       setRows(allRows);
       setLoading(false);
