@@ -63,9 +63,18 @@ export default function CompanyMigration() {
 
   const handleFileUpload = useCallback(async (slot: FileSlot, file: File) => {
     try {
+      console.log("[Migration] Uploading file:", file.name, "size:", file.size, "type:", file.type);
       const text = await file.text();
+      console.log("[Migration] File text length:", text.length, "first 200 chars:", text.substring(0, 200));
       const detectedType = detectFileType(text);
+      console.log("[Migration] Detected type:", detectedType);
       const records = parseConnecteamHtmlXls(text);
+      console.log("[Migration] Parsed records:", records.length);
+
+      if (records.length === 0) {
+        toast({ title: "No records found", description: "The file was read but no employee records were detected. Make sure it's a Connecteam HTML export (.xls).", variant: "destructive" });
+        return;
+      }
 
       setFiles(prev => ({
         ...prev,
@@ -77,14 +86,23 @@ export default function CompanyMigration() {
         description: `File detected as: ${detectedType}. ${records.length} employees found.`,
       });
     } catch (err: any) {
+      console.error("[Migration] Parse error:", err);
       toast({ title: "Parse error", description: err.message, variant: "destructive" });
     }
   }, [toast]);
 
   const runImport = useCallback(async (slot: FileSlot, dryRun: boolean) => {
-    if (!selectedCompanyId) return;
+    if (!selectedCompanyId) {
+      console.error("[Migration] No company selected!");
+      toast({ title: "No company selected", description: "Please select a company from the top switcher before importing.", variant: "destructive" });
+      return;
+    }
     const state = files[slot];
-    if (!state.records.length) return;
+    if (!state.records.length) {
+      toast({ title: "No records", description: "Upload and parse a file first.", variant: "destructive" });
+      return;
+    }
+    console.log("[Migration] Running import:", { slot, dryRun, records: state.records.length, companyId: selectedCompanyId });
 
     setFiles(prev => ({ ...prev, [slot]: { ...prev[slot], status: "importing" } }));
 
