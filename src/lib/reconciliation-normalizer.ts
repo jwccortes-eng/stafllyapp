@@ -309,7 +309,7 @@ export function normalizeScheduleRows(
       };
     }
 
-    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases);
+    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases, manualResolutions);
     if (empMatch.ambiguous) warnings.push(`Row ${raw.row_number}: Ambiguous employee match for "${nameRaw}"`);
     if (!empMatch.employee_id) warnings.push(`Row ${raw.row_number}: No employee match for "${nameRaw}"`);
 
