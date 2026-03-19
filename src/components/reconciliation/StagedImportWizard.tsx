@@ -53,24 +53,47 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
   const [filter, setFilter] = useState<"all" | "matched" | "unmatched" | "system">("all");
 
   const loadEmployees = useCallback(async () => {
-    if (!companyId) return;
-    const { data } = await supabase
+    if (!companyId) {
+      console.warn("[StagedImport] No companyId, skipping employee load");
+      return;
+    }
+    console.log("[StagedImport] Loading employees for company:", companyId);
+
+    const { data, error } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, phone_number, email, external_id, connecteam_id, connecteam_employee_id, is_active")
+      .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, is_active, start_date, end_date")
       .eq("company_id", companyId);
-    setEmployees((data || []).map((d: any) => ({
-      ...d,
+
+    if (error) {
+      console.error("[StagedImport] Employee query error:", error);
+      toast({ title: "Error cargando empleados", description: error.message, variant: "destructive" });
+    }
+
+    const mapped = (data || []).map((d: any) => ({
+      id: d.id,
+      first_name: d.first_name,
+      last_name: d.last_name,
       phone: d.phone_number,
-      connecteam_id: d.connecteam_id || d.connecteam_employee_id,
-    })) as EmployeeRecord[]);
+      email: d.email,
+      connecteam_id: d.connecteam_employee_id || null,
+      external_id: d.connecteam_employee_id || null,
+      is_active: d.is_active,
+      hire_date: d.start_date,
+      termination_date: d.end_date,
+    })) as EmployeeRecord[];
+
+    console.log("[StagedImport] Employees loaded:", mapped.length, "active:", mapped.filter(e => e.is_active !== false).length, "inactive:", mapped.filter(e => e.is_active === false).length);
+    setEmployees(mapped);
 
     // Load aliases
-    const { data: aliasData } = await supabase
+    const { data: aliasData, error: aliasErr } = await supabase
       .from("employee_aliases" as any)
       .select("employee_id, alias_name_normalized")
       .eq("company_id", companyId);
+    if (aliasErr) console.warn("[StagedImport] Alias query error (table may not exist yet):", aliasErr.message);
     setAliases((aliasData || []) as unknown as EmployeeAlias[]);
-  }, [companyId]);
+    console.log("[StagedImport] Aliases loaded:", (aliasData || []).length);
+  }, [companyId, toast]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -393,13 +416,23 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
           </CardHeader>
           <CardContent>
             {/* Employee roster diagnostic */}
-            <Alert className="mb-4">
+            <Alert className={`mb-4 ${employees.length === 0 ? "border-destructive" : ""}`} variant={employees.length === 0 ? "destructive" : "default"}>
               <Users className="h-4 w-4" />
-              <AlertTitle>Diagnóstico de Empleados</AlertTitle>
-              <AlertDescription className="text-sm">
-                <span className="font-medium">{employees.filter((e: any) => e.is_active !== false).length}</span> empleados activos · <span className="font-medium">{employees.filter((e: any) => e.is_active === false).length}</span> inactivos · <span className="font-medium">{aliases.length}</span> alias configurados
+              <AlertTitle>Diagnóstico de Empleados — Roster de Empresa</AlertTitle>
+              <AlertDescription className="text-sm space-y-1">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
+                  <span><span className="font-semibold">{employees.filter((e: any) => e.is_active !== false).length}</span> activos</span>
+                  <span><span className="font-semibold">{employees.filter((e: any) => e.is_active === false).length}</span> inactivos</span>
+                  <span><span className="font-semibold">{employees.length}</span> total roster</span>
+                  <span><span className="font-semibold">{aliases.length}</span> alias</span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Company ID: <code className="bg-muted px-1 rounded">{companyId || "N/A"}</code> · Fuente: <code className="bg-muted px-1 rounded">employees</code>
+                </div>
                 {employees.length === 0 && (
-                  <span className="block mt-1 text-destructive font-semibold">⚠ No hay empleados cargados para esta empresa. El emparejamiento no funcionará.</span>
+                  <div className="mt-2 p-2 bg-destructive/10 rounded text-destructive font-semibold text-sm">
+                    🚫 Roster vacío — No hay empleados cargados para esta empresa. Verifica que el contexto de empresa sea correcto y que existan empleados registrados antes de importar.
+                  </div>
                 )}
               </AlertDescription>
             </Alert>
