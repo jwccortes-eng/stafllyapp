@@ -211,14 +211,33 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     } as any);
     if (error) {
       if (error.code === "23505") {
-        toast({ title: "Alias ya existe", variant: "default" });
+        // Alias already exists — check if it points to the same employee
+        const { data: existing } = await supabase
+          .from("employee_aliases" as any)
+          .select("employee_id")
+          .eq("company_id", companyId)
+          .eq("alias_name_normalized", normalized)
+          .limit(1) as any;
+        const existingEmpId = existing?.[0]?.employee_id;
+        if (existingEmpId && existingEmpId !== employeeId) {
+          toast({ title: "Conflicto de alias", description: `Este nombre ya está asignado a otro empleado. Elimina el alias anterior primero.`, variant: "destructive" });
+          return;
+        }
+        // Same employee — treat as success
+        toast({ title: "Alias ya existía", description: `"${nameRaw}" ya vinculado. Resolución aplicada.` });
       } else {
         toast({ title: "Error al guardar alias", description: error.message, variant: "destructive" });
+        return;
       }
-      return;
+    } else {
+      toast({ title: "Alias guardado", description: `"${nameRaw}" → empleado vinculado` });
     }
-    toast({ title: "Alias guardado", description: `"${nameRaw}" → empleado vinculado` });
-    setAliases(prev => [...prev, { employee_id: employeeId, alias_name_normalized: normalized }]);
+    // Always update local alias state and proceed with resolution
+    setAliases(prev => {
+      const alreadyExists = prev.some(a => a.alias_name_normalized === normalized && a.employee_id === employeeId);
+      if (alreadyExists) return prev;
+      return [...prev, { employee_id: employeeId, alias_name_normalized: normalized }];
+    });
   };
 
   const handleSave = async () => {
