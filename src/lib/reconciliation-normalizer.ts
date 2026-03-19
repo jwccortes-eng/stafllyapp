@@ -24,6 +24,18 @@ const SYSTEM_NAME_PATTERNS = [
   /^placeholder/i,
 ];
 
+// Subtotal / summary rows that should never be treated as employees
+const SUMMARY_ROW_PATTERNS = [
+  /^total\s/i,          // "TOTAL QUALITY", "Total General", etc.
+  /^sub\s?total/i,      // "SUBTOTAL", "Sub Total"
+  /^grand\s?total/i,
+  /\btotal$/i,          // "Grand Total", "Payroll Total"
+  /^resumen/i,          // "Resumen"
+  /^summary/i,
+  /^average/i,
+  /^promedio/i,
+];
+
 const SYSTEM_EMAIL_PATTERNS = [
   /^conecteam@/i,
   /^admin@/i,
