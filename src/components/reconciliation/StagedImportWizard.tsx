@@ -198,8 +198,35 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     if (!f) return;
     setFile(f);
     setNameColumnWarning("");
+    setSheetNames([]);
+    setSelectedSheet("");
     try {
-      const rows = await parseAnyFileToJson(f, { defval: "" });
+      const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+      const isExcel = ext === "xlsx" || ext === "xls";
+
+      let rows: Record<string, any>[];
+      if (isExcel) {
+        // Get sheet names first
+        const names = await getFileSheetNames(f);
+        setSheetNames(names);
+        console.log("[StagedImport] Sheet names:", names);
+
+        // Auto-select the best sheet based on source type
+        let targetSheet = names[0] ?? "";
+        if (sourceType === "payroll" && names.length > 1) {
+          const detected = findPayrollSheet(names);
+          if (detected) targetSheet = detected;
+          console.log("[StagedImport] Payroll sheet detected:", detected, "from", names);
+        }
+        setSelectedSheet(targetSheet);
+
+        const result = await parseExcelWithSheets(f, targetSheet, { defval: "" });
+        rows = result.rows;
+        console.log(`[StagedImport] Reading sheet "${targetSheet}" → ${rows.length} rows`);
+      } else {
+        rows = await parseAnyFileToJson(f, { defval: "" });
+      }
+
       if (!rows || rows.length === 0) {
         toast({ title: "Archivo vacío", description: "No se encontraron filas de datos en el archivo.", variant: "destructive" });
         return;
@@ -210,7 +237,6 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       const mapping = detectColumns(allHeaders);
       console.log("[StagedImport] Column mapping:", mapping);
 
-      // Content-based validation: check if mapped employee_name column looks suspicious
       const nameCol = mapping.employee_name || "";
       if (nameCol) {
         const suspicion = detectSuspiciousNameColumn(rows, nameCol);
@@ -226,6 +252,29 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     } catch (err: any) {
       console.error("[StagedImport] File parse error:", err);
       toast({ title: "Error al leer archivo", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleSheetChange = async (newSheet: string) => {
+    if (!file || newSheet === selectedSheet) return;
+    setSelectedSheet(newSheet);
+    try {
+      const result = await parseExcelWithSheets(file, newSheet, { defval: "" });
+      setRawRows(result.rows);
+      console.log(`[StagedImport] Switched to sheet "${newSheet}" → ${result.rows.length} rows`);
+      if (result.rows.length > 0) {
+        const allHeaders = Object.keys(result.rows[0]);
+        const mapping = detectColumns(allHeaders);
+        setColumnMapping(mapping);
+        setNameColumnWarning("");
+        const nameCol = mapping.employee_name || "";
+        if (nameCol) {
+          const suspicion = detectSuspiciousNameColumn(result.rows, nameCol);
+          if (suspicion.suspicious) setNameColumnWarning(`⚠ "${nameCol}": ${suspicion.reason}`);
+        }
+      }
+    } catch (err: any) {
+      toast({ title: "Error al leer hoja", description: err.message, variant: "destructive" });
     }
   };
 
