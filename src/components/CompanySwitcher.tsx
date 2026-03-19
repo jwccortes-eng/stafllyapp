@@ -21,9 +21,6 @@ const ROLE_LABELS: Record<string, string> = {
   employee: "Empleado",
 };
 
-
-
-
 interface CompanySwitcherProps {
   collapsed?: boolean;
 }
@@ -70,7 +67,6 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
       return;
     }
 
-    // For multi-company users, require PIN confirmation
     if (companies.length > 1) {
       setOpen(false);
       setPendingCompany({
@@ -83,13 +79,11 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
       return;
     }
 
-    // Single company - direct switch (shouldn't normally happen)
     performSwitch(company.id);
   };
 
   const performSwitch = (companyId: string) => {
     switchCompany(companyId);
-    // Navigate to safe landing page to avoid stale entity detail pages
     const isDetailPage = /\/app\/[^/]+\/[^/]+/.test(location.pathname);
     const basePath = activeMode === 'employee' ? '/portal' : '/app';
     if (isDetailPage) {
@@ -104,11 +98,8 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
 
   if (companies.length === 0) return null;
 
-  const currentColor = getCompanyColor(selectedCompany?.brand_color, 0);
-  const currentInitials = selectedCompany ? getCompanyInitials(selectedCompany.name) : "?";
   const isDual = canAccessAdmin && canAccessPortal;
   const isAdmin = activeMode === 'admin';
-  const isMulti = companies.length > 1;
 
   // Active mode pill
   const ModePill = () => {
@@ -118,7 +109,7 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
         "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider leading-none",
         isAdmin
           ? "bg-primary/10 text-primary"
-          : "text-emerald-700 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/40"
+          : "text-earning bg-earning/10"
       )}>
         {isAdmin ? <LayoutDashboard className="h-2.5 w-2.5" /> : <User className="h-2.5 w-2.5" />}
         {isAdmin ? "Admin" : "Portal"}
@@ -133,25 +124,14 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
         "flex items-center gap-2.5",
         collapsed ? "justify-center" : ""
       )}>
-        <div className="relative">
-          <Avatar className="h-7 w-7 rounded-lg shrink-0" style={{ borderColor: `${currentColor}30`, borderWidth: 1.5 }}>
-            {selectedCompany?.logo_url ? (
-              <AvatarImage src={selectedCompany.logo_url} alt={selectedCompany.name} className="rounded-lg object-cover" />
-            ) : null}
-            <AvatarFallback
-              className="rounded-lg text-[10px] font-bold"
-              style={{ backgroundColor: `${currentColor}15`, color: currentColor }}
-            >
-              {currentInitials}
-            </AvatarFallback>
-          </Avatar>
-          {isDual && collapsed && (
-            <span className={cn(
-              "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-background",
-              isAdmin ? "bg-primary" : "bg-emerald-500"
-            )} />
-          )}
-        </div>
+        <CompanyLogo
+          name={selectedCompany?.name || ""}
+          logoUrl={selectedCompany?.logo_url}
+          brandColor={selectedCompany?.brand_color}
+          size="sm"
+          active={isDual}
+          glow
+        />
         {!collapsed && (
           <div className="flex flex-col min-w-0">
             <span className="text-[13px] font-semibold text-foreground truncate leading-tight">{selectedCompany?.name}</span>
@@ -171,25 +151,14 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
             "flex items-center gap-2.5 rounded-xl transition-all duration-200 hover:bg-accent/40 group w-full",
             collapsed ? "justify-center p-1.5" : "px-2.5 py-2"
           )}>
-            <div className="relative">
-              <Avatar className="h-7 w-7 rounded-lg shrink-0 ring-1 ring-border/30">
-                {selectedCompany?.logo_url ? (
-                  <AvatarImage src={selectedCompany.logo_url} alt={selectedCompany.name} className="rounded-lg object-cover" />
-                ) : null}
-                <AvatarFallback
-                  className="rounded-lg text-[10px] font-bold"
-                  style={{ backgroundColor: `${currentColor}15`, color: currentColor }}
-                >
-                  {currentInitials}
-                </AvatarFallback>
-              </Avatar>
-              {isDual && collapsed && (
-                <span className={cn(
-                  "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-background",
-                  isAdmin ? "bg-primary" : "bg-emerald-500"
-                )} />
-              )}
-            </div>
+            <CompanyLogo
+              name={selectedCompany?.name || ""}
+              logoUrl={selectedCompany?.logo_url}
+              brandColor={selectedCompany?.brand_color}
+              size="sm"
+              active
+              glow
+            />
             {!collapsed && (
               <>
                 <div className="flex-1 min-w-0 text-left">
@@ -221,7 +190,7 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
                   "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold",
                   isAdmin
                     ? "bg-primary/10 text-primary"
-                    : "text-emerald-700 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/40"
+                    : "text-earning bg-earning/10"
                 )}>
                   {isAdmin ? <LayoutDashboard className="h-2.5 w-2.5" /> : <User className="h-2.5 w-2.5" />}
                   Modo {isAdmin ? "Admin" : "Empleado"}
@@ -242,9 +211,7 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
             )}
           </div>
           <div className="px-2 pb-2 max-h-[320px] overflow-y-auto scrollbar-thin space-y-0.5">
-            {filtered.map((company, i) => {
-              const color = getCompanyColor(company.brand_color, i);
-              const initials = getCompanyInitials(company.name);
+            {filtered.map((company) => {
               const isSelected = company.id === selectedCompanyId;
               const companyRole = companyRoles[company.id];
               const roleLabel = companyRole ? ROLE_LABELS[companyRole] || companyRole : null;
@@ -260,17 +227,13 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
                       : "hover:bg-accent/40"
                   )}
                 >
-                  <Avatar className="h-8 w-8 rounded-lg shrink-0">
-                    {company.logo_url ? (
-                      <AvatarImage src={company.logo_url} alt={company.name} className="rounded-lg object-cover" />
-                    ) : null}
-                    <AvatarFallback
-                      className="rounded-lg text-[10px] font-bold"
-                      style={{ backgroundColor: `${color}15`, color }}
-                    >
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <CompanyLogo
+                    name={company.name}
+                    logoUrl={company.logo_url}
+                    brandColor={company.brand_color}
+                    size="sm"
+                    active={isSelected}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className={cn("text-[12px] font-medium truncate leading-tight", isSelected && "text-primary font-semibold")}>
                       {company.name}
