@@ -108,10 +108,11 @@ export default function CompanyMigration() {
       if (record.first_name) record.first_name = record.first_name.split(/\s+/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
       if (record.last_name) record.last_name = record.last_name.split(/\s+/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
-      if (!record.first_name && !record.last_name) return;
+      if (!record.first_name && !record.last_name) continue;
       records.push(record as ConnecteamParsedRecord);
-    });
+    }
 
+    console.log("[Migration] Binary parsed records:", records.length);
     return records;
   }, []);
 
