@@ -12,6 +12,17 @@ import {
   type PayrollTruthRow,
 } from "@/lib/payroll-truth-parser";
 
+interface LedgerEntry {
+  id: string;
+  concept: string;
+  qty: number;
+  rate: number;
+  value: number;
+  included: boolean;
+  reason: string;
+  category: "hourly" | "daily" | "ride" | "weekend" | "manual" | "other";
+}
+
 interface ReconBreakdown {
   employee_id: string;
   employee_name: string;
@@ -22,10 +33,12 @@ interface ReconBreakdown {
   manual_adj: number;
   other_pay: number;
   total_final: number;
+  total_raw: number; // before dedup
+  total_suppressed: number;
   schedule_count: number;
   clock_count: number;
   payroll_row_count: number;
-  movement_details: { concept: string; qty: number; rate: number; value: number }[];
+  ledger: LedgerEntry[];
   flags: string[];
 }
 
@@ -44,6 +57,15 @@ interface Props {
 
 function normalizeName(s: string): string {
   return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+}
+
+function classifyMovement(conceptName: string): LedgerEntry["category"] {
+  const n = conceptName.toLowerCase();
+  if (n.includes("daily") || n.includes("diario")) return "daily";
+  if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "ride";
+  if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend";
+  if (n.includes("adjust") || n.includes("manual") || n.includes("correction") || n.includes("reintegro")) return "manual";
+  return "other";
 }
 
 export default function PayrollTruthValidation({ companyId, periodStatusId }: Props) {
@@ -84,12 +106,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
     }
   };
 
-  // Fetch detailed recon breakdown
   useEffect(() => {
     if (!companyId) return;
 
     (async () => {
-      // 1. Employees
       const { data: employees } = await supabase
         .from("employees")
         .select("id, first_name, last_name")
@@ -97,11 +117,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         .eq("is_active", true);
 
       const empMap = new Map<string, string>();
-      (employees || []).forEach((e: any) => {
-        empMap.set(e.id, `${e.first_name} ${e.last_name}`);
-      });
+      (employees || []).forEach((e: any) => empMap.set(e.id, `${e.first_name} ${e.last_name}`));
 
-      // 2. Base pay from period_base_pay
       const { data: basePay } = await supabase
         .from("period_base_pay" as any)
         .select("*")
@@ -115,60 +132,109 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
             employee_id: empId,
             employee_name: empMap.get(empId) || empId,
             hourly_pay: 0, daily_pay: 0, ride_pay: 0, weekend_pay: 0,
-            manual_adj: 0, other_pay: 0, total_final: 0,
+            manual_adj: 0, other_pay: 0, total_final: 0, total_raw: 0, total_suppressed: 0,
             schedule_count: 0, clock_count: 0, payroll_row_count: 0,
-            movement_details: [], flags: [],
+            ledger: [], flags: [],
           });
         }
         return breakdowns.get(empId)!;
       };
 
-      // Populate base pay
       if (basePay) {
         for (const bp of basePay as any[]) {
           const row = getOrCreate(bp.employee_id);
           row.hourly_pay = bp.base_total_pay || 0;
           row.payroll_row_count = 1;
+          row.ledger.push({
+            id: bp.id || "base",
+            concept: "Base Pay (period_base_pay)",
+            qty: bp.total_work_hours || 0,
+            rate: bp.total_work_hours > 0 ? (bp.base_total_pay || 0) / bp.total_work_hours : 0,
+            value: bp.base_total_pay || 0,
+            included: true,
+            reason: "Primary base pay row",
+            category: "hourly",
+          });
           if (bp.import_id) row.flags.push("imported_base");
         }
       }
 
-      // 3. Movements with concept names - get ALL for this company
+      // Movements with deduplication
       const { data: movements } = await supabase
         .from("movements" as any)
-        .select("employee_id, quantity, rate, total_value, note, concepts!inner(name)")
+        .select("id, employee_id, quantity, rate, total_value, note, period_id, concepts!inner(name)")
         .eq("company_id", companyId)
         .limit(1000);
 
       if (movements) {
+        // Group by employee, then deduplicate within each employee
+        const byEmployee = new Map<string, any[]>();
         for (const m of movements as any[]) {
-          const row = getOrCreate(m.employee_id);
-          const conceptName = String(m.concepts?.name || "").toLowerCase();
-          const val = m.total_value || 0;
-
-          const detail = {
-            concept: m.concepts?.name || "Unknown",
-            qty: m.quantity || 0,
-            rate: m.rate || 0,
-            value: val,
-          };
-          row.movement_details.push(detail);
-
-          if (conceptName.includes("daily")) {
-            row.daily_pay += val;
-          } else if (conceptName.includes("ride") || conceptName.includes("ryde")) {
-            row.ride_pay += val;
-          } else if (conceptName.includes("weekend") || conceptName.includes("doble") || conceptName.includes("double")) {
-            row.weekend_pay += val;
-          } else if (conceptName.includes("adjust") || conceptName.includes("manual") || conceptName.includes("correction")) {
-            row.manual_adj += val;
-          } else {
-            row.other_pay += val;
-          }
+          const arr = byEmployee.get(m.employee_id) || [];
+          arr.push(m);
+          byEmployee.set(m.employee_id, arr);
         }
+
+        byEmployee.forEach((empMovements, empId) => {
+          const row = getOrCreate(empId);
+
+          // Deduplicate: same concept + same value = duplicate from same payroll decomposition
+          const seen = new Map<string, { count: number; firstId: string }>();
+          
+          for (const m of empMovements) {
+            const conceptName = String(m.concepts?.name || "Unknown");
+            const val = m.total_value || 0;
+            const dedupKey = `${conceptName}|${val}`;
+            const category = classifyMovement(conceptName);
+
+            const existing = seen.get(dedupKey);
+            const isDuplicate = !!existing;
+
+            if (isDuplicate) {
+              existing!.count++;
+              // Suppressed duplicate
+              row.ledger.push({
+                id: m.id || `mov-${row.ledger.length}`,
+                concept: conceptName,
+                qty: m.quantity || 0,
+                rate: m.rate || 0,
+                value: val,
+                included: false,
+                reason: `Duplicate #${existing!.count} of ${dedupKey} (suppressed)`,
+                category,
+              });
+              row.total_suppressed += val;
+              row.flags.push(`dup_suppressed: ${conceptName} ${fmt(val)}`);
+            } else {
+              seen.set(dedupKey, { count: 1, firstId: m.id });
+              // Included movement
+              row.ledger.push({
+                id: m.id || `mov-${row.ledger.length}`,
+                concept: conceptName,
+                qty: m.quantity || 0,
+                rate: m.rate || 0,
+                value: val,
+                included: true,
+                reason: "First occurrence — included",
+                category,
+              });
+
+              // Only add to category totals for the FIRST occurrence
+              switch (category) {
+                case "daily": row.daily_pay += val; break;
+                case "ride": row.ride_pay += val; break;
+                case "weekend": row.weekend_pay += val; break;
+                case "manual": row.manual_adj += val; break;
+                case "other": row.other_pay += val; break;
+              }
+            }
+
+            row.total_raw += val;
+          }
+        });
       }
 
-      // 4. Schedule counts (scheduled_shifts assigned to employee)
+      // Schedule counts
       const { data: schedules } = await supabase
         .from("shifts" as any)
         .select("employee_id")
@@ -176,17 +242,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         .limit(1000);
 
       if (schedules) {
-        const schedCounts = new Map<string, number>();
-        for (const s of schedules as any[]) {
-          schedCounts.set(s.employee_id, (schedCounts.get(s.employee_id) || 0) + 1);
-        }
-        schedCounts.forEach((count, empId) => {
-          const row = getOrCreate(empId);
-          row.schedule_count = count;
-        });
+        const counts = new Map<string, number>();
+        for (const s of schedules as any[]) counts.set(s.employee_id, (counts.get(s.employee_id) || 0) + 1);
+        counts.forEach((count, empId) => { getOrCreate(empId).schedule_count = count; });
       }
 
-      // 5. Clock counts (time_entries)
+      // Clock counts
       const { data: clocks } = await supabase
         .from("time_entries" as any)
         .select("employee_id")
@@ -194,32 +255,22 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         .limit(1000);
 
       if (clocks) {
-        const clockCounts = new Map<string, number>();
-        for (const c of clocks as any[]) {
-          clockCounts.set(c.employee_id, (clockCounts.get(c.employee_id) || 0) + 1);
-        }
-        clockCounts.forEach((count, empId) => {
-          const row = getOrCreate(empId);
-          row.clock_count = count;
-        });
+        const counts = new Map<string, number>();
+        for (const c of clocks as any[]) counts.set(c.employee_id, (counts.get(c.employee_id) || 0) + 1);
+        counts.forEach((count, empId) => { getOrCreate(empId).clock_count = count; });
       }
 
-      // Compute totals and detect flags
+      // Compute deduped totals + guardrails
       breakdowns.forEach(row => {
         row.total_final = row.hourly_pay + row.daily_pay + row.ride_pay + row.weekend_pay + row.manual_adj + row.other_pay;
 
-        // Duplicate detection: if movements have same concept+value appearing multiple times
-        const seen = new Map<string, number>();
-        for (const d of row.movement_details) {
-          const key = `${d.concept}|${d.value}`;
-          seen.set(key, (seen.get(key) || 0) + 1);
+        if (row.schedule_count === 0 && row.clock_count === 0 && row.hourly_pay > 0) {
+          row.flags.push("no_work_evidence_but_has_base_pay");
         }
-        seen.forEach((count, key) => {
-          if (count > 1) row.flags.push(`dup_movement: ${key} ×${count}`);
-        });
 
-        if (row.schedule_count === 0 && row.hourly_pay > 0) row.flags.push("no_schedules_but_has_base_pay");
-        if (row.clock_count === 0 && row.hourly_pay > 0) row.flags.push("no_clocks_but_has_base_pay");
+        if (row.total_suppressed > 0) {
+          row.flags.push(`total_suppressed: ${fmt(row.total_suppressed)} (${row.ledger.filter(l => !l.included).length} entries)`);
+        }
       });
 
       setReconData(Array.from(breakdowns.values()));
@@ -228,18 +279,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
 
   const comparison = useMemo<ComparisonRow[]>(() => {
     if (truthData.length === 0) return [];
-
     return truthData
       .map(t => {
         const recon = reconData.find(r => normalizeName(r.employee_name) === normalizeName(t.employee));
-
-        if (!recon) {
-          return { employee: t.employee, truth: t, recon: null, totalVariance: t.total, status: "missing" as const };
-        }
-
+        if (!recon) return { employee: t.employee, truth: t, recon: null, totalVariance: t.total, status: "missing" as const };
         const totalVariance = recon.total_final - t.total;
         const absTotal = Math.abs(totalVariance);
-
         return {
           employee: t.employee, truth: t, recon, totalVariance,
           status: (absTotal < 1 ? "match" : absTotal < 50 ? "close" : "mismatch") as ComparisonRow["status"],
@@ -255,7 +300,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
     const missing = comparison.filter(c => c.status === "missing").length;
     const totalTruth = truthData.reduce((sum, row) => sum + row.total, 0);
     const totalRecon = comparison.reduce((sum, row) => sum + (row.recon?.total_final || 0), 0);
-    return { matched, close, mismatch, missing, totalTruth, totalRecon, variance: totalRecon - totalTruth };
+    const totalSuppressed = comparison.reduce((sum, row) => sum + (row.recon?.total_suppressed || 0), 0);
+    return { matched, close, mismatch, missing, totalTruth, totalRecon, variance: totalRecon - totalTruth, totalSuppressed };
   }, [comparison, truthData]);
 
   const statusBadge = (s: ComparisonRow["status"]) => {
@@ -275,19 +321,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
 
     const hourlyDiff = r.hourly_pay - t.totalPay;
     if (Math.abs(hourlyDiff) > 1) parts.push(`Base/Hourly: recon ${fmt(r.hourly_pay)} vs truth ${fmt(t.totalPay)} (${fmtVar(hourlyDiff)})`);
-
     const dailyDiff = r.daily_pay - t.payperDay;
     if (Math.abs(dailyDiff) > 1) parts.push(`Daily: recon ${fmt(r.daily_pay)} vs truth ${fmt(t.payperDay)} (${fmtVar(dailyDiff)})`);
-
     const rideDiff = r.ride_pay - t.ryde;
     if (Math.abs(rideDiff) > 1) parts.push(`Ride: recon ${fmt(r.ride_pay)} vs truth ${fmt(t.ryde)} (${fmtVar(rideDiff)})`);
-
     if (r.weekend_pay > 0) parts.push(`Weekend/Double: ${fmt(r.weekend_pay)} (no truth equivalent)`);
     if (r.manual_adj !== 0) parts.push(`Manual adj: ${fmt(r.manual_adj)}`);
-    if (r.other_pay > 0) parts.push(`Other movements: ${fmt(r.other_pay)}`);
-    if (r.flags.length > 0) parts.push(`Flags: ${r.flags.join(", ")}`);
+    if (r.other_pay > 0) parts.push(`Other: ${fmt(r.other_pay)}`);
+    if (r.total_suppressed > 0) parts.push(`Duplicates suppressed: ${fmt(r.total_suppressed)}`);
 
-    return parts.length > 0 ? parts.join(" | ") : "No significant component differences detected";
+    return parts.length > 0 ? parts.join(" | ") : "No significant component differences";
   };
 
   return (
@@ -299,13 +342,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
             Validación vs. Nómina Pagada (12/24–12/30/2025)
           </CardTitle>
         </CardHeader>
-
         <CardContent>
           {!truthLoaded ? (
             <div className="text-center py-6 space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Carga el archivo de nómina pagada para comparar contra los resultados de reconciliación.
-              </p>
+              <p className="text-sm text-muted-foreground">Carga el archivo de nómina pagada para comparar.</p>
               <Button onClick={loadTruthFile} disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
                 Cargar Payroll Truth Set
@@ -313,18 +353,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Debug panel */}
+              {/* Debug */}
               <details className="text-xs rounded-md border border-border p-3 bg-muted/30">
-                <summary className="cursor-pointer font-medium text-foreground">Debug parser (primeras 5 filas)</summary>
+                <summary className="cursor-pointer font-medium text-foreground">Debug parser</summary>
                 <div className="mt-3 space-y-2 text-muted-foreground">
                   <p><span className="font-medium text-foreground">Sheet:</span> {truthParse?.sheetUsed ?? "N/A"}</p>
-                  <p><span className="font-medium text-foreground">Detected columns:</span> {JSON.stringify(truthParse?.detectedColumns ?? {})}</p>
-                  <p><span className="font-medium text-foreground">Raw columns:</span> {JSON.stringify(truthParse?.rawColumnNames ?? [])}</p>
+                  <p><span className="font-medium text-foreground">Columns:</span> {JSON.stringify(truthParse?.detectedColumns ?? {})}</p>
                 </div>
               </details>
 
               {/* KPIs */}
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
                 <KpiCard label="Empleados (Truth)" value={truthData.length} icon={<DollarSign className="h-4 w-4" />} />
                 <KpiCard label="Exactos" value={stats.matched} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" />
                 <KpiCard label="Cercanos" value={stats.close} icon={<AlertTriangle className="h-4 w-4" />} accent="warning" />
@@ -333,9 +372,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                 <KpiCard label="Total Truth" value={fmt(stats.totalTruth)} icon={<DollarSign className="h-4 w-4" />} />
                 <KpiCard label="Varianza Neta" value={fmtVar(stats.variance)} icon={<DollarSign className="h-4 w-4" />}
                   accent={Math.abs(stats.variance) > 100 ? "deduction" : "primary"} />
+                <KpiCard label="Dups Suprimidos" value={fmt(stats.totalSuppressed)} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
               </div>
 
-              {/* Comparison table with expandable breakdown */}
+              {/* Comparison table */}
               <div className="overflow-auto max-h-[600px]">
                 <Table>
                   <TableHeader>
@@ -353,13 +393,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                       <TableHead className="text-right">Varianza</TableHead>
                       <TableHead className="text-center">Sched</TableHead>
                       <TableHead className="text-center">Clocks</TableHead>
-                      <TableHead className="text-center">Flags</TableHead>
+                      <TableHead className="text-center">Dups</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {comparison.map(c => {
                       const isExpanded = expandedRows.has(c.employee);
                       const r = c.recon;
+                      const dupsCount = r ? r.ledger.filter(l => !l.included).length : 0;
                       return (
                         <>
                           <TableRow
@@ -392,24 +433,21 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                             <TableCell className="text-center font-mono text-xs text-muted-foreground">{r?.schedule_count ?? "—"}</TableCell>
                             <TableCell className="text-center font-mono text-xs text-muted-foreground">{r?.clock_count ?? "—"}</TableCell>
                             <TableCell className="text-center">
-                              {r && r.flags.length > 0 && (
-                                <Badge variant="outline" className="text-xs">{r.flags.length}</Badge>
-                              )}
+                              {dupsCount > 0 && <Badge variant="destructive" className="text-xs">{dupsCount}</Badge>}
                             </TableCell>
                           </TableRow>
 
-                          {/* Expanded detail row */}
                           {isExpanded && (
-                            <TableRow key={`${c.employee}-detail`} className="bg-muted/20">
+                            <TableRow key={`${c.employee}-detail`} className="bg-muted/20 hover:bg-muted/20">
                               <TableCell colSpan={14} className="p-3">
-                                <div className="space-y-2 text-xs">
+                                <div className="space-y-3 text-xs">
                                   {/* Variance explanation */}
                                   <div className="rounded bg-background border border-border p-2">
                                     <p className="font-medium text-foreground mb-1">Explicación de varianza:</p>
                                     <p className="text-muted-foreground">{explainVariance(c)}</p>
                                   </div>
 
-                                  {/* Truth breakdown */}
+                                  {/* Side-by-side breakdown */}
                                   <div className="grid grid-cols-2 gap-4">
                                     <div>
                                       <p className="font-medium text-foreground mb-1">Truth breakdown:</p>
@@ -421,10 +459,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                                         {c.truth.shiftHours > 0 && <p>Hours: {c.truth.shiftHours.toFixed(1)} @ ${c.truth.hourlyRate}/hr</p>}
                                       </div>
                                     </div>
-
                                     {r && (
                                       <div>
-                                        <p className="font-medium text-foreground mb-1">Recon breakdown:</p>
+                                        <p className="font-medium text-foreground mb-1">Recon breakdown (deduped):</p>
                                         <div className="space-y-0.5 text-muted-foreground font-mono">
                                           <p>Hourly/Base: {fmt(r.hourly_pay)}</p>
                                           <p>Daily: {fmt(r.daily_pay)}</p>
@@ -432,32 +469,51 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                                           <p>Weekend/Double: {fmt(r.weekend_pay)}</p>
                                           <p>Manual Adj: {fmt(r.manual_adj)}</p>
                                           <p>Other: {fmt(r.other_pay)}</p>
-                                          <p className="font-medium text-foreground">TOTAL: {fmt(r.total_final)}</p>
+                                          <p className="font-medium text-foreground">TOTAL (deduped): {fmt(r.total_final)}</p>
+                                          {r.total_suppressed > 0 && (
+                                            <p className="text-destructive">Raw total was: {fmt(r.total_raw + r.hourly_pay)} — suppressed: {fmt(r.total_suppressed)}</p>
+                                          )}
                                         </div>
                                       </div>
                                     )}
                                   </div>
 
-                                  {/* Movement details */}
-                                  {r && r.movement_details.length > 0 && (
+                                  {/* Source Ledger */}
+                                  {r && r.ledger.length > 0 && (
                                     <div>
-                                      <p className="font-medium text-foreground mb-1">Movements ({r.movement_details.length}):</p>
-                                      <div className="grid gap-0.5 font-mono text-muted-foreground">
-                                        {r.movement_details.map((m, i) => (
-                                          <p key={i}>{m.concept}: {m.qty} × ${m.rate} = {fmt(m.value)}</p>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Flags */}
-                                  {r && r.flags.length > 0 && (
-                                    <div>
-                                      <p className="font-medium text-foreground mb-1">Flags:</p>
-                                      <div className="flex flex-wrap gap-1">
-                                        {r.flags.map((f, i) => (
-                                          <Badge key={i} variant="outline" className="text-xs font-mono">{f}</Badge>
-                                        ))}
+                                      <p className="font-medium text-foreground mb-1">Source Ledger ({r.ledger.length} entries, {r.ledger.filter(l => l.included).length} included):</p>
+                                      <div className="overflow-auto max-h-48 border border-border rounded">
+                                        <table className="w-full text-xs font-mono">
+                                          <thead className="bg-muted/50 sticky top-0">
+                                            <tr>
+                                              <th className="p-1 text-left">Status</th>
+                                              <th className="p-1 text-left">Concept</th>
+                                              <th className="p-1 text-left">Category</th>
+                                              <th className="p-1 text-right">Qty</th>
+                                              <th className="p-1 text-right">Rate</th>
+                                              <th className="p-1 text-right">Value</th>
+                                              <th className="p-1 text-left">Reason</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {r.ledger.map((l, i) => (
+                                              <tr key={i} className={l.included ? "" : "bg-destructive/5 line-through opacity-60"}>
+                                                <td className="p-1">
+                                                  {l.included
+                                                    ? <span className="text-primary">✓</span>
+                                                    : <span className="text-destructive">✗</span>
+                                                  }
+                                                </td>
+                                                <td className="p-1 max-w-[200px] truncate">{l.concept}</td>
+                                                <td className="p-1">{l.category}</td>
+                                                <td className="p-1 text-right">{l.qty}</td>
+                                                <td className="p-1 text-right">{fmt(l.rate)}</td>
+                                                <td className="p-1 text-right">{fmt(l.value)}</td>
+                                                <td className="p-1 max-w-[250px] truncate text-muted-foreground">{l.reason}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
                                       </div>
                                     </div>
                                   )}
