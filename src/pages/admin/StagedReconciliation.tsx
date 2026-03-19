@@ -434,7 +434,7 @@ export default function StagedReconciliation() {
 
         <TabsContent value="publish">
           {activePeriod ? (
-            <PrePublishReview period={activePeriod} finalRecords={finalRecords} closingReceipt={closingReceipt} employees={employeeMap} validation={validation} onPublish={handlePostPeriod} onLock={handleLockPeriod} onReopen={handleReopen} publishing={publishing} />
+            <PrePublishReview period={activePeriod} finalRecords={finalRecords} closingReceipt={closingReceipt} employees={employeeMap} validation={validation} variances={variances} onPublish={handlePostPeriod} onLock={handleLockPeriod} onReopen={handleReopen} publishing={publishing} isPilotMode={true} />
           ) : (
             <NoPeriodPlaceholder icon={Shield} />
           )}
