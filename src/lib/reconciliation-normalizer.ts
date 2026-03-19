@@ -435,7 +435,7 @@ export function normalizePayrollRows(
     if (!nameRaw.trim()) { blankNameRows++; return buildExcludedRow(raw.id, nameRaw, "blank_name"); }
     if (isSystemRow(nameRaw, email)) { systemRowNames.push(nameRaw.trim()); return buildExcludedRow(raw.id, nameRaw, "system_placeholder"); }
 
-    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases);
+    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases, manualResolutions);
     const classification = classifyPayrollRow(d);
 
     const workDate = parseDate(d[colMap.work_date || ""]);
