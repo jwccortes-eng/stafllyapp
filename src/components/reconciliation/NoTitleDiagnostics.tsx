@@ -142,12 +142,12 @@ function classifyNoTitle(
   const payKey = `${row.matched_employee_id}|${row.work_date}`;
   if (payrollDates.has(payKey)) return "no_title_has_payroll";
 
-  const hasLocation = !!(row.location_name || row.client_name);
+  const hasLoc = !!(row.location_name || row.client_name);
   const hasJob = !!row.pay_type;
   const hasNotes = !!row.notes;
 
-  if (!hasLocation && !hasJob && !hasNotes) return "no_title_placeholder";
-  if (!hasLocation) return "no_title_no_location";
+  if (!hasLoc && !hasJob && !hasNotes) return "no_title_placeholder";
+  if (!hasLoc) return "no_title_no_location";
 
   if (row.start_time && row.end_time && hasLocation) return "no_title_likely_real";
   if (row.start_time || row.end_time) return "no_title_has_times";
