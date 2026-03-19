@@ -240,10 +240,16 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {matches.map(m => (
-                  <TableRow key={m.id} className={`cursor-pointer hover:bg-accent/50 ${m.match_status === "unmatched" ? "bg-destructive/5" : m.match_status === "ambiguous" ? "bg-amber-500/5" : ""}`} onClick={() => openDetail(m)}>
+                {matches.map(m => {
+                  const compLabel = compensationLabel(m.conflict_flags);
+                  return (
+                  <TableRow key={m.id} className={`cursor-pointer hover:bg-accent/50 ${m.match_status === "unmatched" ? "bg-destructive/5" : m.match_status === "ambiguous" ? "bg-amber-500/5" : isCompensationRow(m.conflict_flags) ? "bg-primary/5" : ""}`} onClick={() => openDetail(m)}>
                     <TableCell>
-                      <Badge variant="outline" className="text-xs">{m.match_type.replace("_", " → ")}</Badge>
+                      {compLabel ? (
+                        <Badge className="text-xs bg-primary/10 text-primary border-primary/20">{compLabel}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">{m.match_type.replace("_", " → ")}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusColor(m.match_status) as any} className="text-xs">
