@@ -575,6 +575,10 @@ export default function StagedReconciliation() {
           <StabilizationPriorities companyId={selectedCompanyId} />
         </TabsContent>
 
+        <TabsContent value="payroll-truth">
+          <PayrollTruthValidation companyId={selectedCompanyId} periodStatusId={activePeriod?.id} />
+        </TabsContent>
+
         <TabsContent value="history">
           <ImportBatchHistory companyId={selectedCompanyId} key={refreshKey} />
         </TabsContent>
