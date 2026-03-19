@@ -366,6 +366,7 @@ async function processTimeclockRaw(
       connecteam_ref: hash,
       connecteam_data: {
         employee_name: `${firstName} ${lastName}`,
+        stafly_employee_id: empId,
         start_date: startDate, start_time: r["Start time"],
         end_date: r["End Date"], end_time: r["End time"],
         shift_hours: shiftHours, hourly_rate: hourlyRate,
@@ -376,7 +377,6 @@ async function processTimeclockRaw(
         daily_total_pay: r["Daily total pay (USD)"],
         manager_notes: r["Manager notes"],
       },
-      stafly_employee_id: empId,
       match_status: empId ? "exact_match" : "unresolved",
     });
   }
