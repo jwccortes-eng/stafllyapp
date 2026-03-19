@@ -83,7 +83,7 @@ export function CompensationChangeForm({
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Modo de pago</Label>
-            <Select value={form.payment_mode} onValueChange={v => setForm(f => ({ ...f, payment_mode: v }))}>
+            <Select value={form.payment_mode} onValueChange={v => setForm(f => ({ ...f, payment_mode: v as "hourly" | "daily" | "mixed" }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="hourly">Por hora</SelectItem>
