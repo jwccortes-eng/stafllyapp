@@ -133,21 +133,33 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, co
   };
 
   const empList = useMemo(() => {
-    const norm = normalizeText(searchEmp);
-    const all = employees
-      .map(e => ({ ...e, fullName: `${e.first_name} ${e.last_name}`, norm: normalizeText(`${e.first_name} ${e.last_name}`) }));
-    if (!norm) return all.slice(0, 30);
-    // Match each search token independently for better partial matching
+    const norm = normalizeSearchText(searchEmp);
+    const all = employees.map((e) => {
+      const fullName = `${e.first_name ?? ""} ${e.last_name ?? ""}`.replace(/\s+/g, " ").trim();
+      const normalizedName = normalizeSearchText(fullName);
+      return {
+        ...e,
+        fullName,
+        norm: normalizedName,
+        tokens: normalizedName.split(" ").filter(Boolean),
+      };
+    });
+
     const tokens = norm.split(/\s+/).filter(Boolean);
-    return all
-      .filter(e => tokens.every(t => e.norm.includes(t)))
-      .slice(0, 30);
+
+    const filtered = tokens.length === 0
+      ? all
+      : all.filter((e) =>
+          tokens.every((t) => e.tokens.some((token) => token.includes(t) || token.startsWith(t) || t.includes(token))),
+        );
+
+    return filtered.slice(0, tokens.length === 0 ? 30 : 80);
   }, [employees, searchEmp]);
 
   const empCounts = useMemo(() => ({
     total: employees.length,
-    active: employees.filter(e => e.is_active !== false).length,
-    inactive: employees.filter(e => e.is_active === false).length,
+    active: employees.filter((e) => e.is_active !== false).length,
+    inactive: employees.filter((e) => e.is_active === false).length,
   }), [employees]);
 
   if (unmatchedRows.length === 0 && ambiguousRows.length === 0) return null;
