@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useCompany } from "@/hooks/useCompany";
 import { useReconciliationPeriod } from "@/hooks/useReconciliationPeriod";
 import { useToast } from "@/hooks/use-toast";
@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
-  Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck,
+  Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -22,6 +23,9 @@ import ReconciliationDashboard from "@/components/reconciliation/ReconciliationD
 import EmployeePeriodReconciliation from "@/components/reconciliation/EmployeePeriodReconciliation";
 import PrePublishReview from "@/components/reconciliation/PrePublishReview";
 import VerificationReport from "@/components/reconciliation/VerificationReport";
+import BusinessRuleTuningPanel from "@/components/reconciliation/BusinessRuleTuningPanel";
+import VarianceWorkbench from "@/components/reconciliation/VarianceWorkbench";
+import PilotComparisonReport from "@/components/reconciliation/PilotComparisonReport";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 export default function StagedReconciliation() {
@@ -44,7 +48,6 @@ export default function StagedReconciliation() {
   const [publishing, setPublishing] = useState(false);
   const [employeeMap, setEmployeeMap] = useState<Map<string, string>>(new Map());
 
-  // Load employee names
   useEffect(() => {
     if (!selectedCompanyId) return;
     supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId)
@@ -120,6 +123,7 @@ export default function StagedReconciliation() {
   };
 
   const validation = validateBeforePublish(finalRecords);
+  const variances = useMemo(() => analyzeVariances(finalRecords, employeeMap), [finalRecords, employeeMap, analyzeVariances]);
 
   const periodStatusLabel = activePeriod ? (
     <Badge variant="secondary" className="ml-2 text-xs">
@@ -130,6 +134,13 @@ export default function StagedReconciliation() {
 
   const isLocked = activePeriod && ["posted", "locked"].includes(activePeriod.status);
 
+  const NoPeriodPlaceholder = ({ icon: Icon, text }: { icon: any; text?: string }) => (
+    <div className="text-center py-12 text-muted-foreground">
+      <Icon className="h-10 w-10 mx-auto mb-3 opacity-50" />
+      <p>{text || "Selecciona un periodo desde el Dashboard."}</p>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -138,63 +149,37 @@ export default function StagedReconciliation() {
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-9">
-          <TabsTrigger value="dashboard" className="gap-1 text-[11px]">
-            <BarChart3 className="h-3 w-3" /> Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="import" className="gap-1 text-[11px]">
-            <Upload className="h-3 w-3" /> Importar
-          </TabsTrigger>
-          <TabsTrigger value="review" className="gap-1 text-[11px]">
-            <GitCompareArrows className="h-3 w-3" /> Matching
-          </TabsTrigger>
-          <TabsTrigger value="exceptions" className="gap-1 text-[11px]">
-            <AlertTriangle className="h-3 w-3" /> Excepciones
-          </TabsTrigger>
-          <TabsTrigger value="employees" className="gap-1 text-[11px]">
-            <Users className="h-3 w-3" /> Empleados
-          </TabsTrigger>
-          <TabsTrigger value="approve" className="gap-1 text-[11px]">
-            <CheckCircle2 className="h-3 w-3" /> Aprobar
-          </TabsTrigger>
-          <TabsTrigger value="validate" className="gap-1 text-[11px]">
-            <ClipboardCheck className="h-3 w-3" /> Validar
-          </TabsTrigger>
-          <TabsTrigger value="publish" className="gap-1 text-[11px]">
-            <Shield className="h-3 w-3" /> Publicar
-          </TabsTrigger>
-          <TabsTrigger value="history" className="gap-1 text-[11px]">
-            <FileText className="h-3 w-3" /> Historial
-          </TabsTrigger>
-        </TabsList>
+        <ScrollArea className="w-full">
+          <TabsList className="inline-flex w-max">
+            <TabsTrigger value="dashboard" className="gap-1 text-[11px]"><BarChart3 className="h-3 w-3" /> Dashboard</TabsTrigger>
+            <TabsTrigger value="import" className="gap-1 text-[11px]"><Upload className="h-3 w-3" /> Importar</TabsTrigger>
+            <TabsTrigger value="review" className="gap-1 text-[11px]"><GitCompareArrows className="h-3 w-3" /> Matching</TabsTrigger>
+            <TabsTrigger value="exceptions" className="gap-1 text-[11px]"><AlertTriangle className="h-3 w-3" /> Excepciones</TabsTrigger>
+            <TabsTrigger value="employees" className="gap-1 text-[11px]"><Users className="h-3 w-3" /> Empleados</TabsTrigger>
+            <TabsTrigger value="rules" className="gap-1 text-[11px]"><Settings2 className="h-3 w-3" /> Reglas</TabsTrigger>
+            <TabsTrigger value="workbench" className="gap-1 text-[11px]"><Wrench className="h-3 w-3" /> Workbench</TabsTrigger>
+            <TabsTrigger value="approve" className="gap-1 text-[11px]"><CheckCircle2 className="h-3 w-3" /> Aprobar</TabsTrigger>
+            <TabsTrigger value="validate" className="gap-1 text-[11px]"><ClipboardCheck className="h-3 w-3" /> Validar</TabsTrigger>
+            <TabsTrigger value="publish" className="gap-1 text-[11px]"><Shield className="h-3 w-3" /> Publicar</TabsTrigger>
+            <TabsTrigger value="pilot" className="gap-1 text-[11px]"><Rocket className="h-3 w-3" /> Piloto</TabsTrigger>
+            <TabsTrigger value="history" className="gap-1 text-[11px]"><FileText className="h-3 w-3" /> Historial</TabsTrigger>
+          </TabsList>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
 
-        {/* Dashboard */}
         <TabsContent value="dashboard">
-          <ReconciliationDashboard
-            periods={periods}
-            onSelectPeriod={handleSelectPeriod}
-            onCreatePeriod={() => setShowCreateDialog(true)}
-          />
+          <ReconciliationDashboard periods={periods} onSelectPeriod={handleSelectPeriod} onCreatePeriod={() => setShowCreateDialog(true)} />
         </TabsContent>
 
-        {/* Import */}
         <TabsContent value="import">
           {activePeriod && (
             <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
               Periodo activo: {periodStatusLabel}
-              {isLocked && (
-                <Badge variant="destructive" className="text-xs gap-1">
-                  <Lock className="h-3 w-3" /> Bloqueado
-                </Badge>
-              )}
+              {isLocked && <Badge variant="destructive" className="text-xs gap-1"><Lock className="h-3 w-3" /> Bloqueado</Badge>}
             </div>
           )}
           {isLocked ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Lock className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>Este periodo está cerrado. No se permiten nuevas importaciones.</p>
-              <p className="text-xs mt-1">Reabre el periodo desde la pestaña "Publicar" si necesitas importar datos.</p>
-            </div>
+            <NoPeriodPlaceholder icon={Lock} text="Este periodo está cerrado. No se permiten nuevas importaciones." />
           ) : (
             <StagedImportWizard
               companyId={selectedCompanyId}
@@ -205,17 +190,14 @@ export default function StagedReconciliation() {
           )}
         </TabsContent>
 
-        {/* Matching */}
         <TabsContent value="review">
           <ReconciliationReviewPanel companyId={selectedCompanyId} onRefresh={refresh} key={refreshKey} />
         </TabsContent>
 
-        {/* Exceptions */}
         <TabsContent value="exceptions">
           <ExceptionQueue companyId={selectedCompanyId} onRefresh={refresh} key={refreshKey} />
         </TabsContent>
 
-        {/* Employee-by-Employee */}
         <TabsContent value="employees">
           {activePeriod ? (
             <div className="space-y-4">
@@ -239,21 +221,38 @@ export default function StagedReconciliation() {
               />
             </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>Selecciona un periodo desde el Dashboard.</p>
-            </div>
+            <NoPeriodPlaceholder icon={Users} />
           )}
         </TabsContent>
 
-        {/* Approve */}
+        {/* Business Rules Tuning */}
+        <TabsContent value="rules">
+          <BusinessRuleTuningPanel companyId={selectedCompanyId} employees={employeeMap} />
+        </TabsContent>
+
+        {/* Variance Workbench */}
+        <TabsContent value="workbench">
+          {activePeriod ? (
+            <VarianceWorkbench
+              companyId={selectedCompanyId}
+              periodStatusId={activePeriod.id}
+              finalRecords={finalRecords}
+              employees={employeeMap}
+              onRefresh={() => {
+                if (activePeriod) loadFinalRecords(activePeriod.id);
+              }}
+            />
+          ) : (
+            <NoPeriodPlaceholder icon={Wrench} text="Selecciona un periodo y genera registros finales para usar el Workbench." />
+          )}
+        </TabsContent>
+
         <TabsContent value="approve">
           {activePeriod ? (
             <div className="space-y-6">
               <div className="flex items-center gap-3">
                 <span className="text-sm">Periodo:</span> {periodStatusLabel}
               </div>
-
               <div className="grid grid-cols-4 gap-4">
                 {[
                   { step: "reviewing", label: "En Revisión", icon: Eye, action: () => updatePeriodStatus(activePeriod.id, "reviewing") },
@@ -276,7 +275,6 @@ export default function StagedReconciliation() {
                   );
                 })}
               </div>
-
               <div className="grid grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
                 <div className="text-center">
                   <div className="text-2xl font-bold">{activePeriod.total_employees}</div>
@@ -297,14 +295,25 @@ export default function StagedReconciliation() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <CheckCircle2 className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>Selecciona un periodo desde el Dashboard.</p>
-            </div>
+            <NoPeriodPlaceholder icon={CheckCircle2} />
           )}
         </TabsContent>
 
-        {/* Publish — Pre-publish review + Receipt */}
+        <TabsContent value="validate">
+          {activePeriod ? (
+            <VerificationReport
+              period={activePeriod}
+              finalRecords={finalRecords}
+              employees={employeeMap}
+              onRunValidation={handleRunValidation}
+              onPublish={handlePostPeriod}
+              publishing={publishing}
+            />
+          ) : (
+            <NoPeriodPlaceholder icon={ClipboardCheck} text="Selecciona un periodo desde el Dashboard para validar." />
+          )}
+        </TabsContent>
+
         <TabsContent value="publish">
           {activePeriod ? (
             <PrePublishReview
@@ -319,33 +328,25 @@ export default function StagedReconciliation() {
               publishing={publishing}
             />
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <Shield className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>Selecciona un periodo desde el Dashboard.</p>
-            </div>
+            <NoPeriodPlaceholder icon={Shield} />
           )}
         </TabsContent>
 
-        {/* Validate */}
-        <TabsContent value="validate">
+        {/* Pilot Comparison Report + Go-Live */}
+        <TabsContent value="pilot">
           {activePeriod ? (
-            <VerificationReport
+            <PilotComparisonReport
+              companyId={selectedCompanyId}
               period={activePeriod}
               finalRecords={finalRecords}
               employees={employeeMap}
-              onRunValidation={handleRunValidation}
-              onPublish={handlePostPeriod}
-              publishing={publishing}
+              variances={variances}
             />
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <ClipboardCheck className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>Selecciona un periodo desde el Dashboard para validar.</p>
-            </div>
+            <NoPeriodPlaceholder icon={Rocket} text="Selecciona un periodo para generar el reporte piloto." />
           )}
         </TabsContent>
 
-        {/* History */}
         <TabsContent value="history">
           <ImportBatchHistory companyId={selectedCompanyId} key={refreshKey} />
         </TabsContent>

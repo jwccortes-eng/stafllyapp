@@ -5450,6 +5450,85 @@ export type Database = {
           },
         ]
       }
+      reconciliation_business_rules: {
+        Row: {
+          applies_to_employee: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          match_field: string
+          match_operator: string
+          match_value: string
+          priority: number
+          result_description: string | null
+          result_pay_type: string
+          rule_key: string
+          rule_label: string
+          rule_type: string
+          updated_at: string
+        }
+        Insert: {
+          applies_to_employee?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          match_field?: string
+          match_operator?: string
+          match_value: string
+          priority?: number
+          result_description?: string | null
+          result_pay_type: string
+          rule_key: string
+          rule_label: string
+          rule_type?: string
+          updated_at?: string
+        }
+        Update: {
+          applies_to_employee?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          match_field?: string
+          match_operator?: string
+          match_value?: string
+          priority?: number
+          result_description?: string | null
+          result_pay_type?: string
+          rule_key?: string
+          rule_label?: string
+          rule_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_business_rules_applies_to_employee_fkey"
+            columns: ["applies_to_employee"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_business_rules_applies_to_employee_fkey"
+            columns: ["applies_to_employee"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_business_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_closing_receipts: {
         Row: {
           company_id: string
@@ -5852,6 +5931,70 @@ export type Database = {
           },
         ]
       }
+      reconciliation_learned_rules: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string | null
+          id: string
+          last_used_at: string | null
+          match_criteria: Json
+          result_action: Json
+          rule_label: string
+          source_type: string
+          usage_count: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string | null
+          id?: string
+          last_used_at?: string | null
+          match_criteria?: Json
+          result_action?: Json
+          rule_label: string
+          source_type?: string
+          usage_count?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string | null
+          id?: string
+          last_used_at?: string | null
+          match_criteria?: Json
+          result_action?: Json
+          rule_label?: string
+          source_type?: string
+          usage_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_learned_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_learned_rules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_learned_rules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_matches: {
         Row: {
           batch_id: string | null
@@ -6115,6 +6258,68 @@ export type Database = {
             columns: ["schedule_batch_id"]
             isOneToOne: false
             referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_pilot_reports: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_exact_match_pct: number | null
+          go_live_readiness: string
+          id: string
+          learned_rules_created: number | null
+          manual_intervention_count: number | null
+          payroll_match_pct: number | null
+          period_status_id: string
+          publish_confidence: number | null
+          recommendation: string | null
+          report_data: Json
+          unresolved_critical: number | null
+          unresolved_warnings: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_exact_match_pct?: number | null
+          go_live_readiness?: string
+          id?: string
+          learned_rules_created?: number | null
+          manual_intervention_count?: number | null
+          payroll_match_pct?: number | null
+          period_status_id: string
+          publish_confidence?: number | null
+          recommendation?: string | null
+          report_data?: Json
+          unresolved_critical?: number | null
+          unresolved_warnings?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_exact_match_pct?: number | null
+          go_live_readiness?: string
+          id?: string
+          learned_rules_created?: number | null
+          manual_intervention_count?: number | null
+          payroll_match_pct?: number | null
+          period_status_id?: string
+          publish_confidence?: number | null
+          recommendation?: string | null
+          report_data?: Json
+          unresolved_critical?: number | null
+          unresolved_warnings?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_pilot_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
