@@ -5,7 +5,7 @@
  */
 import {
   normalizeText, normalizePhone, normalizeEmail, hashRow,
-  matchEmployee, classifyPayrollRow, detectColumns,
+  matchEmployee, classifyPayrollRow, detectColumns, resolveEmployeeName,
   type EmployeeRecord, type ColumnMapping, type EmployeeMatchStatus,
 } from "./reconciliation-engine";
 
