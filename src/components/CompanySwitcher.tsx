@@ -21,13 +21,8 @@ const ROLE_LABELS: Record<string, string> = {
   employee: "Empleado",
 };
 
-function getCompanyColor(brandColor: string | null | undefined, index: number): string {
-  return brandColor || COMPANY_COLORS[index % COMPANY_COLORS.length];
-}
 
-function getCompanyInitials(name: string): string {
-  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
-}
+
 
 interface CompanySwitcherProps {
   collapsed?: boolean;
