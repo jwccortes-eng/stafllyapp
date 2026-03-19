@@ -7,6 +7,8 @@ function hashName(name: string) {
   return Math.abs(h);
 }
 
+export type OnlineStatus = "online" | "offline" | "on_shift" | "recently_active" | "not_available";
+
 interface EmployeeAvatarProps {
   firstName: string;
   lastName: string;
@@ -14,7 +16,23 @@ interface EmployeeAvatarProps {
   gender?: string | null;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  status?: OnlineStatus | null;
 }
+
+const STATUS_COLORS: Record<OnlineStatus, string> = {
+  online: "bg-earning",
+  on_shift: "bg-primary",
+  recently_active: "bg-warning",
+  offline: "bg-muted-foreground/40",
+  not_available: "bg-destructive",
+};
+
+const DOT_SIZES: Record<string, string> = {
+  sm: "h-2 w-2 border",
+  md: "h-2.5 w-2.5 border-[1.5px]",
+  lg: "h-3 w-3 border-2",
+  xl: "h-4 w-4 border-2",
+};
 
 const sizes: Record<string, string> = {
   sm: "h-7 w-7",
