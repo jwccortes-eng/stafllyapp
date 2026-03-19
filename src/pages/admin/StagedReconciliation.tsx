@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useCompany } from "@/hooks/useCompany";
 import { useReconciliationPeriod } from "@/hooks/useReconciliationPeriod";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
-  Users, ArrowRight, Lock, Eye,
+  Users, ArrowRight, Lock, Eye, Shield,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -19,6 +20,7 @@ import ExceptionQueue from "@/components/reconciliation/ExceptionQueue";
 import ImportBatchHistory from "@/components/reconciliation/ImportBatchHistory";
 import ReconciliationDashboard from "@/components/reconciliation/ReconciliationDashboard";
 import EmployeePeriodReconciliation from "@/components/reconciliation/EmployeePeriodReconciliation";
+import PrePublishReview from "@/components/reconciliation/PrePublishReview";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 export default function StagedReconciliation() {
@@ -26,9 +28,10 @@ export default function StagedReconciliation() {
   const { toast } = useToast();
   const {
     periods, loading, activePeriod, setActivePeriod,
-    finalRecords, loadPeriods, createPeriod, updatePeriodStatus,
+    finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
     loadFinalRecords, generateFinalRecords, postFinalRecords,
-    saveMappingCorrection,
+    saveMappingCorrection, reopenPeriod, loadClosingReceipt,
+    validateBeforePublish,
   } = useReconciliationPeriod(selectedCompanyId);
 
   const [tab, setTab] = useState("dashboard");
@@ -37,6 +40,19 @@ export default function StagedReconciliation() {
   const [newLabel, setNewLabel] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [employeeMap, setEmployeeMap] = useState<Map<string, string>>(new Map());
+
+  // Load employee names
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    supabase.from("employees").select("id, first_name, last_name").eq("company_id", selectedCompanyId)
+      .then(({ data }) => {
+        const map = new Map<string, string>();
+        (data || []).forEach(e => map.set(e.id, `${e.first_name} ${e.last_name}`));
+        setEmployeeMap(map);
+      });
+  }, [selectedCompanyId]);
 
   const refresh = useCallback(() => {
     setRefreshKey(k => k + 1);
@@ -60,7 +76,9 @@ export default function StagedReconciliation() {
   const handleSelectPeriod = (p: PeriodStatus) => {
     setActivePeriod(p);
     loadFinalRecords(p.id);
-    if (p.status === "reviewing" || p.status === "approved") setTab("employees");
+    loadClosingReceipt(p.id);
+    if (["approved", "posted", "locked"].includes(p.status)) setTab("publish");
+    else if (p.status === "reviewing") setTab("employees");
     else if (["importing", "normalizing"].includes(p.status)) setTab("import");
     else if (p.status === "matching") setTab("review");
     else setTab("employees");
@@ -79,8 +97,9 @@ export default function StagedReconciliation() {
 
   const handlePostPeriod = async () => {
     if (!activePeriod) return;
+    setPublishing(true);
     await postFinalRecords(activePeriod.id);
-    toast({ title: "Periodo publicado — registros finales creados" });
+    setPublishing(false);
   };
 
   const handleLockPeriod = async () => {
@@ -89,21 +108,31 @@ export default function StagedReconciliation() {
     toast({ title: "Periodo cerrado y bloqueado" });
   };
 
+  const handleReopen = async (reason: string) => {
+    if (!activePeriod) return;
+    await reopenPeriod(activePeriod.id, reason);
+  };
+
+  const validation = validateBeforePublish(finalRecords);
+
   const periodStatusLabel = activePeriod ? (
     <Badge variant="secondary" className="ml-2 text-xs">
       {activePeriod.period_label} — {activePeriod.status}
+      {activePeriod.reopen_count > 0 && ` (reabierto ×${activePeriod.reopen_count})`}
     </Badge>
   ) : null;
+
+  const isLocked = activePeriod && ["posted", "locked"].includes(activePeriod.status);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Reconciliación por Periodo"
-        subtitle="Motor de conciliación operacional: importar → normalizar → emparejar → revisar → aprobar → publicar"
+        subtitle="Motor de conciliación operacional: importar → normalizar → emparejar → revisar → aprobar → publicar → cerrar"
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
             <BarChart3 className="h-3.5 w-3.5" /> Dashboard
           </TabsTrigger>
@@ -121,6 +150,9 @@ export default function StagedReconciliation() {
           </TabsTrigger>
           <TabsTrigger value="approve" className="gap-1.5 text-xs">
             <CheckCircle2 className="h-3.5 w-3.5" /> Aprobar
+          </TabsTrigger>
+          <TabsTrigger value="publish" className="gap-1.5 text-xs">
+            <Shield className="h-3.5 w-3.5" /> Publicar
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-1.5 text-xs">
             <FileText className="h-3.5 w-3.5" /> Historial
@@ -141,14 +173,27 @@ export default function StagedReconciliation() {
           {activePeriod && (
             <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
               Periodo activo: {periodStatusLabel}
+              {isLocked && (
+                <Badge variant="destructive" className="text-xs gap-1">
+                  <Lock className="h-3 w-3" /> Bloqueado
+                </Badge>
+              )}
             </div>
           )}
-          <StagedImportWizard
-            companyId={selectedCompanyId}
-            onComplete={refresh}
-            activePeriodId={activePeriod?.id}
-            onBatchLinked={() => loadPeriods()}
-          />
+          {isLocked ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Lock className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>Este periodo está cerrado. No se permiten nuevas importaciones.</p>
+              <p className="text-xs mt-1">Reabre el periodo desde la pestaña "Publicar" si necesitas importar datos.</p>
+            </div>
+          ) : (
+            <StagedImportWizard
+              companyId={selectedCompanyId}
+              onComplete={refresh}
+              activePeriodId={activePeriod?.id}
+              onBatchLinked={() => loadPeriods()}
+            />
+          )}
         </TabsContent>
 
         {/* Matching */}
@@ -170,9 +215,11 @@ export default function StagedReconciliation() {
                   <span className="text-sm text-muted-foreground">Periodo:</span>
                   {periodStatusLabel}
                 </div>
-                <Button size="sm" onClick={handleGenerateRecords}>
-                  <ArrowRight className="h-4 w-4 mr-1" /> Generar Registros Finales
-                </Button>
+                {!isLocked && (
+                  <Button size="sm" onClick={handleGenerateRecords}>
+                    <ArrowRight className="h-4 w-4 mr-1" /> Generar Registros Finales
+                  </Button>
+                )}
               </div>
               <EmployeePeriodReconciliation
                 companyId={selectedCompanyId}
@@ -185,12 +232,12 @@ export default function StagedReconciliation() {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>Selecciona un periodo desde el Dashboard para ver la reconciliación por empleado.</p>
+              <p>Selecciona un periodo desde el Dashboard.</p>
             </div>
           )}
         </TabsContent>
 
-        {/* Approve & Post */}
+        {/* Approve */}
         <TabsContent value="approve">
           {activePeriod ? (
             <div className="space-y-6">
@@ -198,13 +245,12 @@ export default function StagedReconciliation() {
                 <span className="text-sm">Periodo:</span> {periodStatusLabel}
               </div>
 
-              {/* Period workflow steps */}
               <div className="grid grid-cols-4 gap-4">
                 {[
                   { step: "reviewing", label: "En Revisión", icon: Eye, action: () => updatePeriodStatus(activePeriod.id, "reviewing") },
                   { step: "approved", label: "Aprobado", icon: CheckCircle2, action: handleApprovePeriod },
-                  { step: "posted", label: "Publicado", icon: FileText, action: handlePostPeriod },
-                  { step: "locked", label: "Cerrado", icon: Lock, action: handleLockPeriod },
+                  { step: "posted", label: "Publicado", icon: FileText, action: () => setTab("publish") },
+                  { step: "locked", label: "Cerrado", icon: Lock, action: () => setTab("publish") },
                 ].map(({ step, label, icon: Icon, action }) => {
                   const steps = ["importing", "normalizing", "matching", "reviewing", "approved", "posted", "locked"];
                   const currentIdx = steps.indexOf(activePeriod.status);
@@ -215,14 +261,13 @@ export default function StagedReconciliation() {
                     <div key={step} className={`p-4 rounded-lg border-2 text-center space-y-2 ${isDone ? "border-primary bg-primary/5" : isNext ? "border-dashed border-primary/50" : "border-border opacity-50"}`}>
                       <Icon className={`h-6 w-6 mx-auto ${isDone ? "text-primary" : "text-muted-foreground"}`} />
                       <p className="text-sm font-medium">{label}</p>
-                      {isDone && <Badge variant="default" className="text-xs">✓ Completado</Badge>}
+                      {isDone && <Badge variant="default" className="text-xs">✓</Badge>}
                       {isNext && <Button size="sm" onClick={action} className="mt-2">{label}</Button>}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Summary stats */}
               <div className="grid grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
                 <div className="text-center">
                   <div className="text-2xl font-bold">{activePeriod.total_employees}</div>
@@ -234,7 +279,7 @@ export default function StagedReconciliation() {
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">{activePeriod.total_exceptions - activePeriod.resolved_exceptions}</div>
-                  <div className="text-xs text-muted-foreground">Excepciones Abiertas</div>
+                  <div className="text-xs text-muted-foreground">Excepciones</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">{activePeriod.approved_matches}/{activePeriod.total_matches}</div>
@@ -245,7 +290,29 @@ export default function StagedReconciliation() {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <CheckCircle2 className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>Selecciona un periodo desde el Dashboard para aprobar y publicar.</p>
+              <p>Selecciona un periodo desde el Dashboard.</p>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Publish — Pre-publish review + Receipt */}
+        <TabsContent value="publish">
+          {activePeriod ? (
+            <PrePublishReview
+              period={activePeriod}
+              finalRecords={finalRecords}
+              closingReceipt={closingReceipt}
+              employees={employeeMap}
+              validation={validation}
+              onPublish={handlePostPeriod}
+              onLock={handleLockPeriod}
+              onReopen={handleReopen}
+              publishing={publishing}
+            />
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Shield className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>Selecciona un periodo desde el Dashboard.</p>
             </div>
           )}
         </TabsContent>
