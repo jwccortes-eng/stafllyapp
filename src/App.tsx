@@ -221,6 +221,8 @@ function App() {
                 <Route path="quality" element={<QualityDashboard />} />
                 <Route path="migration" element={<MigrationCommandCenter />} />
                 <Route path="reconciliation-report" element={<ReconciliationReport />} />
+                <Route path="advances-loans" element={<AdvancesLoans />} />
+                <Route path="kiosk-devices" element={<KioskDevices />} />
               </Route>
 
               {/* Employee portal routes */}
