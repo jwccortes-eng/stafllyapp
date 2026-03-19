@@ -261,7 +261,7 @@ export default function UnmatchedScheduleBreakdown({ companyId, onRefresh }: Pro
 
   const classified = useMemo(() => {
     const buckets: Record<SubCategory | "other", ScheduleDetail[]> = {
-      no_times: [], duplicate: [], no_employee: [], has_payroll: [],
+      availability_block: [], no_times: [], duplicate: [], no_employee: [], has_payroll: [],
       real_missing: [], low_info: [], other: [],
     };
     rows.forEach(r => {
