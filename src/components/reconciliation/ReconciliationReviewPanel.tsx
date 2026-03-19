@@ -246,7 +246,10 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right space-x-1">
-                      {m.match_status !== "approved" && m.match_status !== "rejected" && (
+                      <Button variant="ghost" size="sm" onClick={() => openDetail(m)} title="Inspeccionar">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {m.match_status !== "approved" && m.match_status !== "rejected" && !["linked","created_shift","valid_unscheduled","ignored_duplicate"].includes(m.match_status) && (
                         <>
                           <Button variant="ghost" size="sm" onClick={() => resolveMatch(m.id, "approved")}>
                             <CheckCircle2 className="h-4 w-4 text-primary" />
