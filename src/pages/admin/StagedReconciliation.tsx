@@ -31,6 +31,8 @@ import PilotComparisonReport from "@/components/reconciliation/PilotComparisonRe
 import CloseDesk from "@/components/reconciliation/CloseDesk";
 import PeriodJournal from "@/components/reconciliation/PeriodJournal";
 import PeriodComparison from "@/components/reconciliation/PeriodComparison";
+import FormalSignoffPanel from "@/components/reconciliation/FormalSignoffPanel";
+import RolloutReadiness from "@/components/reconciliation/RolloutReadiness";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 /* ── Status → workflow step mapping ── */
