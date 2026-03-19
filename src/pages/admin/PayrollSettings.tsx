@@ -263,6 +263,14 @@ export default function PayrollSettings() {
           </Badge>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="financial" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <CompanyFinancialPolicies />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
