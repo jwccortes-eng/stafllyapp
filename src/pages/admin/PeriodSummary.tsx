@@ -91,23 +91,16 @@ export default function PeriodSummary() {
 
   const canConsolidate = hasActionPermission("aprobar_nomina");
 
-  // When date range changes, find matching period(s) - for now select the first match
+  // When date range changes, auto-select the first visible period
   useEffect(() => {
     if (!dateFrom && !dateTo) return;
-    if (periods.length === 0) return;
-    const fromStr = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null;
-    const toStr = dateTo ? format(dateTo, "yyyy-MM-dd") : null;
-    const matching = periods.filter(p => {
-      // Overlap logic: include period if it overlaps with the date range
-      if (fromStr && p.end_date < fromStr) return false;
-      if (toStr && p.start_date > toStr) return false;
-      return true;
-    });
-    if (matching.length > 0 && matching[0].id !== selectedPeriod) {
-      setSelectedPeriod(matching[0].id);
-      setSearchParams({ periodId: matching[0].id });
+    if (visiblePeriods.length === 0) return;
+    // If current selection is not in visible list, switch to first visible
+    if (!visiblePeriods.find(p => p.id === selectedPeriod)) {
+      setSelectedPeriod(visiblePeriods[0].id);
+      setSearchParams({ periodId: visiblePeriods[0].id });
     }
-  }, [dateFrom, dateTo, periods]);
+  }, [dateFrom, dateTo, visiblePeriods]);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
