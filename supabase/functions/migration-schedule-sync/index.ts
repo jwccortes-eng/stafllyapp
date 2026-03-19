@@ -93,6 +93,9 @@ Deno.serve(async (req) => {
     if (action === "stats") {
       return await getStats(supabase, companyId);
     }
+    if (action === "resync_all") {
+      return await resyncAllPeriods(supabase, companyId, userId);
+    }
 
     // Smart Sync API: auto-import raw + process
     if (!rows.length) return json({ error: "No rows" }, 400);
