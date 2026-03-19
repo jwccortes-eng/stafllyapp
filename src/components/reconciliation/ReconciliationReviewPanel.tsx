@@ -14,6 +14,7 @@ import MatchDetailDrawer from "./MatchDetailDrawer";
 import MatchingConflictSummary from "./MatchingConflictSummary";
 import UnmatchedScheduleBreakdown from "./UnmatchedScheduleBreakdown";
 import ClockWithoutScheduleBreakdown from "./ClockWithoutScheduleBreakdown";
+import CaseSamplingDiagnostic from "./CaseSamplingDiagnostic";
 
 /** Fetch all rows from a table, scoped by batch_id if available, otherwise by company_id */
 async function fetchAllByBatch(table: string, companyId: string, batchId: string | null) {
