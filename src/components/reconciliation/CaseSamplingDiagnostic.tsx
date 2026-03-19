@@ -217,7 +217,7 @@ export default function CaseSamplingDiagnostic({ companyId }: Props) {
     const clockIdArr = [...clockIds];
     const empIdArr = [...empIds];
 
-    const fetchPromises: Promise<void>[] = [];
+    const fetchPromises: PromiseLike<void>[] = [];
 
     for (let i = 0; i < schedIdArr.length; i += 200) {
       const batch = schedIdArr.slice(i, i + 200);
