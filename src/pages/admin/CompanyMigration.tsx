@@ -191,12 +191,35 @@ export default function CompanyMigration() {
     }
   };
 
+  const loadTestFile = useCallback(async (slot: FileSlot) => {
+    try {
+      toast({ title: "Loading file...", description: "Fetching users_19.xls from server..." });
+      const resp = await fetch("/temp-import/users_19.xls");
+      if (!resp.ok) throw new Error("Could not fetch test file");
+      const blob = await resp.blob();
+      const file = new File([blob], "users_19.xls", { type: blob.type });
+      await handleFileUpload(slot, file);
+    } catch (err: any) {
+      toast({ title: "Error loading test file", description: err.message, variant: "destructive" });
+    }
+  }, [handleFileUpload, toast]);
+
+  console.log("[Migration] Render state:", { selectedCompanyId, companyName: selectedCompany?.name, filesStatus: Object.fromEntries(FILE_SLOTS.map(s => [s, files[s].status])) });
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Company Employee Migration"
         subtitle={`Connecteam → StaflyApps${selectedCompany ? ` • ${selectedCompany.name}` : ""}`}
       />
+
+      {!selectedCompanyId && (
+        <Card className="border-destructive">
+          <CardContent className="py-4">
+            <p className="text-destructive font-medium">⚠️ Selecciona una empresa en el switcher superior antes de continuar.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* File Upload Slots */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -217,19 +240,26 @@ export default function CompanyMigration() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {state.status === "idle" ? (
-                  <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 cursor-pointer hover:border-primary/50 transition-colors">
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Upload .xls / .xlsx / .csv</span>
-                    <input
-                      type="file"
-                      accept=".xls,.xlsx,.csv"
-                      className="hidden"
-                      onChange={e => {
-                        const f = e.target.files?.[0];
-                        if (f) handleFileUpload(slot, f);
-                      }}
-                    />
-                  </label>
+                  <div className="space-y-2">
+                    <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 cursor-pointer hover:border-primary/50 transition-colors">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Upload .xls / .xlsx / .csv</span>
+                      <input
+                        type="file"
+                        accept=".xls,.xlsx,.csv"
+                        className="hidden"
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (f) handleFileUpload(slot, f);
+                        }}
+                      />
+                    </label>
+                    {slot === "archived" && (
+                      <Button variant="outline" size="sm" className="w-full gap-1 text-xs" onClick={() => loadTestFile(slot)}>
+                        <Download className="h-3.5 w-3.5" /> Load users_19.xls (test)
+                      </Button>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
