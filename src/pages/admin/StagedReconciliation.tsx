@@ -206,6 +206,32 @@ export default function StagedReconciliation() {
     return result;
   };
 
+  // ── Signoff handlers ──
+  const handleSignoff = async (step: string, note: string) => {
+    if (!activePeriod || !user?.id) return;
+    const update: any = {};
+    update[`${step}_by`] = user.id;
+    update[`${step}_at`] = new Date().toISOString();
+    if (note) update[`${step}_note`] = note;
+    await supabase.from("reconciliation_period_status" as any).update(update).eq("id", activePeriod.id);
+    await logJournal("signoff", `Signoff: ${step}`, note || undefined);
+    toast({ title: `Signoff registrado: ${step}` });
+    loadPeriods();
+  };
+
+  const handleSetOutcome = async (outcome: string) => {
+    if (!activePeriod) return;
+    await supabase.from("reconciliation_period_status" as any).update({ outcome_label: outcome } as any).eq("id", activePeriod.id);
+    await logJournal("outcome", `Resultado: ${outcome}`);
+    toast({ title: `Resultado del periodo: ${outcome}` });
+    loadPeriods();
+  };
+
+  const handleSaveChecklist = async (checklist: Record<string, boolean>) => {
+    if (!activePeriod) return;
+    await supabase.from("reconciliation_period_status" as any).update({ golive_checklist: checklist } as any).eq("id", activePeriod.id);
+  };
+
   const validation = validateBeforePublish(finalRecords);
   const variances = useMemo(() => analyzeVariances(finalRecords, employeeMap), [finalRecords, employeeMap, analyzeVariances]);
 
