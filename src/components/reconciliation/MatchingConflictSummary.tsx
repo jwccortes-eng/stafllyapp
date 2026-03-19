@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
   BarChart3, Users, Clock, Calendar, AlertTriangle, CheckCircle2,
-  ChevronDown, ChevronUp, FileQuestion, Loader2,
+  ChevronDown, ChevronUp, FileQuestion, Loader2, Ban,
 } from "lucide-react";
 
 interface Props {
