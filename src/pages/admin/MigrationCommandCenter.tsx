@@ -43,6 +43,7 @@ export default function MigrationCommandCenter() {
   const { selectedCompanyId: companyId } = useCompany();
   const [stats, setStats] = useState<MigrationStats>(EMPTY_STATS);
   const [loading, setLoading] = useState(true);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   const fetchStats = useCallback(async () => {
     if (!companyId) return;
@@ -95,6 +96,7 @@ export default function MigrationCommandCenter() {
       },
     });
     setLoading(false);
+    setRefreshToken(prev => prev + 1);
   }, [companyId]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
@@ -183,31 +185,31 @@ export default function MigrationCommandCenter() {
         </TabsList>
 
         <TabsContent forceMount value="overview">
-          <MigrationOverview stats={stats} loading={loading} onRefresh={fetchStats} />
+          <MigrationOverview key={`overview-${refreshToken}`} stats={stats} loading={loading} onRefresh={fetchStats} />
         </TabsContent>
         <TabsContent forceMount value="smart-sync">
-          <SmartSyncUpload companyId={companyId} onRefresh={fetchStats} />
+          <SmartSyncUpload key={`smart-sync-${refreshToken}`} companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
         <TabsContent forceMount value="sync-status">
-          <SyncStatusPanel companyId={companyId} />
+          <SyncStatusPanel key={`sync-status-${refreshToken}`} companyId={companyId} />
         </TabsContent>
         <TabsContent forceMount value="employees">
-          <EmployeeMatchingTab companyId={companyId} onRefresh={fetchStats} />
+          <EmployeeMatchingTab key={`employees-${refreshToken}`} companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
         <TabsContent forceMount value="shifts">
-          <ShiftMatchingTab companyId={companyId} onRefresh={fetchStats} />
+          <ShiftMatchingTab key={`shifts-${refreshToken}`} companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
         <TabsContent forceMount value="clock">
-          <ClockMatchingTab companyId={companyId} onRefresh={fetchStats} />
+          <ClockMatchingTab key={`clock-${refreshToken}`} companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
         <TabsContent forceMount value="payroll">
-          <PayrollReconciliationTab companyId={companyId} onRefresh={fetchStats} />
+          <PayrollReconciliationTab key={`payroll-${refreshToken}`} companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
         <TabsContent forceMount value="weekly-close">
-          <WeeklyCloseTab companyId={companyId} onRefresh={fetchStats} />
+          <WeeklyCloseTab key={`weekly-close-${refreshToken}`} companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
         <TabsContent forceMount value="exceptions">
-          <ExceptionsTab companyId={companyId} onRefresh={fetchStats} />
+          <ExceptionsTab key={`exceptions-${refreshToken}`} companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
       </Tabs>
     </div>
