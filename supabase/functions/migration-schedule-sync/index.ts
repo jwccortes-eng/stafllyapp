@@ -645,7 +645,16 @@ async function resyncAllPeriods(
     const rangeToken = `${weekStart}_${weekEnd}`;
 
     for (const { row: r, fileName } of payrollRows) {
-      const inFileRange = fileName.includes(rangeToken);
+      // Try standard YYYY-MM-DD_YYYY-MM-DD token first
+      let inFileRange = fileName.includes(rangeToken);
+      // Fallback: extract date range from non-standard filename patterns
+      if (!inFileRange) {
+        const fnRange = extractDateRangeFromFileName(fileName);
+        if (fnRange) {
+          // Check if the filename's date range overlaps with the period
+          inFileRange = fnRange[0] <= weekEnd && fnRange[1] >= weekStart;
+        }
+      }
       if (!inFileRange) {
         const rowDate = ctDateToISO(r["Start Date"] || r["Date"] || r["End Date"]);
         if (!rowDate || rowDate < weekStart || rowDate > weekEnd) continue;
