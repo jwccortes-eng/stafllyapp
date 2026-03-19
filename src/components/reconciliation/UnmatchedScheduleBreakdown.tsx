@@ -300,7 +300,7 @@ export default function UnmatchedScheduleBreakdown({ companyId, onRefresh }: Pro
       if (schedIds.length > 0) {
         const { data: schedData } = await supabase
           .from("normalized_schedule_rows" as any)
-          .select("id, employee_name_raw, matched_employee_id, shift_title, work_date, start_time, end_time, total_hours, client_name, location_name, notes")
+          .select("id, employee_name_raw, matched_employee_id, shift_title, pay_type, work_date, start_time, end_time, total_hours, client_name, location_name, notes")
           .in("id", schedIds);
 
         const schedMap = new Map((schedData || []).map((s: any) => [s.id, s]));
