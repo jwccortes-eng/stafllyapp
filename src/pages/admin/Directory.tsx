@@ -160,6 +160,7 @@ export default function Directory() {
                     gender={emp.gender}
                     size="xl"
                     className="ring-2 ring-background shadow-lg"
+                    status={getStatus(emp.id)}
                   />
 
                   <div className="min-w-0 flex-1 pt-1">
