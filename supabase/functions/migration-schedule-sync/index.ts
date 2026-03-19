@@ -535,7 +535,8 @@ async function resyncAllPeriods(
     .from("migration_employee_mapping")
     .select("connecteam_name, stafly_employee_id, match_status")
     .eq("company_id", companyId)
-    .in("match_status", ["exact_match", "probable_match", "manually_resolved"]);
+    .in("match_status", ["exact_match", "probable_match", "manually_resolved"])
+    .limit(5000);
 
   const empByName = new Map<string, string>();
   for (const m of empMapping ?? []) {
@@ -543,7 +544,7 @@ async function resyncAllPeriods(
   }
 
   const { data: employees } = await supabase
-    .from("employees").select("id, first_name, last_name").eq("company_id", companyId);
+    .from("employees").select("id, first_name, last_name").eq("company_id", companyId).limit(5000);
   for (const emp of employees ?? []) {
     const name = `${emp.first_name} ${emp.last_name}`.toUpperCase().trim();
     if (!empByName.has(name)) empByName.set(name, emp.id);
