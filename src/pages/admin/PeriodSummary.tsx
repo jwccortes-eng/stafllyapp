@@ -730,6 +730,9 @@ export default function PeriodSummary() {
                             <span className="text-muted-foreground">Base:</span><span className="text-right font-mono">${fmt(r.base_total_pay)}</span>
                             <span className="text-muted-foreground">Extras:</span><span className="text-right font-mono text-earning">+${fmt(r.extras_total)}</span>
                             <span className="text-muted-foreground">Deducciones:</span><span className="text-right font-mono text-deduction">−${fmt(r.deductions_total)}</span>
+                            {r.advance_deduction > 0 && (
+                              <><span className="text-muted-foreground">Anticipos:</span><span className="text-right font-mono text-warning">−${fmt(r.advance_deduction)}</span></>
+                            )}
                             <span className="font-semibold border-t pt-0.5">Total:</span><span className="text-right font-mono font-bold border-t pt-0.5">${fmt(r.total_final_pay)}</span>
                           </div>
                         </TooltipContent>
