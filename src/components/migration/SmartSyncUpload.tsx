@@ -117,7 +117,10 @@ export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
   };
 
   const startSync = async () => {
-    if (!companyId || !user) return;
+    if (!companyId) {
+      toast({ title: "Error", description: "Selecciona una compañía primero.", variant: "destructive" });
+      return;
+    }
     setSyncing(true);
     setSyncProgress(0);
     setSyncLog([]);
