@@ -473,8 +473,13 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                   <span><span className="font-semibold">{employees.length}</span> total roster</span>
                   <span><span className="font-semibold">{aliases.length}</span> alias</span>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Company ID: <code className="bg-muted px-1 rounded">{companyId || "N/A"}</code> · Fuente: <code className="bg-muted px-1 rounded">employees</code>
+                <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                  <div>
+                    Empresa: <code className="bg-muted px-1 rounded">{companyName || "N/A"}</code> · Company ID: <code className="bg-muted px-1 rounded">{companyId || "N/A"}</code>
+                  </div>
+                  <div>
+                    Fuente: <code className="bg-muted px-1 rounded">employees</code> · Carga: <code className="bg-muted px-1 rounded">server paginated</code> · Esperado DB: <code className="bg-muted px-1 rounded">{rosterExpectedCount ?? "N/A"}</code>
+                  </div>
                 </div>
                 {employees.length === 0 && (
                   <div className="mt-2 p-2 bg-destructive/10 rounded text-destructive font-semibold text-sm">
