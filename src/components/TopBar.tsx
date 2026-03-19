@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { useNavigate } from "react-router-dom";
-import { Plus, CalendarDays, Users, Building2, MapPin, Search, Moon, Sun } from "lucide-react";
+import { Plus, CalendarDays, Users, Building2, MapPin, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -28,7 +28,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
-  const companyColor = selectedCompany?.brand_color || "#6366f1";
+  const companyColor = selectedCompany?.brand_color || "hsl(var(--primary))";
   const isOwner = role === "developer" || role === "owner";
   const isMultiCompany = companies.length > 1;
   const initials = fullName
@@ -47,19 +47,33 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
       <div className="flex items-center gap-3 flex-1 max-w-lg">
         {selectedCompany && (
           <div className={cn(
-            "flex items-center gap-2 shrink-0",
-            isMultiCompany ? "pr-3 border-r border-border/30" : "pr-3 border-r border-border/30"
+            "flex items-center gap-2.5 shrink-0 pr-3 border-r border-border/30"
           )}>
-            <span
-              className="h-2.5 w-2.5 rounded-full shrink-0 ring-2 ring-offset-1 ring-offset-background"
-              style={{ backgroundColor: companyColor, boxShadow: `0 0 8px ${companyColor}40` }}
-            />
-            <span className={cn(
-              "font-semibold text-foreground truncate hidden sm:inline",
-              isMultiCompany ? "text-[13px] max-w-[180px]" : "text-[12px] max-w-[140px] text-foreground/70"
-            )}>
-              {selectedCompany.name}
-            </span>
+            {/* Company logo/avatar */}
+            <Avatar className="h-7 w-7 rounded-lg shrink-0 ring-1 ring-border/20">
+              {selectedCompany.logo_url ? (
+                <AvatarImage src={selectedCompany.logo_url} alt={selectedCompany.name} className="rounded-lg object-contain" />
+              ) : null}
+              <AvatarFallback
+                className="rounded-lg text-[9px] font-bold"
+                style={{ backgroundColor: `${companyColor}15`, color: companyColor }}
+              >
+                {selectedCompany.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
+              </AvatarFallback>
+            </Avatar>
+            {/* Active dot + company name */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                className="h-2 w-2 rounded-full shrink-0 animate-pulse"
+                style={{ backgroundColor: companyColor, boxShadow: `0 0 6px ${companyColor}50` }}
+              />
+              <span className={cn(
+                "font-semibold text-foreground truncate hidden sm:inline leading-tight",
+                isMultiCompany ? "text-[13px] max-w-[200px]" : "text-[12px] max-w-[160px]"
+              )}>
+                {selectedCompany.name}
+              </span>
+            </div>
           </div>
         )}
         <CommandPaletteTrigger collapsed={false} />
