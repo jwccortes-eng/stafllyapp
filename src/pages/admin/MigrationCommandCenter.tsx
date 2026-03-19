@@ -99,19 +99,15 @@ export default function MigrationCommandCenter() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-
   const tabBadge = (count: number, variant: "default" | "secondary" | "destructive" | "outline" = "secondary") =>
     count > 0 ? <Badge variant={variant} className="ml-1.5 text-xs">{count}</Badge> : null;
 
   const handlePrintAll = () => {
-    const container = containerRef.current;
+    const container = document.getElementById("migration-print-root");
     if (!container) return;
 
-    // Add print-all-mode class to show all tabs
     container.classList.add("print-all-mode");
 
-    // Inject print header
     const header = document.createElement("div");
     header.id = "print-header";
     header.className = "print-header";
@@ -122,9 +118,9 @@ export default function MigrationCommandCenter() {
         <p style="font-size:10px;color:#999;margin:4px 0 0;">Generado: ${new Date().toLocaleString("es-US")}</p>
       </div>
     `;
+
     const main = document.querySelector("main") || document.body;
     main.prepend(header);
-
     window.print();
 
     setTimeout(() => {
@@ -134,7 +130,7 @@ export default function MigrationCommandCenter() {
   };
 
   return (
-    <div className="space-y-6" ref={containerRef}>
+    <div className="space-y-6" id="migration-print-root">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <PageHeader
           title="Migration Command Center"
