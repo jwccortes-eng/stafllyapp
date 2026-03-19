@@ -491,3 +491,34 @@ function DiffBadge({ diff, unit }: { diff: number | null; unit: string }) {
     </span>
   );
 }
+
+function ShiftNumIndicator({ schedNum, clockNum }: { schedNum?: string | null; clockNum?: string | null }) {
+  const s = schedNum?.trim() || null;
+  const c = clockNum?.trim() || null;
+  if (!s && !c) {
+    return (
+      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+        <HelpCircle className="h-3 w-3" /> N/A
+      </span>
+    );
+  }
+  if (!s || !c) {
+    return (
+      <span className="text-[10px] text-amber-500 flex items-center gap-0.5">
+        <AlertTriangle className="h-3 w-3" /> parcial
+      </span>
+    );
+  }
+  if (s === c) {
+    return (
+      <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
+        <Hash className="h-3 w-3" /> ✓
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] text-amber-500 flex items-center gap-0.5" title="Shift # no coincide — señal débil, puede ser error de digitación">
+      <AlertTriangle className="h-3 w-3" /> ≠ débil
+    </span>
+  );
+}
