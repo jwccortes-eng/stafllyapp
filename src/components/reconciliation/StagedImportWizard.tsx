@@ -60,15 +60,21 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
     setFile(f);
     try {
       const rows = await parseAnyFileToJson(f, { defval: "" });
-      setRawRows(rows);
-      if (rows.length > 0) {
-        const mapping = detectColumns(Object.keys(rows[0]));
-        setColumnMapping(mapping);
+      if (!rows || rows.length === 0) {
+        toast({ title: "Archivo vacío", description: "No se encontraron filas de datos en el archivo.", variant: "destructive" });
+        return;
       }
+      setRawRows(rows);
+      const allHeaders = Object.keys(rows[0]);
+      console.log("[StagedImport] Headers detected:", allHeaders);
+      const mapping = detectColumns(allHeaders);
+      console.log("[StagedImport] Column mapping:", mapping);
+      setColumnMapping(mapping);
       setStep("preview");
       await loadEmployees();
     } catch (err: any) {
-      toast({ title: "Error parsing file", description: err.message, variant: "destructive" });
+      console.error("[StagedImport] File parse error:", err);
+      toast({ title: "Error al leer archivo", description: err.message, variant: "destructive" });
     }
   };
 
