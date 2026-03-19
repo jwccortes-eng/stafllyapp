@@ -14,17 +14,20 @@ import MatchDetailDrawer from "./MatchDetailDrawer";
 import MatchingConflictSummary from "./MatchingConflictSummary";
 import UnmatchedScheduleBreakdown from "./UnmatchedScheduleBreakdown";
 
-/** Fetch all rows from a table, bypassing the 1000-row default limit */
-async function fetchAll(table: string, companyId: string) {
+/** Fetch all rows from a table, scoped by batch_id if available, otherwise by company_id */
+async function fetchAllByBatch(table: string, companyId: string, batchId: string | null) {
   const PAGE = 1000;
   let all: any[] = [];
   let from = 0;
   while (true) {
-    const { data, error } = await supabase
+    let q = supabase
       .from(table as any)
       .select("*")
-      .eq("company_id", companyId)
-      .range(from, from + PAGE - 1);
+      .eq("company_id", companyId);
+    if (batchId) {
+      q = q.eq("batch_id", batchId);
+    }
+    const { data, error } = await q.range(from, from + PAGE - 1);
     if (error) { console.error(`[fetchAll] ${table} error:`, error); break; }
     if (!data || data.length === 0) break;
     all = all.concat(data);
@@ -34,9 +37,19 @@ async function fetchAll(table: string, companyId: string) {
   return all;
 }
 
+interface PeriodScope {
+  schedule_batch_id: string | null;
+  clock_batch_id: string | null;
+  payroll_batch_id: string | null;
+  period_start: string;
+  period_end: string;
+  period_label: string;
+}
+
 interface Props {
   companyId: string | null;
   onRefresh: () => void;
+  periodScope?: PeriodScope | null;
 }
 
 interface MatchRow {
@@ -55,7 +68,7 @@ interface MatchRow {
   resolution_note: string | null;
 }
 
-export default function ReconciliationReviewPanel({ companyId, onRefresh }: Props) {
+export default function ReconciliationReviewPanel({ companyId, onRefresh, periodScope }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [matches, setMatches] = useState<MatchRow[]>([]);
@@ -64,6 +77,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
   const [runningMatch, setRunningMatch] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [scopeDebug, setScopeDebug] = useState<{ schedules: number; clocks: number; scheduleBatch: string | null; clockBatch: string | null } | null>(null);
 
   useEffect(() => {
     if (!companyId) return;
@@ -91,16 +105,25 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
     if (!companyId) return;
     setRunningMatch(true);
     try {
-      console.log("[Matching] Fetching ALL normalized rows for company:", companyId);
-      // Fetch ALL normalized rows (bypassing 1000-row limit)
+      const schedBatch = periodScope?.schedule_batch_id || null;
+      const clockBatch = periodScope?.clock_batch_id || null;
+      console.log("[Matching] Scope:", {
+        companyId,
+        schedBatch,
+        clockBatch,
+        periodStart: periodScope?.period_start,
+        periodEnd: periodScope?.period_end,
+      });
+
       const [schedules, clocks] = await Promise.all([
-        fetchAll("normalized_schedule_rows", companyId),
-        fetchAll("normalized_clock_rows", companyId),
+        fetchAllByBatch("normalized_schedule_rows", companyId, schedBatch),
+        fetchAllByBatch("normalized_clock_rows", companyId, clockBatch),
       ]) as [NormalizedScheduleRow[], NormalizedClockRow[]];
 
-      console.log("[Matching] Found", schedules.length, "schedules and", clocks.length, "clocks");
-
-      console.log("[Matching] Found", schedules.length, "schedules and", clocks.length, "clocks");
+      setScopeDebug({ schedules: schedules.length, clocks: clocks.length, scheduleBatch: schedBatch, clockBatch: clockBatch });
+      console.log("[Matching] Scoped rows — schedules:", schedules.length, "clocks:", clocks.length,
+        schedBatch ? `(batch: ${schedBatch})` : "(ALL company — no batch scope!)",
+        clockBatch ? `(batch: ${clockBatch})` : "(ALL company — no batch scope!)");
 
       if (schedules.length === 0 && clocks.length === 0) {
         toast({ title: "Sin datos", description: "Importa turnos y fichajes primero desde la pestaña Importar.", variant: "destructive" });
@@ -221,6 +244,27 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
 
   return (
     <div className="space-y-4">
+      {/* Scope debug banner */}
+      <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-2 text-xs space-y-1">
+        <p className="font-medium text-sm">🔍 Scope del Matching</p>
+        {periodScope ? (
+          <>
+            <p>Periodo: <span className="font-mono">{periodScope.period_label}</span> ({periodScope.period_start} → {periodScope.period_end})</p>
+            <p>Schedule batch: <span className="font-mono">{periodScope.schedule_batch_id || "⚠️ NO ASIGNADO — cargará TODOS los schedules"}</span></p>
+            <p>Clock batch: <span className="font-mono">{periodScope.clock_batch_id || "⚠️ NO ASIGNADO — cargará TODOS los clocks"}</span></p>
+            <p>Payroll batch: <span className="font-mono">{periodScope.payroll_batch_id || "—"}</span></p>
+          </>
+        ) : (
+          <p className="text-destructive font-medium">⚠️ Sin periodo activo — matching cargará TODOS los rows de la empresa (puede incluir datos históricos)</p>
+        )}
+        {scopeDebug && (
+          <p className="mt-1 text-muted-foreground">
+            Último matching: <span className="font-mono">{scopeDebug.schedules}</span> schedules, <span className="font-mono">{scopeDebug.clocks}</span> clocks
+            {!scopeDebug.scheduleBatch && <span className="text-destructive ml-2">⚠️ Sin filtro de batch</span>}
+          </p>
+        )}
+      </div>
+
       <div className="flex items-center gap-3">
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="w-48">
