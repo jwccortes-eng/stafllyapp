@@ -743,6 +743,11 @@ export function EmployeeProfileTabs({
       <TabsContent value="pay" className="mt-0">
         <PayTab employee={employee} companyId={companyId} />
       </TabsContent>
+      <TabsContent value="compensation" className="mt-0">
+        <Suspense fallback={<div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>}>
+          <EmployeeCompensationTab employeeId={employee.id} employeeName={`${employee.first_name ?? ""} ${employee.last_name ?? ""}`} companyId={companyId} />
+        </Suspense>
+      </TabsContent>
       <TabsContent value="advances" className="mt-0">
         <EmployeeAdvancesTab employeeId={employee.id} companyId={companyId} />
       </TabsContent>
