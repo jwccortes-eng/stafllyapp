@@ -143,7 +143,12 @@ export default function StagedReconciliation() {
               Periodo activo: {periodStatusLabel}
             </div>
           )}
-          <StagedImportWizard companyId={selectedCompanyId} onComplete={refresh} />
+          <StagedImportWizard
+            companyId={selectedCompanyId}
+            onComplete={refresh}
+            activePeriodId={activePeriod?.id}
+            onBatchLinked={() => loadPeriods()}
+          />
         </TabsContent>
 
         {/* Matching */}

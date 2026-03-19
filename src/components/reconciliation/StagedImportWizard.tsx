@@ -21,6 +21,8 @@ type Step = "upload" | "preview" | "normalize" | "review" | "save";
 interface Props {
   companyId: string | null;
   onComplete: () => void;
+  activePeriodId?: string | null;
+  onBatchLinked?: (sourceType: SourceType, batchId: string) => void;
 }
 
 const SOURCE_LABELS: Record<SourceType, string> = {
@@ -29,7 +31,7 @@ const SOURCE_LABELS: Record<SourceType, string> = {
   payroll: "Nómina / Payroll",
 };
 
-export default function StagedImportWizard({ companyId, onComplete }: Props) {
+export default function StagedImportWizard({ companyId, onComplete, activePeriodId, onBatchLinked }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -243,11 +245,28 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
         .update({ status: "completed" } as any)
         .eq("id", batchId);
 
+      // 7. Link batch to active period if available
+      if (activePeriodId) {
+        const fieldMap: Record<string, string> = {
+          schedule: "schedule_batch_id",
+          clock: "clock_batch_id",
+          payroll: "payroll_batch_id",
+        };
+        const field = fieldMap[sourceType];
+        if (field) {
+          await supabase.from("reconciliation_period_status" as any)
+            .update({ [field]: batchId, updated_at: new Date().toISOString() } as any)
+            .eq("id", activePeriodId);
+          console.log("[StagedImport] Linked batch", batchId, "to period", activePeriodId, "field:", field);
+        }
+        onBatchLinked?.(sourceType, batchId);
+      }
+
       setProgress(100);
       setStep("save");
       toast({
         title: "Import completado",
-        description: `${rawRows.length} filas importadas, ${unmatched.length} sin emparejar.`,
+        description: `${rawRows.length} filas importadas, ${unmatched.length} sin emparejar.${activePeriodId ? " Vinculado al periodo activo." : ""}`,
       });
       onComplete();
     } catch (err: any) {
