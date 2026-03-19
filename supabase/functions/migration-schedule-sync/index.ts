@@ -661,21 +661,37 @@ async function resyncAllPeriods(
     let sfEmployees = 0, sfGross = 0, sfHours = 0;
 
     if (matchingPayPeriod) {
-      const periodBase = baseByPeriod.get(matchingPayPeriod.id) || [];
-      const periodMov = movByPeriod.get(matchingPayPeriod.id) || new Map();
+      // Query this pay period directly to avoid row-cap truncation and stale aggregates.
+      const [{ data: periodBase }, { data: periodMov }] = await Promise.all([
+        supabase
+          .from("period_base_pay")
+          .select("employee_id, total_work_hours, base_total_pay")
+          .eq("company_id", companyId)
+          .eq("period_id", matchingPayPeriod.id),
+        supabase
+          .from("movements")
+          .select("employee_id, total_value")
+          .eq("company_id", companyId)
+          .eq("period_id", matchingPayPeriod.id),
+      ]);
 
-      // Simple direct sums — avoids any double-counting risk
-      const baseSum = periodBase.reduce((s, bp) => s + bp.pay, 0);
-      const hoursSum = periodBase.reduce((s, bp) => s + bp.hours, 0);
-      const movSum = [...periodMov.values()].reduce((s, v) => s + v, 0);
+      const baseRows = periodBase ?? [];
+      const movRows = periodMov ?? [];
+
+      const baseSum = baseRows.reduce((s, bp) => s + (Number(bp.base_total_pay) || 0), 0);
+      const hoursSum = baseRows.reduce((s, bp) => s + (Number(bp.total_work_hours) || 0), 0);
+      const movSum = movRows.reduce((s, mv) => s + (Number(mv.total_value) || 0), 0);
 
       sfGross = baseSum + movSum;
       sfHours = hoursSum;
 
-      // Count unique employees across both sources
       const sfEmps = new Set<string>();
-      for (const bp of periodBase) sfEmps.add(bp.employee_id);
-      for (const [empId] of periodMov) sfEmps.add(empId);
+      for (const bp of baseRows) {
+        if (bp.employee_id) sfEmps.add(bp.employee_id);
+      }
+      for (const mv of movRows) {
+        if (mv.employee_id) sfEmps.add(mv.employee_id);
+      }
       sfEmployees = sfEmps.size;
     }
 
