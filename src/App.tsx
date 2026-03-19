@@ -114,7 +114,7 @@ const PortalChat = lazy(() => import("./pages/portal/PortalChat"));
 const MyW9 = lazy(() => import("./pages/portal/MyW9"));
 const MyAvailability = lazy(() => import("./pages/portal/MyAvailability"));
 
-const queryClient = new QueryClient();
+import { queryClient } from "@/lib/query-client";
 
 function NetworkListener() {
   useNetworkStatus();

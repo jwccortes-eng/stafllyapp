@@ -1,6 +1,7 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { queryClient } from "@/lib/query-client";
 
 interface Company {
   id: string;
@@ -17,6 +18,8 @@ interface CompanyContextType {
   selectedCompanyId: string | null;
   selectedCompany: Company | null;
   setSelectedCompanyId: (id: string) => void;
+  /** Switch company with cache invalidation */
+  switchCompany: (id: string) => void;
   loading: boolean;
   refetch: () => Promise<void>;
   activeModules: Set<string>;
@@ -28,6 +31,7 @@ const CompanyContext = createContext<CompanyContextType>({
   selectedCompanyId: null,
   selectedCompany: null,
   setSelectedCompanyId: () => {},
+  switchCompany: () => {},
   loading: true,
   refetch: async () => {},
   activeModules: new Set(),
@@ -85,6 +89,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   };
 
+  /** Switch company: update state + invalidate all cached queries */
+  const switchCompany = useCallback((id: string) => {
+    if (id === selectedCompanyId) return;
+    setSelectedCompanyId(id);
+    // Invalidate all React Query caches so screens reload with new company data
+    queryClient.invalidateQueries();
+  }, [selectedCompanyId]);
+
   useEffect(() => {
     if (user && role !== undefined) fetchCompanies();
   }, [user, role]);
@@ -113,7 +125,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <CompanyContext.Provider value={{ companies, selectedCompanyId, selectedCompany, setSelectedCompanyId, loading, refetch: fetchCompanies, activeModules, isModuleActive }}>
+    <CompanyContext.Provider value={{ companies, selectedCompanyId, selectedCompany, setSelectedCompanyId, switchCompany, loading, refetch: fetchCompanies, activeModules, isModuleActive }}>
       {children}
     </CompanyContext.Provider>
   );
