@@ -49,6 +49,7 @@ interface ScheduleDetail {
   source_data: any;
   matched_employee_id: string | null;
   external_shift_id: string | null;
+  shift_title?: string | null;
 }
 
 interface ClockDetail {
@@ -62,6 +63,7 @@ interface ClockDetail {
   source_data: any;
   matched_employee_id: string | null;
   external_clock_id: string | null;
+  shift_title?: string | null;
 }
 
 /* ── Helpers ── */
