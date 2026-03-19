@@ -6,7 +6,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CompanyLogo } from "@/components/ui/company-logo";
 import { ShieldCheck, Loader2, Building2, Delete } from "lucide-react";
 import { cn } from "@/lib/utils";
 
