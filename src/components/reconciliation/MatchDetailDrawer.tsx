@@ -212,6 +212,10 @@ export default function MatchDetailDrawer({ match, open, onOpenChange, onResolve
   const topCandidate = rankedCandidates[0] ?? null;
   const RecoIcon = recommendation?.icon ?? HelpCircle;
 
+  // Detect special compensation category
+  const isClockExempt = flags.includes("clock_exempt");
+  const compCategoryLabel = flags.includes("daily_pay_weekend_job") ? "Daily Pay (Weekend Job)" : flags.includes("ride_pay") ? "Ride Pay (Pay Ride)" : null;
+
   // Use linked schedule detail or top candidate for side-by-side
   const comparisonSched = schedDetail || topCandidate?.schedule || null;
   const compStartDiff = comparisonSched ? timeDiffMin(comparisonSched.start_time, clockDetail?.clock_in ?? null) : null;
