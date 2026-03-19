@@ -48,6 +48,14 @@ interface SubDef {
 
 const SUB_DEFS: SubDef[] = [
   {
+    key: "no_title_no_client",
+    label: "Sin título + sin cliente + sin ubicación",
+    icon: <Ban className="h-4 w-4" />,
+    color: "text-primary",
+    clockRequired: "no",
+    recommendedAction: "Placeholder de disponibilidad/bloqueo — el motor ya lo clasifica como clock-exempt automáticamente",
+  },
+  {
     key: "no_title_no_times",
     label: "Sin título + sin horario",
     icon: <Ban className="h-4 w-4" />,
