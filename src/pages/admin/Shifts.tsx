@@ -342,6 +342,27 @@ export default function Shifts() {
     }
   };
 
+  // Auto-populate defaults when location is selected
+  const handleLocationChange = (newLocId: string) => {
+    const id = newLocId === "none" ? "" : newLocId;
+    setLocationId(id);
+    if (id) {
+      const loc = locations.find(l => l.id === id) as any;
+      if (loc) {
+        if (loc.address) setMeetingPoint(loc.address);
+        if (loc.default_pay_type) setPayType(loc.default_pay_type as "hourly" | "daily");
+        if (loc.default_clock_method) {
+          // clock method not in create form state yet but used in edit; set transport
+        }
+        if (loc.require_car) {
+          setTransportRequired(true);
+          toast.info("🚗 Esta ubicación requiere transporte");
+        }
+        if (loc.default_instructions) setSpecialInstructions(loc.default_instructions);
+      }
+    }
+  };
+
   // --- Notification helper ---
   const sendShiftNotifications = async (
     shiftId: string,
