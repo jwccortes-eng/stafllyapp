@@ -187,15 +187,21 @@ function buildDiagnostics(
   const unmatched = normalized.filter(r => !r.matched_employee_id && !r._is_system);
   const ambiguous = normalized.filter(r => r.has_conflict);
 
-  // Identify likely alias candidates (unmatched with >0 fuzzy confidence)
   const likelyAlias = unmatched.filter(r =>
     r.employee_match_confidence > 0 && r.employee_match_confidence < 0.75
   );
 
   const matchedByMethod: Record<string, number> = {};
+  const matchedByStatus: Record<string, number> = {};
   for (const r of matched) {
     matchedByMethod[r.employee_match_method] = (matchedByMethod[r.employee_match_method] || 0) + 1;
+    const status = r._match_status || "matched_active_employee";
+    matchedByStatus[status] = (matchedByStatus[status] || 0) + 1;
   }
+
+  const matchedActive = matched.filter(r => r._match_status === "matched_active_employee").length;
+  const matchedInactive = matched.filter(r => r._match_status === "matched_inactive_employee").length;
+  const matchedByAlias = matched.filter(r => r.employee_match_method === "alias").length;
 
   const activeEmps = employees.filter((e: any) => e.is_active !== false);
   const inactiveEmps = employees.filter((e: any) => e.is_active === false);
@@ -207,7 +213,11 @@ function buildDiagnostics(
     blankNameRows,
     realEmployeeRows: normalized.filter(r => !r._is_system).length,
     matched: matched.length,
+    matchedActive,
+    matchedInactive,
+    matchedByAlias,
     matchedByMethod,
+    matchedByStatus,
     unmatched: unmatched.length,
     unmatchedNames: [...new Set(unmatched.map(r => r.employee_name_raw))],
     ambiguous: ambiguous.length,
