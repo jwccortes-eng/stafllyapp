@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
-  Users, ArrowRight, Lock, Eye, Shield,
+  Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -21,6 +21,7 @@ import ImportBatchHistory from "@/components/reconciliation/ImportBatchHistory";
 import ReconciliationDashboard from "@/components/reconciliation/ReconciliationDashboard";
 import EmployeePeriodReconciliation from "@/components/reconciliation/EmployeePeriodReconciliation";
 import PrePublishReview from "@/components/reconciliation/PrePublishReview";
+import VerificationReport from "@/components/reconciliation/VerificationReport";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 export default function StagedReconciliation() {
@@ -31,7 +32,7 @@ export default function StagedReconciliation() {
     finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
     loadFinalRecords, generateFinalRecords, postFinalRecords,
     saveMappingCorrection, reopenPeriod, loadClosingReceipt,
-    validateBeforePublish,
+    validateBeforePublish, analyzeVariances, runValidation,
   } = useReconciliationPeriod(selectedCompanyId);
 
   const [tab, setTab] = useState("dashboard");
@@ -113,6 +114,11 @@ export default function StagedReconciliation() {
     await reopenPeriod(activePeriod.id, reason);
   };
 
+  const handleRunValidation = async (isDryRun: boolean, uat: Record<string, boolean>, notes?: string) => {
+    if (!activePeriod) return null;
+    return runValidation(activePeriod.id, isDryRun, uat, employeeMap, notes);
+  };
+
   const validation = validateBeforePublish(finalRecords);
 
   const periodStatusLabel = activePeriod ? (
@@ -132,30 +138,33 @@ export default function StagedReconciliation() {
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
-            <BarChart3 className="h-3.5 w-3.5" /> Dashboard
+        <TabsList className="grid w-full grid-cols-9">
+          <TabsTrigger value="dashboard" className="gap-1 text-[11px]">
+            <BarChart3 className="h-3 w-3" /> Dashboard
           </TabsTrigger>
-          <TabsTrigger value="import" className="gap-1.5 text-xs">
-            <Upload className="h-3.5 w-3.5" /> Importar
+          <TabsTrigger value="import" className="gap-1 text-[11px]">
+            <Upload className="h-3 w-3" /> Importar
           </TabsTrigger>
-          <TabsTrigger value="review" className="gap-1.5 text-xs">
-            <GitCompareArrows className="h-3.5 w-3.5" /> Matching
+          <TabsTrigger value="review" className="gap-1 text-[11px]">
+            <GitCompareArrows className="h-3 w-3" /> Matching
           </TabsTrigger>
-          <TabsTrigger value="exceptions" className="gap-1.5 text-xs">
-            <AlertTriangle className="h-3.5 w-3.5" /> Excepciones
+          <TabsTrigger value="exceptions" className="gap-1 text-[11px]">
+            <AlertTriangle className="h-3 w-3" /> Excepciones
           </TabsTrigger>
-          <TabsTrigger value="employees" className="gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" /> Empleados
+          <TabsTrigger value="employees" className="gap-1 text-[11px]">
+            <Users className="h-3 w-3" /> Empleados
           </TabsTrigger>
-          <TabsTrigger value="approve" className="gap-1.5 text-xs">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Aprobar
+          <TabsTrigger value="approve" className="gap-1 text-[11px]">
+            <CheckCircle2 className="h-3 w-3" /> Aprobar
           </TabsTrigger>
-          <TabsTrigger value="publish" className="gap-1.5 text-xs">
-            <Shield className="h-3.5 w-3.5" /> Publicar
+          <TabsTrigger value="validate" className="gap-1 text-[11px]">
+            <ClipboardCheck className="h-3 w-3" /> Validar
           </TabsTrigger>
-          <TabsTrigger value="history" className="gap-1.5 text-xs">
-            <FileText className="h-3.5 w-3.5" /> Historial
+          <TabsTrigger value="publish" className="gap-1 text-[11px]">
+            <Shield className="h-3 w-3" /> Publicar
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-1 text-[11px]">
+            <FileText className="h-3 w-3" /> Historial
           </TabsTrigger>
         </TabsList>
 
@@ -313,6 +322,25 @@ export default function StagedReconciliation() {
             <div className="text-center py-12 text-muted-foreground">
               <Shield className="h-10 w-10 mx-auto mb-3 opacity-50" />
               <p>Selecciona un periodo desde el Dashboard.</p>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Validate */}
+        <TabsContent value="validate">
+          {activePeriod ? (
+            <VerificationReport
+              period={activePeriod}
+              finalRecords={finalRecords}
+              employees={employeeMap}
+              onRunValidation={handleRunValidation}
+              onPublish={handlePostPeriod}
+              publishing={publishing}
+            />
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <ClipboardCheck className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>Selecciona un periodo desde el Dashboard para validar.</p>
             </div>
           )}
         </TabsContent>
