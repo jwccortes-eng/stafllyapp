@@ -244,6 +244,21 @@ export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
                 );
               })}
             </div>
+            <div className="pt-3 border-t border-border/50 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={resyncing || syncing || !companyId}
+                onClick={resyncAll}
+              >
+                {resyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                {resyncing ? "Re-syncing..." : "Re-sync All Periods"}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Reprocess existing data with updated employee mappings
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
