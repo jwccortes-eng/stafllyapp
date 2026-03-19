@@ -137,25 +137,61 @@ export function useReconciliationPeriod(companyId: string | null) {
     setFinalRecords((data || []) as any);
   }, [companyId]);
 
+  // ── CORE: Generate final records scoped to period date range ──
   const generateFinalRecords = useCallback(async (periodStatusId: string) => {
     if (!companyId || !user?.id) return;
 
-    // Get period info
     const period = periods.find(p => p.id === periodStatusId);
-    if (!period) return;
+    if (!period) {
+      toast({ title: "Error", description: "Periodo no encontrado", variant: "destructive" });
+      return;
+    }
 
-    // Fetch all normalized data for this company within period dates
+    console.log("[GenerateFinal] Period:", period.period_label, period.period_start, "→", period.period_end);
+
+    // Build batch filter if available, otherwise fall back to date range
+    const batchIds = [period.schedule_batch_id, period.clock_batch_id, period.payroll_batch_id].filter(Boolean);
+    const useBatchFilter = batchIds.length > 0;
+
+    // Fetch normalized data FILTERED by the period's linked batches or date range
+    let schedQuery = supabase.from("normalized_schedule_rows" as any).select("*").eq("company_id", companyId);
+    let clockQuery = supabase.from("normalized_clock_rows" as any).select("*").eq("company_id", companyId);
+    let payrollQuery = supabase.from("normalized_payroll_rows" as any).select("*").eq("company_id", companyId);
+
+    if (period.schedule_batch_id) {
+      schedQuery = schedQuery.eq("batch_id", period.schedule_batch_id);
+    } else {
+      schedQuery = schedQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
+    }
+
+    if (period.clock_batch_id) {
+      clockQuery = clockQuery.eq("batch_id", period.clock_batch_id);
+    } else {
+      clockQuery = clockQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
+    }
+
+    if (period.payroll_batch_id) {
+      payrollQuery = payrollQuery.eq("batch_id", period.payroll_batch_id);
+    }
+    // Payroll may not have work_date, so don't filter by date if no batch
+
+    const matchQuery = supabase.from("reconciliation_matches" as any).select("*").eq("company_id", companyId);
+
     const [schedRes, clockRes, payrollRes, matchRes] = await Promise.all([
-      supabase.from("normalized_schedule_rows" as any).select("*").eq("company_id", companyId),
-      supabase.from("normalized_clock_rows" as any).select("*").eq("company_id", companyId),
-      supabase.from("normalized_payroll_rows" as any).select("*").eq("company_id", companyId),
-      supabase.from("reconciliation_matches" as any).select("*").eq("company_id", companyId),
+      schedQuery, clockQuery, payrollQuery, matchQuery,
     ]);
 
     const schedules = (schedRes.data || []) as any[];
     const clocks = (clockRes.data || []) as any[];
     const payrolls = (payrollRes.data || []) as any[];
     const matches = (matchRes.data || []) as any[];
+
+    console.log("[GenerateFinal] Data:", { schedules: schedules.length, clocks: clocks.length, payrolls: payrolls.length, matches: matches.length });
+
+    if (schedules.length === 0 && clocks.length === 0 && payrolls.length === 0) {
+      toast({ title: "Sin datos", description: "No hay datos importados para este periodo. Importa archivos primero.", variant: "destructive" });
+      return;
+    }
 
     // Get employees
     const { data: employees } = await supabase
@@ -169,6 +205,8 @@ export function useReconciliationPeriod(companyId: string | null) {
     schedules.forEach(s => { if (s.matched_employee_id) employeeIds.add(s.matched_employee_id); });
     clocks.forEach(c => { if (c.matched_employee_id) employeeIds.add(c.matched_employee_id); });
     payrolls.forEach(p => { if (p.matched_employee_id) employeeIds.add(p.matched_employee_id); });
+
+    console.log("[GenerateFinal] Employees found:", employeeIds.size);
 
     // Build records per employee
     const records: any[] = [];
@@ -193,11 +231,17 @@ export function useReconciliationPeriod(companyId: string | null) {
       const manualAmount = manualRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
       const basePay = baseRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
 
-      // Determine dominant pay classification
+      // Determine pay classification
       const payTypes = empPayrolls.map(p => p.pay_type).filter(Boolean);
       const classification = payTypes.length > 0
         ? [...new Set(payTypes)].length === 1 ? payTypes[0] : "mixed"
         : "unknown";
+
+      // Detect hourly rate from payroll data
+      const hourlyPayrolls = empPayrolls.filter(p => p.pay_type === "hourly" && Number(p.total_hours) > 0 && Number(p.total_pay) > 0);
+      const hourlyRate = hourlyPayrolls.length > 0
+        ? Math.round((hourlyPayrolls.reduce((s, p) => s + Number(p.total_pay), 0) / hourlyPayrolls.reduce((s, p) => s + Number(p.total_hours), 0)) * 100) / 100
+        : null;
 
       // Count conflicts
       const unresolvedMatches = empMatches.filter(m => m.match_status === "ambiguous" || m.match_status === "unmatched");
@@ -215,6 +259,7 @@ export function useReconciliationPeriod(companyId: string | null) {
         total_payroll_hours: Math.round(totalPayrollHours * 100) / 100,
         total_payroll_amount: Math.round(totalPayrollAmount * 100) / 100,
         pay_classification: classification,
+        hourly_rate: hourlyRate,
         ride_amount: Math.round(rideAmount * 100) / 100,
         weekend_amount: Math.round(weekendAmount * 100) / 100,
         manual_amount: Math.round(manualAmount * 100) / 100,
@@ -227,7 +272,8 @@ export function useReconciliationPeriod(companyId: string | null) {
 
     // Upsert final records
     for (const rec of records) {
-      await supabase.from("reconciliation_final_records" as any).upsert(rec as any, { onConflict: "period_status_id,employee_id" });
+      const { error } = await supabase.from("reconciliation_final_records" as any).upsert(rec as any, { onConflict: "period_status_id,employee_id" });
+      if (error) console.error("[GenerateFinal] Upsert error:", error);
     }
 
     // Update period stats
@@ -238,26 +284,125 @@ export function useReconciliationPeriod(companyId: string | null) {
       total_payroll_rows: payrolls.length,
       total_matches: matches.length,
       approved_matches: matches.filter((m: any) => m.match_status === "approved" || m.match_status === "exact").length,
+      total_exceptions: records.filter(r => r.conflict_count > 0).length,
+      resolved_exceptions: records.filter(r => r.reconciliation_status === "resolved").length,
       status: "reviewing",
       updated_at: new Date().toISOString(),
     } as any).eq("id", periodStatusId);
 
     await loadFinalRecords(periodStatusId);
     await loadPeriods();
-    toast({ title: "Registros generados", description: `${records.length} empleados procesados.` });
+    toast({ title: "Registros generados", description: `${records.length} empleados procesados para ${period.period_label}.` });
   }, [companyId, user?.id, periods, toast, loadFinalRecords, loadPeriods]);
 
+  // ── CORE: Post final records to production tables ──
   const postFinalRecords = useCallback(async (periodStatusId: string) => {
     if (!companyId || !user?.id) return;
-    // Mark all resolved records as posted
-    await supabase.from("reconciliation_final_records" as any)
-      .update({ reconciliation_status: "posted", approved_by: user.id, approved_at: new Date().toISOString() } as any)
+
+    const period = periods.find(p => p.id === periodStatusId);
+    if (!period) return;
+
+    // Load the final records for this period
+    const { data: records } = await supabase
+      .from("reconciliation_final_records" as any)
+      .select("*")
       .eq("period_status_id", periodStatusId)
       .in("reconciliation_status", ["resolved", "approved"] as any);
 
+    const finalRecs = (records || []) as any[];
+
+    if (finalRecs.length === 0) {
+      toast({ title: "Sin registros aprobados", description: "Aprueba al menos un empleado antes de publicar.", variant: "destructive" });
+      return;
+    }
+
+    console.log("[PostFinal] Posting", finalRecs.length, "records to production");
+
+    // Find or create pay_period linked to this reconciliation period
+    let payPeriodId = period.period_id;
+    if (!payPeriodId) {
+      // Try to find existing pay_period matching dates
+      const { data: existingPeriod } = await supabase
+        .from("pay_periods")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("start_date", period.period_start)
+        .eq("end_date", period.period_end)
+        .maybeSingle();
+
+      if (existingPeriod) {
+        payPeriodId = existingPeriod.id;
+      } else {
+        // Create a pay_period
+        const { data: newPeriod, error: ppErr } = await supabase
+          .from("pay_periods")
+          .insert({
+            company_id: companyId,
+            start_date: period.period_start,
+            end_date: period.period_end,
+            label: period.period_label,
+            status: "closed",
+          })
+          .select("id")
+          .single();
+        if (ppErr) {
+          console.error("[PostFinal] Pay period create error:", ppErr);
+          toast({ title: "Error creando periodo", description: ppErr.message, variant: "destructive" });
+          return;
+        }
+        payPeriodId = newPeriod.id;
+      }
+
+      // Link back
+      await supabase.from("reconciliation_period_status" as any)
+        .update({ period_id: payPeriodId } as any)
+        .eq("id", periodStatusId);
+    }
+
+    // Write period_base_pay for each employee
+    let posted = 0;
+    let errors = 0;
+    for (const rec of finalRecs) {
+      const { error } = await supabase
+        .from("period_base_pay")
+        .upsert({
+          company_id: companyId,
+          period_id: payPeriodId,
+          employee_id: rec.employee_id,
+          total_work_hours: rec.total_worked_hours || rec.total_payroll_hours || 0,
+          total_regular: Math.min(rec.total_worked_hours || rec.total_payroll_hours || 0, 40),
+          total_overtime: Math.max((rec.total_worked_hours || rec.total_payroll_hours || 0) - 40, 0),
+          total_paid_hours: rec.total_payroll_hours || rec.total_worked_hours || 0,
+          base_total_pay: rec.final_total_pay || 0,
+        }, { onConflict: "period_id,employee_id" });
+
+      if (error) {
+        console.error("[PostFinal] period_base_pay error for", rec.employee_id, error);
+        errors++;
+      } else {
+        posted++;
+      }
+
+      // Mark reconciliation record as posted
+      await supabase.from("reconciliation_final_records" as any)
+        .update({
+          reconciliation_status: "posted",
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq("id", rec.id);
+    }
+
+    // Update period status
     await updatePeriodStatus(periodStatusId, "posted");
-    toast({ title: "Periodo publicado", description: "Los registros finales han sido creados." });
-  }, [companyId, user?.id, updatePeriodStatus, toast]);
+
+    await loadFinalRecords(periodStatusId);
+    toast({
+      title: "Periodo publicado a producción",
+      description: `${posted} registros creados en period_base_pay. ${errors > 0 ? `${errors} errores.` : "Sin errores."}`,
+    });
+  }, [companyId, user?.id, periods, updatePeriodStatus, toast, loadFinalRecords]);
 
   const saveMappingCorrection = useCallback(async (
     mappingType: string, sourceValue: string, targetId: string, targetValue: string
