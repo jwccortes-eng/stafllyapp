@@ -67,6 +67,7 @@ export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
   const [files, setFiles] = useState<DetectedFile[]>([]);
   const [processing, setProcessing] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
   const [syncLog, setSyncLog] = useState<string[]>([]);
 
