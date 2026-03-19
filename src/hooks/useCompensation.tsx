@@ -234,10 +234,11 @@ export function useCompensationMutations() {
     if (!selectedCompanyId) throw new Error("No company");
     const payload = { ...rule, company_id: selectedCompanyId };
 
-    if (rule.id) {
+    const { id: ruleId, ...rest } = payload;
+    if (ruleId) {
       const { error } = await supabase
         .from("company_compensation_rules")
-        .update(payload)
+        .update(rest as any)
         .eq("id", rule.id);
       if (error) throw error;
     } else {
