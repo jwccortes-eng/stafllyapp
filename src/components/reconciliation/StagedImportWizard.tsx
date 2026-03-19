@@ -53,24 +53,47 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
   const [filter, setFilter] = useState<"all" | "matched" | "unmatched" | "system">("all");
 
   const loadEmployees = useCallback(async () => {
-    if (!companyId) return;
-    const { data } = await supabase
+    if (!companyId) {
+      console.warn("[StagedImport] No companyId, skipping employee load");
+      return;
+    }
+    console.log("[StagedImport] Loading employees for company:", companyId);
+
+    const { data, error } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, phone_number, email, external_id, connecteam_id, connecteam_employee_id, is_active")
+      .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, is_active, start_date, end_date")
       .eq("company_id", companyId);
-    setEmployees((data || []).map((d: any) => ({
-      ...d,
+
+    if (error) {
+      console.error("[StagedImport] Employee query error:", error);
+      toast({ title: "Error cargando empleados", description: error.message, variant: "destructive" });
+    }
+
+    const mapped = (data || []).map((d: any) => ({
+      id: d.id,
+      first_name: d.first_name,
+      last_name: d.last_name,
       phone: d.phone_number,
-      connecteam_id: d.connecteam_id || d.connecteam_employee_id,
-    })) as EmployeeRecord[]);
+      email: d.email,
+      connecteam_id: d.connecteam_employee_id || null,
+      external_id: d.connecteam_employee_id || null,
+      is_active: d.is_active,
+      hire_date: d.start_date,
+      termination_date: d.end_date,
+    })) as EmployeeRecord[];
+
+    console.log("[StagedImport] Employees loaded:", mapped.length, "active:", mapped.filter(e => e.is_active !== false).length, "inactive:", mapped.filter(e => e.is_active === false).length);
+    setEmployees(mapped);
 
     // Load aliases
-    const { data: aliasData } = await supabase
+    const { data: aliasData, error: aliasErr } = await supabase
       .from("employee_aliases" as any)
       .select("employee_id, alias_name_normalized")
       .eq("company_id", companyId);
+    if (aliasErr) console.warn("[StagedImport] Alias query error (table may not exist yet):", aliasErr.message);
     setAliases((aliasData || []) as unknown as EmployeeAlias[]);
-  }, [companyId]);
+    console.log("[StagedImport] Aliases loaded:", (aliasData || []).length);
+  }, [companyId, toast]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
