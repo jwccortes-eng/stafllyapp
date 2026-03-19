@@ -77,6 +77,8 @@ const TABS: TabDef[] = [
   { value: "journal", label: "Diario", icon: BookOpen, minStatus: null },
   { value: "rollout", label: "Rollout", icon: Award, alwaysEnabled: true },
   { value: "pilot", label: "Piloto", icon: Rocket, minStatus: "reviewing" },
+  { value: "uat", label: "UAT", icon: Bug, minStatus: null },
+  { value: "stabilization", label: "Estabilización", icon: TrendingUp, alwaysEnabled: true },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
 
