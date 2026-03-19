@@ -43,7 +43,15 @@ const WORKFLOW_STEPS = [
 const STATUS_ORDER = ["importing", "normalizing", "matching", "reviewing", "approved", "posted", "locked"];
 
 /* Tab definitions with status-gating */
-const TABS = [
+interface TabDef {
+  value: string;
+  label: string;
+  icon: any;
+  alwaysEnabled?: boolean;
+  minStatus?: string | null;
+}
+
+const TABS: TabDef[] = [
   { value: "dashboard", label: "Dashboard", icon: BarChart3, alwaysEnabled: true },
   { value: "import", label: "Importar", icon: Upload, minStatus: null },
   { value: "review", label: "Matching", icon: GitCompareArrows, minStatus: "importing" },
@@ -56,9 +64,9 @@ const TABS = [
   { value: "publish", label: "Publicar", icon: Shield, minStatus: "approved" },
   { value: "pilot", label: "Piloto", icon: Rocket, minStatus: "reviewing" },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
-] as const;
+];
 
-function isTabEnabled(tab: typeof TABS[number], periodStatus: string | null): boolean {
+function isTabEnabled(tab: TabDef, periodStatus: string | null): boolean {
   if (tab.alwaysEnabled) return true;
   if (!periodStatus) return tab.value === "import";
   if (!tab.minStatus) return true;
