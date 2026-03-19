@@ -12,6 +12,26 @@ import { GitCompareArrows, CheckCircle2, AlertTriangle, Link2, XCircle, User, Lo
 import { matchScheduleToClock, type NormalizedScheduleRow, type NormalizedClockRow } from "@/lib/reconciliation-engine";
 import MatchDetailDrawer from "./MatchDetailDrawer";
 
+/** Fetch all rows from a table, bypassing the 1000-row default limit */
+async function fetchAll(table: string, companyId: string) {
+  const PAGE = 1000;
+  let all: any[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from(table as any)
+      .select("*")
+      .eq("company_id", companyId)
+      .range(from, from + PAGE - 1);
+    if (error) { console.error(`[fetchAll] ${table} error:`, error); break; }
+    if (!data || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
 interface Props {
   companyId: string | null;
   onRefresh: () => void;
