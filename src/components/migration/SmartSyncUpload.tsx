@@ -61,7 +61,6 @@ interface Props {
 }
 
 export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [files, setFiles] = useState<DetectedFile[]>([]);
   const [processing, setProcessing] = useState(false);
