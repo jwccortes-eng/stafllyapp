@@ -126,26 +126,19 @@ export default function CompanySwitchPinDialog({ open, onOpenChange, targetCompa
 
   if (!targetCompany) return null;
 
-  const color = targetCompany.brand_color || "hsl(var(--primary))";
-  const initials = targetCompany.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
-
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-[360px] p-0 overflow-hidden rounded-2xl">
         {/* Header with company identity */}
         <div className="px-6 pt-6 pb-4 text-center">
           <div className="flex justify-center mb-3">
-            <Avatar className="h-14 w-14 rounded-xl ring-2 ring-border/30 shadow-lg">
-              {targetCompany.logo_url ? (
-                <AvatarImage src={targetCompany.logo_url} alt={targetCompany.name} className="rounded-xl object-cover" />
-              ) : null}
-              <AvatarFallback
-                className="rounded-xl text-base font-bold"
-                style={{ backgroundColor: `${color}15`, color }}
-              >
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <CompanyLogo
+              name={targetCompany.name}
+              logoUrl={targetCompany.logo_url}
+              brandColor={targetCompany.brand_color}
+              size="xl"
+              glow
+            />
           </div>
           <h3 className="text-base font-bold text-foreground">Cambiar a {targetCompany.name}</h3>
           <p className="text-xs text-muted-foreground mt-1">
