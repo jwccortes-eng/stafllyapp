@@ -553,6 +553,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     setWarnings([]);
     setErrors([]);
     setDiagnostics(null);
+    setManualResolutions([]);
     setStep("upload");
     setProgress(0);
     setFilter("all");
