@@ -326,6 +326,25 @@ export default function StagedReconciliation() {
           )}
         </TabsContent>
 
+        {/* Validate */}
+        <TabsContent value="validate">
+          {activePeriod ? (
+            <VerificationReport
+              period={activePeriod}
+              finalRecords={finalRecords}
+              employees={employeeMap}
+              onRunValidation={handleRunValidation}
+              onPublish={handlePostPeriod}
+              publishing={publishing}
+            />
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <ClipboardCheck className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>Selecciona un periodo desde el Dashboard para validar.</p>
+            </div>
+          )}
+        </TabsContent>
+
         {/* History */}
         <TabsContent value="history">
           <ImportBatchHistory companyId={selectedCompanyId} key={refreshKey} />
