@@ -40,6 +40,8 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [runningMatch, setRunningMatch] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<MatchRow | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!companyId) return;
