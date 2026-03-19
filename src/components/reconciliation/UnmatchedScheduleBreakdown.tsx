@@ -517,6 +517,131 @@ export default function UnmatchedScheduleBreakdown({ companyId, onRefresh }: Pro
           </div>
         )}
 
+        {/* Dominant root-cause diagnostics */}
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="rounded-lg border border-border/60 overflow-hidden">
+            <div className="px-3 py-2 border-b border-border/60 bg-muted/30">
+              <p className="text-sm font-medium flex items-center gap-2"><Filter className="h-4 w-4" /> Top 20 raw shift/job labels in Agenda sin fichaje</p>
+            </div>
+            <div className="overflow-auto max-h-[280px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Label</TableHead>
+                    <TableHead className="text-right">Count</TableHead>
+                    <TableHead>Clock?</TableHead>
+                    <TableHead>Detected</TableHead>
+                    <TableHead>Recommended</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topShiftJobLabels.map((stat) => (
+                    <TableRow key={`all-${stat.label}`}>
+                      <TableCell className="text-xs max-w-[220px] truncate">{stat.label}</TableCell>
+                      <TableCell className="text-right font-mono">{stat.count}</TableCell>
+                      <TableCell>
+                        <Badge variant={stat.requiresClock === "yes" ? "warning" : "success"} className="text-[10px]">
+                          {stat.requiresClock}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{stat.detectedCategory}</TableCell>
+                      <TableCell className="text-xs max-w-[140px] truncate">{stat.recommendedClassification}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border/60 overflow-hidden">
+            <div className="px-3 py-2 border-b border-border/60 bg-muted/30">
+              <p className="text-sm font-medium">Top 20 raw schedule titles still classified as missing-clock</p>
+            </div>
+            <div className="overflow-auto max-h-[280px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Raw title</TableHead>
+                    <TableHead className="text-right">Count</TableHead>
+                    <TableHead>Clock?</TableHead>
+                    <TableHead>Detected</TableHead>
+                    <TableHead>Recommended</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topMissingClockTitles.map((stat) => (
+                    <TableRow key={`missing-${stat.label}`}>
+                      <TableCell className="text-xs max-w-[220px] truncate">{stat.label}</TableCell>
+                      <TableCell className="text-right font-mono">{stat.count}</TableCell>
+                      <TableCell>
+                        <Badge variant={stat.requiresClock === "yes" ? "warning" : "success"} className="text-[10px]">
+                          {stat.requiresClock}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{stat.detectedCategory}</TableCell>
+                      <TableCell className="text-xs max-w-[140px] truncate">{stat.recommendedClassification}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border/60 p-3 bg-muted/20">
+          <p className="text-sm font-medium mb-2">Spotlight check: 9877 PAGA DOBLE / repeated dominant labels</p>
+          {spotlightStats.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {spotlightStats.slice(0, 10).map((stat) => (
+                <Badge key={`spot-${stat.label}`} variant="outline" className="text-xs">
+                  {stat.label}: {stat.count} · clock {stat.requiresClock} · {stat.detectedCategory}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No rows with "PAGA DOBLE / DOUBLE PAY" detected in current unmatched sample.</p>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-border/60 overflow-hidden">
+          <div className="px-3 py-2 border-b border-border/60 bg-muted/30">
+            <p className="text-sm font-medium">Temporary debug table (current period unmatched rows)</p>
+          </div>
+          <div className="overflow-auto max-h-[320px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Raw title</TableHead>
+                  <TableHead>Raw job/pay_type</TableHead>
+                  <TableHead>Raw notes</TableHead>
+                  <TableHead>Raw location/client</TableHead>
+                  <TableHead>Detected category</TableHead>
+                  <TableHead>Excluded from clock-required?</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {debugTableRows.map((row) => (
+                  <TableRow key={`dbg-${row.match_id}`}>
+                    <TableCell className="text-xs max-w-[180px] truncate">{row.rawTitle}</TableCell>
+                    <TableCell className="text-xs max-w-[120px] truncate">{row.rawJob}</TableCell>
+                    <TableCell className="text-xs max-w-[220px] truncate">{row.notes || "—"}</TableCell>
+                    <TableCell className="text-xs max-w-[180px] truncate">{row.location_name || row.client_name || "—"}</TableCell>
+                    <TableCell className="text-xs">{row.detectedCategory}</TableCell>
+                    <TableCell>
+                      <Badge variant={row.excludedFromClockLogic ? "success" : "warning"} className="text-[10px]">
+                        {row.excludedFromClockLogic ? "yes" : "no"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <p className="text-xs text-muted-foreground px-3 py-2 border-t border-border/60">
+            Showing {debugTableRows.length} prioritized rows (PAGA DOBLE + real missing) for proof-level debugging.
+          </p>
+        </div>
+
         {/* Sub-category breakdown */}
         {SUB_BUCKETS.map(b => {
           const bucketRows = classified[b.key] || [];
