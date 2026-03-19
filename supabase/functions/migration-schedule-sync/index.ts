@@ -576,15 +576,18 @@ async function resyncAllPeriods(
     .eq("company_id", companyId)
     .order("start_date");
 
+  // IMPORTANT: add explicit limit to avoid default 1000-row cap
   const { data: basePay } = await supabase
     .from("period_base_pay")
     .select("period_id, employee_id, total_work_hours, base_total_pay")
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .limit(10000);
 
   const { data: movements } = await supabase
     .from("movements")
     .select("period_id, employee_id, total_value")
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .limit(10000);
 
   // Index base_pay and movements by period_id
   const baseByPeriod = new Map<string, Array<{ employee_id: string; hours: number; pay: number }>>();
