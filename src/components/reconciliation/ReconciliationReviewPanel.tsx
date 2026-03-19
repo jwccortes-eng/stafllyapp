@@ -247,6 +247,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
       </div>
 
       <MatchingConflictSummary companyId={companyId} />
+      <UnmatchedScheduleBreakdown companyId={companyId} onRefresh={onRefresh} />
 
       {loading ? (
         <Card><CardContent className="py-8 text-center text-muted-foreground">Cargando...</CardContent></Card>
