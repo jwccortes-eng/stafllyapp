@@ -128,6 +128,11 @@ function classifyNoTitle(
   duplicateKeys: Set<string>,
   payrollDates: Set<string>,
 ): NoTitleSub {
+  // Structural rule: no title + no client + no location = availability placeholder
+  const hasClient = !!(row.client_name && row.client_name.trim());
+  const hasLocation = !!(row.location_name && row.location_name.trim());
+  if (!hasClient && !hasLocation) return "no_title_no_client";
+
   if (!row.matched_employee_id) return "no_title_no_employee";
   if (!row.start_time && !row.end_time) return "no_title_no_times";
 
