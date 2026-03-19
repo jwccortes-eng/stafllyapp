@@ -174,6 +174,7 @@ export default function Clients() {
     setContactPhone(c.contact_phone ?? "");
     setNotes(c.notes ?? "");
     setFormOpen(true);
+    loadClientLocations(c.id);
   };
 
   const handleSave = async () => {
