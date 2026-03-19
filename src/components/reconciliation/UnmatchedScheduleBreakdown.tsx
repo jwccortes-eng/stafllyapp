@@ -355,6 +355,70 @@ export default function UnmatchedScheduleBreakdown({ companyId, onRefresh }: Pro
     return buckets;
   }, [rows, duplicateKeys, payrollDates]);
 
+  const debugRows = useMemo<DebugRow[]>(() => {
+    return rows.map((row) => {
+      const detectedCategory = detectShiftCategory(
+        row.pay_type,
+        row.shift_title,
+        row.client_name,
+        row.location_name,
+        row.notes,
+      );
+      const requiresClock = !isClockExemptCategory(detectedCategory);
+      const subCategory = classifyScheduleRow(row, duplicateKeys, payrollDates);
+      const rawTitle = buildRawTitle(row);
+      const rawJob = buildRawJob(row);
+      const rawLabel = buildRawLabel(row);
+      const recommendedClassification = getRecommendedClassification(row, subCategory, detectedCategory);
+      const excludedFromClockLogic = !requiresClock || subCategory !== "real_missing";
+
+      return {
+        ...row,
+        subCategory,
+        detectedCategory,
+        requiresClock,
+        excludedFromClockLogic,
+        rawTitle,
+        rawJob,
+        rawLabel,
+        recommendedClassification,
+      };
+    });
+  }, [rows, duplicateKeys, payrollDates]);
+
+  const topShiftJobLabels = useMemo(
+    () => aggregateLabelStats(debugRows, (row) => row.rawLabel, 20),
+    [debugRows],
+  );
+
+  const topMissingClockTitles = useMemo(
+    () => aggregateLabelStats(debugRows.filter((row) => row.subCategory === "real_missing"), (row) => row.rawTitle, 20),
+    [debugRows],
+  );
+
+  const spotlightRows = useMemo(
+    () => debugRows.filter((row) => DOUBLE_PAY_PATTERN.test(`${row.rawTitle} ${row.notes || ""}`)),
+    [debugRows],
+  );
+
+  const spotlightStats = useMemo(
+    () => aggregateLabelStats(spotlightRows, (row) => row.rawTitle, 20),
+    [spotlightRows],
+  );
+
+  const debugTableRows = useMemo(() => {
+    const prioritized = [...spotlightRows, ...debugRows.filter((row) => row.subCategory === "real_missing")];
+    const seen = new Set<string>();
+    const uniqueRows: DebugRow[] = [];
+    for (const row of prioritized) {
+      if (seen.has(row.match_id)) continue;
+      seen.add(row.match_id);
+      uniqueRows.push(row);
+      if (uniqueRows.length >= 120) break;
+    }
+    return uniqueRows;
+  }, [debugRows, spotlightRows]);
+
   const total = rows.length;
 
   const toggleSelect = (matchId: string) => {
