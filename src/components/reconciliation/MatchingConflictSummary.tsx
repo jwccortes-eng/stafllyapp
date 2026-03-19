@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
   BarChart3, Users, Clock, Calendar, AlertTriangle, CheckCircle2,
-  ChevronDown, ChevronUp, FileQuestion, Loader2,
+  ChevronDown, ChevronUp, FileQuestion, Loader2, Ban,
 } from "lucide-react";
 
 interface Props {
@@ -42,6 +42,14 @@ const BUCKETS: BucketDef[] = [
     color: "text-amber-500",
     test: (m) => !m.employee_id && !flags(m).includes("clock_exempt"),
     action: "Ejecutar Employee Matching o crear alias para nombres no reconocidos",
+  },
+  {
+    key: "availability_block",
+    label: "Bloqueo / No disponible",
+    icon: <Ban className="h-4 w-4" />,
+    color: "text-muted-foreground",
+    test: (m) => flags(m).includes("availability_block"),
+    action: "✅ Resuelto — fila de disponibilidad/bloqueo, no requiere reloj",
   },
   {
     key: "daily_pay",

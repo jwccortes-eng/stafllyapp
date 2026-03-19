@@ -181,13 +181,16 @@ export function matchEmployee(
 }
 
 // ─── Compensation Category Detection ───
-export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "regular";
+export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "availability_block" | "regular";
 
 // Expanded patterns to match real Connecteam export variants
 const WEEKEND_JOB_PATTERN = /\b(weekend\s*(job|shift)|wj|trabajo\s*de?\s*fin\s*de?\s*semana)\b/i;
 const PAY_RIDE_PATTERN = /\b(pay\s*ride|ride\s*pay|payride|transporte|transportation)\b/i;
 // Also match "99 - PAY RIDE" style prefixed titles
 const PAY_RIDE_PREFIXED = /^\d+\s*[-–—]\s*pay\s*ride/i;
+
+// Non-work / availability-blocking schedule rows from Connecteam
+const AVAILABILITY_BLOCK_PATTERN = /\b(unavailable|no\s*disponible|shift\s*block(ing)?|block(ed|ing)\s*(shift|schedule)?|breaking\s*policy|policy\s*block|monitoring|no[- ]?show\s*block(ing)?|not\s*available|day\s*off|off\s*day|blocked|休|disponibilidad|bloqueo|restricci[oó]n)\b/i;
 
 export function detectShiftCategory(
   jobTitle: string | null | undefined,
@@ -198,6 +201,8 @@ export function detectShiftCategory(
 ): ShiftCategory {
   const fields = [jobTitle, shiftTitle, clientName, locationName, notes].map(f => (f || ""));
   const combined = fields.join(" ");
+  // Check availability/blocking FIRST — these are not real work
+  if (AVAILABILITY_BLOCK_PATTERN.test(combined)) return "availability_block";
   if (WEEKEND_JOB_PATTERN.test(combined)) return "daily_pay";
   if (PAY_RIDE_PATTERN.test(combined)) return "ride_pay";
   // Check shift_title specifically for prefixed patterns like "99 - PAY RIDE"
@@ -206,7 +211,7 @@ export function detectShiftCategory(
 }
 
 export function isClockExemptCategory(cat: ShiftCategory): boolean {
-  return cat === "daily_pay" || cat === "ride_pay";
+  return cat === "daily_pay" || cat === "ride_pay" || cat === "availability_block";
 }
 
 // ─── Shift Matching ───
@@ -272,7 +277,7 @@ export function matchScheduleToClock(
     // are valid even without a matched employee (e.g. Weekend shift, Pay Ride)
     const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes);
     if (isClockExemptCategory(category)) {
-      const label = category === "daily_pay" ? "daily_pay_weekend_job" : "ride_pay";
+      const label = category === "daily_pay" ? "daily_pay_weekend_job" : category === "ride_pay" ? "ride_pay" : "availability_block";
       results.push({
         schedule_id: sched.id,
         clock_id: null,
@@ -374,7 +379,7 @@ export function matchScheduleToClock(
     if (usedClocks.has(clock.id)) continue;
     const clockCat = detectShiftCategory(null, null, clock.client_name, clock.location_name, clock.notes);
     if (isClockExemptCategory(clockCat)) {
-      const label = clockCat === "daily_pay" ? "daily_pay_weekend_job" : "ride_pay";
+      const label = clockCat === "daily_pay" ? "daily_pay_weekend_job" : clockCat === "ride_pay" ? "ride_pay" : "availability_block";
       results.push({
         schedule_id: null, clock_id: clock.id, payroll_id: null,
         employee_id: clock.matched_employee_id, confidence: 90,
