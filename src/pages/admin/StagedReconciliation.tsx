@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
-  ChevronRight, Zap, BookOpen, TrendingUp,
+  ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
