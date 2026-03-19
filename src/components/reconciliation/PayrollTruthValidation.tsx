@@ -6,19 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2 } from "lucide-react";
-import { read, utils } from "xlsx";
-
-interface PayrollTruthRow {
-  employee: string;
-  firstName: string;
-  lastName: string;
-  totalPay: number;
-  hourlyRate: number | null;
-  payperDay: number;
-  ryde: number;
-  total: number;
-  shiftHours: number;
-}
+import {
+  parsePayrollTruthWorkbook,
+  type PayrollTruthParseResult,
+  type PayrollTruthRow,
+} from "@/lib/payroll-truth-parser";
 
 interface ReconciliationRow {
   employee_id: string;
@@ -46,103 +38,51 @@ interface Props {
 }
 
 function normalizeName(s: string): string {
-  return s.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-/** Parse a value that may be a formatted currency string, number, or null */
-function parseNum(v: any): number {
-  if (v == null || v === "") return 0;
-  if (typeof v === "number") return isNaN(v) ? 0 : v;
-  const str = String(v).replace(/[$¤€£¥,\s]/g, "").replace(/^\((.+)\)$/, "-$1");
-  if (str === "-" || str === "") return 0;
-  const n = parseFloat(str);
-  return isNaN(n) ? 0 : n;
-}
-
-/** Rows whose name looks like a summary row */
-const SUMMARY_PATTERNS = [/^total\s/i, /^grand\s/i, /^subtotal/i, /^sum\b/i];
-function isSummaryRow(name: string): boolean {
-  return SUMMARY_PATTERNS.some(p => p.test(name.trim()));
+  return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
 }
 
 export default function PayrollTruthValidation({ companyId, periodStatusId }: Props) {
   const [truthData, setTruthData] = useState<PayrollTruthRow[]>([]);
+  const [truthParse, setTruthParse] = useState<PayrollTruthParseResult | null>(null);
   const [reconData, setReconData] = useState<ReconciliationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [truthLoaded, setTruthLoaded] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string>("");
+
+  const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
 
   const loadTruthFile = async () => {
     setLoading(true);
+    setTruthLoaded(false);
+    setTruthData([]);
+    setTruthParse(null);
+
     try {
-      const res = await fetch("/temp-import/payroll_truth_2025-12-24_to_2025-12-30.xlsx");
+      const cacheBuster = Date.now();
+      const res = await fetch(`/temp-import/payroll_truth_2025-12-24_to_2025-12-30.xlsx?v=${cacheBuster}`, {
+        cache: "no-store",
+      });
+
+      if (!res.ok) throw new Error(`No se pudo cargar el archivo (${res.status})`);
+
       const buf = await res.arrayBuffer();
-      const wb = read(buf, { type: "array" });
-      const sheet = wb.Sheets["PAYROLL"] || wb.Sheets[wb.SheetNames[0]];
+      const parsed = parsePayrollTruthWorkbook(buf);
 
-      // Use raw:true to get numeric values instead of formatted strings
-      const rows: any[] = utils.sheet_to_json(sheet, { raw: true });
-
-      // Debug: show raw column names and first 5 values
-      const debugLines: string[] = [];
-      if (rows.length > 0) {
-        const allCols = Object.keys(rows[0]);
-        debugLines.push(`Sheet: ${wb.SheetNames[0]} | Columns (${allCols.length}): ${allCols.join(", ")}`);
-        const paymentCols = ["Total pay", "Payper Day", "Ryde", "TOTAL", "Hourly rate (USD)", "Shift hours"];
-        for (const col of paymentCols) {
-          const rawVals = rows.slice(0, 5).map(r => ({ raw: r[col], type: typeof r[col], parsed: parseNum(r[col]) }));
-          debugLines.push(`  ${col}: ${JSON.stringify(rawVals)}`);
-        }
-      }
-      debugLines.push(`Total raw rows: ${rows.length}`);
-      setDebugInfo(debugLines.join("\n"));
-
-      // Aggregate per employee
-      const byEmp = new Map<string, PayrollTruthRow>();
-      for (const r of rows) {
-        const fn = String(r["First name"] || "").trim();
-        const ln = String(r["Last name"] || "").trim();
-        const fullName = `${fn} ${ln}`.trim();
-        if (!fullName) continue;
-
-        // Exclude summary rows
-        if (isSummaryRow(fullName)) continue;
-
-        const key = normalizeName(fullName);
-        const totalPay = parseNum(r["Total pay"]);
-        const hrRaw = r["Hourly rate (USD)"];
-        const hourlyRate = (hrRaw != null && hrRaw !== "" && hrRaw !== "-") ? parseNum(hrRaw) : null;
-        const payperDay = parseNum(r["Payper Day"]);
-        const ryde = parseNum(r["Ryde"]);
-        const total = parseNum(r["TOTAL"]);
-        const shiftHours = parseNum(r["Shift hours"]);
-
-        const existing = byEmp.get(key);
-        if (existing) {
-          existing.totalPay += totalPay;
-          existing.payperDay += payperDay;
-          existing.ryde += ryde;
-          existing.total = Math.max(existing.total, total); // TOTAL is per-employee max
-          existing.shiftHours += shiftHours;
-          if (hourlyRate != null && existing.hourlyRate == null) existing.hourlyRate = hourlyRate;
-        } else {
-          byEmp.set(key, { employee: fullName, firstName: fn, lastName: ln, totalPay, hourlyRate, payperDay, ryde, total, shiftHours });
-        }
-      }
-
-      setTruthData(Array.from(byEmp.values()));
+      setTruthParse(parsed);
+      setTruthData(parsed.rows);
       setTruthLoaded(true);
     } catch (err: any) {
       console.error("Error loading truth file:", err);
-      setDebugInfo(`Error: ${err.message}`);
+      setTruthParse(null);
+      setTruthLoaded(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load reconciliation data from DB
   useEffect(() => {
     if (!companyId) return;
+
     (async () => {
       const { data: basePay } = await supabase
         .from("period_base_pay" as any)
@@ -185,46 +125,61 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
       if (movements) {
         for (const m of movements as any[]) {
           const row = reconRows.find(r => r.employee_id === m.employee_id);
-          const conceptName = (m.concepts?.name || "").toLowerCase();
-          if (row) {
-            if (conceptName.includes("daily")) {
-              row.daily_pay += m.total_value || 0;
-              row.total_final += m.total_value || 0;
-            } else if (conceptName.includes("ride")) {
-              row.ride_pay += m.total_value || 0;
-              row.total_final += m.total_value || 0;
-            }
+          const conceptName = String(m.concepts?.name || "").toLowerCase();
+          if (!row) continue;
+
+          if (conceptName.includes("daily")) {
+            row.daily_pay += m.total_value || 0;
+            row.total_final += m.total_value || 0;
+          } else if (conceptName.includes("ride")) {
+            row.ride_pay += m.total_value || 0;
+            row.total_final += m.total_value || 0;
           }
         }
       }
 
       setReconData(reconRows);
     })();
-  }, [companyId]);
+  }, [companyId, periodStatusId]);
 
   const comparison = useMemo<ComparisonRow[]>(() => {
     if (truthData.length === 0) return [];
 
-    return truthData.map(t => {
-      const tName = normalizeName(t.employee);
-      const recon = reconData.find(r => normalizeName(r.employee_name) === tName);
+    return truthData
+      .map(t => {
+        const recon = reconData.find(r => normalizeName(r.employee_name) === normalizeName(t.employee));
 
-      if (!recon) {
-        return { employee: t.employee, truth: t, recon: null, payVariance: t.totalPay, dailyVariance: t.payperDay, rideVariance: t.ryde, totalVariance: t.total, status: "missing" as const };
-      }
+        if (!recon) {
+          return {
+            employee: t.employee,
+            truth: t,
+            recon: null,
+            payVariance: t.totalPay,
+            dailyVariance: t.payperDay,
+            rideVariance: t.ryde,
+            totalVariance: t.total,
+            status: "missing" as const,
+          };
+        }
 
-      const payVar = recon.total_pay - t.totalPay;
-      const dailyVar = recon.daily_pay - t.payperDay;
-      const rideVar = recon.ride_pay - t.ryde;
-      const totalVar = recon.total_final - t.total;
-      const absTotal = Math.abs(totalVar);
+        const payVariance = recon.total_pay - t.totalPay;
+        const dailyVariance = recon.daily_pay - t.payperDay;
+        const rideVariance = recon.ride_pay - t.ryde;
+        const totalVariance = recon.total_final - t.total;
+        const absTotal = Math.abs(totalVariance);
 
-      return {
-        employee: t.employee, truth: t, recon,
-        payVariance: payVar, dailyVariance: dailyVar, rideVariance: rideVar, totalVariance: totalVar,
-        status: (absTotal < 1 ? "match" : absTotal < 50 ? "close" : "mismatch") as ComparisonRow["status"],
-      };
-    }).sort((a, b) => Math.abs(b.totalVariance) - Math.abs(a.totalVariance));
+        return {
+          employee: t.employee,
+          truth: t,
+          recon,
+          payVariance,
+          dailyVariance,
+          rideVariance,
+          totalVariance,
+          status: (absTotal < 1 ? "match" : absTotal < 50 ? "close" : "mismatch") as ComparisonRow["status"],
+        };
+      })
+      .sort((a, b) => Math.abs(b.totalVariance) - Math.abs(a.totalVariance));
   }, [truthData, reconData]);
 
   const stats = useMemo(() => {
@@ -232,21 +187,54 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
     const close = comparison.filter(c => c.status === "close").length;
     const mismatch = comparison.filter(c => c.status === "mismatch").length;
     const missing = comparison.filter(c => c.status === "missing").length;
-    const totalTruth = truthData.reduce((s, t) => s + t.total, 0);
-    const totalRecon = comparison.reduce((s, c) => s + (c.recon?.total_final || 0), 0);
-    return { matched, close, mismatch, missing, totalTruth, totalRecon, variance: totalRecon - totalTruth };
+    const totalTruth = truthData.reduce((sum, row) => sum + row.total, 0);
+    const totalRecon = comparison.reduce((sum, row) => sum + (row.recon?.total_final || 0), 0);
+
+    return {
+      matched,
+      close,
+      mismatch,
+      missing,
+      totalTruth,
+      totalRecon,
+      variance: totalRecon - totalTruth,
+    };
   }, [comparison, truthData]);
 
-  const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
+  const e2eDebugRows = useMemo(() => {
+    if (!truthParse) return [];
 
-  const statusBadge = (s: string) => {
+    return truthParse.debugRows.slice(0, 5).map(d => {
+      const storedTruth = truthData.find(t => normalizeName(t.employee) === normalizeName(d.employee));
+      const tableRow = comparison.find(c => normalizeName(c.employee) === normalizeName(d.employee));
+
+      const storedTotal = storedTruth?.total ?? 0;
+      const renderedTotal = fmt(storedTotal);
+
+      return {
+        rowNumber: d.rowNumber,
+        employee: d.employee,
+        rawTotal: d.rawTotal,
+        parsedTotal: d.parsedTotal,
+        storedComparisonTotal: storedTotal,
+        renderedTableTotal: renderedTotal,
+        comparisonTruthTotal: tableRow?.truth.total ?? 0,
+      };
+    });
+  }, [truthParse, truthData, comparison]);
+
+  const statusBadge = (s: ComparisonRow["status"]) => {
     switch (s) {
-      case "match": return <Badge variant="default" className="text-xs">✓ Exacto</Badge>;
-      case "close": return <Badge variant="secondary" className="text-xs">≈ Cercano</Badge>;
-      case "mismatch": return <Badge variant="destructive" className="text-xs">✗ Diferente</Badge>;
-      case "missing": return <Badge variant="outline" className="text-xs">? No encontrado</Badge>;
-      default: return null;
+      case "match":
+        return <Badge variant="default" className="text-xs">✓ Exacto</Badge>;
+      case "close":
+        return <Badge variant="secondary" className="text-xs">≈ Cercano</Badge>;
+      case "mismatch":
+        return <Badge variant="destructive" className="text-xs">✗ Diferente</Badge>;
+      case "missing":
+        return <Badge variant="outline" className="text-xs">? No encontrado</Badge>;
+      default:
+        return null;
     }
   };
 
@@ -259,6 +247,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
             Validación vs. Nómina Pagada (12/24–12/30/2025)
           </CardTitle>
         </CardHeader>
+
         <CardContent>
           {!truthLoaded ? (
             <div className="text-center py-6 space-y-3">
@@ -272,15 +261,20 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Debug info */}
-              {debugInfo && (
-                <details className="text-xs">
-                  <summary className="cursor-pointer text-muted-foreground font-medium">Debug: columnas detectadas y valores crudos</summary>
-                  <pre className="mt-1 p-2 rounded bg-muted text-muted-foreground overflow-auto max-h-48 whitespace-pre-wrap">{debugInfo}</pre>
-                </details>
-              )}
+              <details className="text-xs rounded-md border border-border p-3 bg-muted/30">
+                <summary className="cursor-pointer font-medium text-foreground">Debug parser + flujo end-to-end (primeras 5 filas)</summary>
+                <div className="mt-3 space-y-2 text-muted-foreground">
+                  <p><span className="font-medium text-foreground">Sheet usada:</span> {truthParse?.sheetUsed ?? "N/A"}</p>
+                  <p><span className="font-medium text-foreground">Reparse:</span> {truthParse?.parsedAt ?? "N/A"} (cache bust + no-store)</p>
+                  <p><span className="font-medium text-foreground">Primary comparison field:</span> {truthParse?.primaryComparisonField ?? "N/A"}</p>
+                  <p><span className="font-medium text-foreground">UI field mapping:</span> Truth Total Pay = <code>comparison[i].truth.totalPay</code>, Truth TOTAL = <code>comparison[i].truth.total</code>, Total Truth KPI = <code>sum(truthData.total)</code>.</p>
+                  <p><span className="font-medium text-foreground">Detected columns:</span> {JSON.stringify(truthParse?.detectedColumns ?? {}, null, 2)}</p>
+                  <p><span className="font-medium text-foreground">Raw column names:</span> {JSON.stringify(truthParse?.rawColumnNames ?? [])}</p>
+                  <p><span className="font-medium text-foreground">E2E sample rows:</span></p>
+                  <pre className="rounded bg-background p-2 overflow-auto max-h-64 whitespace-pre-wrap text-foreground">{JSON.stringify(e2eDebugRows, null, 2)}</pre>
+                </div>
+              </details>
 
-              {/* KPIs */}
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <KpiCard label="Empleados (Truth)" value={truthData.length} icon={<DollarSign className="h-4 w-4" />} />
                 <KpiCard label="Exactos" value={stats.matched} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" />
@@ -288,10 +282,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                 <KpiCard label="Diferentes" value={stats.mismatch} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
                 <KpiCard label="No encontrados" value={stats.missing} icon={<AlertTriangle className="h-4 w-4" />} accent="muted" />
                 <KpiCard label="Total Truth" value={fmt(stats.totalTruth)} icon={<DollarSign className="h-4 w-4" />} />
-                <KpiCard label="Varianza Neta" value={fmtVar(stats.variance)} icon={<DollarSign className="h-4 w-4" />} accent={Math.abs(stats.variance) > 100 ? "deduction" : "primary"} />
+                <KpiCard
+                  label="Varianza Neta"
+                  value={fmtVar(stats.variance)}
+                  icon={<DollarSign className="h-4 w-4" />}
+                  accent={Math.abs(stats.variance) > 100 ? "deduction" : "primary"}
+                />
               </div>
 
-              {/* Table */}
               <div className="overflow-auto max-h-[500px]">
                 <Table>
                   <TableHeader>
@@ -313,9 +311,13 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                       <TableRow
                         key={c.employee}
                         className={
-                          c.status === "mismatch" ? "bg-destructive/5" :
-                          c.status === "missing" ? "bg-amber-500/5" :
-                          c.status === "match" ? "bg-primary/5" : ""
+                          c.status === "mismatch"
+                            ? "bg-destructive/5"
+                            : c.status === "missing"
+                              ? "bg-warning/10"
+                              : c.status === "match"
+                                ? "bg-primary/5"
+                                : ""
                         }
                       >
                         <TableCell className="font-medium text-sm">{c.employee}</TableCell>
@@ -324,10 +326,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                         <TableCell className="text-right font-mono text-sm">{c.truth.payperDay > 0 ? fmt(c.truth.payperDay) : "—"}</TableCell>
                         <TableCell className="text-right font-mono text-sm">{c.truth.ryde > 0 ? fmt(c.truth.ryde) : "—"}</TableCell>
                         <TableCell className="text-right font-mono text-sm font-medium">{fmt(c.truth.total)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          {c.recon ? fmt(c.recon.total_final) : "—"}
-                        </TableCell>
-                        <TableCell className={`text-right font-mono text-sm font-medium ${Math.abs(c.totalVariance) > 50 ? "text-destructive" : Math.abs(c.totalVariance) < 1 ? "text-primary" : "text-amber-600"}`}>
+                        <TableCell className="text-right font-mono text-sm">{c.recon ? fmt(c.recon.total_final) : "—"}</TableCell>
+                        <TableCell
+                          className={`text-right font-mono text-sm font-medium ${
+                            Math.abs(c.totalVariance) > 50
+                              ? "text-destructive"
+                              : Math.abs(c.totalVariance) < 1
+                                ? "text-primary"
+                                : "text-warning"
+                          }`}
+                        >
                           {c.recon ? fmtVar(c.totalVariance) : "N/A"}
                         </TableCell>
                         <TableCell className="text-right font-mono text-xs text-muted-foreground">
