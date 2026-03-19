@@ -167,11 +167,22 @@ export default function Directory() {
                     <p className="text-sm font-bold text-foreground truncate leading-tight">
                       {formatPersonName(`${emp.first_name} ${emp.last_name}`)}
                     </p>
-                    {emp.employee_role && (
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
-                        {formatDisplayText(emp.employee_role, "label")}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      {emp.employee_role && (
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
+                          {formatDisplayText(emp.employee_role, "label")}
+                        </span>
+                      )}
+                      {(() => {
+                        const empStatus = getStatus(emp.id);
+                        const sl = STATUS_LABELS[empStatus];
+                        return (
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border ${sl.className}`}>
+                            {sl.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
 
                     {/* Contact info */}
                     <div className="mt-2 space-y-0.5">
