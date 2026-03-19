@@ -79,10 +79,13 @@ const TABS: TabDef[] = [
   { value: "compare", label: "Comparar", icon: TrendingUp, alwaysEnabled: true },
   { value: "signoff", label: "Signoff", icon: PenTool, minStatus: "reviewing" },
   { value: "journal", label: "Diario", icon: BookOpen, minStatus: null },
+  { value: "notes", label: "Notas", icon: StickyNote, minStatus: null },
+  { value: "runbook", label: "Runbook", icon: ListChecks, minStatus: null },
   { value: "rollout", label: "Rollout", icon: Award, alwaysEnabled: true },
   { value: "pilot", label: "Piloto", icon: Rocket, minStatus: "reviewing" },
   { value: "uat", label: "UAT", icon: Bug, minStatus: null },
   { value: "stabilization", label: "Estabilización", icon: TrendingUp, alwaysEnabled: true },
+  { value: "priorities", label: "Prioridades", icon: Target, alwaysEnabled: true },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
 
