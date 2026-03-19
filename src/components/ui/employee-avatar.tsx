@@ -223,23 +223,38 @@ function GeneratedAvatar({ firstName, lastName, gender, size }: { firstName: str
   );
 }
 
-export function EmployeeAvatar({ firstName, lastName, avatarUrl, gender, size = "md", className }: EmployeeAvatarProps) {
-  if (avatarUrl) {
+export function EmployeeAvatar({ firstName, lastName, avatarUrl, gender, size = "md", className, status }: EmployeeAvatarProps) {
+  const inner = avatarUrl ? (
+    <div className={cn("rounded-full shrink-0 overflow-hidden", sizes[size])}>
+      <img
+        src={avatarUrl}
+        alt={`${firstName} ${lastName}`}
+        className="h-full w-full object-cover"
+        loading="lazy"
+      />
+    </div>
+  ) : (
+    <div className="shrink-0">
+      <GeneratedAvatar firstName={firstName} lastName={lastName} gender={gender} size={sizes[size]} />
+    </div>
+  );
+
+  if (status && status !== "offline") {
     return (
-      <div className={cn("rounded-full shrink-0 overflow-hidden", sizes[size], className)}>
-        <img
-          src={avatarUrl}
-          alt={`${firstName} ${lastName}`}
-          className="h-full w-full object-cover"
-          loading="lazy"
+      <div className={cn("relative shrink-0 inline-flex", className)}>
+        {inner}
+        <span
+          className={cn(
+            "absolute bottom-0 right-0 rounded-full border-background",
+            STATUS_COLORS[status],
+            DOT_SIZES[size],
+            status === "online" && "animate-pulse"
+          )}
+          title={status.replace("_", " ")}
         />
       </div>
     );
   }
 
-  return (
-    <div className={cn("shrink-0", className)}>
-      <GeneratedAvatar firstName={firstName} lastName={lastName} gender={gender} size={sizes[size]} />
-    </div>
-  );
+  return <div className={cn("shrink-0 inline-flex", className)}>{inner}</div>;
 }
