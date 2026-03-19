@@ -18,6 +18,7 @@ import {
   User, DollarSign, Clock, CalendarDays, FileText, Activity,
   Briefcase, Phone, Mail, MapPin, Users, Tag, Star, Shield,
   Plus, Pencil, Trash2, MoreHorizontal, KeyRound, Upload, Download, Cake, Home, TrendingUp,
+  Banknote,
 } from "lucide-react";
 import { EmployeePerformanceScore } from "@/components/reviews/EmployeePerformanceScore";
 import { EmployeeAccessTab } from "@/components/employee/EmployeeAccessTab";
