@@ -7,9 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { detectShiftCategory } from "@/lib/reconciliation-engine";
+import { detectShiftCategory, isClockExemptCategory, type ShiftCategory } from "@/lib/reconciliation-engine";
 import {
-  AlertTriangle, Calendar, Clock, Users, Copy, Ban,
+  AlertTriangle, Clock, Users, Copy, Ban,
   CheckCircle2, FileQuestion, Loader2, ChevronDown, ChevronUp,
   Filter, Layers, ShieldOff,
 } from "lucide-react";
@@ -21,6 +21,7 @@ interface ScheduleDetail {
   employee_name_raw: string | null;
   matched_employee_id: string | null;
   shift_title: string | null;
+  pay_type: string | null;
   work_date: string | null;
   start_time: string | null;
   end_time: string | null;
@@ -48,6 +49,25 @@ interface SubBucket {
   description: string;
   action: string;
   bulkAction?: string;
+}
+
+interface DebugRow extends ScheduleDetail {
+  subCategory: SubCategory;
+  detectedCategory: ShiftCategory;
+  requiresClock: boolean;
+  excludedFromClockLogic: boolean;
+  rawTitle: string;
+  rawJob: string;
+  rawLabel: string;
+  recommendedClassification: string;
+}
+
+interface LabelStat {
+  label: string;
+  count: number;
+  requiresClock: "yes" | "no";
+  detectedCategory: string;
+  recommendedClassification: string;
 }
 
 const SUB_BUCKETS: SubBucket[] = [
@@ -119,6 +139,7 @@ const SUB_BUCKETS: SubBucket[] = [
 /* ── Helpers ── */
 
 const AVAILABILITY_BLOCK_PATTERN = /\b(unavailable|no\s*disponible|shift\s*block(ing)?|block(ed|ing)\s*(shift|schedule)?|breaking\s*policy|policy\s*block|monitoring|no[- ]?show\s*block(ing)?|not\s*available|day\s*off|off\s*day|blocked|disponibilidad|bloqueo|restricci[oó]n)\b/i;
+const DOUBLE_PAY_PATTERN = /\b(paga\s*doble|double\s*pay)\b/i;
 
 function isAvailabilityBlock(row: ScheduleDetail): boolean {
   const fields = [row.shift_title, row.client_name, row.location_name, row.notes].map(f => f || "");
@@ -130,27 +151,17 @@ function classifyScheduleRow(
   duplicateKeys: Set<string>,
   payrollEmployeeDates: Set<string>,
 ): SubCategory {
-  // 0. Availability/blocking rows — always first
   if (isAvailabilityBlock(row)) return "availability_block";
-
-  // 1. No matched employee
   if (!row.matched_employee_id) return "no_employee";
-
-  // 2. No times → placeholder/summary
   if (!row.start_time && !row.end_time) return "no_times";
 
-  // 3. Duplicate check
   const dupeKey = `${row.matched_employee_id || row.employee_name_raw}|${row.work_date}|${row.shift_title || ""}`;
   if (duplicateKeys.has(dupeKey)) return "duplicate";
 
-  // 4. Has payroll evidence
   const payKey = `${row.matched_employee_id}|${row.work_date}`;
   if (payrollEmployeeDates.has(payKey)) return "has_payroll";
 
-  // 5. Low info (no title, no location, no client)
   if (!row.shift_title && !row.location_name && !row.client_name) return "low_info";
-
-  // 6. Real missing
   return "real_missing";
 }
 
@@ -165,13 +176,86 @@ function buildDuplicateKeys(rows: ScheduleDetail[]): Set<string> {
   rows.forEach(r => {
     const key = `${r.matched_employee_id || r.employee_name_raw}|${r.work_date}|${r.shift_title || ""}`;
     if ((counts.get(key) || 0) > 1) {
-      if (seen.has(key)) {
-        dupes.add(key); // Mark all after first as duplicate
-      }
+      if (seen.has(key)) dupes.add(key);
       seen.add(key);
     }
   });
   return dupes;
+}
+
+function normalizeValue(value: string | null | undefined, fallback = "(empty)"): string {
+  const v = (value || "").trim();
+  return v.length > 0 ? v : fallback;
+}
+
+function buildRawTitle(row: ScheduleDetail): string {
+  return normalizeValue(row.shift_title, "(sin título)");
+}
+
+function buildRawJob(row: ScheduleDetail): string {
+  return normalizeValue(row.pay_type, "(sin job/pay_type)");
+}
+
+function buildRawLabel(row: ScheduleDetail): string {
+  const rawTitle = buildRawTitle(row);
+  const rawJob = buildRawJob(row);
+  return rawJob === "(sin job/pay_type)" ? rawTitle : `${rawTitle} · ${rawJob}`;
+}
+
+function mostFrequentKey(counter: Record<string, number>): string {
+  return Object.entries(counter).sort((a, b) => b[1] - a[1])[0]?.[0] || "unknown";
+}
+
+function getRecommendedClassification(row: ScheduleDetail, subCategory: SubCategory, detectedCategory: ShiftCategory): string {
+  if (detectedCategory === "availability_block") return "non_work_schedule";
+  if (detectedCategory === "daily_pay") return "daily_pay_special_comp";
+  if (detectedCategory === "ride_pay") return "ride_pay_special_comp";
+  if (subCategory === "duplicate") return "ignore_duplicate_schedule";
+  if (subCategory === "no_times") return "non_executable_schedule";
+  if (subCategory === "has_payroll") return "paid_without_clock";
+  if (subCategory === "no_employee") return "resolve_employee_matching";
+  if (subCategory === "low_info") return "insufficient_context";
+
+  const combined = `${row.shift_title || ""} ${row.notes || ""} ${row.client_name || ""} ${row.location_name || ""}`;
+  if (DOUBLE_PAY_PATTERN.test(combined)) return "special_compensation_candidate";
+  return "true_missing_clock";
+}
+
+function aggregateLabelStats(rows: DebugRow[], keySelector: (row: DebugRow) => string, limit = 20): LabelStat[] {
+  const map = new Map<string, {
+    count: number;
+    requiresClockYes: number;
+    detectedCategoryCount: Record<string, number>;
+    recommendedCount: Record<string, number>;
+  }>();
+
+  rows.forEach(row => {
+    const key = keySelector(row);
+    if (!map.has(key)) {
+      map.set(key, {
+        count: 0,
+        requiresClockYes: 0,
+        detectedCategoryCount: {},
+        recommendedCount: {},
+      });
+    }
+    const bucket = map.get(key)!;
+    bucket.count += 1;
+    if (row.requiresClock) bucket.requiresClockYes += 1;
+    bucket.detectedCategoryCount[row.detectedCategory] = (bucket.detectedCategoryCount[row.detectedCategory] || 0) + 1;
+    bucket.recommendedCount[row.recommendedClassification] = (bucket.recommendedCount[row.recommendedClassification] || 0) + 1;
+  });
+
+  return Array.from(map.entries())
+    .map(([label, info]) => ({
+      label,
+      count: info.count,
+      requiresClock: info.requiresClockYes >= info.count / 2 ? "yes" : "no",
+      detectedCategory: mostFrequentKey(info.detectedCategoryCount),
+      recommendedClassification: mostFrequentKey(info.recommendedCount),
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
 }
 
 /* ── Component ── */
