@@ -204,8 +204,8 @@ export default function EmployeeReport() {
     const fromStr = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null;
     const toStr = dateTo ? format(dateTo, "yyyy-MM-dd") : null;
     return periods.filter(p => {
-      // Overlap logic: include period if it overlaps with the date range
-      if (fromStr && p.end_date < fromStr) return false;
+      // Include period if its start_date falls within the range
+      if (fromStr && p.start_date < fromStr) return false;
       if (toStr && p.start_date > toStr) return false;
       return true;
     });

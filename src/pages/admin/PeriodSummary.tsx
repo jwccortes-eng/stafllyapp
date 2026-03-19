@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { formatPersonName } from "@/lib/format-helpers";
 import { usePageView } from "@/hooks/useAuditLog";
 import AuditPanel from "@/components/audit/AuditPanel";
@@ -76,25 +76,31 @@ export default function PeriodSummary() {
   const [sendingEmails, setSendingEmails] = useState(false);
   const autoConsolidatedRef = useRef<string | null>(null);
 
-  const canConsolidate = hasActionPermission("aprobar_nomina");
-
-  // When date range changes, find matching period(s) - for now select the first match
-  useEffect(() => {
-    if (!dateFrom && !dateTo) return;
-    if (periods.length === 0) return;
+  // Filter periods by date range for the dropdown
+  const visiblePeriods = useMemo(() => {
+    if (!dateFrom && !dateTo) return periods;
     const fromStr = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null;
     const toStr = dateTo ? format(dateTo, "yyyy-MM-dd") : null;
-    const matching = periods.filter(p => {
-      // Overlap logic: include period if it overlaps with the date range
-      if (fromStr && p.end_date < fromStr) return false;
+    return periods.filter(p => {
+      // Include period if its start_date falls within the range
+      if (fromStr && p.start_date < fromStr) return false;
       if (toStr && p.start_date > toStr) return false;
       return true;
     });
-    if (matching.length > 0 && matching[0].id !== selectedPeriod) {
-      setSelectedPeriod(matching[0].id);
-      setSearchParams({ periodId: matching[0].id });
+  }, [periods, dateFrom, dateTo]);
+
+  const canConsolidate = hasActionPermission("aprobar_nomina");
+
+  // When date range changes, auto-select the first visible period
+  useEffect(() => {
+    if (!dateFrom && !dateTo) return;
+    if (visiblePeriods.length === 0) return;
+    // If current selection is not in visible list, switch to first visible
+    if (!visiblePeriods.find(p => p.id === selectedPeriod)) {
+      setSelectedPeriod(visiblePeriods[0].id);
+      setSearchParams({ periodId: visiblePeriods[0].id });
     }
-  }, [dateFrom, dateTo, periods]);
+  }, [dateFrom, dateTo, visiblePeriods]);
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -413,7 +419,12 @@ export default function PeriodSummary() {
                 <SelectValue placeholder="Seleccionar periodo" />
               </SelectTrigger>
               <SelectContent>
-                {periods.map(p => {
+                {hasDateFilter && visiblePeriods.length !== periods.length && (
+                  <div className="px-2 py-1.5 text-[10px] text-muted-foreground border-b mb-1">
+                    {visiblePeriods.length} de {periods.length} periodos en rango
+                  </div>
+                )}
+                {visiblePeriods.map(p => {
                   const today = new Date().toISOString().slice(0, 10);
                   const isCurrent = p.start_date <= today && p.end_date >= today;
                   return (
@@ -422,6 +433,11 @@ export default function PeriodSummary() {
                     </SelectItem>
                   );
                 })}
+                {visiblePeriods.length === 0 && (
+                  <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                    No hay periodos en este rango
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>
