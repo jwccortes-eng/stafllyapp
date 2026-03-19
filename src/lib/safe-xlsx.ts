@@ -179,7 +179,7 @@ export function parseCSVToJson<T extends Record<string, any>>(
  */
 export async function parseAnyFileToJson<T extends Record<string, any>>(
   file: File,
-  opts?: { defval?: string; sheetIndex?: number }
+  opts?: { defval?: string; sheetIndex?: number; sheetName?: string }
 ): Promise<T[]> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
 
@@ -192,10 +192,48 @@ export async function parseAnyFileToJson<T extends Record<string, any>>(
   const data = await file.arrayBuffer();
   const wb = await safeRead(data);
   const names = getSheetNames(wb);
-  const sheetIdx = opts?.sheetIndex ?? 0;
-  const ws = getSheet(wb, names[sheetIdx] ?? names[0]);
+  let ws: ExcelJS.Worksheet | undefined;
+  if (opts?.sheetName) {
+    ws = getSheet(wb, opts.sheetName);
+  }
+  if (!ws) {
+    const sheetIdx = opts?.sheetIndex ?? 0;
+    ws = getSheet(wb, names[sheetIdx] ?? names[0]);
+  }
   if (!ws) return [];
   return safeSheetToJson<T>(ws, { defval: opts?.defval });
+}
+
+/**
+ * Parse an Excel file and return sheet names + data for a specific sheet.
+ */
+export async function parseExcelWithSheets<T extends Record<string, any>>(
+  file: File,
+  sheetName: string,
+  opts?: { defval?: string }
+): Promise<{ sheetNames: string[]; rows: T[]; selectedSheet: string }> {
+  const data = await file.arrayBuffer();
+  const wb = await safeRead(data);
+  const sheetNames = getSheetNames(wb);
+  let ws = getSheet(wb, sheetName);
+  let selectedSheet = sheetName;
+  if (!ws && sheetNames.length > 0) {
+    ws = getSheet(wb, sheetNames[0]);
+    selectedSheet = sheetNames[0];
+  }
+  const rows = ws ? safeSheetToJson<T>(ws, { defval: opts?.defval }) : [];
+  return { sheetNames, rows, selectedSheet };
+}
+
+/**
+ * Get sheet names from a File without parsing all data.
+ */
+export async function getFileSheetNames(file: File): Promise<string[]> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "csv" || ext === "txt" || ext === "tsv") return [];
+  const data = await file.arrayBuffer();
+  const wb = await safeRead(data);
+  return getSheetNames(wb);
 }
 
 export type SafeWorkbook = ExcelJS.Workbook;
