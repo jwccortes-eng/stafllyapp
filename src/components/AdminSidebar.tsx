@@ -52,6 +52,7 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Nómina" },
   { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes", module: "summary", section: "Nómina" },
+  { to: "/app/staged-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Nómina" },
 
   // MÁS — communication, monitoring & config
   { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Más" },
