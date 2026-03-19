@@ -25,6 +25,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 /**
  * Find the period that contains today (Wed–Tue cycle), or the most recent past period.
