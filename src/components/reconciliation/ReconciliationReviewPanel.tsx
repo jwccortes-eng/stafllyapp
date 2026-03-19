@@ -219,7 +219,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
                       {m.match_status !== "approved" && m.match_status !== "rejected" && (
                         <>
                           <Button variant="ghost" size="sm" onClick={() => resolveMatch(m.id, "approved")}>
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => resolveMatch(m.id, "rejected")}>
                             <XCircle className="h-4 w-4 text-destructive" />
