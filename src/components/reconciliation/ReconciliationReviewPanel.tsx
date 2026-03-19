@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GitCompareArrows, CheckCircle2, AlertTriangle, Link2, XCircle, User, Loader2 } from "lucide-react";
+import { GitCompareArrows, CheckCircle2, AlertTriangle, Link2, XCircle, User, Loader2, Eye } from "lucide-react";
 import { matchScheduleToClock, type NormalizedScheduleRow, type NormalizedClockRow } from "@/lib/reconciliation-engine";
+import MatchDetailDrawer from "./MatchDetailDrawer";
 
 interface Props {
   companyId: string | null;
@@ -39,6 +40,8 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [runningMatch, setRunningMatch] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<MatchRow | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!companyId) return;
@@ -145,17 +148,22 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
     }
   };
 
-  const resolveMatch = async (id: string, status: string) => {
+  const resolveMatch = async (id: string, status: string, note?: string) => {
     const { error } = await supabase
       .from("reconciliation_matches" as any)
-      .update({ match_status: status, resolved_by: user?.id, resolved_at: new Date().toISOString() } as any)
+      .update({ match_status: status, resolved_by: user?.id, resolved_at: new Date().toISOString(), resolution_note: note || null } as any)
       .eq("id", id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      setMatches(prev => prev.map(m => m.id === id ? { ...m, match_status: status } : m));
-      toast({ title: `Match ${status === "approved" ? "aprobado" : "rechazado"}` });
+      setMatches(prev => prev.map(m => m.id === id ? { ...m, match_status: status, resolution_note: note || null } : m));
+      toast({ title: `Match ${status === "approved" ? "aprobado" : status === "rejected" ? "rechazado" : "resuelto como " + status}` });
     }
+  };
+
+  const openDetail = (m: MatchRow) => {
+    setSelectedMatch(m);
+    setDrawerOpen(true);
   };
 
   const statusColor = (s: string) => {
@@ -184,6 +192,8 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
             <SelectItem value="ambiguous">Ambiguos</SelectItem>
             <SelectItem value="unmatched">Sin match</SelectItem>
             <SelectItem value="approved">Aprobados</SelectItem>
+            <SelectItem value="valid_unscheduled">Trabajo sin agenda</SelectItem>
+            <SelectItem value="linked">Vinculados</SelectItem>
           </SelectContent>
         </Select>
         <Button variant="outline" onClick={runMatching} disabled={runningMatch}>
@@ -214,7 +224,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
               </TableHeader>
               <TableBody>
                 {matches.map(m => (
-                  <TableRow key={m.id} className={m.match_status === "unmatched" ? "bg-destructive/5" : m.match_status === "ambiguous" ? "bg-amber-500/5" : ""}>
+                  <TableRow key={m.id} className={`cursor-pointer hover:bg-accent/50 ${m.match_status === "unmatched" ? "bg-destructive/5" : m.match_status === "ambiguous" ? "bg-amber-500/5" : ""}`} onClick={() => openDetail(m)}>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">{m.match_type.replace("_", " → ")}</Badge>
                     </TableCell>
@@ -238,7 +248,10 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right space-x-1">
-                      {m.match_status !== "approved" && m.match_status !== "rejected" && (
+                      <Button variant="ghost" size="sm" onClick={() => openDetail(m)} title="Inspeccionar">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {m.match_status !== "approved" && m.match_status !== "rejected" && !["linked","created_shift","valid_unscheduled","ignored_duplicate"].includes(m.match_status) && (
                         <>
                           <Button variant="ghost" size="sm" onClick={() => resolveMatch(m.id, "approved")}>
                             <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -256,6 +269,13 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
           </div>
         </Card>
       )}
+      <MatchDetailDrawer
+        match={selectedMatch}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onResolve={resolveMatch}
+        companyId={companyId}
+      />
     </div>
   );
 }
