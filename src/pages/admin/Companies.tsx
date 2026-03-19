@@ -49,6 +49,8 @@ interface CompanyRecord {
   invite_code: string;
   company_code: number | null;
   created_at: string;
+  logo_url: string | null;
+  brand_color: string | null;
   user_count: number;
   users: CompanyUser[];
   active_modules: number;
@@ -110,7 +112,7 @@ export default function CompaniesPage() {
   const fetchCompanies = async () => {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at")
+      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color")
       .order("company_code");
 
     if (!data) return;
@@ -327,7 +329,7 @@ export default function CompaniesPage() {
   }
 
   return (
-    <div>
+    <div className="min-h-screen -m-6 p-6 bg-gradient-to-br from-primary/[0.03] via-background to-chart-1/[0.03]">
       <PageHeader
         variant="1"
         icon={Building2}
@@ -433,9 +435,21 @@ export default function CompaniesPage() {
                     </span>
                   </TableCell>
                   <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {c.name}
-                      {c.is_sandbox && <Badge variant="outline" className="text-[10px]"><FlaskConical className="h-3 w-3 mr-1" />Sandbox</Badge>}
+                    <div className="flex items-center gap-2.5">
+                      {c.logo_url ? (
+                        <img src={c.logo_url} alt={c.name} className="h-8 w-8 rounded-lg object-contain bg-muted/50 p-0.5 shrink-0" />
+                      ) : (
+                        <div
+                          className="h-8 w-8 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0"
+                          style={{ backgroundColor: c.brand_color || 'hsl(var(--primary))' }}
+                        >
+                          {c.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        {c.name}
+                        {c.is_sandbox && <Badge variant="outline" className="text-[10px]"><FlaskConical className="h-3 w-3 mr-1" />Sandbox</Badge>}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
