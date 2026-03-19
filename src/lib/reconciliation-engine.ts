@@ -180,6 +180,29 @@ export function matchEmployee(
   };
 }
 
+// ─── Compensation Category Detection ───
+export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "regular";
+
+const WEEKEND_JOB_PATTERN = /\b(weekend\s*job|trabajo\s*de?\s*fin\s*de?\s*semana)\b/i;
+const PAY_RIDE_PATTERN = /\b(pay\s*ride|ride\s*pay|transporte|transportation)\b/i;
+
+export function detectShiftCategory(
+  jobTitle: string | null | undefined,
+  shiftTitle: string | null | undefined,
+  clientName: string | null | undefined,
+  locationName: string | null | undefined,
+): ShiftCategory {
+  const fields = [jobTitle, shiftTitle, clientName, locationName].map(f => (f || "").toLowerCase());
+  const combined = fields.join(" ");
+  if (WEEKEND_JOB_PATTERN.test(combined)) return "daily_pay";
+  if (PAY_RIDE_PATTERN.test(combined)) return "ride_pay";
+  return "regular";
+}
+
+export function isClockExemptCategory(cat: ShiftCategory): boolean {
+  return cat === "daily_pay" || cat === "ride_pay";
+}
+
 // ─── Shift Matching ───
 export interface NormalizedScheduleRow {
   id: string;
@@ -191,6 +214,8 @@ export interface NormalizedScheduleRow {
   client_name: string | null;
   location_name: string | null;
   external_shift_id: string | null;
+  job_title?: string | null;
+  shift_title?: string | null;
 }
 
 export interface NormalizedClockRow {
