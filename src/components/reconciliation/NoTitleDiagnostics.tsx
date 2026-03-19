@@ -27,6 +27,7 @@ interface ScheduleRow {
 }
 
 type NoTitleSub =
+  | "no_title_no_client"
   | "no_title_no_times"
   | "no_title_no_employee"
   | "no_title_has_payroll"
@@ -46,6 +47,14 @@ interface SubDef {
 }
 
 const SUB_DEFS: SubDef[] = [
+  {
+    key: "no_title_no_client",
+    label: "Sin título + sin cliente + sin ubicación",
+    icon: <Ban className="h-4 w-4" />,
+    color: "text-primary",
+    clockRequired: "no",
+    recommendedAction: "Placeholder de disponibilidad/bloqueo — el motor ya lo clasifica como clock-exempt automáticamente",
+  },
   {
     key: "no_title_no_times",
     label: "Sin título + sin horario",
@@ -119,6 +128,11 @@ function classifyNoTitle(
   duplicateKeys: Set<string>,
   payrollDates: Set<string>,
 ): NoTitleSub {
+  // Structural rule: no title + no client + no location = availability placeholder
+  const hasClient = !!(row.client_name && row.client_name.trim());
+  const hasLocation = !!(row.location_name && row.location_name.trim());
+  if (!hasClient && !hasLocation) return "no_title_no_client";
+
   if (!row.matched_employee_id) return "no_title_no_employee";
   if (!row.start_time && !row.end_time) return "no_title_no_times";
 
@@ -128,14 +142,14 @@ function classifyNoTitle(
   const payKey = `${row.matched_employee_id}|${row.work_date}`;
   if (payrollDates.has(payKey)) return "no_title_has_payroll";
 
-  const hasLocation = !!(row.location_name || row.client_name);
+  const hasLoc = !!(row.location_name || row.client_name);
   const hasJob = !!row.pay_type;
   const hasNotes = !!row.notes;
 
-  if (!hasLocation && !hasJob && !hasNotes) return "no_title_placeholder";
-  if (!hasLocation) return "no_title_no_location";
+  if (!hasLoc && !hasJob && !hasNotes) return "no_title_placeholder";
+  if (!hasLoc) return "no_title_no_location";
 
-  if (row.start_time && row.end_time && hasLocation) return "no_title_likely_real";
+  if (row.start_time && row.end_time && hasLoc) return "no_title_likely_real";
   if (row.start_time || row.end_time) return "no_title_has_times";
 
   return "no_title_placeholder";
@@ -221,6 +235,7 @@ export default function NoTitleDiagnostics({ allUnmatchedRows, payrollDates }: P
 
   const classified = useMemo(() => {
     const buckets: Record<NoTitleSub, ScheduleRow[]> = {
+      no_title_no_client: [],
       no_title_no_times: [],
       no_title_no_employee: [],
       no_title_has_payroll: [],
