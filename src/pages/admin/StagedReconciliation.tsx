@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
-  Users, ArrowRight, Lock, Eye, Shield,
+  Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
