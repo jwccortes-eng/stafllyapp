@@ -125,11 +125,21 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, on
 
   const empList = useMemo(() => {
     const norm = normalizeText(searchEmp);
-    return employees
-      .map(e => ({ ...e, fullName: `${e.first_name} ${e.last_name}`, norm: normalizeText(`${e.first_name} ${e.last_name}`) }))
-      .filter(e => !norm || e.norm.includes(norm) || norm.includes(e.norm))
-      .slice(0, 15);
+    const all = employees
+      .map(e => ({ ...e, fullName: `${e.first_name} ${e.last_name}`, norm: normalizeText(`${e.first_name} ${e.last_name}`) }));
+    if (!norm) return all.slice(0, 30);
+    // Match each search token independently for better partial matching
+    const tokens = norm.split(/\s+/).filter(Boolean);
+    return all
+      .filter(e => tokens.every(t => e.norm.includes(t)))
+      .slice(0, 30);
   }, [employees, searchEmp]);
+
+  const empCounts = useMemo(() => ({
+    total: employees.length,
+    active: employees.filter(e => e.is_active !== false).length,
+    inactive: employees.filter(e => e.is_active === false).length,
+  }), [employees]);
 
   if (unmatchedRows.length === 0 && ambiguousRows.length === 0) return null;
 
