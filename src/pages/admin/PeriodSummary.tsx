@@ -98,6 +98,13 @@ export default function PeriodSummary() {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [sendingEmails, setSendingEmails] = useState(false);
   const autoConsolidatedRef = useRef<string | null>(null);
+  const [advanceRecords, setAdvanceRecords] = useState<AdvanceRecord[]>([]);
+
+  // Helper to create a default SummaryRow
+  const mkRow = (eid: string, fn: string, ln: string, base = 0): SummaryRow => ({
+    employee_id: eid, first_name: fn, last_name: ln,
+    base_total_pay: base, extras_total: 0, deductions_total: 0, advance_deduction: 0, total_final_pay: 0,
+  });
 
   // Filter periods by date range for the dropdown
   const visiblePeriods = useMemo(() => {
