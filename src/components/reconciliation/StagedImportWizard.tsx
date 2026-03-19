@@ -469,9 +469,9 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
         id: r.id, row_number: r.row_number, raw_data: r.raw_data,
       }));
 
-      if (sourceType === "schedule") normResult = normalizeScheduleRows(rawForNorm, employees, aliases);
-      else if (sourceType === "clock") normResult = normalizeClockRows(rawForNorm, employees, aliases);
-      else normResult = normalizePayrollRows(rawForNorm, employees, aliases);
+      if (sourceType === "schedule") normResult = normalizeScheduleRows(rawForNorm, employees, aliases, manualResolutions);
+      else if (sourceType === "clock") normResult = normalizeClockRows(rawForNorm, employees, aliases, manualResolutions);
+      else normResult = normalizePayrollRows(rawForNorm, employees, aliases, manualResolutions);
 
       // Only insert non-system rows into normalized table
       const normInserts = normResult.normalized
