@@ -258,7 +258,7 @@ export default function Shifts() {
 
     const [clientsRes, locsRes, empsRes] = await Promise.all([
       supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
-      supabase.from("locations").select("id, name, address, client_id").eq("company_id", selectedCompanyId).is("deleted_at", null),
+      supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("employees").select("id, first_name, last_name, phone_number").eq("company_id", selectedCompanyId).eq("is_active", true),
     ]);
     setShifts((shiftsRes.data ?? []) as Shift[]);
@@ -339,6 +339,27 @@ export default function Shifts() {
     if (newClientId && newClientId !== "none") {
       const loc = locations.find(l => l.client_id === newClientId && l.address);
       if (loc?.address) setMeetingPoint(loc.address);
+    }
+  };
+
+  // Auto-populate defaults when location is selected
+  const handleLocationChange = (newLocId: string) => {
+    const id = newLocId === "none" ? "" : newLocId;
+    setLocationId(id);
+    if (id) {
+      const loc = locations.find(l => l.id === id) as any;
+      if (loc) {
+        if (loc.address) setMeetingPoint(loc.address);
+        if (loc.default_pay_type) setPayType(loc.default_pay_type as "hourly" | "daily");
+        if (loc.default_clock_method) {
+          // clock method not in create form state yet but used in edit; set transport
+        }
+        if (loc.require_car) {
+          setTransportRequired(true);
+          toast.info("🚗 Esta ubicación requiere transporte");
+        }
+        if (loc.default_instructions) setSpecialInstructions(loc.default_instructions);
+      }
     }
   };
 
@@ -1160,7 +1181,7 @@ export default function Shifts() {
                   <div>
                     <Label className="text-[11px] text-muted-foreground font-medium">Ubicación</Label>
                     <div className="flex gap-1 mt-1">
-                      <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
+                      <Select value={locationId || "none"} onValueChange={v => handleLocationChange(v)}>
                         <SelectTrigger className="h-9 text-sm flex-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Sin asignar</SelectItem>

@@ -2672,7 +2672,13 @@ export type Database = {
           city: string | null
           client_id: string | null
           company_id: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
+          default_clock_method: string | null
+          default_instructions: string | null
+          default_pay_type: string | null
           deleted_at: string | null
           deleted_by: string | null
           geofence_lat: number | null
@@ -2682,6 +2688,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           name: string
+          require_car: boolean | null
           state: string | null
           status: string
           updated_at: string
@@ -2691,7 +2698,13 @@ export type Database = {
           city?: string | null
           client_id?: string | null
           company_id: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
+          default_clock_method?: string | null
+          default_instructions?: string | null
+          default_pay_type?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           geofence_lat?: number | null
@@ -2701,6 +2714,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name: string
+          require_car?: boolean | null
           state?: string | null
           status?: string
           updated_at?: string
@@ -2710,7 +2724,13 @@ export type Database = {
           city?: string | null
           client_id?: string | null
           company_id?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
+          default_clock_method?: string | null
+          default_instructions?: string | null
+          default_pay_type?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           geofence_lat?: number | null
@@ -2720,6 +2740,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string
+          require_car?: boolean | null
           state?: string | null
           status?: string
           updated_at?: string
@@ -5288,6 +5309,7 @@ export type Database = {
       }
       shift_assignments: {
         Row: {
+          assignment_role: string | null
           company_id: string
           created_at: string
           employee_id: string
@@ -5298,6 +5320,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          assignment_role?: string | null
           company_id: string
           created_at?: string
           employee_id: string
@@ -5308,6 +5331,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          assignment_role?: string | null
           company_id?: string
           created_at?: string
           employee_id?: string
@@ -5610,6 +5634,68 @@ export type Database = {
           },
         ]
       }
+      shift_notes: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          linked_employee_id: string | null
+          note_type: string
+          shift_id: string
+        }
+        Insert: {
+          company_id: string
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          linked_employee_id?: string | null
+          note_type?: string
+          shift_id: string
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          linked_employee_id?: string | null
+          note_type?: string
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_notes_linked_employee_id_fkey"
+            columns: ["linked_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_notes_linked_employee_id_fkey"
+            columns: ["linked_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_notes_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_requests: {
         Row: {
           company_id: string
@@ -5866,6 +5952,54 @@ export type Database = {
           },
           {
             foreignKeyName: "shift_rides_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_timeline: {
+        Row: {
+          actor_id: string | null
+          company_id: string
+          created_at: string
+          description: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          shift_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          company_id: string
+          created_at?: string
+          description: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          shift_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_timeline_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_timeline_shift_id_fkey"
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "scheduled_shifts"
