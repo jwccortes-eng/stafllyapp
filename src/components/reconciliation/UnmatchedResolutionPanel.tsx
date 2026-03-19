@@ -297,9 +297,12 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, co
                       {!isResolved && (
                         <div>
                           {isAssigning ? (
-                            <div className="min-w-56 space-y-1">
+                            <div className="min-w-64 space-y-1">
                               <div className="text-[10px] text-muted-foreground mb-1">
-                                Roster: {empCounts.total} ({empCounts.active} act / {empCounts.inactive} inact)
+                                Empresa: {companyName || "N/A"} · ID: {companyId || "N/A"}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground mb-1">
+                                Candidatos: {empCounts.total} ({empCounts.active} act / {empCounts.inactive} inact) · Modo: roster completo + filtro cliente
                               </div>
                               <div className="flex items-center gap-1">
                                 <Search className="h-3 w-3 text-muted-foreground" />
@@ -311,11 +314,16 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, co
                                   autoFocus
                                 />
                               </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                Query: "{searchEmp || "(vacío)"}" · Resultados: {empList.length}
+                              </div>
                               {empCounts.total === 0 && (
-                                <div className="text-xs text-destructive font-medium px-1">⚠ No hay empleados cargados para esta empresa</div>
+                                <div className="text-xs text-destructive font-medium rounded border border-destructive/30 bg-destructive/10 px-2 py-1">
+                                  Employee roster is empty for this company. Fix company context or employee query before importing.
+                                </div>
                               )}
                               <div className="max-h-48 overflow-auto space-y-0.5 border rounded p-1">
-                                {empList.map(e => (
+                                {empList.map((e) => (
                                   <button
                                     key={e.id}
                                     className="flex items-center gap-1.5 w-full text-left text-xs px-2 py-1 rounded hover:bg-accent"
