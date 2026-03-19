@@ -36,6 +36,7 @@ export default function PayrollReconciliationTab({ companyId, onRefresh }: Props
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>#</TableHead>
                 <TableHead>Week</TableHead>
                 <TableHead>CT Gross</TableHead>
                 <TableHead>Stafly Gross</TableHead>
@@ -53,6 +54,7 @@ export default function PayrollReconciliationTab({ companyId, onRefresh }: Props
                 const vd = p.variance_details || {};
                 return (
                   <TableRow key={p.id}>
+                    <TableCell className="font-mono text-muted-foreground">{p.period_code || "—"}</TableCell>
                     <TableCell className="font-medium whitespace-nowrap">{p.week_start} → {p.week_end}</TableCell>
                     <TableCell>{fmt(ct.gross)}</TableCell>
                     <TableCell>{fmt(sf.gross)}</TableCell>

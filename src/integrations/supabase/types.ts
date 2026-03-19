@@ -3178,6 +3178,7 @@ export type Database = {
           locked_at: string | null
           locked_by: string | null
           notes: string | null
+          period_code: number | null
           reviewed_at: string | null
           reviewed_by: string | null
           stafly_period_id: string | null
@@ -3198,6 +3199,7 @@ export type Database = {
           locked_at?: string | null
           locked_by?: string | null
           notes?: string | null
+          period_code?: number | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           stafly_period_id?: string | null
@@ -3218,6 +3220,7 @@ export type Database = {
           locked_at?: string | null
           locked_by?: string | null
           notes?: string | null
+          period_code?: number | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           stafly_period_id?: string | null
