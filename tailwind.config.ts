@@ -194,7 +194,7 @@ export default {
   					opacity: '1',
   					transform: 'scale(1)'
   				}
-  			}
+			},
 			'shake': {
 				'0%, 100%': { transform: 'translateX(0)' },
 				'20%, 60%': { transform: 'translateX(-6px)' },
