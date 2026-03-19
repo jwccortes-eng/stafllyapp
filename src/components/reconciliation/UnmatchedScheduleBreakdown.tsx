@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { detectShiftCategory, isClockExemptCategory, type ShiftCategory } from "@/lib/reconciliation-engine";
+import { detectShiftCategory, isClockExemptCategory, hasDoublePay, type ShiftCategory } from "@/lib/reconciliation-engine";
 import {
   AlertTriangle, Clock, Users, Copy, Ban,
   CheckCircle2, FileQuestion, Loader2, ChevronDown, ChevronUp,
@@ -139,6 +139,7 @@ const SUB_BUCKETS: SubBucket[] = [
 /* ── Helpers ── */
 
 const AVAILABILITY_BLOCK_PATTERN = /\b(unavailable|no\s*disponible|shift\s*block(ing)?|block(ed|ing)\s*(shift|schedule)?|breaking\s*policy|policy\s*block|monitoring|no[- ]?show\s*block(ing)?|not\s*available|day\s*off|off\s*day|blocked|disponibilidad|bloqueo|restricci[oó]n)\b/i;
+// PAGA DOBLE is a pay modifier, not a separate category — kept for display only
 const DOUBLE_PAY_PATTERN = /\b(paga\s*doble|double\s*pay)\b/i;
 
 function isAvailabilityBlock(row: ScheduleDetail): boolean {
@@ -216,9 +217,11 @@ function getRecommendedClassification(row: ScheduleDetail, subCategory: SubCateg
   if (subCategory === "no_employee") return "resolve_employee_matching";
   if (subCategory === "low_info") return "insufficient_context";
 
-  const combined = `${row.shift_title || ""} ${row.notes || ""} ${row.client_name || ""} ${row.location_name || ""}`;
-  if (DOUBLE_PAY_PATTERN.test(combined)) return "special_compensation_candidate";
-  return "true_missing_clock";
+  // PAGA DOBLE is a pay modifier — these are normal worked shifts, classify as true_missing_clock
+  // (the double_pay flag is handled separately in the engine)
+  const combined = `${row.shift_title || ""} ${row.notes || ""}`;
+  const isDP = hasDoublePay(combined);
+  return isDP ? "true_missing_clock (double_pay)" : "true_missing_clock";
 }
 
 function aggregateLabelStats(rows: DebugRow[], keySelector: (row: DebugRow) => string, limit = 20): LabelStat[] {

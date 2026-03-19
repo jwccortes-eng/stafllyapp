@@ -180,6 +180,24 @@ export function matchEmployee(
   };
 }
 
+// ─── Pay Modifier Detection ───
+// PAGA DOBLE / DOUBLE PAY is a pay modifier, NOT a separate category.
+// These rows are normal worked shifts that happen to pay double.
+const PAGA_DOBLE_PATTERN = /\b(paga\s*doble|double\s*pay|doble\s*pago)\b/i;
+// Strip numeric prefix + PAGA DOBLE from title to get the underlying shift identity
+const PAGA_DOBLE_TITLE_STRIP = /^(\d+\s*[-–—]?\s*)?(paga\s*doble|double\s*pay|doble\s*pago)\s*/i;
+
+/** Returns true if a title/label contains a double-pay modifier */
+export function hasDoublePay(text: string | null | undefined): boolean {
+  return !!text && PAGA_DOBLE_PATTERN.test(text);
+}
+
+/** Strip PAGA DOBLE and numeric prefixes to get the base shift title for matching */
+export function stripPayModifiers(title: string | null | undefined): string {
+  if (!title) return "";
+  return title.replace(PAGA_DOBLE_TITLE_STRIP, "").replace(/^\s*[-–—]\s*/, "").trim();
+}
+
 // ─── Compensation Category Detection ───
 export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "availability_block" | "regular";
 
@@ -203,10 +221,13 @@ export function detectShiftCategory(
   const combined = fields.join(" ");
   // Check availability/blocking FIRST — these are not real work
   if (AVAILABILITY_BLOCK_PATTERN.test(combined)) return "availability_block";
-  if (WEEKEND_JOB_PATTERN.test(combined)) return "daily_pay";
-  if (PAY_RIDE_PATTERN.test(combined)) return "ride_pay";
+  // Strip PAGA DOBLE before checking other categories — it's just a pay modifier
+  const strippedCombined = fields.map(f => stripPayModifiers(f) || f).join(" ");
+  if (WEEKEND_JOB_PATTERN.test(strippedCombined)) return "daily_pay";
+  if (PAY_RIDE_PATTERN.test(strippedCombined)) return "ride_pay";
   // Check shift_title specifically for prefixed patterns like "99 - PAY RIDE"
-  if (shiftTitle && PAY_RIDE_PREFIXED.test(shiftTitle.trim())) return "ride_pay";
+  const strippedTitle = stripPayModifiers(shiftTitle);
+  if (strippedTitle && PAY_RIDE_PREFIXED.test(strippedTitle.trim())) return "ride_pay";
   return "regular";
 }
 
@@ -276,8 +297,14 @@ export function matchScheduleToClock(
     // Detect special compensation BEFORE employee check — these categories
     // are valid even without a matched employee (e.g. Weekend shift, Pay Ride)
     const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes);
+
+    // Check if this is a double-pay modifier (PAGA DOBLE) — NOT clock-exempt
+    const isDoublePay = hasDoublePay(sched.shift_title) || hasDoublePay(sched.job_title);
+
     if (isClockExemptCategory(category)) {
       const label = category === "daily_pay" ? "daily_pay_weekend_job" : category === "ride_pay" ? "ride_pay" : "availability_block";
+      const flags = [label, "clock_exempt"];
+      if (isDoublePay) flags.push("double_pay");
       results.push({
         schedule_id: sched.id,
         clock_id: null,
@@ -288,7 +315,7 @@ export function matchScheduleToClock(
         match_status: "exact",
         hours_variance: null,
         pay_variance: null,
-        conflict_flags: [label, "clock_exempt"],
+        conflict_flags: flags,
       });
       continue;
     }
@@ -351,6 +378,8 @@ export function matchScheduleToClock(
       usedClocks.add(bestMatch.clock.id);
       const hoursVar = (sched.total_hours && bestMatch.clock.total_hours)
         ? bestMatch.clock.total_hours - sched.total_hours : null;
+      const matchFlags = [...bestMatch.flags];
+      if (isDoublePay) matchFlags.push("double_pay");
       results.push({
         schedule_id: sched.id,
         clock_id: bestMatch.clock.id,
@@ -361,15 +390,17 @@ export function matchScheduleToClock(
         match_status: bestMatch.score >= 80 ? "exact" : bestMatch.score >= 60 ? "probable" : "ambiguous",
         hours_variance: hoursVar,
         pay_variance: null,
-        conflict_flags: bestMatch.flags,
+        conflict_flags: matchFlags,
       });
     } else {
+      const unmatchedFlags: string[] = ["unmatched_schedule"];
+      if (isDoublePay) unmatchedFlags.push("double_pay");
       results.push({
         schedule_id: sched.id, clock_id: null, payroll_id: null,
         employee_id: sched.matched_employee_id, confidence: 0,
         match_type: "schedule_clock", match_status: "unmatched",
         hours_variance: null, pay_variance: null,
-        conflict_flags: ["unmatched_schedule"],
+        conflict_flags: unmatchedFlags,
       });
     }
   }

@@ -68,6 +68,14 @@ const BUCKETS: BucketDef[] = [
     action: "✅ Resuelto — compensación de transporte",
   },
   {
+    key: "double_pay",
+    label: "Paga Doble (modificador)",
+    icon: <CheckCircle2 className="h-4 w-4" />,
+    color: "text-primary",
+    test: (m) => flags(m).includes("double_pay") && !flags(m).includes("clock_exempt"),
+    action: "Turno normal con pago doble — reconcilia normalmente",
+  },
+  {
     key: "clock_without_schedule",
     label: "Fichaje sin agenda",
     icon: <Clock className="h-4 w-4" />,
