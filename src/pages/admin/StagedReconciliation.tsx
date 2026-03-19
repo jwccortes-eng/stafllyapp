@@ -69,7 +69,9 @@ const TABS: TabDef[] = [
   { value: "validate", label: "Validar", icon: ClipboardCheck, minStatus: "reviewing" },
   { value: "publish", label: "Publicar", icon: Shield, minStatus: "approved" },
   { value: "compare", label: "Comparar", icon: TrendingUp, alwaysEnabled: true },
+  { value: "signoff", label: "Signoff", icon: PenTool, minStatus: "reviewing" },
   { value: "journal", label: "Diario", icon: BookOpen, minStatus: null },
+  { value: "rollout", label: "Rollout", icon: Award, alwaysEnabled: true },
   { value: "pilot", label: "Piloto", icon: Rocket, minStatus: "reviewing" },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
