@@ -696,6 +696,24 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Sheet selector for multi-sheet Excel files */}
+            {sheetNames.length > 1 && (
+              <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
+                <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Hoja activa:</span>
+                <Select value={selectedSheet} onValueChange={handleSheetChange}>
+                  <SelectTrigger className="h-8 w-[220px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sheetNames.map(name => (
+                      <SelectItem key={name} value={name}>{name.trim()}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground">({sheetNames.length} hojas disponibles)</span>
+              </div>
+            )}
             {/* Suspicious column warning */}
             {nameColumnWarning && (
               <Alert variant="destructive">
