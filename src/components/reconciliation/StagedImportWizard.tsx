@@ -51,7 +51,7 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       .from("employees")
       .select("id, first_name, last_name, phone_number, email, external_id, connecteam_id")
       .eq("company_id", companyId);
-    setEmployees((data || []) as EmployeeRecord[]);
+    setEmployees((data || []).map((d: any) => ({ ...d, phone: d.phone_number })) as EmployeeRecord[]);
   }, [companyId]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {

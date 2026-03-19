@@ -39,7 +39,7 @@ export default function StagedReconciliation() {
     <div className="space-y-6">
       <PageHeader
         title="Reconciliación por Periodo"
-        description="Motor de conciliación staged: importar → normalizar → emparejar → revisar → publicar"
+        subtitle="Motor de conciliación staged: importar → normalizar → emparejar → revisar → publicar"
       />
 
       <Tabs value={tab} onValueChange={setTab}>
