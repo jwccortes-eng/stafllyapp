@@ -378,6 +378,8 @@ export function matchScheduleToClock(
       usedClocks.add(bestMatch.clock.id);
       const hoursVar = (sched.total_hours && bestMatch.clock.total_hours)
         ? bestMatch.clock.total_hours - sched.total_hours : null;
+      const matchFlags = [...bestMatch.flags];
+      if (isDoublePay) matchFlags.push("double_pay");
       results.push({
         schedule_id: sched.id,
         clock_id: bestMatch.clock.id,
@@ -388,15 +390,17 @@ export function matchScheduleToClock(
         match_status: bestMatch.score >= 80 ? "exact" : bestMatch.score >= 60 ? "probable" : "ambiguous",
         hours_variance: hoursVar,
         pay_variance: null,
-        conflict_flags: bestMatch.flags,
+        conflict_flags: matchFlags,
       });
     } else {
+      const unmatchedFlags: string[] = ["unmatched_schedule"];
+      if (isDoublePay) unmatchedFlags.push("double_pay");
       results.push({
         schedule_id: sched.id, clock_id: null, payroll_id: null,
         employee_id: sched.matched_employee_id, confidence: 0,
         match_type: "schedule_clock", match_status: "unmatched",
         hours_variance: null, pay_variance: null,
-        conflict_flags: ["unmatched_schedule"],
+        conflict_flags: unmatchedFlags,
       });
     }
   }
