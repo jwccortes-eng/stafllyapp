@@ -423,7 +423,7 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       {step === "save" && (
         <Card>
           <CardContent className="py-12 text-center space-y-4">
-            <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
+            <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
             <h3 className="text-lg font-semibold">Import Staged Completado</h3>
             <p className="text-muted-foreground">
               Los datos han sido almacenados en las capas raw y normalizada.
