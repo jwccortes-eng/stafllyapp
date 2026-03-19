@@ -139,6 +139,7 @@ const SUB_BUCKETS: SubBucket[] = [
 /* ── Helpers ── */
 
 const AVAILABILITY_BLOCK_PATTERN = /\b(unavailable|no\s*disponible|shift\s*block(ing)?|block(ed|ing)\s*(shift|schedule)?|breaking\s*policy|policy\s*block|monitoring|no[- ]?show\s*block(ing)?|not\s*available|day\s*off|off\s*day|blocked|disponibilidad|bloqueo|restricci[oó]n)\b/i;
+// PAGA DOBLE is a pay modifier, not a separate category — kept for display only
 const DOUBLE_PAY_PATTERN = /\b(paga\s*doble|double\s*pay)\b/i;
 
 function isAvailabilityBlock(row: ScheduleDetail): boolean {
