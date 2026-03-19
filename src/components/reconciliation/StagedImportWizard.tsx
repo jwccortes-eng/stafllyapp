@@ -245,11 +245,28 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
         .update({ status: "completed" } as any)
         .eq("id", batchId);
 
+      // 7. Link batch to active period if available
+      if (activePeriodId) {
+        const fieldMap: Record<string, string> = {
+          schedule: "schedule_batch_id",
+          clock: "clock_batch_id",
+          payroll: "payroll_batch_id",
+        };
+        const field = fieldMap[sourceType];
+        if (field) {
+          await supabase.from("reconciliation_period_status" as any)
+            .update({ [field]: batchId, updated_at: new Date().toISOString() } as any)
+            .eq("id", activePeriodId);
+          console.log("[StagedImport] Linked batch", batchId, "to period", activePeriodId, "field:", field);
+        }
+        onBatchLinked?.(sourceType, batchId);
+      }
+
       setProgress(100);
       setStep("save");
       toast({
         title: "Import completado",
-        description: `${rawRows.length} filas importadas, ${unmatched.length} sin emparejar.`,
+        description: `${rawRows.length} filas importadas, ${unmatched.length} sin emparejar.${activePeriodId ? " Vinculado al periodo activo." : ""}`,
       });
       onComplete();
     } catch (err: any) {
