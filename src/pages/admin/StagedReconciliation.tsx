@@ -86,6 +86,7 @@ function isTabEnabled(tab: TabDef, periodStatus: string | null): boolean {
 export default function StagedReconciliation() {
   const { selectedCompanyId } = useCompany();
   const { toast } = useToast();
+  const { user } = useAuth();
   const {
     periods, loading, activePeriod, setActivePeriod,
     finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
