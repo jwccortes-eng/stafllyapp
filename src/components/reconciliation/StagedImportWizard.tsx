@@ -120,7 +120,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     }
   };
 
-  const handleNormalize = () => {
+  const runNormalization = useCallback(() => {
     const rawWithIds = rawRows.map((r, i) => ({
       id: `temp-${i}`,
       row_number: i + 1,
@@ -143,6 +143,11 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     setWarnings(result.warnings);
     setErrors(result.errors);
     setDiagnostics(result.diagnostics);
+    return result;
+  }, [rawRows, sourceType, employees, aliases]);
+
+  const handleNormalize = () => {
+    const result = runNormalization();
 
     if (result.normalized.length === 0) {
       toast({ title: "Sin resultados", description: "No se pudieron normalizar filas. Revisa que el archivo tenga las columnas esperadas.", variant: "destructive" });
@@ -150,6 +155,11 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     }
 
     setStep("review");
+  };
+
+  const handleReNormalize = () => {
+    runNormalization();
+    toast({ title: "Re-normalizado", description: "Se aplicaron los alias guardados a las filas." });
   };
 
   const handleSaveAlias = async (nameRaw: string, employeeId: string) => {
