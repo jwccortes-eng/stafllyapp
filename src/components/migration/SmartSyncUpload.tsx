@@ -172,7 +172,10 @@ export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
   };
 
   const resyncAll = async () => {
-    if (!companyId || !user) return;
+    if (!companyId) {
+      toast({ title: "Error", description: "Selecciona una compañía primero.", variant: "destructive" });
+      return;
+    }
     setResyncing(true);
     setSyncLog(["🔄 Re-syncing all periods with updated employee mappings..."]);
     try {
