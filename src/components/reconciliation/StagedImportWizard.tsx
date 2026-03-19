@@ -688,6 +688,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
             <CardTitle className="text-base flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" />
               Vista Previa: {file?.name}
+              {selectedSheet && <Badge variant="outline" className="text-xs">Hoja: {selectedSheet}</Badge>}
               <Badge variant="secondary">{rawRows.length} filas</Badge>
             </CardTitle>
             <CardDescription>
