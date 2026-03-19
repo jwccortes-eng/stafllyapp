@@ -28,6 +28,13 @@ export interface PeriodStatus {
   posted_by: string | null;
   posted_at: string | null;
   locked: boolean;
+  locked_by: string | null;
+  locked_at: string | null;
+  reopened_by: string | null;
+  reopened_at: string | null;
+  reopen_reason: string | null;
+  reopen_count: number;
+  publish_idempotency_key: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -46,6 +53,14 @@ export interface EmployeeFinalRecord {
   pay_classification: string;
   hourly_rate: number | null;
   daily_rate: number | null;
+  regular_hours: number;
+  overtime_hours: number;
+  hourly_pay_total: number;
+  daily_pay_total: number;
+  ride_pay_total: number;
+  weekend_pay_total: number;
+  manual_adjustment_total: number;
+  grand_total: number;
   ride_amount: number;
   weekend_amount: number;
   manual_amount: number;
@@ -56,7 +71,48 @@ export interface EmployeeFinalRecord {
   resolution_notes: string | null;
   approved_by: string | null;
   approved_at: string | null;
+  warnings: any[];
+  schedule_batch_id: string | null;
+  clock_batch_id: string | null;
+  payroll_batch_id: string | null;
+  match_ids: string[];
+  publishing_user: string | null;
+  published_at: string | null;
 }
+
+export interface ClosingReceipt {
+  id: string;
+  period_label: string;
+  period_start: string;
+  period_end: string;
+  total_employees: number;
+  total_scheduled_shifts: number;
+  total_worked_shifts: number;
+  total_payroll_rows: number;
+  total_regular_hours: number;
+  total_overtime_hours: number;
+  total_hourly_pay: number;
+  total_daily_pay: number;
+  total_ride_pay: number;
+  total_manual_adjustments: number;
+  grand_total_posted: number;
+  published_by: string;
+  published_at: string;
+}
+
+// Valid status transitions
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  importing: ["matching", "reviewing"],
+  normalizing: ["matching", "reviewing"],
+  matching: ["reviewing"],
+  reviewing: ["approved"],
+  approved: ["posted"],
+  posted: ["locked"],
+  locked: ["reopened"],
+  reopened: ["reviewing"],
+};
+
+const LOCKED_STATUSES = ["posted", "locked"];
 
 export function useReconciliationPeriod(companyId: string | null) {
   const { user } = useAuth();
@@ -65,6 +121,7 @@ export function useReconciliationPeriod(companyId: string | null) {
   const [loading, setLoading] = useState(false);
   const [activePeriod, setActivePeriod] = useState<PeriodStatus | null>(null);
   const [finalRecords, setFinalRecords] = useState<EmployeeFinalRecord[]>([]);
+  const [closingReceipt, setClosingReceipt] = useState<ClosingReceipt | null>(null);
 
   const loadPeriods = useCallback(async () => {
     if (!companyId) return;
@@ -75,9 +132,15 @@ export function useReconciliationPeriod(companyId: string | null) {
       .eq("company_id", companyId)
       .order("period_start", { ascending: false })
       .limit(50);
-    setPeriods((data || []) as any);
+    const loaded = (data || []) as any[];
+    setPeriods(loaded);
+    // Refresh activePeriod if it exists
+    if (activePeriod) {
+      const refreshed = loaded.find(p => p.id === activePeriod.id);
+      if (refreshed) setActivePeriod(refreshed);
+    }
     setLoading(false);
-  }, [companyId]);
+  }, [companyId, activePeriod?.id]);
 
   useEffect(() => { loadPeriods(); }, [loadPeriods]);
 
@@ -105,6 +168,17 @@ export function useReconciliationPeriod(companyId: string | null) {
 
   const updatePeriodStatus = useCallback(async (periodStatusId: string, status: string, extras?: Record<string, any>) => {
     if (!user?.id) return;
+
+    // Validate transition
+    const period = periods.find(p => p.id === periodStatusId);
+    if (period) {
+      const allowed = VALID_TRANSITIONS[period.status];
+      if (allowed && !allowed.includes(status)) {
+        toast({ title: "Transición inválida", description: `No se puede pasar de "${period.status}" a "${status}".`, variant: "destructive" });
+        return;
+      }
+    }
+
     const update: any = { status, updated_at: new Date().toISOString(), ...extras };
     if (status === "approved") {
       update.approved_by = user.id;
@@ -119,13 +193,31 @@ export function useReconciliationPeriod(companyId: string | null) {
       update.locked_by = user.id;
       update.locked_at = new Date().toISOString();
     }
+    if (status === "reopened") {
+      update.locked = false;
+      update.reopened_by = user.id;
+      update.reopened_at = new Date().toISOString();
+      update.reopen_count = (period?.reopen_count || 0) + 1;
+      update.reopen_reason = extras?.reopen_reason || null;
+      // After reopen, transition to reviewing
+      update.status = "reviewing";
+    }
     const { error } = await supabase
       .from("reconciliation_period_status" as any)
       .update(update as any)
       .eq("id", periodStatusId);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     await loadPeriods();
-  }, [user?.id, toast, loadPeriods]);
+  }, [user?.id, toast, loadPeriods, periods]);
+
+  const reopenPeriod = useCallback(async (periodStatusId: string, reason: string) => {
+    if (!user?.id || !reason.trim()) {
+      toast({ title: "Se requiere una razón para reabrir", variant: "destructive" });
+      return;
+    }
+    await updatePeriodStatus(periodStatusId, "reopened", { reopen_reason: reason });
+    toast({ title: "Periodo reabierto", description: "El periodo ha vuelto a estado de revisión." });
+  }, [user?.id, toast, updatePeriodStatus]);
 
   const loadFinalRecords = useCallback(async (periodStatusId: string) => {
     if (!companyId) return;
@@ -137,7 +229,60 @@ export function useReconciliationPeriod(companyId: string | null) {
     setFinalRecords((data || []) as any);
   }, [companyId]);
 
-  // ── CORE: Generate final records scoped to period date range ──
+  const loadClosingReceipt = useCallback(async (periodStatusId: string) => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("reconciliation_closing_receipts" as any)
+      .select("*")
+      .eq("period_status_id", periodStatusId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setClosingReceipt(data as any);
+  }, [companyId]);
+
+  // ── Pre-publish validation ──
+  const validateBeforePublish = useCallback((records: EmployeeFinalRecord[]): { canPublish: boolean; errors: string[]; warnings: string[] } => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (records.length === 0) {
+      errors.push("No hay registros de empleados para publicar.");
+      return { canPublish: false, errors, warnings };
+    }
+
+    const unresolved = records.filter(r => r.reconciliation_status === "pending" || r.reconciliation_status === "partial");
+    if (unresolved.length > 0) {
+      errors.push(`${unresolved.length} empleado(s) con conflictos sin resolver.`);
+    }
+
+    const withConflicts = records.filter(r => r.conflict_count > 0 && r.reconciliation_status !== "approved");
+    if (withConflicts.length > 0) {
+      errors.push(`${withConflicts.length} empleado(s) con conflictos críticos no aprobados.`);
+    }
+
+    const unknownPay = records.filter(r => r.pay_classification === "unknown");
+    if (unknownPay.length > 0) {
+      errors.push(`${unknownPay.length} empleado(s) con clasificación de pago desconocida.`);
+    }
+
+    const zeroTotal = records.filter(r => (r.grand_total || r.final_total_pay) === 0);
+    if (zeroTotal.length > 0) {
+      warnings.push(`${zeroTotal.length} empleado(s) con total $0.`);
+    }
+
+    const highVariance = records.filter(r => {
+      const diff = Math.abs(r.total_scheduled_hours - r.total_worked_hours);
+      return diff > 8 && r.total_scheduled_hours > 0;
+    });
+    if (highVariance.length > 0) {
+      warnings.push(`${highVariance.length} empleado(s) con gran variación horas programadas vs trabajadas.`);
+    }
+
+    return { canPublish: errors.length === 0, errors, warnings };
+  }, []);
+
+  // ── CORE: Generate final records with full payment breakdown ──
   const generateFinalRecords = useCallback(async (periodStatusId: string) => {
     if (!companyId || !user?.id) return;
 
@@ -147,33 +292,23 @@ export function useReconciliationPeriod(companyId: string | null) {
       return;
     }
 
-    console.log("[GenerateFinal] Period:", period.period_label, period.period_start, "→", period.period_end);
+    // Block if period is locked/posted
+    if (LOCKED_STATUSES.includes(period.status)) {
+      toast({ title: "Periodo bloqueado", description: "No se pueden regenerar registros de un periodo publicado/cerrado.", variant: "destructive" });
+      return;
+    }
 
-    // Build batch filter if available, otherwise fall back to date range
-    const batchIds = [period.schedule_batch_id, period.clock_batch_id, period.payroll_batch_id].filter(Boolean);
-    const useBatchFilter = batchIds.length > 0;
-
-    // Fetch normalized data FILTERED by the period's linked batches or date range
     let schedQuery = supabase.from("normalized_schedule_rows" as any).select("*").eq("company_id", companyId);
     let clockQuery = supabase.from("normalized_clock_rows" as any).select("*").eq("company_id", companyId);
     let payrollQuery = supabase.from("normalized_payroll_rows" as any).select("*").eq("company_id", companyId);
 
-    if (period.schedule_batch_id) {
-      schedQuery = schedQuery.eq("batch_id", period.schedule_batch_id);
-    } else {
-      schedQuery = schedQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
-    }
+    if (period.schedule_batch_id) schedQuery = schedQuery.eq("batch_id", period.schedule_batch_id);
+    else schedQuery = schedQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
 
-    if (period.clock_batch_id) {
-      clockQuery = clockQuery.eq("batch_id", period.clock_batch_id);
-    } else {
-      clockQuery = clockQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
-    }
+    if (period.clock_batch_id) clockQuery = clockQuery.eq("batch_id", period.clock_batch_id);
+    else clockQuery = clockQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
 
-    if (period.payroll_batch_id) {
-      payrollQuery = payrollQuery.eq("batch_id", period.payroll_batch_id);
-    }
-    // Payroll may not have work_date, so don't filter by date if no batch
+    if (period.payroll_batch_id) payrollQuery = payrollQuery.eq("batch_id", period.payroll_batch_id);
 
     const matchQuery = supabase.from("reconciliation_matches" as any).select("*").eq("company_id", companyId);
 
@@ -186,30 +321,25 @@ export function useReconciliationPeriod(companyId: string | null) {
     const payrolls = (payrollRes.data || []) as any[];
     const matches = (matchRes.data || []) as any[];
 
-    console.log("[GenerateFinal] Data:", { schedules: schedules.length, clocks: clocks.length, payrolls: payrolls.length, matches: matches.length });
-
     if (schedules.length === 0 && clocks.length === 0 && payrolls.length === 0) {
-      toast({ title: "Sin datos", description: "No hay datos importados para este periodo. Importa archivos primero.", variant: "destructive" });
+      toast({ title: "Sin datos", description: "No hay datos importados para este periodo.", variant: "destructive" });
       return;
     }
 
-    // Get employees
     const { data: employees } = await supabase
       .from("employees")
       .select("id, first_name, last_name")
       .eq("company_id", companyId);
     const empMap = new Map((employees || []).map(e => [e.id, `${e.first_name} ${e.last_name}`]));
 
-    // Collect all employee IDs involved
     const employeeIds = new Set<string>();
     schedules.forEach(s => { if (s.matched_employee_id) employeeIds.add(s.matched_employee_id); });
     clocks.forEach(c => { if (c.matched_employee_id) employeeIds.add(c.matched_employee_id); });
     payrolls.forEach(p => { if (p.matched_employee_id) employeeIds.add(p.matched_employee_id); });
 
-    console.log("[GenerateFinal] Employees found:", employeeIds.size);
-
-    // Build records per employee
+    const OT_THRESHOLD = 40;
     const records: any[] = [];
+
     for (const empId of employeeIds) {
       const empSchedules = schedules.filter(s => s.matched_employee_id === empId);
       const empClocks = clocks.filter(c => c.matched_employee_id === empId);
@@ -221,31 +351,46 @@ export function useReconciliationPeriod(companyId: string | null) {
       const totalPayrollHours = empPayrolls.reduce((sum, p) => sum + (Number(p.total_hours) || 0), 0);
       const totalPayrollAmount = empPayrolls.reduce((sum, p) => sum + (Number(p.total_pay) || 0), 0);
 
+      // Full payment breakdown by type
+      const hourlyRows = empPayrolls.filter(p => p.pay_type === "hourly");
+      const dailyRows = empPayrolls.filter(p => p.pay_type === "daily");
       const rideRows = empPayrolls.filter(p => p.pay_type === "pay_ride");
       const weekendRows = empPayrolls.filter(p => p.pay_type === "weekend_job");
       const manualRows = empPayrolls.filter(p => p.pay_type === "manual_adjustment");
-      const baseRows = empPayrolls.filter(p => !["pay_ride", "weekend_job", "manual_adjustment"].includes(p.pay_type));
 
-      const rideAmount = rideRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
-      const weekendAmount = weekendRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
-      const manualAmount = manualRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
-      const basePay = baseRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
+      const hourlyPayTotal = hourlyRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
+      const dailyPayTotal = dailyRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
+      const ridePayTotal = rideRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
+      const weekendPayTotal = weekendRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
+      const manualTotal = manualRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
 
-      // Determine pay classification
+      // Hours breakdown
+      const hourlyHours = hourlyRows.reduce((s, r) => s + (Number(r.total_hours) || 0), 0);
+      const regularHours = Math.min(hourlyHours, OT_THRESHOLD);
+      const overtimeHours = Math.max(hourlyHours - OT_THRESHOLD, 0);
+
+      // Hourly rate detection
+      const hourlyRate = hourlyHours > 0 ? Math.round((hourlyPayTotal / hourlyHours) * 100) / 100 : null;
+      const dailyRate = dailyRows.length > 0 ? Math.round((dailyPayTotal / dailyRows.length) * 100) / 100 : null;
+
+      // Pay classification
       const payTypes = empPayrolls.map(p => p.pay_type).filter(Boolean);
-      const classification = payTypes.length > 0
-        ? [...new Set(payTypes)].length === 1 ? payTypes[0] : "mixed"
-        : "unknown";
+      const uniqueTypes = [...new Set(payTypes)];
+      const classification = uniqueTypes.length === 0 ? "unknown" : uniqueTypes.length === 1 ? uniqueTypes[0] : "mixed";
 
-      // Detect hourly rate from payroll data
-      const hourlyPayrolls = empPayrolls.filter(p => p.pay_type === "hourly" && Number(p.total_hours) > 0 && Number(p.total_pay) > 0);
-      const hourlyRate = hourlyPayrolls.length > 0
-        ? Math.round((hourlyPayrolls.reduce((s, p) => s + Number(p.total_pay), 0) / hourlyPayrolls.reduce((s, p) => s + Number(p.total_hours), 0)) * 100) / 100
-        : null;
+      const grandTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
 
-      // Count conflicts
+      // Conflicts
       const unresolvedMatches = empMatches.filter(m => m.match_status === "ambiguous" || m.match_status === "unmatched");
       const conflictCount = unresolvedMatches.length;
+
+      // Warnings
+      const warnings: string[] = [];
+      if (Math.abs(totalScheduledHours - totalWorkedHours) > 4 && totalScheduledHours > 0) {
+        warnings.push(`Variación de ${Math.abs(totalScheduledHours - totalWorkedHours).toFixed(1)}h entre programado y trabajado`);
+      }
+      if (grandTotal === 0 && empPayrolls.length > 0) warnings.push("Total calculado es $0 con filas de nómina existentes");
+      if (classification === "unknown") warnings.push("Clasificación de pago no determinada");
 
       records.push({
         company_id: companyId,
@@ -260,20 +405,33 @@ export function useReconciliationPeriod(companyId: string | null) {
         total_payroll_amount: Math.round(totalPayrollAmount * 100) / 100,
         pay_classification: classification,
         hourly_rate: hourlyRate,
-        ride_amount: Math.round(rideAmount * 100) / 100,
-        weekend_amount: Math.round(weekendAmount * 100) / 100,
-        manual_amount: Math.round(manualAmount * 100) / 100,
-        base_pay: Math.round(basePay * 100) / 100,
-        final_total_pay: Math.round(totalPayrollAmount * 100) / 100,
+        daily_rate: dailyRate,
+        regular_hours: Math.round(regularHours * 100) / 100,
+        overtime_hours: Math.round(overtimeHours * 100) / 100,
+        hourly_pay_total: Math.round(hourlyPayTotal * 100) / 100,
+        daily_pay_total: Math.round(dailyPayTotal * 100) / 100,
+        ride_pay_total: Math.round(ridePayTotal * 100) / 100,
+        weekend_pay_total: Math.round(weekendPayTotal * 100) / 100,
+        manual_adjustment_total: Math.round(manualTotal * 100) / 100,
+        grand_total: grandTotal,
+        ride_amount: Math.round(ridePayTotal * 100) / 100,
+        weekend_amount: Math.round(weekendPayTotal * 100) / 100,
+        manual_amount: Math.round(manualTotal * 100) / 100,
+        base_pay: Math.round(hourlyPayTotal * 100) / 100,
+        final_total_pay: grandTotal,
         reconciliation_status: conflictCount > 0 ? "partial" : "resolved",
         conflict_count: conflictCount,
+        warnings: warnings,
+        schedule_batch_id: period.schedule_batch_id,
+        clock_batch_id: period.clock_batch_id,
+        payroll_batch_id: period.payroll_batch_id,
+        match_ids: empMatches.map(m => m.id),
       });
     }
 
     // Upsert final records
     for (const rec of records) {
-      const { error } = await supabase.from("reconciliation_final_records" as any).upsert(rec as any, { onConflict: "period_status_id,employee_id" });
-      if (error) console.error("[GenerateFinal] Upsert error:", error);
+      await supabase.from("reconciliation_final_records" as any).upsert(rec as any, { onConflict: "period_status_id,employee_id" });
     }
 
     // Update period stats
@@ -292,36 +450,59 @@ export function useReconciliationPeriod(companyId: string | null) {
 
     await loadFinalRecords(periodStatusId);
     await loadPeriods();
-    toast({ title: "Registros generados", description: `${records.length} empleados procesados para ${period.period_label}.` });
+    toast({ title: "Registros generados", description: `${records.length} empleados procesados.` });
   }, [companyId, user?.id, periods, toast, loadFinalRecords, loadPeriods]);
 
-  // ── CORE: Post final records to production tables ──
+  // ── CORE: Idempotent post final records to production ──
   const postFinalRecords = useCallback(async (periodStatusId: string) => {
-    if (!companyId || !user?.id) return;
+    if (!companyId || !user?.id) return false;
 
     const period = periods.find(p => p.id === periodStatusId);
-    if (!period) return;
+    if (!period) return false;
 
-    // Load the final records for this period
+    // Idempotency check: block if already posted
+    if (period.publish_idempotency_key) {
+      toast({ title: "Ya publicado", description: "Este periodo ya fue publicado. Reabre el periodo si necesitas republicar.", variant: "destructive" });
+      return false;
+    }
+
+    // Must be approved first
+    if (period.status !== "approved") {
+      toast({ title: "No aprobado", description: "El periodo debe estar aprobado antes de publicar.", variant: "destructive" });
+      return false;
+    }
+
+    // Load records
     const { data: records } = await supabase
       .from("reconciliation_final_records" as any)
       .select("*")
-      .eq("period_status_id", periodStatusId)
-      .in("reconciliation_status", ["resolved", "approved"] as any);
-
+      .eq("period_status_id", periodStatusId);
     const finalRecs = (records || []) as any[];
 
-    if (finalRecs.length === 0) {
-      toast({ title: "Sin registros aprobados", description: "Aprueba al menos un empleado antes de publicar.", variant: "destructive" });
-      return;
+    // Pre-publish validation
+    const validation = validateBeforePublish(finalRecs);
+    if (!validation.canPublish) {
+      toast({ title: "No se puede publicar", description: validation.errors.join(" "), variant: "destructive" });
+      return false;
     }
 
-    console.log("[PostFinal] Posting", finalRecs.length, "records to production");
+    // Generate idempotency key
+    const idempotencyKey = `${companyId}-${periodStatusId}-${Date.now()}`;
 
-    // Find or create pay_period linked to this reconciliation period
+    // Set idempotency key FIRST to prevent race conditions
+    const { error: lockErr } = await supabase.from("reconciliation_period_status" as any)
+      .update({ publish_idempotency_key: idempotencyKey, updated_at: new Date().toISOString() } as any)
+      .eq("id", periodStatusId)
+      .is("publish_idempotency_key", null);
+
+    if (lockErr) {
+      toast({ title: "Error de bloqueo", description: "No se pudo bloquear el periodo para publicación.", variant: "destructive" });
+      return false;
+    }
+
+    // Find or create pay_period
     let payPeriodId = period.period_id;
     if (!payPeriodId) {
-      // Try to find existing pay_period matching dates
       const { data: existingPeriod } = await supabase
         .from("pay_periods")
         .select("id")
@@ -333,7 +514,6 @@ export function useReconciliationPeriod(companyId: string | null) {
       if (existingPeriod) {
         payPeriodId = existingPeriod.id;
       } else {
-        // Create a pay_period
         const { data: newPeriod, error: ppErr } = await supabase
           .from("pay_periods")
           .insert({
@@ -346,22 +526,25 @@ export function useReconciliationPeriod(companyId: string | null) {
           .select("id")
           .single();
         if (ppErr) {
-          console.error("[PostFinal] Pay period create error:", ppErr);
           toast({ title: "Error creando periodo", description: ppErr.message, variant: "destructive" });
-          return;
+          return false;
         }
         payPeriodId = newPeriod.id;
       }
 
-      // Link back
       await supabase.from("reconciliation_period_status" as any)
         .update({ period_id: payPeriodId } as any)
         .eq("id", periodStatusId);
     }
 
-    // Write period_base_pay for each employee
+    // Post to period_base_pay with full breakdown — upsert prevents duplicates
     let posted = 0;
-    let errors = 0;
+    let receiptTotals = {
+      regular_hours: 0, overtime_hours: 0,
+      hourly_pay: 0, daily_pay: 0, ride_pay: 0, manual_adj: 0, weekend_pay: 0,
+      grand_total: 0, scheduled_shifts: 0, worked_shifts: 0, payroll_rows: 0,
+    };
+
     for (const rec of finalRecs) {
       const { error } = await supabase
         .from("period_base_pay")
@@ -370,39 +553,74 @@ export function useReconciliationPeriod(companyId: string | null) {
           period_id: payPeriodId,
           employee_id: rec.employee_id,
           total_work_hours: rec.total_worked_hours || rec.total_payroll_hours || 0,
-          total_regular: Math.min(rec.total_worked_hours || rec.total_payroll_hours || 0, 40),
-          total_overtime: Math.max((rec.total_worked_hours || rec.total_payroll_hours || 0) - 40, 0),
+          total_regular: rec.regular_hours || Math.min(rec.total_worked_hours || 0, 40),
+          total_overtime: rec.overtime_hours || Math.max((rec.total_worked_hours || 0) - 40, 0),
           total_paid_hours: rec.total_payroll_hours || rec.total_worked_hours || 0,
-          base_total_pay: rec.final_total_pay || 0,
+          base_total_pay: rec.grand_total || rec.final_total_pay || 0,
         }, { onConflict: "period_id,employee_id" });
 
-      if (error) {
-        console.error("[PostFinal] period_base_pay error for", rec.employee_id, error);
-        errors++;
-      } else {
+      if (!error) {
         posted++;
+        receiptTotals.regular_hours += rec.regular_hours || 0;
+        receiptTotals.overtime_hours += rec.overtime_hours || 0;
+        receiptTotals.hourly_pay += rec.hourly_pay_total || 0;
+        receiptTotals.daily_pay += rec.daily_pay_total || 0;
+        receiptTotals.ride_pay += rec.ride_pay_total || rec.ride_amount || 0;
+        receiptTotals.manual_adj += rec.manual_adjustment_total || rec.manual_amount || 0;
+        receiptTotals.weekend_pay += rec.weekend_pay_total || rec.weekend_amount || 0;
+        receiptTotals.grand_total += rec.grand_total || rec.final_total_pay || 0;
+        receiptTotals.scheduled_shifts += (rec.scheduled_shifts || []).length;
+        receiptTotals.worked_shifts += (rec.worked_shifts || []).length;
+        receiptTotals.payroll_rows += (rec.payroll_rows || []).length;
       }
 
-      // Mark reconciliation record as posted
+      // Mark as posted with traceability
       await supabase.from("reconciliation_final_records" as any)
         .update({
           reconciliation_status: "posted",
-          approved_by: user.id,
-          approved_at: new Date().toISOString(),
+          publishing_user: user.id,
+          published_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         } as any)
         .eq("id", rec.id);
     }
 
-    // Update period status
-    await updatePeriodStatus(periodStatusId, "posted");
+    // Create closing receipt
+    await supabase.from("reconciliation_closing_receipts" as any).insert({
+      company_id: companyId,
+      period_status_id: periodStatusId,
+      period_label: period.period_label,
+      period_start: period.period_start,
+      period_end: period.period_end,
+      total_employees: posted,
+      total_scheduled_shifts: receiptTotals.scheduled_shifts,
+      total_worked_shifts: receiptTotals.worked_shifts,
+      total_payroll_rows: receiptTotals.payroll_rows,
+      total_regular_hours: Math.round(receiptTotals.regular_hours * 100) / 100,
+      total_overtime_hours: Math.round(receiptTotals.overtime_hours * 100) / 100,
+      total_hourly_pay: Math.round(receiptTotals.hourly_pay * 100) / 100,
+      total_daily_pay: Math.round(receiptTotals.daily_pay * 100) / 100,
+      total_ride_pay: Math.round(receiptTotals.ride_pay * 100) / 100,
+      total_manual_adjustments: Math.round(receiptTotals.manual_adj * 100) / 100,
+      grand_total_posted: Math.round(receiptTotals.grand_total * 100) / 100,
+      published_by: user.id,
+      receipt_data: {
+        idempotency_key: idempotencyKey,
+        validation_warnings: validation.warnings,
+      },
+    } as any);
 
+    // Update period status to posted
+    await updatePeriodStatus(periodStatusId, "posted");
     await loadFinalRecords(periodStatusId);
+    await loadClosingReceipt(periodStatusId);
+
     toast({
-      title: "Periodo publicado a producción",
-      description: `${posted} registros creados en period_base_pay. ${errors > 0 ? `${errors} errores.` : "Sin errores."}`,
+      title: "✅ Periodo publicado a producción",
+      description: `${posted} empleados. Total: $${Math.round(receiptTotals.grand_total * 100) / 100}`,
     });
-  }, [companyId, user?.id, periods, updatePeriodStatus, toast, loadFinalRecords]);
+    return true;
+  }, [companyId, user?.id, periods, updatePeriodStatus, toast, loadFinalRecords, loadClosingReceipt, validateBeforePublish]);
 
   const saveMappingCorrection = useCallback(async (
     mappingType: string, sourceValue: string, targetId: string, targetValue: string
@@ -422,8 +640,9 @@ export function useReconciliationPeriod(companyId: string | null) {
 
   return {
     periods, loading, activePeriod, setActivePeriod,
-    finalRecords, loadPeriods, createPeriod, updatePeriodStatus,
+    finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
     loadFinalRecords, generateFinalRecords, postFinalRecords,
-    saveMappingCorrection,
+    saveMappingCorrection, reopenPeriod, loadClosingReceipt,
+    validateBeforePublish,
   };
 }

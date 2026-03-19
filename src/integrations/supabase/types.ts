@@ -5450,6 +5450,86 @@ export type Database = {
           },
         ]
       }
+      reconciliation_closing_receipts: {
+        Row: {
+          company_id: string
+          created_at: string
+          grand_total_posted: number | null
+          id: string
+          period_end: string
+          period_label: string
+          period_start: string
+          period_status_id: string
+          published_at: string
+          published_by: string
+          receipt_data: Json | null
+          total_daily_pay: number | null
+          total_employees: number | null
+          total_hourly_pay: number | null
+          total_manual_adjustments: number | null
+          total_overtime_hours: number | null
+          total_payroll_rows: number | null
+          total_regular_hours: number | null
+          total_ride_pay: number | null
+          total_scheduled_shifts: number | null
+          total_worked_shifts: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          grand_total_posted?: number | null
+          id?: string
+          period_end: string
+          period_label: string
+          period_start: string
+          period_status_id: string
+          published_at?: string
+          published_by: string
+          receipt_data?: Json | null
+          total_daily_pay?: number | null
+          total_employees?: number | null
+          total_hourly_pay?: number | null
+          total_manual_adjustments?: number | null
+          total_overtime_hours?: number | null
+          total_payroll_rows?: number | null
+          total_regular_hours?: number | null
+          total_ride_pay?: number | null
+          total_scheduled_shifts?: number | null
+          total_worked_shifts?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          grand_total_posted?: number | null
+          id?: string
+          period_end?: string
+          period_label?: string
+          period_start?: string
+          period_status_id?: string
+          published_at?: string
+          published_by?: string
+          receipt_data?: Json | null
+          total_daily_pay?: number | null
+          total_employees?: number | null
+          total_hourly_pay?: number | null
+          total_manual_adjustments?: number | null
+          total_overtime_hours?: number | null
+          total_payroll_rows?: number | null
+          total_regular_hours?: number | null
+          total_ride_pay?: number | null
+          total_scheduled_shifts?: number | null
+          total_worked_shifts?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_closing_receipts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_exceptions: {
         Row: {
           batch_id: string | null
@@ -5554,84 +5634,129 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           base_pay: number | null
+          clock_batch_id: string | null
           company_id: string
           conflict_count: number | null
           created_at: string
+          daily_pay_total: number | null
           daily_rate: number | null
           employee_id: string
           final_total_pay: number | null
+          grand_total: number | null
+          hourly_pay_total: number | null
           hourly_rate: number | null
           id: string
+          manual_adjustment_total: number | null
           manual_amount: number | null
+          match_ids: Json | null
+          overtime_hours: number | null
           pay_classification: string | null
+          payroll_batch_id: string | null
           payroll_rows: Json | null
           period_status_id: string
+          published_at: string | null
+          publishing_user: string | null
           reconciliation_status: string
+          regular_hours: number | null
           resolution_notes: string | null
           ride_amount: number | null
+          ride_pay_total: number | null
+          schedule_batch_id: string | null
           scheduled_shifts: Json | null
           total_payroll_amount: number | null
           total_payroll_hours: number | null
           total_scheduled_hours: number | null
           total_worked_hours: number | null
           updated_at: string
+          warnings: Json | null
           weekend_amount: number | null
+          weekend_pay_total: number | null
           worked_shifts: Json | null
         }
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
           base_pay?: number | null
+          clock_batch_id?: string | null
           company_id: string
           conflict_count?: number | null
           created_at?: string
+          daily_pay_total?: number | null
           daily_rate?: number | null
           employee_id: string
           final_total_pay?: number | null
+          grand_total?: number | null
+          hourly_pay_total?: number | null
           hourly_rate?: number | null
           id?: string
+          manual_adjustment_total?: number | null
           manual_amount?: number | null
+          match_ids?: Json | null
+          overtime_hours?: number | null
           pay_classification?: string | null
+          payroll_batch_id?: string | null
           payroll_rows?: Json | null
           period_status_id: string
+          published_at?: string | null
+          publishing_user?: string | null
           reconciliation_status?: string
+          regular_hours?: number | null
           resolution_notes?: string | null
           ride_amount?: number | null
+          ride_pay_total?: number | null
+          schedule_batch_id?: string | null
           scheduled_shifts?: Json | null
           total_payroll_amount?: number | null
           total_payroll_hours?: number | null
           total_scheduled_hours?: number | null
           total_worked_hours?: number | null
           updated_at?: string
+          warnings?: Json | null
           weekend_amount?: number | null
+          weekend_pay_total?: number | null
           worked_shifts?: Json | null
         }
         Update: {
           approved_at?: string | null
           approved_by?: string | null
           base_pay?: number | null
+          clock_batch_id?: string | null
           company_id?: string
           conflict_count?: number | null
           created_at?: string
+          daily_pay_total?: number | null
           daily_rate?: number | null
           employee_id?: string
           final_total_pay?: number | null
+          grand_total?: number | null
+          hourly_pay_total?: number | null
           hourly_rate?: number | null
           id?: string
+          manual_adjustment_total?: number | null
           manual_amount?: number | null
+          match_ids?: Json | null
+          overtime_hours?: number | null
           pay_classification?: string | null
+          payroll_batch_id?: string | null
           payroll_rows?: Json | null
           period_status_id?: string
+          published_at?: string | null
+          publishing_user?: string | null
           reconciliation_status?: string
+          regular_hours?: number | null
           resolution_notes?: string | null
           ride_amount?: number | null
+          ride_pay_total?: number | null
+          schedule_batch_id?: string | null
           scheduled_shifts?: Json | null
           total_payroll_amount?: number | null
           total_payroll_hours?: number | null
           total_scheduled_hours?: number | null
           total_worked_hours?: number | null
           updated_at?: string
+          warnings?: Json | null
           weekend_amount?: number | null
+          weekend_pay_total?: number | null
           worked_shifts?: Json | null
         }
         Relationships: [
@@ -5858,6 +5983,11 @@ export type Database = {
           period_start: string
           posted_at: string | null
           posted_by: string | null
+          publish_idempotency_key: string | null
+          reopen_count: number | null
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
           resolved_exceptions: number | null
           schedule_batch_id: string | null
           status: string
@@ -5888,6 +6018,11 @@ export type Database = {
           period_start: string
           posted_at?: string | null
           posted_by?: string | null
+          publish_idempotency_key?: string | null
+          reopen_count?: number | null
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
           resolved_exceptions?: number | null
           schedule_batch_id?: string | null
           status?: string
@@ -5918,6 +6053,11 @@ export type Database = {
           period_start?: string
           posted_at?: string | null
           posted_by?: string | null
+          publish_idempotency_key?: string | null
+          reopen_count?: number | null
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
           resolved_exceptions?: number | null
           schedule_batch_id?: string | null
           status?: string
