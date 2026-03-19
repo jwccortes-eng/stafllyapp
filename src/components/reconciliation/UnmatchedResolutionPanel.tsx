@@ -28,6 +28,8 @@ interface SuggestedMatch {
 interface Props {
   normalizedRows: any[];
   employees: EmployeeRecord[];
+  companyId?: string | null;
+  companyName?: string;
   onAssignAlias: (nameRaw: string, employeeId: string) => Promise<void>;
   onReNormalize: () => void;
 }
@@ -43,7 +45,14 @@ function computeSimilarity(a: string, b: string): number {
   return commonParts.length / Math.max(aParts.length, bParts.length);
 }
 
-export default function UnmatchedResolutionPanel({ normalizedRows, employees, onAssignAlias, onReNormalize }: Props) {
+function normalizeSearchText(value: string): string {
+  return normalizeText(value)
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export default function UnmatchedResolutionPanel({ normalizedRows, employees, companyId, companyName, onAssignAlias, onReNormalize }: Props) {
   const [expandedName, setExpandedName] = useState<string | null>(null);
   const [assigningName, setAssigningName] = useState<string | null>(null);
   const [searchEmp, setSearchEmp] = useState("");
@@ -124,21 +133,33 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, on
   };
 
   const empList = useMemo(() => {
-    const norm = normalizeText(searchEmp);
-    const all = employees
-      .map(e => ({ ...e, fullName: `${e.first_name} ${e.last_name}`, norm: normalizeText(`${e.first_name} ${e.last_name}`) }));
-    if (!norm) return all.slice(0, 30);
-    // Match each search token independently for better partial matching
+    const norm = normalizeSearchText(searchEmp);
+    const all = employees.map((e) => {
+      const fullName = `${e.first_name ?? ""} ${e.last_name ?? ""}`.replace(/\s+/g, " ").trim();
+      const normalizedName = normalizeSearchText(fullName);
+      return {
+        ...e,
+        fullName,
+        norm: normalizedName,
+        tokens: normalizedName.split(" ").filter(Boolean),
+      };
+    });
+
     const tokens = norm.split(/\s+/).filter(Boolean);
-    return all
-      .filter(e => tokens.every(t => e.norm.includes(t)))
-      .slice(0, 30);
+
+    const filtered = tokens.length === 0
+      ? all
+      : all.filter((e) =>
+          tokens.every((t) => e.tokens.some((token) => token.includes(t) || token.startsWith(t) || t.includes(token))),
+        );
+
+    return filtered.slice(0, tokens.length === 0 ? 30 : 80);
   }, [employees, searchEmp]);
 
   const empCounts = useMemo(() => ({
     total: employees.length,
-    active: employees.filter(e => e.is_active !== false).length,
-    inactive: employees.filter(e => e.is_active === false).length,
+    active: employees.filter((e) => e.is_active !== false).length,
+    inactive: employees.filter((e) => e.is_active === false).length,
   }), [employees]);
 
   if (unmatchedRows.length === 0 && ambiguousRows.length === 0) return null;
@@ -276,9 +297,12 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, on
                       {!isResolved && (
                         <div>
                           {isAssigning ? (
-                            <div className="min-w-56 space-y-1">
+                            <div className="min-w-64 space-y-1">
                               <div className="text-[10px] text-muted-foreground mb-1">
-                                Roster: {empCounts.total} ({empCounts.active} act / {empCounts.inactive} inact)
+                                Empresa: {companyName || "N/A"} · ID: {companyId || "N/A"}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground mb-1">
+                                Candidatos: {empCounts.total} ({empCounts.active} act / {empCounts.inactive} inact) · Modo: roster completo + filtro cliente
                               </div>
                               <div className="flex items-center gap-1">
                                 <Search className="h-3 w-3 text-muted-foreground" />
@@ -290,11 +314,16 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, on
                                   autoFocus
                                 />
                               </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                Query: "{searchEmp || "(vacío)"}" · Resultados: {empList.length}
+                              </div>
                               {empCounts.total === 0 && (
-                                <div className="text-xs text-destructive font-medium px-1">⚠ No hay empleados cargados para esta empresa</div>
+                                <div className="text-xs text-destructive font-medium rounded border border-destructive/30 bg-destructive/10 px-2 py-1">
+                                  Employee roster is empty for this company. Fix company context or employee query before importing.
+                                </div>
                               )}
                               <div className="max-h-48 overflow-auto space-y-0.5 border rounded p-1">
-                                {empList.map(e => (
+                                {empList.map((e) => (
                                   <button
                                     key={e.id}
                                     className="flex items-center gap-1.5 w-full text-left text-xs px-2 py-1 rounded hover:bg-accent"

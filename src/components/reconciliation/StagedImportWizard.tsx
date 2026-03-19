@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -52,25 +52,51 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
   const [diagnostics, setDiagnostics] = useState<ImportDiagnostics | null>(null);
   const [showSystemRows, setShowSystemRows] = useState(false);
   const [filter, setFilter] = useState<"all" | "matched" | "unmatched" | "system">("all");
+  const [companyName, setCompanyName] = useState<string>("");
+  const [rosterExpectedCount, setRosterExpectedCount] = useState<number | null>(null);
 
   const loadEmployees = useCallback(async () => {
     if (!companyId) {
       console.warn("[StagedImport] No companyId, skipping employee load");
       return;
     }
+
     console.log("[StagedImport] Loading employees for company:", companyId);
 
-    const { data, error } = await supabase
-      .from("employees")
-      .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, is_active, start_date, end_date")
-      .eq("company_id", companyId);
+    const [{ data: companyData }, { count: expectedCount }] = await Promise.all([
+      supabase.from("companies").select("name").eq("id", companyId).maybeSingle(),
+      supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", companyId),
+    ]);
 
-    if (error) {
-      console.error("[StagedImport] Employee query error:", error);
-      toast({ title: "Error cargando empleados", description: error.message, variant: "destructive" });
+    setCompanyName(companyData?.name ?? "");
+    setRosterExpectedCount(expectedCount ?? null);
+
+    const pageSize = 500;
+    let from = 0;
+    let allRows: any[] = [];
+
+    while (true) {
+      const { data, error } = await supabase
+        .from("employees")
+        .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, is_active, start_date, end_date")
+        .eq("company_id", companyId)
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error("[StagedImport] Employee query error:", error);
+        toast({ title: "Error cargando empleados", description: error.message, variant: "destructive" });
+        break;
+      }
+
+      const page = data ?? [];
+      allRows = allRows.concat(page);
+
+      if (page.length < pageSize) break;
+      from += pageSize;
     }
 
-    const mapped = (data || []).map((d: any) => ({
+    const mapped = allRows.map((d: any) => ({
       id: d.id,
       first_name: d.first_name,
       last_name: d.last_name,
@@ -83,7 +109,16 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       termination_date: d.end_date,
     })) as EmployeeRecord[];
 
-    console.log("[StagedImport] Employees loaded:", mapped.length, "active:", mapped.filter(e => e.is_active !== false).length, "inactive:", mapped.filter(e => e.is_active === false).length);
+    console.log(
+      "[StagedImport] Employees loaded:",
+      mapped.length,
+      "active:",
+      mapped.filter((e) => e.is_active !== false).length,
+      "inactive:",
+      mapped.filter((e) => e.is_active === false).length,
+      "expected:",
+      expectedCount ?? "n/a",
+    );
     setEmployees(mapped);
 
     // Load aliases
@@ -91,6 +126,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       .from("employee_aliases" as any)
       .select("employee_id, alias_name_normalized")
       .eq("company_id", companyId);
+
     if (aliasErr) console.warn("[StagedImport] Alias query error (table may not exist yet):", aliasErr.message);
     setAliases((aliasData || []) as unknown as EmployeeAlias[]);
     console.log("[StagedImport] Aliases loaded:", (aliasData || []).length);
@@ -437,8 +473,13 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                   <span><span className="font-semibold">{employees.length}</span> total roster</span>
                   <span><span className="font-semibold">{aliases.length}</span> alias</span>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Company ID: <code className="bg-muted px-1 rounded">{companyId || "N/A"}</code> · Fuente: <code className="bg-muted px-1 rounded">employees</code>
+                <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                  <div>
+                    Empresa: <code className="bg-muted px-1 rounded">{companyName || "N/A"}</code> · Company ID: <code className="bg-muted px-1 rounded">{companyId || "N/A"}</code>
+                  </div>
+                  <div>
+                    Fuente: <code className="bg-muted px-1 rounded">employees</code> · Carga: <code className="bg-muted px-1 rounded">server paginated</code> · Esperado DB: <code className="bg-muted px-1 rounded">{rosterExpectedCount ?? "N/A"}</code>
+                  </div>
                 </div>
                 {employees.length === 0 && (
                   <div className="mt-2 p-2 bg-destructive/10 rounded text-destructive font-semibold text-sm">
@@ -561,6 +602,8 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
           <UnmatchedResolutionPanel
             normalizedRows={normalizedRows}
             employees={employees}
+            companyId={companyId}
+            companyName={companyName}
             onAssignAlias={handleSaveAlias}
             onReNormalize={handleReNormalize}
           />
@@ -694,6 +737,8 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                           <TableCell>
                             <MatchAssignDropdown
                               employees={employees}
+                              companyId={companyId}
+                              companyName={companyName}
                               nameRaw={row.employee_name_raw}
                               onAssign={(empId) => handleSaveAlias(row.employee_name_raw, empId)}
                             />
@@ -763,26 +808,82 @@ function DiagnosticStat({ label, value, variant = "default" }: { label: string; 
   );
 }
 
-function MatchAssignDropdown({ employees, nameRaw, onAssign }: { employees: EmployeeRecord[]; nameRaw: string; onAssign: (id: string) => void }) {
+function normalizeSearchText(value: string): string {
+  return normalizeText(value)
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function MatchAssignDropdown({
+  employees,
+  companyId,
+  companyName,
+  nameRaw,
+  onAssign,
+}: {
+  employees: EmployeeRecord[];
+  companyId: string | null;
+  companyName?: string;
+  nameRaw: string;
+  onAssign: (id: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const normalized = normalizeText(nameRaw);
 
-  // Sort employees by name similarity
-  const sorted = employees
-    .map(e => ({
-      ...e,
-      fullName: `${e.first_name} ${e.last_name}`,
-      norm: normalizeText(`${e.first_name} ${e.last_name}`),
-    }))
-    .filter(e => !search || e.norm.includes(normalizeText(search)))
-    .sort((a, b) => {
-      // Prioritize partial matches with import name
-      const aMatch = a.norm.includes(normalized) || normalized.includes(a.norm) ? 0 : 1;
-      const bMatch = b.norm.includes(normalized) || normalized.includes(b.norm) ? 0 : 1;
-      return aMatch - bMatch || a.fullName.localeCompare(b.fullName);
-    })
-    .slice(0, 10);
+  const normalizedImportName = normalizeSearchText(nameRaw);
+  const normalizedQuery = normalizeSearchText(search);
+
+  const indexedEmployees = useMemo(
+    () =>
+      employees.map((e) => {
+        const fullName = `${e.first_name ?? ""} ${e.last_name ?? ""}`.replace(/\s+/g, " ").trim();
+        const norm = normalizeSearchText(fullName);
+        return {
+          ...e,
+          fullName,
+          norm,
+          tokens: norm.split(" ").filter(Boolean),
+        };
+      }),
+    [employees],
+  );
+
+  const counts = useMemo(
+    () => ({
+      total: indexedEmployees.length,
+      active: indexedEmployees.filter((e) => e.is_active !== false).length,
+      inactive: indexedEmployees.filter((e) => e.is_active === false).length,
+    }),
+    [indexedEmployees],
+  );
+
+  const results = useMemo(() => {
+    const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+
+    const scored = indexedEmployees
+      .filter((e) => {
+        if (queryTokens.length === 0) return true;
+        return queryTokens.every((q) =>
+          e.tokens.some((token) => token.includes(q) || q.includes(token) || token.startsWith(q)),
+        );
+      })
+      .map((e) => {
+        const importBoost =
+          normalizedImportName && (e.norm.includes(normalizedImportName) || normalizedImportName.includes(e.norm)) ? 1 : 0;
+        const tokenHits = queryTokens.length
+          ? queryTokens.reduce(
+              (acc, q) =>
+                acc + (e.tokens.some((token) => token.includes(q) || token.startsWith(q) || q.includes(token)) ? 1 : 0),
+              0,
+            )
+          : 0;
+        return { ...e, score: importBoost * 100 + tokenHits };
+      })
+      .sort((a, b) => b.score - a.score || a.fullName.localeCompare(b.fullName));
+
+    return scored.slice(0, queryTokens.length === 0 ? 25 : 75);
+  }, [indexedEmployees, normalizedImportName, normalizedQuery]);
 
   if (!open) {
     return (
@@ -793,26 +894,55 @@ function MatchAssignDropdown({ employees, nameRaw, onAssign }: { employees: Empl
   }
 
   return (
-    <div className="min-w-48 space-y-1">
+    <div className="min-w-64 space-y-1">
+      <div className="text-[10px] text-muted-foreground">
+        Empresa: {companyName || "N/A"} · ID: {companyId || "N/A"}
+      </div>
+      <div className="text-[10px] text-muted-foreground">
+        Candidatos: {counts.total} ({counts.active} act / {counts.inactive} inact) · Modo: roster completo (server paginated) + filtro cliente
+      </div>
       <input
         className="w-full text-xs border rounded px-2 py-1 bg-background"
         placeholder="Buscar empleado..."
         value={search}
-        onChange={e => setSearch(e.target.value)}
+        onChange={(e) => setSearch(e.target.value)}
         autoFocus
       />
-      <div className="max-h-32 overflow-auto space-y-0.5">
-        {sorted.map(e => (
-          <button
-            key={e.id}
-            className="block w-full text-left text-xs px-2 py-1 rounded hover:bg-accent truncate"
-            onClick={() => { onAssign(e.id); setOpen(false); }}
-          >
-            {e.fullName}
-          </button>
-        ))}
+      <div className="text-[10px] text-muted-foreground">
+        Query: "{search || "(vacío)"}" · Resultados: {results.length}
       </div>
-      <button className="text-xs text-muted-foreground underline" onClick={() => setOpen(false)}>Cancelar</button>
+
+      {counts.total === 0 ? (
+        <div className="text-xs text-destructive font-medium rounded border border-destructive/30 bg-destructive/10 px-2 py-1">
+          Employee roster is empty for this company. Fix company context or employee query before importing.
+        </div>
+      ) : (
+        <div className="max-h-48 overflow-auto space-y-0.5 border rounded p-1">
+          {results.map((e) => (
+            <button
+              key={e.id}
+              className="flex w-full items-center gap-1.5 text-left text-xs px-2 py-1 rounded hover:bg-accent"
+              onClick={() => {
+                onAssign(e.id);
+                setOpen(false);
+                setSearch("");
+              }}
+            >
+              <Badge variant={e.is_active !== false ? "default" : "outline"} className="text-[10px] px-1 shrink-0">
+                {e.is_active !== false ? "A" : "I"}
+              </Badge>
+              <span className="truncate">{e.fullName}</span>
+            </button>
+          ))}
+          {results.length === 0 && (
+            <span className="text-xs text-muted-foreground px-2">Sin resultados para "{search}"</span>
+          )}
+        </div>
+      )}
+
+      <button className="text-xs text-muted-foreground underline" onClick={() => setOpen(false)}>
+        Cancelar
+      </button>
     </div>
   );
 }
