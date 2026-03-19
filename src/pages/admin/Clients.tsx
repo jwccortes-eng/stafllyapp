@@ -264,38 +264,146 @@ export default function Clients() {
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nuevo cliente</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle>{editing ? "Editar cliente" : "Nuevo cliente"}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Nombre *</Label>
-                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del cliente" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+              <ScrollArea className="flex-1 pr-2">
+                <div className="space-y-4 pb-2">
                   <div>
-                    <Label>Contacto</Label>
-                    <Input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Nombre" />
+                    <Label>Nombre *</Label>
+                    <Input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del cliente" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Contacto</Label>
+                      <Input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Nombre" />
+                    </div>
+                    <div>
+                      <Label>Teléfono</Label>
+                      <Input value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="Teléfono" />
+                    </div>
                   </div>
                   <div>
-                    <Label>Teléfono</Label>
-                    <Input value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="Teléfono" />
+                    <Label>Email</Label>
+                    <Input value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="email@ejemplo.com" />
                   </div>
+                  <div>
+                    <Label>Notas</Label>
+                    <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas opcionales..." rows={2} />
+                  </div>
+                  <Button onClick={handleSave} disabled={saving || !name.trim()} className="w-full">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                    {editing ? "Guardar cambios" : "Crear cliente"}
+                  </Button>
+
+                  {/* ── Client Locations Section (only in edit mode) ── */}
+                  {editing && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-primary" />
+                            <h3 className="text-sm font-bold">Ubicaciones</h3>
+                            <Badge variant="secondary" className="text-[9px]">{clientLocations.length}</Badge>
+                          </div>
+                          <Button size="xs" variant="outline" onClick={() => setShowLocForm(true)} className="text-[10px] gap-1">
+                            <Plus className="h-3 w-3" /> Agregar
+                          </Button>
+                        </div>
+
+                        {/* Add location form */}
+                        {showLocForm && (
+                          <div className="rounded-xl border border-primary/20 bg-primary/[0.02] p-3 space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[11px]">Nombre *</Label>
+                                <Input value={locName} onChange={e => setLocName(e.target.value)} placeholder="Nombre ubicación" className="h-8 text-xs" />
+                              </div>
+                              <div>
+                                <Label className="text-[11px]">Dirección</Label>
+                                <Input value={locAddress} onChange={e => setLocAddress(e.target.value)} placeholder="Dirección" className="h-8 text-xs" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[11px]">Pago por defecto</Label>
+                                <Select value={locPayType} onValueChange={setLocPayType}>
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="hourly">⏱ Por hora</SelectItem>
+                                    <SelectItem value="daily">📅 Por día</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-[11px]">Fichaje por defecto</Label>
+                                <Select value={locClockMethod} onValueChange={setLocClockMethod}>
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="both">📱🖥 Ambos</SelectItem>
+                                    <SelectItem value="mobile">📱 Móvil</SelectItem>
+                                    <SelectItem value="kiosk">🖥 Kiosk</SelectItem>
+                                    <SelectItem value="qr">📲 QR</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[11px]">Contacto sitio</Label>
+                                <Input value={locContactName} onChange={e => setLocContactName(e.target.value)} placeholder="Nombre" className="h-8 text-xs" />
+                              </div>
+                              <div>
+                                <Label className="text-[11px]">Tel. sitio</Label>
+                                <Input value={locContactPhone} onChange={e => setLocContactPhone(e.target.value)} placeholder="Teléfono" className="h-8 text-xs" />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Switch checked={locRequireCar} onCheckedChange={setLocRequireCar} />
+                              <Label className="text-[11px] flex items-center gap-1"><Car className="h-3 w-3" /> Requiere transporte</Label>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={handleSaveLocation} disabled={savingLoc || !locName.trim()} className="h-7 text-[10px] flex-1">
+                                {savingLoc ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+                                Crear ubicación
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={resetLocForm} className="h-7 text-[10px]">Cancelar</Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Locations list */}
+                        {loadingLocations ? (
+                          <div className="py-3 text-center"><Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" /></div>
+                        ) : clientLocations.length === 0 ? (
+                          <p className="text-[11px] text-muted-foreground text-center py-3">Sin ubicaciones. Agrega la primera.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {clientLocations.map(loc => (
+                              <div key={loc.id} className="flex items-center gap-2 rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors px-3 py-2">
+                                <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold truncate">{loc.name}</p>
+                                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
+                                    {loc.address && <span className="truncate">{loc.address}</span>}
+                                    <span className="shrink-0">{loc.default_pay_type === "daily" ? "📅" : "⏱"}</span>
+                                    {loc.require_car && <Car className="h-2.5 w-2.5 text-warning shrink-0" />}
+                                  </div>
+                                </div>
+                                <button onClick={() => handleDeleteLocation(loc.id)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground/40 hover:text-destructive transition-colors">
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="email@ejemplo.com" />
-                </div>
-                <div>
-                  <Label>Notas</Label>
-                  <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas opcionales..." rows={2} />
-                </div>
-                <Button onClick={handleSave} disabled={saving || !name.trim()} className="w-full">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                  {editing ? "Guardar cambios" : "Crear cliente"}
-                </Button>
-              </div>
+              </ScrollArea>
             </DialogContent>
           </Dialog>
         ) : undefined}
