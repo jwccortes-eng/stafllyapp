@@ -222,7 +222,21 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         period_end: string;
         payroll_batch_id: string | null;
       } | null;
-...
+
+      if (!periodStatus) {
+        setReconData([]);
+        return;
+      }
+
+      let effectivePeriodId: string | null = periodStatus.period_id ?? null;
+      if (!effectivePeriodId) {
+        const { data: matchedPeriodData } = await supabase
+          .from("pay_periods" as any)
+          .select("id")
+          .eq("company_id", companyId)
+          .eq("start_date", periodStatus.period_start)
+          .eq("end_date", periodStatus.period_end)
+          .maybeSingle();
         const matchedPeriod = matchedPeriodData as unknown as { id: string } | null;
         effectivePeriodId = matchedPeriod?.id ?? null;
       }
