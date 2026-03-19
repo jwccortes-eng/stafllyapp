@@ -31,7 +31,7 @@ const SOURCE_LABELS: Record<SourceType, string> = {
   payroll: "Nómina / Payroll",
 };
 
-export default function StagedImportWizard({ companyId, onComplete }: Props) {
+export default function StagedImportWizard({ companyId, onComplete, activePeriodId, onBatchLinked }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
 
