@@ -222,12 +222,12 @@ export function detectShiftCategory(
   // Check availability/blocking FIRST — these are not real work
   if (AVAILABILITY_BLOCK_PATTERN.test(combined)) return "availability_block";
 
-  // Structural detection: no title + no client = likely non-work placeholder
+  // Structural detection: no title + no client + no location = availability placeholder
   // (Connecteam exports availability/blocking rows without title or client)
   const hasTitle = !!(shiftTitle && shiftTitle.trim());
   const hasClient = !!(clientName && clientName.trim());
   const hasLocation = !!(locationName && locationName.trim());
-  if (!hasTitle && !hasClient && !hasLocation) return "availability_block";
+  if (!hasTitle && !hasClient && !hasLocation) return "structural_no_context";
 
   // Strip PAGA DOBLE before checking other categories — it's just a pay modifier
   const strippedCombined = fields.map(f => stripPayModifiers(f) || f).join(" ");
