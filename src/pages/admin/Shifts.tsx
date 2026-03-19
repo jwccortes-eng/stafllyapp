@@ -258,7 +258,7 @@ export default function Shifts() {
 
     const [clientsRes, locsRes, empsRes] = await Promise.all([
       supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
-      supabase.from("locations").select("id, name, address, client_id").eq("company_id", selectedCompanyId).is("deleted_at", null),
+      supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
       supabase.from("employees").select("id, first_name, last_name, phone_number").eq("company_id", selectedCompanyId).eq("is_active", true),
     ]);
     setShifts((shiftsRes.data ?? []) as Shift[]);
