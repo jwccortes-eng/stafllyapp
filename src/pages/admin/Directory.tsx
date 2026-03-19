@@ -8,6 +8,16 @@ import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useCompany } from "@/hooks/useCompany";
 import { formatPersonName, formatDisplayText, localeSort } from "@/lib/format-helpers";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { useEmployeeStatuses, type EmployeeOnlineStatus } from "@/hooks/useEmployeeStatus";
+import { Badge } from "@/components/ui/badge";
+
+const STATUS_LABELS: Record<EmployeeOnlineStatus, { label: string; className: string }> = {
+  online: { label: "En línea", className: "bg-earning/15 text-earning border-earning/30" },
+  on_shift: { label: "En turno", className: "bg-primary/15 text-primary border-primary/30" },
+  recently_active: { label: "Reciente", className: "bg-warning/15 text-warning border-warning/30" },
+  offline: { label: "Desconectado", className: "bg-muted text-muted-foreground border-border" },
+  not_available: { label: "No disponible", className: "bg-destructive/15 text-destructive border-destructive/30" },
+};
 
 interface DirectoryEntry {
   id: string;
@@ -25,6 +35,7 @@ export default function Directory() {
   const [employees, setEmployees] = useState<DirectoryEntry[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const { getStatus } = useEmployeeStatuses();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -149,17 +160,29 @@ export default function Directory() {
                     gender={emp.gender}
                     size="xl"
                     className="ring-2 ring-background shadow-lg"
+                    status={getStatus(emp.id)}
                   />
 
                   <div className="min-w-0 flex-1 pt-1">
                     <p className="text-sm font-bold text-foreground truncate leading-tight">
                       {formatPersonName(`${emp.first_name} ${emp.last_name}`)}
                     </p>
-                    {emp.employee_role && (
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
-                        {formatDisplayText(emp.employee_role, "label")}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      {emp.employee_role && (
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
+                          {formatDisplayText(emp.employee_role, "label")}
+                        </span>
+                      )}
+                      {(() => {
+                        const empStatus = getStatus(emp.id);
+                        const sl = STATUS_LABELS[empStatus];
+                        return (
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border ${sl.className}`}>
+                            {sl.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
 
                     {/* Contact info */}
                     <div className="mt-2 space-y-0.5">

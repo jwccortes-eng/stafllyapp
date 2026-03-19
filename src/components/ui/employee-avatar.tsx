@@ -7,6 +7,8 @@ function hashName(name: string) {
   return Math.abs(h);
 }
 
+export type OnlineStatus = "online" | "offline" | "on_shift" | "recently_active" | "not_available";
+
 interface EmployeeAvatarProps {
   firstName: string;
   lastName: string;
@@ -14,7 +16,23 @@ interface EmployeeAvatarProps {
   gender?: string | null;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  status?: OnlineStatus | null;
 }
+
+const STATUS_COLORS: Record<OnlineStatus, string> = {
+  online: "bg-earning",
+  on_shift: "bg-primary",
+  recently_active: "bg-warning",
+  offline: "bg-muted-foreground/40",
+  not_available: "bg-destructive",
+};
+
+const DOT_SIZES: Record<string, string> = {
+  sm: "h-2 w-2 border",
+  md: "h-2.5 w-2.5 border-[1.5px]",
+  lg: "h-3 w-3 border-2",
+  xl: "h-4 w-4 border-2",
+};
 
 const sizes: Record<string, string> = {
   sm: "h-7 w-7",
@@ -205,23 +223,38 @@ function GeneratedAvatar({ firstName, lastName, gender, size }: { firstName: str
   );
 }
 
-export function EmployeeAvatar({ firstName, lastName, avatarUrl, gender, size = "md", className }: EmployeeAvatarProps) {
-  if (avatarUrl) {
+export function EmployeeAvatar({ firstName, lastName, avatarUrl, gender, size = "md", className, status }: EmployeeAvatarProps) {
+  const inner = avatarUrl ? (
+    <div className={cn("rounded-full shrink-0 overflow-hidden", sizes[size])}>
+      <img
+        src={avatarUrl}
+        alt={`${firstName} ${lastName}`}
+        className="h-full w-full object-cover"
+        loading="lazy"
+      />
+    </div>
+  ) : (
+    <div className="shrink-0">
+      <GeneratedAvatar firstName={firstName} lastName={lastName} gender={gender} size={sizes[size]} />
+    </div>
+  );
+
+  if (status && status !== "offline") {
     return (
-      <div className={cn("rounded-full shrink-0 overflow-hidden", sizes[size], className)}>
-        <img
-          src={avatarUrl}
-          alt={`${firstName} ${lastName}`}
-          className="h-full w-full object-cover"
-          loading="lazy"
+      <div className={cn("relative shrink-0 inline-flex", className)}>
+        {inner}
+        <span
+          className={cn(
+            "absolute bottom-0 right-0 rounded-full border-background",
+            STATUS_COLORS[status],
+            DOT_SIZES[size],
+            status === "online" && "animate-pulse"
+          )}
+          title={status.replace("_", " ")}
         />
       </div>
     );
   }
 
-  return (
-    <div className={cn("shrink-0", className)}>
-      <GeneratedAvatar firstName={firstName} lastName={lastName} gender={gender} size={sizes[size]} />
-    </div>
-  );
+  return <div className={cn("shrink-0 inline-flex", className)}>{inner}</div>;
 }
