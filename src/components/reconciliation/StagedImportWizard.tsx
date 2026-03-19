@@ -56,11 +56,17 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
   const [progress, setProgress] = useState(0);
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [aliases, setAliases] = useState<EmployeeAlias[]>([]);
+  const [manualResolutions, setManualResolutions] = useState<ManualNameResolution[]>([]);
   const [diagnostics, setDiagnostics] = useState<ImportDiagnostics | null>(null);
   const [showSystemRows, setShowSystemRows] = useState(false);
   const [filter, setFilter] = useState<"all" | "matched" | "unmatched" | "system">("all");
   const [companyName, setCompanyName] = useState<string>("");
   const [rosterExpectedCount, setRosterExpectedCount] = useState<number | null>(null);
+
+  const resolutionScopeKey = useMemo(
+    () => (activePeriodId ? `period:${activePeriodId}` : "global"),
+    [activePeriodId],
+  );
 
   const loadEmployees = useCallback(async () => {
     if (!companyId) {
