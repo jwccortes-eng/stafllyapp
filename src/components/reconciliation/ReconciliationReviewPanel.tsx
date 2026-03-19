@@ -148,17 +148,22 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
     }
   };
 
-  const resolveMatch = async (id: string, status: string) => {
+  const resolveMatch = async (id: string, status: string, note?: string) => {
     const { error } = await supabase
       .from("reconciliation_matches" as any)
-      .update({ match_status: status, resolved_by: user?.id, resolved_at: new Date().toISOString() } as any)
+      .update({ match_status: status, resolved_by: user?.id, resolved_at: new Date().toISOString(), resolution_note: note || null } as any)
       .eq("id", id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      setMatches(prev => prev.map(m => m.id === id ? { ...m, match_status: status } : m));
-      toast({ title: `Match ${status === "approved" ? "aprobado" : "rechazado"}` });
+      setMatches(prev => prev.map(m => m.id === id ? { ...m, match_status: status, resolution_note: note || null } : m));
+      toast({ title: `Match ${status === "approved" ? "aprobado" : status === "rejected" ? "rechazado" : "resuelto como " + status}` });
     }
+  };
+
+  const openDetail = (m: MatchRow) => {
+    setSelectedMatch(m);
+    setDrawerOpen(true);
   };
 
   const statusColor = (s: string) => {
