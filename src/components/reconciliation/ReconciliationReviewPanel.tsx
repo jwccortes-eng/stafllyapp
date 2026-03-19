@@ -12,6 +12,7 @@ import { GitCompareArrows, CheckCircle2, AlertTriangle, Link2, XCircle, User, Lo
 import { matchScheduleToClock, type NormalizedScheduleRow, type NormalizedClockRow } from "@/lib/reconciliation-engine";
 import MatchDetailDrawer from "./MatchDetailDrawer";
 import MatchingConflictSummary from "./MatchingConflictSummary";
+import UnmatchedScheduleBreakdown from "./UnmatchedScheduleBreakdown";
 
 /** Fetch all rows from a table, bypassing the 1000-row default limit */
 async function fetchAll(table: string, companyId: string) {
@@ -246,6 +247,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
       </div>
 
       <MatchingConflictSummary companyId={companyId} />
+      <UnmatchedScheduleBreakdown companyId={companyId} onRefresh={onRefresh} />
 
       {loading ? (
         <Card><CardContent className="py-8 text-center text-muted-foreground">Cargando...</CardContent></Card>
