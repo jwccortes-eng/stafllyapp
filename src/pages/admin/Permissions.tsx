@@ -64,6 +64,18 @@ const ACTION_GROUPS = [
     ],
   },
   {
+    label: "Compensación",
+    icon: DollarSign,
+    actions: [
+      { key: "manage_compensation", label: "Gestionar compensación" },
+      { key: "import_payroll_compensation", label: "Importar nómina/compensación" },
+      { key: "approve_compensation_changes", label: "Aprobar cambios de compensación" },
+      { key: "view_compensation_history", label: "Ver historial de compensación" },
+      { key: "edit_compensation_matrix", label: "Editar matriz de compensación" },
+      { key: "edit_compensation_analysis", label: "Editar análisis de compensación" },
+    ],
+  },
+  {
     label: "Configuración",
     icon: Settings,
     actions: [

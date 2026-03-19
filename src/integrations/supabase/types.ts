@@ -620,6 +620,82 @@ export type Database = {
         }
         Relationships: []
       }
+      company_compensation_rules: {
+        Row: {
+          amount: number
+          applies_to_employee: string | null
+          applies_to_job: string | null
+          applies_to_location: string | null
+          applies_to_role: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          priority: number
+          rule_name: string
+          rule_type: Database["public"]["Enums"]["comp_rule_type"]
+          unit_type: Database["public"]["Enums"]["comp_unit_type"]
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          applies_to_employee?: string | null
+          applies_to_job?: string | null
+          applies_to_location?: string | null
+          applies_to_role?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          priority?: number
+          rule_name: string
+          rule_type: Database["public"]["Enums"]["comp_rule_type"]
+          unit_type?: Database["public"]["Enums"]["comp_unit_type"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          applies_to_employee?: string | null
+          applies_to_job?: string | null
+          applies_to_location?: string | null
+          applies_to_role?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          priority?: number
+          rule_name?: string
+          rule_type?: Database["public"]["Enums"]["comp_rule_type"]
+          unit_type?: Database["public"]["Enums"]["comp_unit_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_compensation_rules_applies_to_employee_fkey"
+            columns: ["applies_to_employee"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_compensation_rules_applies_to_employee_fkey"
+            columns: ["applies_to_employee"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_compensation_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_financial_policies: {
         Row: {
           advances_enabled: boolean
@@ -801,6 +877,277 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compensation_analysis_summary: {
+        Row: {
+          company_id: string
+          current_known_hourly_rate: number | null
+          daily_payment_detected: boolean
+          employee_id: string
+          first_known_hourly_rate: number | null
+          first_seen_date: string | null
+          hourly_rate_change_count: number
+          id: string
+          last_hourly_change_date: string | null
+          manual_adjustment_detected: boolean
+          mixed_compensation_detected: boolean
+          notes: string | null
+          refreshed_at: string
+          ride_payment_detected: boolean
+        }
+        Insert: {
+          company_id: string
+          current_known_hourly_rate?: number | null
+          daily_payment_detected?: boolean
+          employee_id: string
+          first_known_hourly_rate?: number | null
+          first_seen_date?: string | null
+          hourly_rate_change_count?: number
+          id?: string
+          last_hourly_change_date?: string | null
+          manual_adjustment_detected?: boolean
+          mixed_compensation_detected?: boolean
+          notes?: string | null
+          refreshed_at?: string
+          ride_payment_detected?: boolean
+        }
+        Update: {
+          company_id?: string
+          current_known_hourly_rate?: number | null
+          daily_payment_detected?: boolean
+          employee_id?: string
+          first_known_hourly_rate?: number | null
+          first_seen_date?: string | null
+          hourly_rate_change_count?: number
+          id?: string
+          last_hourly_change_date?: string | null
+          manual_adjustment_detected?: boolean
+          mixed_compensation_detected?: boolean
+          notes?: string | null
+          refreshed_at?: string
+          ride_payment_detected?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compensation_analysis_summary_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensation_analysis_summary_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensation_analysis_summary_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compensation_change_log: {
+        Row: {
+          action_type: Database["public"]["Enums"]["comp_action_type"]
+          changed_at: string
+          changed_by: string
+          changed_field: string | null
+          company_id: string
+          compensation_profile_id: string | null
+          effective_from_new: string | null
+          effective_from_old: string | null
+          employee_id: string
+          id: string
+          import_batch_id: string | null
+          metadata_json: Json | null
+          new_payment_mode:
+            | Database["public"]["Enums"]["payment_mode_type"]
+            | null
+          new_value: string | null
+          old_payment_mode:
+            | Database["public"]["Enums"]["payment_mode_type"]
+            | null
+          old_value: string | null
+          reason: string | null
+          source_file_name: string | null
+          source_row_number: number | null
+          source_sheet_name: string | null
+          source_type: Database["public"]["Enums"]["comp_source_type"]
+        }
+        Insert: {
+          action_type: Database["public"]["Enums"]["comp_action_type"]
+          changed_at?: string
+          changed_by: string
+          changed_field?: string | null
+          company_id: string
+          compensation_profile_id?: string | null
+          effective_from_new?: string | null
+          effective_from_old?: string | null
+          employee_id: string
+          id?: string
+          import_batch_id?: string | null
+          metadata_json?: Json | null
+          new_payment_mode?:
+            | Database["public"]["Enums"]["payment_mode_type"]
+            | null
+          new_value?: string | null
+          old_payment_mode?:
+            | Database["public"]["Enums"]["payment_mode_type"]
+            | null
+          old_value?: string | null
+          reason?: string | null
+          source_file_name?: string | null
+          source_row_number?: number | null
+          source_sheet_name?: string | null
+          source_type?: Database["public"]["Enums"]["comp_source_type"]
+        }
+        Update: {
+          action_type?: Database["public"]["Enums"]["comp_action_type"]
+          changed_at?: string
+          changed_by?: string
+          changed_field?: string | null
+          company_id?: string
+          compensation_profile_id?: string | null
+          effective_from_new?: string | null
+          effective_from_old?: string | null
+          employee_id?: string
+          id?: string
+          import_batch_id?: string | null
+          metadata_json?: Json | null
+          new_payment_mode?:
+            | Database["public"]["Enums"]["payment_mode_type"]
+            | null
+          new_value?: string | null
+          old_payment_mode?:
+            | Database["public"]["Enums"]["payment_mode_type"]
+            | null
+          old_value?: string | null
+          reason?: string | null
+          source_file_name?: string | null
+          source_row_number?: number | null
+          source_sheet_name?: string | null
+          source_type?: Database["public"]["Enums"]["comp_source_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compensation_change_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensation_change_log_compensation_profile_id_fkey"
+            columns: ["compensation_profile_id"]
+            isOneToOne: false
+            referencedRelation: "compensation_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensation_change_log_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensation_change_log_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compensation_profiles: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          default_daily_rate: number | null
+          default_half_day_rate: number | null
+          default_hourly_rate: number | null
+          default_ride_rate_regular: number | null
+          default_ride_rate_special: number | null
+          effective_from: string
+          effective_to: string | null
+          employee_id: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          payment_mode: Database["public"]["Enums"]["payment_mode_type"]
+          rate_source: Database["public"]["Enums"]["comp_rate_source"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          default_daily_rate?: number | null
+          default_half_day_rate?: number | null
+          default_hourly_rate?: number | null
+          default_ride_rate_regular?: number | null
+          default_ride_rate_special?: number | null
+          effective_from?: string
+          effective_to?: string | null
+          employee_id: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payment_mode?: Database["public"]["Enums"]["payment_mode_type"]
+          rate_source?: Database["public"]["Enums"]["comp_rate_source"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          default_daily_rate?: number | null
+          default_half_day_rate?: number | null
+          default_hourly_rate?: number | null
+          default_ride_rate_regular?: number | null
+          default_ride_rate_special?: number | null
+          effective_from?: string
+          effective_to?: string | null
+          employee_id?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payment_mode?: Database["public"]["Enums"]["payment_mode_type"]
+          rate_source?: Database["public"]["Enums"]["comp_rate_source"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compensation_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensation_profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compensation_profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -4043,6 +4390,230 @@ export type Database = {
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_import_batches: {
+        Row: {
+          company_id: string
+          errors_count: number
+          file_name: string
+          id: string
+          imported_at: string
+          imported_by: string
+          notes: string | null
+          processed_rows: number
+          status: string
+          total_rows: number
+          warnings_count: number
+        }
+        Insert: {
+          company_id: string
+          errors_count?: number
+          file_name: string
+          id?: string
+          imported_at?: string
+          imported_by: string
+          notes?: string | null
+          processed_rows?: number
+          status?: string
+          total_rows?: number
+          warnings_count?: number
+        }
+        Update: {
+          company_id?: string
+          errors_count?: number
+          file_name?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string
+          notes?: string | null
+          processed_rows?: number
+          status?: string
+          total_rows?: number
+          warnings_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_import_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_interpreted_entries: {
+        Row: {
+          approved_compensation_change: boolean
+          company_id: string
+          confidence_score: number | null
+          created_at: string
+          detected_daily_full_days: number | null
+          detected_daily_half_days: number | null
+          detected_daily_units: number | null
+          detected_hourly_rate: number | null
+          detected_manual_adjustment: number | null
+          detected_ride_amount: number | null
+          detected_ride_type: string | null
+          employee_id: string | null
+          id: string
+          import_batch_id: string
+          interpretation_notes: string | null
+          interpreted_payment_type: Database["public"]["Enums"]["interpreted_payment_type"]
+          raw_employee_name: string | null
+          raw_row_payload_json: Json | null
+          raw_total_amount: number | null
+          suggested_compensation_change: boolean
+          week_end: string | null
+          week_start: string | null
+        }
+        Insert: {
+          approved_compensation_change?: boolean
+          company_id: string
+          confidence_score?: number | null
+          created_at?: string
+          detected_daily_full_days?: number | null
+          detected_daily_half_days?: number | null
+          detected_daily_units?: number | null
+          detected_hourly_rate?: number | null
+          detected_manual_adjustment?: number | null
+          detected_ride_amount?: number | null
+          detected_ride_type?: string | null
+          employee_id?: string | null
+          id?: string
+          import_batch_id: string
+          interpretation_notes?: string | null
+          interpreted_payment_type?: Database["public"]["Enums"]["interpreted_payment_type"]
+          raw_employee_name?: string | null
+          raw_row_payload_json?: Json | null
+          raw_total_amount?: number | null
+          suggested_compensation_change?: boolean
+          week_end?: string | null
+          week_start?: string | null
+        }
+        Update: {
+          approved_compensation_change?: boolean
+          company_id?: string
+          confidence_score?: number | null
+          created_at?: string
+          detected_daily_full_days?: number | null
+          detected_daily_half_days?: number | null
+          detected_daily_units?: number | null
+          detected_hourly_rate?: number | null
+          detected_manual_adjustment?: number | null
+          detected_ride_amount?: number | null
+          detected_ride_type?: string | null
+          employee_id?: string | null
+          id?: string
+          import_batch_id?: string
+          interpretation_notes?: string | null
+          interpreted_payment_type?: Database["public"]["Enums"]["interpreted_payment_type"]
+          raw_employee_name?: string | null
+          raw_row_payload_json?: Json | null
+          raw_total_amount?: number | null
+          suggested_compensation_change?: boolean
+          week_end?: string | null
+          week_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_interpreted_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_interpreted_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_interpreted_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_interpreted_entries_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_rate_snapshots: {
+        Row: {
+          company_id: string
+          created_at: string
+          daily_rate: number | null
+          effective_date: string
+          employee_id: string
+          half_day_rate: number | null
+          hourly_rate: number | null
+          id: string
+          payment_mode: Database["public"]["Enums"]["payment_mode_type"] | null
+          ride_rate: number | null
+          snapshot_reason: string | null
+          source_record_id: string | null
+          source_record_type: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          daily_rate?: number | null
+          effective_date?: string
+          employee_id: string
+          half_day_rate?: number | null
+          hourly_rate?: number | null
+          id?: string
+          payment_mode?: Database["public"]["Enums"]["payment_mode_type"] | null
+          ride_rate?: number | null
+          snapshot_reason?: string | null
+          source_record_id?: string | null
+          source_record_type: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          daily_rate?: number | null
+          effective_date?: string
+          employee_id?: string
+          half_day_rate?: number | null
+          hourly_rate?: number | null
+          id?: string
+          payment_mode?: Database["public"]["Enums"]["payment_mode_type"] | null
+          ride_rate?: number | null
+          snapshot_reason?: string | null
+          source_record_id?: string | null
+          source_record_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_rate_snapshots_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_rate_snapshots_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_rate_snapshots_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -7582,6 +8153,35 @@ export type Database = {
         | "manager"
         | "supervisor"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
+      comp_action_type:
+        | "created"
+        | "updated"
+        | "archived"
+        | "imported"
+        | "corrected"
+        | "system_detected"
+        | "inline_table_edit"
+      comp_rate_source:
+        | "company_default"
+        | "job_default"
+        | "location_default"
+        | "employee_custom"
+        | "imported"
+      comp_rule_type:
+        | "hourly_default"
+        | "daily_full"
+        | "daily_half"
+        | "ride_regular"
+        | "ride_special"
+        | "custom_daily_pattern"
+      comp_source_type:
+        | "manual"
+        | "import"
+        | "migration"
+        | "sync"
+        | "admin_edit"
+        | "inline_edit"
+      comp_unit_type: "hour" | "day" | "half_day" | "ride" | "custom"
       concept_category: "extra" | "deduction"
       consent_type:
         | "terms_of_service"
@@ -7649,6 +8249,13 @@ export type Database = {
         | "refund"
         | "writeoff"
         | "repayment_outside_payroll"
+      interpreted_payment_type:
+        | "hourly"
+        | "daily"
+        | "ride"
+        | "manual_adjustment"
+        | "mixed"
+        | "unknown"
       invoice_status:
         | "draft"
         | "approved"
@@ -7663,6 +8270,7 @@ export type Database = {
         | "stafly_shift"
         | "marketplace_booking"
         | "imported_experience"
+      payment_mode_type: "hourly" | "daily" | "mixed"
       payment_source_method:
         | "cash"
         | "zelle"
@@ -7871,6 +8479,39 @@ export const Constants = {
         "supervisor",
       ],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
+      comp_action_type: [
+        "created",
+        "updated",
+        "archived",
+        "imported",
+        "corrected",
+        "system_detected",
+        "inline_table_edit",
+      ],
+      comp_rate_source: [
+        "company_default",
+        "job_default",
+        "location_default",
+        "employee_custom",
+        "imported",
+      ],
+      comp_rule_type: [
+        "hourly_default",
+        "daily_full",
+        "daily_half",
+        "ride_regular",
+        "ride_special",
+        "custom_daily_pattern",
+      ],
+      comp_source_type: [
+        "manual",
+        "import",
+        "migration",
+        "sync",
+        "admin_edit",
+        "inline_edit",
+      ],
+      comp_unit_type: ["hour", "day", "half_day", "ride", "custom"],
       concept_category: ["extra", "deduction"],
       consent_type: [
         "terms_of_service",
@@ -7946,6 +8587,14 @@ export const Constants = {
         "writeoff",
         "repayment_outside_payroll",
       ],
+      interpreted_payment_type: [
+        "hourly",
+        "daily",
+        "ride",
+        "manual_adjustment",
+        "mixed",
+        "unknown",
+      ],
       invoice_status: [
         "draft",
         "approved",
@@ -7962,6 +8611,7 @@ export const Constants = {
         "marketplace_booking",
         "imported_experience",
       ],
+      payment_mode_type: ["hourly", "daily", "mixed"],
       payment_source_method: [
         "cash",
         "zelle",

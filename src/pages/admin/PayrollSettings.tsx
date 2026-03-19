@@ -13,12 +13,16 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   Settings, CalendarDays, Clock, AlertTriangle,
-  Save, RotateCcw, Shield, Globe, Loader2,
+  Save, RotateCcw, Shield, Globe, Loader2, DollarSign, FileSpreadsheet, TrendingUp, LayoutGrid,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const CompanyFinancialPolicies = lazy(() => import("@/components/advances/CompanyFinancialPolicies"));
+const CompensationMatrixTab = lazy(() => import("@/components/compensation/CompensationMatrixTab"));
+const CompensationRulesTab = lazy(() => import("@/components/compensation/CompensationRulesTab"));
+const PayrollImportReviewTab = lazy(() => import("@/components/compensation/PayrollImportReviewTab"));
+const CompensationAnalysisTab = lazy(() => import("@/components/compensation/CompensationAnalysisTab"));
 
 const TIMEZONES = [
   "America/New_York",
@@ -93,9 +97,13 @@ export default function PayrollSettings() {
       />
 
       <Tabs defaultValue="payroll" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="payroll">Ciclo y Reglas</TabsTrigger>
-          <TabsTrigger value="financial">Anticipos y Préstamos</TabsTrigger>
+        <TabsList className="mb-4 flex-wrap h-auto gap-1">
+          <TabsTrigger value="payroll"><CalendarDays className="h-3.5 w-3.5 mr-1" />Ciclo y Reglas</TabsTrigger>
+          <TabsTrigger value="financial"><DollarSign className="h-3.5 w-3.5 mr-1" />Anticipos</TabsTrigger>
+          <TabsTrigger value="matrix"><LayoutGrid className="h-3.5 w-3.5 mr-1" />Matriz</TabsTrigger>
+          <TabsTrigger value="rules"><Settings className="h-3.5 w-3.5 mr-1" />Reglas</TabsTrigger>
+          <TabsTrigger value="import"><FileSpreadsheet className="h-3.5 w-3.5 mr-1" />Importar</TabsTrigger>
+          <TabsTrigger value="analysis"><TrendingUp className="h-3.5 w-3.5 mr-1" />Análisis</TabsTrigger>
         </TabsList>
 
         <TabsContent value="payroll" className="space-y-6 mt-0">
@@ -268,6 +276,30 @@ export default function PayrollSettings() {
         <TabsContent value="financial" className="mt-0">
           <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
             <CompanyFinancialPolicies />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="matrix" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <CompensationMatrixTab />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="rules" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <CompensationRulesTab />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="import" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <PayrollImportReviewTab />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="analysis" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <CompensationAnalysisTab />
           </Suspense>
         </TabsContent>
       </Tabs>
