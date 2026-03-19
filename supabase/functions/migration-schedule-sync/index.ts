@@ -535,7 +535,8 @@ async function resyncAllPeriods(
     .from("migration_employee_mapping")
     .select("connecteam_name, stafly_employee_id, match_status")
     .eq("company_id", companyId)
-    .in("match_status", ["exact_match", "probable_match", "manually_resolved"]);
+    .in("match_status", ["exact_match", "probable_match", "manually_resolved"])
+    .limit(5000);
 
   const empByName = new Map<string, string>();
   for (const m of empMapping ?? []) {
@@ -543,7 +544,7 @@ async function resyncAllPeriods(
   }
 
   const { data: employees } = await supabase
-    .from("employees").select("id, first_name, last_name").eq("company_id", companyId);
+    .from("employees").select("id, first_name, last_name").eq("company_id", companyId).limit(5000);
   for (const emp of employees ?? []) {
     const name = `${emp.first_name} ${emp.last_name}`.toUpperCase().trim();
     if (!empByName.has(name)) empByName.set(name, emp.id);
@@ -576,15 +577,18 @@ async function resyncAllPeriods(
     .eq("company_id", companyId)
     .order("start_date");
 
+  // IMPORTANT: add explicit limit to avoid default 1000-row cap
   const { data: basePay } = await supabase
     .from("period_base_pay")
     .select("period_id, employee_id, total_work_hours, base_total_pay")
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .limit(10000);
 
   const { data: movements } = await supabase
     .from("movements")
     .select("period_id, employee_id, total_value")
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .limit(10000);
 
   // Index base_pay and movements by period_id
   const baseByPeriod = new Map<string, Array<{ employee_id: string; hours: number; pay: number }>>();
@@ -604,12 +608,29 @@ async function resyncAllPeriods(
     empMap.set(mv.employee_id, (empMap.get(mv.employee_id) || 0) + (mv.total_value || 0));
   }
 
-  // Helper: parse CT date "MM/DD/YYYY" → "YYYY-MM-DD"
+  // Helper: parse CT date in multiple formats → "YYYY-MM-DD"
+  // Supports: "MM/DD/YYYY", "Fri Feb 06 2026 19:00:00 GMT-0500 (...)"
   function ctDateToISO(d: string | unknown): string | null {
     if (!d || typeof d !== "string") return null;
-    const m = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (!m) return null;
-    return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+    // Format 1: MM/DD/YYYY
+    const m1 = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m1) return `${m1[3]}-${m1[1].padStart(2, "0")}-${m1[2].padStart(2, "0")}`;
+    // Format 2: JS Date string like "Fri Feb 06 2026 19:00:00 GMT-0500 (...)"
+    const m2 = d.match(/\w{3}\s+(\w{3})\s+(\d{1,2})\s+(\d{4})/);
+    if (m2) {
+      const months: Record<string, string> = {
+        Jan: "01", Feb: "02", Mar: "03", Apr: "04", May: "05", Jun: "06",
+        Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12",
+      };
+      const mon = months[m2[1]];
+      if (mon) return `${m2[3]}-${mon}-${m2[2].padStart(2, "0")}`;
+    }
+    // Format 3: try native Date parse as fallback
+    const parsed = new Date(d);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10);
+    }
+    return null;
   }
 
   const results: Record<string, unknown>[] = [];
