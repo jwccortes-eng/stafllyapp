@@ -156,7 +156,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       console.warn("[StagedImport] Resolution query error (table may not exist yet):", resolutionErr.message);
       setManualResolutions([]);
     } else {
-      const rows = (resolutionData || []) as Array<{
+      const rows = ((resolutionData || []) as unknown) as Array<{
         imported_name_normalized: string;
         selected_employee_id: string;
         resolution_source?: string | null;
