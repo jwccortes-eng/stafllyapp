@@ -195,14 +195,20 @@ export default {
   					transform: 'scale(1)'
   				}
   			}
-  		},
-  		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out',
-  			'fade-in': 'fade-in 0.3s ease-out',
-  			'slide-up': 'slide-up 0.3s ease-out',
-  			'scale-in': 'scale-in 0.2s ease-out'
-  		},
+			'shake': {
+				'0%, 100%': { transform: 'translateX(0)' },
+				'20%, 60%': { transform: 'translateX(-6px)' },
+				'40%, 80%': { transform: 'translateX(6px)' },
+			}
+		},
+		animation: {
+			'accordion-down': 'accordion-down 0.2s ease-out',
+			'accordion-up': 'accordion-up 0.2s ease-out',
+			'fade-in': 'fade-in 0.3s ease-out',
+			'slide-up': 'slide-up 0.3s ease-out',
+			'scale-in': 'scale-in 0.2s ease-out',
+			'shake': 'shake 0.5s ease-in-out',
+		},
   		boxShadow: {
   			'2xs': 'var(--shadow-2xs)',
   			xs: 'var(--shadow-xs)',
