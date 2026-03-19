@@ -170,6 +170,18 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
     setDrawerOpen(true);
   };
 
+  const isCompensationRow = (flags: any) => {
+    const f = Array.isArray(flags) ? flags : [];
+    return f.includes("clock_exempt");
+  };
+
+  const compensationLabel = (flags: any): string | null => {
+    const f = Array.isArray(flags) ? flags : [];
+    if (f.includes("daily_pay_weekend_job")) return "Daily Pay (Weekend Job)";
+    if (f.includes("ride_pay")) return "Ride Pay (Pay Ride)";
+    return null;
+  };
+
   const statusColor = (s: string) => {
     switch (s) {
       case "exact": return "default";
