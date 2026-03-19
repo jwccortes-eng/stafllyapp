@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useCompany } from "@/hooks/useCompany";
 import { useReconciliationPeriod } from "@/hooks/useReconciliationPeriod";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
@@ -15,7 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
-  ChevronRight, Zap, BookOpen, TrendingUp,
+  ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -31,6 +32,8 @@ import PilotComparisonReport from "@/components/reconciliation/PilotComparisonRe
 import CloseDesk from "@/components/reconciliation/CloseDesk";
 import PeriodJournal from "@/components/reconciliation/PeriodJournal";
 import PeriodComparison from "@/components/reconciliation/PeriodComparison";
+import FormalSignoffPanel from "@/components/reconciliation/FormalSignoffPanel";
+import RolloutReadiness from "@/components/reconciliation/RolloutReadiness";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 /* ── Status → workflow step mapping ── */
@@ -67,7 +70,9 @@ const TABS: TabDef[] = [
   { value: "validate", label: "Validar", icon: ClipboardCheck, minStatus: "reviewing" },
   { value: "publish", label: "Publicar", icon: Shield, minStatus: "approved" },
   { value: "compare", label: "Comparar", icon: TrendingUp, alwaysEnabled: true },
+  { value: "signoff", label: "Signoff", icon: PenTool, minStatus: "reviewing" },
   { value: "journal", label: "Diario", icon: BookOpen, minStatus: null },
+  { value: "rollout", label: "Rollout", icon: Award, alwaysEnabled: true },
   { value: "pilot", label: "Piloto", icon: Rocket, minStatus: "reviewing" },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
@@ -82,6 +87,7 @@ function isTabEnabled(tab: TabDef, periodStatus: string | null): boolean {
 export default function StagedReconciliation() {
   const { selectedCompanyId } = useCompany();
   const { toast } = useToast();
+  const { user } = useAuth();
   const {
     periods, loading, activePeriod, setActivePeriod,
     finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
@@ -200,6 +206,32 @@ export default function StagedReconciliation() {
     const result = await runValidation(activePeriod.id, isDryRun, uat, employeeMap, notes);
     await logJournal("validation", isDryRun ? "Dry-run ejecutado" : "Validación ejecutada", `Confianza: ${result?.confidence_score}%`);
     return result;
+  };
+
+  // ── Signoff handlers ──
+  const handleSignoff = async (step: string, note: string) => {
+    if (!activePeriod || !user?.id) return;
+    const update: any = {};
+    update[`${step}_by`] = user.id;
+    update[`${step}_at`] = new Date().toISOString();
+    if (note) update[`${step}_note`] = note;
+    await supabase.from("reconciliation_period_status" as any).update(update).eq("id", activePeriod.id);
+    await logJournal("signoff", `Signoff: ${step}`, note || undefined);
+    toast({ title: `Signoff registrado: ${step}` });
+    loadPeriods();
+  };
+
+  const handleSetOutcome = async (outcome: string) => {
+    if (!activePeriod) return;
+    await supabase.from("reconciliation_period_status" as any).update({ outcome_label: outcome } as any).eq("id", activePeriod.id);
+    await logJournal("outcome", `Resultado: ${outcome}`);
+    toast({ title: `Resultado del periodo: ${outcome}` });
+    loadPeriods();
+  };
+
+  const handleSaveChecklist = async (checklist: Record<string, boolean>) => {
+    if (!activePeriod) return;
+    await supabase.from("reconciliation_period_status" as any).update({ golive_checklist: checklist } as any).eq("id", activePeriod.id);
   };
 
   const validation = validateBeforePublish(finalRecords);
@@ -448,12 +480,33 @@ export default function StagedReconciliation() {
           )}
         </TabsContent>
 
+        <TabsContent value="signoff">
+          {activePeriod ? (
+            <FormalSignoffPanel
+              period={activePeriod}
+              finalRecords={finalRecords}
+              closingReceipt={closingReceipt}
+              variances={variances}
+              employees={employeeMap}
+              onSignoff={handleSignoff}
+              onSetOutcome={handleSetOutcome}
+              onSaveChecklist={handleSaveChecklist}
+            />
+          ) : (
+            <NoPeriodPlaceholder icon={PenTool} text="Selecciona un periodo para ver el signoff formal." />
+          )}
+        </TabsContent>
+
         <TabsContent value="journal">
           {activePeriod ? (
             <PeriodJournal period={activePeriod} companyId={selectedCompanyId} />
           ) : (
             <NoPeriodPlaceholder icon={BookOpen} text="Selecciona un periodo para ver su diario de actividad." />
           )}
+        </TabsContent>
+
+        <TabsContent value="rollout">
+          <RolloutReadiness periods={periods} />
         </TabsContent>
 
         <TabsContent value="pilot">
