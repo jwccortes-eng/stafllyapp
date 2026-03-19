@@ -112,6 +112,58 @@ export default function Clients() {
     setContactPhone("");
     setNotes("");
     setEditing(null);
+    setClientLocations([]);
+    setShowLocForm(false);
+    resetLocForm();
+  };
+
+  const resetLocForm = () => {
+    setLocName(""); setLocAddress(""); setLocPayType("hourly");
+    setLocClockMethod("both"); setLocRequireCar(false);
+    setLocContactName(""); setLocContactPhone("");
+    setShowLocForm(false);
+  };
+
+  const loadClientLocations = async (clientId: string) => {
+    setLoadingLocations(true);
+    const { data } = await supabase
+      .from("locations")
+      .select("id, name, address, default_pay_type, default_clock_method, require_car, contact_name, contact_phone")
+      .eq("client_id", clientId)
+      .eq("company_id", selectedCompanyId!)
+      .is("deleted_at", null)
+      .order("name");
+    setClientLocations((data ?? []) as ClientLocation[]);
+    setLoadingLocations(false);
+  };
+
+  const handleSaveLocation = async () => {
+    if (!locName.trim() || !editing || !selectedCompanyId) return;
+    setSavingLoc(true);
+    const { error } = await supabase.from("locations").insert({
+      company_id: selectedCompanyId,
+      client_id: editing.id,
+      name: locName.trim(),
+      address: locAddress.trim() || null,
+      default_pay_type: locPayType,
+      default_clock_method: locClockMethod,
+      require_car: locRequireCar,
+      contact_name: locContactName.trim() || null,
+      contact_phone: locContactPhone.trim() || null,
+    } as any);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Ubicación creada");
+      resetLocForm();
+      loadClientLocations(editing.id);
+    }
+    setSavingLoc(false);
+  };
+
+  const handleDeleteLocation = async (locId: string) => {
+    const { error } = await supabase.from("locations").update({ deleted_at: new Date().toISOString() } as any).eq("id", locId);
+    if (error) toast.error(error.message);
+    else if (editing) loadClientLocations(editing.id);
   };
 
   const openEdit = (c: Client) => {
