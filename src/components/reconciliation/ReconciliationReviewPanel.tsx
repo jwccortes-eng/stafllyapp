@@ -245,6 +245,8 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
         <Badge variant="secondary">{matches.length} resultados</Badge>
       </div>
 
+      <MatchingConflictSummary companyId={companyId} />
+
       {loading ? (
         <Card><CardContent className="py-8 text-center text-muted-foreground">Cargando...</CardContent></Card>
       ) : matches.length === 0 ? (
