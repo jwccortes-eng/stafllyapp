@@ -302,14 +302,25 @@ export function interpretPayrollRows(
 
 /* ── Excel sheet detection ── */
 export function findPayrollSheet(sheetNames: string[]): string | null {
+  const EXCLUDED = ["secretaria", "all employees", "allemployees"];
+
+  // 1. Exact match: trimmed name equals "payroll"
   for (const name of sheetNames) {
-    if (name.toLowerCase().replace(/\s+/g, "") === "payroll") return name;
+    if (name.trim().toLowerCase() === "payroll") return name;
   }
+  // 2. Contains "payroll" (but not excluded)
   for (const name of sheetNames) {
-    if (name.toLowerCase().includes("payroll")) return name;
+    const t = name.trim().toLowerCase();
+    if (t.includes("payroll") && !EXCLUDED.includes(t)) return name;
   }
+  // 3. Nómina variants
   for (const name of sheetNames) {
-    if (name.toLowerCase().includes("nomina") || name.toLowerCase().includes("nómina")) return name;
+    const t = name.trim().toLowerCase();
+    if ((t.includes("nomina") || t.includes("nómina")) && !EXCLUDED.includes(t)) return name;
+  }
+  // 4. Fallback: first sheet that is NOT excluded
+  for (const name of sheetNames) {
+    if (!EXCLUDED.includes(name.trim().toLowerCase())) return name;
   }
   return sheetNames[0] ?? null;
 }
