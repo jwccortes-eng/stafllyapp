@@ -60,15 +60,21 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
     setFile(f);
     try {
       const rows = await parseAnyFileToJson(f, { defval: "" });
-      setRawRows(rows);
-      if (rows.length > 0) {
-        const mapping = detectColumns(Object.keys(rows[0]));
-        setColumnMapping(mapping);
+      if (!rows || rows.length === 0) {
+        toast({ title: "Archivo vacío", description: "No se encontraron filas de datos en el archivo.", variant: "destructive" });
+        return;
       }
+      setRawRows(rows);
+      const allHeaders = Object.keys(rows[0]);
+      console.log("[StagedImport] Headers detected:", allHeaders);
+      const mapping = detectColumns(allHeaders);
+      console.log("[StagedImport] Column mapping:", mapping);
+      setColumnMapping(mapping);
       setStep("preview");
       await loadEmployees();
     } catch (err: any) {
-      toast({ title: "Error parsing file", description: err.message, variant: "destructive" });
+      console.error("[StagedImport] File parse error:", err);
+      toast({ title: "Error al leer archivo", description: err.message, variant: "destructive" });
     }
   };
 
@@ -79,24 +85,47 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       raw_data: r,
     }));
 
+    console.log("[StagedImport] Normalizing", rawWithIds.length, "rows as", sourceType, "with", employees.length, "employees");
+
     let result: any;
     if (sourceType === "schedule") result = normalizeScheduleRows(rawWithIds, employees);
     else if (sourceType === "clock") result = normalizeClockRows(rawWithIds, employees);
     else result = normalizePayrollRows(rawWithIds, employees);
 
+    console.log("[StagedImport] Normalization result:", {
+      normalized: result.normalized.length,
+      matched: result.normalized.filter((r: any) => r.matched_employee_id).length,
+      warnings: result.warnings.length,
+      errors: result.errors.length,
+    });
+    if (result.normalized.length > 0) {
+      console.log("[StagedImport] Sample normalized row:", result.normalized[0]);
+    }
+
     setNormalizedRows(result.normalized);
     setWarnings(result.warnings);
     setErrors(result.errors);
+
+    if (result.normalized.length === 0) {
+      toast({ title: "Sin resultados", description: "No se pudieron normalizar filas. Revisa que el archivo tenga las columnas esperadas.", variant: "destructive" });
+      return;
+    }
+
     setStep("review");
   };
 
   const handleSave = async () => {
-    if (!companyId || !user?.id || !file) return;
+    if (!companyId || !user?.id || !file) {
+      console.error("[StagedImport] Missing required data:", { companyId, userId: user?.id, file: file?.name });
+      toast({ title: "Error", description: "Faltan datos requeridos (empresa, usuario o archivo).", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     setProgress(10);
 
     try {
       // 1. Create batch
+      console.log("[StagedImport] Creating import batch...");
       const { data: batch, error: batchErr } = await supabase
         .from("import_batches" as any)
         .insert({
@@ -112,8 +141,12 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
         .select("id")
         .single();
 
-      if (batchErr) throw batchErr;
+      if (batchErr) {
+        console.error("[StagedImport] Batch create error:", batchErr);
+        throw batchErr;
+      }
       const batchId = (batch as any).id;
+      console.log("[StagedImport] Batch created:", batchId);
       setProgress(25);
 
       // 2. Insert raw rows
@@ -129,21 +162,30 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
         row_hash: hashRow(r),
       }));
 
-      // Insert in chunks of 100
       for (let i = 0; i < rawInserts.length; i += 100) {
         const chunk = rawInserts.slice(i, i + 100);
         const { error } = await supabase.from(rawTable as any).insert(chunk as any);
-        if (error) throw error;
+        if (error) {
+          console.error("[StagedImport] Raw insert error:", error);
+          throw error;
+        }
         setProgress(25 + ((i / rawInserts.length) * 25));
       }
+      console.log("[StagedImport] Raw rows inserted:", rawInserts.length);
       setProgress(50);
 
       // 3. Fetch raw rows with IDs
-      const { data: savedRaw } = await supabase
+      const { data: savedRaw, error: fetchErr } = await supabase
         .from(rawTable as any)
         .select("id, row_number, raw_data")
         .eq("batch_id", batchId)
         .order("row_number");
+      
+      if (fetchErr) {
+        console.error("[StagedImport] Fetch raw error:", fetchErr);
+        throw fetchErr;
+      }
+      console.log("[StagedImport] Fetched raw rows:", savedRaw?.length);
       setProgress(60);
 
       // 4. Normalize and insert
@@ -160,6 +202,8 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       else if (sourceType === "clock") normResult = normalizeClockRows(rawForNorm, employees);
       else normResult = normalizePayrollRows(rawForNorm, employees);
 
+      console.log("[StagedImport] Normalized:", normResult.normalized.length, "rows");
+
       const normInserts = normResult.normalized.map((n: any) => ({
         ...n,
         batch_id: batchId,
@@ -169,7 +213,10 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       for (let i = 0; i < normInserts.length; i += 100) {
         const chunk = normInserts.slice(i, i + 100);
         const { error } = await supabase.from(normTable as any).insert(chunk as any);
-        if (error) throw error;
+        if (error) {
+          console.error("[StagedImport] Normalized insert error:", error);
+          throw error;
+        }
         setProgress(60 + ((i / normInserts.length) * 25));
       }
       setProgress(85);
@@ -187,7 +234,8 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
           source_data: { name: n.employee_name_raw, phone: n.employee_phone, email: n.employee_email },
           status: "open",
         }));
-        await supabase.from("reconciliation_exceptions" as any).insert(exceptions as any);
+        const { error: excErr } = await supabase.from("reconciliation_exceptions" as any).insert(exceptions as any);
+        if (excErr) console.error("[StagedImport] Exception insert error:", excErr);
       }
 
       // 6. Update batch status
@@ -203,7 +251,8 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       });
       onComplete();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      console.error("[StagedImport] Save error:", err);
+      toast({ title: "Error al guardar", description: err.message || "Error desconocido", variant: "destructive" });
     } finally {
       setSaving(false);
     }
