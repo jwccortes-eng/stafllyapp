@@ -7,14 +7,9 @@ import { Check, ChevronsUpDown, Search, LayoutDashboard, User, Shield } from "lu
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import CompanySwitchPinDialog from "@/components/CompanySwitchPinDialog";
-
-const COMPANY_COLORS = [
-  "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#ec4899", "#14b8a6", "#f97316", "#3b82f6", "#84cc16",
-];
+import { CompanyLogo } from "@/components/ui/company-logo";
 
 const ROLE_LABELS: Record<string, string> = {
   developer: "Dev",

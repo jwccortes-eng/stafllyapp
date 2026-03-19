@@ -10,6 +10,7 @@ import NotificationBell from "@/components/NotificationBell";
 import { CommandPaletteTrigger } from "@/components/CommandPalette";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
+import { CompanyLogo } from "@/components/ui/company-logo";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
