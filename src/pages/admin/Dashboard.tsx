@@ -563,6 +563,28 @@ export default function AdminDashboard() {
       }
     }
     fetchOverdueInfo();
+
+    // Compensation KPIs
+    async function fetchCompKpis() {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      const monthStartStr = monthStart.toISOString().split("T")[0];
+
+      const [changesRes, analysisRes] = await Promise.all([
+        supabase.from("compensation_change_log").select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId!).gte("changed_at", monthStartStr),
+        supabase.from("compensation_analysis_summary").select("daily_payment_detected, ride_payment_detected, mixed_compensation_detected")
+          .eq("company_id", selectedCompanyId!),
+      ]);
+      const analysis = analysisRes.data ?? [];
+      setCompKpis({
+        rateChanges: changesRes.count ?? 0,
+        dailyPatterns: analysis.filter(a => a.daily_payment_detected).length,
+        ridePayments: analysis.filter(a => a.ride_payment_detected).length,
+        warnings: analysis.filter(a => a.mixed_compensation_detected).length,
+      });
+    }
+    fetchCompKpis();
   }, [selectedCompanyId, payrollConfig]);
 
   const periodProgress = useMemo(() => {
