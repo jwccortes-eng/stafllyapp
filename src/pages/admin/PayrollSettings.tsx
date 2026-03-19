@@ -278,6 +278,30 @@ export default function PayrollSettings() {
             <CompanyFinancialPolicies />
           </Suspense>
         </TabsContent>
+
+        <TabsContent value="matrix" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <CompensationMatrixTab />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="rules" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <CompensationRulesTab />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="import" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <PayrollImportReviewTab />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="analysis" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <CompensationAnalysisTab />
+          </Suspense>
+        </TabsContent>
       </Tabs>
     </div>
   );

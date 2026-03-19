@@ -239,7 +239,7 @@ export function useCompensationMutations() {
       const { error } = await supabase
         .from("company_compensation_rules")
         .update(rest as any)
-        .eq("id", rule.id);
+        .eq("id", ruleId);
       if (error) throw error;
     } else {
       const { error } = await supabase
