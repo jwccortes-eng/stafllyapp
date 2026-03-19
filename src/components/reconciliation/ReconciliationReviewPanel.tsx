@@ -330,6 +330,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
       </div>
 
       <MatchingConflictSummary companyId={companyId} />
+      <ClockWithoutScheduleBreakdown companyId={companyId} onRefresh={onRefresh} />
       <UnmatchedScheduleBreakdown companyId={companyId} onRefresh={onRefresh} />
 
       {loading ? (
