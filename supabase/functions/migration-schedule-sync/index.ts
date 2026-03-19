@@ -577,36 +577,8 @@ async function resyncAllPeriods(
     .eq("company_id", companyId)
     .order("start_date");
 
-  // IMPORTANT: add explicit limit to avoid default 1000-row cap
-  const { data: basePay } = await supabase
-    .from("period_base_pay")
-    .select("period_id, employee_id, total_work_hours, base_total_pay")
-    .eq("company_id", companyId)
-    .limit(10000);
-
-  const { data: movements } = await supabase
-    .from("movements")
-    .select("period_id, employee_id, total_value")
-    .eq("company_id", companyId)
-    .limit(10000);
-
-  // Index base_pay and movements by period_id
-  const baseByPeriod = new Map<string, Array<{ employee_id: string; hours: number; pay: number }>>();
-  for (const bp of basePay ?? []) {
-    if (!baseByPeriod.has(bp.period_id)) baseByPeriod.set(bp.period_id, []);
-    baseByPeriod.get(bp.period_id)!.push({
-      employee_id: bp.employee_id,
-      hours: bp.total_work_hours || 0,
-      pay: bp.base_total_pay || 0,
-    });
-  }
-
-  const movByPeriod = new Map<string, Map<string, number>>();
-  for (const mv of movements ?? []) {
-    if (!movByPeriod.has(mv.period_id)) movByPeriod.set(mv.period_id, new Map());
-    const empMap = movByPeriod.get(mv.period_id)!;
-    empMap.set(mv.employee_id, (empMap.get(mv.employee_id) || 0) + (mv.total_value || 0));
-  }
+  // NOTE: project row cap can truncate broad queries at 1000 rows,
+  // so per-period queries are executed inside the loop for accuracy.
 
   // Helper: parse CT date in multiple formats → "YYYY-MM-DD"
   // Supports: "MM/DD/YYYY", "Fri Feb 06 2026 19:00:00 GMT-0500 (...)"
