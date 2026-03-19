@@ -57,3 +57,9 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.migration-employee-sync]
     verify_jwt = false
+  [functions.migration-company-sync]
+    verify_jwt = false
+  [functions.generate-reviews]
+    verify_jwt = false
+  [functions.kiosk-clock]
+    verify_jwt = false
