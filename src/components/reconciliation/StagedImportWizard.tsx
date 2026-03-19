@@ -212,19 +212,34 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     }
   };
 
-  const runNormalization = useCallback(() => {
+  const runNormalization = useCallback((options?: { aliasSnapshot?: EmployeeAlias[]; manualResolutionSnapshot?: ManualNameResolution[] }) => {
     const rawWithIds = rawRows.map((r, i) => ({
       id: `temp-${i}`,
       row_number: i + 1,
       raw_data: r,
     }));
 
-    console.log("[StagedImport] Normalizing", rawWithIds.length, "rows as", sourceType, "with", employees.length, "employees and", aliases.length, "aliases");
+    const aliasSnapshot = options?.aliasSnapshot ?? aliases;
+    const manualResolutionSnapshot = options?.manualResolutionSnapshot ?? manualResolutions;
+
+    console.log(
+      "[StagedImport] Normalizing",
+      rawWithIds.length,
+      "rows as",
+      sourceType,
+      "with",
+      employees.length,
+      "employees,",
+      aliasSnapshot.length,
+      "aliases and",
+      manualResolutionSnapshot.length,
+      "manual resolutions",
+    );
 
     let result: any;
-    if (sourceType === "schedule") result = normalizeScheduleRows(rawWithIds, employees, aliases);
-    else if (sourceType === "clock") result = normalizeClockRows(rawWithIds, employees, aliases);
-    else result = normalizePayrollRows(rawWithIds, employees, aliases);
+    if (sourceType === "schedule") result = normalizeScheduleRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot);
+    else if (sourceType === "clock") result = normalizeClockRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot);
+    else result = normalizePayrollRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot);
 
     console.log("[StagedImport] Normalization result:", {
       normalized: result.normalized.length,
@@ -236,7 +251,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     setErrors(result.errors);
     setDiagnostics(result.diagnostics);
     return result;
-  }, [rawRows, sourceType, employees, aliases]);
+  }, [rawRows, sourceType, employees, aliases, manualResolutions]);
 
   const handleNormalize = () => {
     const result = runNormalization();
@@ -251,49 +266,125 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
 
   const handleReNormalize = () => {
     runNormalization();
-    toast({ title: "Re-normalizado", description: "Se aplicaron los alias guardados a las filas." });
+    toast({ title: "Re-normalizado", description: "Se aplicaron alias y resoluciones manuales a las filas." });
+  };
+
+  const buildAliasState = (current: EmployeeAlias[], normalized: string, employeeId: string) => {
+    const alreadyExists = current.some((a) => a.alias_name_normalized === normalized && a.employee_id === employeeId);
+    if (alreadyExists) return current;
+    return [...current, { employee_id: employeeId, alias_name_normalized: normalized }];
+  };
+
+  const buildManualResolutionState = (current: ManualNameResolution[], normalized: string, employeeId: string) => {
+    const withoutName = current.filter((r) => r.imported_name_normalized !== normalized);
+    return [
+      ...withoutName,
+      {
+        imported_name_normalized: normalized,
+        selected_employee_id: employeeId,
+        resolution_source: "manual_ambiguous_resolution",
+      },
+    ];
   };
 
   const handleSaveAlias = async (nameRaw: string, employeeId: string) => {
     if (!companyId || !user?.id) return;
+
     const normalized = normalizeText(nameRaw);
-    const { error } = await supabase.from("employee_aliases" as any).insert({
-      company_id: companyId,
-      employee_id: employeeId,
-      alias_name: nameRaw.trim(),
-      alias_name_normalized: normalized,
-      source: "manual_review",
-      created_by: user.id,
-    } as any);
-    if (error) {
-      if (error.code === "23505") {
-        // Alias already exists — check if it points to the same employee
-        const { data: existing } = await supabase
-          .from("employee_aliases" as any)
-          .select("employee_id")
-          .eq("company_id", companyId)
-          .eq("alias_name_normalized", normalized)
-          .limit(1) as any;
-        const existingEmpId = existing?.[0]?.employee_id;
-        if (existingEmpId && existingEmpId !== employeeId) {
-          toast({ title: "Conflicto de alias", description: `Este nombre ya está asignado a otro empleado. Elimina el alias anterior primero.`, variant: "destructive" });
-          return;
-        }
-        // Same employee — treat as success
-        toast({ title: "Alias ya existía", description: `"${nameRaw}" ya vinculado. Resolución aplicada.` });
-      } else {
-        toast({ title: "Error al guardar alias", description: error.message, variant: "destructive" });
-        return;
-      }
-    } else {
-      toast({ title: "Alias guardado", description: `"${nameRaw}" → empleado vinculado` });
+    if (!normalized) {
+      toast({ title: "Nombre inválido", description: "No se pudo normalizar el nombre importado.", variant: "destructive" });
+      return;
     }
-    // Always update local alias state and proceed with resolution
-    setAliases(prev => {
-      const alreadyExists = prev.some(a => a.alias_name_normalized === normalized && a.employee_id === employeeId);
-      if (alreadyExists) return prev;
-      return [...prev, { employee_id: employeeId, alias_name_normalized: normalized }];
-    });
+
+    const resolutionPayload = {
+      company_id: companyId,
+      source_type: sourceType,
+      scope_key: resolutionScopeKey,
+      imported_name_raw: nameRaw.trim(),
+      imported_name_normalized: normalized,
+      selected_employee_id: employeeId,
+      applies_to_rows: "same_imported_name",
+      resolution_source: "manual_ambiguous_resolution",
+      created_by: user.id,
+    };
+
+    const { error: resolutionError } = await supabase
+      .from("reconciliation_name_resolutions" as any)
+      .upsert(resolutionPayload as any, {
+        onConflict: "company_id,source_type,scope_key,imported_name_normalized",
+      } as any);
+
+    if (resolutionError) {
+      toast({ title: "Error al guardar resolución", description: resolutionError.message, variant: "destructive" });
+      return;
+    }
+
+    let aliasOutcome: "created" | "existing_same" | "conflict_other" | "insert_error" = "created";
+
+    const { data: existingAlias, error: existingAliasError } = await supabase
+      .from("employee_aliases" as any)
+      .select("employee_id")
+      .eq("company_id", companyId)
+      .eq("alias_name_normalized", normalized)
+      .limit(1) as any;
+
+    if (existingAliasError) {
+      console.warn("[StagedImport] Existing alias lookup failed:", existingAliasError.message);
+      aliasOutcome = "insert_error";
+    } else {
+      const existingEmpId = existingAlias?.[0]?.employee_id ?? null;
+      if (existingEmpId && existingEmpId === employeeId) {
+        aliasOutcome = "existing_same";
+      } else if (existingEmpId && existingEmpId !== employeeId) {
+        aliasOutcome = "conflict_other";
+      } else {
+        const { error: aliasInsertError } = await supabase.from("employee_aliases" as any).insert({
+          company_id: companyId,
+          employee_id: employeeId,
+          alias_name: nameRaw.trim(),
+          alias_name_normalized: normalized,
+          source: "manual_ambiguous_resolution",
+          created_by: user.id,
+        } as any);
+
+        if (aliasInsertError) {
+          console.warn("[StagedImport] Alias insert failed:", aliasInsertError.message);
+          aliasOutcome = "insert_error";
+        }
+      }
+    }
+
+    const nextManualResolutions = buildManualResolutionState(manualResolutions, normalized, employeeId);
+    const nextAliases = aliasOutcome === "conflict_other"
+      ? aliases
+      : buildAliasState(aliases, normalized, employeeId);
+
+    setManualResolutions(nextManualResolutions);
+    setAliases(nextAliases);
+    runNormalization({ aliasSnapshot: nextAliases, manualResolutionSnapshot: nextManualResolutions });
+
+    if (aliasOutcome === "conflict_other") {
+      toast({
+        title: "Resolución aplicada",
+        description: `"${nameRaw}" quedó resuelto para este periodo/import, pero el alias global ya apunta a otro empleado.`,
+      });
+      return;
+    }
+
+    if (aliasOutcome === "existing_same") {
+      toast({ title: "Alias ya existía", description: `"${nameRaw}" ya estaba vinculado al empleado seleccionado. Resolución aplicada.` });
+      return;
+    }
+
+    if (aliasOutcome === "insert_error") {
+      toast({
+        title: "Resolución aplicada",
+        description: `La resolución manual se guardó y se aplicó; no se pudo actualizar el alias global en este intento.`,
+      });
+      return;
+    }
+
+    toast({ title: "Alias guardado", description: `"${nameRaw}" → empleado vinculado y resolución aplicada.` });
   };
 
   const handleSave = async () => {
