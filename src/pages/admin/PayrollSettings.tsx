@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { usePayrollConfig, DAY_NAMES, DEFAULT_CONFIG, type PayrollConfig } from "@/hooks/usePayrollConfig";
@@ -16,6 +16,9 @@ import {
   Save, RotateCcw, Shield, Globe, Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const CompanyFinancialPolicies = lazy(() => import("@/components/advances/CompanyFinancialPolicies"));
 
 const TIMEZONES = [
   "America/New_York",
@@ -88,6 +91,14 @@ export default function PayrollSettings() {
         title="Configuración de Nómina"
         subtitle={`Define el ciclo semanal de nómina, cierre esperado y reglas de atraso para ${selectedCompany?.name}`}
       />
+
+      <Tabs defaultValue="payroll" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="payroll">Ciclo y Reglas</TabsTrigger>
+          <TabsTrigger value="financial">Anticipos y Préstamos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="payroll" className="space-y-6 mt-0">
 
       {/* Week Configuration */}
       <Card className="rounded-2xl">
@@ -252,6 +263,14 @@ export default function PayrollSettings() {
           </Badge>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="financial" className="mt-0">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-muted-foreground">Cargando...</div>}>
+            <CompanyFinancialPolicies />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

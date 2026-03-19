@@ -18,6 +18,7 @@ import {
   User, DollarSign, Clock, CalendarDays, FileText, Activity,
   Briefcase, Phone, Mail, MapPin, Users, Tag, Star, Shield,
   Plus, Pencil, Trash2, MoreHorizontal, KeyRound, Upload, Download, Cake, Home, TrendingUp,
+  Banknote,
 } from "lucide-react";
 import { EmployeePerformanceScore } from "@/components/reviews/EmployeePerformanceScore";
 import { EmployeeAccessTab } from "@/components/employee/EmployeeAccessTab";
@@ -25,6 +26,7 @@ import { ReputationProfile } from "@/components/reviews/ReputationProfile";
 import { ReputationAdminPanel } from "@/components/reviews/ReputationAdminPanel";
 import { WorkerProfileTab } from "@/components/employee/WorkerProfileTab";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
+import EmployeeAdvancesTab from "@/components/advances/EmployeeAdvancesTab";
 import { useToast } from "@/hooks/use-toast";
 
 type EmployeeRecord = Record<string, any>;
@@ -665,7 +667,7 @@ export function EmployeeProfileTabs({
   }
   return (
     <Tabs defaultValue="info" className="w-full">
-      <TabsList className="w-full grid grid-cols-9 h-9 mb-4 bg-muted/40 rounded-xl">
+      <TabsList className="w-full grid grid-cols-10 h-9 mb-4 bg-muted/40 rounded-xl">
         <TabsTrigger value="info" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <User className="h-3 w-3" />
           <span className="hidden sm:inline">Info</span>
@@ -681,6 +683,10 @@ export function EmployeeProfileTabs({
         <TabsTrigger value="pay" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <DollarSign className="h-3 w-3" />
           <span className="hidden sm:inline">Pago</span>
+        </TabsTrigger>
+        <TabsTrigger value="advances" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <Banknote className="h-3 w-3" />
+          <span className="hidden sm:inline">Anticipos</span>
         </TabsTrigger>
         <TabsTrigger value="shifts" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <CalendarDays className="h-3 w-3" />
@@ -730,6 +736,9 @@ export function EmployeeProfileTabs({
       </TabsContent>
       <TabsContent value="pay" className="mt-0">
         <PayTab employee={employee} companyId={companyId} />
+      </TabsContent>
+      <TabsContent value="advances" className="mt-0">
+        <EmployeeAdvancesTab employeeId={employee.id} companyId={companyId} />
       </TabsContent>
       <TabsContent value="shifts" className="mt-0">
         <ShiftsTab employee={employee} companyId={companyId} />
