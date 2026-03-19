@@ -17,7 +17,21 @@ import { hashRow, detectColumns, normalizeText, type ColumnMapping } from "@/lib
 import { normalizeScheduleRows, normalizeClockRows, normalizePayrollRows, type ImportDiagnostics, type EmployeeAlias } from "@/lib/reconciliation-normalizer";
 import type { EmployeeRecord } from "@/lib/reconciliation-engine";
 
-...
+type SourceType = "schedule" | "clock" | "payroll";
+type Step = "upload" | "preview" | "normalize" | "review" | "save";
+
+interface Props {
+  companyId: string | null;
+  onComplete: () => void;
+  activePeriodId?: string | null;
+  onBatchLinked?: (sourceType: SourceType, batchId: string) => void;
+}
+
+const SOURCE_LABELS: Record<SourceType, string> = {
+  schedule: "Turnos Programados",
+  clock: "Fichajes (Clock In/Out)",
+  payroll: "Nómina / Payroll",
+};
 
 export default function StagedImportWizard({ companyId, onComplete, activePeriodId, onBatchLinked }: Props) {
   const { user } = useAuth();
