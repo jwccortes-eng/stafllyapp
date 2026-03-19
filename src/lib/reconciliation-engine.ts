@@ -199,7 +199,7 @@ export function stripPayModifiers(title: string | null | undefined): string {
 }
 
 // ─── Compensation Category Detection ───
-export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "availability_block" | "regular";
+export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "availability_block" | "structural_no_context" | "regular";
 
 // Expanded patterns to match real Connecteam export variants
 const WEEKEND_JOB_PATTERN = /\b(weekend\s*(job|shift)|wj|trabajo\s*de?\s*fin\s*de?\s*semana)\b/i;
