@@ -559,19 +559,38 @@ async function resyncAllPeriods(
 
   if (!periods?.length) return json({ error: "No periods found" }, 400);
 
-  // ── Get ALL payroll raw imports ──
-  const { data: payrollRaw } = await supabase
-    .from("migration_raw_imports")
-    .select("raw_payload, file_name")
-    .eq("company_id", companyId)
-    .eq("record_type", "payroll")
-    .order("row_index")
-    .limit(10000);
+  // ── Get ALL payroll raw imports (paginated to avoid 1000-row cap) ──
+  const PAGE_SIZE = 1000;
+  let allPayrollRaw: any[] = [];
+  let pgOffset = 0;
+  while (true) {
+    const { data: page } = await supabase
+      .from("migration_raw_imports")
+      .select("raw_payload, file_name")
+      .eq("company_id", companyId)
+      .eq("record_type", "payroll")
+      .order("row_index")
+      .range(pgOffset, pgOffset + PAGE_SIZE - 1);
+    if (!page || page.length === 0) break;
+    allPayrollRaw = allPayrollRaw.concat(page);
+    if (page.length < PAGE_SIZE) break;
+    pgOffset += PAGE_SIZE;
+  }
 
-  const payrollRows = (payrollRaw ?? []).map(r => ({
+  const payrollRows = allPayrollRaw.map(r => ({
     row: r.raw_payload as Record<string, unknown>,
     fileName: (r.file_name as string | null) || "",
   }));
+
+  // Helper: extract date range from non-standard filenames like "PAYROLL 01_14 - 01_20"
+  function extractDateRangeFromFileName(fn: string, defaultYear = "2026"): [string, string] | null {
+    const m = fn.match(/(\d{1,2})[_/-](\d{1,2})\s*[-–]\s*(\d{1,2})[_/-](\d{1,2})/);
+    if (!m) return null;
+    return [
+      `${defaultYear}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`,
+      `${defaultYear}-${m[3].padStart(2, "0")}-${m[4].padStart(2, "0")}`,
+    ];
+  }
 
   // ── Get Stafly pay_periods + period_base_pay + movements ──
   const { data: payPeriods } = await supabase
@@ -626,7 +645,16 @@ async function resyncAllPeriods(
     const rangeToken = `${weekStart}_${weekEnd}`;
 
     for (const { row: r, fileName } of payrollRows) {
-      const inFileRange = fileName.includes(rangeToken);
+      // Try standard YYYY-MM-DD_YYYY-MM-DD token first
+      let inFileRange = fileName.includes(rangeToken);
+      // Fallback: extract date range from non-standard filename patterns
+      if (!inFileRange) {
+        const fnRange = extractDateRangeFromFileName(fileName);
+        if (fnRange) {
+          // Check if the filename's date range overlaps with the period
+          inFileRange = fnRange[0] <= weekEnd && fnRange[1] >= weekStart;
+        }
+      }
       if (!inFileRange) {
         const rowDate = ctDateToISO(r["Start Date"] || r["Date"] || r["End Date"]);
         if (!rowDate || rowDate < weekStart || rowDate > weekEnd) continue;
