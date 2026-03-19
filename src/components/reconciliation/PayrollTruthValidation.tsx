@@ -209,12 +209,19 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
     }
 
     (async () => {
-      const { data: periodStatus } = await supabase
+      const { data: periodStatusData } = await supabase
         .from("reconciliation_period_status" as any)
         .select("period_id, period_start, period_end, payroll_batch_id")
         .eq("id", periodStatusId)
         .eq("company_id", companyId)
         .maybeSingle();
+
+      const periodStatus = periodStatusData as {
+        period_id: string | null;
+        period_start: string;
+        period_end: string;
+        payroll_batch_id: string | null;
+      } | null;
 
       if (!periodStatus) {
         setReconData([]);
@@ -223,13 +230,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
 
       let effectivePeriodId: string | null = periodStatus.period_id ?? null;
       if (!effectivePeriodId) {
-        const { data: matchedPeriod } = await supabase
+        const { data: matchedPeriodData } = await supabase
           .from("pay_periods" as any)
           .select("id")
           .eq("company_id", companyId)
           .eq("start_date", periodStatus.period_start)
           .eq("end_date", periodStatus.period_end)
           .maybeSingle();
+        const matchedPeriod = matchedPeriodData as { id: string } | null;
         effectivePeriodId = matchedPeriod?.id ?? null;
       }
 
