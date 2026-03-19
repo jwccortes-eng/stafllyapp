@@ -46,12 +46,22 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const token = authHeader.replace("Bearer ", "");
 
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await anonClient.auth.getUser();
-    if (authError || !user) return json({ error: "Token inválido" }, 401);
+    // Allow service role key for server-to-server calls
+    const isServiceRole = token === serviceKey;
+    let userId: string;
+
+    if (isServiceRole) {
+      userId = "00000000-0000-0000-0000-000000000000"; // system user
+    } else {
+      const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user }, error: authError } = await anonClient.auth.getUser();
+      if (authError || !user) return json({ error: "Token inválido" }, 401);
+      userId = user.id;
+    }
 
     const supabase = createClient(supabaseUrl, serviceKey);
     const body = await req.json();
