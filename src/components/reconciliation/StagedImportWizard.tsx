@@ -21,6 +21,8 @@ type Step = "upload" | "preview" | "normalize" | "review" | "save";
 interface Props {
   companyId: string | null;
   onComplete: () => void;
+  activePeriodId?: string | null;
+  onBatchLinked?: (sourceType: SourceType, batchId: string) => void;
 }
 
 const SOURCE_LABELS: Record<SourceType, string> = {
