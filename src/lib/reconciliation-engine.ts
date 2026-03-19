@@ -235,6 +235,7 @@ export interface NormalizedClockRow {
   location_name: string | null;
   client_name: string | null;
   external_clock_id: string | null;
+  notes?: string | null;
 }
 
 export interface NormalizedPayrollRow {
