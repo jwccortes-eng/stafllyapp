@@ -85,14 +85,32 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       raw_data: r,
     }));
 
+    console.log("[StagedImport] Normalizing", rawWithIds.length, "rows as", sourceType, "with", employees.length, "employees");
+
     let result: any;
     if (sourceType === "schedule") result = normalizeScheduleRows(rawWithIds, employees);
     else if (sourceType === "clock") result = normalizeClockRows(rawWithIds, employees);
     else result = normalizePayrollRows(rawWithIds, employees);
 
+    console.log("[StagedImport] Normalization result:", {
+      normalized: result.normalized.length,
+      matched: result.normalized.filter((r: any) => r.matched_employee_id).length,
+      warnings: result.warnings.length,
+      errors: result.errors.length,
+    });
+    if (result.normalized.length > 0) {
+      console.log("[StagedImport] Sample normalized row:", result.normalized[0]);
+    }
+
     setNormalizedRows(result.normalized);
     setWarnings(result.warnings);
     setErrors(result.errors);
+
+    if (result.normalized.length === 0) {
+      toast({ title: "Sin resultados", description: "No se pudieron normalizar filas. Revisa que el archivo tenga las columnas esperadas.", variant: "destructive" });
+      return;
+    }
+
     setStep("review");
   };
 
