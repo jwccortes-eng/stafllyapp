@@ -85,12 +85,10 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!membership) return json({ error: "Sin acceso" }, 403);
     }
-      .maybeSingle();
-    if (!membership) return json({ error: "Sin acceso" }, 403);
 
     // Legacy action-based API
     if (action === "process_shifts") {
-      return await processShifts(supabase, companyId, user.id);
+      return await processShifts(supabase, companyId, userId);
     }
     if (action === "stats") {
       return await getStats(supabase, companyId);
