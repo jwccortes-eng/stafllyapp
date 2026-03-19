@@ -5549,6 +5549,172 @@ export type Database = {
           },
         ]
       }
+      reconciliation_final_records: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          base_pay: number | null
+          company_id: string
+          conflict_count: number | null
+          created_at: string
+          daily_rate: number | null
+          employee_id: string
+          final_total_pay: number | null
+          hourly_rate: number | null
+          id: string
+          manual_amount: number | null
+          pay_classification: string | null
+          payroll_rows: Json | null
+          period_status_id: string
+          reconciliation_status: string
+          resolution_notes: string | null
+          ride_amount: number | null
+          scheduled_shifts: Json | null
+          total_payroll_amount: number | null
+          total_payroll_hours: number | null
+          total_scheduled_hours: number | null
+          total_worked_hours: number | null
+          updated_at: string
+          weekend_amount: number | null
+          worked_shifts: Json | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          base_pay?: number | null
+          company_id: string
+          conflict_count?: number | null
+          created_at?: string
+          daily_rate?: number | null
+          employee_id: string
+          final_total_pay?: number | null
+          hourly_rate?: number | null
+          id?: string
+          manual_amount?: number | null
+          pay_classification?: string | null
+          payroll_rows?: Json | null
+          period_status_id: string
+          reconciliation_status?: string
+          resolution_notes?: string | null
+          ride_amount?: number | null
+          scheduled_shifts?: Json | null
+          total_payroll_amount?: number | null
+          total_payroll_hours?: number | null
+          total_scheduled_hours?: number | null
+          total_worked_hours?: number | null
+          updated_at?: string
+          weekend_amount?: number | null
+          worked_shifts?: Json | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          base_pay?: number | null
+          company_id?: string
+          conflict_count?: number | null
+          created_at?: string
+          daily_rate?: number | null
+          employee_id?: string
+          final_total_pay?: number | null
+          hourly_rate?: number | null
+          id?: string
+          manual_amount?: number | null
+          pay_classification?: string | null
+          payroll_rows?: Json | null
+          period_status_id?: string
+          reconciliation_status?: string
+          resolution_notes?: string | null
+          ride_amount?: number | null
+          scheduled_shifts?: Json | null
+          total_payroll_amount?: number | null
+          total_payroll_hours?: number | null
+          total_scheduled_hours?: number | null
+          total_worked_hours?: number | null
+          updated_at?: string
+          weekend_amount?: number | null
+          worked_shifts?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_final_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_final_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_final_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_final_records_period_status_id_fkey"
+            columns: ["period_status_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_period_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_learned_mappings: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          mapping_type: string
+          source_value: string
+          source_value_normalized: string
+          target_id: string | null
+          target_value: string
+          updated_at: string
+          usage_count: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          mapping_type: string
+          source_value: string
+          source_value_normalized: string
+          target_id?: string | null
+          target_value: string
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          mapping_type?: string
+          source_value?: string
+          source_value_normalized?: string
+          target_id?: string | null
+          target_value?: string
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_learned_mappings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_matches: {
         Row: {
           batch_id: string | null
@@ -5668,6 +5834,226 @@ export type Database = {
             columns: ["schedule_row_id"]
             isOneToOne: false
             referencedRelation: "normalized_schedule_rows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_period_status: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_matches: number | null
+          clock_batch_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          locked: boolean | null
+          locked_at: string | null
+          locked_by: string | null
+          notes: string | null
+          payroll_batch_id: string | null
+          period_end: string
+          period_id: string | null
+          period_label: string
+          period_start: string
+          posted_at: string | null
+          posted_by: string | null
+          resolved_exceptions: number | null
+          schedule_batch_id: string | null
+          status: string
+          total_clocks: number | null
+          total_employees: number | null
+          total_exceptions: number | null
+          total_matches: number | null
+          total_payroll_rows: number | null
+          total_schedules: number | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_matches?: number | null
+          clock_batch_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          locked?: boolean | null
+          locked_at?: string | null
+          locked_by?: string | null
+          notes?: string | null
+          payroll_batch_id?: string | null
+          period_end: string
+          period_id?: string | null
+          period_label?: string
+          period_start: string
+          posted_at?: string | null
+          posted_by?: string | null
+          resolved_exceptions?: number | null
+          schedule_batch_id?: string | null
+          status?: string
+          total_clocks?: number | null
+          total_employees?: number | null
+          total_exceptions?: number | null
+          total_matches?: number | null
+          total_payroll_rows?: number | null
+          total_schedules?: number | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_matches?: number | null
+          clock_batch_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          locked?: boolean | null
+          locked_at?: string | null
+          locked_by?: string | null
+          notes?: string | null
+          payroll_batch_id?: string | null
+          period_end?: string
+          period_id?: string | null
+          period_label?: string
+          period_start?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          resolved_exceptions?: number | null
+          schedule_batch_id?: string | null
+          status?: string
+          total_clocks?: number | null
+          total_employees?: number | null
+          total_exceptions?: number | null
+          total_matches?: number | null
+          total_payroll_rows?: number | null
+          total_schedules?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_period_status_clock_batch_id_fkey"
+            columns: ["clock_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_period_status_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_period_status_payroll_batch_id_fkey"
+            columns: ["payroll_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_period_status_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_period_status_schedule_batch_id_fkey"
+            columns: ["schedule_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_row_actions: {
+        Row: {
+          action_data: Json | null
+          action_type: string
+          company_id: string
+          employee_id: string | null
+          exception_id: string | null
+          id: string
+          match_id: string | null
+          performed_at: string
+          performed_by: string
+          period_status_id: string | null
+          reason: string | null
+          source_row_id: string | null
+          target_row_id: string | null
+        }
+        Insert: {
+          action_data?: Json | null
+          action_type: string
+          company_id: string
+          employee_id?: string | null
+          exception_id?: string | null
+          id?: string
+          match_id?: string | null
+          performed_at?: string
+          performed_by: string
+          period_status_id?: string | null
+          reason?: string | null
+          source_row_id?: string | null
+          target_row_id?: string | null
+        }
+        Update: {
+          action_data?: Json | null
+          action_type?: string
+          company_id?: string
+          employee_id?: string | null
+          exception_id?: string | null
+          id?: string
+          match_id?: string | null
+          performed_at?: string
+          performed_by?: string
+          period_status_id?: string | null
+          reason?: string | null
+          source_row_id?: string | null
+          target_row_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_row_actions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_row_actions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_row_actions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_row_actions_exception_id_fkey"
+            columns: ["exception_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_exceptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_row_actions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_row_actions_period_status_id_fkey"
+            columns: ["period_status_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_period_status"
             referencedColumns: ["id"]
           },
         ]
