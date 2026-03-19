@@ -180,6 +180,24 @@ export function matchEmployee(
   };
 }
 
+// ─── Pay Modifier Detection ───
+// PAGA DOBLE / DOUBLE PAY is a pay modifier, NOT a separate category.
+// These rows are normal worked shifts that happen to pay double.
+const PAGA_DOBLE_PATTERN = /\b(paga\s*doble|double\s*pay|doble\s*pago)\b/i;
+// Strip numeric prefix + PAGA DOBLE from title to get the underlying shift identity
+const PAGA_DOBLE_TITLE_STRIP = /^(\d+\s*[-–—]?\s*)?(paga\s*doble|double\s*pay|doble\s*pago)\s*/i;
+
+/** Returns true if a title/label contains a double-pay modifier */
+export function hasDoublePay(text: string | null | undefined): boolean {
+  return !!text && PAGA_DOBLE_PATTERN.test(text);
+}
+
+/** Strip PAGA DOBLE and numeric prefixes to get the base shift title for matching */
+export function stripPayModifiers(title: string | null | undefined): string {
+  if (!title) return "";
+  return title.replace(PAGA_DOBLE_TITLE_STRIP, "").replace(/^\s*[-–—]\s*/, "").trim();
+}
+
 // ─── Compensation Category Detection ───
 export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "availability_block" | "regular";
 
@@ -203,10 +221,13 @@ export function detectShiftCategory(
   const combined = fields.join(" ");
   // Check availability/blocking FIRST — these are not real work
   if (AVAILABILITY_BLOCK_PATTERN.test(combined)) return "availability_block";
-  if (WEEKEND_JOB_PATTERN.test(combined)) return "daily_pay";
-  if (PAY_RIDE_PATTERN.test(combined)) return "ride_pay";
+  // Strip PAGA DOBLE before checking other categories — it's just a pay modifier
+  const strippedCombined = fields.map(f => stripPayModifiers(f) || f).join(" ");
+  if (WEEKEND_JOB_PATTERN.test(strippedCombined)) return "daily_pay";
+  if (PAY_RIDE_PATTERN.test(strippedCombined)) return "ride_pay";
   // Check shift_title specifically for prefixed patterns like "99 - PAY RIDE"
-  if (shiftTitle && PAY_RIDE_PREFIXED.test(shiftTitle.trim())) return "ride_pay";
+  const strippedTitle = stripPayModifiers(shiftTitle);
+  if (strippedTitle && PAY_RIDE_PREFIXED.test(strippedTitle.trim())) return "ride_pay";
   return "regular";
 }
 
