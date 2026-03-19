@@ -50,31 +50,21 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
           <div className={cn(
             "flex items-center gap-2.5 shrink-0 pr-3 border-r border-border/30"
           )}>
-            {/* Company logo/avatar */}
-            <Avatar className="h-7 w-7 rounded-lg shrink-0 ring-1 ring-border/20">
-              {selectedCompany.logo_url ? (
-                <AvatarImage src={selectedCompany.logo_url} alt={selectedCompany.name} className="rounded-lg object-contain" />
-              ) : null}
-              <AvatarFallback
-                className="rounded-lg text-[9px] font-bold"
-                style={{ backgroundColor: `${companyColor}15`, color: companyColor }}
-              >
-                {selectedCompany.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            {/* Active dot + company name */}
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span
-                className="h-2 w-2 rounded-full shrink-0 animate-pulse"
-                style={{ backgroundColor: companyColor, boxShadow: `0 0 6px ${companyColor}50` }}
-              />
-              <span className={cn(
-                "font-semibold text-foreground truncate hidden sm:inline leading-tight",
-                isMultiCompany ? "text-[13px] max-w-[200px]" : "text-[12px] max-w-[160px]"
-              )}>
-                {selectedCompany.name}
-              </span>
-            </div>
+            <CompanyLogo
+              name={selectedCompany.name}
+              logoUrl={selectedCompany.logo_url}
+              brandColor={selectedCompany.brand_color}
+              size="sm"
+              active
+              glow
+            />
+            {/* Company name */}
+            <span className={cn(
+              "font-semibold text-foreground truncate hidden sm:inline leading-tight",
+              isMultiCompany ? "text-[13px] max-w-[200px]" : "text-[12px] max-w-[160px]"
+            )}>
+              {selectedCompany.name}
+            </span>
           </div>
         )}
         <CommandPaletteTrigger collapsed={false} />
