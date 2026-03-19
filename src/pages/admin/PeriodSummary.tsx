@@ -601,11 +601,14 @@ export default function PeriodSummary() {
       <TabsContent value="summary" className="space-y-5 mt-0">
         {/* KPI Cards */}
         {rows.length > 0 && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <KpiCard value={rows.length.toString()} label="Empleados en periodo" icon={<Users className="h-5 w-5 text-primary" />} accent="primary" subtitle={`${withBase} con pago base`} />
             <KpiCard value={`$${fmt(grandBase)}`} label="Total pago base" icon={<DollarSign className="h-5 w-5 text-primary" />} accent="primary" />
             <KpiCard value={`$${fmt(grandExtras)}`} label="Total extras" icon={<TrendingUp className="h-5 w-5 text-earning" />} accent="earning" subtitle={`${withExtras} empleados con extras`} />
             <KpiCard value={`$${fmt(grandDeductions)}`} label="Total deducciones" icon={<TrendingDown className="h-5 w-5 text-deduction" />} accent="deduction" subtitle={`${withDeductions} con deducciones`} />
+            {grandAdvances > 0 && (
+              <KpiCard value={`$${fmt(grandAdvances)}`} label="Anticipos / Préstamos" icon={<Banknote className="h-5 w-5 text-warning" />} accent="warning" subtitle={`${withAdvances} empleado${withAdvances !== 1 ? "s" : ""}`} />
+            )}
           </div>
         )}
 
