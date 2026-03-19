@@ -334,12 +334,13 @@ export default function PeriodSummary() {
   const selectedPeriodObj = periods.find(p => p.id === selectedPeriod);
 
   const getCSVRows = (): string[][] => {
-    const header = ["Empleado", "Base", "Extras", "Deducciones", "Total Final"];
+    const header = ["Empleado", "Base", "Extras", "Deducciones", "Anticipos/Préstamos", "Total Final"];
     const dataRows = sorted.map(r => [
       formatPersonName(`${r.first_name} ${r.last_name}`),
       String(r.base_total_pay),
       String(r.extras_total),
       String(r.deductions_total),
+      String(r.advance_deduction),
       String(r.total_final_pay),
     ]);
     return [header, ...dataRows];
