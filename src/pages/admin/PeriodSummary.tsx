@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { formatPersonName } from "@/lib/format-helpers";
 import { usePageView } from "@/hooks/useAuditLog";
 import AuditPanel from "@/components/audit/AuditPanel";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2, Clock, Mail, FileSpreadsheet, UserCheck, BarChart3, AlertTriangle, ContactRound } from "lucide-react";
+import { Download, Search, X, Filter, Users, DollarSign, TrendingUp, TrendingDown, ArrowUpDown, CalendarIcon, CheckCircle2, Loader2, Clock, Mail, FileSpreadsheet, UserCheck, BarChart3, AlertTriangle, ContactRound, Banknote } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 /**
  * Find the period that contains today (Wed–Tue cycle), or the most recent past period.
@@ -47,10 +48,32 @@ interface SummaryRow {
   base_total_pay: number;
   extras_total: number;
   deductions_total: number;
+  advance_deduction: number;
   total_final_pay: number;
 }
 
-type SortKey = "name" | "base" | "extras" | "deductions" | "total";
+interface AdvanceRecord {
+  id: string;
+  employee_id: string;
+  reference_code: string;
+  record_type: string;
+  original_amount: number;
+  balance_remaining: number;
+  repayment_mode: string;
+  fixed_amount_per_cut: number | null;
+  percentage_per_cut: number | null;
+  maximum_payment_per_cut: number | null;
+  minimum_payment: number | null;
+  protect_minimum_net_pay: boolean;
+  protect_negative_payroll: boolean;
+  auto_deduct_enabled: boolean;
+  repayment_start_date: string | null;
+  priority_order: number | null;
+  status: string;
+  employees?: { first_name: string; last_name: string } | null;
+}
+
+type SortKey = "name" | "base" | "extras" | "deductions" | "advances" | "total";
 type SortDir = "asc" | "desc";
 type PayFilter = "all" | "with_extras" | "with_deductions" | "zero_base";
 
@@ -75,6 +98,13 @@ export default function PeriodSummary() {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [sendingEmails, setSendingEmails] = useState(false);
   const autoConsolidatedRef = useRef<string | null>(null);
+  const [advanceRecords, setAdvanceRecords] = useState<AdvanceRecord[]>([]);
+
+  // Helper to create a default SummaryRow
+  const mkRow = (eid: string, fn: string, ln: string, base = 0): SummaryRow => ({
+    employee_id: eid, first_name: fn, last_name: ln,
+    base_total_pay: base, extras_total: 0, deductions_total: 0, advance_deduction: 0, total_final_pay: 0,
+  });
 
   // Filter periods by date range for the dropdown
   const visiblePeriods = useMemo(() => {
@@ -138,13 +168,7 @@ export default function PeriodSummary() {
         .eq("approval_status", "approved");
       const empMap = new Map<string, SummaryRow>();
       (basePays ?? []).forEach((bp: any) => {
-        empMap.set(bp.employee_id, {
-          employee_id: bp.employee_id,
-          first_name: bp.employees?.first_name ?? "",
-          last_name: bp.employees?.last_name ?? "",
-          base_total_pay: Number(bp.base_total_pay) || 0,
-          extras_total: 0, deductions_total: 0, total_final_pay: 0,
-        });
+        empMap.set(bp.employee_id, mkRow(bp.employee_id, bp.employees?.first_name ?? "", bp.employees?.last_name ?? "", Number(bp.base_total_pay) || 0));
       });
       const { data: movEmployees } = await supabase
         .from("movements")
@@ -152,12 +176,7 @@ export default function PeriodSummary() {
         .eq("period_id", selectedPeriod);
       (movEmployees ?? []).forEach((me: any) => {
         if (!empMap.has(me.employee_id) && me.employees) {
-          empMap.set(me.employee_id, {
-            employee_id: me.employee_id,
-            first_name: me.employees.first_name ?? "",
-            last_name: me.employees.last_name ?? "",
-            base_total_pay: 0, extras_total: 0, deductions_total: 0, total_final_pay: 0,
-          });
+          empMap.set(me.employee_id, mkRow(me.employee_id, me.employees.first_name ?? "", me.employees.last_name ?? ""));
         }
       });
       (movements ?? []).forEach((m: any) => {
@@ -166,7 +185,69 @@ export default function PeriodSummary() {
         if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0;
         else row.deductions_total += Number(m.total_value) || 0;
       });
-      empMap.forEach((row) => { row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total; });
+
+      // Fetch active advance/loan records for this company
+      if (selectedCompanyId) {
+        const periodObj = periods.find(p => p.id === selectedPeriod);
+        const { data: advRecords } = await supabase
+          .from("employee_financial_records")
+          .select("id, employee_id, reference_code, record_type, original_amount, balance_remaining, repayment_mode, fixed_amount_per_cut, percentage_per_cut, maximum_payment_per_cut, minimum_payment, protect_minimum_net_pay, protect_negative_payroll, auto_deduct_enabled, repayment_start_date, priority_order, status, employees(first_name, last_name)")
+          .eq("company_id", selectedCompanyId)
+          .in("status", ["active", "approved"])
+          .eq("auto_deduct_enabled", true)
+          .is("deleted_at", null);
+
+        const eligible = (advRecords ?? []).filter((r: any) => {
+          if (Number(r.balance_remaining) <= 0) return false;
+          if (r.repayment_start_date && periodObj && r.repayment_start_date > periodObj.end_date) return false;
+          return true;
+        });
+
+        setAdvanceRecords(eligible as any[]);
+
+        // Calculate proposed deductions per employee
+        eligible.forEach((r: any) => {
+          const empId = r.employee_id;
+          // Ensure employee exists in empMap
+          if (!empMap.has(empId) && r.employees) {
+            empMap.set(empId, mkRow(empId, r.employees.first_name ?? "", r.employees.last_name ?? ""));
+          }
+          const row = empMap.get(empId);
+          if (!row) return;
+
+          const netPay = row.base_total_pay + row.extras_total - row.deductions_total;
+          const balance = Number(r.balance_remaining);
+          let proposed = 0;
+
+          switch (r.repayment_mode) {
+            case "fixed_amount":
+              proposed = Number(r.fixed_amount_per_cut ?? 0);
+              break;
+            case "percentage_net":
+              proposed = netPay * (Number(r.percentage_per_cut ?? 0) / 100);
+              break;
+            case "one_time_next":
+              proposed = balance;
+              break;
+            case "manual":
+              return; // skip
+            default:
+              proposed = Number(r.fixed_amount_per_cut ?? 0);
+          }
+
+          // Apply caps
+          proposed = Math.min(proposed, balance);
+          if (r.maximum_payment_per_cut) proposed = Math.min(proposed, Number(r.maximum_payment_per_cut));
+          if (r.protect_negative_payroll) proposed = Math.min(proposed, Math.max(0, netPay - row.advance_deduction));
+          proposed = Math.max(0, Math.round(proposed * 100) / 100);
+
+          row.advance_deduction += proposed;
+        });
+      }
+
+      empMap.forEach((row) => {
+        row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total - row.advance_deduction;
+      });
       const allRows = Array.from(empMap.values());
       setRows(allRows);
       setLoading(false);
@@ -225,6 +306,7 @@ export default function PeriodSummary() {
       case "base": cmp = a.base_total_pay - b.base_total_pay; break;
       case "extras": cmp = a.extras_total - b.extras_total; break;
       case "deductions": cmp = a.deductions_total - b.deductions_total; break;
+      case "advances": cmp = a.advance_deduction - b.advance_deduction; break;
       case "total": cmp = a.total_final_pay - b.total_final_pay; break;
     }
     return sortDir === "asc" ? cmp : -cmp;
@@ -243,19 +325,22 @@ export default function PeriodSummary() {
   const grandBase = filtered.reduce((s, r) => s + r.base_total_pay, 0);
   const grandExtras = filtered.reduce((s, r) => s + r.extras_total, 0);
   const grandDeductions = filtered.reduce((s, r) => s + r.deductions_total, 0);
+  const grandAdvances = filtered.reduce((s, r) => s + r.advance_deduction, 0);
   const withExtras = rows.filter(r => r.extras_total > 0).length;
   const withDeductions = rows.filter(r => r.deductions_total > 0).length;
   const withBase = rows.filter(r => r.base_total_pay > 0).length;
+  const withAdvances = rows.filter(r => r.advance_deduction > 0).length;
 
   const selectedPeriodObj = periods.find(p => p.id === selectedPeriod);
 
   const getCSVRows = (): string[][] => {
-    const header = ["Empleado", "Base", "Extras", "Deducciones", "Total Final"];
+    const header = ["Empleado", "Base", "Extras", "Deducciones", "Anticipos/Préstamos", "Total Final"];
     const dataRows = sorted.map(r => [
       formatPersonName(`${r.first_name} ${r.last_name}`),
       String(r.base_total_pay),
       String(r.extras_total),
       String(r.deductions_total),
+      String(r.advance_deduction),
       String(r.total_final_pay),
     ]);
     return [header, ...dataRows];
@@ -320,10 +405,10 @@ export default function PeriodSummary() {
                       const { data: movements2 } = await supabase.from("movements").select("employee_id, total_value, concepts(category)").eq("period_id", selectedPeriod).eq("approval_status", "approved");
                       const empMap2 = new Map<string, SummaryRow>();
                       (basePays2 ?? []).forEach((bp: any) => {
-                        empMap2.set(bp.employee_id, { employee_id: bp.employee_id, first_name: bp.employees?.first_name ?? "", last_name: bp.employees?.last_name ?? "", base_total_pay: Number(bp.base_total_pay) || 0, extras_total: 0, deductions_total: 0, total_final_pay: 0 });
+                        empMap2.set(bp.employee_id, mkRow(bp.employee_id, bp.employees?.first_name ?? "", bp.employees?.last_name ?? "", Number(bp.base_total_pay) || 0));
                       });
                       const { data: movEmps2 } = await supabase.from("movements").select("employee_id, employees(first_name, last_name)").eq("period_id", selectedPeriod);
-                      (movEmps2 ?? []).forEach((me: any) => { if (!empMap2.has(me.employee_id) && me.employees) empMap2.set(me.employee_id, { employee_id: me.employee_id, first_name: me.employees.first_name ?? "", last_name: me.employees.last_name ?? "", base_total_pay: 0, extras_total: 0, deductions_total: 0, total_final_pay: 0 }); });
+                      (movEmps2 ?? []).forEach((me: any) => { if (!empMap2.has(me.employee_id) && me.employees) empMap2.set(me.employee_id, mkRow(me.employee_id, me.employees.first_name ?? "", me.employees.last_name ?? "")); });
                       (movements2 ?? []).forEach((m: any) => { const row = empMap2.get(m.employee_id); if (!row) return; if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0; else row.deductions_total += Number(m.total_value) || 0; });
                       empMap2.forEach(row => { row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total; });
                       setRows(Array.from(empMap2.values()));
@@ -517,11 +602,14 @@ export default function PeriodSummary() {
       <TabsContent value="summary" className="space-y-5 mt-0">
         {/* KPI Cards */}
         {rows.length > 0 && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <KpiCard value={rows.length.toString()} label="Empleados en periodo" icon={<Users className="h-5 w-5 text-primary" />} accent="primary" subtitle={`${withBase} con pago base`} />
             <KpiCard value={`$${fmt(grandBase)}`} label="Total pago base" icon={<DollarSign className="h-5 w-5 text-primary" />} accent="primary" />
             <KpiCard value={`$${fmt(grandExtras)}`} label="Total extras" icon={<TrendingUp className="h-5 w-5 text-earning" />} accent="earning" subtitle={`${withExtras} empleados con extras`} />
             <KpiCard value={`$${fmt(grandDeductions)}`} label="Total deducciones" icon={<TrendingDown className="h-5 w-5 text-deduction" />} accent="deduction" subtitle={`${withDeductions} con deducciones`} />
+            {grandAdvances > 0 && (
+              <KpiCard value={`$${fmt(grandAdvances)}`} label="Anticipos / Préstamos" icon={<Banknote className="h-5 w-5 text-warning" />} accent="warning" subtitle={`${withAdvances} empleado${withAdvances !== 1 ? "s" : ""}`} />
+            )}
           </div>
         )}
 
@@ -592,6 +680,11 @@ export default function PeriodSummary() {
                   <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("deductions")}>
                     <span className="flex items-center justify-end gap-1">Deducciones {sortIcon("deductions")}</span>
                   </TableHead>
+                  {grandAdvances > 0 && (
+                    <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("advances")}>
+                      <span className="flex items-center justify-end gap-1"><Banknote className="h-3 w-3" /> Anticipos {sortIcon("advances")}</span>
+                    </TableHead>
+                  )}
                   <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors font-bold" onClick={() => toggleSort("total")}>
                     <span className="flex items-center justify-end gap-1">Total Final {sortIcon("total")}</span>
                   </TableHead>
@@ -600,7 +693,7 @@ export default function PeriodSummary() {
               <TableBody>
                 {sorted.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-16">
+                    <TableCell colSpan={grandAdvances > 0 ? 7 : 6} className="text-center text-muted-foreground py-16">
                       {rows.length === 0 ? "Selecciona un periodo para ver el resumen" : "Sin resultados para los filtros aplicados"}
                     </TableCell>
                   </TableRow>
@@ -623,6 +716,11 @@ export default function PeriodSummary() {
                             <TableCell className="text-right font-mono text-sm tabular-nums">
                               {r.deductions_total > 0 ? <span className="text-deduction font-medium">−${fmt(r.deductions_total)}</span> : <span className="text-muted-foreground">—</span>}
                             </TableCell>
+                            {grandAdvances > 0 && (
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {r.advance_deduction > 0 ? <span className="text-warning font-medium">−${fmt(r.advance_deduction)}</span> : <span className="text-muted-foreground">—</span>}
+                              </TableCell>
+                            )}
                             <TableCell className="text-right font-mono text-sm tabular-nums font-bold">${fmt(r.total_final_pay)}</TableCell>
                           </TableRow>
                         </TooltipTrigger>
@@ -632,6 +730,9 @@ export default function PeriodSummary() {
                             <span className="text-muted-foreground">Base:</span><span className="text-right font-mono">${fmt(r.base_total_pay)}</span>
                             <span className="text-muted-foreground">Extras:</span><span className="text-right font-mono text-earning">+${fmt(r.extras_total)}</span>
                             <span className="text-muted-foreground">Deducciones:</span><span className="text-right font-mono text-deduction">−${fmt(r.deductions_total)}</span>
+                            {r.advance_deduction > 0 && (
+                              <><span className="text-muted-foreground">Anticipos:</span><span className="text-right font-mono text-warning">−${fmt(r.advance_deduction)}</span></>
+                            )}
                             <span className="font-semibold border-t pt-0.5">Total:</span><span className="text-right font-mono font-bold border-t pt-0.5">${fmt(r.total_final_pay)}</span>
                           </div>
                         </TooltipContent>
@@ -647,6 +748,9 @@ export default function PeriodSummary() {
                       <TableCell className="text-right font-mono font-bold tabular-nums">${fmt(grandBase)}</TableCell>
                       <TableCell className="text-right font-mono font-bold tabular-nums text-earning">+${fmt(grandExtras)}</TableCell>
                       <TableCell className="text-right font-mono font-bold tabular-nums text-deduction">−${fmt(grandDeductions)}</TableCell>
+                      {grandAdvances > 0 && (
+                        <TableCell className="text-right font-mono font-bold tabular-nums text-warning">−${fmt(grandAdvances)}</TableCell>
+                      )}
                       <TableCell className="text-right font-mono font-bold tabular-nums text-lg">${fmt(grandTotal)}</TableCell>
                     </TableRow>
                   </>
