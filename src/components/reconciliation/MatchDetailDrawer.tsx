@@ -133,6 +133,14 @@ function scoreCandidates(clock: ClockDetail, schedules: ScheduleDetail[]): Candi
     if (sameCli) { score += 15; reasons.push("Mismo cliente"); }
     if (hoursDiff != null && Math.abs(hoursDiff) <= 0.5) { score += 10; reasons.push("Horas similares"); }
 
+    // Shift number: weak hint only
+    const schedNum = s.external_shift_id?.trim() || null;
+    const clockNum = clock.external_clock_id?.trim() || null;
+    if (schedNum && clockNum) {
+      if (schedNum === clockNum) { score += 5; reasons.push("Shift # coincide (débil)"); }
+      else { reasons.push("Shift # ≠ (no confiable)"); }
+    }
+
     return { schedule: s, score, sameDate, startDiff, endDiff, hoursDiff, sameLocation: sameLoc, sameClient: sameCli, reasons };
   }).sort((a, b) => b.score - a.score);
 }
