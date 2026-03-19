@@ -251,9 +251,9 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     );
 
     let result: any;
-    if (sourceType === "schedule") result = normalizeScheduleRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot);
-    else if (sourceType === "clock") result = normalizeClockRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot);
-    else result = normalizePayrollRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot);
+    if (sourceType === "schedule") result = normalizeScheduleRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot, columnMapping);
+    else if (sourceType === "clock") result = normalizeClockRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot, columnMapping);
+    else result = normalizePayrollRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot, columnMapping);
 
     console.log("[StagedImport] Normalization result:", {
       normalized: result.normalized.length,
