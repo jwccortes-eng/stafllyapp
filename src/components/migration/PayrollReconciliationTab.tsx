@@ -36,6 +36,7 @@ export default function PayrollReconciliationTab({ companyId, onRefresh }: Props
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>#</TableHead>
                 <TableHead>Week</TableHead>
                 <TableHead>CT Gross</TableHead>
                 <TableHead>Stafly Gross</TableHead>
