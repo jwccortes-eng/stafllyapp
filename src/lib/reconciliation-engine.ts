@@ -183,19 +183,25 @@ export function matchEmployee(
 // ─── Compensation Category Detection ───
 export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "regular";
 
-const WEEKEND_JOB_PATTERN = /\b(weekend\s*job|trabajo\s*de?\s*fin\s*de?\s*semana)\b/i;
-const PAY_RIDE_PATTERN = /\b(pay\s*ride|ride\s*pay|transporte|transportation)\b/i;
+// Expanded patterns to match real Connecteam export variants
+const WEEKEND_JOB_PATTERN = /\b(weekend\s*(job|shift)|wj|trabajo\s*de?\s*fin\s*de?\s*semana)\b/i;
+const PAY_RIDE_PATTERN = /\b(pay\s*ride|ride\s*pay|payride|transporte|transportation)\b/i;
+// Also match "99 - PAY RIDE" style prefixed titles
+const PAY_RIDE_PREFIXED = /^\d+\s*[-–—]\s*pay\s*ride/i;
 
 export function detectShiftCategory(
   jobTitle: string | null | undefined,
   shiftTitle: string | null | undefined,
   clientName: string | null | undefined,
   locationName: string | null | undefined,
+  notes?: string | null,
 ): ShiftCategory {
-  const fields = [jobTitle, shiftTitle, clientName, locationName].map(f => (f || "").toLowerCase());
+  const fields = [jobTitle, shiftTitle, clientName, locationName, notes].map(f => (f || ""));
   const combined = fields.join(" ");
   if (WEEKEND_JOB_PATTERN.test(combined)) return "daily_pay";
   if (PAY_RIDE_PATTERN.test(combined)) return "ride_pay";
+  // Check shift_title specifically for prefixed patterns like "99 - PAY RIDE"
+  if (shiftTitle && PAY_RIDE_PREFIXED.test(shiftTitle.trim())) return "ride_pay";
   return "regular";
 }
 
