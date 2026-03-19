@@ -297,8 +297,14 @@ export function matchScheduleToClock(
     // Detect special compensation BEFORE employee check — these categories
     // are valid even without a matched employee (e.g. Weekend shift, Pay Ride)
     const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes);
+
+    // Check if this is a double-pay modifier (PAGA DOBLE) — NOT clock-exempt
+    const isDoublePay = hasDoublePay(sched.shift_title) || hasDoublePay(sched.job_title);
+
     if (isClockExemptCategory(category)) {
       const label = category === "daily_pay" ? "daily_pay_weekend_job" : category === "ride_pay" ? "ride_pay" : "availability_block";
+      const flags = [label, "clock_exempt"];
+      if (isDoublePay) flags.push("double_pay");
       results.push({
         schedule_id: sched.id,
         clock_id: null,
@@ -309,7 +315,7 @@ export function matchScheduleToClock(
         match_status: "exact",
         hours_variance: null,
         pay_variance: null,
-        conflict_flags: [label, "clock_exempt"],
+        conflict_flags: flags,
       });
       continue;
     }
