@@ -1,6 +1,7 @@
 /**
  * Normalizer: Converts raw imported rows into normalized structures
  * for schedules, clocks, and payroll.
+ * Includes system-row filtering, alias support, and match diagnostics.
  */
 import {
   normalizeText, normalizePhone, normalizeEmail, hashRow,
@@ -8,25 +9,133 @@ import {
   type EmployeeRecord, type ColumnMapping,
 } from "./reconciliation-engine";
 
+// ─── System / Non-Employee Row Detection ───
+
+const SYSTEM_NAME_PATTERNS = [
+  /^conecteam/i,
+  /^general\s*admin/i,
+  /^help$/i,
+  /^admin$/i,
+  /^support$/i,
+  /^test\s*(user|account)/i,
+  /^system/i,
+  /^n\/?a$/i,
+  /^setup/i,
+  /^placeholder/i,
+];
+
+const SYSTEM_EMAIL_PATTERNS = [
+  /^conecteam@/i,
+  /^admin@/i,
+  /^help@/i,
+  /^support@/i,
+  /^noreply@/i,
+  /^test@/i,
+];
+
+export interface EmployeeAlias {
+  employee_id: string;
+  alias_name_normalized: string;
+}
+
+export function isSystemRow(nameRaw: string, emailRaw?: string | null): boolean {
+  const name = (nameRaw || "").trim();
+  if (!name || name.length < 2) return true;
+  // All digits or special chars only
+  if (/^[\d\s\-_.@#]+$/.test(name)) return true;
+
+  const normalized = normalizeText(name);
+  for (const pattern of SYSTEM_NAME_PATTERNS) {
+    if (pattern.test(name) || pattern.test(normalized)) return true;
+  }
+
+  if (emailRaw) {
+    for (const pattern of SYSTEM_EMAIL_PATTERNS) {
+      if (pattern.test(emailRaw.trim())) return true;
+    }
+  }
+
+  return false;
+}
+
+// ─── Diagnostics ───
+
+export interface ImportDiagnostics {
+  totalRows: number;
+  systemRows: number;
+  systemRowNames: string[];
+  blankNameRows: number;
+  realEmployeeRows: number;
+  matched: number;
+  matchedByMethod: Record<string, number>;
+  unmatched: number;
+  unmatchedNames: string[];
+  ambiguous: number;
+  likelyAliasMatches: number;
+  likelyAliasNames: string[];
+  companyEmployeesActive: number;
+  companyEmployeesInactive: number;
+}
+
 export interface NormalizationResult<T> {
   normalized: T[];
   warnings: string[];
   errors: string[];
   columnMapping: ColumnMapping;
+  diagnostics: ImportDiagnostics;
 }
+
+// ─── Enhanced Employee Matching with Aliases ───
+
+export function matchEmployeeWithAliases(
+  nameRaw: string | null,
+  phone: string | null,
+  email: string | null,
+  externalId: string | null,
+  employees: EmployeeRecord[],
+  aliases: EmployeeAlias[]
+) {
+  // First try standard matching
+  const result = matchEmployee(nameRaw, phone, email, externalId, employees);
+
+  // If no match and we have aliases, try alias lookup
+  if (!result.employee_id && nameRaw) {
+    const normalized = normalizeText(nameRaw);
+    if (normalized) {
+      const alias = aliases.find(a => a.alias_name_normalized === normalized);
+      if (alias) {
+        const emp = employees.find(e => e.id === alias.employee_id);
+        if (emp) {
+          return {
+            ...result,
+            employee_id: alias.employee_id,
+            confidence: 0.85,
+            method: "alias",
+            ambiguous: false,
+            candidates: [
+              { id: alias.employee_id, name: `${emp.first_name} ${emp.last_name}`, confidence: 0.85, method: "alias" },
+              ...result.candidates,
+            ],
+          };
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+// ─── Parsers (unchanged) ───
 
 function parseDate(val: string | null | undefined): string | null {
   if (!val) return null;
   const s = val.trim();
-  // ISO
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
-  // MM/DD/YYYY or M/D/YYYY
   const mdy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
   if (mdy) {
     const y = mdy[3].length === 2 ? `20${mdy[3]}` : mdy[3];
     return `${y}-${mdy[1].padStart(2, "0")}-${mdy[2].padStart(2, "0")}`;
   }
-  // Try Date.parse
   const d = new Date(s);
   if (!isNaN(d.getTime())) return d.toISOString().substring(0, 10);
   return null;
@@ -35,10 +144,8 @@ function parseDate(val: string | null | undefined): string | null {
 function parseTime(val: string | null | undefined): string | null {
   if (!val) return null;
   const s = val.trim();
-  // HH:MM or H:MM
   const hm = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (hm) return `${hm[1].padStart(2, "0")}:${hm[2]}:${hm[3] || "00"}`;
-  // AM/PM
   const ampm = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm)/i);
   if (ampm) {
     let h = parseInt(ampm[1]);
@@ -62,16 +169,63 @@ function parseTimestamp(dateStr: string | null, timeStr: string | null): string 
   return t ? `${d}T${t}` : `${d}T00:00:00`;
 }
 
+// ─── Core normalizer with diagnostics ───
+
+function buildDiagnostics(
+  totalRows: number,
+  systemRowNames: string[],
+  blankNameRows: number,
+  normalized: any[],
+  employees: EmployeeRecord[]
+): ImportDiagnostics {
+  const matched = normalized.filter(r => r.matched_employee_id);
+  const unmatched = normalized.filter(r => !r.matched_employee_id && !r._is_system);
+  const ambiguous = normalized.filter(r => r.has_conflict);
+
+  // Identify likely alias candidates (unmatched with >0 fuzzy confidence)
+  const likelyAlias = unmatched.filter(r =>
+    r.employee_match_confidence > 0 && r.employee_match_confidence < 0.75
+  );
+
+  const matchedByMethod: Record<string, number> = {};
+  for (const r of matched) {
+    matchedByMethod[r.employee_match_method] = (matchedByMethod[r.employee_match_method] || 0) + 1;
+  }
+
+  const activeEmps = employees.filter((e: any) => e.is_active !== false);
+  const inactiveEmps = employees.filter((e: any) => e.is_active === false);
+
+  return {
+    totalRows,
+    systemRows: systemRowNames.length,
+    systemRowNames: [...new Set(systemRowNames)],
+    blankNameRows,
+    realEmployeeRows: normalized.filter(r => !r._is_system).length,
+    matched: matched.length,
+    matchedByMethod,
+    unmatched: unmatched.length,
+    unmatchedNames: [...new Set(unmatched.map(r => r.employee_name_raw))],
+    ambiguous: ambiguous.length,
+    likelyAliasMatches: likelyAlias.length,
+    likelyAliasNames: [...new Set(likelyAlias.map(r => r.employee_name_raw))],
+    companyEmployeesActive: activeEmps.length,
+    companyEmployeesInactive: inactiveEmps.length,
+  };
+}
+
 export function normalizeScheduleRows(
   rawRows: Array<{ id: string; row_number: number; raw_data: Record<string, any> }>,
-  employees: EmployeeRecord[]
+  employees: EmployeeRecord[],
+  aliases: EmployeeAlias[] = []
 ): NormalizationResult<any> {
-  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {} };
+  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedByMethod: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.length, companyEmployeesInactive: 0 } };
 
   const headers = Object.keys(rawRows[0].raw_data);
   const colMap = detectColumns(headers);
   const warnings: string[] = [];
   const errors: string[] = [];
+  const systemRowNames: string[] = [];
+  let blankNameRows = 0;
 
   if (!colMap.employee_name && !colMap.external_id) {
     errors.push("Could not detect employee name or ID column");
@@ -84,7 +238,44 @@ export function normalizeScheduleRows(
     const email = d[colMap.employee_email || ""] || null;
     const extId = d[colMap.external_id || ""] || null;
 
-    const empMatch = matchEmployee(nameRaw, phone, email, extId, employees);
+    // Check for system/non-employee rows
+    if (!nameRaw.trim()) {
+      blankNameRows++;
+      return {
+        raw_row_id: raw.id,
+        employee_name_raw: nameRaw,
+        employee_name_normalized: "",
+        _is_system: true,
+        _system_reason: "blank_name",
+        matched_employee_id: null,
+        employee_match_confidence: 0,
+        employee_match_method: "excluded",
+        work_date: null, start_time: null, end_time: null, total_hours: null,
+        client_name: null, location_name: null, shift_title: null,
+        external_shift_id: null, pay_type: "excluded",
+        has_conflict: false, conflict_details: null,
+      };
+    }
+
+    if (isSystemRow(nameRaw, email)) {
+      systemRowNames.push(nameRaw.trim());
+      return {
+        raw_row_id: raw.id,
+        employee_name_raw: nameRaw,
+        employee_name_normalized: normalizeText(nameRaw),
+        _is_system: true,
+        _system_reason: "system_placeholder",
+        matched_employee_id: null,
+        employee_match_confidence: 0,
+        employee_match_method: "excluded",
+        work_date: null, start_time: null, end_time: null, total_hours: null,
+        client_name: null, location_name: null, shift_title: null,
+        external_shift_id: null, pay_type: "excluded",
+        has_conflict: false, conflict_details: null,
+      };
+    }
+
+    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases);
     if (empMatch.ambiguous) warnings.push(`Row ${raw.row_number}: Ambiguous employee match for "${nameRaw}"`);
     if (!empMatch.employee_id) warnings.push(`Row ${raw.row_number}: No employee match for "${nameRaw}"`);
 
@@ -113,22 +304,28 @@ export function normalizeScheduleRows(
       pay_type: "unknown",
       has_conflict: empMatch.ambiguous,
       conflict_details: empMatch.ambiguous ? { candidates: empMatch.candidates } : null,
+      _is_system: false,
     };
   });
 
-  return { normalized, warnings, errors, columnMapping: colMap };
+  const diagnostics = buildDiagnostics(rawRows.length, systemRowNames, blankNameRows, normalized, employees);
+
+  return { normalized, warnings, errors, columnMapping: colMap, diagnostics };
 }
 
 export function normalizeClockRows(
   rawRows: Array<{ id: string; row_number: number; raw_data: Record<string, any> }>,
-  employees: EmployeeRecord[]
+  employees: EmployeeRecord[],
+  aliases: EmployeeAlias[] = []
 ): NormalizationResult<any> {
-  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {} };
+  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedByMethod: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.length, companyEmployeesInactive: 0 } };
 
   const headers = Object.keys(rawRows[0].raw_data);
   const colMap = detectColumns(headers);
   const warnings: string[] = [];
   const errors: string[] = [];
+  const systemRowNames: string[] = [];
+  let blankNameRows = 0;
 
   const normalized = rawRows.map(raw => {
     const d = raw.raw_data;
@@ -137,7 +334,10 @@ export function normalizeClockRows(
     const email = d[colMap.employee_email || ""] || null;
     const extId = d[colMap.external_id || ""] || null;
 
-    const empMatch = matchEmployee(nameRaw, phone, email, extId, employees);
+    if (!nameRaw.trim()) { blankNameRows++; return buildExcludedRow(raw.id, nameRaw, "blank_name"); }
+    if (isSystemRow(nameRaw, email)) { systemRowNames.push(nameRaw.trim()); return buildExcludedRow(raw.id, nameRaw, "system_placeholder"); }
+
+    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases);
     if (empMatch.ambiguous) warnings.push(`Row ${raw.row_number}: Ambiguous employee match for "${nameRaw}"`);
 
     const workDate = parseDate(d[colMap.work_date || ""]);
@@ -165,22 +365,27 @@ export function normalizeClockRows(
       clock_method: "import",
       has_conflict: empMatch.ambiguous,
       conflict_details: empMatch.ambiguous ? { candidates: empMatch.candidates } : null,
+      _is_system: false,
     };
   });
 
-  return { normalized, warnings, errors, columnMapping: colMap };
+  const diagnostics = buildDiagnostics(rawRows.length, systemRowNames, blankNameRows, normalized, employees);
+  return { normalized, warnings, errors, columnMapping: colMap, diagnostics };
 }
 
 export function normalizePayrollRows(
   rawRows: Array<{ id: string; row_number: number; raw_data: Record<string, any> }>,
-  employees: EmployeeRecord[]
+  employees: EmployeeRecord[],
+  aliases: EmployeeAlias[] = []
 ): NormalizationResult<any> {
-  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {} };
+  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedByMethod: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.length, companyEmployeesInactive: 0 } };
 
   const headers = Object.keys(rawRows[0].raw_data);
   const colMap = detectColumns(headers);
   const warnings: string[] = [];
   const errors: string[] = [];
+  const systemRowNames: string[] = [];
+  let blankNameRows = 0;
 
   const normalized = rawRows.map(raw => {
     const d = raw.raw_data;
@@ -189,7 +394,10 @@ export function normalizePayrollRows(
     const email = d[colMap.employee_email || ""] || null;
     const extId = d[colMap.external_id || ""] || null;
 
-    const empMatch = matchEmployee(nameRaw, phone, email, extId, employees);
+    if (!nameRaw.trim()) { blankNameRows++; return buildExcludedRow(raw.id, nameRaw, "blank_name"); }
+    if (isSystemRow(nameRaw, email)) { systemRowNames.push(nameRaw.trim()); return buildExcludedRow(raw.id, nameRaw, "system_placeholder"); }
+
+    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases);
     const classification = classifyPayrollRow(d);
 
     const workDate = parseDate(d[colMap.work_date || ""]);
@@ -218,8 +426,29 @@ export function normalizePayrollRows(
       notes: classification.notes,
       has_conflict: empMatch.ambiguous,
       conflict_details: empMatch.ambiguous ? { candidates: empMatch.candidates } : null,
+      _is_system: false,
     };
   });
 
-  return { normalized, warnings, errors, columnMapping: colMap };
+  const diagnostics = buildDiagnostics(rawRows.length, systemRowNames, blankNameRows, normalized, employees);
+  return { normalized, warnings, errors, columnMapping: colMap, diagnostics };
+}
+
+// ─── Helper ───
+
+function buildExcludedRow(rawRowId: string, nameRaw: string, reason: string) {
+  return {
+    raw_row_id: rawRowId,
+    employee_name_raw: nameRaw,
+    employee_name_normalized: normalizeText(nameRaw),
+    _is_system: true,
+    _system_reason: reason,
+    matched_employee_id: null,
+    employee_match_confidence: 0,
+    employee_match_method: "excluded",
+    work_date: null,
+    total_hours: null,
+    has_conflict: false,
+    conflict_details: null,
+  };
 }
