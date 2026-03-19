@@ -6,7 +6,7 @@
 import {
   normalizeText, normalizePhone, normalizeEmail, hashRow,
   matchEmployee, classifyPayrollRow, detectColumns,
-  type EmployeeRecord, type ColumnMapping,
+  type EmployeeRecord, type ColumnMapping, type EmployeeMatchStatus,
 } from "./reconciliation-engine";
 
 // ─── System / Non-Employee Row Detection ───
