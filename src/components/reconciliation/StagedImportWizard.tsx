@@ -143,7 +143,50 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     if (aliasErr) console.warn("[StagedImport] Alias query error (table may not exist yet):", aliasErr.message);
     setAliases((aliasData || []) as unknown as EmployeeAlias[]);
     console.log("[StagedImport] Aliases loaded:", (aliasData || []).length);
-  }, [companyId, toast]);
+
+    // Load persisted manual ambiguous resolutions for this source/scope
+    const { data: resolutionData, error: resolutionErr } = await supabase
+      .from("reconciliation_name_resolutions" as any)
+      .select("imported_name_normalized, selected_employee_id, resolution_source, source_type, scope_key")
+      .eq("company_id", companyId)
+      .in("source_type", [sourceType, "all"])
+      .in("scope_key", [resolutionScopeKey, "global"]);
+
+    if (resolutionErr) {
+      console.warn("[StagedImport] Resolution query error (table may not exist yet):", resolutionErr.message);
+      setManualResolutions([]);
+    } else {
+      const rows = (resolutionData || []) as Array<{
+        imported_name_normalized: string;
+        selected_employee_id: string;
+        resolution_source?: string | null;
+        source_type: string;
+        scope_key: string;
+      }>;
+
+      const ranked = rows.sort((a, b) => {
+        const aScope = a.scope_key === resolutionScopeKey ? 0 : 1;
+        const bScope = b.scope_key === resolutionScopeKey ? 0 : 1;
+        const aSource = a.source_type === sourceType ? 0 : 1;
+        const bSource = b.source_type === sourceType ? 0 : 1;
+        return aScope - bScope || aSource - bSource;
+      });
+
+      const deduped = new Map<string, ManualNameResolution>();
+      for (const item of ranked) {
+        if (!item.imported_name_normalized || deduped.has(item.imported_name_normalized)) continue;
+        deduped.set(item.imported_name_normalized, {
+          imported_name_normalized: item.imported_name_normalized,
+          selected_employee_id: item.selected_employee_id,
+          resolution_source: item.resolution_source,
+        });
+      }
+
+      const resolved = Array.from(deduped.values());
+      setManualResolutions(resolved);
+      console.log("[StagedImport] Manual resolutions loaded:", resolved.length, "scope:", resolutionScopeKey, "source:", sourceType);
+    }
+  }, [companyId, resolutionScopeKey, sourceType, toast]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
