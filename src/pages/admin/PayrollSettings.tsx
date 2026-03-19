@@ -97,9 +97,13 @@ export default function PayrollSettings() {
       />
 
       <Tabs defaultValue="payroll" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="payroll">Ciclo y Reglas</TabsTrigger>
-          <TabsTrigger value="financial">Anticipos y Préstamos</TabsTrigger>
+        <TabsList className="mb-4 flex-wrap h-auto gap-1">
+          <TabsTrigger value="payroll"><CalendarDays className="h-3.5 w-3.5 mr-1" />Ciclo y Reglas</TabsTrigger>
+          <TabsTrigger value="financial"><DollarSign className="h-3.5 w-3.5 mr-1" />Anticipos</TabsTrigger>
+          <TabsTrigger value="matrix"><LayoutGrid className="h-3.5 w-3.5 mr-1" />Matriz</TabsTrigger>
+          <TabsTrigger value="rules"><Settings className="h-3.5 w-3.5 mr-1" />Reglas</TabsTrigger>
+          <TabsTrigger value="import"><FileSpreadsheet className="h-3.5 w-3.5 mr-1" />Importar</TabsTrigger>
+          <TabsTrigger value="analysis"><TrendingUp className="h-3.5 w-3.5 mr-1" />Análisis</TabsTrigger>
         </TabsList>
 
         <TabsContent value="payroll" className="space-y-6 mt-0">
