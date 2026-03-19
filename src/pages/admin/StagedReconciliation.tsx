@@ -21,6 +21,7 @@ import ImportBatchHistory from "@/components/reconciliation/ImportBatchHistory";
 import ReconciliationDashboard from "@/components/reconciliation/ReconciliationDashboard";
 import EmployeePeriodReconciliation from "@/components/reconciliation/EmployeePeriodReconciliation";
 import PrePublishReview from "@/components/reconciliation/PrePublishReview";
+import VerificationReport from "@/components/reconciliation/VerificationReport";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 export default function StagedReconciliation() {
