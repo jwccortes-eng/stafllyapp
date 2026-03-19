@@ -29,7 +29,6 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
-  const companyColor = selectedCompany?.brand_color || "hsl(var(--primary))";
   const isOwner = role === "developer" || role === "owner";
   const isMultiCompany = companies.length > 1;
   const initials = fullName
