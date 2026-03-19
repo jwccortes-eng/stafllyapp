@@ -13,14 +13,6 @@ import {
   CheckCircle2, FileQuestion, Loader2, ChevronDown, ChevronUp,
   Filter, Layers, ShieldOff,
 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
-import {
-  AlertTriangle, Calendar, Clock, Users, Copy, Ban,
-  CheckCircle2, FileQuestion, Loader2, ChevronDown, ChevronUp,
-  Filter, Layers,
-} from "lucide-react";
 
 /* ── Types ── */
 
