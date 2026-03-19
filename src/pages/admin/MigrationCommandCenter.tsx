@@ -13,7 +13,9 @@ import ClockMatchingTab from "@/components/migration/ClockMatchingTab";
 import PayrollReconciliationTab from "@/components/migration/PayrollReconciliationTab";
 import WeeklyCloseTab from "@/components/migration/WeeklyCloseTab";
 import ExceptionsTab from "@/components/migration/ExceptionsTab";
-import { ArrowLeftRight, Users, CalendarDays, Clock, DollarSign, CalendarCheck, AlertTriangle, FileText } from "lucide-react";
+import SmartSyncUpload from "@/components/migration/SmartSyncUpload";
+import SyncStatusPanel from "@/components/migration/SyncStatusPanel";
+import { ArrowLeftRight, Users, CalendarDays, Clock, DollarSign, CalendarCheck, AlertTriangle, FileText, Zap, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface MigrationStats {
@@ -116,6 +118,12 @@ export default function MigrationCommandCenter() {
           <TabsTrigger value="overview" className="gap-1.5">
             <ArrowLeftRight className="h-4 w-4" /> Overview
           </TabsTrigger>
+          <TabsTrigger value="smart-sync" className="gap-1.5">
+            <Zap className="h-4 w-4" /> Smart Sync
+          </TabsTrigger>
+          <TabsTrigger value="sync-status" className="gap-1.5">
+            <Activity className="h-4 w-4" /> Sync Status
+          </TabsTrigger>
           <TabsTrigger value="employees" className="gap-1.5">
             <Users className="h-4 w-4" /> Employees
             {tabBadge(stats.employeeCounts.unresolved, "destructive")}
@@ -143,6 +151,12 @@ export default function MigrationCommandCenter() {
 
         <TabsContent value="overview">
           <MigrationOverview stats={stats} loading={loading} onRefresh={fetchStats} />
+        </TabsContent>
+        <TabsContent value="smart-sync">
+          <SmartSyncUpload companyId={companyId} onRefresh={fetchStats} />
+        </TabsContent>
+        <TabsContent value="sync-status">
+          <SyncStatusPanel companyId={companyId} />
         </TabsContent>
         <TabsContent value="employees">
           <EmployeeMatchingTab companyId={companyId} onRefresh={fetchStats} />
