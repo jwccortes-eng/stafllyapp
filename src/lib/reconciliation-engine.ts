@@ -371,7 +371,7 @@ export function matchScheduleToClock(
   // Orphan clocks (no schedule) — also check if clock itself is a compensation category
   for (const clock of clocks) {
     if (usedClocks.has(clock.id)) continue;
-    const clockCat = detectShiftCategory(null, null, clock.client_name, clock.location_name);
+    const clockCat = detectShiftCategory(null, null, clock.client_name, clock.location_name, clock.notes);
     if (isClockExemptCategory(clockCat)) {
       const label = clockCat === "daily_pay" ? "daily_pay_weekend_job" : "ride_pay";
       results.push({
