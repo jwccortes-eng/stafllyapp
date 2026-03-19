@@ -348,41 +348,66 @@ const DAILY_HALF = 125;
 const RIDE_REGULAR = 100;
 const RIDE_SPECIAL = 160;
 
+// Known manual-adjustment keywords in notes/job fields
+const MANUAL_KEYWORDS = /\b(bonus|tip|propina|ajuste|manual|reimburs|reintegro|descuento|deduccion)\b/i;
+
 export function classifyPayrollRow(row: Record<string, any>): PayrollClassification {
   const totalPay = parseFloat(row["Total pay"] || row["total_pay"] || row["TotalPay"] || "0") || 0;
   const totalHours = parseFloat(row["Total hours"] || row["total_hours"] || row["TotalHours"] || "0") || 0;
   const jobTitle = normalizeText(row["Job title"] || row["job_title"] || row["Job"] || "");
   const shiftTitle = normalizeText(row["Shift title"] || row["shift_title"] || row["Shift"] || "");
+  const notesField = (row["Notes"] || row["notes"] || row["Employee notes"] || "").toString();
 
-  // Ride detection
-  if (totalPay === RIDE_REGULAR || totalPay === RIDE_SPECIAL || jobTitle.includes("ride") || shiftTitle.includes("ride")) {
-    return { pay_type: "pay_ride", base_pay: 0, ride_amount: totalPay, weekend_amount: 0, manual_amount: 0, confidence: 90, notes: "Detected as ride payment" };
+  // 1. Ride detection (by title keyword or exact ride amounts with no hours)
+  if (jobTitle.includes("ride") || shiftTitle.includes("ride")) {
+    return { pay_type: "pay_ride", base_pay: 0, ride_amount: totalPay, weekend_amount: 0, manual_amount: 0, confidence: 90, notes: "Detected as ride payment (title)" };
+  }
+  if (totalHours === 0 && (totalPay === RIDE_REGULAR || totalPay === RIDE_SPECIAL)) {
+    return { pay_type: "pay_ride", base_pay: 0, ride_amount: totalPay, weekend_amount: 0, manual_amount: 0, confidence: 85, notes: `Ride amount: $${totalPay}` };
   }
 
-  // Weekend job detection
+  // 2. Weekend job detection
   if (jobTitle.includes("weekend") || shiftTitle.includes("weekend")) {
     return { pay_type: "weekend_job", base_pay: 0, ride_amount: 0, weekend_amount: totalPay, manual_amount: 0, confidence: 85, notes: "Weekend job detected" };
   }
 
-  // Daily pay detection
-  if (totalPay === DAILY_FULL || totalPay === DAILY_HALF) {
-    return { pay_type: "daily", base_pay: totalPay, ride_amount: 0, weekend_amount: 0, manual_amount: 0, confidence: 85, notes: `Daily rate: $${totalPay}` };
-  }
-  if (totalPay > 0 && totalPay % DAILY_FULL === 0) {
-    return { pay_type: "daily", base_pay: totalPay, ride_amount: 0, weekend_amount: 0, manual_amount: 0, confidence: 75, notes: `Multiple daily: ${totalPay / DAILY_FULL} days` };
-  }
-
-  // Hourly detection
+  // 3. Hourly detection (has hours AND pay)
   if (totalHours > 0 && totalPay > 0) {
     const impliedRate = totalPay / totalHours;
-    if (impliedRate >= 10 && impliedRate <= 100) {
-      return { pay_type: "hourly", base_pay: totalPay, ride_amount: 0, weekend_amount: 0, manual_amount: 0, confidence: 80, notes: `Hourly @ $${impliedRate.toFixed(2)}/hr` };
+    if (impliedRate >= 10 && impliedRate <= 200) {
+      return { pay_type: "hourly", base_pay: totalPay, ride_amount: 0, weekend_amount: 0, manual_amount: 0, confidence: 85, notes: `Hourly @ $${impliedRate.toFixed(2)}/hr × ${totalHours}h` };
     }
   }
 
-  // Manual adjustment detection (odd amounts, no hours)
+  // 4. Daily pay detection (exact or decomposable amounts)
+  if (totalPay === DAILY_FULL || totalPay === DAILY_HALF) {
+    return { pay_type: "daily", base_pay: totalPay, ride_amount: 0, weekend_amount: 0, manual_amount: 0, confidence: 85, notes: `Daily rate: $${totalPay}` };
+  }
+  if (totalPay > 0) {
+    // Try daily decomposition: totalPay = F * DAILY_FULL + H * DAILY_HALF
+    for (let f = 0; f <= 7; f++) {
+      const rem = totalPay - f * DAILY_FULL;
+      if (rem < 0) break;
+      if (rem === 0 && f > 0) {
+        return { pay_type: "daily", base_pay: totalPay, ride_amount: 0, weekend_amount: 0, manual_amount: 0, confidence: 80, notes: `Daily: ${f} full days = $${totalPay}` };
+      }
+      if (DAILY_HALF > 0) {
+        const h = rem / DAILY_HALF;
+        if (h > 0 && h <= 7 && h === Math.round(h)) {
+          return { pay_type: "daily", base_pay: totalPay, ride_amount: 0, weekend_amount: 0, manual_amount: 0, confidence: 78, notes: `Daily: ${f}F + ${h}H = $${totalPay}` };
+        }
+      }
+    }
+  }
+
+  // 5. Only classify as manual_adjustment if keywords confirm it
+  if (totalPay > 0 && totalHours === 0 && MANUAL_KEYWORDS.test(notesField + " " + jobTitle + " " + shiftTitle)) {
+    return { pay_type: "manual_adjustment", base_pay: 0, ride_amount: 0, weekend_amount: 0, manual_amount: totalPay, confidence: 70, notes: "Manual adjustment (keyword match)" };
+  }
+
+  // 6. Fallback: unknown (NOT manual_adjustment by default)
   if (totalPay > 0 && totalHours === 0) {
-    return { pay_type: "manual_adjustment", base_pay: 0, ride_amount: 0, weekend_amount: 0, manual_amount: totalPay, confidence: 60, notes: "Possible manual adjustment (no hours)" };
+    return { pay_type: "unknown", base_pay: totalPay, ride_amount: 0, weekend_amount: 0, manual_amount: 0, confidence: 40, notes: "No hours — could not classify (review needed)" };
   }
 
   return { pay_type: "unknown", base_pay: totalPay, ride_amount: 0, weekend_amount: 0, manual_amount: 0, confidence: 30, notes: "Could not classify" };
