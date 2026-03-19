@@ -44,7 +44,7 @@ export interface ConnecteamParsedRecord {
   _raw: Record<string, string>;
 }
 
-const HEADER_MAP: Record<string, keyof ConnecteamParsedRecord> = {
+export const HEADER_MAP: Record<string, keyof ConnecteamParsedRecord> = {
   "first name": "first_name",
   "last name": "last_name",
   "email": "email",
