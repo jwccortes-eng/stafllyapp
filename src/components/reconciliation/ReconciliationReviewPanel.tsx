@@ -53,7 +53,11 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
       .order("created_at", { ascending: false })
       .limit(200);
 
-    if (filter !== "all") q = q.eq("match_status", filter);
+    if (filter === "compensation") {
+      q = q.contains("conflict_flags", ["clock_exempt"]);
+    } else if (filter !== "all") {
+      q = q.eq("match_status", filter);
+    }
 
     q.then(({ data }) => {
       setMatches((data || []) as any);
@@ -166,6 +170,18 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
     setDrawerOpen(true);
   };
 
+  const isCompensationRow = (flags: any) => {
+    const f = Array.isArray(flags) ? flags : [];
+    return f.includes("clock_exempt");
+  };
+
+  const compensationLabel = (flags: any): string | null => {
+    const f = Array.isArray(flags) ? flags : [];
+    if (f.includes("daily_pay_weekend_job")) return "Daily Pay (Weekend Job)";
+    if (f.includes("ride_pay")) return "Ride Pay (Pay Ride)";
+    return null;
+  };
+
   const statusColor = (s: string) => {
     switch (s) {
       case "exact": return "default";
@@ -191,6 +207,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
             <SelectItem value="probable">Probables</SelectItem>
             <SelectItem value="ambiguous">Ambiguos</SelectItem>
             <SelectItem value="unmatched">Sin match</SelectItem>
+            <SelectItem value="compensation">Compensación especial</SelectItem>
             <SelectItem value="approved">Aprobados</SelectItem>
             <SelectItem value="valid_unscheduled">Trabajo sin agenda</SelectItem>
             <SelectItem value="linked">Vinculados</SelectItem>
@@ -223,10 +240,16 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {matches.map(m => (
-                  <TableRow key={m.id} className={`cursor-pointer hover:bg-accent/50 ${m.match_status === "unmatched" ? "bg-destructive/5" : m.match_status === "ambiguous" ? "bg-amber-500/5" : ""}`} onClick={() => openDetail(m)}>
+                {matches.map(m => {
+                  const compLabel = compensationLabel(m.conflict_flags);
+                  return (
+                  <TableRow key={m.id} className={`cursor-pointer hover:bg-accent/50 ${m.match_status === "unmatched" ? "bg-destructive/5" : m.match_status === "ambiguous" ? "bg-amber-500/5" : isCompensationRow(m.conflict_flags) ? "bg-primary/5" : ""}`} onClick={() => openDetail(m)}>
                     <TableCell>
-                      <Badge variant="outline" className="text-xs">{m.match_type.replace("_", " → ")}</Badge>
+                      {compLabel ? (
+                        <Badge className="text-xs bg-primary/10 text-primary border-primary/20">{compLabel}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">{m.match_type.replace("_", " → ")}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusColor(m.match_status) as any} className="text-xs">
@@ -263,7 +286,8 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
