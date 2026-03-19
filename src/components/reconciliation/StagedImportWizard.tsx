@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ArrowRight, Eye, Loader2, Users, ShieldAlert, Info, UserX, Link2 } from "lucide-react";
 import UnmatchedResolutionPanel from "./UnmatchedResolutionPanel";
-import { parseAnyFileToJson } from "@/lib/safe-xlsx";
+import { parseAnyFileToJson, parseExcelWithSheets, getFileSheetNames } from "@/lib/safe-xlsx";
+import { findPayrollSheet } from "@/lib/payroll-interpreter";
 import { hashRow, detectColumns, normalizeText, resolveEmployeeName, detectSuspiciousNameColumn, type ColumnMapping } from "@/lib/reconciliation-engine";
 import {
   normalizeScheduleRows,
