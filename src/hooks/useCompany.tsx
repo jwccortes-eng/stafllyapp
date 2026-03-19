@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { queryClient } from "@/App";
+import { queryClient } from "@/lib/query-client";
 
 interface Company {
   id: string;
