@@ -112,7 +112,7 @@ export default function PilotReviewReport({ companyId, period, finalRecords, emp
             <div className="space-y-1.5">
               <p className="font-medium">Periodo</p>
               <p className="text-muted-foreground">{period.period_label}</p>
-              <p className="text-muted-foreground">{period.start_date} → {period.end_date}</p>
+              <p className="text-muted-foreground">{period.period_start} → {period.period_end}</p>
               <p>Estado: <Badge variant="outline" className="text-[10px]">{period.status}</Badge></p>
             </div>
             <div className="space-y-1.5">
