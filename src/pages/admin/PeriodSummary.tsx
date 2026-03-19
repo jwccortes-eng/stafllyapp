@@ -680,6 +680,11 @@ export default function PeriodSummary() {
                   <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("deductions")}>
                     <span className="flex items-center justify-end gap-1">Deducciones {sortIcon("deductions")}</span>
                   </TableHead>
+                  {grandAdvances > 0 && (
+                    <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort("advances")}>
+                      <span className="flex items-center justify-end gap-1"><Banknote className="h-3 w-3" /> Anticipos {sortIcon("advances")}</span>
+                    </TableHead>
+                  )}
                   <TableHead className="text-right cursor-pointer select-none hover:text-foreground transition-colors font-bold" onClick={() => toggleSort("total")}>
                     <span className="flex items-center justify-end gap-1">Total Final {sortIcon("total")}</span>
                   </TableHead>
