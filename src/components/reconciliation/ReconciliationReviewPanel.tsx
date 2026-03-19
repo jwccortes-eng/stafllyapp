@@ -89,8 +89,16 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
         return;
       }
 
+      // Clear previous matches before re-running
+      const { error: delErr } = await supabase
+        .from("reconciliation_matches" as any)
+        .delete()
+        .eq("company_id", companyId);
+      if (delErr) console.warn("[Matching] Could not clear old matches:", delErr);
+
       const results = matchScheduleToClock(schedules, clocks);
-      console.log("[Matching] Generated", results.length, "match results");
+      const specialCount = results.filter(r => r.conflict_flags.includes("clock_exempt")).length;
+      console.log("[Matching] Generated", results.length, "match results,", specialCount, "clock-exempt (special compensation)");
 
       // Save matches
       const inserts = results.map(r => ({
