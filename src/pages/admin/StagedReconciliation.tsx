@@ -32,7 +32,7 @@ export default function StagedReconciliation() {
     finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
     loadFinalRecords, generateFinalRecords, postFinalRecords,
     saveMappingCorrection, reopenPeriod, loadClosingReceipt,
-    validateBeforePublish,
+    validateBeforePublish, analyzeVariances, runValidation,
   } = useReconciliationPeriod(selectedCompanyId);
 
   const [tab, setTab] = useState("dashboard");
