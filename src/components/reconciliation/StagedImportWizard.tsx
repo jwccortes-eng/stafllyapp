@@ -241,7 +241,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       const normInserts = normResult.normalized
         .filter((n: any) => !n._is_system)
         .map((n: any) => {
-          const { _is_system, _system_reason, ...rest } = n;
+          const { _is_system, _system_reason, _match_status, ...rest } = n;
           return { ...rest, batch_id: batchId, company_id: companyId };
         });
 
