@@ -6498,6 +6498,94 @@ export type Database = {
           },
         ]
       }
+      reconciliation_uat_issues: {
+        Row: {
+          category: string
+          company_id: string
+          created_at: string
+          description: string | null
+          fix_notes: string | null
+          fixed_at: string | null
+          id: string
+          linked_employee_id: string | null
+          linked_record_id: string | null
+          linked_step: string | null
+          period_status_id: string
+          reported_at: string
+          reported_by: string | null
+          retested_at: string | null
+          retested_by: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          company_id: string
+          created_at?: string
+          description?: string | null
+          fix_notes?: string | null
+          fixed_at?: string | null
+          id?: string
+          linked_employee_id?: string | null
+          linked_record_id?: string | null
+          linked_step?: string | null
+          period_status_id: string
+          reported_at?: string
+          reported_by?: string | null
+          retested_at?: string | null
+          retested_by?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          fix_notes?: string | null
+          fixed_at?: string | null
+          id?: string
+          linked_employee_id?: string | null
+          linked_record_id?: string | null
+          linked_step?: string | null
+          period_status_id?: string
+          reported_at?: string
+          reported_by?: string | null
+          retested_at?: string | null
+          retested_by?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_uat_issues_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_uat_issues_linked_employee_id_fkey"
+            columns: ["linked_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_uat_issues_linked_employee_id_fkey"
+            columns: ["linked_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_validation_results: {
         Row: {
           company_id: string
