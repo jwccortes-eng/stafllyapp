@@ -310,7 +310,7 @@ export function matchScheduleToClock(
     const isDoublePay = hasDoublePay(sched.shift_title) || hasDoublePay(sched.job_title);
 
     if (isClockExemptCategory(category)) {
-      const label = category === "daily_pay" ? "daily_pay_weekend_job" : category === "ride_pay" ? "ride_pay" : "availability_block";
+      const label = category === "daily_pay" ? "daily_pay_weekend_job" : category === "ride_pay" ? "ride_pay" : category === "structural_no_context" ? "structural_no_context" : "availability_block";
       const flags = [label, "clock_exempt"];
       if (isDoublePay) flags.push("double_pay");
       results.push({
