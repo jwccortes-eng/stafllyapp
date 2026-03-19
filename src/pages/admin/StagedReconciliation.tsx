@@ -522,6 +522,18 @@ export default function StagedReconciliation() {
           )}
         </TabsContent>
 
+        <TabsContent value="uat">
+          {activePeriod ? (
+            <UATIssueTracker companyId={selectedCompanyId} period={activePeriod} employees={employeeMap} />
+          ) : (
+            <NoPeriodPlaceholder icon={Bug} text="Selecciona un periodo para gestionar issues UAT." />
+          )}
+        </TabsContent>
+
+        <TabsContent value="stabilization">
+          <StabilizationDashboard periods={periods} companyId={selectedCompanyId} />
+        </TabsContent>
+
         <TabsContent value="history">
           <ImportBatchHistory companyId={selectedCompanyId} key={refreshKey} />
         </TabsContent>
