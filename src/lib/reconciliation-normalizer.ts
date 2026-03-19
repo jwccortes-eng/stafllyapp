@@ -365,7 +365,7 @@ export function normalizeClockRows(
 
   const normalized = rawRows.map(raw => {
     const d = raw.raw_data;
-    const nameRaw = d[colMap.employee_name || ""] || "";
+    const nameRaw = resolveEmployeeName(d, colMap);
     const phone = d[colMap.employee_phone || ""] || null;
     const email = d[colMap.employee_email || ""] || null;
     const extId = d[colMap.external_id || ""] || null;
