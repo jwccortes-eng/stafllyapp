@@ -240,7 +240,7 @@ export function detectShiftCategory(
 }
 
 export function isClockExemptCategory(cat: ShiftCategory): boolean {
-  return cat === "daily_pay" || cat === "ride_pay" || cat === "availability_block";
+  return cat === "daily_pay" || cat === "ride_pay" || cat === "availability_block" || cat === "structural_no_context";
 }
 
 // ─── Shift Matching ───
