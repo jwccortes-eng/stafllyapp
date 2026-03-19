@@ -16,6 +16,9 @@ import {
   Save, RotateCcw, Shield, Globe, Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const CompanyFinancialPolicies = lazy(() => import("@/components/advances/CompanyFinancialPolicies"));
 
 const TIMEZONES = [
   "America/New_York",
