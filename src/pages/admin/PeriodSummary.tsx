@@ -76,6 +76,19 @@ export default function PeriodSummary() {
   const [sendingEmails, setSendingEmails] = useState(false);
   const autoConsolidatedRef = useRef<string | null>(null);
 
+  // Filter periods by date range for the dropdown
+  const visiblePeriods = useMemo(() => {
+    if (!dateFrom && !dateTo) return periods;
+    const fromStr = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null;
+    const toStr = dateTo ? format(dateTo, "yyyy-MM-dd") : null;
+    return periods.filter(p => {
+      // Include period if its start_date falls within the range
+      if (fromStr && p.start_date < fromStr) return false;
+      if (toStr && p.start_date > toStr) return false;
+      return true;
+    });
+  }, [periods, dateFrom, dateTo]);
+
   const canConsolidate = hasActionPermission("aprobar_nomina");
 
   // When date range changes, find matching period(s) - for now select the first match
