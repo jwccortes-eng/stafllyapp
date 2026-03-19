@@ -716,6 +716,11 @@ export default function PeriodSummary() {
                             <TableCell className="text-right font-mono text-sm tabular-nums">
                               {r.deductions_total > 0 ? <span className="text-deduction font-medium">−${fmt(r.deductions_total)}</span> : <span className="text-muted-foreground">—</span>}
                             </TableCell>
+                            {grandAdvances > 0 && (
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {r.advance_deduction > 0 ? <span className="text-warning font-medium">−${fmt(r.advance_deduction)}</span> : <span className="text-muted-foreground">—</span>}
+                              </TableCell>
+                            )}
                             <TableCell className="text-right font-mono text-sm tabular-nums font-bold">${fmt(r.total_final_pay)}</TableCell>
                           </TableRow>
                         </TooltipTrigger>
