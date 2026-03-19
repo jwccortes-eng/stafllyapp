@@ -52,7 +52,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
           )}>
             <span
               className="h-2.5 w-2.5 rounded-full shrink-0 ring-2 ring-offset-1 ring-offset-background"
-              style={{ backgroundColor: companyColor, boxShadow: `0 0 8px ${companyColor}40`, ringColor: `${companyColor}30` }}
+              style={{ backgroundColor: companyColor, boxShadow: `0 0 8px ${companyColor}40` }}
             />
             <span className={cn(
               "font-semibold text-foreground truncate hidden sm:inline",
