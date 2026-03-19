@@ -7,11 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   CheckCircle2, AlertTriangle, XCircle, Shield, User, DollarSign,
-  Clock, Calendar, FileText, RotateCcw, Lock,
+  Clock, Calendar, FileText, RotateCcw, Lock, Rocket, Eye,
 } from "lucide-react";
-import type { EmployeeFinalRecord, PeriodStatus, ClosingReceipt } from "@/hooks/useReconciliationPeriod";
+import PostPublishVerification from "./PostPublishVerification";
+import type { EmployeeFinalRecord, EmployeeVariance, PeriodStatus, ClosingReceipt } from "@/hooks/useReconciliationPeriod";
 
 interface Props {
   period: PeriodStatus;
@@ -19,19 +22,24 @@ interface Props {
   closingReceipt: ClosingReceipt | null;
   employees: Map<string, string>;
   validation: { canPublish: boolean; errors: string[]; warnings: string[] };
+  variances?: EmployeeVariance[];
   onPublish: () => Promise<boolean | void>;
   onLock: () => void;
   onReopen: (reason: string) => void;
   publishing?: boolean;
+  isPilotMode?: boolean;
 }
 
 export default function PrePublishReview({
-  period, finalRecords, closingReceipt, employees, validation,
-  onPublish, onLock, onReopen, publishing,
+  period, finalRecords, closingReceipt, employees, validation, variances,
+  onPublish, onLock, onReopen, publishing, isPilotMode = true,
 }: Props) {
   const [showReopenDialog, setShowReopenDialog] = useState(false);
   const [reopenReason, setReopenReason] = useState("");
   const [confirmPublish, setConfirmPublish] = useState(false);
+  const [publishNote, setPublishNote] = useState("");
+  const [acknowledgeWarnings, setAcknowledgeWarnings] = useState(false);
+  const [supervisedConfirm, setSupervisedConfirm] = useState(false);
 
   const stats = useMemo(() => {
     const approved = finalRecords.filter(r => ["resolved", "approved"].includes(r.reconciliation_status));
@@ -52,12 +60,54 @@ export default function PrePublishReview({
     };
   }, [finalRecords]);
 
+  // Enhanced pre-publish checks
+  const enhancedChecks = useMemo(() => {
+    const errors = [...validation.errors];
+    const warnings = [...validation.warnings];
+
+    // No unknown classifications
+    const unknowns = finalRecords.filter(r => r.pay_classification === "unknown");
+    if (unknowns.length > 0 && !errors.some(e => e.includes("clasificación"))) {
+      errors.push(`${unknowns.length} empleado(s) con clasificación de pago desconocida.`);
+    }
+
+    // No major unexplained variances
+    const majorUnexplained = (variances || []).filter(v =>
+      v.variance_status === "major_variance" && (!v.variance_reasons || v.variance_reasons.length === 0)
+    );
+    if (majorUnexplained.length > 0) {
+      errors.push(`${majorUnexplained.length} empleado(s) con varianza mayor sin explicación.`);
+    }
+
+    // Duplicate publish check
+    if (period.publish_idempotency_key) {
+      errors.push("Este periodo ya fue publicado. No se permiten publicaciones duplicadas.");
+    }
+
+    // Validation result must exist
+    const noApproval = finalRecords.filter(r => !["approved", "resolved", "posted"].includes(r.reconciliation_status));
+    if (noApproval.length > 0 && !errors.some(e => e.includes("conflictos sin resolver"))) {
+      warnings.push(`${noApproval.length} empleado(s) aún sin aprobar.`);
+    }
+
+    const canPublish = errors.length === 0;
+    const hasWarnings = warnings.length > 0;
+
+    return { canPublish, errors, warnings, hasWarnings };
+  }, [validation, finalRecords, variances, period]);
+
   const isPosted = ["posted", "locked"].includes(period.status);
   const isLocked = period.status === "locked";
-  const canPublish = period.status === "approved" && validation.canPublish && !period.publish_idempotency_key;
+  const canPublish = period.status === "approved" && enhancedChecks.canPublish;
+
+  // Pilot mode: first 3 periods require supervised confirm
+  const isFirstPeriods = (period.reopen_count || 0) === 0 && isPilotMode;
 
   const handlePublish = async () => {
     setConfirmPublish(false);
+    setPublishNote("");
+    setAcknowledgeWarnings(false);
+    setSupervisedConfirm(false);
     await onPublish();
   };
 
@@ -71,10 +121,21 @@ export default function PrePublishReview({
 
   const fmt = (n: number) => `$${n.toFixed(2)}`;
 
-  // ── Show closing receipt if already posted ──
+  // Post-publish: show verification + receipt
   if (isPosted && closingReceipt) {
     return (
       <div className="space-y-6">
+        {/* Post-publish verification */}
+        {variances && (
+          <PostPublishVerification
+            closingReceipt={closingReceipt}
+            finalRecords={finalRecords}
+            variances={variances}
+            employees={employees}
+          />
+        )}
+
+        {/* Closing receipt */}
         <Card className="border-2 border-primary/30 bg-primary/5">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -148,7 +209,6 @@ export default function PrePublishReview({
           </Alert>
         )}
 
-        {/* Reopen dialog */}
         <Dialog open={showReopenDialog} onOpenChange={setShowReopenDialog}>
           <DialogContent>
             <DialogHeader>
@@ -159,17 +219,10 @@ export default function PrePublishReview({
             <p className="text-sm text-muted-foreground">
               Esta acción reabrirá el periodo para revisión. Se registrará quién reabrió y por qué.
             </p>
-            <Textarea
-              value={reopenReason}
-              onChange={e => setReopenReason(e.target.value)}
-              placeholder="Razón de la reapertura (obligatorio)..."
-              rows={3}
-            />
+            <Textarea value={reopenReason} onChange={e => setReopenReason(e.target.value)} placeholder="Razón de la reapertura (obligatorio)..." rows={3} />
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowReopenDialog(false)}>Cancelar</Button>
-              <Button variant="destructive" onClick={handleReopen} disabled={!reopenReason.trim()}>
-                Reabrir Periodo
-              </Button>
+              <Button variant="destructive" onClick={handleReopen} disabled={!reopenReason.trim()}>Reabrir Periodo</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -177,28 +230,39 @@ export default function PrePublishReview({
     );
   }
 
-  // ── Pre-Publish Review ──
+  // Pre-Publish Review
   return (
     <div className="space-y-6">
+      {/* Pilot mode banner */}
+      {isPilotMode && (
+        <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+          <Rocket className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-700 dark:text-amber-400">Modo Piloto Activo</AlertTitle>
+          <AlertDescription className="text-amber-600 text-xs">
+            Se requiere confirmación supervisada. Revisa todos los totales antes de publicar.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Validation alerts */}
-      {validation.errors.length > 0 && (
+      {enhancedChecks.errors.length > 0 && (
         <Alert variant="destructive">
           <XCircle className="h-4 w-4" />
-          <AlertTitle>Bloqueos de publicación</AlertTitle>
+          <AlertTitle>Bloqueos de publicación ({enhancedChecks.errors.length})</AlertTitle>
           <AlertDescription>
             <ul className="list-disc pl-4 mt-1 space-y-1">
-              {validation.errors.map((e, i) => <li key={i}>{e}</li>)}
+              {enhancedChecks.errors.map((e, i) => <li key={i}>{e}</li>)}
             </ul>
           </AlertDescription>
         </Alert>
       )}
-      {validation.warnings.length > 0 && (
+      {enhancedChecks.warnings.length > 0 && (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Advertencias</AlertTitle>
+          <AlertTitle>Advertencias ({enhancedChecks.warnings.length})</AlertTitle>
           <AlertDescription>
             <ul className="list-disc pl-4 mt-1 space-y-1">
-              {validation.warnings.map((w, i) => <li key={i}>{w}</li>)}
+              {enhancedChecks.warnings.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
           </AlertDescription>
         </Alert>
@@ -227,10 +291,7 @@ export default function PrePublishReview({
               </div>
             ))}
           </div>
-
           <Separator />
-
-          {/* Payment breakdown */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { label: "Horas Regular", value: `${stats.totalRegularHours.toFixed(1)}h` },
@@ -242,12 +303,8 @@ export default function PrePublishReview({
               { label: "Manual Adj.", value: fmt(stats.manualAdj) },
               { label: "TOTAL", value: fmt(stats.grandTotal), highlight: true },
             ].map(item => (
-              <div key={item.label} className={`text-center p-3 rounded-lg ${
-                (item as any).highlight ? "bg-primary/10 border-2 border-primary/30" : "bg-muted/30"
-              }`}>
-                <div className={`font-mono font-semibold ${(item as any).highlight ? "text-lg text-primary" : "text-sm"}`}>
-                  {item.value}
-                </div>
+              <div key={item.label} className={`text-center p-3 rounded-lg ${(item as any).highlight ? "bg-primary/10 border-2 border-primary/30" : "bg-muted/30"}`}>
+                <div className={`font-mono font-semibold ${(item as any).highlight ? "text-lg text-primary" : "text-sm"}`}>{item.value}</div>
                 <div className="text-xs text-muted-foreground">{item.label}</div>
               </div>
             ))}
@@ -255,7 +312,7 @@ export default function PrePublishReview({
         </CardContent>
       </Card>
 
-      {/* Employee-by-employee summary table */}
+      {/* Employee summary table */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Detalle por Empleado</CardTitle>
@@ -275,14 +332,12 @@ export default function PrePublishReview({
                   <TableHead className="text-xs text-right">Manual</TableHead>
                   <TableHead className="text-xs text-right">Total</TableHead>
                   <TableHead className="text-xs text-center">Estado</TableHead>
-                  <TableHead className="text-xs text-center">Avisos</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {finalRecords.map(r => {
                   const name = employees.get(r.employee_id) || "—";
                   const total = r.grand_total || r.final_total_pay || 0;
-                  const w = r.warnings || [];
                   return (
                     <TableRow key={r.id}>
                       <TableCell className="text-xs font-medium">{name}</TableCell>
@@ -298,13 +353,6 @@ export default function PrePublishReview({
                         <Badge variant={r.reconciliation_status === "approved" || r.reconciliation_status === "resolved" ? "default" : "destructive"} className="text-[10px]">
                           {r.reconciliation_status}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {w.length > 0 ? (
-                          <Badge variant="secondary" className="text-[10px] gap-0.5">
-                            <AlertTriangle className="h-2.5 w-2.5" /> {w.length}
-                          </Badge>
-                        ) : "—"}
                       </TableCell>
                     </TableRow>
                   );
@@ -326,29 +374,59 @@ export default function PrePublishReview({
         ) : null}
       </div>
 
-      {/* Confirm publish dialog */}
+      {/* Enhanced confirm dialog with pilot safeguards */}
       <Dialog open={confirmPublish} onOpenChange={setConfirmPublish}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" /> Confirmar Publicación
+              {isPilotMode && <Badge variant="outline" className="text-[10px] gap-1"><Rocket className="h-2.5 w-2.5" /> Piloto</Badge>}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm">
             Se publicarán <strong>{stats.totalEmployees} empleados</strong> con un total de <strong>{fmt(stats.grandTotal)}</strong> a producción.
             Esta acción es idempotente — no se crearán duplicados.
           </p>
-          {validation.warnings.length > 0 && (
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {validation.warnings.length} advertencia(s) no bloqueantes.
-              </AlertDescription>
-            </Alert>
+
+          {enhancedChecks.hasWarnings && (
+            <div className="space-y-2">
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  {enhancedChecks.warnings.length} advertencia(s) no bloqueantes.
+                </AlertDescription>
+              </Alert>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="ack-warnings" checked={acknowledgeWarnings} onCheckedChange={(v) => setAcknowledgeWarnings(!!v)} />
+                <Label htmlFor="ack-warnings" className="text-xs">He revisado todas las advertencias y acepto publicar</Label>
+              </div>
+            </div>
           )}
+
+          {isPilotMode && (
+            <div className="flex items-center space-x-2 p-2 rounded bg-amber-50 dark:bg-amber-950/20">
+              <Checkbox id="supervised" checked={supervisedConfirm} onCheckedChange={(v) => setSupervisedConfirm(!!v)} />
+              <Label htmlFor="supervised" className="text-xs text-amber-700 dark:text-amber-400">
+                Confirmo que esta publicación fue supervisada (modo piloto)
+              </Label>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-xs">Nota de publicación (opcional)</Label>
+            <Textarea value={publishNote} onChange={e => setPublishNote(e.target.value)} placeholder="Ej: Primer cierre semanal real..." rows={2} className="mt-1" />
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmPublish(false)}>Cancelar</Button>
-            <Button onClick={handlePublish} disabled={publishing}>
+            <Button
+              onClick={handlePublish}
+              disabled={
+                publishing ||
+                (enhancedChecks.hasWarnings && !acknowledgeWarnings) ||
+                (isPilotMode && !supervisedConfirm)
+              }
+            >
               {publishing ? "Publicando..." : "Confirmar Publicación"}
             </Button>
           </DialogFooter>
