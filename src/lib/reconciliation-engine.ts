@@ -271,7 +271,7 @@ export function matchScheduleToClock(
     if (!sched.matched_employee_id) continue;
 
     // Detect special compensation category — these don't need clocks
-    const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name);
+    const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes);
     if (isClockExemptCategory(category)) {
       const label = category === "daily_pay" ? "daily_pay_weekend_job" : "ride_pay";
       results.push({
