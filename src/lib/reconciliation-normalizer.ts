@@ -417,11 +417,12 @@ export function normalizePayrollRows(
   employees: EmployeeRecord[],
   aliases: EmployeeAlias[] = [],
   manualResolutions: ManualNameResolution[] = [],
+  customColumnMapping?: ColumnMapping,
 ): NormalizationResult<any> {
   if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
   const headers = Object.keys(rawRows[0].raw_data);
-  const colMap = detectColumns(headers);
+  const colMap = customColumnMapping ?? detectColumns(headers);
   const warnings: string[] = [];
   const errors: string[] = [];
   const systemRowNames: string[] = [];
