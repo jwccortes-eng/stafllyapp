@@ -250,7 +250,7 @@ function aggregateLabelStats(rows: DebugRow[], keySelector: (row: DebugRow) => s
     .map(([label, info]) => ({
       label,
       count: info.count,
-      requiresClock: info.requiresClockYes >= info.count / 2 ? "yes" : "no",
+      requiresClock: (info.requiresClockYes >= info.count / 2 ? "yes" : "no") as "yes" | "no",
       detectedCategory: mostFrequentKey(info.detectedCategoryCount),
       recommendedClassification: mostFrequentKey(info.recommendedCount),
     }))
