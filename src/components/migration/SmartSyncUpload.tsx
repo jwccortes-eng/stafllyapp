@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { safeRead, safeSheetToJson, getSheetNames } from "@/lib/safe-xlsx";
 import {
   Upload, FileSpreadsheet, CalendarDays, Clock, DollarSign,
