@@ -250,9 +250,9 @@ export default function MatchDetailDrawer({ match, open, onOpenChange, onResolve
 
             {/* Closest schedule candidate for orphan clocks */}
             {closestSchedule && !schedDetail && (
-              <Card className="border-amber-500/30">
+              <Card className="border-warning/30">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2 text-amber-600">
+                  <CardTitle className="text-sm flex items-center gap-2 text-warning">
                     <MapPin className="h-4 w-4" /> Candidato más cercano
                   </CardTitle>
                 </CardHeader>
