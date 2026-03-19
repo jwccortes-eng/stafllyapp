@@ -99,6 +99,7 @@ const CompanyMigration = lazy(() => import("./pages/admin/CompanyMigration"));
 const ReconciliationReport = lazy(() => import("./pages/admin/ReconciliationReport"));
 const AdvancesLoans = lazy(() => import("./pages/admin/AdvancesLoans"));
 const ShiftOperations = lazy(() => import("./pages/admin/ShiftOperations"));
+const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliation"));
 
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
@@ -224,6 +225,7 @@ function App() {
                 <Route path="migration" element={<MigrationCommandCenter />} />
                 <Route path="company-migration" element={<CompanyMigration />} />
                 <Route path="reconciliation-report" element={<ReconciliationReport />} />
+                <Route path="staged-reconciliation" element={<StagedReconciliation />} />
                 <Route path="advances-loans" element={<AdvancesLoans />} />
                 <Route path="kiosk-devices" element={<KioskDevices />} />
                 <Route path="shift-ops" element={<ShiftOperations />} />

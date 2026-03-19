@@ -3880,6 +3880,357 @@ export type Database = {
           },
         ]
       }
+      normalized_clock_rows: {
+        Row: {
+          batch_id: string
+          break_minutes: number | null
+          client_name: string | null
+          clock_in: string | null
+          clock_method: string | null
+          clock_out: string | null
+          company_id: string
+          conflict_details: Json | null
+          created_at: string
+          employee_email: string | null
+          employee_match_confidence: number | null
+          employee_match_method: string | null
+          employee_name_normalized: string | null
+          employee_name_raw: string | null
+          employee_phone: string | null
+          external_clock_id: string | null
+          has_conflict: boolean | null
+          id: string
+          location_name: string | null
+          matched_employee_id: string | null
+          notes: string | null
+          raw_row_id: string
+          total_hours: number | null
+          work_date: string | null
+        }
+        Insert: {
+          batch_id: string
+          break_minutes?: number | null
+          client_name?: string | null
+          clock_in?: string | null
+          clock_method?: string | null
+          clock_out?: string | null
+          company_id: string
+          conflict_details?: Json | null
+          created_at?: string
+          employee_email?: string | null
+          employee_match_confidence?: number | null
+          employee_match_method?: string | null
+          employee_name_normalized?: string | null
+          employee_name_raw?: string | null
+          employee_phone?: string | null
+          external_clock_id?: string | null
+          has_conflict?: boolean | null
+          id?: string
+          location_name?: string | null
+          matched_employee_id?: string | null
+          notes?: string | null
+          raw_row_id: string
+          total_hours?: number | null
+          work_date?: string | null
+        }
+        Update: {
+          batch_id?: string
+          break_minutes?: number | null
+          client_name?: string | null
+          clock_in?: string | null
+          clock_method?: string | null
+          clock_out?: string | null
+          company_id?: string
+          conflict_details?: Json | null
+          created_at?: string
+          employee_email?: string | null
+          employee_match_confidence?: number | null
+          employee_match_method?: string | null
+          employee_name_normalized?: string | null
+          employee_name_raw?: string | null
+          employee_phone?: string | null
+          external_clock_id?: string | null
+          has_conflict?: boolean | null
+          id?: string
+          location_name?: string | null
+          matched_employee_id?: string | null
+          notes?: string | null
+          raw_row_id?: string
+          total_hours?: number | null
+          work_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "normalized_clock_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_clock_rows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_clock_rows_matched_employee_id_fkey"
+            columns: ["matched_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_clock_rows_matched_employee_id_fkey"
+            columns: ["matched_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_clock_rows_raw_row_id_fkey"
+            columns: ["raw_row_id"]
+            isOneToOne: false
+            referencedRelation: "raw_clock_import_rows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      normalized_payroll_rows: {
+        Row: {
+          base_pay: number | null
+          batch_id: string
+          company_id: string
+          conflict_details: Json | null
+          created_at: string
+          employee_email: string | null
+          employee_match_confidence: number | null
+          employee_match_method: string | null
+          employee_name_normalized: string | null
+          employee_name_raw: string | null
+          employee_phone: string | null
+          has_conflict: boolean | null
+          hourly_rate: number | null
+          id: string
+          manual_amount: number | null
+          matched_employee_id: string | null
+          notes: string | null
+          pay_type: string | null
+          raw_row_id: string
+          ride_amount: number | null
+          total_hours: number | null
+          total_pay: number | null
+          weekend_amount: number | null
+          work_date: string | null
+        }
+        Insert: {
+          base_pay?: number | null
+          batch_id: string
+          company_id: string
+          conflict_details?: Json | null
+          created_at?: string
+          employee_email?: string | null
+          employee_match_confidence?: number | null
+          employee_match_method?: string | null
+          employee_name_normalized?: string | null
+          employee_name_raw?: string | null
+          employee_phone?: string | null
+          has_conflict?: boolean | null
+          hourly_rate?: number | null
+          id?: string
+          manual_amount?: number | null
+          matched_employee_id?: string | null
+          notes?: string | null
+          pay_type?: string | null
+          raw_row_id: string
+          ride_amount?: number | null
+          total_hours?: number | null
+          total_pay?: number | null
+          weekend_amount?: number | null
+          work_date?: string | null
+        }
+        Update: {
+          base_pay?: number | null
+          batch_id?: string
+          company_id?: string
+          conflict_details?: Json | null
+          created_at?: string
+          employee_email?: string | null
+          employee_match_confidence?: number | null
+          employee_match_method?: string | null
+          employee_name_normalized?: string | null
+          employee_name_raw?: string | null
+          employee_phone?: string | null
+          has_conflict?: boolean | null
+          hourly_rate?: number | null
+          id?: string
+          manual_amount?: number | null
+          matched_employee_id?: string | null
+          notes?: string | null
+          pay_type?: string | null
+          raw_row_id?: string
+          ride_amount?: number | null
+          total_hours?: number | null
+          total_pay?: number | null
+          weekend_amount?: number | null
+          work_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "normalized_payroll_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_payroll_rows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_payroll_rows_matched_employee_id_fkey"
+            columns: ["matched_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_payroll_rows_matched_employee_id_fkey"
+            columns: ["matched_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_payroll_rows_raw_row_id_fkey"
+            columns: ["raw_row_id"]
+            isOneToOne: false
+            referencedRelation: "raw_payroll_import_rows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      normalized_schedule_rows: {
+        Row: {
+          batch_id: string
+          client_name: string | null
+          company_id: string
+          conflict_details: Json | null
+          created_at: string
+          employee_email: string | null
+          employee_match_confidence: number | null
+          employee_match_method: string | null
+          employee_name_normalized: string | null
+          employee_name_raw: string | null
+          employee_phone: string | null
+          end_time: string | null
+          external_shift_id: string | null
+          has_conflict: boolean | null
+          id: string
+          location_name: string | null
+          matched_employee_id: string | null
+          notes: string | null
+          pay_type: string | null
+          raw_row_id: string
+          shift_title: string | null
+          start_time: string | null
+          total_hours: number | null
+          work_date: string | null
+        }
+        Insert: {
+          batch_id: string
+          client_name?: string | null
+          company_id: string
+          conflict_details?: Json | null
+          created_at?: string
+          employee_email?: string | null
+          employee_match_confidence?: number | null
+          employee_match_method?: string | null
+          employee_name_normalized?: string | null
+          employee_name_raw?: string | null
+          employee_phone?: string | null
+          end_time?: string | null
+          external_shift_id?: string | null
+          has_conflict?: boolean | null
+          id?: string
+          location_name?: string | null
+          matched_employee_id?: string | null
+          notes?: string | null
+          pay_type?: string | null
+          raw_row_id: string
+          shift_title?: string | null
+          start_time?: string | null
+          total_hours?: number | null
+          work_date?: string | null
+        }
+        Update: {
+          batch_id?: string
+          client_name?: string | null
+          company_id?: string
+          conflict_details?: Json | null
+          created_at?: string
+          employee_email?: string | null
+          employee_match_confidence?: number | null
+          employee_match_method?: string | null
+          employee_name_normalized?: string | null
+          employee_name_raw?: string | null
+          employee_phone?: string | null
+          end_time?: string | null
+          external_shift_id?: string | null
+          has_conflict?: boolean | null
+          id?: string
+          location_name?: string | null
+          matched_employee_id?: string | null
+          notes?: string | null
+          pay_type?: string | null
+          raw_row_id?: string
+          shift_title?: string | null
+          start_time?: string | null
+          total_hours?: number | null
+          work_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "normalized_schedule_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_schedule_rows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_schedule_rows_matched_employee_id_fkey"
+            columns: ["matched_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_schedule_rows_matched_employee_id_fkey"
+            columns: ["matched_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "normalized_schedule_rows_raw_row_id_fkey"
+            columns: ["raw_row_id"]
+            isOneToOne: false
+            referencedRelation: "raw_schedule_import_rows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           channel: string
@@ -4926,6 +5277,150 @@ export type Database = {
           },
         ]
       }
+      raw_clock_import_rows: {
+        Row: {
+          batch_id: string
+          company_id: string
+          created_at: string
+          id: string
+          is_duplicate: boolean | null
+          raw_data: Json
+          row_hash: string | null
+          row_number: number
+        }
+        Insert: {
+          batch_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          is_duplicate?: boolean | null
+          raw_data: Json
+          row_hash?: string | null
+          row_number: number
+        }
+        Update: {
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_duplicate?: boolean | null
+          raw_data?: Json
+          row_hash?: string | null
+          row_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_clock_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_clock_import_rows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_payroll_import_rows: {
+        Row: {
+          batch_id: string
+          company_id: string
+          created_at: string
+          id: string
+          is_duplicate: boolean | null
+          raw_data: Json
+          row_hash: string | null
+          row_number: number
+        }
+        Insert: {
+          batch_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          is_duplicate?: boolean | null
+          raw_data: Json
+          row_hash?: string | null
+          row_number: number
+        }
+        Update: {
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_duplicate?: boolean | null
+          raw_data?: Json
+          row_hash?: string | null
+          row_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_payroll_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_payroll_import_rows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_schedule_import_rows: {
+        Row: {
+          batch_id: string
+          company_id: string
+          created_at: string
+          id: string
+          is_duplicate: boolean | null
+          raw_data: Json
+          row_hash: string | null
+          row_number: number
+        }
+        Insert: {
+          batch_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          is_duplicate?: boolean | null
+          raw_data: Json
+          row_hash?: string | null
+          row_number: number
+        }
+        Update: {
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_duplicate?: boolean | null
+          raw_data?: Json
+          row_hash?: string | null
+          row_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_schedule_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_schedule_import_rows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       read_receipts: {
         Row: {
           conversation_id: string
@@ -4951,6 +5446,228 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_exceptions: {
+        Row: {
+          batch_id: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          employee_id: string | null
+          exception_type: string
+          id: string
+          period_id: string | null
+          resolution_action: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          source_data: Json | null
+          source_row_id: string | null
+          source_type: string | null
+          status: string
+          suggested_resolution: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          employee_id?: string | null
+          exception_type: string
+          id?: string
+          period_id?: string | null
+          resolution_action?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_data?: Json | null
+          source_row_id?: string | null
+          source_type?: string | null
+          status?: string
+          suggested_resolution?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          employee_id?: string | null
+          exception_type?: string
+          id?: string
+          period_id?: string | null
+          resolution_action?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_data?: Json | null
+          source_row_id?: string | null
+          source_type?: string | null
+          status?: string
+          suggested_resolution?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_exceptions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_exceptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_exceptions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_exceptions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_exceptions_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_matches: {
+        Row: {
+          batch_id: string | null
+          clock_row_id: string | null
+          company_id: string
+          confidence_score: number
+          conflict_flags: Json | null
+          created_at: string
+          employee_id: string | null
+          hours_variance: number | null
+          id: string
+          match_status: string
+          match_type: string
+          pay_variance: number | null
+          payroll_row_id: string | null
+          period_id: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          schedule_row_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_id?: string | null
+          clock_row_id?: string | null
+          company_id: string
+          confidence_score?: number
+          conflict_flags?: Json | null
+          created_at?: string
+          employee_id?: string | null
+          hours_variance?: number | null
+          id?: string
+          match_status?: string
+          match_type: string
+          pay_variance?: number | null
+          payroll_row_id?: string | null
+          period_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          schedule_row_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string | null
+          clock_row_id?: string | null
+          company_id?: string
+          confidence_score?: number
+          conflict_flags?: Json | null
+          created_at?: string
+          employee_id?: string | null
+          hours_variance?: number | null
+          id?: string
+          match_status?: string
+          match_type?: string
+          pay_variance?: number | null
+          payroll_row_id?: string | null
+          period_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          schedule_row_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_matches_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_matches_clock_row_id_fkey"
+            columns: ["clock_row_id"]
+            isOneToOne: false
+            referencedRelation: "normalized_clock_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_matches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_matches_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_matches_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_matches_payroll_row_id_fkey"
+            columns: ["payroll_row_id"]
+            isOneToOne: false
+            referencedRelation: "normalized_payroll_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_matches_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_matches_schedule_row_id_fkey"
+            columns: ["schedule_row_id"]
+            isOneToOne: false
+            referencedRelation: "normalized_schedule_rows"
             referencedColumns: ["id"]
           },
         ]
