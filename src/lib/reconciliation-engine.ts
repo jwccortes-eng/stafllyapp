@@ -112,32 +112,33 @@ export function matchEmployee(
     const empName = normalizeText(`${emp.first_name} ${emp.last_name}`);
     const empPhone = normalizePhone(emp.phone);
     const empEmail = normalizeEmail(emp.email);
+    const fullName = `${emp.first_name} ${emp.last_name}`;
 
     // Priority 1: External/Connecteam ID
     if (externalId && (emp.external_id === externalId || emp.connecteam_id === externalId)) {
-      candidates.push({ id: emp.id, name: `${emp.first_name} ${emp.last_name}`, confidence: 1.0, method: "external_id" });
+      candidates.push({ id: emp.id, name: fullName, confidence: 1.0, method: "external_id", is_active: emp.is_active });
       continue;
     }
     // Priority 2: Phone
     if (normPhone && empPhone && normPhone === empPhone) {
-      candidates.push({ id: emp.id, name: `${emp.first_name} ${emp.last_name}`, confidence: 0.95, method: "phone" });
+      candidates.push({ id: emp.id, name: fullName, confidence: 0.95, method: "phone", is_active: emp.is_active });
       continue;
     }
     // Priority 3: Email
     if (normEmail && empEmail && normEmail === empEmail) {
-      candidates.push({ id: emp.id, name: `${emp.first_name} ${emp.last_name}`, confidence: 0.90, method: "email" });
+      candidates.push({ id: emp.id, name: fullName, confidence: 0.90, method: "email", is_active: emp.is_active });
       continue;
     }
     // Priority 4: Exact name
     if (normName && empName && normName === empName) {
-      candidates.push({ id: emp.id, name: `${emp.first_name} ${emp.last_name}`, confidence: 0.75, method: "exact_name" });
+      candidates.push({ id: emp.id, name: fullName, confidence: 0.75, method: "exact_name", is_active: emp.is_active });
       continue;
     }
     // Priority 5: Fuzzy name
     if (normName && empName) {
       const score = fuzzyNameScore(normName, empName);
       if (score >= 0.6) {
-        candidates.push({ id: emp.id, name: `${emp.first_name} ${emp.last_name}`, confidence: score * 0.6, method: "fuzzy_name" });
+        candidates.push({ id: emp.id, name: fullName, confidence: score * 0.6, method: "fuzzy_name", is_active: emp.is_active });
       }
     }
   }
@@ -145,23 +146,36 @@ export function matchEmployee(
   candidates.sort((a, b) => b.confidence - a.confidence);
 
   if (candidates.length === 0) {
-    return { employee_id: null, confidence: 0, method: "none", ambiguous: false, candidates: [] };
+    return { employee_id: null, confidence: 0, method: "none", match_status: "true_missing_employee", ambiguous: false, candidates: [] };
   }
-  if (candidates.length === 1 || candidates[0].confidence >= 0.75) {
+
+  const top = candidates[0];
+  const isAmbiguous = candidates.length > 1 && (
+    (top.confidence < 0.75) || (candidates[1].confidence > 0.5)
+  );
+
+  if (isAmbiguous && top.confidence < 0.75) {
     return {
-      employee_id: candidates[0].id,
-      confidence: candidates[0].confidence,
-      method: candidates[0].method,
-      ambiguous: candidates.length > 1 && candidates[1].confidence > 0.5,
+      employee_id: top.id,
+      confidence: top.confidence,
+      method: top.method,
+      match_status: "ambiguous_match",
+      ambiguous: true,
       candidates,
     };
   }
-  // Multiple candidates, ambiguous
+
+  // Determine match status based on employee active state
+  const matchStatus: EmployeeMatchStatus = top.is_active === false
+    ? "matched_inactive_employee"
+    : "matched_active_employee";
+
   return {
-    employee_id: candidates[0].id,
-    confidence: candidates[0].confidence,
-    method: candidates[0].method,
-    ambiguous: true,
+    employee_id: top.id,
+    confidence: top.confidence,
+    method: top.method,
+    match_status: matchStatus,
+    ambiguous: isAmbiguous,
     candidates,
   };
 }
