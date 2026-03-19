@@ -448,20 +448,37 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <DiagnosticStat label="Total filas" value={diagnostics.totalRows} />
-                  <DiagnosticStat label="Filas de sistema (excluidas)" value={diagnostics.systemRows} variant="muted" />
-                  <DiagnosticStat label="Nombres en blanco" value={diagnostics.blankNameRows} variant="muted" />
+                  <DiagnosticStat label="Filas de sistema" value={diagnostics.systemRows} variant="muted" />
                   <DiagnosticStat label="Filas de empleados" value={diagnostics.realEmployeeRows} />
                   <DiagnosticStat label="Emparejados" value={diagnostics.matched} variant="success" />
                   <DiagnosticStat label="Sin match" value={diagnostics.unmatched} variant={diagnostics.unmatched > 0 ? "destructive" : "success"} />
-                  <DiagnosticStat label="Ambiguos" value={diagnostics.ambiguous} variant={diagnostics.ambiguous > 0 ? "warning" : "success"} />
-                  <DiagnosticStat label="Posibles alias" value={diagnostics.likelyAliasMatches} variant={diagnostics.likelyAliasMatches > 0 ? "warning" : "muted"} />
                 </div>
+
+                {/* Match breakdown by status */}
+                {diagnostics.matched > 0 && (
+                  <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <DiagnosticStat label="✅ Activos" value={diagnostics.matchedActive} variant="success" />
+                    <DiagnosticStat label="📦 Inactivos" value={diagnostics.matchedInactive} variant="warning" />
+                    <DiagnosticStat label="🔗 Por alias" value={diagnostics.matchedByAlias} variant="muted" />
+                    <DiagnosticStat label="⚠ Ambiguos" value={diagnostics.ambiguous} variant={diagnostics.ambiguous > 0 ? "warning" : "muted"} />
+                  </div>
+                )}
+
+                {diagnostics.matchedInactive > 0 && (
+                  <Alert className="mt-3">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle className="text-sm">Empleados inactivos emparejados</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      {diagnostics.matchedInactive} filas se emparejaron con empleados actualmente inactivos. Esto es normal para importaciones históricas — estos empleados estaban activos durante el periodo importado.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {diagnostics.matchedByMethod && Object.keys(diagnostics.matchedByMethod).length > 0 && (
                   <div className="mt-3 text-xs text-muted-foreground">
-                    Métodos de match: {Object.entries(diagnostics.matchedByMethod).map(([m, c]) => `${m}: ${c}`).join(" · ")}
+                    Métodos: {Object.entries(diagnostics.matchedByMethod).map(([m, c]) => `${m}: ${c}`).join(" · ")}
                   </div>
                 )}
 
@@ -483,14 +500,14 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                     <Link2 className="h-4 w-4" />
                     <AlertTitle className="text-sm">Posibles alias detectados</AlertTitle>
                     <AlertDescription className="text-xs">
-                      Estos nombres tuvieron coincidencia parcial pero no suficiente confianza. Podrías asignarlos manualmente y guardar como alias: {diagnostics.likelyAliasNames.slice(0, 10).join(", ")}
+                      Nombres con coincidencia parcial: {diagnostics.likelyAliasNames.slice(0, 10).join(", ")}
                       {diagnostics.likelyAliasNames.length > 10 && ` ...y ${diagnostics.likelyAliasNames.length - 10} más`}
                     </AlertDescription>
                   </Alert>
                 )}
 
                 <div className="mt-3 text-xs text-muted-foreground">
-                  Empleados disponibles: {diagnostics.companyEmployeesActive} activos · {diagnostics.companyEmployeesInactive} inactivos
+                  Roster: {diagnostics.companyEmployeesActive} activos + {diagnostics.companyEmployeesInactive} inactivos = {diagnostics.companyEmployeesActive + diagnostics.companyEmployeesInactive} total
                 </div>
               </CardContent>
             </Card>
