@@ -163,17 +163,43 @@ export function matchEmployeeWithAliases(
 
 // ─── Parsers (unchanged) ───
 
-function parseDate(val: string | null | undefined): string | null {
-  if (!val) return null;
-  const s = val.trim();
+function parseDate(val: string | number | null | undefined): string | null {
+  if (val == null) return null;
+
+  // Handle Excel serial dates (numbers like 45951 = a date in 2025-2026 range)
+  if (typeof val === "number" && val > 1 && val < 100000) {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const date = new Date(excelEpoch.getTime() + val * 86400000);
+    if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
+      return date.toISOString().substring(0, 10);
+    }
+  }
+
+  const s = String(val).trim();
+  if (!s) return null;
+
+  // ISO format
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+
+  // MM/DD/YYYY or DD/MM/YYYY
   const mdy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
   if (mdy) {
     const y = mdy[3].length === 2 ? `20${mdy[3]}` : mdy[3];
     return `${y}-${mdy[1].padStart(2, "0")}-${mdy[2].padStart(2, "0")}`;
   }
+
+  // Numeric string that looks like an Excel serial date
+  const numericVal = parseFloat(s);
+  if (!isNaN(numericVal) && numericVal > 1 && numericVal < 100000 && /^\d+(\.\d+)?$/.test(s)) {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const date = new Date(excelEpoch.getTime() + numericVal * 86400000);
+    if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
+      return date.toISOString().substring(0, 10);
+    }
+  }
+
   const d = new Date(s);
-  if (!isNaN(d.getTime())) return d.toISOString().substring(0, 10);
+  if (!isNaN(d.getTime()) && d.getFullYear() > 1900) return d.toISOString().substring(0, 10);
   return null;
 }
 
