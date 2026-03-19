@@ -627,7 +627,13 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                           ) : row.has_conflict ? (
                             <Badge variant="secondary" className="text-xs">Ambiguo</Badge>
                           ) : row.matched_employee_id ? (
-                            <Badge variant="default" className="text-xs">OK</Badge>
+                            row._match_status === "matched_inactive_employee" ? (
+                              <Badge variant="secondary" className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-300">📦 Inactivo</Badge>
+                            ) : row._match_status === "likely_alias_match" ? (
+                              <Badge variant="secondary" className="text-xs">🔗 Alias</Badge>
+                            ) : (
+                              <Badge variant="default" className="text-xs">✅ Activo</Badge>
+                            )
                           ) : (
                             <Badge variant="destructive" className="text-xs">Sin match</Badge>
                           )}
