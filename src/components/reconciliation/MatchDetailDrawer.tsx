@@ -95,46 +95,28 @@ export default function MatchDetailDrawer({ match, open, onOpenChange, onResolve
     if (!match || !open) { setSchedDetail(null); setClockDetail(null); setEmpName("—"); setClosestSchedule(null); return; }
     setLoading(true);
 
-    const promises: Promise<any>[] = [];
-
-    // Fetch schedule row
-    if (match.schedule_row_id) {
-      promises.push(
-        supabase.from("normalized_schedule_rows" as any).select("*").eq("id", match.schedule_row_id).maybeSingle()
-          .then(({ data }) => { if (data) setSchedDetail(data as any); })
-      );
-    }
-
-    // Fetch clock row
-    if (match.clock_row_id) {
-      promises.push(
-        supabase.from("normalized_clock_rows" as any).select("*").eq("id", match.clock_row_id).maybeSingle()
-          .then(({ data }) => { if (data) setClockDetail(data as any); })
-      );
-    }
-
-    // Fetch employee name
-    if (match.employee_id) {
-      promises.push(
-        supabase.from("employees").select("first_name, last_name").eq("id", match.employee_id).maybeSingle()
-          .then(({ data }) => { if (data) setEmpName(`${data.first_name} ${data.last_name}`); })
-      );
-    }
-
-    // Find closest schedule for orphan clocks
-    if (!match.schedule_row_id && match.clock_row_id && match.employee_id && companyId) {
-      promises.push(
-        supabase.from("normalized_schedule_rows" as any).select("*")
-          .eq("company_id", companyId)
-          .eq("matched_employee_id", match.employee_id)
-          .order("work_date", { ascending: false }).limit(5)
-          .then(({ data }) => {
-            if (data && data.length > 0) setClosestSchedule((data as any[])[0]);
-          })
-      );
-    }
-
-    Promise.all(promises).finally(() => setLoading(false));
+    const load = async () => {
+      if (match.schedule_row_id) {
+        const { data } = await supabase.from("normalized_schedule_rows" as any).select("*").eq("id", match.schedule_row_id).maybeSingle();
+        if (data) setSchedDetail(data as any);
+      }
+      if (match.clock_row_id) {
+        const { data } = await supabase.from("normalized_clock_rows" as any).select("*").eq("id", match.clock_row_id).maybeSingle();
+        if (data) setClockDetail(data as any);
+      }
+      if (match.employee_id) {
+        const { data } = await supabase.from("employees").select("first_name, last_name").eq("id", match.employee_id).maybeSingle();
+        if (data) setEmpName(`${data.first_name} ${data.last_name}`);
+      }
+      if (!match.schedule_row_id && match.clock_row_id && match.employee_id && companyId) {
+        const { data } = await supabase.from("normalized_schedule_rows" as any).select("*")
+          .eq("company_id", companyId).eq("matched_employee_id", match.employee_id)
+          .order("work_date", { ascending: false }).limit(5);
+        if (data && data.length > 0) setClosestSchedule((data as any[])[0]);
+      }
+      setLoading(false);
+    };
+    load();
   }, [match, open, companyId]);
 
   if (!match) return null;

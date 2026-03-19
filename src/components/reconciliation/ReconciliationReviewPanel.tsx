@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GitCompareArrows, CheckCircle2, AlertTriangle, Link2, XCircle, User, Loader2 } from "lucide-react";
+import { GitCompareArrows, CheckCircle2, AlertTriangle, Link2, XCircle, User, Loader2, Eye } from "lucide-react";
 import { matchScheduleToClock, type NormalizedScheduleRow, type NormalizedClockRow } from "@/lib/reconciliation-engine";
+import MatchDetailDrawer from "./MatchDetailDrawer";
 
 interface Props {
   companyId: string | null;
