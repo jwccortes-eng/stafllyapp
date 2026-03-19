@@ -38,8 +38,10 @@ interface CompanySwitcherProps {
 }
 
 export default function CompanySwitcher({ collapsed = false }: CompanySwitcherProps) {
-  const { companies, selectedCompanyId, selectedCompany, setSelectedCompanyId } = useCompany();
+  const { companies, selectedCompanyId, selectedCompany, switchCompany } = useCompany();
   const { user, role, activeMode, canAccessAdmin, canAccessPortal } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [companyRoles, setCompanyRoles] = useState<Record<string, string>>({});
@@ -71,7 +73,13 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
       return;
     }
     setOpen(false);
-    setSelectedCompanyId(companyId);
+    switchCompany(companyId);
+    // Navigate to safe landing page to avoid stale entity detail pages
+    const isDetailPage = /\/app\/[^/]+\/[^/]+/.test(location.pathname);
+    const basePath = activeMode === 'employee' ? '/portal' : '/app';
+    if (isDetailPage) {
+      navigate(basePath, { replace: true });
+    }
   };
 
   if (companies.length === 0) return null;
