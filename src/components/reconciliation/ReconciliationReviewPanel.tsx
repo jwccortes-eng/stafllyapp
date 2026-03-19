@@ -191,6 +191,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
             <SelectItem value="probable">Probables</SelectItem>
             <SelectItem value="ambiguous">Ambiguos</SelectItem>
             <SelectItem value="unmatched">Sin match</SelectItem>
+            <SelectItem value="compensation">Compensación especial</SelectItem>
             <SelectItem value="approved">Aprobados</SelectItem>
             <SelectItem value="valid_unscheduled">Trabajo sin agenda</SelectItem>
             <SelectItem value="linked">Vinculados</SelectItem>
