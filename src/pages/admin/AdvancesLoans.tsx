@@ -195,6 +195,37 @@ export default function AdvancesLoans() {
             <SelectItem value="written_off">Castigado</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => {
+            const headers = ["Código","Empleado","Tipo","Monto Original","Saldo","Modo Repago","Estado","Fecha Emisión","Categoría"];
+            const rows = filtered.map(r => [
+              r.reference_code,
+              `${r.employees?.first_name ?? ""} ${r.employees?.last_name ?? ""}`.trim(),
+              TYPE_LABELS[r.record_type] ?? r.record_type,
+              r.original_amount,
+              r.balance_remaining,
+              MODE_LABELS[r.repayment_mode] ?? r.repayment_mode,
+              STATUS_CONFIG[r.status]?.label ?? r.status,
+              r.issue_date,
+              r.category ?? "",
+            ]);
+            const csv = [headers, ...rows].map(row => row.map(c => `"${c}"`).join(",")).join("\n");
+            const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `anticipos-prestamos-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success("Exportado a CSV");
+          }}
+          disabled={filtered.length === 0}
+        >
+          <Download className="h-4 w-4" /> Exportar CSV
+        </Button>
       </div>
 
       {/* Data Table */}
