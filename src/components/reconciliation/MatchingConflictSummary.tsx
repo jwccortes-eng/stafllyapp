@@ -411,6 +411,12 @@ export default function MatchingConflictSummary({ companyId }: Props) {
             </div>
           </TabsContent>
         </Tabs>
+
+        <OverlapDiagnostic
+          matches={matches}
+          scheduleLabels={scheduleLabels}
+          clockLabels={clockLabels}
+        />
       </CardContent>
     </Card>
   );
