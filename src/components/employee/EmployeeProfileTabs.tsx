@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +18,7 @@ import {
   User, DollarSign, Clock, CalendarDays, FileText, Activity,
   Briefcase, Phone, Mail, MapPin, Users, Tag, Star, Shield,
   Plus, Pencil, Trash2, MoreHorizontal, KeyRound, Upload, Download, Cake, Home, TrendingUp,
-  Banknote,
+  Banknote, Wallet,
 } from "lucide-react";
 import { EmployeePerformanceScore } from "@/components/reviews/EmployeePerformanceScore";
 import { EmployeeAccessTab } from "@/components/employee/EmployeeAccessTab";
@@ -28,6 +28,8 @@ import { WorkerProfileTab } from "@/components/employee/WorkerProfileTab";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import EmployeeAdvancesTab from "@/components/advances/EmployeeAdvancesTab";
 import { useToast } from "@/hooks/use-toast";
+
+const EmployeeCompensationTab = lazy(() => import("@/components/compensation/EmployeeCompensationTab"));
 
 type EmployeeRecord = Record<string, any>;
 
@@ -667,7 +669,7 @@ export function EmployeeProfileTabs({
   }
   return (
     <Tabs defaultValue="info" className="w-full">
-      <TabsList className="w-full grid grid-cols-10 h-9 mb-4 bg-muted/40 rounded-xl">
+      <TabsList className="w-full grid grid-cols-11 h-9 mb-4 bg-muted/40 rounded-xl">
         <TabsTrigger value="info" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <User className="h-3 w-3" />
           <span className="hidden sm:inline">Info</span>
@@ -683,6 +685,10 @@ export function EmployeeProfileTabs({
         <TabsTrigger value="pay" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <DollarSign className="h-3 w-3" />
           <span className="hidden sm:inline">Pago</span>
+        </TabsTrigger>
+        <TabsTrigger value="compensation" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <Wallet className="h-3 w-3" />
+          <span className="hidden sm:inline">Comp</span>
         </TabsTrigger>
         <TabsTrigger value="advances" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <Banknote className="h-3 w-3" />
@@ -736,6 +742,11 @@ export function EmployeeProfileTabs({
       </TabsContent>
       <TabsContent value="pay" className="mt-0">
         <PayTab employee={employee} companyId={companyId} />
+      </TabsContent>
+      <TabsContent value="compensation" className="mt-0">
+        <Suspense fallback={<div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>}>
+          <EmployeeCompensationTab employeeId={employee.id} employeeName={`${employee.first_name ?? ""} ${employee.last_name ?? ""}`} companyId={companyId} />
+        </Suspense>
       </TabsContent>
       <TabsContent value="advances" className="mt-0">
         <EmployeeAdvancesTab employeeId={employee.id} companyId={companyId} />

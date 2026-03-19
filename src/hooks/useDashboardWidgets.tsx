@@ -19,6 +19,7 @@ const DEFAULT_WIDGETS: DashboardWidget[] = [
   { id: "announcements", label: "Comunicados", description: "Últimos anuncios publicados", enabled: true, order: 6 },
   { id: "activity", label: "Actividad reciente", description: "Timeline de acciones recientes", enabled: true, order: 7 },
   { id: "period_banner", label: "Estado de periodos", description: "Banner resumen de periodos abiertos/cerrados", enabled: true, order: 8 },
+  { id: "compensation_kpis", label: "Compensación", description: "KPIs de cambios de tarifa, patrones y alertas", enabled: true, order: 9 },
 ];
 
 const STORAGE_KEY = "dashboard-widgets";

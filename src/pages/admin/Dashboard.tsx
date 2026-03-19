@@ -369,6 +369,7 @@ export default function AdminDashboard() {
   const [commercialKpis, setCommercialKpis] = useState({ activeClients: 0, openRequests: 0, unpaidInvoices: 0, overdueInvoices: 0, unpaidTotal: 0, overdueTotal: 0 });
   const [missingPhotoCount, setMissingPhotoCount] = useState(0);
   const [totalHoursWorked, setTotalHoursWorked] = useState(0);
+  const [compKpis, setCompKpis] = useState({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
 
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -562,6 +563,28 @@ export default function AdminDashboard() {
       }
     }
     fetchOverdueInfo();
+
+    // Compensation KPIs
+    async function fetchCompKpis() {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      const monthStartStr = monthStart.toISOString().split("T")[0];
+
+      const [changesRes, analysisRes] = await Promise.all([
+        supabase.from("compensation_change_log").select("id", { count: "exact", head: true })
+          .eq("company_id", selectedCompanyId!).gte("changed_at", monthStartStr),
+        supabase.from("compensation_analysis_summary").select("daily_payment_detected, ride_payment_detected, mixed_compensation_detected")
+          .eq("company_id", selectedCompanyId!),
+      ]);
+      const analysis = analysisRes.data ?? [];
+      setCompKpis({
+        rateChanges: changesRes.count ?? 0,
+        dailyPatterns: analysis.filter(a => a.daily_payment_detected).length,
+        ridePayments: analysis.filter(a => a.ride_payment_detected).length,
+        warnings: analysis.filter(a => a.mixed_compensation_detected).length,
+      });
+    }
+    fetchCompKpis();
   }, [selectedCompanyId, payrollConfig]);
 
   const periodProgress = useMemo(() => {
@@ -932,6 +955,27 @@ export default function AdminDashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+    ),
+    compensation_kpis: () => (
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-earning/[0.08] flex items-center justify-center">
+              <DollarSign className="h-3.5 w-3.5 text-earning" />
+            </div>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Compensación</h2>
+          </div>
+          <Link to="/app/payroll-settings" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
+            Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiStatCard label="Cambios de tarifa" value={compKpis.rateChanges} subtitle="este mes" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Pago diario" value={compKpis.dailyPatterns} subtitle="empleados detectados" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Pagos ride" value={compKpis.ridePayments} subtitle="empleados con ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Alertas" value={compKpis.warnings} subtitle="requieren atención" icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/payroll-settings")} />
+        </div>
       </div>
     ),
   };
