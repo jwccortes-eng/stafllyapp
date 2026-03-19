@@ -92,6 +92,14 @@ export default function PayrollSettings() {
         subtitle={`Define el ciclo semanal de nómina, cierre esperado y reglas de atraso para ${selectedCompany?.name}`}
       />
 
+      <Tabs defaultValue="payroll" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="payroll">Ciclo y Reglas</TabsTrigger>
+          <TabsTrigger value="financial">Anticipos y Préstamos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="payroll" className="space-y-6 mt-0">
+
       {/* Week Configuration */}
       <Card className="rounded-2xl">
         <CardHeader>
