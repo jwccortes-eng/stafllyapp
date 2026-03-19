@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { usePayrollConfig, DAY_NAMES, DEFAULT_CONFIG, type PayrollConfig } from "@/hooks/usePayrollConfig";
