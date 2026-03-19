@@ -6167,14 +6167,20 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           approved_matches: number | null
+          approved_note: string | null
           clock_batch_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          closed_note: string | null
           company_id: string
           created_at: string
+          golive_checklist: Json | null
           id: string
           locked: boolean | null
           locked_at: string | null
           locked_by: string | null
           notes: string | null
+          outcome_label: string | null
           payroll_batch_id: string | null
           period_end: string
           period_id: string | null
@@ -6182,7 +6188,11 @@ export type Database = {
           period_start: string
           posted_at: string | null
           posted_by: string | null
+          posted_note: string | null
           publish_idempotency_key: string | null
+          reconciled_at: string | null
+          reconciled_by: string | null
+          reconciled_note: string | null
           reopen_count: number | null
           reopen_reason: string | null
           reopened_at: string | null
@@ -6197,19 +6207,28 @@ export type Database = {
           total_payroll_rows: number | null
           total_schedules: number | null
           updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+          validated_note: string | null
         }
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
           approved_matches?: number | null
+          approved_note?: string | null
           clock_batch_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closed_note?: string | null
           company_id: string
           created_at?: string
+          golive_checklist?: Json | null
           id?: string
           locked?: boolean | null
           locked_at?: string | null
           locked_by?: string | null
           notes?: string | null
+          outcome_label?: string | null
           payroll_batch_id?: string | null
           period_end: string
           period_id?: string | null
@@ -6217,7 +6236,11 @@ export type Database = {
           period_start: string
           posted_at?: string | null
           posted_by?: string | null
+          posted_note?: string | null
           publish_idempotency_key?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciled_note?: string | null
           reopen_count?: number | null
           reopen_reason?: string | null
           reopened_at?: string | null
@@ -6232,19 +6255,28 @@ export type Database = {
           total_payroll_rows?: number | null
           total_schedules?: number | null
           updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validated_note?: string | null
         }
         Update: {
           approved_at?: string | null
           approved_by?: string | null
           approved_matches?: number | null
+          approved_note?: string | null
           clock_batch_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closed_note?: string | null
           company_id?: string
           created_at?: string
+          golive_checklist?: Json | null
           id?: string
           locked?: boolean | null
           locked_at?: string | null
           locked_by?: string | null
           notes?: string | null
+          outcome_label?: string | null
           payroll_batch_id?: string | null
           period_end?: string
           period_id?: string | null
@@ -6252,7 +6284,11 @@ export type Database = {
           period_start?: string
           posted_at?: string | null
           posted_by?: string | null
+          posted_note?: string | null
           publish_idempotency_key?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciled_note?: string | null
           reopen_count?: number | null
           reopen_reason?: string | null
           reopened_at?: string | null
@@ -6267,6 +6303,9 @@ export type Database = {
           total_payroll_rows?: number | null
           total_schedules?: number | null
           updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validated_note?: string | null
         }
         Relationships: [
           {
