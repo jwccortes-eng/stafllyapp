@@ -277,7 +277,7 @@ export function matchScheduleToClock(
     // are valid even without a matched employee (e.g. Weekend shift, Pay Ride)
     const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes);
     if (isClockExemptCategory(category)) {
-      const label = category === "daily_pay" ? "daily_pay_weekend_job" : "ride_pay";
+      const label = category === "daily_pay" ? "daily_pay_weekend_job" : category === "ride_pay" ? "ride_pay" : "availability_block";
       results.push({
         schedule_id: sched.id,
         clock_id: null,
