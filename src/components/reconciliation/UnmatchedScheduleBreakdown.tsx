@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import NoTitleDiagnostics from "./NoTitleDiagnostics";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -644,6 +645,9 @@ export default function UnmatchedScheduleBreakdown({ companyId, onRefresh }: Pro
             Showing {debugTableRows.length} prioritized rows (PAGA DOBLE + real missing) for proof-level debugging.
           </p>
         </div>
+
+        {/* "(sin título)" deep diagnostics */}
+        <NoTitleDiagnostics allUnmatchedRows={rows} payrollDates={payrollDates} />
 
         {/* Sub-category breakdown */}
         {SUB_BUCKETS.map(b => {
