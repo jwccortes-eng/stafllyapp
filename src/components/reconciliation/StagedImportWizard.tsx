@@ -188,10 +188,13 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     }
   }, [companyId, resolutionScopeKey, sourceType, toast]);
 
+  const [nameColumnWarning, setNameColumnWarning] = useState<string>("");
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     setFile(f);
+    setNameColumnWarning("");
     try {
       const rows = await parseAnyFileToJson(f, { defval: "" });
       if (!rows || rows.length === 0) {
@@ -203,6 +206,17 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       console.log("[StagedImport] Headers detected:", allHeaders);
       const mapping = detectColumns(allHeaders);
       console.log("[StagedImport] Column mapping:", mapping);
+
+      // Content-based validation: check if mapped employee_name column looks suspicious
+      const nameCol = mapping.employee_name || "";
+      if (nameCol) {
+        const suspicion = detectSuspiciousNameColumn(rows, nameCol);
+        if (suspicion.suspicious) {
+          console.warn("[StagedImport] Suspicious employee_name column:", nameCol, suspicion.reason);
+          setNameColumnWarning(`⚠ La columna "${nameCol}" parece contener notas/texto libre en lugar de nombres. ${suspicion.reason}. Revisa el mapeo antes de normalizar.`);
+        }
+      }
+
       setColumnMapping(mapping);
       setStep("preview");
       await loadEmployees();
