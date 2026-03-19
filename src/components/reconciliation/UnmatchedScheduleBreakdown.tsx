@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { detectShiftCategory, isClockExemptCategory, type ShiftCategory } from "@/lib/reconciliation-engine";
+import { detectShiftCategory, isClockExemptCategory, hasDoublePay, type ShiftCategory } from "@/lib/reconciliation-engine";
 import {
   AlertTriangle, Clock, Users, Copy, Ban,
   CheckCircle2, FileQuestion, Loader2, ChevronDown, ChevronUp,
