@@ -1881,6 +1881,55 @@ export type Database = {
           },
         ]
       }
+      employee_status: {
+        Row: {
+          company_id: string
+          employee_id: string
+          id: string
+          last_seen_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          employee_id: string
+          id?: string
+          last_seen_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          employee_id?: string
+          id?: string
+          last_seen_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_status_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_status_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_status_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_tickets: {
         Row: {
           assigned_to: string | null
