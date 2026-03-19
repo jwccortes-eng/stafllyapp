@@ -306,6 +306,7 @@ export default function PeriodSummary() {
       case "base": cmp = a.base_total_pay - b.base_total_pay; break;
       case "extras": cmp = a.extras_total - b.extras_total; break;
       case "deductions": cmp = a.deductions_total - b.deductions_total; break;
+      case "advances": cmp = a.advance_deduction - b.advance_deduction; break;
       case "total": cmp = a.total_final_pay - b.total_final_pay; break;
     }
     return sortDir === "asc" ? cmp : -cmp;
