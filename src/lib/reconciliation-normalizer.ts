@@ -38,6 +38,12 @@ export interface EmployeeAlias {
   alias_name_normalized: string;
 }
 
+export interface ManualNameResolution {
+  imported_name_normalized: string;
+  selected_employee_id: string;
+  resolution_source?: string | null;
+}
+
 export function isSystemRow(nameRaw: string, emailRaw?: string | null): boolean {
   const name = (nameRaw || "").trim();
   if (!name || name.length < 2) return true;
@@ -97,37 +103,45 @@ export function matchEmployeeWithAliases(
   email: string | null,
   externalId: string | null,
   employees: EmployeeRecord[],
-  aliases: EmployeeAlias[]
+  aliases: EmployeeAlias[],
+  manualResolutions: ManualNameResolution[] = [],
 ) {
-  // First try standard matching
-  const result = matchEmployee(nameRaw, phone, email, externalId, employees);
+  const normalizedName = normalizeText(nameRaw);
 
-  // If no match and we have aliases, try alias lookup
-  if (!result.employee_id && nameRaw) {
-    const normalized = normalizeText(nameRaw);
-    if (normalized) {
-      const alias = aliases.find(a => a.alias_name_normalized === normalized);
-      if (alias) {
-        const emp = employees.find(e => e.id === alias.employee_id);
-        if (emp) {
-          return {
-            ...result,
-            employee_id: alias.employee_id,
-            confidence: 0.85,
-            method: "alias",
-            match_status: emp.is_active === false ? "matched_inactive_employee" : "likely_alias_match" as any,
-            ambiguous: false,
-            candidates: [
-              { id: alias.employee_id, name: `${emp.first_name} ${emp.last_name}`, confidence: 0.85, method: "alias", is_active: emp.is_active },
-              ...result.candidates,
-            ],
-          };
-        }
+  if (normalizedName) {
+    const manual = manualResolutions.find((r) => r.imported_name_normalized === normalizedName);
+    if (manual) {
+      const resolvedEmployee = employees.find((e) => e.id === manual.selected_employee_id);
+      if (resolvedEmployee) {
+        const fullName = `${resolvedEmployee.first_name} ${resolvedEmployee.last_name}`.trim();
+        return {
+          employee_id: resolvedEmployee.id,
+          confidence: 1,
+          method: manual.resolution_source || "manual_ambiguous_resolution",
+          match_status: resolvedEmployee.is_active === false ? "matched_inactive_employee" : "matched_active_employee",
+          ambiguous: false,
+          candidates: [{ id: resolvedEmployee.id, name: fullName, confidence: 1, method: "manual_ambiguous_resolution", is_active: resolvedEmployee.is_active }],
+        };
+      }
+    }
+
+    const alias = aliases.find((a) => a.alias_name_normalized === normalizedName);
+    if (alias) {
+      const emp = employees.find((e) => e.id === alias.employee_id);
+      if (emp) {
+        return {
+          employee_id: alias.employee_id,
+          confidence: 0.85,
+          method: "alias",
+          match_status: emp.is_active === false ? "matched_inactive_employee" : "likely_alias_match",
+          ambiguous: false,
+          candidates: [{ id: alias.employee_id, name: `${emp.first_name} ${emp.last_name}`.trim(), confidence: 0.85, method: "alias", is_active: emp.is_active }],
+        };
       }
     }
   }
 
-  return result;
+  return matchEmployee(nameRaw, phone, email, externalId, employees);
 }
 
 // ─── Parsers (unchanged) ───
@@ -235,7 +249,8 @@ function buildDiagnostics(
 export function normalizeScheduleRows(
   rawRows: Array<{ id: string; row_number: number; raw_data: Record<string, any> }>,
   employees: EmployeeRecord[],
-  aliases: EmployeeAlias[] = []
+  aliases: EmployeeAlias[] = [],
+  manualResolutions: ManualNameResolution[] = [],
 ): NormalizationResult<any> {
   if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
@@ -294,7 +309,7 @@ export function normalizeScheduleRows(
       };
     }
 
-    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases);
+    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases, manualResolutions);
     if (empMatch.ambiguous) warnings.push(`Row ${raw.row_number}: Ambiguous employee match for "${nameRaw}"`);
     if (!empMatch.employee_id) warnings.push(`Row ${raw.row_number}: No employee match for "${nameRaw}"`);
 
@@ -336,7 +351,8 @@ export function normalizeScheduleRows(
 export function normalizeClockRows(
   rawRows: Array<{ id: string; row_number: number; raw_data: Record<string, any> }>,
   employees: EmployeeRecord[],
-  aliases: EmployeeAlias[] = []
+  aliases: EmployeeAlias[] = [],
+  manualResolutions: ManualNameResolution[] = [],
 ): NormalizationResult<any> {
   if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
@@ -357,7 +373,7 @@ export function normalizeClockRows(
     if (!nameRaw.trim()) { blankNameRows++; return buildExcludedRow(raw.id, nameRaw, "blank_name"); }
     if (isSystemRow(nameRaw, email)) { systemRowNames.push(nameRaw.trim()); return buildExcludedRow(raw.id, nameRaw, "system_placeholder"); }
 
-    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases);
+    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases, manualResolutions);
     if (empMatch.ambiguous) warnings.push(`Row ${raw.row_number}: Ambiguous employee match for "${nameRaw}"`);
 
     const workDate = parseDate(d[colMap.work_date || ""]);
@@ -397,7 +413,8 @@ export function normalizeClockRows(
 export function normalizePayrollRows(
   rawRows: Array<{ id: string; row_number: number; raw_data: Record<string, any> }>,
   employees: EmployeeRecord[],
-  aliases: EmployeeAlias[] = []
+  aliases: EmployeeAlias[] = [],
+  manualResolutions: ManualNameResolution[] = [],
 ): NormalizationResult<any> {
   if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
@@ -418,7 +435,7 @@ export function normalizePayrollRows(
     if (!nameRaw.trim()) { blankNameRows++; return buildExcludedRow(raw.id, nameRaw, "blank_name"); }
     if (isSystemRow(nameRaw, email)) { systemRowNames.push(nameRaw.trim()); return buildExcludedRow(raw.id, nameRaw, "system_placeholder"); }
 
-    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases);
+    const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases, manualResolutions);
     const classification = classifyPayrollRow(d);
 
     const workDate = parseDate(d[colMap.work_date || ""]);

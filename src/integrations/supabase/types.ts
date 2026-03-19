@@ -6173,6 +6173,73 @@ export type Database = {
           },
         ]
       }
+      reconciliation_name_resolutions: {
+        Row: {
+          applies_to_rows: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          imported_name_normalized: string
+          imported_name_raw: string
+          resolution_source: string
+          scope_key: string
+          selected_employee_id: string
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          applies_to_rows?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          imported_name_normalized: string
+          imported_name_raw: string
+          resolution_source?: string
+          scope_key?: string
+          selected_employee_id: string
+          source_type?: string
+          updated_at?: string
+        }
+        Update: {
+          applies_to_rows?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          imported_name_normalized?: string
+          imported_name_raw?: string
+          resolution_source?: string
+          scope_key?: string
+          selected_employee_id?: string
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_name_resolutions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_name_resolutions_selected_employee_id_fkey"
+            columns: ["selected_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_name_resolutions_selected_employee_id_fkey"
+            columns: ["selected_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_period_journal: {
         Row: {
           company_id: string
