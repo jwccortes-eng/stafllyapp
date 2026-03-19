@@ -557,8 +557,15 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
             </Card>
           )}
 
+          {/* Unmatched / Ambiguous Resolution Panel */}
+          <UnmatchedResolutionPanel
+            normalizedRows={normalizedRows}
+            employees={employees}
+            onAssignAlias={handleSaveAlias}
+            onReNormalize={handleReNormalize}
+          />
+
           <Card>
-            <CardHeader>
               <CardTitle className="text-base">Resultado de Normalización</CardTitle>
               <CardDescription className="flex gap-2 mt-2 flex-wrap">
                 <Badge
