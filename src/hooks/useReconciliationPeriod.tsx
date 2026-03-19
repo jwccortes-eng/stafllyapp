@@ -78,7 +78,64 @@ export interface EmployeeFinalRecord {
   match_ids: string[];
   publishing_user: string | null;
   published_at: string | null;
+  source_payroll_total: number;
+  variance_amount: number;
+  variance_status: string;
+  variance_reasons: string[];
 }
+
+export interface EmployeeVariance {
+  employee_id: string;
+  employee_name: string;
+  scheduled_count: number;
+  worked_count: number;
+  payroll_count: number;
+  pay_classification: string;
+  source_payroll_total: number;
+  reconciled_total: number;
+  published_total: number;
+  variance_amount: number;
+  variance_status: "exact_match" | "minor_variance" | "major_variance" | "unresolved";
+  variance_reasons: string[];
+  warnings: string[];
+}
+
+export interface ValidationResult {
+  id?: string;
+  period_status_id: string;
+  is_dry_run: boolean;
+  total_employees: number;
+  employees_exact_match: number;
+  employees_minor_variance: number;
+  employees_major_variance: number;
+  employees_unresolved: number;
+  source_payroll_total: number;
+  reconciled_total: number;
+  published_total: number;
+  total_variance: number;
+  unresolved_exceptions: number;
+  publish_readiness: "ready" | "ready_with_warnings" | "blocked";
+  confidence_score: number;
+  uat_checklist: Record<string, boolean>;
+  employee_variances: EmployeeVariance[];
+  notes?: string;
+}
+
+export const UAT_CHECKLIST_ITEMS = [
+  { key: "hourly_employee", label: "Empleado por hora" },
+  { key: "daily_employee", label: "Empleado diario" },
+  { key: "ride_payment", label: "Pago de transporte (ride)" },
+  { key: "weekend_job", label: "Weekend Job" },
+  { key: "manual_adjustment", label: "Ajuste manual" },
+  { key: "mixed_compensation", label: "Compensación mixta" },
+  { key: "midnight_crossing", label: "Turno cruzando medianoche" },
+  { key: "multiple_shifts_same_day", label: "Múltiples turnos mismo empleado mismo día" },
+  { key: "unmatched_schedule", label: "Turno programado sin match" },
+  { key: "unmatched_clock", label: "Fichaje sin match" },
+  { key: "unmatched_payroll", label: "Fila de nómina sin match" },
+  { key: "reopen_republish", label: "Reapertura y republicación" },
+  { key: "duplicate_prevention", label: "Prevención de duplicados" },
+] as const;
 
 export interface ClosingReceipt {
   id: string;
