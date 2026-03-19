@@ -17,6 +17,7 @@ import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
   ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool, Bug,
+  StickyNote, ListChecks, Target,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -37,6 +38,9 @@ import RolloutReadiness from "@/components/reconciliation/RolloutReadiness";
 import UATIssueTracker from "@/components/reconciliation/UATIssueTracker";
 import PilotReviewReport from "@/components/reconciliation/PilotReviewReport";
 import StabilizationDashboard from "@/components/reconciliation/StabilizationDashboard";
+import PilotRunbook from "@/components/reconciliation/PilotRunbook";
+import PeriodNotes from "@/components/reconciliation/PeriodNotes";
+import StabilizationPriorities from "@/components/reconciliation/StabilizationPriorities";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 /* ── Status → workflow step mapping ── */
@@ -75,10 +79,13 @@ const TABS: TabDef[] = [
   { value: "compare", label: "Comparar", icon: TrendingUp, alwaysEnabled: true },
   { value: "signoff", label: "Signoff", icon: PenTool, minStatus: "reviewing" },
   { value: "journal", label: "Diario", icon: BookOpen, minStatus: null },
+  { value: "notes", label: "Notas", icon: StickyNote, minStatus: null },
+  { value: "runbook", label: "Runbook", icon: ListChecks, minStatus: null },
   { value: "rollout", label: "Rollout", icon: Award, alwaysEnabled: true },
   { value: "pilot", label: "Piloto", icon: Rocket, minStatus: "reviewing" },
   { value: "uat", label: "UAT", icon: Bug, minStatus: null },
   { value: "stabilization", label: "Estabilización", icon: TrendingUp, alwaysEnabled: true },
+  { value: "priorities", label: "Prioridades", icon: Target, alwaysEnabled: true },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
 
@@ -510,6 +517,22 @@ export default function StagedReconciliation() {
           )}
         </TabsContent>
 
+        <TabsContent value="notes">
+          {activePeriod ? (
+            <PeriodNotes period={activePeriod} companyId={selectedCompanyId} />
+          ) : (
+            <NoPeriodPlaceholder icon={StickyNote} text="Selecciona un periodo para agregar notas." />
+          )}
+        </TabsContent>
+
+        <TabsContent value="runbook">
+          {activePeriod ? (
+            <PilotRunbook period={activePeriod} onNavigate={setTab} />
+          ) : (
+            <NoPeriodPlaceholder icon={ListChecks} text="Selecciona un periodo para ver el runbook operativo." />
+          )}
+        </TabsContent>
+
         <TabsContent value="rollout">
           <RolloutReadiness periods={periods} />
         </TabsContent>
@@ -532,6 +555,10 @@ export default function StagedReconciliation() {
 
         <TabsContent value="stabilization">
           <StabilizationDashboard periods={periods} companyId={selectedCompanyId} />
+        </TabsContent>
+
+        <TabsContent value="priorities">
+          <StabilizationPriorities companyId={selectedCompanyId} />
         </TabsContent>
 
         <TabsContent value="history">
