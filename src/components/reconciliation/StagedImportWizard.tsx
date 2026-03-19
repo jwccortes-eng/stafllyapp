@@ -566,6 +566,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
           />
 
           <Card>
+            <CardHeader>
               <CardTitle className="text-base">Resultado de Normalización</CardTitle>
               <CardDescription className="flex gap-2 mt-2 flex-wrap">
                 <Badge
