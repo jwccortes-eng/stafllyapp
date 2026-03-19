@@ -875,6 +875,9 @@ export function ShiftDetailDialog({
                     <Copy className="h-3 w-3" /> Duplicar
                   </Button>
                 )}
+                <Button variant="default" size="sm" onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }} className="h-8 text-xs gap-1.5 rounded-full">
+                  <Radar className="h-3 w-3" /> Operaciones
+                </Button>
                 {onDelete && !isLocked && (
                   <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(true)} className="h-8 text-xs gap-1.5 rounded-full text-destructive border-destructive/30 hover:bg-destructive/10">
                     <Trash2 className="h-3 w-3" /> Eliminar
