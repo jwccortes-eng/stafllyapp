@@ -17,7 +17,7 @@ import SmartSyncUpload from "@/components/migration/SmartSyncUpload";
 import SyncStatusPanel from "@/components/migration/SyncStatusPanel";
 import { ArrowLeftRight, Users, CalendarDays, Clock, DollarSign, CalendarCheck, AlertTriangle, FileText, Zap, Activity, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRef } from "react";
+
 
 export interface MigrationStats {
   pilotStatus: any;
@@ -99,19 +99,15 @@ export default function MigrationCommandCenter() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-
   const tabBadge = (count: number, variant: "default" | "secondary" | "destructive" | "outline" = "secondary") =>
     count > 0 ? <Badge variant={variant} className="ml-1.5 text-xs">{count}</Badge> : null;
 
   const handlePrintAll = () => {
-    const container = containerRef.current;
+    const container = document.getElementById("migration-print-root");
     if (!container) return;
 
-    // Add print-all-mode class to show all tabs
     container.classList.add("print-all-mode");
 
-    // Inject print header
     const header = document.createElement("div");
     header.id = "print-header";
     header.className = "print-header";
@@ -122,9 +118,9 @@ export default function MigrationCommandCenter() {
         <p style="font-size:10px;color:#999;margin:4px 0 0;">Generado: ${new Date().toLocaleString("es-US")}</p>
       </div>
     `;
+
     const main = document.querySelector("main") || document.body;
     main.prepend(header);
-
     window.print();
 
     setTimeout(() => {
@@ -134,7 +130,7 @@ export default function MigrationCommandCenter() {
   };
 
   return (
-    <div className="space-y-6" ref={containerRef}>
+    <div className="space-y-6" id="migration-print-root">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <PageHeader
           title="Migration Command Center"
@@ -186,31 +182,31 @@ export default function MigrationCommandCenter() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
+        <TabsContent forceMount value="overview">
           <MigrationOverview stats={stats} loading={loading} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="smart-sync">
+        <TabsContent forceMount value="smart-sync">
           <SmartSyncUpload companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="sync-status">
+        <TabsContent forceMount value="sync-status">
           <SyncStatusPanel companyId={companyId} />
         </TabsContent>
-        <TabsContent value="employees">
+        <TabsContent forceMount value="employees">
           <EmployeeMatchingTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="shifts">
+        <TabsContent forceMount value="shifts">
           <ShiftMatchingTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="clock">
+        <TabsContent forceMount value="clock">
           <ClockMatchingTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="payroll">
+        <TabsContent forceMount value="payroll">
           <PayrollReconciliationTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="weekly-close">
+        <TabsContent forceMount value="weekly-close">
           <WeeklyCloseTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="exceptions">
+        <TabsContent forceMount value="exceptions">
           <ExceptionsTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
       </Tabs>

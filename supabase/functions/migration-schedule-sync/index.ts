@@ -577,36 +577,8 @@ async function resyncAllPeriods(
     .eq("company_id", companyId)
     .order("start_date");
 
-  // IMPORTANT: add explicit limit to avoid default 1000-row cap
-  const { data: basePay } = await supabase
-    .from("period_base_pay")
-    .select("period_id, employee_id, total_work_hours, base_total_pay")
-    .eq("company_id", companyId)
-    .limit(10000);
-
-  const { data: movements } = await supabase
-    .from("movements")
-    .select("period_id, employee_id, total_value")
-    .eq("company_id", companyId)
-    .limit(10000);
-
-  // Index base_pay and movements by period_id
-  const baseByPeriod = new Map<string, Array<{ employee_id: string; hours: number; pay: number }>>();
-  for (const bp of basePay ?? []) {
-    if (!baseByPeriod.has(bp.period_id)) baseByPeriod.set(bp.period_id, []);
-    baseByPeriod.get(bp.period_id)!.push({
-      employee_id: bp.employee_id,
-      hours: bp.total_work_hours || 0,
-      pay: bp.base_total_pay || 0,
-    });
-  }
-
-  const movByPeriod = new Map<string, Map<string, number>>();
-  for (const mv of movements ?? []) {
-    if (!movByPeriod.has(mv.period_id)) movByPeriod.set(mv.period_id, new Map());
-    const empMap = movByPeriod.get(mv.period_id)!;
-    empMap.set(mv.employee_id, (empMap.get(mv.employee_id) || 0) + (mv.total_value || 0));
-  }
+  // NOTE: project row cap can truncate broad queries at 1000 rows,
+  // so per-period queries are executed inside the loop for accuracy.
 
   // Helper: parse CT date in multiple formats → "YYYY-MM-DD"
   // Supports: "MM/DD/YYYY", "Fri Feb 06 2026 19:00:00 GMT-0500 (...)"
@@ -689,21 +661,37 @@ async function resyncAllPeriods(
     let sfEmployees = 0, sfGross = 0, sfHours = 0;
 
     if (matchingPayPeriod) {
-      const periodBase = baseByPeriod.get(matchingPayPeriod.id) || [];
-      const periodMov = movByPeriod.get(matchingPayPeriod.id) || new Map();
+      // Query this pay period directly to avoid row-cap truncation and stale aggregates.
+      const [{ data: periodBase }, { data: periodMov }] = await Promise.all([
+        supabase
+          .from("period_base_pay")
+          .select("employee_id, total_work_hours, base_total_pay")
+          .eq("company_id", companyId)
+          .eq("period_id", matchingPayPeriod.id),
+        supabase
+          .from("movements")
+          .select("employee_id, total_value")
+          .eq("company_id", companyId)
+          .eq("period_id", matchingPayPeriod.id),
+      ]);
 
-      // Simple direct sums — avoids any double-counting risk
-      const baseSum = periodBase.reduce((s, bp) => s + bp.pay, 0);
-      const hoursSum = periodBase.reduce((s, bp) => s + bp.hours, 0);
-      const movSum = [...periodMov.values()].reduce((s, v) => s + v, 0);
+      const baseRows = periodBase ?? [];
+      const movRows = periodMov ?? [];
+
+      const baseSum = baseRows.reduce((s, bp) => s + (Number(bp.base_total_pay) || 0), 0);
+      const hoursSum = baseRows.reduce((s, bp) => s + (Number(bp.total_work_hours) || 0), 0);
+      const movSum = movRows.reduce((s, mv) => s + (Number(mv.total_value) || 0), 0);
 
       sfGross = baseSum + movSum;
       sfHours = hoursSum;
 
-      // Count unique employees across both sources
       const sfEmps = new Set<string>();
-      for (const bp of periodBase) sfEmps.add(bp.employee_id);
-      for (const [empId] of periodMov) sfEmps.add(empId);
+      for (const bp of baseRows) {
+        if (bp.employee_id) sfEmps.add(bp.employee_id);
+      }
+      for (const mv of movRows) {
+        if (mv.employee_id) sfEmps.add(mv.employee_id);
+      }
       sfEmployees = sfEmps.size;
     }
 
