@@ -244,6 +244,27 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
 
   return (
     <div className="space-y-4">
+      {/* Scope debug banner */}
+      <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-2 text-xs space-y-1">
+        <p className="font-medium text-sm">🔍 Scope del Matching</p>
+        {periodScope ? (
+          <>
+            <p>Periodo: <span className="font-mono">{periodScope.period_label}</span> ({periodScope.period_start} → {periodScope.period_end})</p>
+            <p>Schedule batch: <span className="font-mono">{periodScope.schedule_batch_id || "⚠️ NO ASIGNADO — cargará TODOS los schedules"}</span></p>
+            <p>Clock batch: <span className="font-mono">{periodScope.clock_batch_id || "⚠️ NO ASIGNADO — cargará TODOS los clocks"}</span></p>
+            <p>Payroll batch: <span className="font-mono">{periodScope.payroll_batch_id || "—"}</span></p>
+          </>
+        ) : (
+          <p className="text-destructive font-medium">⚠️ Sin periodo activo — matching cargará TODOS los rows de la empresa (puede incluir datos históricos)</p>
+        )}
+        {scopeDebug && (
+          <p className="mt-1 text-muted-foreground">
+            Último matching: <span className="font-mono">{scopeDebug.schedules}</span> schedules, <span className="font-mono">{scopeDebug.clocks}</span> clocks
+            {!scopeDebug.scheduleBatch && <span className="text-destructive ml-2">⚠️ Sin filtro de batch</span>}
+          </p>
+        )}
+      </div>
+
       <div className="flex items-center gap-3">
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="w-48">
