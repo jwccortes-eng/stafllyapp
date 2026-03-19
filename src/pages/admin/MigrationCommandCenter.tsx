@@ -182,31 +182,31 @@ export default function MigrationCommandCenter() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
+        <TabsContent forceMount value="overview">
           <MigrationOverview stats={stats} loading={loading} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="smart-sync">
+        <TabsContent forceMount value="smart-sync">
           <SmartSyncUpload companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="sync-status">
+        <TabsContent forceMount value="sync-status">
           <SyncStatusPanel companyId={companyId} />
         </TabsContent>
-        <TabsContent value="employees">
+        <TabsContent forceMount value="employees">
           <EmployeeMatchingTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="shifts">
+        <TabsContent forceMount value="shifts">
           <ShiftMatchingTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="clock">
+        <TabsContent forceMount value="clock">
           <ClockMatchingTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="payroll">
+        <TabsContent forceMount value="payroll">
           <PayrollReconciliationTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="weekly-close">
+        <TabsContent forceMount value="weekly-close">
           <WeeklyCloseTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
-        <TabsContent value="exceptions">
+        <TabsContent forceMount value="exceptions">
           <ExceptionsTab companyId={companyId} onRefresh={fetchStats} />
         </TabsContent>
       </Tabs>
