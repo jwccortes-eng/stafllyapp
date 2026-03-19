@@ -695,11 +695,161 @@ export function useReconciliationPeriod(companyId: string | null) {
     } as any, { onConflict: "company_id,mapping_type,source_value_normalized" });
   }, [companyId, user?.id]);
 
+  // ── Variance analysis for a set of final records ──
+  const analyzeVariances = useCallback((records: EmployeeFinalRecord[], empNames: Map<string, string>): EmployeeVariance[] => {
+    return records.map(r => {
+      const sourceTotal = r.source_payroll_total || r.total_payroll_amount || 0;
+      const reconciledTotal = r.grand_total || r.final_total_pay || 0;
+      const variance = Math.round((reconciledTotal - sourceTotal) * 100) / 100;
+      const absVariance = Math.abs(variance);
+
+      const reasons: string[] = [];
+      if (r.payroll_rows?.length === 0 && r.worked_shifts?.length > 0) reasons.push("Fichajes sin nómina vinculada");
+      if (r.payroll_rows?.length > 0 && r.worked_shifts?.length === 0) reasons.push("Nómina sin fichajes vinculados");
+      if (r.pay_classification === "unknown") reasons.push("Clasificación de pago desconocida");
+      if ((r.ride_pay_total || r.ride_amount || 0) > 0 && !r.payroll_rows?.some((p: any) => p.type === "pay_ride")) reasons.push("Ride no vinculado en nómina");
+      if ((r.manual_adjustment_total || r.manual_amount || 0) > 0) reasons.push("Incluye ajustes manuales");
+      if (absVariance > 50) reasons.push(`Varianza de $${absVariance.toFixed(2)}`);
+      const scheduled = r.scheduled_shifts || [];
+      const worked = r.worked_shifts || [];
+      if (scheduled.length > 0 && worked.length === 0) reasons.push("Turnos programados sin fichajes");
+
+      let status: EmployeeVariance["variance_status"];
+      if (r.reconciliation_status === "pending" || r.reconciliation_status === "partial") status = "unresolved";
+      else if (absVariance <= 0.01) status = "exact_match";
+      else if (absVariance <= 10) status = "minor_variance";
+      else status = "major_variance";
+
+      return {
+        employee_id: r.employee_id,
+        employee_name: empNames.get(r.employee_id) || "—",
+        scheduled_count: scheduled.length,
+        worked_count: worked.length,
+        payroll_count: r.payroll_rows?.length || 0,
+        pay_classification: r.pay_classification,
+        source_payroll_total: Math.round(sourceTotal * 100) / 100,
+        reconciled_total: Math.round(reconciledTotal * 100) / 100,
+        published_total: r.reconciliation_status === "posted" ? Math.round(reconciledTotal * 100) / 100 : 0,
+        variance_amount: variance,
+        variance_status: status,
+        variance_reasons: reasons,
+        warnings: r.warnings || [],
+      };
+    });
+  }, []);
+
+  // ── Run full validation (dry-run or live) ──
+  const runValidation = useCallback(async (
+    periodStatusId: string,
+    isDryRun: boolean,
+    uatChecklist: Record<string, boolean>,
+    empNames: Map<string, string>,
+    notes?: string,
+  ): Promise<ValidationResult | null> => {
+    if (!companyId || !user?.id) return null;
+
+    const period = periods.find(p => p.id === periodStatusId);
+    if (!period) return null;
+
+    // Use current finalRecords or load fresh
+    let records = finalRecords;
+    if (records.length === 0 || records[0]?.id === undefined) {
+      const { data } = await supabase
+        .from("reconciliation_final_records" as any)
+        .select("*")
+        .eq("period_status_id", periodStatusId);
+      records = (data || []) as any;
+    }
+
+    const variances = analyzeVariances(records, empNames);
+    const exactMatch = variances.filter(v => v.variance_status === "exact_match").length;
+    const minor = variances.filter(v => v.variance_status === "minor_variance").length;
+    const major = variances.filter(v => v.variance_status === "major_variance").length;
+    const unresolved = variances.filter(v => v.variance_status === "unresolved").length;
+
+    const sourceTotal = variances.reduce((s, v) => s + v.source_payroll_total, 0);
+    const reconciledTotal = variances.reduce((s, v) => s + v.reconciled_total, 0);
+    const totalVariance = Math.round((reconciledTotal - sourceTotal) * 100) / 100;
+    const unresolvedExceptions = records.filter(r => r.conflict_count > 0 && !["approved", "resolved", "posted"].includes(r.reconciliation_status)).length;
+
+    // Confidence score: 0-100
+    const matchRatio = variances.length > 0 ? exactMatch / variances.length : 0;
+    const noMajor = major === 0 ? 1 : 0;
+    const noUnresolved = unresolved === 0 ? 1 : 0;
+    const confidence = Math.round((matchRatio * 50 + noMajor * 25 + noUnresolved * 25) * 100) / 100;
+
+    let readiness: ValidationResult["publish_readiness"];
+    if (major > 0 || unresolved > 0 || unresolvedExceptions > 0) readiness = "blocked";
+    else if (minor > 0) readiness = "ready_with_warnings";
+    else readiness = "ready";
+
+    const result: ValidationResult = {
+      period_status_id: periodStatusId,
+      is_dry_run: isDryRun,
+      total_employees: variances.length,
+      employees_exact_match: exactMatch,
+      employees_minor_variance: minor,
+      employees_major_variance: major,
+      employees_unresolved: unresolved,
+      source_payroll_total: Math.round(sourceTotal * 100) / 100,
+      reconciled_total: Math.round(reconciledTotal * 100) / 100,
+      published_total: 0,
+      total_variance: totalVariance,
+      unresolved_exceptions: unresolvedExceptions,
+      publish_readiness: readiness,
+      confidence_score: confidence,
+      uat_checklist: uatChecklist,
+      employee_variances: variances,
+      notes,
+    };
+
+    // Store validation result
+    const { data: inserted } = await supabase.from("reconciliation_validation_results" as any).insert({
+      company_id: companyId,
+      period_status_id: periodStatusId,
+      tested_by: user.id,
+      is_dry_run: isDryRun,
+      total_employees: result.total_employees,
+      employees_exact_match: exactMatch,
+      employees_minor_variance: minor,
+      employees_major_variance: major,
+      employees_unresolved: unresolved,
+      source_payroll_total: result.source_payroll_total,
+      reconciled_total: result.reconciled_total,
+      published_total: result.published_total,
+      total_variance: result.total_variance,
+      unresolved_exceptions: unresolvedExceptions,
+      publish_readiness: readiness,
+      confidence_score: confidence,
+      uat_checklist: uatChecklist,
+      employee_variances: variances,
+      notes,
+    } as any).select("id").single();
+
+    if (inserted) result.id = (inserted as any).id;
+
+    // Update variance fields on final records
+    for (const v of variances) {
+      const rec = records.find(r => r.employee_id === v.employee_id);
+      if (rec) {
+        await supabase.from("reconciliation_final_records" as any).update({
+          source_payroll_total: v.source_payroll_total,
+          variance_amount: v.variance_amount,
+          variance_status: v.variance_status,
+          variance_reasons: v.variance_reasons,
+        } as any).eq("id", rec.id);
+      }
+    }
+
+    toast({ title: isDryRun ? "Validación completada (Dry Run)" : "Validación completada", description: `Confianza: ${confidence}% — ${readiness}` });
+    return result;
+  }, [companyId, user?.id, periods, finalRecords, analyzeVariances, toast]);
+
   return {
     periods, loading, activePeriod, setActivePeriod,
     finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
     loadFinalRecords, generateFinalRecords, postFinalRecords,
     saveMappingCorrection, reopenPeriod, loadClosingReceipt,
-    validateBeforePublish,
+    validateBeforePublish, analyzeVariances, runValidation,
   };
 }
