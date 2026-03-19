@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Search, MapPin, Loader2, Trash2, RotateCcw, Pencil, Download } from "lucide-react";
+import { Plus, Search, MapPin, Loader2, Trash2, RotateCcw, Pencil, Car, Clock, CreditCard, Phone, Mail, User } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 
@@ -25,6 +27,13 @@ interface Location {
   client_id: string | null;
   geofence_radius: number | null;
   deleted_at: string | null;
+  default_pay_type: string | null;
+  default_clock_method: string | null;
+  require_car: boolean;
+  default_instructions: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
 }
 
 interface ClientOption {
@@ -46,13 +55,20 @@ export default function Locations() {
   const [editing, setEditing] = useState<Location | null>(null);
   const [showDeleted, setShowDeleted] = useState("active");
 
-  // Form
+  // Form fields
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [clientId, setClientId] = useState<string>("");
   const [radius, setRadius] = useState("200");
+  const [defaultPayType, setDefaultPayType] = useState("hourly");
+  const [defaultClockMethod, setDefaultClockMethod] = useState("both");
+  const [requireCar, setRequireCar] = useState(false);
+  const [defaultInstructions, setDefaultInstructions] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -81,6 +97,9 @@ export default function Locations() {
   const resetForm = () => {
     setName(""); setAddress(""); setCity(""); setState("");
     setClientId(""); setRadius("200"); setEditing(null);
+    setDefaultPayType("hourly"); setDefaultClockMethod("both");
+    setRequireCar(false); setDefaultInstructions("");
+    setContactName(""); setContactPhone(""); setContactEmail("");
   };
 
   const openEdit = (l: Location) => {
@@ -91,6 +110,13 @@ export default function Locations() {
     setState(l.state ?? "");
     setClientId(l.client_id ?? "");
     setRadius(String(l.geofence_radius ?? 200));
+    setDefaultPayType(l.default_pay_type ?? "hourly");
+    setDefaultClockMethod(l.default_clock_method ?? "both");
+    setRequireCar(l.require_car ?? false);
+    setDefaultInstructions(l.default_instructions ?? "");
+    setContactName(l.contact_name ?? "");
+    setContactPhone(l.contact_phone ?? "");
+    setContactEmail(l.contact_email ?? "");
     setFormOpen(true);
   };
 
@@ -105,10 +131,17 @@ export default function Locations() {
       state: state.trim() || null,
       client_id: clientId || null,
       geofence_radius: parseInt(radius) || 200,
+      default_pay_type: defaultPayType,
+      default_clock_method: defaultClockMethod,
+      require_car: requireCar,
+      default_instructions: defaultInstructions.trim() || null,
+      contact_name: contactName.trim() || null,
+      contact_phone: contactPhone.trim() || null,
+      contact_email: contactEmail.trim() || null,
     };
 
     if (editing) {
-      const { error } = await supabase.from("locations").update(payload).eq("id", editing.id);
+      const { error } = await supabase.from("locations").update(payload as any).eq("id", editing.id);
       if (error) toast.error(error.message);
       else toast.success("Ubicación actualizada");
     } else {
@@ -152,24 +185,25 @@ export default function Locations() {
         variant="1"
         icon={MapPin}
         title="Ubicaciones"
-        subtitle="Gestiona las ubicaciones de trabajo"
+        subtitle="Gestiona las ubicaciones de trabajo con defaults operacionales"
         rightSlot={canEdit ? (
           <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nueva ubicación</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editing ? "Editar ubicación" : "Nueva ubicación"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                {/* Basic info */}
                 <div>
                   <Label>Nombre *</Label>
                   <Input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre de la ubicación" />
                 </div>
                 <div>
                   <Label>Dirección</Label>
-                  <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="Dirección" />
+                  <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="Dirección completa" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -177,8 +211,8 @@ export default function Locations() {
                     <Input value={city} onChange={e => setCity(e.target.value)} placeholder="Ciudad" />
                   </div>
                   <div>
-                    <Label>Estado</Label>
-                    <Input value={state} onChange={e => setState(e.target.value)} placeholder="Estado" />
+                    <Label>Estado / Borough</Label>
+                    <Input value={state} onChange={e => setState(e.target.value)} placeholder="Ej: Queens, NJ" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -199,6 +233,77 @@ export default function Locations() {
                     <Input type="number" value={radius} onChange={e => setRadius(e.target.value)} />
                   </div>
                 </div>
+
+                {/* Contact info */}
+                <div className="border-t border-border/30 pt-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" /> Contacto en sitio
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs">Nombre</Label>
+                      <Input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Nombre" className="h-8 text-sm" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Teléfono</Label>
+                      <Input value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="Teléfono" className="h-8 text-sm" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Email</Label>
+                      <Input value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="Email" className="h-8 text-sm" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Operational defaults */}
+                <div className="border-t border-border/30 pt-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    ⚙️ Defaults operacionales
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mb-3">
+                    Se aplicarán automáticamente al crear un turno en esta ubicación.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs flex items-center gap-1"><CreditCard className="h-3 w-3" /> Tipo de pago</Label>
+                      <Select value={defaultPayType} onValueChange={setDefaultPayType}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="hourly">⏱ Por hora</SelectItem>
+                          <SelectItem value="daily">📅 Por día</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs flex items-center gap-1"><Clock className="h-3 w-3" /> Método fichaje</Label>
+                      <Select value={defaultClockMethod} onValueChange={setDefaultClockMethod}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="both">📱🖥 Ambos</SelectItem>
+                          <SelectItem value="mobile">📱 Móvil</SelectItem>
+                          <SelectItem value="kiosk">🖥 Kiosk</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <Checkbox checked={requireCar} onCheckedChange={c => setRequireCar(!!c)} id="require-car" />
+                    <Label htmlFor="require-car" className="text-xs font-normal cursor-pointer flex items-center gap-1">
+                      <Car className="h-3 w-3" /> Requiere transporte (vehículo)
+                    </Label>
+                  </div>
+                  <div className="mt-3">
+                    <Label className="text-xs">Instrucciones por defecto</Label>
+                    <Textarea
+                      value={defaultInstructions}
+                      onChange={e => setDefaultInstructions(e.target.value)}
+                      rows={2}
+                      placeholder="Ej: Uniforme negro, llegar 15 min antes, reportar con el supervisor..."
+                      className="text-sm resize-none"
+                    />
+                  </div>
+                </div>
+
                 <Button onClick={handleSave} disabled={saving || !name.trim()} className="w-full">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                   {editing ? "Guardar cambios" : "Crear ubicación"}
@@ -214,11 +319,12 @@ export default function Locations() {
           title="Ubicaciones"
           subtitle={`${filtered.length} ubicación${filtered.length !== 1 ? "es" : ""}`}
           onExportCSV={() => {
-            const headers = ["Nombre", "Dirección", "Ciudad", "Estado", "Cliente", "Radio geocerca", "Status"];
+            const headers = ["Nombre", "Dirección", "Ciudad", "Estado", "Cliente", "Radio geocerca", "Pago default", "Fichaje default", "Req. carro", "Status"];
             const rows = filtered.map(l => [
               l.name, l.address ?? "", l.city ?? "", l.state ?? "",
               clients.find(c => c.id === l.client_id)?.name ?? "",
-              String(l.geofence_radius ?? ""), l.status,
+              String(l.geofence_radius ?? ""), l.default_pay_type ?? "",
+              l.default_clock_method ?? "", l.require_car ? "Sí" : "No", l.status,
             ]);
             return [headers, ...rows];
           }}
@@ -258,6 +364,7 @@ export default function Locations() {
                 <TableHead>Nombre</TableHead>
                 <TableHead className="hidden md:table-cell">Dirección</TableHead>
                 <TableHead className="hidden md:table-cell">Cliente</TableHead>
+                <TableHead className="hidden lg:table-cell">Defaults</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-[100px]" />
               </TableRow>
@@ -265,11 +372,31 @@ export default function Locations() {
             <TableBody>
               {filtered.map(l => (
                 <TableRow key={l.id}>
-                  <TableCell className="font-medium">{l.name}</TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">
-                    {[l.address, l.city, l.state].filter(Boolean).join(", ") || "—"}
+                  <TableCell>
+                    <div>
+                      <span className="font-medium">{l.name}</span>
+                      {l.state && <span className="text-[10px] text-muted-foreground ml-1.5">({l.state})</span>}
+                    </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{getClientName(l.client_id)}</TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                    {[l.address, l.city].filter(Boolean).join(", ") || "—"}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{getClientName(l.client_id)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0.5">
+                        {l.default_pay_type === "daily" ? "📅 Día" : "⏱ Hora"}
+                      </Badge>
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0.5">
+                        {l.default_clock_method === "mobile" ? "📱" : l.default_clock_method === "kiosk" ? "🖥" : "📱🖥"}
+                      </Badge>
+                      {l.require_car && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 border-warning/30 text-warning">
+                          <Car className="h-2.5 w-2.5 mr-0.5" /> Carro
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {l.deleted_at ? (
                       <Badge variant="secondary">Archivado</Badge>
@@ -303,7 +430,6 @@ export default function Locations() {
         </div>
       )}
 
-      {/* Audit trail */}
       <div className="mt-8">
         <AuditPanel entityType="location" title="Actividad de ubicaciones" hideViews compact />
       </div>
