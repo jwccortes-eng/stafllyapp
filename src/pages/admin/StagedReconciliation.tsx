@@ -56,7 +56,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { value: "dashboard", label: "Dashboard", icon: BarChart3, alwaysEnabled: true },
-  { value: "checklist", label: "Guía", icon: ClipboardCheck, minStatus: null },
+  { value: "closedesk", label: "Close Desk", icon: Shield, minStatus: null },
   { value: "import", label: "Importar", icon: Upload, minStatus: null },
   { value: "review", label: "Matching", icon: GitCompareArrows, minStatus: "importing" },
   { value: "exceptions", label: "Excepciones", icon: AlertTriangle, minStatus: "importing" },
