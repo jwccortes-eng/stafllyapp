@@ -6118,6 +6118,50 @@ export type Database = {
           },
         ]
       }
+      reconciliation_period_journal: {
+        Row: {
+          company_id: string
+          created_at: string
+          detail: string | null
+          event_label: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          period_status_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          detail?: string | null
+          event_label: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          period_status_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          detail?: string | null
+          event_label?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          period_status_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_period_journal_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_period_status: {
         Row: {
           approved_at: string | null
