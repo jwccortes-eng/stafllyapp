@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     if (!rows.length) return json({ error: "No rows" }, 400);
 
     // Step 1: Import raw records
-    const importResult = await importRaw(supabase, companyId, rows, user.id, dataType, fileName);
+    const importResult = await importRaw(supabase, companyId, rows, userId, dataType, fileName);
     
     return importResult;
   } catch (e) {
