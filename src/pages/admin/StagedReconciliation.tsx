@@ -114,6 +114,11 @@ export default function StagedReconciliation() {
     await reopenPeriod(activePeriod.id, reason);
   };
 
+  const handleRunValidation = async (isDryRun: boolean, uat: Record<string, boolean>, notes?: string) => {
+    if (!activePeriod) return null;
+    return runValidation(activePeriod.id, isDryRun, uat, employeeMap, notes);
+  };
+
   const validation = validateBeforePublish(finalRecords);
 
   const periodStatusLabel = activePeriod ? (
