@@ -261,6 +261,26 @@ export function matchScheduleToClock(
 
   for (const sched of schedules) {
     if (!sched.matched_employee_id) continue;
+
+    // Detect special compensation category — these don't need clocks
+    const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name);
+    if (isClockExemptCategory(category)) {
+      const label = category === "daily_pay" ? "daily_pay_weekend_job" : "ride_pay";
+      results.push({
+        schedule_id: sched.id,
+        clock_id: null,
+        payroll_id: null,
+        employee_id: sched.matched_employee_id,
+        confidence: 95,
+        match_type: "schedule_clock",
+        match_status: "exact",
+        hours_variance: null,
+        pay_variance: null,
+        conflict_flags: [label, "clock_exempt"],
+      });
+      continue;
+    }
+
     let bestMatch: { clock: NormalizedClockRow; score: number; flags: string[] } | null = null;
 
     for (const clock of clocks) {
@@ -340,9 +360,21 @@ export function matchScheduleToClock(
     }
   }
 
-  // Orphan clocks (no schedule)
+  // Orphan clocks (no schedule) — also check if clock itself is a compensation category
   for (const clock of clocks) {
     if (usedClocks.has(clock.id)) continue;
+    const clockCat = detectShiftCategory(null, null, clock.client_name, clock.location_name);
+    if (isClockExemptCategory(clockCat)) {
+      const label = clockCat === "daily_pay" ? "daily_pay_weekend_job" : "ride_pay";
+      results.push({
+        schedule_id: null, clock_id: clock.id, payroll_id: null,
+        employee_id: clock.matched_employee_id, confidence: 90,
+        match_type: "schedule_clock", match_status: "exact",
+        hours_variance: null, pay_variance: null,
+        conflict_flags: [label, "clock_exempt"],
+      });
+      continue;
+    }
     results.push({
       schedule_id: null, clock_id: clock.id, payroll_id: null,
       employee_id: clock.matched_employee_id, confidence: 0,
