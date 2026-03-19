@@ -40,6 +40,7 @@ interface ScheduleDetail {
 }
 
 type SubCategory =
+  | "availability_block"
   | "no_times"
   | "duplicate"
   | "no_employee"
@@ -58,6 +59,15 @@ interface SubBucket {
 }
 
 const SUB_BUCKETS: SubBucket[] = [
+  {
+    key: "availability_block",
+    label: "Bloqueo / No disponible",
+    icon: <ShieldOff className="h-4 w-4" />,
+    color: "text-muted-foreground",
+    description: "Filas de disponibilidad, bloqueo de turno o monitoreo — NO son turnos trabajados reales",
+    action: "Excluir automáticamente — no requiere reloj ni reconciliación",
+    bulkAction: "non_executable",
+  },
   {
     key: "no_times",
     label: "Sin horario programado",
@@ -116,11 +126,21 @@ const SUB_BUCKETS: SubBucket[] = [
 
 /* ── Helpers ── */
 
+const AVAILABILITY_BLOCK_PATTERN = /\b(unavailable|no\s*disponible|shift\s*block(ing)?|block(ed|ing)\s*(shift|schedule)?|breaking\s*policy|policy\s*block|monitoring|no[- ]?show\s*block(ing)?|not\s*available|day\s*off|off\s*day|blocked|disponibilidad|bloqueo|restricci[oó]n)\b/i;
+
+function isAvailabilityBlock(row: ScheduleDetail): boolean {
+  const fields = [row.shift_title, row.client_name, row.location_name, row.notes].map(f => f || "");
+  return AVAILABILITY_BLOCK_PATTERN.test(fields.join(" "));
+}
+
 function classifyScheduleRow(
   row: ScheduleDetail,
   duplicateKeys: Set<string>,
   payrollEmployeeDates: Set<string>,
 ): SubCategory {
+  // 0. Availability/blocking rows — always first
+  if (isAvailabilityBlock(row)) return "availability_block";
+
   // 1. No matched employee
   if (!row.matched_employee_id) return "no_employee";
 
