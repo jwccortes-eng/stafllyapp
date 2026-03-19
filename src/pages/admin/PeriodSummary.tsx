@@ -401,10 +401,10 @@ export default function PeriodSummary() {
                       const { data: movements2 } = await supabase.from("movements").select("employee_id, total_value, concepts(category)").eq("period_id", selectedPeriod).eq("approval_status", "approved");
                       const empMap2 = new Map<string, SummaryRow>();
                       (basePays2 ?? []).forEach((bp: any) => {
-                        empMap2.set(bp.employee_id, { employee_id: bp.employee_id, first_name: bp.employees?.first_name ?? "", last_name: bp.employees?.last_name ?? "", base_total_pay: Number(bp.base_total_pay) || 0, extras_total: 0, deductions_total: 0, total_final_pay: 0 });
+                        empMap2.set(bp.employee_id, mkRow(bp.employee_id, bp.employees?.first_name ?? "", bp.employees?.last_name ?? "", Number(bp.base_total_pay) || 0));
                       });
                       const { data: movEmps2 } = await supabase.from("movements").select("employee_id, employees(first_name, last_name)").eq("period_id", selectedPeriod);
-                      (movEmps2 ?? []).forEach((me: any) => { if (!empMap2.has(me.employee_id) && me.employees) empMap2.set(me.employee_id, { employee_id: me.employee_id, first_name: me.employees.first_name ?? "", last_name: me.employees.last_name ?? "", base_total_pay: 0, extras_total: 0, deductions_total: 0, total_final_pay: 0 }); });
+                      (movEmps2 ?? []).forEach((me: any) => { if (!empMap2.has(me.employee_id) && me.employees) empMap2.set(me.employee_id, mkRow(me.employee_id, me.employees.first_name ?? "", me.employees.last_name ?? "")); });
                       (movements2 ?? []).forEach((m: any) => { const row = empMap2.get(m.employee_id); if (!row) return; if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0; else row.deductions_total += Number(m.total_value) || 0; });
                       empMap2.forEach(row => { row.total_final_pay = row.base_total_pay + row.extras_total - row.deductions_total; });
                       setRows(Array.from(empMap2.values()));
