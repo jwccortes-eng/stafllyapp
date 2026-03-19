@@ -344,6 +344,22 @@ export default function MatchDetailDrawer({ match, open, onOpenChange, onResolve
                     <CompCheck ok={compSameCli} label="Cliente" />
                   </div>
                   <div className="px-3 py-1.5 border-t border-border truncate max-w-[180px]">{comparisonSched?.client_name || "—"}</div>
+
+                  {/* Shift Number */}
+                  <div className="px-3 py-1.5 border-t border-border font-mono text-muted-foreground">
+                    <span className="text-[10px] uppercase tracking-wide block text-muted-foreground/60">Shift #</span>
+                    {clockDetail?.external_clock_id || "—"}
+                  </div>
+                  <div className="px-1 py-1.5 border-t border-border flex items-center justify-center">
+                    <ShiftNumIndicator
+                      schedNum={comparisonSched?.external_shift_id}
+                      clockNum={clockDetail?.external_clock_id}
+                    />
+                  </div>
+                  <div className="px-3 py-1.5 border-t border-border font-mono text-muted-foreground">
+                    <span className="text-[10px] uppercase tracking-wide block text-muted-foreground/60">Shift #</span>
+                    {comparisonSched?.external_shift_id || "—"}
+                  </div>
                 </div>
               </CardContent>
             </Card>
