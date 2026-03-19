@@ -562,13 +562,16 @@ async function resyncAllPeriods(
   // ── Get ALL payroll raw imports ──
   const { data: payrollRaw } = await supabase
     .from("migration_raw_imports")
-    .select("raw_payload")
+    .select("raw_payload, file_name")
     .eq("company_id", companyId)
     .eq("record_type", "payroll")
     .order("row_index")
     .limit(10000);
 
-  const payrollRows = (payrollRaw ?? []).map(r => r.raw_payload as Record<string, unknown>);
+  const payrollRows = (payrollRaw ?? []).map(r => ({
+    row: r.raw_payload as Record<string, unknown>,
+    fileName: (r.file_name as string | null) || "",
+  }));
 
   // ── Get Stafly pay_periods + period_base_pay + movements ──
   const { data: payPeriods } = await supabase
@@ -579,6 +582,13 @@ async function resyncAllPeriods(
 
   // NOTE: project row cap can truncate broad queries at 1000 rows,
   // so per-period queries are executed inside the loop for accuracy.
+
+  function toNumber(v: unknown): number {
+    const cleaned = String(v ?? "").replace(/[^0-9.-]/g, "");
+    if (!cleaned || cleaned === "-" || cleaned === ".") return 0;
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  }
 
   // Helper: parse CT date in multiple formats → "YYYY-MM-DD"
   // Supports: "MM/DD/YYYY", "Fri Feb 06 2026 19:00:00 GMT-0500 (...)"
@@ -605,48 +615,93 @@ async function resyncAllPeriods(
     return null;
   }
 
+  function parseWeekRangeFromFileName(fileName: string): { start: string; end: string } | null {
+    if (!fileName) return null;
+    const m = fileName.match(/(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})/);
+    if (!m) return null;
+    return { start: m[1], end: m[2] };
+  }
+
+  const periodRowsById = new Map<string, Record<string, unknown>[]>();
+  for (const period of periods) {
+    periodRowsById.set(period.id, []);
+  }
+
+  const fileRangeCache = new Map<string, { start: string; end: string } | null>();
+
+  for (const { row, fileName } of payrollRows) {
+    let assigned = false;
+
+    if (fileName) {
+      if (!fileRangeCache.has(fileName)) {
+        fileRangeCache.set(fileName, parseWeekRangeFromFileName(fileName));
+      }
+      const fileRange = fileRangeCache.get(fileName);
+      if (fileRange) {
+        const exactPeriod = periods.find(
+          p => p.week_start === fileRange.start && p.week_end === fileRange.end,
+        );
+        if (exactPeriod) {
+          periodRowsById.get(exactPeriod.id)?.push(row);
+          assigned = true;
+        } else {
+          const overlapPeriod = periods.find(
+            p => p.week_start <= fileRange.end && p.week_end >= fileRange.start,
+          );
+          if (overlapPeriod) {
+            periodRowsById.get(overlapPeriod.id)?.push(row);
+            assigned = true;
+          }
+        }
+      }
+    }
+
+    if (!assigned) {
+      const rowDate = ctDateToISO(row["Start Date"] || row["Date"] || row["End Date"]);
+      if (!rowDate) continue;
+      const periodMatch = periods.find(p => p.week_start <= rowDate && p.week_end >= rowDate);
+      if (periodMatch) {
+        periodRowsById.get(periodMatch.id)?.push(row);
+      }
+    }
+  }
+
   const results: Record<string, unknown>[] = [];
 
   for (const period of periods) {
     const weekStart = period.week_start;
     const weekEnd = period.week_end;
 
-    // ── CT TOTALS: match payroll rows by date range ──
-    // Each row is a shift entry. Total pay/hours are weekly aggregates that repeat per employee.
-    // Strategy: group by employee, use MAX(Total pay) as their weekly total, SUM(Shift hours) for hours.
+    // ── CT TOTALS: group by employee and keep MAX weekly totals ──
     const empCTData = new Map<string, { totalPay: number; shiftHours: number; totalHours: number }>();
+    const periodPayrollRows = periodRowsById.get(period.id) ?? [];
 
-    for (const r of payrollRows) {
-      // Match by Start Date or End Date falling within period range
-      const startDateStr = ctDateToISO(r["Start Date"] || r["Date"]);
-      const endDateStr = ctDateToISO(r["End Date"]);
-      const rowDate = startDateStr || endDateStr;
-      if (!rowDate) continue;
-      if (rowDate < weekStart || rowDate > weekEnd) continue;
+    for (const r of periodPayrollRows) {
+      const firstName = String(r["First name"] || r["First Name"] || "").trim();
+      const lastName = String(r["Last name"] || r["Last Name"] || "").trim();
+      const employeeName = String(r["Employee name"] || `${firstName} ${lastName}`).trim();
+      const empKey = employeeName.toUpperCase().trim();
+      if (!empKey) continue;
 
-      const firstName = String(r["First name"] || "").trim();
-      const lastName = String(r["Last name"] || "").trim();
-      const empKey = `${firstName} ${lastName}`.toUpperCase().trim();
-
-      const totalPay = parseFloat(String(r["Total pay"] || "0")) || 0;
-      const totalHours = parseFloat(String(r["Total work hours"] || r["Total paid hours"] || "0")) || 0;
-      const shiftHours = parseFloat(String(r["Shift hours"] || "0")) || 0;
+      const totalPay = toNumber(r["Total pay"] ?? r["TOTAL"] ?? r["Total pay (USD)"] ?? r["Total pay usd"]);
+      const totalHours = toNumber(r["Total work hours"] ?? r["Total paid hours"] ?? r["Weekly total hours"]);
+      const shiftHours = toNumber(r["Shift hours"] ?? r["Daily total hours"]);
 
       const existing = empCTData.get(empKey) || { totalPay: 0, shiftHours: 0, totalHours: 0 };
-      // Total pay is a weekly aggregate repeated on each row → take the MAX
       if (totalPay > existing.totalPay) existing.totalPay = totalPay;
       if (totalHours > existing.totalHours) existing.totalHours = totalHours;
-      // Shift hours are per-entry → sum them
       existing.shiftHours += shiftHours;
       empCTData.set(empKey, existing);
     }
 
-    let ctEmployees = empCTData.size;
+    let ctEmployees = 0;
     let ctGross = 0;
     let ctHours = 0;
     let ctEntries = 0;
 
     for (const [, data] of empCTData) {
+      if (data.totalPay <= 0 && data.totalHours <= 0 && data.shiftHours <= 0) continue;
+      ctEmployees++;
       ctGross += data.totalPay;
       ctHours += data.totalHours > 0 ? data.totalHours : data.shiftHours;
       ctEntries++;
