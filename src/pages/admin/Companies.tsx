@@ -329,7 +329,7 @@ export default function CompaniesPage() {
   }
 
   return (
-    <div>
+    <div className="min-h-screen -m-6 p-6 bg-gradient-to-br from-primary/[0.03] via-background to-chart-1/[0.03]">
       <PageHeader
         variant="1"
         icon={Building2}
