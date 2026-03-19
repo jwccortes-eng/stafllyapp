@@ -35,6 +35,7 @@ export default function Directory() {
   const [employees, setEmployees] = useState<DirectoryEntry[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const { getStatus } = useEmployeeStatuses();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
