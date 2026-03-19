@@ -69,7 +69,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       .from("employee_aliases" as any)
       .select("employee_id, alias_name_normalized")
       .eq("company_id", companyId);
-    setAliases((aliasData || []) as EmployeeAlias[]);
+    setAliases((aliasData || []) as unknown as EmployeeAlias[]);
   }, [companyId]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
