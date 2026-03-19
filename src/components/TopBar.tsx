@@ -24,12 +24,13 @@ const CREATE_OPTIONS = [
 
 export default function TopBar({ collapsed }: { collapsed: boolean }) {
   const { user, role, fullName, signOut } = useAuth();
-  const { selectedCompany } = useCompany();
+  const { selectedCompany, companies } = useCompany();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
   const companyColor = selectedCompany?.brand_color || "#6366f1";
   const isOwner = role === "developer" || role === "owner";
+  const isMultiCompany = companies.length > 1;
   const initials = fullName
     ? fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     : user?.email ? user.email[0].toUpperCase() : "?";
@@ -42,12 +43,21 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
         collapsed ? "ml-[60px]" : "ml-[240px]"
       )}
     >
-      {/* Left: Company indicator + Search */}
+      {/* Left: Company context badge + Search */}
       <div className="flex items-center gap-3 flex-1 max-w-lg">
         {selectedCompany && (
-          <div className="flex items-center gap-2 pr-3 border-r border-border/30 shrink-0">
-            <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: companyColor }} />
-            <span className="text-[12px] font-medium text-foreground/70 truncate max-w-[140px] hidden sm:inline">
+          <div className={cn(
+            "flex items-center gap-2 shrink-0",
+            isMultiCompany ? "pr-3 border-r border-border/30" : "pr-3 border-r border-border/30"
+          )}>
+            <span
+              className="h-2.5 w-2.5 rounded-full shrink-0 ring-2 ring-offset-1 ring-offset-background"
+              style={{ backgroundColor: companyColor, boxShadow: `0 0 8px ${companyColor}40` }}
+            />
+            <span className={cn(
+              "font-semibold text-foreground truncate hidden sm:inline",
+              isMultiCompany ? "text-[13px] max-w-[180px]" : "text-[12px] max-w-[140px] text-foreground/70"
+            )}>
               {selectedCompany.name}
             </span>
           </div>
