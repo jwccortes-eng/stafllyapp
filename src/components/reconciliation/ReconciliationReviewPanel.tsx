@@ -89,18 +89,14 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
     if (!companyId) return;
     setRunningMatch(true);
     try {
-      console.log("[Matching] Fetching normalized rows for company:", companyId);
-      // Fetch normalized rows
-      const [schedRes, clockRes] = await Promise.all([
-        supabase.from("normalized_schedule_rows" as any).select("*").eq("company_id", companyId),
-        supabase.from("normalized_clock_rows" as any).select("*").eq("company_id", companyId),
-      ]);
+      console.log("[Matching] Fetching ALL normalized rows for company:", companyId);
+      // Fetch ALL normalized rows (bypassing 1000-row limit)
+      const [schedules, clocks] = await Promise.all([
+        fetchAll("normalized_schedule_rows", companyId),
+        fetchAll("normalized_clock_rows", companyId),
+      ]) as [NormalizedScheduleRow[], NormalizedClockRow[]];
 
-      if (schedRes.error) console.error("[Matching] Schedule fetch error:", schedRes.error);
-      if (clockRes.error) console.error("[Matching] Clock fetch error:", clockRes.error);
-
-      const schedules = (schedRes.data || []) as any as NormalizedScheduleRow[];
-      const clocks = (clockRes.data || []) as any as NormalizedClockRow[];
+      console.log("[Matching] Found", schedules.length, "schedules and", clocks.length, "clocks");
 
       console.log("[Matching] Found", schedules.length, "schedules and", clocks.length, "clocks");
 
