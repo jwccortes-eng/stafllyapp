@@ -516,7 +516,7 @@ export default function StagedReconciliation() {
 
         <TabsContent value="pilot">
           {activePeriod ? (
-            <PilotComparisonReport companyId={selectedCompanyId} period={activePeriod} finalRecords={finalRecords} employees={employeeMap} variances={variances} />
+            <PilotReviewReport companyId={selectedCompanyId} period={activePeriod} finalRecords={finalRecords} employees={employeeMap} variances={variances} />
           ) : (
             <NoPeriodPlaceholder icon={Rocket} text="Selecciona un periodo para generar el reporte piloto." />
           )}
