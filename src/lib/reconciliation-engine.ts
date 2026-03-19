@@ -199,7 +199,7 @@ export function stripPayModifiers(title: string | null | undefined): string {
 }
 
 // ─── Compensation Category Detection ───
-export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "availability_block" | "regular";
+export type ShiftCategory = "hourly" | "daily_pay" | "ride_pay" | "availability_block" | "structural_no_context" | "regular";
 
 // Expanded patterns to match real Connecteam export variants
 const WEEKEND_JOB_PATTERN = /\b(weekend\s*(job|shift)|wj|trabajo\s*de?\s*fin\s*de?\s*semana)\b/i;
@@ -222,12 +222,12 @@ export function detectShiftCategory(
   // Check availability/blocking FIRST — these are not real work
   if (AVAILABILITY_BLOCK_PATTERN.test(combined)) return "availability_block";
 
-  // Structural detection: no title + no client = likely non-work placeholder
+  // Structural detection: no title + no client + no location = availability placeholder
   // (Connecteam exports availability/blocking rows without title or client)
   const hasTitle = !!(shiftTitle && shiftTitle.trim());
   const hasClient = !!(clientName && clientName.trim());
   const hasLocation = !!(locationName && locationName.trim());
-  if (!hasTitle && !hasClient && !hasLocation) return "availability_block";
+  if (!hasTitle && !hasClient && !hasLocation) return "structural_no_context";
 
   // Strip PAGA DOBLE before checking other categories — it's just a pay modifier
   const strippedCombined = fields.map(f => stripPayModifiers(f) || f).join(" ");
@@ -240,7 +240,7 @@ export function detectShiftCategory(
 }
 
 export function isClockExemptCategory(cat: ShiftCategory): boolean {
-  return cat === "daily_pay" || cat === "ride_pay" || cat === "availability_block";
+  return cat === "daily_pay" || cat === "ride_pay" || cat === "availability_block" || cat === "structural_no_context";
 }
 
 // ─── Shift Matching ───
@@ -310,7 +310,7 @@ export function matchScheduleToClock(
     const isDoublePay = hasDoublePay(sched.shift_title) || hasDoublePay(sched.job_title);
 
     if (isClockExemptCategory(category)) {
-      const label = category === "daily_pay" ? "daily_pay_weekend_job" : category === "ride_pay" ? "ride_pay" : "availability_block";
+      const label = category === "daily_pay" ? "daily_pay_weekend_job" : category === "ride_pay" ? "ride_pay" : category === "structural_no_context" ? "structural_no_context" : "availability_block";
       const flags = [label, "clock_exempt"];
       if (isDoublePay) flags.push("double_pay");
       results.push({
@@ -418,7 +418,7 @@ export function matchScheduleToClock(
     if (usedClocks.has(clock.id)) continue;
     const clockCat = detectShiftCategory(null, null, clock.client_name, clock.location_name, clock.notes);
     if (isClockExemptCategory(clockCat)) {
-      const label = clockCat === "daily_pay" ? "daily_pay_weekend_job" : clockCat === "ride_pay" ? "ride_pay" : "availability_block";
+      const label = clockCat === "daily_pay" ? "daily_pay_weekend_job" : clockCat === "ride_pay" ? "ride_pay" : clockCat === "structural_no_context" ? "structural_no_context" : "availability_block";
       results.push({
         schedule_id: null, clock_id: clock.id, payroll_id: null,
         employee_id: clock.matched_employee_id, confidence: 90,
