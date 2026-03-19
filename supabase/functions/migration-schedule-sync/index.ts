@@ -75,12 +75,16 @@ Deno.serve(async (req) => {
 
     if (!companyId) return json({ error: "companyId requerido" }, 400);
 
-    // Verify membership
-    const { data: membership } = await supabase
-      .from("company_users")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("company_id", companyId)
+    // Verify membership (skip for service role)
+    if (!isServiceRole) {
+      const { data: membership } = await supabase
+        .from("company_users")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (!membership) return json({ error: "Sin acceso" }, 403);
+    }
       .maybeSingle();
     if (!membership) return json({ error: "Sin acceso" }, 403);
 
