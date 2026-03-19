@@ -13,12 +13,16 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   Settings, CalendarDays, Clock, AlertTriangle,
-  Save, RotateCcw, Shield, Globe, Loader2,
+  Save, RotateCcw, Shield, Globe, Loader2, DollarSign, FileSpreadsheet, TrendingUp, LayoutGrid,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const CompanyFinancialPolicies = lazy(() => import("@/components/advances/CompanyFinancialPolicies"));
+const CompensationMatrixTab = lazy(() => import("@/components/compensation/CompensationMatrixTab"));
+const CompensationRulesTab = lazy(() => import("@/components/compensation/CompensationRulesTab"));
+const PayrollImportReviewTab = lazy(() => import("@/components/compensation/PayrollImportReviewTab"));
+const CompensationAnalysisTab = lazy(() => import("@/components/compensation/CompensationAnalysisTab"));
 
 const TIMEZONES = [
   "America/New_York",
