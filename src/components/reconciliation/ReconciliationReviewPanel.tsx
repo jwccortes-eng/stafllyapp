@@ -68,7 +68,7 @@ interface MatchRow {
   resolution_note: string | null;
 }
 
-export default function ReconciliationReviewPanel({ companyId, onRefresh }: Props) {
+export default function ReconciliationReviewPanel({ companyId, onRefresh, periodScope }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [matches, setMatches] = useState<MatchRow[]>([]);
@@ -77,6 +77,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
   const [runningMatch, setRunningMatch] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [scopeDebug, setScopeDebug] = useState<{ schedules: number; clocks: number; scheduleBatch: string | null; clockBatch: string | null } | null>(null);
 
   useEffect(() => {
     if (!companyId) return;
@@ -104,16 +105,25 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
     if (!companyId) return;
     setRunningMatch(true);
     try {
-      console.log("[Matching] Fetching ALL normalized rows for company:", companyId);
-      // Fetch ALL normalized rows (bypassing 1000-row limit)
+      const schedBatch = periodScope?.schedule_batch_id || null;
+      const clockBatch = periodScope?.clock_batch_id || null;
+      console.log("[Matching] Scope:", {
+        companyId,
+        schedBatch,
+        clockBatch,
+        periodStart: periodScope?.period_start,
+        periodEnd: periodScope?.period_end,
+      });
+
       const [schedules, clocks] = await Promise.all([
-        fetchAll("normalized_schedule_rows", companyId),
-        fetchAll("normalized_clock_rows", companyId),
+        fetchAllByBatch("normalized_schedule_rows", companyId, schedBatch),
+        fetchAllByBatch("normalized_clock_rows", companyId, clockBatch),
       ]) as [NormalizedScheduleRow[], NormalizedClockRow[]];
 
-      console.log("[Matching] Found", schedules.length, "schedules and", clocks.length, "clocks");
-
-      console.log("[Matching] Found", schedules.length, "schedules and", clocks.length, "clocks");
+      setScopeDebug({ schedules: schedules.length, clocks: clocks.length, scheduleBatch: schedBatch, clockBatch: clockBatch });
+      console.log("[Matching] Scoped rows — schedules:", schedules.length, "clocks:", clocks.length,
+        schedBatch ? `(batch: ${schedBatch})` : "(ALL company — no batch scope!)",
+        clockBatch ? `(batch: ${clockBatch})` : "(ALL company — no batch scope!)");
 
       if (schedules.length === 0 && clocks.length === 0) {
         toast({ title: "Sin datos", description: "Importa turnos y fichajes primero desde la pestaña Importar.", variant: "destructive" });
