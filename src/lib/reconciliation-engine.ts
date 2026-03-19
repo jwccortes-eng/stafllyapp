@@ -268,9 +268,8 @@ export function matchScheduleToClock(
   const usedClocks = new Set<string>();
 
   for (const sched of schedules) {
-    if (!sched.matched_employee_id) continue;
-
-    // Detect special compensation category — these don't need clocks
+    // Detect special compensation BEFORE employee check — these categories
+    // are valid even without a matched employee (e.g. Weekend shift, Pay Ride)
     const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes);
     if (isClockExemptCategory(category)) {
       const label = category === "daily_pay" ? "daily_pay_weekend_job" : "ride_pay";
@@ -288,6 +287,8 @@ export function matchScheduleToClock(
       });
       continue;
     }
+
+    if (!sched.matched_employee_id) continue;
 
     let bestMatch: { clock: NormalizedClockRow; score: number; flags: string[] } | null = null;
 
