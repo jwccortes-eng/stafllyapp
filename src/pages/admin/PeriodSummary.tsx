@@ -48,7 +48,29 @@ interface SummaryRow {
   base_total_pay: number;
   extras_total: number;
   deductions_total: number;
+  advance_deduction: number;
   total_final_pay: number;
+}
+
+interface AdvanceRecord {
+  id: string;
+  employee_id: string;
+  reference_code: string;
+  record_type: string;
+  original_amount: number;
+  balance_remaining: number;
+  repayment_mode: string;
+  fixed_amount_per_cut: number | null;
+  percentage_per_cut: number | null;
+  maximum_payment_per_cut: number | null;
+  minimum_payment: number | null;
+  protect_minimum_net_pay: boolean;
+  protect_negative_payroll: boolean;
+  auto_deduct_enabled: boolean;
+  repayment_start_date: string | null;
+  priority_order: number | null;
+  status: string;
+  employees?: { first_name: string; last_name: string } | null;
 }
 
 type SortKey = "name" | "base" | "extras" | "deductions" | "total";
