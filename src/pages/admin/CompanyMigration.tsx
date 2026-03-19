@@ -92,9 +92,17 @@ export default function CompanyMigration() {
   }, [toast]);
 
   const runImport = useCallback(async (slot: FileSlot, dryRun: boolean) => {
-    if (!selectedCompanyId) return;
+    if (!selectedCompanyId) {
+      console.error("[Migration] No company selected!");
+      toast({ title: "No company selected", description: "Please select a company from the top switcher before importing.", variant: "destructive" });
+      return;
+    }
     const state = files[slot];
-    if (!state.records.length) return;
+    if (!state.records.length) {
+      toast({ title: "No records", description: "Upload and parse a file first.", variant: "destructive" });
+      return;
+    }
+    console.log("[Migration] Running import:", { slot, dryRun, records: state.records.length, companyId: selectedCompanyId });
 
     setFiles(prev => ({ ...prev, [slot]: { ...prev[slot], status: "importing" } }));
 
