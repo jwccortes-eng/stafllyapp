@@ -620,6 +620,89 @@ export type Database = {
         }
         Relationships: []
       }
+      company_financial_policies: {
+        Row: {
+          advances_enabled: boolean
+          allow_multiple_active: boolean
+          allow_outside_payroll_repayments: boolean
+          allow_transport_advances: boolean
+          company_id: string
+          created_at: string
+          deduction_priority:
+            | Database["public"]["Enums"]["deduction_priority_mode"]
+            | null
+          default_fixed_amount: number | null
+          default_percentage: number | null
+          default_repayment_mode:
+            | Database["public"]["Enums"]["repayment_mode"]
+            | null
+          id: string
+          loans_enabled: boolean
+          max_advance_amount: number | null
+          max_deduction_percent_of_net: number | null
+          max_loan_amount: number | null
+          protect_minimum_net_pay_amount: number | null
+          require_approval: boolean
+          updated_at: string
+        }
+        Insert: {
+          advances_enabled?: boolean
+          allow_multiple_active?: boolean
+          allow_outside_payroll_repayments?: boolean
+          allow_transport_advances?: boolean
+          company_id: string
+          created_at?: string
+          deduction_priority?:
+            | Database["public"]["Enums"]["deduction_priority_mode"]
+            | null
+          default_fixed_amount?: number | null
+          default_percentage?: number | null
+          default_repayment_mode?:
+            | Database["public"]["Enums"]["repayment_mode"]
+            | null
+          id?: string
+          loans_enabled?: boolean
+          max_advance_amount?: number | null
+          max_deduction_percent_of_net?: number | null
+          max_loan_amount?: number | null
+          protect_minimum_net_pay_amount?: number | null
+          require_approval?: boolean
+          updated_at?: string
+        }
+        Update: {
+          advances_enabled?: boolean
+          allow_multiple_active?: boolean
+          allow_outside_payroll_repayments?: boolean
+          allow_transport_advances?: boolean
+          company_id?: string
+          created_at?: string
+          deduction_priority?:
+            | Database["public"]["Enums"]["deduction_priority_mode"]
+            | null
+          default_fixed_amount?: number | null
+          default_percentage?: number | null
+          default_repayment_mode?:
+            | Database["public"]["Enums"]["repayment_mode"]
+            | null
+          id?: string
+          loans_enabled?: boolean
+          max_advance_amount?: number | null
+          max_deduction_percent_of_net?: number | null
+          max_loan_amount?: number | null
+          protect_minimum_net_pay_amount?: number | null
+          require_approval?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_financial_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_modules: {
         Row: {
           activated_at: string | null
@@ -1384,6 +1467,302 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_financial_attachments: {
+        Row: {
+          company_id: string
+          file_name: string
+          file_path: string
+          file_type: string | null
+          id: string
+          record_id: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          company_id: string
+          file_name: string
+          file_path: string
+          file_type?: string | null
+          id?: string
+          record_id: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          company_id?: string
+          file_name?: string
+          file_path?: string
+          file_type?: string | null
+          id?: string
+          record_id?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_financial_attachments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_financial_attachments_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "employee_financial_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_financial_ledger: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          company_id: string
+          created_at: string
+          created_by: string
+          employee_id: string
+          id: string
+          metadata: Json | null
+          note: string | null
+          period_id: string | null
+          record_id: string
+          transaction_date: string
+          transaction_type: Database["public"]["Enums"]["financial_transaction_type"]
+        }
+        Insert: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          company_id: string
+          created_at?: string
+          created_by: string
+          employee_id: string
+          id?: string
+          metadata?: Json | null
+          note?: string | null
+          period_id?: string | null
+          record_id: string
+          transaction_date?: string
+          transaction_type: Database["public"]["Enums"]["financial_transaction_type"]
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          employee_id?: string
+          id?: string
+          metadata?: Json | null
+          note?: string | null
+          period_id?: string | null
+          record_id?: string
+          transaction_date?: string
+          transaction_type?: Database["public"]["Enums"]["financial_transaction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_financial_ledger_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_financial_ledger_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_financial_ledger_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_financial_ledger_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_financial_ledger_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "employee_financial_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_financial_records: {
+        Row: {
+          approval_note: string | null
+          approved_at: string | null
+          approved_by: string | null
+          attachment_count: number
+          auto_deduct_enabled: boolean
+          balance_remaining: number
+          category: Database["public"]["Enums"]["financial_category"]
+          company_id: string
+          company_policy_snapshot: Json | null
+          created_at: string
+          created_by: string
+          currency: string
+          deleted_at: string | null
+          employee_id: string
+          employee_visible_notes: string | null
+          expected_end_date: string | null
+          fixed_amount_per_cut: number | null
+          id: string
+          is_transport_related: boolean
+          issue_date: string
+          linked_period_id: string | null
+          linked_shift_id: string | null
+          maximum_payment_per_cut: number | null
+          metadata: Json | null
+          minimum_payment: number | null
+          notes_internal: string | null
+          original_amount: number
+          payment_source:
+            | Database["public"]["Enums"]["payment_source_method"]
+            | null
+          percentage_per_cut: number | null
+          priority_order: number | null
+          protect_minimum_net_pay: boolean
+          protect_negative_payroll: boolean
+          record_type: Database["public"]["Enums"]["financial_record_type"]
+          reference_code: string
+          repayment_mode: Database["public"]["Enums"]["repayment_mode"]
+          repayment_start_date: string | null
+          status: Database["public"]["Enums"]["financial_record_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          approval_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          attachment_count?: number
+          auto_deduct_enabled?: boolean
+          balance_remaining?: number
+          category?: Database["public"]["Enums"]["financial_category"]
+          company_id: string
+          company_policy_snapshot?: Json | null
+          created_at?: string
+          created_by: string
+          currency?: string
+          deleted_at?: string | null
+          employee_id: string
+          employee_visible_notes?: string | null
+          expected_end_date?: string | null
+          fixed_amount_per_cut?: number | null
+          id?: string
+          is_transport_related?: boolean
+          issue_date?: string
+          linked_period_id?: string | null
+          linked_shift_id?: string | null
+          maximum_payment_per_cut?: number | null
+          metadata?: Json | null
+          minimum_payment?: number | null
+          notes_internal?: string | null
+          original_amount: number
+          payment_source?:
+            | Database["public"]["Enums"]["payment_source_method"]
+            | null
+          percentage_per_cut?: number | null
+          priority_order?: number | null
+          protect_minimum_net_pay?: boolean
+          protect_negative_payroll?: boolean
+          record_type: Database["public"]["Enums"]["financial_record_type"]
+          reference_code?: string
+          repayment_mode?: Database["public"]["Enums"]["repayment_mode"]
+          repayment_start_date?: string | null
+          status?: Database["public"]["Enums"]["financial_record_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          approval_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          attachment_count?: number
+          auto_deduct_enabled?: boolean
+          balance_remaining?: number
+          category?: Database["public"]["Enums"]["financial_category"]
+          company_id?: string
+          company_policy_snapshot?: Json | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          deleted_at?: string | null
+          employee_id?: string
+          employee_visible_notes?: string | null
+          expected_end_date?: string | null
+          fixed_amount_per_cut?: number | null
+          id?: string
+          is_transport_related?: boolean
+          issue_date?: string
+          linked_period_id?: string | null
+          linked_shift_id?: string | null
+          maximum_payment_per_cut?: number | null
+          metadata?: Json | null
+          minimum_payment?: number | null
+          notes_internal?: string | null
+          original_amount?: number
+          payment_source?:
+            | Database["public"]["Enums"]["payment_source_method"]
+            | null
+          percentage_per_cut?: number | null
+          priority_order?: number | null
+          protect_minimum_net_pay?: boolean
+          protect_negative_payroll?: boolean
+          record_type?: Database["public"]["Enums"]["financial_record_type"]
+          reference_code?: string
+          repayment_mode?: Database["public"]["Enums"]["repayment_mode"]
+          repayment_start_date?: string | null
+          status?: Database["public"]["Enums"]["financial_record_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_financial_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_financial_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_financial_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_financial_records_linked_period_id_fkey"
+            columns: ["linked_period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
             referencedColumns: ["id"]
           },
         ]
@@ -7023,6 +7402,11 @@ export type Database = {
         | "gps_tracking"
         | "data_sharing"
         | "photo_release"
+      deduction_priority_mode:
+        | "oldest_first"
+        | "newest_first"
+        | "highest_balance_first"
+        | "manual_priority"
       document_type_enum:
         | "id_card"
         | "passport"
@@ -7042,6 +7426,40 @@ export type Database = {
         | "stafly_import"
         | "marketplace_import"
         | "linkedin"
+      financial_category:
+        | "payroll_advance"
+        | "employee_loan"
+        | "transport_support"
+        | "emergency_support"
+        | "payroll_correction"
+        | "equipment_deduction"
+        | "uniform_related"
+        | "other"
+      financial_record_status:
+        | "draft"
+        | "pending_approval"
+        | "approved"
+        | "active"
+        | "paused"
+        | "paid"
+        | "cancelled"
+        | "closed_manually"
+        | "written_off"
+      financial_record_type: "advance" | "loan"
+      financial_transaction_type:
+        | "disbursement"
+        | "payroll_deduction"
+        | "manual_adjustment_add"
+        | "manual_adjustment_reduce"
+        | "pause"
+        | "resume"
+        | "approval"
+        | "cancellation"
+        | "manual_close"
+        | "reversal"
+        | "refund"
+        | "writeoff"
+        | "repayment_outside_payroll"
       invoice_status:
         | "draft"
         | "approved"
@@ -7056,9 +7474,23 @@ export type Database = {
         | "stafly_shift"
         | "marketplace_booking"
         | "imported_experience"
+      payment_source_method:
+        | "cash"
+        | "zelle"
+        | "transfer"
+        | "check"
+        | "payroll_offset"
+        | "other"
       proficiency_level: "beginner" | "intermediate" | "advanced" | "expert"
       profile_visibility: "private" | "limited" | "public"
       rate_source: "concept_default" | "per_employee"
+      repayment_mode:
+        | "fixed_amount"
+        | "percentage_net"
+        | "percentage_gross"
+        | "one_time_next"
+        | "manual"
+        | "hybrid"
       reputation_source:
         | "shift_review"
         | "marketplace_review"
@@ -7260,6 +7692,12 @@ export const Constants = {
         "data_sharing",
         "photo_release",
       ],
+      deduction_priority_mode: [
+        "oldest_first",
+        "newest_first",
+        "highest_balance_first",
+        "manual_priority",
+      ],
       document_type_enum: [
         "id_card",
         "passport",
@@ -7282,6 +7720,43 @@ export const Constants = {
         "marketplace_import",
         "linkedin",
       ],
+      financial_category: [
+        "payroll_advance",
+        "employee_loan",
+        "transport_support",
+        "emergency_support",
+        "payroll_correction",
+        "equipment_deduction",
+        "uniform_related",
+        "other",
+      ],
+      financial_record_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "active",
+        "paused",
+        "paid",
+        "cancelled",
+        "closed_manually",
+        "written_off",
+      ],
+      financial_record_type: ["advance", "loan"],
+      financial_transaction_type: [
+        "disbursement",
+        "payroll_deduction",
+        "manual_adjustment_add",
+        "manual_adjustment_reduce",
+        "pause",
+        "resume",
+        "approval",
+        "cancellation",
+        "manual_close",
+        "reversal",
+        "refund",
+        "writeoff",
+        "repayment_outside_payroll",
+      ],
       invoice_status: [
         "draft",
         "approved",
@@ -7298,9 +7773,25 @@ export const Constants = {
         "marketplace_booking",
         "imported_experience",
       ],
+      payment_source_method: [
+        "cash",
+        "zelle",
+        "transfer",
+        "check",
+        "payroll_offset",
+        "other",
+      ],
       proficiency_level: ["beginner", "intermediate", "advanced", "expert"],
       profile_visibility: ["private", "limited", "public"],
       rate_source: ["concept_default", "per_employee"],
+      repayment_mode: [
+        "fixed_amount",
+        "percentage_net",
+        "percentage_gross",
+        "one_time_next",
+        "manual",
+        "hybrid",
+      ],
       reputation_source: [
         "shift_review",
         "marketplace_review",
