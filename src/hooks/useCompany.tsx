@@ -18,6 +18,8 @@ interface CompanyContextType {
   selectedCompanyId: string | null;
   selectedCompany: Company | null;
   setSelectedCompanyId: (id: string) => void;
+  /** Switch company with cache invalidation */
+  switchCompany: (id: string) => void;
   loading: boolean;
   refetch: () => Promise<void>;
   activeModules: Set<string>;
@@ -29,6 +31,7 @@ const CompanyContext = createContext<CompanyContextType>({
   selectedCompanyId: null,
   selectedCompany: null,
   setSelectedCompanyId: () => {},
+  switchCompany: () => {},
   loading: true,
   refetch: async () => {},
   activeModules: new Set(),
