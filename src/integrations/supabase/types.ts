@@ -4179,6 +4179,7 @@ export type Database = {
           id: string
           phone_login_enabled: boolean | null
           phone_number: string | null
+          switch_pin: string | null
           user_id: string
         }
         Insert: {
@@ -4188,6 +4189,7 @@ export type Database = {
           id?: string
           phone_login_enabled?: boolean | null
           phone_number?: string | null
+          switch_pin?: string | null
           user_id: string
         }
         Update: {
@@ -4197,6 +4199,7 @@ export type Database = {
           id?: string
           phone_login_enabled?: boolean | null
           phone_number?: string | null
+          switch_pin?: string | null
           user_id?: string
         }
         Relationships: []
