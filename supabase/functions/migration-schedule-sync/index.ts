@@ -93,6 +93,9 @@ Deno.serve(async (req) => {
     if (action === "stats") {
       return await getStats(supabase, companyId);
     }
+    if (action === "resync_all") {
+      return await resyncAllPeriods(supabase, companyId, userId);
+    }
 
     // Smart Sync API: auto-import raw + process
     if (!rows.length) return json({ error: "No rows" }, 400);
@@ -519,4 +522,172 @@ async function getStats(
     mapping_records: mappingRes.data?.length || 0,
     scheduled_shifts: shiftsRes.count || 0,
   });
+}
+
+// ─── Resync All Periods ──────────────────────────────────────────
+async function resyncAllPeriods(
+  supabase: ReturnType<typeof createClient>,
+  companyId: string,
+  userId: string,
+) {
+  // Rebuild employee lookup with latest mappings
+  const { data: empMapping } = await supabase
+    .from("migration_employee_mapping")
+    .select("connecteam_name, stafly_employee_id, match_status")
+    .eq("company_id", companyId)
+    .in("match_status", ["exact_match", "probable_match", "manually_resolved"]);
+
+  const empByName = new Map<string, string>();
+  for (const m of empMapping ?? []) {
+    if (m.stafly_employee_id) empByName.set(m.connecteam_name.toUpperCase().trim(), m.stafly_employee_id);
+  }
+
+  const { data: employees } = await supabase
+    .from("employees").select("id, first_name, last_name").eq("company_id", companyId);
+  for (const emp of employees ?? []) {
+    const name = `${emp.first_name} ${emp.last_name}`.toUpperCase().trim();
+    if (!empByName.has(name)) empByName.set(name, emp.id);
+  }
+
+  // Get all periods
+  const { data: periods } = await supabase
+    .from("migration_period_reconciliation")
+    .select("*")
+    .eq("company_id", companyId)
+    .order("week_start");
+
+  if (!periods?.length) return json({ error: "No periods found" }, 400);
+
+  // Get all payroll raw imports
+  const { data: payrollRaw } = await supabase
+    .from("migration_raw_imports")
+    .select("raw_payload")
+    .eq("company_id", companyId)
+    .eq("record_type", "payroll")
+    .order("row_index")
+    .limit(10000);
+
+  const payrollRows = (payrollRaw ?? []).map(r => r.raw_payload as Record<string, unknown>);
+
+  // Get all scheduling raw imports to count Stafly shifts per period
+  const { data: staflyShifts } = await supabase
+    .from("scheduled_shifts")
+    .select("id, date, shift_hours, reconciliation_hash")
+    .eq("company_id", companyId)
+    .not("reconciliation_hash", "is", null);
+
+  // Get shift assignments with employee rates
+  const { data: shiftAssignments } = await supabase
+    .from("shift_assignments")
+    .select("shift_id, employee_id")
+    .eq("company_id", companyId);
+
+  // Get shifts table for pay data
+  const { data: shiftsData } = await supabase
+    .from("shifts")
+    .select("employee_id, shift_date, shift_hours, hourly_rate_usd, total_pay_usd, period_id")
+    .eq("company_id", companyId);
+
+  const results: Record<string, unknown>[] = [];
+
+  for (const period of periods) {
+    const weekStart = period.week_start;
+    const weekEnd = period.week_end;
+
+    // Filter payroll rows for this period by checking if employee has a "Corte" matching period_code
+    // or by date range from raw data
+    const periodPayroll = payrollRows.filter(r => {
+      const corte = String(r["Corte"] || "");
+      if (corte && String(period.period_code) === corte) return true;
+      // Also try matching by week number patterns
+      if (corte && corte.includes(String(period.period_code))) return true;
+      return false;
+    });
+
+    // If no Corte match, try all payroll rows (they may not have Corte field)
+    // Group all payroll by employee and calculate totals
+    let ctEmployees = 0, ctGross = 0, ctHours = 0, ctEntries = 0;
+    let sfEmployees = 0, sfGross = 0, sfHours = 0;
+
+    if (periodPayroll.length > 0) {
+      // Use matched payroll data
+      const matchedEmps = new Set<string>();
+      for (const r of periodPayroll) {
+        const firstName = String(r["First name"] || "").trim();
+        const lastName = String(r["Last name"] || "").trim();
+        const fullName = `${firstName} ${lastName}`.toUpperCase().trim();
+        const empId = empByName.get(fullName) || null;
+
+        const totalPay = parseFloat(String(r["Total pay"] || r["TOTAL"] || "0")) || 0;
+        const totalHours = parseFloat(String(r["Total work hours"] || r["Total paid hours"] || "0")) || 0;
+
+        ctGross += totalPay;
+        ctHours += totalHours;
+        ctEntries++;
+
+        if (!matchedEmps.has(fullName)) {
+          ctEmployees++;
+          matchedEmps.add(fullName);
+        }
+
+        if (empId) {
+          sfGross += totalPay;
+          sfHours += totalHours;
+          if (!matchedEmps.has(`sf_${fullName}`)) {
+            sfEmployees++;
+            matchedEmps.add(`sf_${fullName}`);
+          }
+        }
+      }
+    } else {
+      // Keep existing totals if no payroll data matches
+      const ct = period.connecteam_totals || {};
+      const sf = period.stafly_totals || {};
+      ctEmployees = ct.employees || 0;
+      ctGross = ct.gross || 0;
+      ctHours = ct.hours || 0;
+      ctEntries = ct.entries || 0;
+      sfEmployees = sf.employees || 0;
+      sfGross = sf.gross || 0;
+      sfHours = sf.hours || 0;
+    }
+
+    // Count Stafly shifts in this period range
+    const periodShifts = (staflyShifts ?? []).filter(s => s.date >= weekStart && s.date <= weekEnd);
+
+    // Calculate Stafly totals from actual shifts data
+    const periodShiftData = (shiftsData ?? []).filter(s => 
+      s.shift_date >= weekStart && s.shift_date <= weekEnd
+    );
+
+    if (periodShiftData.length > 0) {
+      const sfEmps = new Set(periodShiftData.map(s => s.employee_id));
+      sfEmployees = sfEmps.size;
+      sfGross = periodShiftData.reduce((sum, s) => sum + (s.total_pay_usd || 0), 0);
+      sfHours = periodShiftData.reduce((sum, s) => sum + (s.shift_hours || 0), 0);
+    }
+
+    const variance = Math.round((ctGross - sfGross) * 100) / 100;
+
+    // Update period
+    const { error } = await supabase.from("migration_period_reconciliation").update({
+      connecteam_totals: { employees: ctEmployees, entries: ctEntries, gross: Math.round(ctGross * 100) / 100, hours: Math.round(ctHours * 100) / 100 },
+      stafly_totals: { employees: sfEmployees, gross: Math.round(sfGross * 100) / 100, hours: Math.round(sfHours * 100) / 100 },
+      total_variance: variance,
+      status: period.status === "locked" ? "locked" : (ctGross > 0 ? "under_review" : period.status),
+      updated_at: new Date().toISOString(),
+    }).eq("id", period.id);
+
+    results.push({
+      period_code: period.period_code,
+      week: `${weekStart} → ${weekEnd}`,
+      ct_gross: Math.round(ctGross * 100) / 100,
+      sf_gross: Math.round(sfGross * 100) / 100,
+      variance,
+      payroll_rows: periodPayroll.length,
+      error: error?.message || null,
+    });
+  }
+
+  return json({ success: true, periods_updated: results.length, results });
 }
