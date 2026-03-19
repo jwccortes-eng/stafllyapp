@@ -45,11 +45,19 @@ const BUCKETS: BucketDef[] = [
     action: "Ejecutar Employee Matching o crear alias para nombres no reconocidos",
   },
   {
-    key: "availability_block",
-    label: "Bloqueo / No disponible",
+    key: "structural_no_context",
+    label: "Sin título + sin cliente + sin ubicación (auto clock-exempt)",
     icon: <Ban className="h-4 w-4" />,
     color: "text-muted-foreground",
-    test: (m) => flags(m).includes("availability_block"),
+    test: (m) => flags(m).includes("structural_no_context"),
+    action: "✅ Resuelto — fila sin contexto operacional, clasificada como placeholder automáticamente",
+  },
+  {
+    key: "availability_block",
+    label: "Bloqueo / No disponible (por texto)",
+    icon: <Ban className="h-4 w-4" />,
+    color: "text-muted-foreground",
+    test: (m) => flags(m).includes("availability_block") && !flags(m).includes("structural_no_context"),
     action: "✅ Resuelto — fila de disponibilidad/bloqueo, no requiere reloj",
   },
   {
