@@ -115,9 +115,10 @@ export function matchEmployeeWithAliases(
             employee_id: alias.employee_id,
             confidence: 0.85,
             method: "alias",
+            match_status: emp.is_active === false ? "matched_inactive_employee" : "likely_alias_match" as any,
             ambiguous: false,
             candidates: [
-              { id: alias.employee_id, name: `${emp.first_name} ${emp.last_name}`, confidence: 0.85, method: "alias" },
+              { id: alias.employee_id, name: `${emp.first_name} ${emp.last_name}`, confidence: 0.85, method: "alias", is_active: emp.is_active },
               ...result.candidates,
             ],
           };
