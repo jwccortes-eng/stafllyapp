@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -17,21 +17,7 @@ import { hashRow, detectColumns, normalizeText, type ColumnMapping } from "@/lib
 import { normalizeScheduleRows, normalizeClockRows, normalizePayrollRows, type ImportDiagnostics, type EmployeeAlias } from "@/lib/reconciliation-normalizer";
 import type { EmployeeRecord } from "@/lib/reconciliation-engine";
 
-type SourceType = "schedule" | "clock" | "payroll";
-type Step = "upload" | "preview" | "normalize" | "review" | "save";
-
-interface Props {
-  companyId: string | null;
-  onComplete: () => void;
-  activePeriodId?: string | null;
-  onBatchLinked?: (sourceType: SourceType, batchId: string) => void;
-}
-
-const SOURCE_LABELS: Record<SourceType, string> = {
-  schedule: "Turnos Programados",
-  clock: "Fichajes (Clock In/Out)",
-  payroll: "Nómina / Payroll",
-};
+...
 
 export default function StagedImportWizard({ companyId, onComplete, activePeriodId, onBatchLinked }: Props) {
   const { user } = useAuth();
@@ -52,25 +38,51 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
   const [diagnostics, setDiagnostics] = useState<ImportDiagnostics | null>(null);
   const [showSystemRows, setShowSystemRows] = useState(false);
   const [filter, setFilter] = useState<"all" | "matched" | "unmatched" | "system">("all");
+  const [companyName, setCompanyName] = useState<string>("");
+  const [rosterExpectedCount, setRosterExpectedCount] = useState<number | null>(null);
 
   const loadEmployees = useCallback(async () => {
     if (!companyId) {
       console.warn("[StagedImport] No companyId, skipping employee load");
       return;
     }
+
     console.log("[StagedImport] Loading employees for company:", companyId);
 
-    const { data, error } = await supabase
-      .from("employees")
-      .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, is_active, start_date, end_date")
-      .eq("company_id", companyId);
+    const [{ data: companyData }, { count: expectedCount }] = await Promise.all([
+      supabase.from("companies").select("name").eq("id", companyId).maybeSingle(),
+      supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", companyId),
+    ]);
 
-    if (error) {
-      console.error("[StagedImport] Employee query error:", error);
-      toast({ title: "Error cargando empleados", description: error.message, variant: "destructive" });
+    setCompanyName(companyData?.name ?? "");
+    setRosterExpectedCount(expectedCount ?? null);
+
+    const pageSize = 500;
+    let from = 0;
+    let allRows: any[] = [];
+
+    while (true) {
+      const { data, error } = await supabase
+        .from("employees")
+        .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, is_active, start_date, end_date")
+        .eq("company_id", companyId)
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error("[StagedImport] Employee query error:", error);
+        toast({ title: "Error cargando empleados", description: error.message, variant: "destructive" });
+        break;
+      }
+
+      const page = data ?? [];
+      allRows = allRows.concat(page);
+
+      if (page.length < pageSize) break;
+      from += pageSize;
     }
 
-    const mapped = (data || []).map((d: any) => ({
+    const mapped = allRows.map((d: any) => ({
       id: d.id,
       first_name: d.first_name,
       last_name: d.last_name,
@@ -83,7 +95,16 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       termination_date: d.end_date,
     })) as EmployeeRecord[];
 
-    console.log("[StagedImport] Employees loaded:", mapped.length, "active:", mapped.filter(e => e.is_active !== false).length, "inactive:", mapped.filter(e => e.is_active === false).length);
+    console.log(
+      "[StagedImport] Employees loaded:",
+      mapped.length,
+      "active:",
+      mapped.filter((e) => e.is_active !== false).length,
+      "inactive:",
+      mapped.filter((e) => e.is_active === false).length,
+      "expected:",
+      expectedCount ?? "n/a",
+    );
     setEmployees(mapped);
 
     // Load aliases
@@ -91,6 +112,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       .from("employee_aliases" as any)
       .select("employee_id, alias_name_normalized")
       .eq("company_id", companyId);
+
     if (aliasErr) console.warn("[StagedImport] Alias query error (table may not exist yet):", aliasErr.message);
     setAliases((aliasData || []) as unknown as EmployeeAlias[]);
     console.log("[StagedImport] Aliases loaded:", (aliasData || []).length);
