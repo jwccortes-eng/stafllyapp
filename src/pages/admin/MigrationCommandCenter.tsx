@@ -99,19 +99,55 @@ export default function MigrationCommandCenter() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const tabBadge = (count: number, variant: "default" | "secondary" | "destructive" | "outline" = "secondary") =>
     count > 0 ? <Badge variant={variant} className="ml-1.5 text-xs">{count}</Badge> : null;
 
+  const handlePrintAll = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Add print-all-mode class to show all tabs
+    container.classList.add("print-all-mode");
+
+    // Inject print header
+    const header = document.createElement("div");
+    header.id = "print-header";
+    header.className = "print-header";
+    header.innerHTML = `
+      <div style="padding:16px 0;border-bottom:2px solid #333;margin-bottom:16px;">
+        <h1 style="font-size:18px;font-weight:700;margin:0;">Migration Command Center — Full Report</h1>
+        <p style="font-size:13px;color:#666;margin:4px 0 0;">Connecteam → StaflyApps • Pilot Migration & Reconciliation</p>
+        <p style="font-size:10px;color:#999;margin:4px 0 0;">Generado: ${new Date().toLocaleString("es-US")}</p>
+      </div>
+    `;
+    const main = document.querySelector("main") || document.body;
+    main.prepend(header);
+
+    window.print();
+
+    setTimeout(() => {
+      header.remove();
+      container.classList.remove("print-all-mode");
+    }, 500);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={containerRef}>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <PageHeader
           title="Migration Command Center"
           subtitle="Connecteam → StaflyApps • Pilot Migration & Reconciliation"
         />
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/app/reconciliation-report")}>
-          <FileText className="h-4 w-4" /> Reconciliation Report
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrintAll}>
+            <Printer className="h-4 w-4" /> Imprimir Todo
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/app/reconciliation-report")}>
+            <FileText className="h-4 w-4" /> Reconciliation Report
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">

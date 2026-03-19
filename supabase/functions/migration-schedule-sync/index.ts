@@ -692,20 +692,18 @@ async function resyncAllPeriods(
       const periodBase = baseByPeriod.get(matchingPayPeriod.id) || [];
       const periodMov = movByPeriod.get(matchingPayPeriod.id) || new Map();
 
+      // Simple direct sums — avoids any double-counting risk
+      const baseSum = periodBase.reduce((s, bp) => s + bp.pay, 0);
+      const hoursSum = periodBase.reduce((s, bp) => s + bp.hours, 0);
+      const movSum = [...periodMov.values()].reduce((s, v) => s + v, 0);
+
+      sfGross = baseSum + movSum;
+      sfHours = hoursSum;
+
+      // Count unique employees across both sources
       const sfEmps = new Set<string>();
-      for (const bp of periodBase) {
-        sfEmps.add(bp.employee_id);
-        const extras = periodMov.get(bp.employee_id) || 0;
-        sfGross += bp.pay + extras;
-        sfHours += bp.hours;
-      }
-      // Also count employees who only have movements (no base pay)
-      for (const [empId, val] of periodMov) {
-        if (!sfEmps.has(empId)) {
-          sfEmps.add(empId);
-          sfGross += val;
-        }
-      }
+      for (const bp of periodBase) sfEmps.add(bp.employee_id);
+      for (const [empId] of periodMov) sfEmps.add(empId);
       sfEmployees = sfEmps.size;
     }
 
