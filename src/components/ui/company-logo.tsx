@@ -70,12 +70,9 @@ export function CompanyLogo({
         className
       )}
       style={{
-        ringColor: `${color}40`,
-        borderColor: `${color}30`,
         boxShadow: showGlow
           ? `0 0 ${s.glow}px ${color}30, 0 0 ${s.glow * 2.5}px ${color}15, inset 0 1px 0 rgba(255,255,255,0.1)`
           : `inset 0 1px 0 rgba(255,255,255,0.08)`,
-        // Use ring via inline style for brand color
         outline: `${showGlow ? 2 : 1.5}px solid ${showGlow ? `${color}50` : `${color}25`}`,
         outlineOffset: "-1px",
       }}
