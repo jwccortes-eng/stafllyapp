@@ -669,7 +669,7 @@ export function EmployeeProfileTabs({
   }
   return (
     <Tabs defaultValue="info" className="w-full">
-      <TabsList className="w-full grid grid-cols-10 h-9 mb-4 bg-muted/40 rounded-xl">
+      <TabsList className="w-full grid grid-cols-11 h-9 mb-4 bg-muted/40 rounded-xl">
         <TabsTrigger value="info" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <User className="h-3 w-3" />
           <span className="hidden sm:inline">Info</span>
@@ -685,6 +685,10 @@ export function EmployeeProfileTabs({
         <TabsTrigger value="pay" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <DollarSign className="h-3 w-3" />
           <span className="hidden sm:inline">Pago</span>
+        </TabsTrigger>
+        <TabsTrigger value="compensation" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
+          <Wallet className="h-3 w-3" />
+          <span className="hidden sm:inline">Comp</span>
         </TabsTrigger>
         <TabsTrigger value="advances" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
           <Banknote className="h-3 w-3" />
