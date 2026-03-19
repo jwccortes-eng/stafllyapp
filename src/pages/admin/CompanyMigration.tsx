@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Upload, Users, Archive, Shield, CheckCircle2, AlertTriangle, Link2, Plus, Eye, Play, FileSpreadsheet, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { parseConnecteamHtmlXls, detectFileType, normalizePhone } from "@/lib/connecteam-html-parser";
+import { parseConnecteamHtmlXls, detectFileType, normalizePhone, HEADER_MAP } from "@/lib/connecteam-html-parser";
 import type { ConnecteamParsedRecord } from "@/lib/connecteam-html-parser";
+import ExcelJS from "exceljs";
 
 interface FileState {
   file: File | null;
