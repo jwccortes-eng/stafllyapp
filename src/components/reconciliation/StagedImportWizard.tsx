@@ -49,7 +49,7 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
     if (!companyId) return;
     const { data } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, phone, email, external_id, connecteam_id")
+      .select("id, first_name, last_name, phone_number, email, external_id, connecteam_id")
       .eq("company_id", companyId);
     setEmployees((data || []) as EmployeeRecord[]);
   }, [companyId]);
