@@ -397,7 +397,7 @@ export function normalizePayrollRows(
   employees: EmployeeRecord[],
   aliases: EmployeeAlias[] = []
 ): NormalizationResult<any> {
-  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedByMethod: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.length, companyEmployeesInactive: 0 } };
+  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
   const headers = Object.keys(rawRows[0].raw_data);
   const colMap = detectColumns(headers);
