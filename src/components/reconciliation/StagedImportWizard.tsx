@@ -265,7 +265,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     setErrors(result.errors);
     setDiagnostics(result.diagnostics);
     return result;
-  }, [rawRows, sourceType, employees, aliases, manualResolutions]);
+  }, [rawRows, sourceType, employees, aliases, manualResolutions, columnMapping]);
 
   const handleNormalize = () => {
     const result = runNormalization();
