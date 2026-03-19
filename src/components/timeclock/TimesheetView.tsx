@@ -9,18 +9,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, Timer, Download, Upload,
-  CheckCircle2, XCircle, AlertCircle, CalendarIcon, Filter, Clock,
+  CheckCircle2, XCircle, AlertCircle, CalendarIcon, Clock, MapPin, Smartphone,
+  Monitor, UserCheck, AlertTriangle, Navigation, Shield, Eye, Wifi, WifiOff,
+  Users, Signal, CircleDot,
 } from "lucide-react";
-import { format, startOfWeek, addDays, differenceInMinutes, parseISO, isWithinInterval, isSameDay } from "date-fns";
+import { format, startOfWeek, addDays, differenceInMinutes, parseISO, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { distanceMeters, googleMapsUrl } from "@/lib/geo-helpers";
 
 interface TimeEntry {
   id: string;
@@ -35,11 +41,43 @@ interface TimeEntry {
   import_meta?: { customer?: string; sub_job?: string; shift_hours?: number };
 }
 
+interface ClockEvent {
+  id: string;
+  employee_id: string;
+  type: string;
+  latitude: number | null;
+  longitude: number | null;
+  accuracy: number | null;
+  address: string | null;
+  clock_method: string;
+  device: string | null;
+  photo_url: string | null;
+  created_at: string;
+  shift_id: string | null;
+  time_entry_id: string | null;
+}
+
 interface Employee {
   id: string;
   first_name: string;
   last_name: string;
   avatar_url?: string | null;
+  employee_role?: string | null;
+  phone_number?: string | null;
+}
+
+interface ShiftInfo {
+  id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  location_name?: string;
+  location_lat?: number;
+  location_lng?: number;
+  location_radius?: number;
+  client_name?: string;
+  pay_type?: string;
 }
 
 interface PayPeriod {
@@ -66,6 +104,53 @@ const formatHoursDecimal = (mins: number) => {
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
+// --- GPS Status helpers ---
+type GpsStatus = "verified" | "near" | "off_site" | "weak" | "missing";
+
+function getGpsStatus(
+  clockLat: number | null, clockLng: number | null, accuracy: number | null,
+  siteLat?: number, siteLng?: number, siteRadius?: number
+): { status: GpsStatus; distance?: number } {
+  if (!clockLat || !clockLng) return { status: "missing" };
+  if (accuracy && accuracy > 500) return { status: "weak" };
+  if (!siteLat || !siteLng) return { status: "verified" }; // no site to compare
+  const dist = distanceMeters(clockLat, clockLng, siteLat, siteLng);
+  const radius = siteRadius ?? 200;
+  if (dist <= radius) return { status: "verified", distance: dist };
+  if (dist <= radius * 2) return { status: "near", distance: dist };
+  return { status: "off_site", distance: dist };
+}
+
+const GPS_CONFIG: Record<GpsStatus, { label: string; color: string; icon: typeof Shield }> = {
+  verified: { label: "GPS Verified", color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400", icon: Shield },
+  near: { label: "Near Site", color: "text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400", icon: Navigation },
+  off_site: { label: "Off Site", color: "text-destructive bg-destructive/10", icon: AlertTriangle },
+  weak: { label: "GPS Weak", color: "text-muted-foreground bg-muted/50", icon: WifiOff },
+  missing: { label: "No GPS", color: "text-muted-foreground bg-muted/30", icon: WifiOff },
+};
+
+function clockMethodLabel(method: string): string {
+  switch (method) {
+    case "mobile": return "App Móvil";
+    case "kiosk": return "Kiosco";
+    case "admin": return "Admin";
+    case "import": return "Importado";
+    case "qr": return "Código QR";
+    default: return method || "Manual";
+  }
+}
+
+function clockMethodIcon(method: string) {
+  switch (method) {
+    case "mobile": return <Smartphone className="h-3 w-3" />;
+    case "kiosk": return <Monitor className="h-3 w-3" />;
+    case "admin": return <UserCheck className="h-3 w-3" />;
+    default: return <Clock className="h-3 w-3" />;
+  }
+}
+
+// --- Component ---
+
 export function TimesheetView() {
   const { role, hasModuleAccess } = useAuth();
   const { selectedCompanyId } = useCompany();
@@ -74,24 +159,26 @@ export function TimesheetView() {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [payPeriods, setPayPeriods] = useState<PayPeriod[]>([]);
+  const [clockEvents, setClockEvents] = useState<ClockEvent[]>([]);
+  const [shiftMap, setShiftMap] = useState<Map<string, ShiftInfo>>(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [gpsFilter, setGpsFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  // Pagination
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
-  // View mode & range
   const [viewMode, setViewMode] = useState<ViewMode>("period");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
   const [customTo, setCustomTo] = useState<Date | undefined>();
 
-  // Load pay periods — no limit
+  // Load pay periods
   useEffect(() => {
     if (!selectedCompanyId) return;
     supabase.from("pay_periods")
@@ -110,28 +197,17 @@ export function TimesheetView() {
       });
   }, [selectedCompanyId]);
 
-  // Compute effective date range
   const { rangeStart, rangeEnd } = useMemo(() => {
-    let start: Date;
-    let end: Date;
-
+    let start: Date, end: Date;
     if (viewMode === "period" && selectedPeriodId) {
       const period = payPeriods.find(p => p.id === selectedPeriodId);
-      if (period) {
-        start = parseISO(period.start_date);
-        end = parseISO(period.end_date);
-      } else {
-        start = weekStart;
-        end = addDays(weekStart, 6);
-      }
+      if (period) { start = parseISO(period.start_date); end = parseISO(period.end_date); }
+      else { start = weekStart; end = addDays(weekStart, 6); }
     } else if (viewMode === "custom" && customFrom && customTo) {
-      start = customFrom;
-      end = customTo;
+      start = customFrom; end = customTo;
     } else {
-      start = weekStart;
-      end = addDays(weekStart, 6);
+      start = weekStart; end = addDays(weekStart, 6);
     }
-
     return { rangeStart: start, rangeEnd: end };
   }, [viewMode, weekStart, selectedPeriodId, payPeriods, customFrom, customTo]);
 
@@ -139,12 +215,12 @@ export function TimesheetView() {
     if (!selectedCompanyId) return;
     setLoading(true);
     const fetchEnd = addDays(rangeEnd, 1);
+    const startISO = rangeStart.toISOString();
+    const endISO = fetchEnd.toISOString();
 
-    // Build shifts query based on view mode
     let shiftsQuery = supabase.from("shifts")
       .select("id, employee_id, clock_in_time, clock_out_time, shift_start_date, shift_hours, customer, sub_job, period_id")
       .eq("company_id", selectedCompanyId);
-
     if (viewMode === "period" && selectedPeriodId) {
       shiftsQuery = shiftsQuery.eq("period_id", selectedPeriodId);
     } else {
@@ -153,42 +229,57 @@ export function TimesheetView() {
         .lte("shift_start_date", format(fetchEnd, "yyyy-MM-dd"));
     }
 
-    const [entriesRes, shiftsRes, empsRes] = await Promise.all([
+    const [entriesRes, shiftsRes, empsRes, clockEventsRes] = await Promise.all([
       supabase.from("time_entries")
         .select("id, employee_id, shift_id, clock_in, clock_out, break_minutes, notes, status")
         .eq("company_id", selectedCompanyId)
-        .gte("clock_in", rangeStart.toISOString())
-        .lt("clock_in", fetchEnd.toISOString())
+        .gte("clock_in", startISO).lt("clock_in", endISO)
         .order("clock_in", { ascending: true }),
       shiftsQuery.order("shift_start_date", { ascending: true }),
       supabase.from("employees")
-        .select("id, first_name, last_name, avatar_url")
+        .select("id, first_name, last_name, avatar_url, employee_role, phone_number")
+        .eq("company_id", selectedCompanyId).eq("is_active", true).order("first_name"),
+      supabase.from("clock_events")
+        .select("id, employee_id, type, latitude, longitude, accuracy, address, clock_method, device, photo_url, created_at, shift_id, time_entry_id")
         .eq("company_id", selectedCompanyId)
-        .eq("is_active", true)
-        .order("first_name"),
+        .gte("created_at", startISO).lt("created_at", endISO)
+        .order("created_at", { ascending: true }),
     ]);
 
-    const clockEntries: TimeEntry[] = (entriesRes.data ?? []).map((e: any) => ({
-      ...e,
-      source: "clock" as const,
-    }));
+    setClockEvents((clockEventsRes.data ?? []) as ClockEvent[]);
 
+    // Load shift details for linked time entries
+    const shiftIds = [...new Set((entriesRes.data ?? []).map((e: any) => e.shift_id).filter(Boolean))];
+    if (shiftIds.length > 0) {
+      const { data: scheduledShifts } = await supabase
+        .from("scheduled_shifts")
+        .select("id, title, date, start_time, end_time, pay_type, locations(name, latitude, longitude, geofence_radius), clients(name)")
+        .in("id", shiftIds);
+      const sMap = new Map<string, ShiftInfo>();
+      (scheduledShifts ?? []).forEach((s: any) => {
+        sMap.set(s.id, {
+          id: s.id, title: s.title, date: s.date,
+          start_time: s.start_time, end_time: s.end_time,
+          location_name: s.locations?.name, location_lat: s.locations?.latitude,
+          location_lng: s.locations?.longitude, location_radius: s.locations?.geofence_radius,
+          client_name: s.clients?.name, pay_type: s.pay_type,
+        });
+      });
+      setShiftMap(sMap);
+    } else {
+      setShiftMap(new Map());
+    }
+
+    const clockEntries: TimeEntry[] = (entriesRes.data ?? []).map((e: any) => ({ ...e, source: "clock" as const }));
     const importedEntries: TimeEntry[] = (shiftsRes.data ?? []).map((s: any) => {
       const clockIn = s.clock_in_time || (s.shift_start_date ? `${s.shift_start_date}T08:00:00` : new Date().toISOString());
       const shiftHours = s.shift_hours ?? 0;
-      const clockOut = s.clock_out_time || (shiftHours > 0
-        ? new Date(new Date(clockIn).getTime() + shiftHours * 3600000).toISOString()
-        : null);
+      const clockOut = s.clock_out_time || (shiftHours > 0 ? new Date(new Date(clockIn).getTime() + shiftHours * 3600000).toISOString() : null);
       return {
-        id: `imp_${s.id}`,
-        employee_id: s.employee_id,
-        shift_id: null,
-        clock_in: clockIn,
-        clock_out: clockOut,
-        break_minutes: 0,
+        id: `imp_${s.id}`, employee_id: s.employee_id, shift_id: null,
+        clock_in: clockIn, clock_out: clockOut, break_minutes: 0,
         notes: [s.customer, s.sub_job].filter(Boolean).join(" · ") || null,
-        status: "imported",
-        source: "import" as const,
+        status: "imported", source: "import" as const,
         import_meta: { customer: s.customer, sub_job: s.sub_job, shift_hours: s.shift_hours },
       } satisfies TimeEntry;
     });
@@ -203,34 +294,61 @@ export function TimesheetView() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Build employee summary rows with daily breakdown
+  // Helper: get clock events for a time entry
+  const getClockEventsForEntry = useCallback((entry: TimeEntry): { clockIn?: ClockEvent; clockOut?: ClockEvent } => {
+    if (entry.source === "import") return {};
+    const empEvents = clockEvents.filter(ce => ce.employee_id === entry.employee_id);
+    const clockIn = empEvents.find(ce => ce.type === "clock_in" && ce.time_entry_id === entry.id)
+      || empEvents.find(ce => ce.type === "clock_in" && Math.abs(new Date(ce.created_at).getTime() - new Date(entry.clock_in).getTime()) < 60000);
+    const clockOut = entry.clock_out
+      ? empEvents.find(ce => ce.type === "clock_out" && ce.time_entry_id === entry.id)
+        || empEvents.find(ce => ce.type === "clock_out" && entry.clock_out && Math.abs(new Date(ce.created_at).getTime() - new Date(entry.clock_out).getTime()) < 60000)
+      : undefined;
+    return { clockIn, clockOut };
+  }, [clockEvents]);
+
+  // Build employee summary rows
   const rows = useMemo(() => {
     const s = search.toLowerCase();
     return employees
       .filter(e => `${e.first_name} ${e.last_name}`.toLowerCase().includes(s))
       .map(emp => {
         const empEntries = entries.filter(e => e.employee_id === emp.id);
-        const filteredEntries = statusFilter === "all"
-          ? empEntries
-          : empEntries.filter(e => e.status === statusFilter);
-
-        let totalMins = 0;
-        let breakMins = 0;
+        const filteredEntries = statusFilter === "all" ? empEntries : empEntries.filter(e => e.status === statusFilter);
+        let totalMins = 0, breakMins = 0;
         filteredEntries.forEach(e => {
-          if (e.source === "import" && e.import_meta?.shift_hours) {
-            totalMins += Math.round(e.import_meta.shift_hours * 60);
-          } else if (e.clock_out) {
-            totalMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
-            breakMins += e.break_minutes ?? 0;
-          }
+          if (e.source === "import" && e.import_meta?.shift_hours) totalMins += Math.round(e.import_meta.shift_hours * 60);
+          else if (e.clock_out) { totalMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0)); breakMins += e.break_minutes ?? 0; }
         });
-
         const pendingCount = empEntries.filter(e => e.status === "pending").length;
         const approvedCount = empEntries.filter(e => e.status === "approved").length;
         const rejectedCount = empEntries.filter(e => e.status === "rejected").length;
-        const openCount = empEntries.filter(e => !e.clock_out).length;
+        const openCount = empEntries.filter(e => !e.clock_out && e.source === "clock").length;
         const importedCount = empEntries.filter(e => e.status === "imported").length;
-        const hasIssues = rejectedCount > 0 || openCount > 0;
+
+        // GPS analysis
+        let gpsVerified = 0, gpsOffSite = 0, gpsMissing = 0;
+        empEntries.filter(e => e.source === "clock").forEach(entry => {
+          const { clockIn } = getClockEventsForEntry(entry);
+          const shift = entry.shift_id ? shiftMap.get(entry.shift_id) : undefined;
+          const { status } = getGpsStatus(clockIn?.latitude ?? null, clockIn?.longitude ?? null, clockIn?.accuracy ?? null, shift?.location_lat, shift?.location_lng, shift?.location_radius);
+          if (status === "verified" || status === "near") gpsVerified++;
+          else if (status === "off_site") gpsOffSite++;
+          else gpsMissing++;
+        });
+
+        // Late detection
+        let lateCount = 0;
+        empEntries.filter(e => e.source === "clock" && e.shift_id).forEach(entry => {
+          const shift = shiftMap.get(entry.shift_id!);
+          if (shift) {
+            const scheduled = new Date(`${shift.date}T${shift.start_time}`);
+            const actual = new Date(entry.clock_in);
+            if (actual > scheduled && differenceInMinutes(actual, scheduled) >= 5) lateCount++;
+          }
+        });
+
+        const hasIssues = rejectedCount > 0 || openCount > 0 || gpsOffSite > 0 || lateCount > 0;
         const entryIds = filteredEntries.filter(e => e.source === "clock").map(e => e.id);
 
         // Daily breakdown
@@ -240,131 +358,106 @@ export function TimesheetView() {
           if (!dayMap.has(dayKey)) dayMap.set(dayKey, []);
           dayMap.get(dayKey)!.push(e);
         });
-
-        const dailyBreakdown = Array.from(dayMap.entries())
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([day, dayEntries]) => {
-            let dayMins = 0;
-            let dayBreakMins = 0;
-            dayEntries.forEach(e => {
-              if (e.source === "import" && e.import_meta?.shift_hours) {
-                dayMins += Math.round(e.import_meta.shift_hours * 60);
-              } else if (e.clock_out) {
-                dayMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
-                dayBreakMins += e.break_minutes ?? 0;
-              }
-            });
-            return { day, entries: dayEntries, totalMins: dayMins, breakMins: dayBreakMins };
+        const dailyBreakdown = Array.from(dayMap.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([day, dayEntries]) => {
+          let dayMins = 0, dayBreakMins = 0;
+          dayEntries.forEach(e => {
+            if (e.source === "import" && e.import_meta?.shift_hours) dayMins += Math.round(e.import_meta.shift_hours * 60);
+            else if (e.clock_out) { dayMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0)); dayBreakMins += e.break_minutes ?? 0; }
           });
+          return { day, entries: dayEntries, totalMins: dayMins, breakMins: dayBreakMins };
+        });
 
         return {
-          ...emp,
-          totalMins,
-          breakMins,
-          totalHours: totalMins / 60,
-          pendingCount,
-          approvedCount,
-          rejectedCount,
-          importedCount,
-          openCount,
-          hasIssues,
-          entryIds,
-          entryCount: filteredEntries.length,
-          daysWorked: dayMap.size,
-          dailyBreakdown,
+          ...emp, totalMins, breakMins, totalHours: totalMins / 60,
+          pendingCount, approvedCount, rejectedCount, importedCount, openCount,
+          hasIssues, entryIds, entryCount: filteredEntries.length, daysWorked: dayMap.size,
+          dailyBreakdown, gpsVerified, gpsOffSite, gpsMissing, lateCount,
         };
       })
-      .filter(r => r.entryCount > 0)
+      .filter(r => {
+        if (r.entryCount === 0) return false;
+        if (gpsFilter === "verified" && r.gpsVerified === 0) return false;
+        if (gpsFilter === "off_site" && r.gpsOffSite === 0) return false;
+        if (gpsFilter === "missing" && r.gpsMissing === 0) return false;
+        if (sourceFilter === "clock" && r.importedCount === r.entryCount) return false;
+        if (sourceFilter === "import" && r.importedCount === 0) return false;
+        return true;
+      })
       .sort((a, b) => b.totalHours - a.totalHours);
-  }, [employees, entries, search, statusFilter]);
+  }, [employees, entries, search, statusFilter, gpsFilter, sourceFilter, getClockEventsForEntry, shiftMap]);
 
-  // Pagination
   const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
   const paginatedRows = rows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
-  const pendingRequestsTotal = useMemo(() =>
-    entries.filter(e => e.status === "pending").length
-  , [entries]);
+  const pendingRequestsTotal = useMemo(() => entries.filter(e => e.status === "pending").length, [entries]);
 
   // KPIs
   const kpis = useMemo(() => {
-    const filtered = statusFilter === "all" ? entries : entries.filter(e => e.status === statusFilter);
+    const clockOnly = entries.filter(e => e.source === "clock");
     let regularMins = 0;
-    let breakMins = 0;
-    filtered.forEach(e => {
-      if (e.source === "import" && e.import_meta?.shift_hours) {
-        regularMins += Math.round(e.import_meta.shift_hours * 60);
-      } else if (e.clock_out) {
-        regularMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
-        breakMins += e.break_minutes ?? 0;
+    entries.forEach(e => {
+      if (e.source === "import" && e.import_meta?.shift_hours) regularMins += Math.round(e.import_meta.shift_hours * 60);
+      else if (e.clock_out) regularMins += Math.max(0, differenceInMinutes(new Date(e.clock_out), new Date(e.clock_in)) - (e.break_minutes ?? 0));
+    });
+    const activeNow = clockOnly.filter(e => !e.clock_out).length;
+    const missingClockOut = clockOnly.filter(e => !e.clock_out && differenceInMinutes(new Date(), new Date(e.clock_in)) > 720).length;
+    const needsReview = clockOnly.filter(e => e.status === "pending").length;
+
+    // GPS stats
+    let gpsTotal = 0, gpsOk = 0, gpsOff = 0, gpsMiss = 0;
+    clockOnly.forEach(entry => {
+      gpsTotal++;
+      const empEvents = clockEvents.filter(ce => ce.employee_id === entry.employee_id && ce.type === "clock_in");
+      const ce = empEvents.find(ce => ce.time_entry_id === entry.id)
+        || empEvents.find(ce => Math.abs(new Date(ce.created_at).getTime() - new Date(entry.clock_in).getTime()) < 60000);
+      if (!ce?.latitude) gpsMiss++;
+      else {
+        const shift = entry.shift_id ? shiftMap.get(entry.shift_id) : undefined;
+        const { status } = getGpsStatus(ce.latitude, ce.longitude, ce.accuracy, shift?.location_lat, shift?.location_lng, shift?.location_radius);
+        if (status === "verified" || status === "near") gpsOk++;
+        else if (status === "off_site") gpsOff++;
+        else gpsMiss++;
       }
     });
+
     return {
-      regularHours: formatHoursDecimal(regularMins),
-      breakHours: formatHoursDecimal(breakMins),
       totalHours: formatHoursDecimal(regularMins),
       employeeCount: new Set(entries.map(e => e.employee_id)).size,
-      entryCount: filtered.length,
+      entryCount: entries.length,
+      activeNow, missingClockOut, needsReview,
+      gpsOk, gpsOff, gpsMiss,
     };
-  }, [entries, statusFilter]);
+  }, [entries, clockEvents, shiftMap]);
 
-  // Toggle expand
   const toggleExpand = (id: string) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    setExpandedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
 
-  // Bulk actions — batch in chunks of 50 to avoid URL length limits
   const batchUpdate = async (ids: string[], updates: Record<string, any>) => {
     const BATCH_SIZE = 50;
     for (let i = 0; i < ids.length; i += BATCH_SIZE) {
       const chunk = ids.slice(i, i + BATCH_SIZE);
-      const { error } = await supabase.from("time_entries")
-        .update(updates as any)
-        .in("id", chunk)
-        .eq("status", "pending");
+      const { error } = await supabase.from("time_entries").update(updates as any).in("id", chunk).eq("status", "pending");
       if (error) throw error;
     }
   };
 
   const handleBulkApprove = async () => {
     if (selectedIds.size === 0) return;
-    const ids = Array.from(selectedIds);
-    try {
-      await batchUpdate(ids, { status: "approved", approved_at: new Date().toISOString() });
-      toast.success(`${ids.length} fichajes aprobados`);
-      setSelectedIds(new Set());
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message ?? "Error al aprobar");
-    }
+    try { await batchUpdate(Array.from(selectedIds), { status: "approved", approved_at: new Date().toISOString() }); toast.success(`${selectedIds.size} fichajes aprobados`); setSelectedIds(new Set()); loadData(); }
+    catch (err: any) { toast.error(err.message ?? "Error al aprobar"); }
   };
 
   const handleBulkReject = async () => {
     if (selectedIds.size === 0) return;
-    const ids = Array.from(selectedIds);
-    try {
-      await batchUpdate(ids, { status: "rejected", notes: "[Rechazado] Rechazo masivo" });
-      toast.success(`${ids.length} fichajes rechazados`);
-      setSelectedIds(new Set());
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message ?? "Error al rechazar");
-    }
+    try { await batchUpdate(Array.from(selectedIds), { status: "rejected", notes: "[Rechazado] Rechazo masivo" }); toast.success(`${selectedIds.size} fichajes rechazados`); setSelectedIds(new Set()); loadData(); }
+    catch (err: any) { toast.error(err.message ?? "Error al rechazar"); }
   };
 
   const toggleSelectAll = () => {
     const allIds = paginatedRows.flatMap(r => r.entryIds);
-    if (allIds.every(id => selectedIds.has(id))) {
-      const next = new Set(selectedIds);
-      allIds.forEach(id => next.delete(id));
-      setSelectedIds(next);
-    } else {
-      setSelectedIds(new Set([...selectedIds, ...allIds]));
-    }
+    if (allIds.every(id => selectedIds.has(id))) { const next = new Set(selectedIds); allIds.forEach(id => next.delete(id)); setSelectedIds(next); }
+    else setSelectedIds(new Set([...selectedIds, ...allIds]));
   };
 
   const toggleEmployee = (entryIds: string[]) => {
@@ -374,41 +467,30 @@ export function TimesheetView() {
     setSelectedIds(next);
   };
 
-  // Export
   const handleExport = async () => {
     try {
       const { writeExcelFile } = await import("@/lib/safe-xlsx");
       const data = rows.map(r => ({
         "Empleado": `${r.first_name} ${r.last_name}`,
-        "Días trabajados": r.daysWorked,
-        "Horas totales": Number(formatHoursDecimal(r.totalMins)),
-        "Descansos (min)": r.breakMins,
-        "Entradas": r.entryCount,
-        "Pendientes": r.pendingCount,
-        "Aprobados": r.approvedCount,
-        "Rechazados": r.rejectedCount,
+        "Días trabajados": r.daysWorked, "Horas totales": Number(formatHoursDecimal(r.totalMins)),
+        "Descansos (min)": r.breakMins, "Entradas": r.entryCount,
+        "Pendientes": r.pendingCount, "Aprobados": r.approvedCount,
+        "GPS Verificado": r.gpsVerified, "GPS Off-site": r.gpsOffSite,
+        "Tardanzas": r.lateCount,
       }));
       await writeExcelFile(data, "Timesheets", `timesheets_${format(rangeStart, "yyyy-MM-dd")}.xlsx`);
       toast.success("Archivo exportado");
-    } catch (error) {
-      console.error("Export error:", error);
-      toast.error("Error al exportar");
-    }
+    } catch { toast.error("Error al exportar"); }
   };
 
   const selectedPeriod = payPeriods.find(p => p.id === selectedPeriodId);
 
   const getStatusBadge = (row: typeof rows[0]) => {
-    if (row.importedCount > 0 && row.importedCount === row.entryCount)
-      return <Badge className="text-[10px] rounded-full px-2.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">Importado</Badge>;
-    if (row.approvedCount === row.entryCount && row.entryCount > 0)
-      return <Badge className="text-[10px] rounded-full px-2.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">Aprobado</Badge>;
-    if (row.rejectedCount > 0)
-      return <Badge className="text-[10px] rounded-full px-2.5 bg-destructive/10 text-destructive border-0">Rechazado</Badge>;
-    if (row.pendingCount > 0)
-      return <Badge className="text-[10px] rounded-full px-2.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">Pendiente</Badge>;
-    if (row.importedCount > 0)
-      return <Badge className="text-[10px] rounded-full px-2.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">Mixto</Badge>;
+    if (row.openCount > 0) return <Badge className="text-[10px] rounded-full px-2.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">Active Now</Badge>;
+    if (row.importedCount > 0 && row.importedCount === row.entryCount) return <Badge className="text-[10px] rounded-full px-2.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">Importado</Badge>;
+    if (row.approvedCount === row.entryCount && row.entryCount > 0) return <Badge className="text-[10px] rounded-full px-2.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">Aprobado</Badge>;
+    if (row.rejectedCount > 0) return <Badge className="text-[10px] rounded-full px-2.5 bg-destructive/10 text-destructive border-0">Rechazado</Badge>;
+    if (row.pendingCount > 0) return <Badge className="text-[10px] rounded-full px-2.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">Pendiente</Badge>;
     return <span className="text-xs text-muted-foreground">--</span>;
   };
 
@@ -419,10 +501,24 @@ export function TimesheetView() {
     return <Clock className="h-3.5 w-3.5 text-amber-500" />;
   };
 
-  const colCount = canApprove ? 8 : 7;
+  const colCount = canApprove ? 10 : 9;
+
+  const hasActiveFilters = statusFilter !== "all" || gpsFilter !== "all" || sourceFilter !== "all";
 
   return (
     <div className="space-y-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+        <KpiMini icon={<Users className="h-4 w-4 text-primary" />} value={kpis.employeeCount} label="Empleados" />
+        <KpiMini icon={<Clock className="h-4 w-4 text-primary" />} value={kpis.totalHours + "h"} label="Hrs Totales" />
+        <KpiMini icon={<Signal className="h-4 w-4 text-emerald-500" />} value={kpis.activeNow} label="Active Now" accent={kpis.activeNow > 0 ? "emerald" : undefined} />
+        <KpiMini icon={<AlertTriangle className="h-4 w-4 text-amber-500" />} value={kpis.needsReview} label="Needs Review" accent={kpis.needsReview > 0 ? "amber" : undefined} />
+        <KpiMini icon={<Shield className="h-4 w-4 text-emerald-500" />} value={kpis.gpsOk} label="GPS Verified" />
+        <KpiMini icon={<Navigation className="h-4 w-4 text-destructive" />} value={kpis.gpsOff} label="Off Site" accent={kpis.gpsOff > 0 ? "red" : undefined} />
+        <KpiMini icon={<WifiOff className="h-4 w-4 text-muted-foreground" />} value={kpis.gpsMiss} label="No GPS" />
+        <KpiMini icon={<AlertCircle className="h-4 w-4 text-amber-500" />} value={kpis.missingClockOut} label="Missing Out" accent={kpis.missingClockOut > 0 ? "amber" : undefined} />
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full sm:max-w-[220px]">
@@ -430,11 +526,8 @@ export function TimesheetView() {
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar empleado..." className="pl-9 h-9" />
         </div>
 
-        {/* View mode selector */}
         <Select value={viewMode} onValueChange={v => setViewMode(v as ViewMode)}>
-          <SelectTrigger className="h-9 w-[130px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="period">Periodo</SelectItem>
             <SelectItem value="week">Semana</SelectItem>
@@ -442,38 +535,19 @@ export function TimesheetView() {
           </SelectContent>
         </Select>
 
-        {/* Date range nav */}
         {viewMode === "week" && (
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekStart(d => addDays(d, -7))}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[140px] text-center">
-              {format(weekStart, "MM/dd")} - {format(addDays(weekStart, 6), "MM/dd")}
-            </span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekStart(d => addDays(d, 7))}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekStart(d => addDays(d, -7))}><ChevronLeft className="h-4 w-4" /></Button>
+            <span className="text-sm font-medium min-w-[140px] text-center">{format(weekStart, "MM/dd")} - {format(addDays(weekStart, 6), "MM/dd")}</span>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekStart(d => addDays(d, 7))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
         )}
 
         {viewMode === "period" && selectedPeriod && (
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-              const idx = payPeriods.findIndex(p => p.id === selectedPeriodId);
-              if (idx < payPeriods.length - 1) setSelectedPeriodId(payPeriods[idx + 1].id);
-            }}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[160px] text-center">
-              {format(parseISO(selectedPeriod.start_date), "MMM dd", { locale: es })} – {format(parseISO(selectedPeriod.end_date), "MMM dd, yyyy", { locale: es })}
-            </span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-              const idx = payPeriods.findIndex(p => p.id === selectedPeriodId);
-              if (idx > 0) setSelectedPeriodId(payPeriods[idx - 1].id);
-            }}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { const idx = payPeriods.findIndex(p => p.id === selectedPeriodId); if (idx < payPeriods.length - 1) setSelectedPeriodId(payPeriods[idx + 1].id); }}><ChevronLeft className="h-4 w-4" /></Button>
+            <span className="text-sm font-medium min-w-[160px] text-center">{format(parseISO(selectedPeriod.start_date), "MMM dd", { locale: es })} – {format(parseISO(selectedPeriod.end_date), "MMM dd, yyyy", { locale: es })}</span>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { const idx = payPeriods.findIndex(p => p.id === selectedPeriodId); if (idx > 0) setSelectedPeriodId(payPeriods[idx - 1].id); }}><ChevronRight className="h-4 w-4" /></Button>
           </div>
         )}
 
@@ -482,34 +556,25 @@ export function TimesheetView() {
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("h-9 text-xs gap-1.5", !customFrom && "text-muted-foreground")}>
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  {customFrom ? format(customFrom, "MMM dd", { locale: es }) : "Desde"}
+                  <CalendarIcon className="h-3.5 w-3.5" />{customFrom ? format(customFrom, "MMM dd", { locale: es }) : "Desde"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} initialFocus className="p-3 pointer-events-auto" />
-              </PopoverContent>
+              <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} initialFocus className="p-3 pointer-events-auto" /></PopoverContent>
             </Popover>
             <span className="text-xs text-muted-foreground">–</span>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("h-9 text-xs gap-1.5", !customTo && "text-muted-foreground")}>
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  {customTo ? format(customTo, "MMM dd", { locale: es }) : "Hasta"}
+                  <CalendarIcon className="h-3.5 w-3.5" />{customTo ? format(customTo, "MMM dd", { locale: es }) : "Hasta"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={customTo} onSelect={setCustomTo} initialFocus className="p-3 pointer-events-auto" />
-              </PopoverContent>
+              <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={customTo} onSelect={setCustomTo} initialFocus className="p-3 pointer-events-auto" /></PopoverContent>
             </Popover>
           </div>
         )}
 
-        {/* Status filter */}
-         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
-          <SelectTrigger className="h-9 w-[140px] text-xs">
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
+        <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue placeholder="Estado" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="pending">Pendientes</SelectItem>
@@ -519,77 +584,66 @@ export function TimesheetView() {
           </SelectContent>
         </Select>
 
+        <Select value={gpsFilter} onValueChange={v => { setGpsFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-9 w-[120px] text-xs"><MapPin className="h-3 w-3 mr-1" /><SelectValue placeholder="GPS" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos GPS</SelectItem>
+            <SelectItem value="verified">GPS Verified</SelectItem>
+            <SelectItem value="off_site">Off Site</SelectItem>
+            <SelectItem value="missing">No GPS</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={sourceFilter} onValueChange={v => { setSourceFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-9 w-[120px] text-xs"><SelectValue placeholder="Fuente" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas fuentes</SelectItem>
+            <SelectItem value="clock">App/Kiosco</SelectItem>
+            <SelectItem value="import">Importados</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setStatusFilter("all"); setGpsFilter("all"); setSourceFilter("all"); }}>Limpiar filtros</Button>
+        )}
+
         <div className="flex-1" />
 
         {pendingRequestsTotal > 0 && (
           <div className="flex items-center gap-1.5">
-            <Badge className="bg-amber-500 text-white rounded-full h-5 w-5 p-0 flex items-center justify-center text-[10px]">
-              {pendingRequestsTotal}
-            </Badge>
+            <Badge className="bg-amber-500 text-white rounded-full h-5 w-5 p-0 flex items-center justify-center text-[10px]">{pendingRequestsTotal}</Badge>
             <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Pendientes</span>
           </div>
         )}
 
-        <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={handleExport}>
-          <Download className="h-3.5 w-3.5" /> Exportar
-        </Button>
-      </div>
-
-      {/* KPI Summary */}
-      <div className="flex flex-wrap items-center gap-6 text-sm bg-muted/30 rounded-lg px-4 py-3 border border-border/50">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl font-bold font-mono">{kpis.regularHours}</span>
-          <span className="text-[11px] text-muted-foreground">hrs totales</span>
-        </div>
-        <div className="h-6 w-px bg-border/50" />
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-lg font-semibold font-mono">{kpis.employeeCount}</span>
-          <span className="text-[11px] text-muted-foreground">empleados</span>
-        </div>
-        <div className="h-6 w-px bg-border/50" />
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-lg font-semibold font-mono">{kpis.entryCount}</span>
-          <span className="text-[11px] text-muted-foreground">fichajes</span>
-        </div>
+        <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={handleExport}><Download className="h-3.5 w-3.5" /> Exportar</Button>
       </div>
 
       {/* Bulk actions */}
       {canApprove && selectedIds.size > 0 && (
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">{selectedIds.size} seleccionados</Badge>
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleBulkApprove}>
-            <CheckCircle2 className="h-3 w-3" /> Aprobar
-          </Button>
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-destructive" onClick={handleBulkReject}>
-            <XCircle className="h-3 w-3" /> Rechazar
-          </Button>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleBulkApprove}><CheckCircle2 className="h-3 w-3" /> Aprobar</Button>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-destructive" onClick={handleBulkReject}><XCircle className="h-3 w-3" /> Rechazar</Button>
         </div>
       )}
 
       {/* Data Table */}
-      {loading ? (
-        <PageSkeleton variant="table" />
-      ) : rows.length === 0 ? (
+      {loading ? <PageSkeleton variant="table" /> : rows.length === 0 ? (
         <EmptyState icon={Timer} title="Sin timesheets" description="No hay registros para el rango seleccionado" compact />
       ) : (
         <div className="border rounded-xl overflow-hidden bg-card">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                {canApprove && (
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={paginatedRows.length > 0 && paginatedRows.flatMap(r => r.entryIds).every(id => selectedIds.has(id))}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                )}
+                {canApprove && <TableHead className="w-10"><Checkbox checked={paginatedRows.length > 0 && paginatedRows.flatMap(r => r.entryIds).every(id => selectedIds.has(id))} onCheckedChange={toggleSelectAll} /></TableHead>}
                 <TableHead className="w-8" />
                 <TableHead className="min-w-[180px]">Empleado</TableHead>
                 <TableHead className="text-center">Días</TableHead>
-                <TableHead className="text-center">Horas totales</TableHead>
-                <TableHead className="text-center">Descansos</TableHead>
-                <TableHead className="text-center">Fichajes</TableHead>
+                <TableHead className="text-center">Horas</TableHead>
+                <TableHead className="text-center hidden md:table-cell">Fichajes</TableHead>
+                <TableHead className="text-center">GPS</TableHead>
+                <TableHead className="text-center hidden lg:table-cell">Excepciones</TableHead>
                 <TableHead className="text-center">Estado</TableHead>
               </TableRow>
             </TableHeader>
@@ -598,139 +652,148 @@ export function TimesheetView() {
                 const isExpanded = expandedIds.has(row.id);
                 return (
                   <Fragment key={row.id}>
-                    {/* Summary row */}
-                    <TableRow
-                      className="cursor-pointer hover:bg-muted/40"
-                      onClick={() => toggleExpand(row.id)}
-                    >
-                      {canApprove && (
-                        <TableCell onClick={e => e.stopPropagation()}>
-                          <Checkbox
-                            checked={row.entryIds.every(id => selectedIds.has(id))}
-                            onCheckedChange={() => toggleEmployee(row.entryIds)}
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell className="px-1">
-                        {isExpanded
-                          ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                          : <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        }
-                      </TableCell>
+                    <TableRow className="cursor-pointer hover:bg-muted/40" onClick={() => toggleExpand(row.id)}>
+                      {canApprove && <TableCell onClick={e => e.stopPropagation()}><Checkbox checked={row.entryIds.every(id => selectedIds.has(id))} onCheckedChange={() => toggleEmployee(row.entryIds)} /></TableCell>}
+                      <TableCell className="px-1">{isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           <EmployeeAvatar firstName={row.first_name} lastName={row.last_name} avatarUrl={row.avatar_url} size="md" />
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-sm">{row.first_name} {row.last_name}</span>
-                            {row.hasIssues && <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-sm">{row.first_name} {row.last_name}</span>
+                              {row.openCount > 0 && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
+                            </div>
+                            {row.employee_role && <span className="text-[10px] text-muted-foreground">{row.employee_role}</span>}
                           </div>
                         </div>
                       </TableCell>
+                      <TableCell className="text-center"><span className="font-mono text-sm">{row.daysWorked}</span></TableCell>
+                      <TableCell className="text-center"><span className="font-mono font-semibold text-sm">{row.totalMins > 0 ? formatHours(row.totalMins) : "--"}</span></TableCell>
+                      <TableCell className="text-center hidden md:table-cell"><span className="text-sm">{row.entryCount}</span></TableCell>
                       <TableCell className="text-center">
-                        <span className="font-mono text-sm">{row.daysWorked}</span>
+                        <div className="flex items-center justify-center gap-1">
+                          {row.gpsVerified > 0 && <span className="text-[10px] text-emerald-600 font-medium">{row.gpsVerified}✓</span>}
+                          {row.gpsOffSite > 0 && <span className="text-[10px] text-destructive font-medium">{row.gpsOffSite}✗</span>}
+                          {row.gpsMissing > 0 && <span className="text-[10px] text-muted-foreground">{row.gpsMissing}?</span>}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span className="font-mono font-semibold text-sm">{row.totalMins > 0 ? formatHours(row.totalMins) : "--"}</span>
+                      <TableCell className="text-center hidden lg:table-cell">
+                        <div className="flex items-center justify-center gap-1 flex-wrap">
+                          {row.lateCount > 0 && <Badge className="text-[9px] px-1.5 py-0 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">{row.lateCount} Late</Badge>}
+                          {row.openCount > 0 && <Badge className="text-[9px] px-1.5 py-0 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-0">{row.openCount} Open</Badge>}
+                          {row.gpsOffSite > 0 && <Badge className="text-[9px] px-1.5 py-0 rounded-full bg-destructive/10 text-destructive border-0">{row.gpsOffSite} Off-site</Badge>}
+                          {!row.hasIssues && <span className="text-[10px] text-muted-foreground">—</span>}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span className="font-mono text-sm text-muted-foreground">{row.breakMins > 0 ? `${row.breakMins}m` : "--"}</span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className="text-sm">{row.entryCount}</span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getStatusBadge(row)}
-                      </TableCell>
+                      <TableCell className="text-center">{getStatusBadge(row)}</TableCell>
                     </TableRow>
 
-                    {/* Expanded daily detail */}
+                    {/* Expanded detail */}
                     {isExpanded && row.dailyBreakdown.map(dayData => (
                       <Fragment key={dayData.day}>
-                        {/* Day header */}
                         <TableRow className="bg-muted/20 hover:bg-muted/30">
                           {canApprove && <TableCell />}
                           <TableCell />
                           <TableCell colSpan={colCount - 3} className="py-2">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                {format(parseISO(dayData.day), "EEEE, d MMM", { locale: es })}
-                              </span>
-                              <span className="text-xs font-mono font-semibold">
-                                {dayData.totalMins > 0 ? formatHours(dayData.totalMins) : "--"}
-                              </span>
+                              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{format(parseISO(dayData.day), "EEEE, d MMM", { locale: es })}</span>
+                              <span className="text-xs font-mono font-semibold">{dayData.totalMins > 0 ? formatHours(dayData.totalMins) : "--"}</span>
                             </div>
                           </TableCell>
                           <TableCell />
                         </TableRow>
 
-                        {/* Individual entries */}
                         {dayData.entries.map(entry => {
                           const isImported = entry.source === "import";
                           const duration = isImported && entry.import_meta?.shift_hours
                             ? Math.round(entry.import_meta.shift_hours * 60)
-                            : entry.clock_out
-                              ? Math.max(0, differenceInMinutes(new Date(entry.clock_out), new Date(entry.clock_in)) - (entry.break_minutes ?? 0))
-                              : 0;
+                            : entry.clock_out ? Math.max(0, differenceInMinutes(new Date(entry.clock_out), new Date(entry.clock_in)) - (entry.break_minutes ?? 0)) : 0;
+                          const { clockIn: ceIn, clockOut: ceOut } = getClockEventsForEntry(entry);
+                          const shift = entry.shift_id ? shiftMap.get(entry.shift_id) : undefined;
+                          const gps = getGpsStatus(ceIn?.latitude ?? null, ceIn?.longitude ?? null, ceIn?.accuracy ?? null, shift?.location_lat, shift?.location_lng, shift?.location_radius);
+                          const gpsConf = GPS_CONFIG[gps.status];
+
+                          // Late detection
+                          let isLate = false;
+                          if (shift && !isImported) {
+                            const scheduled = new Date(`${shift.date}T${shift.start_time}`);
+                            isLate = differenceInMinutes(new Date(entry.clock_in), scheduled) >= 5;
+                          }
+
                           return (
                             <TableRow key={entry.id} className="bg-muted/10 hover:bg-muted/20 border-b-0">
-                              {canApprove && (
-                                <TableCell onClick={e => e.stopPropagation()}>
-                                  {!isImported ? (
-                                    <Checkbox
-                                      checked={selectedIds.has(entry.id)}
-                                      onCheckedChange={() => {
-                                        const next = new Set(selectedIds);
-                                        next.has(entry.id) ? next.delete(entry.id) : next.add(entry.id);
-                                        setSelectedIds(next);
-                                      }}
-                                    />
-                                  ) : null}
-                                </TableCell>
-                              )}
+                              {canApprove && <TableCell onClick={e => e.stopPropagation()}>{!isImported ? <Checkbox checked={selectedIds.has(entry.id)} onCheckedChange={() => { const next = new Set(selectedIds); next.has(entry.id) ? next.delete(entry.id) : next.add(entry.id); setSelectedIds(next); }} /> : null}</TableCell>}
                               <TableCell />
-                              <TableCell className="py-2">
-                                <div className="flex items-center gap-4 pl-4">
+                              <TableCell colSpan={colCount - 3} className="py-2">
+                                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pl-4">
                                   {isImported ? (
                                     <>
-                                      <div className="flex items-center gap-1.5 text-xs">
-                                        <Upload className="h-3 w-3 text-blue-500" />
-                                        <span className="font-medium text-blue-600 dark:text-blue-400">
-                                          {entry.import_meta?.shift_hours?.toFixed(2)}h
-                                        </span>
-                                      </div>
-                                      {entry.notes && (
-                                        <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">{entry.notes}</span>
-                                      )}
+                                      <div className="flex items-center gap-1.5 text-xs"><Upload className="h-3 w-3 text-blue-500" /><span className="font-medium text-blue-600 dark:text-blue-400">{entry.import_meta?.shift_hours?.toFixed(2)}h</span></div>
+                                      {entry.notes && <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">{entry.notes}</span>}
                                     </>
                                   ) : (
                                     <>
+                                      {/* Time */}
                                       <div className="flex items-center gap-1.5 text-xs">
                                         <span className="text-muted-foreground">In:</span>
                                         <span className="font-mono font-medium">{format(new Date(entry.clock_in), "hh:mm a")}</span>
+                                        {isLate && <Badge className="text-[8px] px-1 py-0 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">Late</Badge>}
                                       </div>
                                       <div className="flex items-center gap-1.5 text-xs">
                                         <span className="text-muted-foreground">Out:</span>
-                                        <span className="font-mono font-medium">
-                                          {entry.clock_out ? format(new Date(entry.clock_out), "hh:mm a") : <span className="text-amber-500">Abierto</span>}
-                                        </span>
+                                        <span className="font-mono font-medium">{entry.clock_out ? format(new Date(entry.clock_out), "hh:mm a") : <span className="text-amber-500 font-medium">Active</span>}</span>
                                       </div>
+                                      <div className="flex items-center gap-1.5 text-xs">
+                                        <span className="text-muted-foreground">Hrs:</span>
+                                        <span className="font-mono font-semibold">{duration > 0 ? formatHours(duration) : "--"}</span>
+                                      </div>
+
+                                      {/* Shift info */}
+                                      {shift && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                          <CircleDot className="h-3 w-3" />
+                                          <span className="truncate max-w-[120px]">{shift.title}</span>
+                                          {shift.client_name && <span>· {shift.client_name}</span>}
+                                          {shift.location_name && <span>· 📍 {shift.location_name}</span>}
+                                        </div>
+                                      )}
+
+                                      {/* Clock method */}
+                                      {ceIn && (
+                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                          {clockMethodIcon(ceIn.clock_method)}
+                                          <span>{clockMethodLabel(ceIn.clock_method)}</span>
+                                        </div>
+                                      )}
+
+                                      {/* GPS badge */}
+                                      <TooltipProvider delayDuration={200}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium rounded-full px-2 py-0.5", gpsConf.color)}>
+                                              <gpsConf.icon className="h-2.5 w-2.5" />
+                                              {gpsConf.label}
+                                              {gps.distance !== undefined && <span>({Math.round(gps.distance)}m)</span>}
+                                            </span>
+                                          </TooltipTrigger>
+                                          <TooltipContent className="text-xs max-w-xs">
+                                            {ceIn?.latitude ? (
+                                              <div className="space-y-0.5">
+                                                <p>📍 {ceIn.latitude.toFixed(5)}, {ceIn.longitude?.toFixed(5)}</p>
+                                                {ceIn.accuracy && <p>Accuracy: ±{Math.round(ceIn.accuracy)}m</p>}
+                                                {ceIn.address && <p>{ceIn.address}</p>}
+                                                {gps.distance !== undefined && <p>Distance from site: {Math.round(gps.distance)}m</p>}
+                                                <a href={googleMapsUrl(ceIn.latitude, ceIn.longitude!)} target="_blank" rel="noopener noreferrer" className="text-primary underline">Open in Maps</a>
+                                              </div>
+                                            ) : <p>No GPS data available</p>}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     </>
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell />
-                              <TableCell className="text-center">
-                                <span className="font-mono text-xs">{duration > 0 ? formatHours(duration) : "--"}</span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className="font-mono text-xs text-muted-foreground">
-                                  {entry.break_minutes > 0 ? `${entry.break_minutes}m` : "--"}
-                                </span>
-                              </TableCell>
-                              <TableCell />
-                              <TableCell className="text-center">
-                                {getEntryStatusIcon(entry.status)}
-                              </TableCell>
+                              <TableCell className="text-center">{getEntryStatusIcon(entry.status)}</TableCell>
                             </TableRow>
                           );
                         })}
@@ -745,21 +808,10 @@ export function TimesheetView() {
                 {canApprove && <TableCell />}
                 <TableCell />
                 <TableCell className="font-semibold text-xs uppercase text-muted-foreground">Totales</TableCell>
-                <TableCell className="text-center">
-                  <span className="font-mono font-bold text-xs">{new Set(rows.flatMap(r => r.dailyBreakdown.map(d => d.day))).size}d</span>
-                </TableCell>
-                <TableCell className="text-center">
-                  <span className="font-mono font-bold text-sm text-primary">
-                    {formatHours(rows.reduce((sum, r) => sum + r.totalMins, 0))}
-                  </span>
-                </TableCell>
-                <TableCell className="text-center text-xs text-muted-foreground">
-                  {rows.reduce((sum, r) => sum + r.breakMins, 0)}m
-                </TableCell>
-                <TableCell className="text-center text-xs">
-                  {rows.reduce((sum, r) => sum + r.entryCount, 0)}
-                </TableCell>
-                <TableCell />
+                <TableCell className="text-center"><span className="font-mono font-bold text-xs">{new Set(rows.flatMap(r => r.dailyBreakdown.map(d => d.day))).size}d</span></TableCell>
+                <TableCell className="text-center"><span className="font-mono font-bold text-sm text-primary">{formatHours(rows.reduce((sum, r) => sum + r.totalMins, 0))}</span></TableCell>
+                <TableCell className="text-center text-xs hidden md:table-cell">{rows.reduce((sum, r) => sum + r.entryCount, 0)}</TableCell>
+                <TableCell /><TableCell className="hidden lg:table-cell" /><TableCell />
               </TableRow>
             </TableFooter>
           </Table>
@@ -770,48 +822,41 @@ export function TimesheetView() {
       {rows.length > 0 && (
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
-              .map((p, idx, arr) => {
-                const prev = arr[idx - 1];
-                const showEllipsis = prev && p - prev > 1;
-                return (
-                  <span key={p} className="contents">
-                    {showEllipsis && <span className="text-xs text-muted-foreground px-1">…</span>}
-                    <Button
-                      variant={p === page ? "default" : "ghost"}
-                      size="icon"
-                      className={cn("h-8 w-8 text-xs", p === page && "pointer-events-none")}
-                      onClick={() => setPage(p)}
-                    >
-                      {p}
-                    </Button>
-                  </span>
-                );
-              })}
-            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><ChevronLeft className="h-4 w-4" /></Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2).map((p, idx, arr) => {
+              const prev = arr[idx - 1];
+              const showEllipsis = prev && p - prev > 1;
+              return (
+                <span key={p} className="contents">
+                  {showEllipsis && <span className="text-xs text-muted-foreground px-1">…</span>}
+                  <Button variant={p === page ? "default" : "ghost"} size="icon" className={cn("h-8 w-8 text-xs", p === page && "pointer-events-none")} onClick={() => setPage(p)}>{p}</Button>
+                </span>
+              );
+            })}
+            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}><ChevronRight className="h-4 w-4" /></Button>
           </div>
-
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Filas:</span>
             <Select value={String(rowsPerPage)} onValueChange={v => { setRowsPerPage(Number(v)); setPage(1); }}>
-              <SelectTrigger className="h-8 w-[65px] text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROWS_PER_PAGE_OPTIONS.map(n => (
-                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="h-8 w-[65px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>{ROWS_PER_PAGE_OPTIONS.map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+// --- Mini KPI Card ---
+function KpiMini({ icon, value, label, accent }: { icon: React.ReactNode; value: string | number; label: string; accent?: string }) {
+  return (
+    <Card className="border-border/30 rounded-xl">
+      <CardContent className="pt-3 pb-2 px-3">
+        <div className="flex items-center gap-2 mb-1">{icon}</div>
+        <div className={cn("text-xl font-bold font-mono tabular-nums", accent === "emerald" && "text-emerald-600 dark:text-emerald-400", accent === "amber" && "text-amber-600 dark:text-amber-400", accent === "red" && "text-destructive")}>{value}</div>
+        <p className="text-[10px] text-muted-foreground truncate">{label}</p>
+      </CardContent>
+    </Card>
   );
 }
