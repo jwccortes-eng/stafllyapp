@@ -222,7 +222,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
               </TableHeader>
               <TableBody>
                 {matches.map(m => (
-                  <TableRow key={m.id} className={m.match_status === "unmatched" ? "bg-destructive/5" : m.match_status === "ambiguous" ? "bg-amber-500/5" : ""}>
+                  <TableRow key={m.id} className={`cursor-pointer hover:bg-accent/50 ${m.match_status === "unmatched" ? "bg-destructive/5" : m.match_status === "ambiguous" ? "bg-amber-500/5" : ""}`} onClick={() => openDetail(m)}>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">{m.match_type.replace("_", " → ")}</Badge>
                     </TableCell>
