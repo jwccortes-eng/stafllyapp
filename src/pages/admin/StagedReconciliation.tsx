@@ -480,12 +480,33 @@ export default function StagedReconciliation() {
           )}
         </TabsContent>
 
+        <TabsContent value="signoff">
+          {activePeriod ? (
+            <FormalSignoffPanel
+              period={activePeriod}
+              finalRecords={finalRecords}
+              closingReceipt={closingReceipt}
+              variances={variances}
+              employees={employeeMap}
+              onSignoff={handleSignoff}
+              onSetOutcome={handleSetOutcome}
+              onSaveChecklist={handleSaveChecklist}
+            />
+          ) : (
+            <NoPeriodPlaceholder icon={PenTool} text="Selecciona un periodo para ver el signoff formal." />
+          )}
+        </TabsContent>
+
         <TabsContent value="journal">
           {activePeriod ? (
             <PeriodJournal period={activePeriod} companyId={selectedCompanyId} />
           ) : (
             <NoPeriodPlaceholder icon={BookOpen} text="Selecciona un periodo para ver su diario de actividad." />
           )}
+        </TabsContent>
+
+        <TabsContent value="rollout">
+          <RolloutReadiness periods={periods} />
         </TabsContent>
 
         <TabsContent value="pilot">
