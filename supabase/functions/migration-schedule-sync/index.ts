@@ -530,7 +530,7 @@ async function resyncAllPeriods(
   companyId: string,
   userId: string,
 ) {
-  // Rebuild employee lookup with latest mappings
+  // ── Employee lookup ──
   const { data: empMapping } = await supabase
     .from("migration_employee_mapping")
     .select("connecteam_name, stafly_employee_id, match_status")
@@ -549,7 +549,7 @@ async function resyncAllPeriods(
     if (!empByName.has(name)) empByName.set(name, emp.id);
   }
 
-  // Get all periods
+  // ── Get all migration periods ──
   const { data: periods } = await supabase
     .from("migration_period_reconciliation")
     .select("*")
@@ -558,7 +558,7 @@ async function resyncAllPeriods(
 
   if (!periods?.length) return json({ error: "No periods found" }, 400);
 
-  // Get all payroll raw imports
+  // ── Get ALL payroll raw imports ──
   const { data: payrollRaw } = await supabase
     .from("migration_raw_imports")
     .select("raw_payload")
@@ -569,24 +569,48 @@ async function resyncAllPeriods(
 
   const payrollRows = (payrollRaw ?? []).map(r => r.raw_payload as Record<string, unknown>);
 
-  // Get all scheduling raw imports to count Stafly shifts per period
-  const { data: staflyShifts } = await supabase
-    .from("scheduled_shifts")
-    .select("id, date, shift_hours, reconciliation_hash")
+  // ── Get Stafly pay_periods + period_base_pay + movements ──
+  const { data: payPeriods } = await supabase
+    .from("pay_periods")
+    .select("id, start_date, end_date")
     .eq("company_id", companyId)
-    .not("reconciliation_hash", "is", null);
+    .order("start_date");
 
-  // Get shift assignments with employee rates
-  const { data: shiftAssignments } = await supabase
-    .from("shift_assignments")
-    .select("shift_id, employee_id")
+  const { data: basePay } = await supabase
+    .from("period_base_pay")
+    .select("period_id, employee_id, total_work_hours, base_total_pay")
     .eq("company_id", companyId);
 
-  // Get shifts table for pay data
-  const { data: shiftsData } = await supabase
-    .from("shifts")
-    .select("employee_id, shift_date, shift_hours, hourly_rate_usd, total_pay_usd, period_id")
+  const { data: movements } = await supabase
+    .from("movements")
+    .select("period_id, employee_id, total_value")
     .eq("company_id", companyId);
+
+  // Index base_pay and movements by period_id
+  const baseByPeriod = new Map<string, Array<{ employee_id: string; hours: number; pay: number }>>();
+  for (const bp of basePay ?? []) {
+    if (!baseByPeriod.has(bp.period_id)) baseByPeriod.set(bp.period_id, []);
+    baseByPeriod.get(bp.period_id)!.push({
+      employee_id: bp.employee_id,
+      hours: bp.total_work_hours || 0,
+      pay: bp.base_total_pay || 0,
+    });
+  }
+
+  const movByPeriod = new Map<string, Map<string, number>>();
+  for (const mv of movements ?? []) {
+    if (!movByPeriod.has(mv.period_id)) movByPeriod.set(mv.period_id, new Map());
+    const empMap = movByPeriod.get(mv.period_id)!;
+    empMap.set(mv.employee_id, (empMap.get(mv.employee_id) || 0) + (mv.total_value || 0));
+  }
+
+  // Helper: parse CT date "MM/DD/YYYY" → "YYYY-MM-DD"
+  function ctDateToISO(d: string | unknown): string | null {
+    if (!d || typeof d !== "string") return null;
+    const m = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return null;
+    return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+  }
 
   const results: Record<string, unknown>[] = [];
 
@@ -594,85 +618,91 @@ async function resyncAllPeriods(
     const weekStart = period.week_start;
     const weekEnd = period.week_end;
 
-    // Filter payroll rows for this period by checking if employee has a "Corte" matching period_code
-    // or by date range from raw data
-    const periodPayroll = payrollRows.filter(r => {
-      const corte = String(r["Corte"] || "");
-      if (corte && String(period.period_code) === corte) return true;
-      // Also try matching by week number patterns
-      if (corte && corte.includes(String(period.period_code))) return true;
-      return false;
-    });
+    // ── CT TOTALS: match payroll rows by date range ──
+    // Each row is a shift entry. Total pay/hours are weekly aggregates that repeat per employee.
+    // Strategy: group by employee, use MAX(Total pay) as their weekly total, SUM(Shift hours) for hours.
+    const empCTData = new Map<string, { totalPay: number; shiftHours: number; totalHours: number }>();
 
-    // If no Corte match, try all payroll rows (they may not have Corte field)
-    // Group all payroll by employee and calculate totals
-    let ctEmployees = 0, ctGross = 0, ctHours = 0, ctEntries = 0;
-    let sfEmployees = 0, sfGross = 0, sfHours = 0;
+    for (const r of payrollRows) {
+      // Match by Start Date or End Date falling within period range
+      const startDateStr = ctDateToISO(r["Start Date"] || r["Date"]);
+      const endDateStr = ctDateToISO(r["End Date"]);
+      const rowDate = startDateStr || endDateStr;
+      if (!rowDate) continue;
+      if (rowDate < weekStart || rowDate > weekEnd) continue;
 
-    if (periodPayroll.length > 0) {
-      // Use matched payroll data
-      const matchedEmps = new Set<string>();
-      for (const r of periodPayroll) {
-        const firstName = String(r["First name"] || "").trim();
-        const lastName = String(r["Last name"] || "").trim();
-        const fullName = `${firstName} ${lastName}`.toUpperCase().trim();
-        const empId = empByName.get(fullName) || null;
+      const firstName = String(r["First name"] || "").trim();
+      const lastName = String(r["Last name"] || "").trim();
+      const empKey = `${firstName} ${lastName}`.toUpperCase().trim();
 
-        const totalPay = parseFloat(String(r["Total pay"] || r["TOTAL"] || "0")) || 0;
-        const totalHours = parseFloat(String(r["Total work hours"] || r["Total paid hours"] || "0")) || 0;
+      const totalPay = parseFloat(String(r["Total pay"] || "0")) || 0;
+      const totalHours = parseFloat(String(r["Total work hours"] || r["Total paid hours"] || "0")) || 0;
+      const shiftHours = parseFloat(String(r["Shift hours"] || "0")) || 0;
 
-        ctGross += totalPay;
-        ctHours += totalHours;
-        ctEntries++;
-
-        if (!matchedEmps.has(fullName)) {
-          ctEmployees++;
-          matchedEmps.add(fullName);
-        }
-
-        if (empId) {
-          sfGross += totalPay;
-          sfHours += totalHours;
-          if (!matchedEmps.has(`sf_${fullName}`)) {
-            sfEmployees++;
-            matchedEmps.add(`sf_${fullName}`);
-          }
-        }
-      }
-    } else {
-      // Keep existing totals if no payroll data matches
-      const ct = period.connecteam_totals || {};
-      const sf = period.stafly_totals || {};
-      ctEmployees = ct.employees || 0;
-      ctGross = ct.gross || 0;
-      ctHours = ct.hours || 0;
-      ctEntries = ct.entries || 0;
-      sfEmployees = sf.employees || 0;
-      sfGross = sf.gross || 0;
-      sfHours = sf.hours || 0;
+      const existing = empCTData.get(empKey) || { totalPay: 0, shiftHours: 0, totalHours: 0 };
+      // Total pay is a weekly aggregate repeated on each row → take the MAX
+      if (totalPay > existing.totalPay) existing.totalPay = totalPay;
+      if (totalHours > existing.totalHours) existing.totalHours = totalHours;
+      // Shift hours are per-entry → sum them
+      existing.shiftHours += shiftHours;
+      empCTData.set(empKey, existing);
     }
 
-    // Count Stafly shifts in this period range
-    const periodShifts = (staflyShifts ?? []).filter(s => s.date >= weekStart && s.date <= weekEnd);
+    let ctEmployees = empCTData.size;
+    let ctGross = 0;
+    let ctHours = 0;
+    let ctEntries = 0;
 
-    // Calculate Stafly totals from actual shifts data
-    const periodShiftData = (shiftsData ?? []).filter(s => 
-      s.shift_date >= weekStart && s.shift_date <= weekEnd
+    for (const [, data] of empCTData) {
+      ctGross += data.totalPay;
+      ctHours += data.totalHours > 0 ? data.totalHours : data.shiftHours;
+      ctEntries++;
+    }
+
+    // ── STAFLY TOTALS: from period_base_pay + movements ──
+    // Find matching pay_period by date range overlap
+    const matchingPayPeriod = (payPeriods ?? []).find(pp =>
+      pp.start_date <= weekEnd && pp.end_date >= weekStart
     );
 
-    if (periodShiftData.length > 0) {
-      const sfEmps = new Set(periodShiftData.map(s => s.employee_id));
+    let sfEmployees = 0, sfGross = 0, sfHours = 0;
+
+    if (matchingPayPeriod) {
+      const periodBase = baseByPeriod.get(matchingPayPeriod.id) || [];
+      const periodMov = movByPeriod.get(matchingPayPeriod.id) || new Map();
+
+      const sfEmps = new Set<string>();
+      for (const bp of periodBase) {
+        sfEmps.add(bp.employee_id);
+        const extras = periodMov.get(bp.employee_id) || 0;
+        sfGross += bp.pay + extras;
+        sfHours += bp.hours;
+      }
+      // Also count employees who only have movements (no base pay)
+      for (const [empId, val] of periodMov) {
+        if (!sfEmps.has(empId)) {
+          sfEmps.add(empId);
+          sfGross += val;
+        }
+      }
       sfEmployees = sfEmps.size;
-      sfGross = periodShiftData.reduce((sum, s) => sum + (s.total_pay_usd || 0), 0);
-      sfHours = periodShiftData.reduce((sum, s) => sum + (s.shift_hours || 0), 0);
     }
 
     const variance = Math.round((ctGross - sfGross) * 100) / 100;
 
     // Update period
     const { error } = await supabase.from("migration_period_reconciliation").update({
-      connecteam_totals: { employees: ctEmployees, entries: ctEntries, gross: Math.round(ctGross * 100) / 100, hours: Math.round(ctHours * 100) / 100 },
-      stafly_totals: { employees: sfEmployees, gross: Math.round(sfGross * 100) / 100, hours: Math.round(sfHours * 100) / 100 },
+      connecteam_totals: {
+        employees: ctEmployees,
+        entries: ctEntries,
+        gross: Math.round(ctGross * 100) / 100,
+        hours: Math.round(ctHours * 100) / 100,
+      },
+      stafly_totals: {
+        employees: sfEmployees,
+        gross: Math.round(sfGross * 100) / 100,
+        hours: Math.round(sfHours * 100) / 100,
+      },
       total_variance: variance,
       status: period.status === "locked" ? "locked" : (ctGross > 0 ? "under_review" : period.status),
       updated_at: new Date().toISOString(),
@@ -684,10 +714,28 @@ async function resyncAllPeriods(
       ct_gross: Math.round(ctGross * 100) / 100,
       sf_gross: Math.round(sfGross * 100) / 100,
       variance,
-      payroll_rows: periodPayroll.length,
+      ct_employees: ctEmployees,
+      sf_employees: sfEmployees,
+      matched_pay_period: matchingPayPeriod?.id || null,
       error: error?.message || null,
     });
   }
+
+  // ── Auto-update pilot_status ──
+  const totalReconciled = results.filter(r => Math.abs((r.variance as number) || 0) < 1).length;
+  const { data: openExceptions } = await supabase
+    .from("migration_exceptions")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .in("status", ["open", "in_progress"]);
+
+  await supabase.from("migration_pilot_status").upsert({
+    company_id: companyId,
+    total_weeks_imported: periods.length,
+    total_weeks_reconciled: totalReconciled,
+    total_unresolved_issues: openExceptions?.length || 0,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "company_id" });
 
   return json({ success: true, periods_updated: results.length, results });
 }
