@@ -411,7 +411,19 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="review">
-          <ReconciliationReviewPanel companyId={selectedCompanyId} onRefresh={refresh} key={refreshKey} />
+          <ReconciliationReviewPanel
+            companyId={selectedCompanyId}
+            onRefresh={refresh}
+            key={refreshKey}
+            periodScope={activePeriod ? {
+              schedule_batch_id: activePeriod.schedule_batch_id,
+              clock_batch_id: activePeriod.clock_batch_id,
+              payroll_batch_id: activePeriod.payroll_batch_id,
+              period_start: activePeriod.period_start,
+              period_end: activePeriod.period_end,
+              period_label: activePeriod.period_label,
+            } : null}
+          />
         </TabsContent>
 
         <TabsContent value="exceptions">
