@@ -41,14 +41,28 @@ export interface EmployeeRecord {
   email?: string | null;
   external_id?: string | null;
   connecteam_id?: string | null;
+  is_active?: boolean;
+  hire_date?: string | null;
+  termination_date?: string | null;
+  employee_role?: string | null;
 }
+
+export type EmployeeMatchStatus =
+  | "matched_active_employee"
+  | "matched_inactive_employee"
+  | "matched_historical_employee"
+  | "likely_alias_match"
+  | "true_missing_employee"
+  | "ignored_system_row"
+  | "ambiguous_match";
 
 export interface EmployeeMatchResult {
   employee_id: string | null;
   confidence: number;
   method: string;
+  match_status: EmployeeMatchStatus;
   ambiguous: boolean;
-  candidates: Array<{ id: string; name: string; confidence: number; method: string }>;
+  candidates: Array<{ id: string; name: string; confidence: number; method: string; is_active?: boolean }>;
 }
 
 function fuzzyNameScore(a: string, b: string): number {
