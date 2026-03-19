@@ -63,6 +63,8 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
   const [filter, setFilter] = useState<"all" | "matched" | "unmatched" | "system">("all");
   const [companyName, setCompanyName] = useState<string>("");
   const [rosterExpectedCount, setRosterExpectedCount] = useState<number | null>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState<string>("");
 
   const resolutionScopeKey = useMemo(
     () => (activePeriodId ? `period:${activePeriodId}` : "global"),
