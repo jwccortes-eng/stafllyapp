@@ -1181,7 +1181,7 @@ export default function Shifts() {
                   <div>
                     <Label className="text-[11px] text-muted-foreground font-medium">Ubicación</Label>
                     <div className="flex gap-1 mt-1">
-                      <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
+                      <Select value={locationId || "none"} onValueChange={v => handleLocationChange(v)}>
                         <SelectTrigger className="h-9 text-sm flex-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Sin asignar</SelectItem>
