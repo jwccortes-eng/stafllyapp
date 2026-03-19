@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { EmptyState } from "@/components/ui/empty-state";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2 } from "lucide-react";
 import { read, utils } from "xlsx";
@@ -50,13 +49,29 @@ function normalizeName(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/** Parse a value that may be a formatted currency string, number, or null */
+function parseNum(v: any): number {
+  if (v == null || v === "") return 0;
+  if (typeof v === "number") return isNaN(v) ? 0 : v;
+  const str = String(v).replace(/[$¤€£¥,\s]/g, "").replace(/^\((.+)\)$/, "-$1");
+  if (str === "-" || str === "") return 0;
+  const n = parseFloat(str);
+  return isNaN(n) ? 0 : n;
+}
+
+/** Rows whose name looks like a summary row */
+const SUMMARY_PATTERNS = [/^total\s/i, /^grand\s/i, /^subtotal/i, /^sum\b/i];
+function isSummaryRow(name: string): boolean {
+  return SUMMARY_PATTERNS.some(p => p.test(name.trim()));
+}
+
 export default function PayrollTruthValidation({ companyId, periodStatusId }: Props) {
   const [truthData, setTruthData] = useState<PayrollTruthRow[]>([]);
   const [reconData, setReconData] = useState<ReconciliationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [truthLoaded, setTruthLoaded] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>("");
 
-  // Load truth file from public
   const loadTruthFile = async () => {
     setLoading(true);
     try {
@@ -64,24 +79,45 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
       const buf = await res.arrayBuffer();
       const wb = read(buf, { type: "array" });
       const sheet = wb.Sheets["PAYROLL"] || wb.Sheets[wb.SheetNames[0]];
-      const rows: any[] = utils.sheet_to_json(sheet);
 
-      // Aggregate per employee (use MAX for TOTAL since it's already per-employee)
+      // Use raw:true to get numeric values instead of formatted strings
+      const rows: any[] = utils.sheet_to_json(sheet, { raw: true });
+
+      // Debug: show raw column names and first 5 values
+      const debugLines: string[] = [];
+      if (rows.length > 0) {
+        const allCols = Object.keys(rows[0]);
+        debugLines.push(`Sheet: ${wb.SheetNames[0]} | Columns (${allCols.length}): ${allCols.join(", ")}`);
+        const paymentCols = ["Total pay", "Payper Day", "Ryde", "TOTAL", "Hourly rate (USD)", "Shift hours"];
+        for (const col of paymentCols) {
+          const rawVals = rows.slice(0, 5).map(r => ({ raw: r[col], type: typeof r[col], parsed: parseNum(r[col]) }));
+          debugLines.push(`  ${col}: ${JSON.stringify(rawVals)}`);
+        }
+      }
+      debugLines.push(`Total raw rows: ${rows.length}`);
+      setDebugInfo(debugLines.join("\n"));
+
+      // Aggregate per employee
       const byEmp = new Map<string, PayrollTruthRow>();
       for (const r of rows) {
         const fn = String(r["First name"] || "").trim();
         const ln = String(r["Last name"] || "").trim();
-        const key = normalizeName(`${fn} ${ln}`);
-        if (!key) continue;
+        const fullName = `${fn} ${ln}`.trim();
+        if (!fullName) continue;
+
+        // Exclude summary rows
+        if (isSummaryRow(fullName)) continue;
+
+        const key = normalizeName(fullName);
+        const totalPay = parseNum(r["Total pay"]);
+        const hrRaw = r["Hourly rate (USD)"];
+        const hourlyRate = (hrRaw != null && hrRaw !== "" && hrRaw !== "-") ? parseNum(hrRaw) : null;
+        const payperDay = parseNum(r["Payper Day"]);
+        const ryde = parseNum(r["Ryde"]);
+        const total = parseNum(r["TOTAL"]);
+        const shiftHours = parseNum(r["Shift hours"]);
 
         const existing = byEmp.get(key);
-        const totalPay = parseFloat(r["Total pay"]) || 0;
-        const hourlyRate = r["Hourly rate (USD)"] != null ? parseFloat(r["Hourly rate (USD)"]) : null;
-        const payperDay = parseFloat(r["Payper Day"]) || 0;
-        const ryde = parseFloat(r["Ryde"]) || 0;
-        const total = parseFloat(r["TOTAL"]) || 0;
-        const shiftHours = parseFloat(r["Shift hours"]) || 0;
-
         if (existing) {
           existing.totalPay += totalPay;
           existing.payperDay += payperDay;
@@ -90,17 +126,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
           existing.shiftHours += shiftHours;
           if (hourlyRate != null && existing.hourlyRate == null) existing.hourlyRate = hourlyRate;
         } else {
-          byEmp.set(key, {
-            employee: `${fn} ${ln}`,
-            firstName: fn,
-            lastName: ln,
-            totalPay,
-            hourlyRate,
-            payperDay,
-            ryde,
-            total,
-            shiftHours,
-          });
+          byEmp.set(key, { employee: fullName, firstName: fn, lastName: ln, totalPay, hourlyRate, payperDay, ryde, total, shiftHours });
         }
       }
 
@@ -108,6 +134,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
       setTruthLoaded(true);
     } catch (err: any) {
       console.error("Error loading truth file:", err);
+      setDebugInfo(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -117,7 +144,6 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
   useEffect(() => {
     if (!companyId) return;
     (async () => {
-      // Try to get from period_base_pay + movements
       const { data: basePay } = await supabase
         .from("period_base_pay" as any)
         .select("*")
@@ -135,7 +161,6 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         empMap.set(e.id, { name: `${e.first_name} ${e.last_name}`, id: e.id });
       });
 
-      // Build recon rows from base pay
       const reconRows: ReconciliationRow[] = [];
       if (basePay && basePay.length > 0) {
         for (const bp of basePay as any[]) {
@@ -151,7 +176,6 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         }
       }
 
-      // Augment with movements (daily, ride)
       const { data: movements } = await supabase
         .from("movements" as any)
         .select("*, concepts!inner(name)")
@@ -178,7 +202,6 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
     })();
   }, [companyId]);
 
-  // Compare
   const comparison = useMemo<ComparisonRow[]>(() => {
     if (truthData.length === 0) return [];
 
@@ -187,16 +210,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
       const recon = reconData.find(r => normalizeName(r.employee_name) === tName);
 
       if (!recon) {
-        return {
-          employee: t.employee,
-          truth: t,
-          recon: null,
-          payVariance: t.totalPay,
-          dailyVariance: t.payperDay,
-          rideVariance: t.ryde,
-          totalVariance: t.total,
-          status: "missing" as const,
-        };
+        return { employee: t.employee, truth: t, recon: null, payVariance: t.totalPay, dailyVariance: t.payperDay, rideVariance: t.ryde, totalVariance: t.total, status: "missing" as const };
       }
 
       const payVar = recon.total_pay - t.totalPay;
@@ -206,13 +220,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
       const absTotal = Math.abs(totalVar);
 
       return {
-        employee: t.employee,
-        truth: t,
-        recon,
-        payVariance: payVar,
-        dailyVariance: dailyVar,
-        rideVariance: rideVar,
-        totalVariance: totalVar,
+        employee: t.employee, truth: t, recon,
+        payVariance: payVar, dailyVariance: dailyVar, rideVariance: rideVar, totalVariance: totalVar,
         status: (absTotal < 1 ? "match" : absTotal < 50 ? "close" : "mismatch") as ComparisonRow["status"],
       };
     }).sort((a, b) => Math.abs(b.totalVariance) - Math.abs(a.totalVariance));
@@ -263,6 +272,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Debug info */}
+              {debugInfo && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted-foreground font-medium">Debug: columnas detectadas y valores crudos</summary>
+                  <pre className="mt-1 p-2 rounded bg-muted text-muted-foreground overflow-auto max-h-48 whitespace-pre-wrap">{debugInfo}</pre>
+                </details>
+              )}
+
               {/* KPIs */}
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <KpiCard label="Empleados (Truth)" value={truthData.length} icon={<DollarSign className="h-4 w-4" />} />
