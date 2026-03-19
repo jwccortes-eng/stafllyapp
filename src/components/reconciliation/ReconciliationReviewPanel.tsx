@@ -53,7 +53,11 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
       .order("created_at", { ascending: false })
       .limit(200);
 
-    if (filter !== "all") q = q.eq("match_status", filter);
+    if (filter === "compensation") {
+      q = q.contains("conflict_flags", ["clock_exempt"]);
+    } else if (filter !== "all") {
+      q = q.eq("match_status", filter);
+    }
 
     q.then(({ data }) => {
       setMatches((data || []) as any);
