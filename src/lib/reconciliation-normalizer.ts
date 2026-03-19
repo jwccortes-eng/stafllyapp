@@ -67,6 +67,11 @@ export function isSystemRow(nameRaw: string, emailRaw?: string | null): boolean 
     if (pattern.test(name) || pattern.test(normalized)) return true;
   }
 
+  // Summary / subtotal rows
+  for (const pattern of SUMMARY_ROW_PATTERNS) {
+    if (pattern.test(name) || pattern.test(normalized)) return true;
+  }
+
   if (emailRaw) {
     for (const pattern of SYSTEM_EMAIL_PATTERNS) {
       if (pattern.test(emailRaw.trim())) return true;
