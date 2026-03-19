@@ -73,7 +73,7 @@ interface AdvanceRecord {
   employees?: { first_name: string; last_name: string } | null;
 }
 
-type SortKey = "name" | "base" | "extras" | "deductions" | "total";
+type SortKey = "name" | "base" | "extras" | "deductions" | "advances" | "total";
 type SortDir = "asc" | "desc";
 type PayFilter = "all" | "with_extras" | "with_deductions" | "zero_base";
 
