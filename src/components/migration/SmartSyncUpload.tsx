@@ -170,6 +170,31 @@ export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
     toast({ title: "Sync complete", description: `${done} files processed successfully.` });
   };
 
+  const resyncAll = async () => {
+    if (!companyId || !user) return;
+    setResyncing(true);
+    setSyncLog(["🔄 Re-syncing all periods with updated employee mappings..."]);
+    try {
+      const { data, error } = await supabase.functions.invoke("migration-schedule-sync", {
+        body: { company_id: companyId, action: "resync_all" },
+      });
+      if (error) throw error;
+      const results = data?.results || [];
+      setSyncLog(prev => [
+        ...prev,
+        `✅ ${results.length} periods re-synced`,
+        ...results.map((r: any) => `  #${r.period_code} ${r.week}: CT $${r.ct_gross?.toLocaleString()} | Stafly $${r.sf_gross?.toLocaleString()} | Var $${r.variance?.toLocaleString()}`),
+        "🎉 Re-sync complete!",
+      ]);
+      onRefresh();
+      toast({ title: "Re-sync complete", description: `${results.length} periods updated.` });
+    } catch (err: any) {
+      setSyncLog(prev => [...prev, `❌ Error: ${err.message}`]);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+    setResyncing(false);
+  };
+
   const hasValidFiles = files.some(f => f.type !== "unknown");
   const typeGroups = { scheduling: files.filter(f => f.type === "scheduling"), timeclock: files.filter(f => f.type === "timeclock"), payroll: files.filter(f => f.type === "payroll") };
   const hasDuplicateTypes = Object.values(typeGroups).some(g => g.length > 1);
