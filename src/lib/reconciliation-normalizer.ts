@@ -249,7 +249,8 @@ function buildDiagnostics(
 export function normalizeScheduleRows(
   rawRows: Array<{ id: string; row_number: number; raw_data: Record<string, any> }>,
   employees: EmployeeRecord[],
-  aliases: EmployeeAlias[] = []
+  aliases: EmployeeAlias[] = [],
+  manualResolutions: ManualNameResolution[] = [],
 ): NormalizationResult<any> {
   if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
