@@ -618,8 +618,8 @@ async function resyncAllPeriods(
   const results: Record<string, unknown>[] = [];
 
   for (const period of periods) {
-    const weekStart = period.week_start;
-    const weekEnd = period.week_end;
+    const weekStart = String(period.week_start).slice(0, 10);
+    const weekEnd = String(period.week_end).slice(0, 10);
 
     // ── CT TOTALS: group by employee and keep MAX weekly totals ──
     const empCTData = new Map<string, { totalPay: number; shiftHours: number; totalHours: number }>();
