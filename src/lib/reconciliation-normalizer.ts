@@ -67,7 +67,11 @@ export interface ImportDiagnostics {
   blankNameRows: number;
   realEmployeeRows: number;
   matched: number;
+  matchedActive: number;
+  matchedInactive: number;
+  matchedByAlias: number;
   matchedByMethod: Record<string, number>;
+  matchedByStatus: Record<string, number>;
   unmatched: number;
   unmatchedNames: string[];
   ambiguous: number;
