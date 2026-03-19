@@ -3,16 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   CheckCircle2, AlertTriangle, XCircle, Users, Shield, ArrowRight, Wrench,
-  GitCompareArrows, Lock, Upload, Zap, Eye, Clock, FileText, Search,
-  ChevronRight, RotateCcw, TrendingUp, DollarSign, ClipboardCheck,
-  FolderOpen, CircleDot,
+  Lock, Upload, Zap, Clock, FileText,
+  RotateCcw, TrendingUp, DollarSign, ClipboardCheck,
+  CircleDot,
 } from "lucide-react";
 import type { PeriodStatus, EmployeeFinalRecord, EmployeeVariance } from "@/hooks/useReconciliationPeriod";
+import type { ClassifyAction } from "./QuickClassifyBar";
 import EmployeeCloseCards from "./EmployeeCloseCards";
+import FinancialAccuracyPanel from "./FinancialAccuracyPanel";
 
 interface Props {
   period: PeriodStatus;
@@ -22,9 +22,10 @@ interface Props {
   onNavigate: (tab: string) => void;
   onApproveRecord?: (recordId: string) => void;
   onBulkApprove?: (recordIds: string[]) => void;
+  onClassifyRecords?: (recordIds: string[], classification: ClassifyAction) => Promise<void>;
+  onMarkReviewed?: (recordIds: string[]) => Promise<void>;
 }
 
-/* ── Readiness Statuses ── */
 type ReadinessLevel = "ready_validate" | "ready_publish" | "ready_warnings" | "blocked" | "closed" | "reopened";
 
 const READINESS_CONFIG: Record<ReadinessLevel, { label: string; color: string; icon: any; bg: string }> = {
@@ -38,7 +39,6 @@ const READINESS_CONFIG: Record<ReadinessLevel, { label: string; color: string; i
 
 const STATUS_ORDER = ["importing", "normalizing", "matching", "reviewing", "approved", "posted", "locked"];
 
-/* ── Blocker Queue Definition ── */
 interface BlockerQueue {
   id: string;
   label: string;
@@ -49,10 +49,10 @@ interface BlockerQueue {
   items?: { id: string; name: string; detail: string }[];
 }
 
-export default function CloseDesk({ period, finalRecords, variances, employeeMap, onNavigate, onApproveRecord, onBulkApprove }: Props) {
+export default function CloseDesk({ period, finalRecords, variances, employeeMap, onNavigate, onApproveRecord, onBulkApprove, onClassifyRecords, onMarkReviewed }: Props) {
   const [showAllBlockers, setShowAllBlockers] = useState(false);
+  const [showFinancial, setShowFinancial] = useState(false);
 
-  // ── Readiness computation ──
   const readiness = useMemo((): ReadinessLevel => {
     if (period.status === "locked" || period.status === "posted") return "closed";
     if (period.reopen_count > 0 && period.status === "reviewing") return "reopened";
@@ -68,7 +68,6 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
   const readinessCfg = READINESS_CONFIG[readiness];
   const ReadinessIcon = readinessCfg.icon;
 
-  // ── KPI Stats ──
   const stats = useMemo(() => {
     const sourceTotal = variances.reduce((s, v) => s + v.source_payroll_total, 0);
     const reconciledTotal = variances.reduce((s, v) => s + v.reconciled_total, 0);
@@ -87,7 +86,6 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
 
   const fmt = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  // ── Blocker Queues ──
   const blockerQueues = useMemo((): BlockerQueue[] => {
     const queues: BlockerQueue[] = [];
     const unresolved = variances.filter(v => v.variance_status === "unresolved");
@@ -102,51 +100,34 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
       items: major.slice(0, 5).map(v => ({ id: v.employee_id, name: v.employee_name, detail: `${fmt(v.variance_amount)}` })),
     });
 
-    if (stats.openExceptions > 0) queues.push({
-      id: "exceptions", label: "Excepciones abiertas", count: stats.openExceptions, severity: "critical", icon: AlertTriangle, tab: "exceptions",
-    });
-
+    if (stats.openExceptions > 0) queues.push({ id: "exceptions", label: "Excepciones abiertas", count: stats.openExceptions, severity: "critical", icon: AlertTriangle, tab: "exceptions" });
     if (stats.unknownClass > 0) queues.push({
       id: "unknown_class", label: "Clasificación desconocida", count: stats.unknownClass, severity: "warning", icon: Wrench, tab: "workbench",
       items: finalRecords.filter(r => r.pay_classification === "unknown").slice(0, 5).map(r => ({ id: r.employee_id, name: employeeMap.get(r.employee_id) || "—", detail: "Sin clasificar" })),
     });
-
-    if (stats.pendingReview > 0) queues.push({
-      id: "pending_review", label: "Empleados pendientes de revisión", count: stats.pendingReview, severity: "warning", icon: Users, tab: "employees",
-    });
-
-    if (stats.unmatchedPayroll > 0) queues.push({
-      id: "unmatched_payroll", label: "Nómina sin fichajes vinculados", count: stats.unmatchedPayroll, severity: "warning", icon: FileText, tab: "workbench",
-    });
-
-    if (stats.unmatchedClocks > 0) queues.push({
-      id: "unmatched_clocks", label: "Fichajes sin nómina vinculada", count: stats.unmatchedClocks, severity: "warning", icon: Clock, tab: "workbench",
-    });
+    if (stats.pendingReview > 0) queues.push({ id: "pending_review", label: "Empleados pendientes de revisión", count: stats.pendingReview, severity: "warning", icon: Users, tab: "employees" });
+    if (stats.unmatchedPayroll > 0) queues.push({ id: "unmatched_payroll", label: "Nómina sin fichajes", count: stats.unmatchedPayroll, severity: "warning", icon: FileText, tab: "workbench" });
+    if (stats.unmatchedClocks > 0) queues.push({ id: "unmatched_clocks", label: "Fichajes sin nómina", count: stats.unmatchedClocks, severity: "warning", icon: Clock, tab: "workbench" });
 
     const minor = variances.filter(v => v.variance_status === "minor_variance");
-    if (minor.length > 0) queues.push({
-      id: "minor_variance", label: "Varianzas menores (≤$10)", count: minor.length, severity: "info", icon: TrendingUp, tab: "workbench",
-    });
+    if (minor.length > 0) queues.push({ id: "minor_variance", label: "Varianzas menores (≤$10)", count: minor.length, severity: "info", icon: TrendingUp, tab: "workbench" });
 
-    if (period.status === "reviewing" && finalRecords.length > 0 && stats.critical === 0 && stats.openExceptions === 0) queues.push({
-      id: "not_validated", label: "Periodo sin validar", count: 1, severity: "info", icon: ClipboardCheck, tab: "validate",
-    });
+    if (period.status === "reviewing" && finalRecords.length > 0 && stats.critical === 0 && stats.openExceptions === 0) {
+      queues.push({ id: "not_validated", label: "Periodo sin validar", count: 1, severity: "info", icon: ClipboardCheck, tab: "validate" });
+    }
 
     return queues;
   }, [variances, finalRecords, stats, period, employeeMap]);
 
-  const criticalQueues = blockerQueues.filter(q => q.severity === "critical");
-  const warningQueues = blockerQueues.filter(q => q.severity === "warning");
-  const infoQueues = blockerQueues.filter(q => q.severity === "info");
   const displayQueues = showAllBlockers ? blockerQueues : blockerQueues.slice(0, 6);
+  const criticalQueues = blockerQueues.filter(q => q.severity === "critical");
 
-  // ── Workflow progress ──
   const currentStepIdx = STATUS_ORDER.indexOf(period.status);
   const progressPct = Math.round(((currentStepIdx + 1) / STATUS_ORDER.length) * 100);
 
   return (
     <div className="space-y-4">
-      {/* ── READINESS BANNER ── */}
+      {/* READINESS BANNER */}
       <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 ${readinessCfg.bg}`}>
         <ReadinessIcon className={`h-6 w-6 shrink-0 ${readinessCfg.color}`} />
         <div className="flex-1">
@@ -175,7 +156,7 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
         </div>
       </div>
 
-      {/* ── KPI STRIP ── */}
+      {/* KPI STRIP */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {[
           { label: "Nómina Fuente", value: fmt(stats.sourceTotal), mono: true },
@@ -192,13 +173,24 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
         ))}
       </div>
 
-      {/* ── WORKFLOW PROGRESS ── */}
+      {/* WORKFLOW PROGRESS */}
       <div className="flex items-center gap-2">
         <Progress value={progressPct} className="h-1.5 flex-1" />
         <span className="text-[11px] text-muted-foreground font-medium">{period.status}</span>
       </div>
 
-      {/* ── BLOCKER QUEUES ── */}
+      {/* FINANCIAL ACCURACY TOGGLE */}
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant={showFinancial ? "default" : "outline"} className="gap-1 text-xs" onClick={() => setShowFinancial(!showFinancial)}>
+          <DollarSign className="h-3.5 w-3.5" /> {showFinancial ? "Ocultar Panel Financiero" : "Panel Financiero"}
+        </Button>
+      </div>
+
+      {showFinancial && (
+        <FinancialAccuracyPanel finalRecords={finalRecords} variances={variances} />
+      )}
+
+      {/* BLOCKER QUEUES */}
       {blockerQueues.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
@@ -233,7 +225,6 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
                     <Badge variant={isCrit ? "destructive" : "outline"} className="text-xs">{q.count}</Badge>
                     <ArrowRight className="h-3 w-3 text-muted-foreground" />
                   </button>
-                  {/* Inline preview of top items */}
                   {q.items && q.items.length > 0 && (
                     <div className="ml-10 space-y-0.5">
                       {q.items.map(item => (
@@ -268,7 +259,7 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
         </Card>
       )}
 
-      {/* ── EMPLOYEE CLOSE CARDS ── */}
+      {/* EMPLOYEE CLOSE CARDS */}
       {finalRecords.length > 0 && (
         <EmployeeCloseCards
           finalRecords={finalRecords}
@@ -277,6 +268,8 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
           onNavigate={onNavigate}
           onApproveRecord={onApproveRecord}
           onBulkApprove={onBulkApprove}
+          onClassifyRecords={onClassifyRecords}
+          onMarkReviewed={onMarkReviewed}
         />
       )}
 
