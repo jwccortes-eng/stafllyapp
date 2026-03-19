@@ -17,7 +17,7 @@ import SmartSyncUpload from "@/components/migration/SmartSyncUpload";
 import SyncStatusPanel from "@/components/migration/SyncStatusPanel";
 import { ArrowLeftRight, Users, CalendarDays, Clock, DollarSign, CalendarCheck, AlertTriangle, FileText, Zap, Activity, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRef } from "react";
+
 
 export interface MigrationStats {
   pilotStatus: any;
