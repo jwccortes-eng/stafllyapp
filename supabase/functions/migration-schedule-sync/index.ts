@@ -615,57 +615,6 @@ async function resyncAllPeriods(
     return null;
   }
 
-  function parseWeekRangeFromFileName(fileName: string): { start: string; end: string } | null {
-    if (!fileName) return null;
-    const m = fileName.match(/(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})/);
-    if (!m) return null;
-    return { start: m[1], end: m[2] };
-  }
-
-  const periodRowsById = new Map<string, Record<string, unknown>[]>();
-  for (const period of periods) {
-    periodRowsById.set(period.id, []);
-  }
-
-  const fileRangeCache = new Map<string, { start: string; end: string } | null>();
-
-  for (const { row, fileName } of payrollRows) {
-    let assigned = false;
-
-    if (fileName) {
-      if (!fileRangeCache.has(fileName)) {
-        fileRangeCache.set(fileName, parseWeekRangeFromFileName(fileName));
-      }
-      const fileRange = fileRangeCache.get(fileName);
-      if (fileRange) {
-        const exactPeriod = periods.find(
-          p => p.week_start === fileRange.start && p.week_end === fileRange.end,
-        );
-        if (exactPeriod) {
-          periodRowsById.get(exactPeriod.id)?.push(row);
-          assigned = true;
-        } else {
-          const overlapPeriod = periods.find(
-            p => p.week_start <= fileRange.end && p.week_end >= fileRange.start,
-          );
-          if (overlapPeriod) {
-            periodRowsById.get(overlapPeriod.id)?.push(row);
-            assigned = true;
-          }
-        }
-      }
-    }
-
-    if (!assigned) {
-      const rowDate = ctDateToISO(row["Start Date"] || row["Date"] || row["End Date"]);
-      if (!rowDate) continue;
-      const periodMatch = periods.find(p => p.week_start <= rowDate && p.week_end >= rowDate);
-      if (periodMatch) {
-        periodRowsById.get(periodMatch.id)?.push(row);
-      }
-    }
-  }
-
   const results: Record<string, unknown>[] = [];
 
   for (const period of periods) {
@@ -674,9 +623,14 @@ async function resyncAllPeriods(
 
     // ── CT TOTALS: group by employee and keep MAX weekly totals ──
     const empCTData = new Map<string, { totalPay: number; shiftHours: number; totalHours: number }>();
-    const periodPayrollRows = periodRowsById.get(period.id) ?? [];
+    const rangeToken = `${weekStart}_${weekEnd}`;
 
-    for (const r of periodPayrollRows) {
+    for (const { row: r, fileName } of payrollRows) {
+      const inFileRange = fileName.includes(rangeToken);
+      if (!inFileRange) {
+        const rowDate = ctDateToISO(r["Start Date"] || r["Date"] || r["End Date"]);
+        if (!rowDate || rowDate < weekStart || rowDate > weekEnd) continue;
+      }
       const firstName = String(r["First name"] || r["First Name"] || "").trim();
       const lastName = String(r["Last name"] || r["Last Name"] || "").trim();
       const employeeName = String(r["Employee name"] || `${firstName} ${lastName}`).trim();
