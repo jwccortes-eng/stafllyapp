@@ -73,6 +73,18 @@ export default function Clients() {
   const [contactPhone, setContactPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [clientLocations, setClientLocations] = useState<ClientLocation[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  // New location inline form
+  const [showLocForm, setShowLocForm] = useState(false);
+  const [locName, setLocName] = useState("");
+  const [locAddress, setLocAddress] = useState("");
+  const [locPayType, setLocPayType] = useState("hourly");
+  const [locClockMethod, setLocClockMethod] = useState("both");
+  const [locRequireCar, setLocRequireCar] = useState(false);
+  const [locContactName, setLocContactName] = useState("");
+  const [locContactPhone, setLocContactPhone] = useState("");
+  const [savingLoc, setSavingLoc] = useState(false);
 
   useEffect(() => {
     if (selectedCompanyId) loadClients();
