@@ -646,6 +646,9 @@ export default function UnmatchedScheduleBreakdown({ companyId, onRefresh }: Pro
           </p>
         </div>
 
+        {/* "(sin título)" deep diagnostics */}
+        <NoTitleDiagnostics allUnmatchedRows={rows} payrollDates={payrollDates} />
+
         {/* Sub-category breakdown */}
         {SUB_BUCKETS.map(b => {
           const bucketRows = classified[b.key] || [];
