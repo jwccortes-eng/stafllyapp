@@ -222,6 +222,7 @@ export interface NormalizedScheduleRow {
   external_shift_id: string | null;
   job_title?: string | null;
   shift_title?: string | null;
+  notes?: string | null;
 }
 
 export interface NormalizedClockRow {
