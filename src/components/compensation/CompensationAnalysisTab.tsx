@@ -117,10 +117,10 @@ export default function CompensationAnalysisTab() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs">{formatDate(r.last_hourly_change_date)}</TableCell>
-                    <TableCell className="text-center">{r.daily_payment_detected ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto" /> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
-                    <TableCell className="text-center">{r.ride_payment_detected ? <CheckCircle2 className="h-3.5 w-3.5 text-purple-500 mx-auto" /> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                    <TableCell className="text-center">{r.daily_payment_detected ? <CheckCircle2 className="h-3.5 w-3.5 text-earning mx-auto" /> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                    <TableCell className="text-center">{r.ride_payment_detected ? <CheckCircle2 className="h-3.5 w-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
                     <TableCell className="text-center">{r.manual_adjustment_detected ? <AlertTriangle className="h-3.5 w-3.5 text-warning mx-auto" /> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
-                    <TableCell className="text-center">{r.mixed_compensation_detected ? <AlertTriangle className="h-3.5 w-3.5 text-orange-500 mx-auto" /> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                    <TableCell className="text-center">{r.mixed_compensation_detected ? <AlertTriangle className="h-3.5 w-3.5 text-destructive mx-auto" /> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
