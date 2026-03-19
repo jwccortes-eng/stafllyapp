@@ -302,18 +302,33 @@ export default function StagedReconciliation() {
           <ReconciliationDashboard periods={periods} onSelectPeriod={handleSelectPeriod} onCreatePeriod={() => setShowCreateDialog(true)} />
         </TabsContent>
 
-        <TabsContent value="checklist">
+        <TabsContent value="closedesk">
           {activePeriod ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2 space-y-4">
-                <WeeklyCloseChecklist period={activePeriod} finalRecords={finalRecords} onNavigate={setTab} />
-              </div>
-              <div className="space-y-4">
-                <PeriodScorecard period={activePeriod} finalRecords={finalRecords} variances={variances} onNavigate={setTab} />
-              </div>
-            </div>
+            <CloseDesk
+              period={activePeriod}
+              finalRecords={finalRecords}
+              variances={variances}
+              employeeMap={employeeMap}
+              onNavigate={setTab}
+              onApproveRecord={async (recordId) => {
+                await supabase.from("reconciliation_final_records" as any)
+                  .update({ reconciliation_status: "approved", approved_at: new Date().toISOString() } as any)
+                  .eq("id", recordId);
+                if (activePeriod) loadFinalRecords(activePeriod.id);
+              }}
+              onBulkApprove={async (recordIds) => {
+                for (const id of recordIds) {
+                  await supabase.from("reconciliation_final_records" as any)
+                    .update({ reconciliation_status: "approved", approved_at: new Date().toISOString() } as any)
+                    .eq("id", id);
+                }
+                if (activePeriod) loadFinalRecords(activePeriod.id);
+                await logJournal("approval", `${recordIds.length} empleados aprobados en bulk`);
+                toast({ title: `${recordIds.length} empleados aprobados` });
+              }}
+            />
           ) : (
-            <NoPeriodPlaceholder icon={ClipboardCheck} text="Selecciona un periodo para ver la guía de cierre." />
+            <NoPeriodPlaceholder icon={Shield} text="Selecciona un periodo para abrir el Close Desk." />
           )}
         </TabsContent>
 
