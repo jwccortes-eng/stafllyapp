@@ -261,7 +261,7 @@ export function normalizeScheduleRows(
   const systemRowNames: string[] = [];
   let blankNameRows = 0;
 
-  if (!colMap.employee_name && !colMap.external_id) {
+  if (!colMap.employee_name && !colMap.employee_first_name && !colMap.external_id) {
     errors.push("Could not detect employee name or ID column");
   }
 
