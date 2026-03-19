@@ -86,6 +86,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   };
 
+  /** Switch company: update state + invalidate all cached queries */
+  const switchCompany = useCallback((id: string) => {
+    if (id === selectedCompanyId) return;
+    setSelectedCompanyId(id);
+    // Invalidate all React Query caches so screens reload with new company data
+    queryClient.invalidateQueries();
+  }, [selectedCompanyId]);
+
   useEffect(() => {
     if (user && role !== undefined) fetchCompanies();
   }, [user, role]);
