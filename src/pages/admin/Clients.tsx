@@ -9,14 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   Plus, Search, Building2, Loader2, Trash2, RotateCcw, Pencil,
-  LayoutGrid, List, Download, Phone, Mail, MessageCircle, Filter, X, Users
+  LayoutGrid, List, Download, Phone, Mail, MessageCircle, Filter, X, Users, MapPin, Car
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReportActionsBar } from "@/components/ui/report-actions-bar";
@@ -33,6 +37,17 @@ interface Client {
   notes: string | null;
   deleted_at: string | null;
   created_at: string;
+}
+
+interface ClientLocation {
+  id: string;
+  name: string;
+  address: string | null;
+  default_pay_type: string | null;
+  default_clock_method: string | null;
+  require_car: boolean;
+  contact_name: string | null;
+  contact_phone: string | null;
 }
 
 type ViewMode = "grid" | "list";
