@@ -379,7 +379,7 @@ export function matchScheduleToClock(
     if (usedClocks.has(clock.id)) continue;
     const clockCat = detectShiftCategory(null, null, clock.client_name, clock.location_name, clock.notes);
     if (isClockExemptCategory(clockCat)) {
-      const label = clockCat === "daily_pay" ? "daily_pay_weekend_job" : "ride_pay";
+      const label = clockCat === "daily_pay" ? "daily_pay_weekend_job" : clockCat === "ride_pay" ? "ride_pay" : "availability_block";
       results.push({
         schedule_id: null, clock_id: clock.id, payroll_id: null,
         employee_id: clock.matched_employee_id, confidence: 90,

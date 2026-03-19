@@ -44,6 +44,14 @@ const BUCKETS: BucketDef[] = [
     action: "Ejecutar Employee Matching o crear alias para nombres no reconocidos",
   },
   {
+    key: "availability_block",
+    label: "Bloqueo / No disponible",
+    icon: <Ban className="h-4 w-4" />,
+    color: "text-muted-foreground",
+    test: (m) => flags(m).includes("availability_block"),
+    action: "✅ Resuelto — fila de disponibilidad/bloqueo, no requiere reloj",
+  },
+  {
     key: "daily_pay",
     label: "Daily Pay (Weekend shift)",
     icon: <CheckCircle2 className="h-4 w-4" />,
