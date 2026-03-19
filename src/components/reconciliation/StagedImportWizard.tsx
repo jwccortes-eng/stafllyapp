@@ -602,6 +602,8 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
           <UnmatchedResolutionPanel
             normalizedRows={normalizedRows}
             employees={employees}
+            companyId={companyId}
+            companyName={companyName}
             onAssignAlias={handleSaveAlias}
             onReNormalize={handleReNormalize}
           />
