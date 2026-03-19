@@ -483,8 +483,32 @@
   .print-hide { display: none !important; }
   main { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
   .print-header { display: block !important; }
-  table { font-size: 11px; }
+  table { font-size: 10px; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Print-all mode: show every tab panel at once */
+  .print-all-mode [role="tablist"] { display: none !important; }
+  .print-all-mode [role="tabpanel"] {
+    display: block !important;
+    opacity: 1 !important;
+    position: static !important;
+    pointer-events: auto !important;
+    animation: none !important;
+  }
+  .print-all-mode [data-state="inactive"][role="tabpanel"] {
+    display: block !important;
+  }
+
+  /* Page breaks between major sections */
+  .print-page-break { page-break-before: always; }
+  .print-avoid-break { page-break-inside: avoid; }
+
+  /* Compact cards for print */
+  .print-all-mode .card,
+  .print-all-mode [class*="Card"] {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
 }
 
 /* ── Mobile safe area for notched devices ── */

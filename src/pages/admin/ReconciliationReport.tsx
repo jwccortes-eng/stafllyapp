@@ -13,8 +13,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   FileText, Download, RefreshCw, ChevronDown, ChevronRight,
   AlertTriangle, CheckCircle2, Clock, DollarSign, Users,
-  TrendingUp, TrendingDown, Minus, Filter, BarChart3, Eye
+  TrendingUp, TrendingDown, Minus, Filter, BarChart3, Eye, Printer
 } from "lucide-react";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { cn } from "@/lib/utils";
 
 /* ─── Types ─── */
@@ -171,12 +172,30 @@ export default function ReconciliationReport() {
     );
   }
 
+  const exportCSV = (): string[][] => {
+    const headers = ["Week Start", "Week End", "Status", "CT Gross", "CT Hours", "SF Gross", "SF Hours", "Variance"];
+    const rows = periods.map(p => [
+      p.week_start, p.week_end, p.status,
+      String(p.connecteam_totals?.gross || 0), String(p.connecteam_totals?.hours || 0),
+      String(p.stafly_totals?.gross || 0), String(p.stafly_totals?.hours || 0),
+      String(p.total_variance || 0),
+    ]);
+    return [headers, ...rows];
+  };
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Reconciliation Report"
-        subtitle={`Connecteam ↔ StaflyApps • ${periods.length} weeks analyzed • ${exceptions.length} findings`}
-      />
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <PageHeader
+          title="Reconciliation Report"
+          subtitle={`Connecteam ↔ StaflyApps • ${periods.length} weeks analyzed • ${exceptions.length} findings`}
+        />
+        <ReportActionsBar
+          title="Reconciliation Report"
+          subtitle={`${periods.length} weeks • ${exceptions.length} findings`}
+          onExportCSV={exportCSV}
+        />
+      </div>
 
       {/* ─── Executive Summary KPIs ─── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
