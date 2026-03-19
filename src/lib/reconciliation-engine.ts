@@ -370,37 +370,83 @@ export interface ColumnMapping {
   location_name?: string;
 }
 
+// Aliases sorted from most specific to least specific per field
 const COLUMN_ALIASES: Record<keyof ColumnMapping, string[]> = {
-  employee_name: ["employee", "name", "worker", "full name", "nombre", "empleado", "user"],
-  employee_phone: ["phone", "mobile", "tel", "telefono", "celular"],
-  employee_email: ["email", "correo", "e-mail"],
-  external_id: ["id", "employee id", "external id", "connecteam id", "user id"],
-  work_date: ["date", "shift date", "work date", "fecha", "day"],
-  start_time: ["start", "start time", "hora inicio", "check in", "scheduled start"],
-  end_time: ["end", "end time", "hora fin", "check out", "scheduled end"],
-  clock_in: ["clock in", "actual start", "entrada", "check-in", "punch in"],
-  clock_out: ["clock out", "actual end", "salida", "check-out", "punch out"],
-  total_hours: ["hours", "total hours", "worked hours", "horas", "duration", "total time"],
-  total_pay: ["total pay", "pay", "total", "amount", "pago", "monto", "gross"],
-  hourly_rate: ["rate", "hourly rate", "pay rate", "tarifa"],
-  job_title: ["job", "job title", "puesto", "position", "rol"],
-  shift_title: ["shift", "shift title", "turno", "shift name"],
-  client_name: ["client", "customer", "cliente", "account"],
-  location_name: ["location", "site", "ubicacion", "place", "address"],
+  employee_name: ["full name", "employee name", "worker name", "nombre completo", "nombre empleado", "empleado", "employee", "worker", "name", "nombre", "user"],
+  employee_phone: ["phone number", "phone", "mobile", "tel", "telefono", "celular"],
+  employee_email: ["email address", "email", "correo", "e-mail"],
+  external_id: ["connecteam id", "external id", "employee id", "worker id", "user id", "emp id"],
+  work_date: ["shift date", "work date", "schedule date", "fecha turno", "fecha", "date", "day"],
+  start_time: ["scheduled start", "start time", "hora inicio", "check in", "start"],
+  end_time: ["scheduled end", "end time", "hora fin", "check out", "end"],
+  clock_in: ["clock in", "actual start", "punch in", "entrada", "check-in", "clock-in"],
+  clock_out: ["clock out", "actual end", "punch out", "salida", "check-out", "clock-out"],
+  total_hours: ["total hours", "worked hours", "total time", "hours worked", "hours", "horas", "duration"],
+  total_pay: ["total pay", "gross pay", "total amount", "total", "amount", "pay", "pago", "monto", "gross"],
+  hourly_rate: ["hourly rate", "pay rate", "rate", "tarifa"],
+  job_title: ["job title", "job name", "job", "puesto", "position", "rol"],
+  shift_title: ["shift title", "shift name", "shift", "turno"],
+  client_name: ["client name", "client", "customer", "cliente", "account"],
+  location_name: ["location name", "location", "site", "ubicacion", "place", "address"],
 };
+
+// Field detection priority: detect more specific fields first to avoid stealing columns
+const DETECTION_ORDER: (keyof ColumnMapping)[] = [
+  "external_id", "employee_email", "employee_phone",
+  "clock_in", "clock_out", "start_time", "end_time",
+  "work_date", "total_hours", "total_pay", "hourly_rate",
+  "job_title", "shift_title", "client_name", "location_name",
+  "employee_name",
+];
+
+function normalizeHeader(h: string): string {
+  if (!h) return "";
+  return h.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().trim().replace(/[_\-]+/g, " ").replace(/\s+/g, " ");
+}
 
 export function detectColumns(headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {};
-  const normHeaders = headers.map(h => normalizeText(h));
+  const normHeaders = headers.map(normalizeHeader);
+  const usedIndices = new Set<number>();
 
-  for (const [field, aliases] of Object.entries(COLUMN_ALIASES) as [keyof ColumnMapping, string[]][]) {
+  for (const field of DETECTION_ORDER) {
+    const aliases = COLUMN_ALIASES[field];
+    let bestIdx = -1;
+    let bestPriority = Infinity; // lower = better match
+
     for (let i = 0; i < normHeaders.length; i++) {
+      if (usedIndices.has(i)) continue;
       const nh = normHeaders[i];
-      if (aliases.some(a => nh === a || nh.includes(a))) {
-        if (!mapping[field]) {
-          mapping[field] = headers[i];
+      if (!nh) continue;
+
+      for (let a = 0; a < aliases.length; a++) {
+        const alias = normalizeHeader(aliases[a]);
+        let priority = Infinity;
+
+        // Tier 1: Exact match
+        if (nh === alias) {
+          priority = a; // alias index as tiebreaker
+        }
+        // Tier 2: Header starts with alias
+        else if (nh.startsWith(alias + " ") || nh.startsWith(alias)) {
+          priority = 100 + a;
+        }
+        // Tier 3: Header contains alias (only for multi-word aliases to avoid greedy matching)
+        else if (alias.includes(" ") && nh.includes(alias)) {
+          priority = 200 + a;
+        }
+
+        if (priority < bestPriority) {
+          bestPriority = priority;
+          bestIdx = i;
         }
       }
+    }
+
+    if (bestIdx >= 0) {
+      mapping[field] = headers[bestIdx];
+      usedIndices.add(bestIdx);
     }
   }
 

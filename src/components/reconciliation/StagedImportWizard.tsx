@@ -115,12 +115,17 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
   };
 
   const handleSave = async () => {
-    if (!companyId || !user?.id || !file) return;
+    if (!companyId || !user?.id || !file) {
+      console.error("[StagedImport] Missing required data:", { companyId, userId: user?.id, file: file?.name });
+      toast({ title: "Error", description: "Faltan datos requeridos (empresa, usuario o archivo).", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     setProgress(10);
 
     try {
       // 1. Create batch
+      console.log("[StagedImport] Creating import batch...");
       const { data: batch, error: batchErr } = await supabase
         .from("import_batches" as any)
         .insert({
@@ -136,8 +141,12 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
         .select("id")
         .single();
 
-      if (batchErr) throw batchErr;
+      if (batchErr) {
+        console.error("[StagedImport] Batch create error:", batchErr);
+        throw batchErr;
+      }
       const batchId = (batch as any).id;
+      console.log("[StagedImport] Batch created:", batchId);
       setProgress(25);
 
       // 2. Insert raw rows
@@ -153,21 +162,30 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
         row_hash: hashRow(r),
       }));
 
-      // Insert in chunks of 100
       for (let i = 0; i < rawInserts.length; i += 100) {
         const chunk = rawInserts.slice(i, i + 100);
         const { error } = await supabase.from(rawTable as any).insert(chunk as any);
-        if (error) throw error;
+        if (error) {
+          console.error("[StagedImport] Raw insert error:", error);
+          throw error;
+        }
         setProgress(25 + ((i / rawInserts.length) * 25));
       }
+      console.log("[StagedImport] Raw rows inserted:", rawInserts.length);
       setProgress(50);
 
       // 3. Fetch raw rows with IDs
-      const { data: savedRaw } = await supabase
+      const { data: savedRaw, error: fetchErr } = await supabase
         .from(rawTable as any)
         .select("id, row_number, raw_data")
         .eq("batch_id", batchId)
         .order("row_number");
+      
+      if (fetchErr) {
+        console.error("[StagedImport] Fetch raw error:", fetchErr);
+        throw fetchErr;
+      }
+      console.log("[StagedImport] Fetched raw rows:", savedRaw?.length);
       setProgress(60);
 
       // 4. Normalize and insert
@@ -184,6 +202,8 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       else if (sourceType === "clock") normResult = normalizeClockRows(rawForNorm, employees);
       else normResult = normalizePayrollRows(rawForNorm, employees);
 
+      console.log("[StagedImport] Normalized:", normResult.normalized.length, "rows");
+
       const normInserts = normResult.normalized.map((n: any) => ({
         ...n,
         batch_id: batchId,
@@ -193,7 +213,10 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       for (let i = 0; i < normInserts.length; i += 100) {
         const chunk = normInserts.slice(i, i + 100);
         const { error } = await supabase.from(normTable as any).insert(chunk as any);
-        if (error) throw error;
+        if (error) {
+          console.error("[StagedImport] Normalized insert error:", error);
+          throw error;
+        }
         setProgress(60 + ((i / normInserts.length) * 25));
       }
       setProgress(85);
@@ -211,7 +234,8 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
           source_data: { name: n.employee_name_raw, phone: n.employee_phone, email: n.employee_email },
           status: "open",
         }));
-        await supabase.from("reconciliation_exceptions" as any).insert(exceptions as any);
+        const { error: excErr } = await supabase.from("reconciliation_exceptions" as any).insert(exceptions as any);
+        if (excErr) console.error("[StagedImport] Exception insert error:", excErr);
       }
 
       // 6. Update batch status
@@ -227,7 +251,8 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
       });
       onComplete();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      console.error("[StagedImport] Save error:", err);
+      toast({ title: "Error al guardar", description: err.message || "Error desconocido", variant: "destructive" });
     } finally {
       setSaving(false);
     }
