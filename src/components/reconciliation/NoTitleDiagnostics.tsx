@@ -27,6 +27,7 @@ interface ScheduleRow {
 }
 
 type NoTitleSub =
+  | "no_title_no_client"
   | "no_title_no_times"
   | "no_title_no_employee"
   | "no_title_has_payroll"
