@@ -99,6 +99,7 @@ const CompanyMigration = lazy(() => import("./pages/admin/CompanyMigration"));
 const ReconciliationReport = lazy(() => import("./pages/admin/ReconciliationReport"));
 const AdvancesLoans = lazy(() => import("./pages/admin/AdvancesLoans"));
 const ShiftOperations = lazy(() => import("./pages/admin/ShiftOperations"));
+const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliation"));
 
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
