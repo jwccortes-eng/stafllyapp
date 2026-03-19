@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +18,7 @@ import {
   User, DollarSign, Clock, CalendarDays, FileText, Activity,
   Briefcase, Phone, Mail, MapPin, Users, Tag, Star, Shield,
   Plus, Pencil, Trash2, MoreHorizontal, KeyRound, Upload, Download, Cake, Home, TrendingUp,
-  Banknote,
+  Banknote, Wallet,
 } from "lucide-react";
 import { EmployeePerformanceScore } from "@/components/reviews/EmployeePerformanceScore";
 import { EmployeeAccessTab } from "@/components/employee/EmployeeAccessTab";
@@ -28,6 +28,8 @@ import { WorkerProfileTab } from "@/components/employee/WorkerProfileTab";
 import { useWorkerProfile } from "@/hooks/useWorkerProfile";
 import EmployeeAdvancesTab from "@/components/advances/EmployeeAdvancesTab";
 import { useToast } from "@/hooks/use-toast";
+
+const EmployeeCompensationTab = lazy(() => import("@/components/compensation/EmployeeCompensationTab"));
 
 type EmployeeRecord = Record<string, any>;
 
