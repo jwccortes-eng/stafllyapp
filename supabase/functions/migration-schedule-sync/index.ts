@@ -6,25 +6,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface ScheduleRow {
-  date: string;       // MM/DD/YYYY
-  start: string;      // e.g. "09:00am"
-  end: string;
-  shift_title: string;
-  job: string;
-  sub_item: string;
-  address: string;
-  user: string;       // employee name
-  tags: string;
-  note: string;
-  draft: string;
-  last_status: string;
-  source_file: string;
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 function parseTime12(t: string): string | null {
   if (!t || t === "All Day") return null;
-  const m = t.match(/^(\d{1,2}):(\d{2})(am|pm)$/i);
+  const m = t.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
   if (!m) return null;
   let h = parseInt(m[1]);
   const min = m[2];
@@ -35,10 +26,11 @@ function parseTime12(t: string): string | null {
 }
 
 function parseDate(d: string): string | null {
+  if (!d) return null;
   // MM/DD/YYYY → YYYY-MM-DD
-  const m = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const m = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!m) return null;
-  return `${m[3]}-${m[1]}-${m[2]}`;
+  return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
 }
 
 Deno.serve(async (req) => {
@@ -62,12 +54,14 @@ Deno.serve(async (req) => {
     if (authError || !user) return json({ error: "Token inválido" }, 401);
 
     const supabase = createClient(supabaseUrl, serviceKey);
+    const body = await req.json();
 
-    const { companyId, rows, action } = await req.json() as {
-      companyId: string;
-      rows?: ScheduleRow[];
-      action: "import_raw" | "process_shifts" | "stats";
-    };
+    // Support both naming conventions from frontend
+    const companyId = body.companyId || body.company_id;
+    const rows = body.rows || [];
+    const action = body.action;
+    const dataType = body.data_type || "scheduling";
+    const fileName = body.file_name || "import";
 
     if (!companyId) return json({ error: "companyId requerido" }, 400);
 
@@ -80,40 +74,45 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!membership) return json({ error: "Sin acceso" }, 403);
 
-    if (action === "import_raw") {
-      return await importRaw(supabase, companyId, rows ?? [], user.id);
-    } else if (action === "process_shifts") {
+    // Legacy action-based API
+    if (action === "process_shifts") {
       return await processShifts(supabase, companyId, user.id);
-    } else if (action === "stats") {
+    }
+    if (action === "stats") {
       return await getStats(supabase, companyId);
     }
 
-    return json({ error: "Acción no válida" }, 400);
+    // Smart Sync API: auto-import raw + process
+    if (!rows.length) return json({ error: "No rows" }, 400);
+
+    // Step 1: Import raw records
+    const importResult = await importRaw(supabase, companyId, rows, user.id, dataType, fileName);
+    
+    return importResult;
   } catch (e) {
     console.error("migration-schedule-sync error:", e);
-    return json({ error: "Error interno" }, 500);
+    return json({ error: "Error interno", details: e.message }, 500);
   }
 });
 
 async function importRaw(
   supabase: ReturnType<typeof createClient>,
   companyId: string,
-  rows: ScheduleRow[],
+  rows: Record<string, unknown>[],
   userId: string,
+  recordType: string,
+  fileName: string,
 ) {
-  if (!rows.length) return json({ error: "No rows" }, 400);
-
   const toInsert = rows.map((r, idx) => ({
     company_id: companyId,
     source_system: "connecteam",
-    record_type: "schedule",
-    file_name: r.source_file || "schedule_import",
+    record_type: recordType,
+    file_name: fileName,
     raw_payload: r,
     row_index: idx,
     imported_by: userId,
   }));
 
-  // Insert in batches
   const BATCH = 200;
   let inserted = 0;
   for (let i = 0; i < toInsert.length; i += BATCH) {
@@ -126,28 +125,36 @@ async function importRaw(
     inserted += batch.length;
   }
 
-  return json({ success: true, inserted });
+  // After importing, run type-specific processing
+  let processing: Record<string, unknown> = {};
+
+  if (recordType === "scheduling") {
+    processing = await processScheduleRaw(supabase, companyId, userId, rows);
+  } else if (recordType === "timeclock") {
+    processing = await processTimeclockRaw(supabase, companyId, userId, rows);
+  } else if (recordType === "payroll") {
+    processing = await processPayrollRaw(supabase, companyId, userId, rows);
+  }
+
+  await supabase.from("activity_log").insert({
+    user_id: userId,
+    company_id: companyId,
+    action: `migration_${recordType}_import`,
+    entity_type: "migration_raw_imports",
+    details: { inserted, record_type: recordType, file_name: fileName, ...processing },
+  });
+
+  return json({ success: true, inserted, record_type: recordType, ...processing });
 }
 
-async function processShifts(
+// ─── Schedule Processing ─────────────────────────────────────────
+async function processScheduleRaw(
   supabase: ReturnType<typeof createClient>,
   companyId: string,
   userId: string,
+  rows: Record<string, unknown>[],
 ) {
-  // 1. Fetch all raw schedule records
-  const { data: rawRecords, error: rawErr } = await supabase
-    .from("migration_raw_imports")
-    .select("id, raw_payload")
-    .eq("company_id", companyId)
-    .eq("record_type", "schedule")
-    .eq("source_system", "connecteam")
-    .order("row_index")
-    .limit(5000);
-
-  if (rawErr) return json({ error: rawErr.message }, 500);
-  if (!rawRecords?.length) return json({ error: "No raw schedule records found" }, 400);
-
-  // 2. Fetch employee mapping for name matching
+  // Build employee lookup
   const { data: empMapping } = await supabase
     .from("migration_employee_mapping")
     .select("connecteam_name, stafly_employee_id, match_status")
@@ -161,7 +168,6 @@ async function processShifts(
     }
   }
 
-  // Also fetch employees directly for fallback matching
   const { data: employees } = await supabase
     .from("employees")
     .select("id, first_name, last_name")
@@ -169,176 +175,121 @@ async function processShifts(
 
   for (const emp of employees ?? []) {
     const name = `${emp.first_name} ${emp.last_name}`.toUpperCase().trim();
-    if (!empByName.has(name)) {
-      empByName.set(name, emp.id);
-    }
+    if (!empByName.has(name)) empByName.set(name, emp.id);
   }
 
-  // 3. Fetch existing clients
+  // Build client lookup
   const { data: clients } = await supabase
     .from("clients")
     .select("id, name")
     .eq("company_id", companyId);
-
   const clientByName = new Map<string, string>();
   for (const c of clients ?? []) {
     clientByName.set(c.name.toUpperCase().trim(), c.id);
   }
 
-  // 4. Group raw records into shifts
-  type ShiftGroup = {
-    date: string;
-    startTime: string;
-    endTime: string;
-    title: string;
-    job: string;
-    subItem: string;
-    address: string;
-    tags: string;
-    note: string;
-    assignments: { userName: string; empId: string | null; status: string }[];
-  };
-
-  const shiftMap = new Map<string, ShiftGroup>();
-  let skippedPayRide = 0;
-  let skippedNoDate = 0;
-
-  for (const raw of rawRecords) {
-    const r = raw.raw_payload as unknown as ScheduleRow;
-    const isoDate = parseDate(r.date);
-    if (!isoDate) { skippedNoDate++; continue; }
-
-    // Separate PAY RIDE for later processing
-    if (r.job?.includes("PAY RIDE")) {
-      skippedPayRide++;
-      continue;
-    }
-
-    const startTime = parseTime12(r.start) || "00:00:00";
-    const endTime = parseTime12(r.end) || "23:59:00";
-
-    const key = `${isoDate}|${r.shift_title}|${r.job}|${startTime}|${endTime}`;
-
-    if (!shiftMap.has(key)) {
-      shiftMap.set(key, {
-        date: isoDate,
-        startTime,
-        endTime,
-        title: r.shift_title,
-        job: r.job,
-        subItem: r.sub_item,
-        address: r.address,
-        tags: r.tags,
-        note: r.note,
-        assignments: [],
-      });
-    }
-
-    const userName = r.user.toUpperCase().trim();
-    const empId = empByName.get(userName) || null;
-
-    shiftMap.get(key)!.assignments.push({
-      userName: r.user,
-      empId,
-      status: r.last_status || "pending",
-    });
-  }
-
-  // 5. Check existing shifts to avoid duplicates
+  // Existing hashes
   const { data: existingShifts } = await supabase
     .from("scheduled_shifts")
     .select("id, reconciliation_hash")
     .eq("company_id", companyId)
     .not("reconciliation_hash", "is", null);
-
   const existingHashes = new Set((existingShifts ?? []).map(s => s.reconciliation_hash));
 
-  // 6. Insert scheduled_shifts and shift_assignments
-  let shiftsCreated = 0;
-  let assignmentsCreated = 0;
-  let shiftsSkippedDup = 0;
-  let unmatchedEmployees = new Set<string>();
-  let mappingRecords: any[] = [];
+  // Group rows into shifts (skip availability rows without Shift title)
+  type ShiftGroup = {
+    date: string; startTime: string; endTime: string; title: string;
+    job: string; subItem: string; address: string; tags: string; note: string;
+    assignments: { userName: string; empId: string | null; status: string }[];
+  };
+
+  const shiftMap = new Map<string, ShiftGroup>();
+  let skippedPayRide = 0, skippedNoTitle = 0;
+
+  for (const r of rows) {
+    const shiftTitle = r["Shift title"] as string;
+    if (!shiftTitle) { skippedNoTitle++; continue; }
+
+    const dateStr = r["Date"] as string;
+    const isoDate = parseDate(dateStr);
+    if (!isoDate) continue;
+
+    const job = (r["Job"] as string) || "";
+    if (job.includes("PAY RIDE")) { skippedPayRide++; continue; }
+
+    const startTime = parseTime12(r["Start"] as string) || "00:00:00";
+    const endTime = parseTime12(r["End"] as string) || "23:59:00";
+    const key = `${isoDate}|${shiftTitle}|${job}|${startTime}|${endTime}`;
+
+    if (!shiftMap.has(key)) {
+      shiftMap.set(key, {
+        date: isoDate, startTime, endTime, title: shiftTitle, job,
+        subItem: (r["Sub item"] as string) || "",
+        address: (r["Address"] as string) || "",
+        tags: (r["Shift tags"] as string) || "",
+        note: (r["Note"] as string) || "",
+        assignments: [],
+      });
+    }
+
+    const userName = ((r["Users"] as string) || "").toUpperCase().trim();
+    const empId = empByName.get(userName) || null;
+    shiftMap.get(key)!.assignments.push({
+      userName: (r["Users"] as string) || "",
+      empId,
+      status: (r["Last Status"] as string) || "pending",
+    });
+  }
+
+  let shiftsCreated = 0, assignmentsCreated = 0, shiftsSkippedDup = 0;
+  const unmatchedEmployees = new Set<string>();
+  const mappingRecords: Record<string, unknown>[] = [];
 
   for (const [key, group] of shiftMap) {
     const hash = `ctm_sched_${key}`;
-    if (existingHashes.has(hash)) {
-      shiftsSkippedDup++;
-      continue;
-    }
+    if (existingHashes.has(hash)) { shiftsSkippedDup++; continue; }
 
-    // Determine client from job name
     const jobClean = group.job.replace(/^\d+\s*-\s*/, "").trim();
     const clientId = clientByName.get(jobClean.toUpperCase()) || null;
-
-    // Determine tags
     const isWeekend = group.tags?.toLowerCase().includes("weekend");
-    const isDraft = group.draft === "Yes";
 
     const shiftInsert = {
       company_id: companyId,
       title: `${group.title} - ${group.subItem || jobClean}`.substring(0, 200),
-      date: group.date,
-      start_time: group.startTime,
-      end_time: group.endTime,
-      slots: group.assignments.length,
-      client_id: clientId,
-      notes: group.note || null,
-      shift_code: group.title,
-      status: isDraft ? "draft" : "confirmed",
-      claimable: false,
-      meeting_point: group.address || null,
-      pay_type: "hourly",
+      date: group.date, start_time: group.startTime, end_time: group.endTime,
+      slots: group.assignments.length, client_id: clientId,
+      notes: group.note || null, shift_code: group.title,
+      status: "confirmed", claimable: false,
+      meeting_point: group.address || null, pay_type: "hourly",
       day_type: isWeekend ? "weekend" : "weekday",
-      reconciliation_hash: hash,
-      clock_method: "standard",
-      qr_attendance_mode: "none",
-      transportation_required: false,
-      car_capacity: 0,
+      reconciliation_hash: hash, clock_method: "standard",
+      qr_attendance_mode: "none", transportation_required: false, car_capacity: 0,
     };
 
     const { data: newShift, error: shiftErr } = await supabase
-      .from("scheduled_shifts")
-      .insert(shiftInsert)
-      .select("id")
-      .single();
-
-    if (shiftErr) {
-      console.error("Shift insert error:", shiftErr.message, key);
-      continue;
-    }
+      .from("scheduled_shifts").insert(shiftInsert).select("id").single();
+    if (shiftErr) { console.error("Shift insert:", shiftErr.message); continue; }
 
     shiftsCreated++;
     existingHashes.add(hash);
 
-    // Create assignments
     for (const a of group.assignments) {
       if (a.empId) {
-        const { error: assErr } = await supabase
-          .from("shift_assignments")
-          .insert({
-            shift_id: newShift.id,
-            employee_id: a.empId,
-            company_id: companyId,
-            status: a.status === "accept" ? "confirmed" : "pending",
-          });
+        const { error: assErr } = await supabase.from("shift_assignments").insert({
+          shift_id: newShift.id, employee_id: a.empId, company_id: companyId,
+          status: a.status === "accept" ? "confirmed" : "pending",
+        });
         if (!assErr) assignmentsCreated++;
       } else {
         unmatchedEmployees.add(a.userName);
       }
     }
 
-    // Create migration_shift_mapping record
     mappingRecords.push({
-      company_id: companyId,
-      connecteam_ref: hash,
+      company_id: companyId, connecteam_ref: hash,
       connecteam_data: {
-        shift_title: group.title,
-        job: group.job,
-        sub_item: group.subItem,
-        date: group.date,
-        start_time: group.startTime,
-        end_time: group.endTime,
+        shift_title: group.title, job: group.job, sub_item: group.subItem,
+        date: group.date, start_time: group.startTime, end_time: group.endTime,
         employee_count: group.assignments.length,
         matched_count: group.assignments.filter(a => a.empId).length,
         unmatched: group.assignments.filter(a => !a.empId).map(a => a.userName),
@@ -348,36 +299,196 @@ async function processShifts(
     });
   }
 
-  // Insert mapping records in batch
-  if (mappingRecords.length > 0) {
-    const BATCH = 100;
-    for (let i = 0; i < mappingRecords.length; i += BATCH) {
-      await supabase.from("migration_shift_mapping").insert(mappingRecords.slice(i, i + BATCH));
+  if (mappingRecords.length) {
+    for (let i = 0; i < mappingRecords.length; i += 100) {
+      await supabase.from("migration_shift_mapping").insert(mappingRecords.slice(i, i + 100));
     }
   }
 
-  // Log activity
-  const summary = {
-    raw_records: rawRecords.length,
-    unique_shifts: shiftMap.size,
-    shifts_created: shiftsCreated,
+  return {
+    unique_shifts: shiftMap.size, shifts_created: shiftsCreated,
     shifts_skipped_duplicate: shiftsSkippedDup,
     assignments_created: assignmentsCreated,
-    skipped_pay_ride: skippedPayRide,
+    skipped_pay_ride: skippedPayRide, skipped_no_title: skippedNoTitle,
     unmatched_employees: Array.from(unmatchedEmployees),
   };
+}
 
+// ─── Timeclock Processing ────────────────────────────────────────
+async function processTimeclockRaw(
+  supabase: ReturnType<typeof createClient>,
+  companyId: string,
+  userId: string,
+  rows: Record<string, unknown>[],
+) {
+  // Build employee lookup
+  const { data: empMapping } = await supabase
+    .from("migration_employee_mapping")
+    .select("connecteam_name, stafly_employee_id, match_status")
+    .eq("company_id", companyId)
+    .in("match_status", ["exact_match", "probable_match", "manually_resolved"]);
+
+  const empByName = new Map<string, string>();
+  for (const m of empMapping ?? []) {
+    if (m.stafly_employee_id) empByName.set(m.connecteam_name.toUpperCase().trim(), m.stafly_employee_id);
+  }
+
+  const { data: employees } = await supabase
+    .from("employees").select("id, first_name, last_name").eq("company_id", companyId);
+  for (const emp of employees ?? []) {
+    const name = `${emp.first_name} ${emp.last_name}`.toUpperCase().trim();
+    if (!empByName.has(name)) empByName.set(name, emp.id);
+  }
+
+  let matched = 0, unmatched = 0, skipped = 0;
+  const clockMappings: Record<string, unknown>[] = [];
+
+  for (const r of rows) {
+    const startDate = r["Start Date"] as string;
+    if (!startDate) { skipped++; continue; }
+
+    const firstName = String(r["First name"] || "").trim();
+    const lastName = String(r["Last name"] || "").trim();
+    const fullName = `${firstName} ${lastName}`.toUpperCase().trim();
+    const empId = empByName.get(fullName) || null;
+
+    const shiftHours = parseFloat(String(r["Shift hours"] || "0")) || 0;
+    const hourlyRate = parseFloat(String(r["Hourly rate (USD)"] || "0")) || 0;
+
+    const isoDate = parseDate(startDate);
+    const hash = `ctm_clock_${fullName}_${isoDate}_${r["Start time"]}`;
+
+    if (empId) matched++;
+    else unmatched++;
+
+    clockMappings.push({
+      company_id: companyId,
+      connecteam_ref: hash,
+      connecteam_data: {
+        employee_name: `${firstName} ${lastName}`,
+        start_date: startDate, start_time: r["Start time"],
+        end_date: r["End Date"], end_time: r["End time"],
+        shift_hours: shiftHours, hourly_rate: hourlyRate,
+        job: r["Job"], sub_item: r["Job sub item"],
+        start_location: r["Start - location"], end_location: r["End - location"],
+        start_device: r["Start - device"], end_device: r["End - device"],
+        daily_total_hours: r["Daily total hours"],
+        daily_total_pay: r["Daily total pay (USD)"],
+        manager_notes: r["Manager notes"],
+      },
+      stafly_employee_id: empId,
+      match_status: empId ? "exact_match" : "unresolved",
+    });
+  }
+
+  if (clockMappings.length) {
+    for (let i = 0; i < clockMappings.length; i += 100) {
+      await supabase.from("migration_clock_mapping").insert(clockMappings.slice(i, i + 100));
+    }
+  }
+
+  return { clock_records: clockMappings.length, matched, unmatched, skipped };
+}
+
+// ─── Payroll Processing ──────────────────────────────────────────
+async function processPayrollRaw(
+  supabase: ReturnType<typeof createClient>,
+  companyId: string,
+  userId: string,
+  rows: Record<string, unknown>[],
+) {
+  const { data: empMapping } = await supabase
+    .from("migration_employee_mapping")
+    .select("connecteam_name, stafly_employee_id, match_status")
+    .eq("company_id", companyId)
+    .in("match_status", ["exact_match", "probable_match", "manually_resolved"]);
+
+  const empByName = new Map<string, string>();
+  for (const m of empMapping ?? []) {
+    if (m.stafly_employee_id) empByName.set(m.connecteam_name.toUpperCase().trim(), m.stafly_employee_id);
+  }
+
+  const { data: employees } = await supabase
+    .from("employees").select("id, first_name, last_name").eq("company_id", companyId);
+  for (const emp of employees ?? []) {
+    const name = `${emp.first_name} ${emp.last_name}`.toUpperCase().trim();
+    if (!empByName.has(name)) empByName.set(name, emp.id);
+  }
+
+  let matched = 0, unmatched = 0;
+  const summaries: Record<string, unknown>[] = [];
+
+  for (const r of rows) {
+    const firstName = String(r["First name"] || "").trim();
+    const lastName = String(r["Last name"] || "").trim();
+    const fullName = `${firstName} ${lastName}`.toUpperCase().trim();
+    const empId = empByName.get(fullName) || null;
+
+    if (empId) matched++;
+    else unmatched++;
+
+    summaries.push({
+      employee_name: `${firstName} ${lastName}`,
+      employee_id: empId,
+      total_hours: parseFloat(String(r["Total work hours"] || r["Total paid hours"] || "0")) || 0,
+      total_regular: parseFloat(String(r["Total Regular"] || "0")) || 0,
+      total_overtime: parseFloat(String(r["Total overtime hours"] || "0")) || 0,
+      total_pay: parseFloat(String(r["Total pay"] || "0")) || 0,
+      payper_day: r["Payper Day"],
+      ryde: parseFloat(String(r["Ryde"] || "0")) || 0,
+      tips: parseFloat(String(r["TIPS"] || "0")) || 0,
+      reimbursements: parseFloat(String(r["Reimbursements"] || "0")) || 0,
+      travel_hours: parseFloat(String(r["Travel Hours"] || "0")) || 0,
+      otros: parseFloat(String(r["Otros"] || "0")) || 0,
+      discount: parseFloat(String(r["Discount "] || r["Discount"] || "0")) || 0,
+      total_final: parseFloat(String(r["TOTAL"] || "0")) || 0,
+      corte: r["Corte"],
+      matched: !!empId,
+    });
+  }
+
+  // Store payroll summary in activity log for now (period reconciliation uses it)
   await supabase.from("activity_log").insert({
     user_id: userId,
     company_id: companyId,
-    action: "migration_schedule_sync",
-    entity_type: "scheduled_shifts",
-    details: summary,
+    action: "migration_payroll_summary",
+    entity_type: "payroll",
+    details: {
+      employees_matched: matched,
+      employees_unmatched: unmatched,
+      total_employees: summaries.length,
+      grand_total: summaries.reduce((s, e) => s + ((e.total_final as number) || 0), 0),
+      summaries,
+    },
   });
 
-  return json({ success: true, ...summary });
+  return { payroll_employees: summaries.length, matched, unmatched };
 }
 
+// ─── Legacy: Process Shifts from raw imports ─────────────────────
+async function processShifts(
+  supabase: ReturnType<typeof createClient>,
+  companyId: string,
+  userId: string,
+) {
+  const { data: rawRecords, error: rawErr } = await supabase
+    .from("migration_raw_imports")
+    .select("id, raw_payload")
+    .eq("company_id", companyId)
+    .eq("record_type", "schedule")
+    .eq("source_system", "connecteam")
+    .order("row_index")
+    .limit(5000);
+
+  if (rawErr) return json({ error: rawErr.message }, 500);
+  if (!rawRecords?.length) return json({ error: "No raw schedule records found" }, 400);
+
+  const rows = rawRecords.map(r => r.raw_payload as Record<string, unknown>);
+  const result = await processScheduleRaw(supabase, companyId, userId, rows);
+  return json({ success: true, raw_records: rawRecords.length, ...result });
+}
+
+// ─── Stats ───────────────────────────────────────────────────────
 async function getStats(
   supabase: ReturnType<typeof createClient>,
   companyId: string,
@@ -395,12 +506,5 @@ async function getStats(
     raw_records: rawRes.count || 0,
     mapping_records: mappingRes.data?.length || 0,
     scheduled_shifts: shiftsRes.count || 0,
-  });
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
