@@ -85,8 +85,9 @@ export default function PeriodSummary() {
     const fromStr = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null;
     const toStr = dateTo ? format(dateTo, "yyyy-MM-dd") : null;
     const matching = periods.filter(p => {
-      if (fromStr && p.start_date < fromStr) return false;
-      if (toStr && p.end_date > toStr) return false;
+      // Overlap logic: include period if it overlaps with the date range
+      if (fromStr && p.end_date < fromStr) return false;
+      if (toStr && p.start_date > toStr) return false;
       return true;
     });
     if (matching.length > 0 && matching[0].id !== selectedPeriod) {
