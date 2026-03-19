@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ArrowRight, Eye, Loader2, Users, ShieldAlert, Info, UserX, Link2 } from "lucide-react";
+import UnmatchedResolutionPanel from "./UnmatchedResolutionPanel";
 import { parseAnyFileToJson } from "@/lib/safe-xlsx";
 import { hashRow, detectColumns, normalizeText, type ColumnMapping } from "@/lib/reconciliation-engine";
 import { normalizeScheduleRows, normalizeClockRows, normalizePayrollRows, type ImportDiagnostics, type EmployeeAlias } from "@/lib/reconciliation-normalizer";
@@ -119,7 +120,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     }
   };
 
-  const handleNormalize = () => {
+  const runNormalization = useCallback(() => {
     const rawWithIds = rawRows.map((r, i) => ({
       id: `temp-${i}`,
       row_number: i + 1,
@@ -142,6 +143,11 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     setWarnings(result.warnings);
     setErrors(result.errors);
     setDiagnostics(result.diagnostics);
+    return result;
+  }, [rawRows, sourceType, employees, aliases]);
+
+  const handleNormalize = () => {
+    const result = runNormalization();
 
     if (result.normalized.length === 0) {
       toast({ title: "Sin resultados", description: "No se pudieron normalizar filas. Revisa que el archivo tenga las columnas esperadas.", variant: "destructive" });
@@ -149,6 +155,11 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     }
 
     setStep("review");
+  };
+
+  const handleReNormalize = () => {
+    runNormalization();
+    toast({ title: "Re-normalizado", description: "Se aplicaron los alias guardados a las filas." });
   };
 
   const handleSaveAlias = async (nameRaw: string, employeeId: string) => {
@@ -545,6 +556,14 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
               </CardContent>
             </Card>
           )}
+
+          {/* Unmatched / Ambiguous Resolution Panel */}
+          <UnmatchedResolutionPanel
+            normalizedRows={normalizedRows}
+            employees={employees}
+            onAssignAlias={handleSaveAlias}
+            onReNormalize={handleReNormalize}
+          />
 
           <Card>
             <CardHeader>
