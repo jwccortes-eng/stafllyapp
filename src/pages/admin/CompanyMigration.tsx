@@ -12,7 +12,7 @@ import { Upload, Users, Archive, Shield, CheckCircle2, AlertTriangle, Link2, Plu
 import { useToast } from "@/hooks/use-toast";
 import { parseConnecteamHtmlXls, detectFileType, normalizePhone, HEADER_MAP } from "@/lib/connecteam-html-parser";
 import type { ConnecteamParsedRecord } from "@/lib/connecteam-html-parser";
-import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 
 interface FileState {
   file: File | null;
@@ -64,29 +64,24 @@ export default function CompanyMigration() {
 
   const parseBinaryXls = useCallback(async (file: File): Promise<ConnecteamParsedRecord[]> => {
     const buffer = await file.arrayBuffer();
-    const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buffer);
-    const ws = wb.worksheets[0];
-    if (!ws || ws.rowCount < 2) return [];
+    const wb = XLSX.read(buffer, { type: "array" });
+    const wsName = wb.SheetNames[0];
+    if (!wsName) return [];
+    const ws = wb.Sheets[wsName];
+    const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+    if (rows.length < 2) return [];
 
-    // Read headers from first row
-    const headerRow = ws.getRow(1);
-    const headers: string[] = [];
-    headerRow.eachCell((cell, colNumber) => {
-      headers[colNumber - 1] = String(cell.value ?? "").trim();
-    });
+    const headers = rows[0].map(h => String(h ?? "").trim());
+    console.log("[Migration] Binary headers:", headers);
 
     const normalizeKey = (h: string) => h.toLowerCase().replace(/[_\s-]+/g, " ").replace(/[^\w\s().?]/g, "").trim();
     const headerKeys = headers.map(h => HEADER_MAP[normalizeKey(h)] ?? null);
+    console.log("[Migration] Mapped keys:", headerKeys.filter(Boolean));
 
     const records: ConnecteamParsedRecord[] = [];
-    ws.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
-      const cells: string[] = [];
-      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        cells[colNumber - 1] = String(cell.value ?? "").trim();
-      });
-      if (cells.length < 2) return;
+    for (let r = 1; r < rows.length; r++) {
+      const cells = rows[r].map(c => String(c ?? "").trim());
+      if (cells.length < 2) continue;
 
       const record: any = {
         first_name: "", last_name: "", email: "", phone_number: "",
@@ -113,10 +108,11 @@ export default function CompanyMigration() {
       if (record.first_name) record.first_name = record.first_name.split(/\s+/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
       if (record.last_name) record.last_name = record.last_name.split(/\s+/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
-      if (!record.first_name && !record.last_name) return;
+      if (!record.first_name && !record.last_name) continue;
       records.push(record as ConnecteamParsedRecord);
-    });
+    }
 
+    console.log("[Migration] Binary parsed records:", records.length);
     return records;
   }, []);
 
