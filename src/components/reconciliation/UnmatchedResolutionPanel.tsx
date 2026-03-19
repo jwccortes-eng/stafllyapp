@@ -276,7 +276,10 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, on
                       {!isResolved && (
                         <div>
                           {isAssigning ? (
-                            <div className="min-w-48 space-y-1">
+                            <div className="min-w-56 space-y-1">
+                              <div className="text-[10px] text-muted-foreground mb-1">
+                                Roster: {empCounts.total} ({empCounts.active} act / {empCounts.inactive} inact)
+                              </div>
                               <div className="flex items-center gap-1">
                                 <Search className="h-3 w-3 text-muted-foreground" />
                                 <input
@@ -287,7 +290,10 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, on
                                   autoFocus
                                 />
                               </div>
-                              <div className="max-h-32 overflow-auto space-y-0.5 border rounded p-1">
+                              {empCounts.total === 0 && (
+                                <div className="text-xs text-destructive font-medium px-1">⚠ No hay empleados cargados para esta empresa</div>
+                              )}
+                              <div className="max-h-48 overflow-auto space-y-0.5 border rounded p-1">
                                 {empList.map(e => (
                                   <button
                                     key={e.id}
@@ -300,7 +306,7 @@ export default function UnmatchedResolutionPanel({ normalizedRows, employees, on
                                     <span className="truncate">{e.fullName}</span>
                                   </button>
                                 ))}
-                                {empList.length === 0 && <span className="text-xs text-muted-foreground px-2">Sin resultados</span>}
+                                {empList.length === 0 && empCounts.total > 0 && <span className="text-xs text-muted-foreground px-2">Sin resultados para "{searchEmp}"</span>}
                               </div>
                               <button className="text-xs text-muted-foreground underline" onClick={() => { setAssigningName(null); setSearchEmp(""); }}>
                                 Cancelar
