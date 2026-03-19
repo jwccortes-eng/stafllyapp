@@ -5663,11 +5663,15 @@ export type Database = {
           ride_pay_total: number | null
           schedule_batch_id: string | null
           scheduled_shifts: Json | null
+          source_payroll_total: number | null
           total_payroll_amount: number | null
           total_payroll_hours: number | null
           total_scheduled_hours: number | null
           total_worked_hours: number | null
           updated_at: string
+          variance_amount: number | null
+          variance_reasons: Json | null
+          variance_status: string | null
           warnings: Json | null
           weekend_amount: number | null
           weekend_pay_total: number | null
@@ -5706,11 +5710,15 @@ export type Database = {
           ride_pay_total?: number | null
           schedule_batch_id?: string | null
           scheduled_shifts?: Json | null
+          source_payroll_total?: number | null
           total_payroll_amount?: number | null
           total_payroll_hours?: number | null
           total_scheduled_hours?: number | null
           total_worked_hours?: number | null
           updated_at?: string
+          variance_amount?: number | null
+          variance_reasons?: Json | null
+          variance_status?: string | null
           warnings?: Json | null
           weekend_amount?: number | null
           weekend_pay_total?: number | null
@@ -5749,11 +5757,15 @@ export type Database = {
           ride_pay_total?: number | null
           schedule_batch_id?: string | null
           scheduled_shifts?: Json | null
+          source_payroll_total?: number | null
           total_payroll_amount?: number | null
           total_payroll_hours?: number | null
           total_scheduled_hours?: number | null
           total_worked_hours?: number | null
           updated_at?: string
+          variance_amount?: number | null
+          variance_reasons?: Json | null
+          variance_status?: string | null
           warnings?: Json | null
           weekend_amount?: number | null
           weekend_pay_total?: number | null
@@ -6194,6 +6206,89 @@ export type Database = {
             columns: ["period_status_id"]
             isOneToOne: false
             referencedRelation: "reconciliation_period_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_validation_results: {
+        Row: {
+          company_id: string
+          confidence_score: number | null
+          created_at: string
+          employee_variances: Json | null
+          employees_exact_match: number | null
+          employees_major_variance: number | null
+          employees_minor_variance: number | null
+          employees_unresolved: number | null
+          id: string
+          is_dry_run: boolean
+          notes: string | null
+          period_status_id: string
+          publish_readiness: string | null
+          published_total: number | null
+          reconciled_total: number | null
+          source_payroll_total: number | null
+          tested_at: string
+          tested_by: string
+          total_employees: number | null
+          total_variance: number | null
+          uat_checklist: Json | null
+          unresolved_exceptions: number | null
+        }
+        Insert: {
+          company_id: string
+          confidence_score?: number | null
+          created_at?: string
+          employee_variances?: Json | null
+          employees_exact_match?: number | null
+          employees_major_variance?: number | null
+          employees_minor_variance?: number | null
+          employees_unresolved?: number | null
+          id?: string
+          is_dry_run?: boolean
+          notes?: string | null
+          period_status_id: string
+          publish_readiness?: string | null
+          published_total?: number | null
+          reconciled_total?: number | null
+          source_payroll_total?: number | null
+          tested_at?: string
+          tested_by: string
+          total_employees?: number | null
+          total_variance?: number | null
+          uat_checklist?: Json | null
+          unresolved_exceptions?: number | null
+        }
+        Update: {
+          company_id?: string
+          confidence_score?: number | null
+          created_at?: string
+          employee_variances?: Json | null
+          employees_exact_match?: number | null
+          employees_major_variance?: number | null
+          employees_minor_variance?: number | null
+          employees_unresolved?: number | null
+          id?: string
+          is_dry_run?: boolean
+          notes?: string | null
+          period_status_id?: string
+          publish_readiness?: string | null
+          published_total?: number | null
+          reconciled_total?: number | null
+          source_payroll_total?: number | null
+          tested_at?: string
+          tested_by?: string
+          total_employees?: number | null
+          total_variance?: number | null
+          uat_checklist?: Json | null
+          unresolved_exceptions?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_validation_results_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
