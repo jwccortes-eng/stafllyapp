@@ -435,9 +435,21 @@ export default function CompaniesPage() {
                     </span>
                   </TableCell>
                   <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {c.name}
-                      {c.is_sandbox && <Badge variant="outline" className="text-[10px]"><FlaskConical className="h-3 w-3 mr-1" />Sandbox</Badge>}
+                    <div className="flex items-center gap-2.5">
+                      {c.logo_url ? (
+                        <img src={c.logo_url} alt={c.name} className="h-8 w-8 rounded-lg object-contain bg-muted/50 p-0.5 shrink-0" />
+                      ) : (
+                        <div
+                          className="h-8 w-8 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0"
+                          style={{ backgroundColor: c.brand_color || 'hsl(var(--primary))' }}
+                        >
+                          {c.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        {c.name}
+                        {c.is_sandbox && <Badge variant="outline" className="text-[10px]"><FlaskConical className="h-3 w-3 mr-1" />Sandbox</Badge>}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
