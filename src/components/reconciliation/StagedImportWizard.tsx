@@ -337,9 +337,9 @@ export default function StagedImportWizard({ companyId, onComplete }: Props) {
           </CardHeader>
           <CardContent>
             {warnings.length > 0 && (
-              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm space-y-1">
+              <div className="mb-4 p-3 bg-accent/50 border border-accent rounded-md text-sm space-y-1">
                 {warnings.slice(0, 10).map((w, i) => (
-                  <div key={i} className="text-amber-700 dark:text-amber-400">⚠ {w}</div>
+                  <div key={i} className="text-muted-foreground">⚠ {w}</div>
                 ))}
                 {warnings.length > 10 && <div className="text-muted-foreground">...y {warnings.length - 10} más</div>}
               </div>
