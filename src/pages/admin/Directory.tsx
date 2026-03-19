@@ -8,6 +8,16 @@ import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { useCompany } from "@/hooks/useCompany";
 import { formatPersonName, formatDisplayText, localeSort } from "@/lib/format-helpers";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { useEmployeeStatuses, type EmployeeOnlineStatus } from "@/hooks/useEmployeeStatus";
+import { Badge } from "@/components/ui/badge";
+
+const STATUS_LABELS: Record<EmployeeOnlineStatus, { label: string; className: string }> = {
+  online: { label: "En línea", className: "bg-earning/15 text-earning border-earning/30" },
+  on_shift: { label: "En turno", className: "bg-primary/15 text-primary border-primary/30" },
+  recently_active: { label: "Reciente", className: "bg-warning/15 text-warning border-warning/30" },
+  offline: { label: "Desconectado", className: "bg-muted text-muted-foreground border-border" },
+  not_available: { label: "No disponible", className: "bg-destructive/15 text-destructive border-destructive/30" },
+};
 
 interface DirectoryEntry {
   id: string;
