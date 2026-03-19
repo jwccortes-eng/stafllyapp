@@ -1392,6 +1392,8 @@ export default function Shifts() {
                   if (selectedEmployees.length === 0) warnings.push("No se asignaron empleados.");
                   if (!clientId) warnings.push("No se asignó un cliente.");
                   if (!locationId) warnings.push("No se asignó una ubicación.");
+                  if (transportRequired && !driverEmployeeId) warnings.push("🚗 Transporte requerido pero no se asignó un conductor.");
+                  if (!shiftAdminId) warnings.push("🛡️ No se asignó un admin/líder del turno.");
                   const slotsNum = parseInt(slots) || 1;
                   if (selectedEmployees.length > slotsNum) warnings.push(`Se asignaron ${selectedEmployees.length} empleados pero solo hay ${slotsNum} plaza(s).`);
                   if (date && new Date(date + "T00:00:00") < new Date(new Date().toDateString())) warnings.push("La fecha es anterior a hoy.");
