@@ -325,9 +325,11 @@ export default function PeriodSummary() {
   const grandBase = filtered.reduce((s, r) => s + r.base_total_pay, 0);
   const grandExtras = filtered.reduce((s, r) => s + r.extras_total, 0);
   const grandDeductions = filtered.reduce((s, r) => s + r.deductions_total, 0);
+  const grandAdvances = filtered.reduce((s, r) => s + r.advance_deduction, 0);
   const withExtras = rows.filter(r => r.extras_total > 0).length;
   const withDeductions = rows.filter(r => r.deductions_total > 0).length;
   const withBase = rows.filter(r => r.base_total_pay > 0).length;
+  const withAdvances = rows.filter(r => r.advance_deduction > 0).length;
 
   const selectedPeriodObj = periods.find(p => p.id === selectedPeriod);
 
