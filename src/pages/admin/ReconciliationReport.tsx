@@ -13,8 +13,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   FileText, Download, RefreshCw, ChevronDown, ChevronRight,
   AlertTriangle, CheckCircle2, Clock, DollarSign, Users,
-  TrendingUp, TrendingDown, Minus, Filter, BarChart3, Eye
+  TrendingUp, TrendingDown, Minus, Filter, BarChart3, Eye, Printer
 } from "lucide-react";
+import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { cn } from "@/lib/utils";
 
 /* ─── Types ─── */
