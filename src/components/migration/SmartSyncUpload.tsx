@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { safeRead, safeSheetToJson, getSheetNames } from "@/lib/safe-xlsx";
 import {
   Upload, FileSpreadsheet, CalendarDays, Clock, DollarSign,
-  CheckCircle2, AlertCircle, Loader2, X, Zap, ArrowRight,
+  CheckCircle2, AlertCircle, Loader2, X, Zap, ArrowRight, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
