@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   CheckCircle2, AlertTriangle, XCircle, Eye, Wrench, Search,
   ChevronDown, ChevronUp, Users, DollarSign, Clock, FileText,
-  ChevronsRight, Filter,
+  ChevronsRight, Filter, Car, Calendar, PenTool, Briefcase,
 } from "lucide-react";
+import QuickClassifyBar, { type ClassifyAction } from "./QuickClassifyBar";
 import type { EmployeeFinalRecord, EmployeeVariance } from "@/hooks/useReconciliationPeriod";
 
 interface Props {
@@ -19,6 +20,8 @@ interface Props {
   onNavigate: (tab: string) => void;
   onApproveRecord?: (recordId: string) => void;
   onBulkApprove?: (recordIds: string[]) => void;
+  onClassifyRecords?: (recordIds: string[], classification: ClassifyAction) => Promise<void>;
+  onMarkReviewed?: (recordIds: string[]) => Promise<void>;
 }
 
 type FilterMode = "all" | "critical" | "warnings" | "pending" | "resolved";
@@ -38,20 +41,22 @@ const VARIANCE_BADGE: Record<string, { label: string; variant: string; icon: any
   unresolved: { label: "✗ Sin resolver", variant: "destructive", icon: XCircle },
 };
 
-export default function EmployeeCloseCards({ finalRecords, variances, employeeMap, onNavigate, onApproveRecord, onBulkApprove }: Props) {
+const PAY_ICONS: Record<string, any> = {
+  hourly: Clock, daily: Calendar, pay_ride: Car, weekend_job: Briefcase, manual_adjustment: PenTool, mixed: DollarSign, unknown: AlertTriangle,
+};
+
+export default function EmployeeCloseCards({ finalRecords, variances, employeeMap, onNavigate, onApproveRecord, onBulkApprove, onClassifyRecords, onMarkReviewed }: Props) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterMode>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // Build lookup
   const varianceMap = useMemo(() => {
     const map = new Map<string, EmployeeVariance>();
     variances.forEach(v => map.set(v.employee_id, v));
     return map;
   }, [variances]);
 
-  // Filter & search
   const filtered = useMemo(() => {
     let items = finalRecords.map(r => ({
       record: r,
@@ -69,7 +74,6 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
     else if (filter === "pending") items = items.filter(i => !["approved", "resolved", "posted"].includes(i.record.reconciliation_status));
     else if (filter === "resolved") items = items.filter(i => ["approved", "resolved", "posted"].includes(i.record.reconciliation_status));
 
-    // Sort: critical first, then warnings, then pending, then resolved
     const order: Record<string, number> = { unresolved: 0, major_variance: 1, minor_variance: 2, exact_match: 3 };
     items.sort((a, b) => (order[a.variance?.variance_status || "exact_match"] ?? 3) - (order[b.variance?.variance_status || "exact_match"] ?? 3));
 
@@ -97,9 +101,23 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
     else setSelectedIds(new Set(filtered.map(i => i.record.id)));
   };
 
-  const handleBulkApprove = () => {
-    if (onBulkApprove && selectedIds.size > 0) {
-      onBulkApprove(Array.from(selectedIds));
+  const handleBulkApprove = async (ids: string[]) => {
+    if (onBulkApprove) {
+      onBulkApprove(ids);
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleClassify = async (ids: string[], classification: ClassifyAction) => {
+    if (onClassifyRecords) {
+      await onClassifyRecords(ids, classification);
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleMarkReviewed = async (ids: string[]) => {
+    if (onMarkReviewed) {
+      await onMarkReviewed(ids);
       setSelectedIds(new Set());
     }
   };
@@ -113,17 +131,6 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
           <CardTitle className="text-sm flex items-center gap-2">
             <Users className="h-4 w-4" /> Empleados ({filtered.length}/{finalRecords.length})
           </CardTitle>
-          <div className="flex items-center gap-2">
-            {/* Bulk actions */}
-            {selectedIds.size > 0 && (
-              <div className="flex items-center gap-1">
-                <Badge variant="secondary" className="text-xs">{selectedIds.size} seleccionados</Badge>
-                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleBulkApprove}>
-                  <CheckCircle2 className="h-3 w-3" /> Aprobar
-                </Button>
-              </div>
-            )}
-          </div>
         </div>
         {/* Toolbar */}
         <div className="flex items-center gap-2 mt-2">
@@ -158,7 +165,19 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-2">
+        {/* Quick action bar for selected */}
+        {selectedIds.size > 0 && (
+          <QuickClassifyBar
+            selectedIds={Array.from(selectedIds)}
+            onClassify={handleClassify}
+            onBulkApprove={handleBulkApprove}
+            onBulkMarkReviewed={handleMarkReviewed}
+            onNavigateWorkbench={() => onNavigate("workbench")}
+            compact
+          />
+        )}
+
         <ScrollArea className="max-h-[600px]">
           <div className="space-y-1.5">
             {filtered.map(({ record: r, name, variance: v }) => {
@@ -167,6 +186,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
               const isExpanded = expanded.has(r.id);
               const isPending = !["approved", "resolved", "posted"].includes(r.reconciliation_status);
               const StatusIcon = vBadge.icon;
+              const PayIcon = PAY_ICONS[r.pay_classification] || DollarSign;
 
               return (
                 <div key={r.id} className={`rounded-lg border transition-colors ${isSelected ? "border-primary/50 bg-primary/3" : "border-border"}`}>
@@ -180,15 +200,13 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                     <button onClick={() => toggleExpand(r.id)} className="shrink-0 text-muted-foreground hover:text-foreground">
                       {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                     </button>
+                    <PayIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium truncate">{name}</span>
                         <Badge variant={vBadge.variant as any} className="text-[10px] gap-0.5 shrink-0">
                           <StatusIcon className="h-2.5 w-2.5" /> {vBadge.label}
                         </Badge>
-                        {r.pay_classification && r.pay_classification !== "unknown" && (
-                          <Badge variant="secondary" className="text-[10px] shrink-0">{r.pay_classification}</Badge>
-                        )}
                         {r.pay_classification === "unknown" && (
                           <Badge variant="destructive" className="text-[10px] shrink-0">Sin clasificar</Badge>
                         )}
@@ -246,6 +264,20 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                         {(r.weekend_pay_total || r.weekend_amount || 0) > 0 && <Badge variant="secondary">Weekend: {fmt(r.weekend_pay_total || r.weekend_amount || 0)}</Badge>}
                         {(r.manual_adjustment_total || r.manual_amount || 0) > 0 && <Badge variant="secondary">Manual: {fmt(r.manual_adjustment_total || r.manual_amount || 0)}</Badge>}
                       </div>
+                      {/* Variance explanation */}
+                      {v && v.variance_amount !== 0 && (
+                        <div className="mt-1.5 p-2 rounded bg-muted/30 space-y-0.5">
+                          <div className="text-[10px] font-medium text-muted-foreground">¿Por qué hay varianza?</div>
+                          <div className="text-[11px] font-mono">
+                            Fuente: {fmt(v.source_payroll_total)} → Reconciliado: {fmt(v.reconciled_total)} = Δ {fmt(v.variance_amount)}
+                          </div>
+                          {v.variance_reasons && v.variance_reasons.length > 0 && v.variance_reasons.map((reason, i) => (
+                            <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Eye className="h-2.5 w-2.5" /> {reason}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {/* Warnings */}
                       {r.warnings && r.warnings.length > 0 && (
                         <div className="mt-1.5 space-y-0.5">
@@ -256,14 +288,18 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                           ))}
                         </div>
                       )}
-                      {/* Variance reasons */}
-                      {v?.variance_reasons && v.variance_reasons.length > 0 && (
-                        <div className="mt-1 space-y-0.5">
-                          {v.variance_reasons.map((r, i) => (
-                            <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Eye className="h-2.5 w-2.5" /> {r}
-                            </div>
-                          ))}
+                      {/* Inline quick actions */}
+                      {isPending && (
+                        <div className="flex items-center gap-1 mt-2 pt-1.5 border-t border-dashed">
+                          <span className="text-[10px] text-muted-foreground mr-1">Acciones:</span>
+                          {onApproveRecord && (
+                            <Button size="xs" variant="outline" className="gap-1 text-[10px]" onClick={() => onApproveRecord(r.id)}>
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Aprobar
+                            </Button>
+                          )}
+                          <Button size="xs" variant="outline" className="gap-1 text-[10px]" onClick={() => onNavigate("workbench")}>
+                            <Wrench className="h-2.5 w-2.5" /> Workbench
+                          </Button>
                         </div>
                       )}
                     </div>

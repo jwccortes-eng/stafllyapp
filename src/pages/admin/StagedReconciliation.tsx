@@ -326,6 +326,26 @@ export default function StagedReconciliation() {
                 await logJournal("approval", `${recordIds.length} empleados aprobados en bulk`);
                 toast({ title: `${recordIds.length} empleados aprobados` });
               }}
+              onClassifyRecords={async (recordIds, classification) => {
+                for (const id of recordIds) {
+                  await supabase.from("reconciliation_final_records" as any)
+                    .update({ pay_classification: classification } as any)
+                    .eq("id", id);
+                }
+                if (activePeriod) loadFinalRecords(activePeriod.id);
+                await logJournal("classify", `${recordIds.length} registros clasificados como ${classification}`);
+                toast({ title: `${recordIds.length} registros clasificados como ${classification}` });
+              }}
+              onMarkReviewed={async (recordIds) => {
+                for (const id of recordIds) {
+                  await supabase.from("reconciliation_final_records" as any)
+                    .update({ reconciliation_status: "resolved" } as any)
+                    .eq("id", id);
+                }
+                if (activePeriod) loadFinalRecords(activePeriod.id);
+                await logJournal("review", `${recordIds.length} registros marcados como revisados`);
+                toast({ title: `${recordIds.length} registros marcados como revisados` });
+              }}
             />
           ) : (
             <NoPeriodPlaceholder icon={Shield} text="Selecciona un periodo para abrir el Close Desk." />
@@ -414,7 +434,7 @@ export default function StagedReconciliation() {
 
         <TabsContent value="publish">
           {activePeriod ? (
-            <PrePublishReview period={activePeriod} finalRecords={finalRecords} closingReceipt={closingReceipt} employees={employeeMap} validation={validation} onPublish={handlePostPeriod} onLock={handleLockPeriod} onReopen={handleReopen} publishing={publishing} />
+            <PrePublishReview period={activePeriod} finalRecords={finalRecords} closingReceipt={closingReceipt} employees={employeeMap} validation={validation} variances={variances} onPublish={handlePostPeriod} onLock={handleLockPeriod} onReopen={handleReopen} publishing={publishing} isPilotMode={true} />
           ) : (
             <NoPeriodPlaceholder icon={Shield} />
           )}
