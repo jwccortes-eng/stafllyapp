@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { safeRead, safeSheetToJson, getSheetNames } from "@/lib/safe-xlsx";
 import {
   Upload, FileSpreadsheet, CalendarDays, Clock, DollarSign,
@@ -62,7 +61,6 @@ interface Props {
 }
 
 export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [files, setFiles] = useState<DetectedFile[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -119,7 +117,10 @@ export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
   };
 
   const startSync = async () => {
-    if (!companyId || !user) return;
+    if (!companyId) {
+      toast({ title: "Error", description: "Selecciona una compañía primero.", variant: "destructive" });
+      return;
+    }
     setSyncing(true);
     setSyncProgress(0);
     setSyncLog([]);
@@ -171,7 +172,10 @@ export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
   };
 
   const resyncAll = async () => {
-    if (!companyId || !user) return;
+    if (!companyId) {
+      toast({ title: "Error", description: "Selecciona una compañía primero.", variant: "destructive" });
+      return;
+    }
     setResyncing(true);
     setSyncLog(["🔄 Re-syncing all periods with updated employee mappings..."]);
     try {
