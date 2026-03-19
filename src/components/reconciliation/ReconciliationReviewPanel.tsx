@@ -139,7 +139,45 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
 
       const results = matchScheduleToClock(schedules, clocks);
       const specialCount = results.filter(r => r.conflict_flags.includes("clock_exempt")).length;
-      console.log("[Matching] Generated", results.length, "match results,", specialCount, "clock-exempt (special compensation)");
+      const structuralCount = results.filter(r => r.conflict_flags.includes("structural_no_context")).length;
+      const availBlockCount = results.filter(r => r.conflict_flags.includes("availability_block")).length;
+      const unmatchedSchedCount = results.filter(r => r.conflict_flags.includes("unmatched_schedule")).length;
+      console.log("[Matching] Generated", results.length, "match results");
+      console.log("[Matching] clock-exempt total:", specialCount, "| structural_no_context:", structuralCount, "| availability_block (text):", availBlockCount);
+      console.log("[Matching] unmatched_schedule:", unmatchedSchedCount);
+
+      // Debug: show examples of structural_no_context matches
+      const structExamples = results.filter(r => r.conflict_flags.includes("structural_no_context")).slice(0, 10);
+      if (structExamples.length > 0) {
+        console.log("[Matching] structural_no_context examples:");
+        structExamples.forEach((ex, i) => {
+          const sched = schedules.find(s => s.id === ex.schedule_id);
+          console.log(`  [${i}]`, {
+            employee: ex.employee_id || "(none)",
+            shift_title: sched?.shift_title || "(null)",
+            job_title: sched?.job_title || "(null)",
+            client: sched?.client_name || "(null)",
+            location: sched?.location_name || "(null)",
+            notes: sched?.notes || "(null)",
+            date: sched?.work_date || "(null)",
+          });
+        });
+      } else {
+        console.log("[Matching] structural_no_context: 0 rows matched — rule did not fire for this batch");
+        // Debug: show 5 unmatched_schedule rows to understand why
+        const unmatchedExamples = results.filter(r => r.conflict_flags.includes("unmatched_schedule")).slice(0, 5);
+        console.log("[Matching] Sample unmatched_schedule rows for investigation:");
+        unmatchedExamples.forEach((ex, i) => {
+          const sched = schedules.find(s => s.id === ex.schedule_id);
+          console.log(`  [${i}]`, {
+            shift_title: sched?.shift_title || "(null)",
+            job_title: sched?.job_title || "(null)",
+            client: sched?.client_name || "(null)",
+            location: sched?.location_name || "(null)",
+            notes: sched?.notes || "(null)",
+          });
+        });
+      }
 
       // Save matches
       const inserts = results.map(r => ({
