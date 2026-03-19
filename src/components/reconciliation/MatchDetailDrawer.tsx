@@ -49,6 +49,7 @@ interface ScheduleDetail {
   source_data: any;
   matched_employee_id: string | null;
   external_shift_id: string | null;
+  shift_title?: string | null;
 }
 
 interface ClockDetail {
@@ -62,6 +63,7 @@ interface ClockDetail {
   source_data: any;
   matched_employee_id: string | null;
   external_clock_id: string | null;
+  shift_title?: string | null;
 }
 
 /* ── Helpers ── */
@@ -130,6 +132,14 @@ function scoreCandidates(clock: ClockDetail, schedules: ScheduleDetail[]): Candi
     if (sameLoc) { score += 15; reasons.push("Misma ubicación"); }
     if (sameCli) { score += 15; reasons.push("Mismo cliente"); }
     if (hoursDiff != null && Math.abs(hoursDiff) <= 0.5) { score += 10; reasons.push("Horas similares"); }
+
+    // Shift number: weak hint only
+    const schedNum = s.external_shift_id?.trim() || null;
+    const clockNum = clock.external_clock_id?.trim() || null;
+    if (schedNum && clockNum) {
+      if (schedNum === clockNum) { score += 5; reasons.push("Shift # coincide (débil)"); }
+      else { reasons.push("Shift # ≠ (no confiable)"); }
+    }
 
     return { schedule: s, score, sameDate, startDiff, endDiff, hoursDiff, sameLocation: sameLoc, sameClient: sameCli, reasons };
   }).sort((a, b) => b.score - a.score);
@@ -342,6 +352,22 @@ export default function MatchDetailDrawer({ match, open, onOpenChange, onResolve
                     <CompCheck ok={compSameCli} label="Cliente" />
                   </div>
                   <div className="px-3 py-1.5 border-t border-border truncate max-w-[180px]">{comparisonSched?.client_name || "—"}</div>
+
+                  {/* Shift Number */}
+                  <div className="px-3 py-1.5 border-t border-border font-mono text-muted-foreground">
+                    <span className="text-[10px] uppercase tracking-wide block text-muted-foreground/60">Shift #</span>
+                    {clockDetail?.external_clock_id || "—"}
+                  </div>
+                  <div className="px-1 py-1.5 border-t border-border flex items-center justify-center">
+                    <ShiftNumIndicator
+                      schedNum={comparisonSched?.external_shift_id}
+                      clockNum={clockDetail?.external_clock_id}
+                    />
+                  </div>
+                  <div className="px-3 py-1.5 border-t border-border font-mono text-muted-foreground">
+                    <span className="text-[10px] uppercase tracking-wide block text-muted-foreground/60">Shift #</span>
+                    {comparisonSched?.external_shift_id || "—"}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -470,6 +496,37 @@ function DiffBadge({ diff, unit }: { diff: number | null; unit: string }) {
   return (
     <span className={`text-[10px] font-mono font-medium ${color}`}>
       {diff > 0 ? "+" : ""}{unit === "h" ? diff.toFixed(1) : diff}{unit}
+    </span>
+  );
+}
+
+function ShiftNumIndicator({ schedNum, clockNum }: { schedNum?: string | null; clockNum?: string | null }) {
+  const s = schedNum?.trim() || null;
+  const c = clockNum?.trim() || null;
+  if (!s && !c) {
+    return (
+      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+        <HelpCircle className="h-3 w-3" /> N/A
+      </span>
+    );
+  }
+  if (!s || !c) {
+    return (
+      <span className="text-[10px] text-amber-500 flex items-center gap-0.5">
+        <AlertTriangle className="h-3 w-3" /> parcial
+      </span>
+    );
+  }
+  if (s === c) {
+    return (
+      <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
+        <Hash className="h-3 w-3" /> ✓
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] text-amber-500 flex items-center gap-0.5" title="Shift # no coincide — señal débil, puede ser error de digitación">
+      <AlertTriangle className="h-3 w-3" /> ≠ débil
     </span>
   );
 }

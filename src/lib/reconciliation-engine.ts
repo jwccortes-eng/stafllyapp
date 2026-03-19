@@ -339,7 +339,7 @@ export function matchScheduleToClock(
       let score = 0;
       const flags: string[] = [];
 
-      // Date match
+      // Date match (primary signal)
       if (sched.work_date && clock.work_date) {
         if (sched.work_date === clock.work_date) score += 40;
         else {
@@ -366,7 +366,15 @@ export function matchScheduleToClock(
         const schedStart = sched.start_time.substring(0, 5);
         const clockStart = clock.clock_in.substring(11, 16);
         if (schedStart === clockStart) score += 20;
-        else score += 10;
+        else {
+          // Check approximate time (within 30 min)
+          const sMin = parseInt(sched.start_time.substring(0, 2)) * 60 + parseInt(sched.start_time.substring(3, 5));
+          const cMin = parseInt(clock.clock_in.substring(11, 13)) * 60 + parseInt(clock.clock_in.substring(14, 16));
+          const timeDiff = Math.abs(sMin - cMin);
+          if (timeDiff <= 30) score += 15;
+          else if (timeDiff <= 60) score += 10;
+          else score += 5;
+        }
       }
 
       // Hours match
@@ -375,6 +383,22 @@ export function matchScheduleToClock(
         if (diff <= 0.25) score += 20;
         else if (diff <= 1) { score += 10; flags.push("hours_mismatch"); }
         else flags.push("hours_mismatch");
+      }
+
+      // Shift number: WEAK HINT only — not a hard identifier
+      // Connecteam shift numbers can be manually edited or mistyped by employees
+      const schedShiftNum = sched.external_shift_id?.trim() || null;
+      const clockShiftNum = clock.external_clock_id?.trim() || null;
+      if (schedShiftNum && clockShiftNum) {
+        if (schedShiftNum === clockShiftNum) {
+          score += 5; // Small bonus for matching shift number
+          flags.push("shift_number_match");
+        } else {
+          // Do NOT penalize — just flag for debug visibility
+          flags.push("shift_number_mismatch");
+        }
+      } else {
+        flags.push("shift_number_missing");
       }
 
       if (score > (bestMatch?.score ?? 0)) {
