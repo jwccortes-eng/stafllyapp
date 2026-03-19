@@ -6,7 +6,7 @@
 import {
   normalizeText, normalizePhone, normalizeEmail, hashRow,
   matchEmployee, classifyPayrollRow, detectColumns,
-  type EmployeeRecord, type ColumnMapping,
+  type EmployeeRecord, type ColumnMapping, type EmployeeMatchStatus,
 } from "./reconciliation-engine";
 
 // ─── System / Non-Employee Row Detection ───
@@ -67,7 +67,11 @@ export interface ImportDiagnostics {
   blankNameRows: number;
   realEmployeeRows: number;
   matched: number;
+  matchedActive: number;
+  matchedInactive: number;
+  matchedByAlias: number;
   matchedByMethod: Record<string, number>;
+  matchedByStatus: Record<string, number>;
   unmatched: number;
   unmatchedNames: string[];
   ambiguous: number;
@@ -111,9 +115,10 @@ export function matchEmployeeWithAliases(
             employee_id: alias.employee_id,
             confidence: 0.85,
             method: "alias",
+            match_status: emp.is_active === false ? "matched_inactive_employee" : "likely_alias_match" as any,
             ambiguous: false,
             candidates: [
-              { id: alias.employee_id, name: `${emp.first_name} ${emp.last_name}`, confidence: 0.85, method: "alias" },
+              { id: alias.employee_id, name: `${emp.first_name} ${emp.last_name}`, confidence: 0.85, method: "alias", is_active: emp.is_active },
               ...result.candidates,
             ],
           };
@@ -171,6 +176,10 @@ function parseTimestamp(dateStr: string | null, timeStr: string | null): string 
 
 // ─── Core normalizer with diagnostics ───
 
+function emptyDiagnostics(employees: EmployeeRecord[]): ImportDiagnostics {
+  return { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedActive: 0, matchedInactive: 0, matchedByAlias: 0, matchedByMethod: {}, matchedByStatus: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.filter(e => e.is_active !== false).length, companyEmployeesInactive: employees.filter(e => e.is_active === false).length };
+}
+
 function buildDiagnostics(
   totalRows: number,
   systemRowNames: string[],
@@ -182,15 +191,21 @@ function buildDiagnostics(
   const unmatched = normalized.filter(r => !r.matched_employee_id && !r._is_system);
   const ambiguous = normalized.filter(r => r.has_conflict);
 
-  // Identify likely alias candidates (unmatched with >0 fuzzy confidence)
   const likelyAlias = unmatched.filter(r =>
     r.employee_match_confidence > 0 && r.employee_match_confidence < 0.75
   );
 
   const matchedByMethod: Record<string, number> = {};
+  const matchedByStatus: Record<string, number> = {};
   for (const r of matched) {
     matchedByMethod[r.employee_match_method] = (matchedByMethod[r.employee_match_method] || 0) + 1;
+    const status = r._match_status || "matched_active_employee";
+    matchedByStatus[status] = (matchedByStatus[status] || 0) + 1;
   }
+
+  const matchedActive = matched.filter(r => r._match_status === "matched_active_employee").length;
+  const matchedInactive = matched.filter(r => r._match_status === "matched_inactive_employee").length;
+  const matchedByAlias = matched.filter(r => r.employee_match_method === "alias").length;
 
   const activeEmps = employees.filter((e: any) => e.is_active !== false);
   const inactiveEmps = employees.filter((e: any) => e.is_active === false);
@@ -202,7 +217,11 @@ function buildDiagnostics(
     blankNameRows,
     realEmployeeRows: normalized.filter(r => !r._is_system).length,
     matched: matched.length,
+    matchedActive,
+    matchedInactive,
+    matchedByAlias,
     matchedByMethod,
+    matchedByStatus,
     unmatched: unmatched.length,
     unmatchedNames: [...new Set(unmatched.map(r => r.employee_name_raw))],
     ambiguous: ambiguous.length,
@@ -218,7 +237,7 @@ export function normalizeScheduleRows(
   employees: EmployeeRecord[],
   aliases: EmployeeAlias[] = []
 ): NormalizationResult<any> {
-  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedByMethod: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.length, companyEmployeesInactive: 0 } };
+  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
   const headers = Object.keys(rawRows[0].raw_data);
   const colMap = detectColumns(headers);
@@ -293,6 +312,7 @@ export function normalizeScheduleRows(
       matched_employee_id: empMatch.ambiguous ? null : empMatch.employee_id,
       employee_match_confidence: empMatch.confidence,
       employee_match_method: empMatch.method,
+      _match_status: empMatch.match_status,
       work_date: workDate,
       start_time: startTime,
       end_time: endTime,
@@ -318,7 +338,7 @@ export function normalizeClockRows(
   employees: EmployeeRecord[],
   aliases: EmployeeAlias[] = []
 ): NormalizationResult<any> {
-  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedByMethod: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.length, companyEmployeesInactive: 0 } };
+  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
   const headers = Object.keys(rawRows[0].raw_data);
   const colMap = detectColumns(headers);
@@ -354,6 +374,7 @@ export function normalizeClockRows(
       matched_employee_id: empMatch.ambiguous ? null : empMatch.employee_id,
       employee_match_confidence: empMatch.confidence,
       employee_match_method: empMatch.method,
+      _match_status: empMatch.match_status,
       work_date: workDate,
       clock_in: clockIn,
       clock_out: clockOut,
@@ -378,7 +399,7 @@ export function normalizePayrollRows(
   employees: EmployeeRecord[],
   aliases: EmployeeAlias[] = []
 ): NormalizationResult<any> {
-  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedByMethod: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.length, companyEmployeesInactive: 0 } };
+  if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
   const headers = Object.keys(rawRows[0].raw_data);
   const colMap = detectColumns(headers);
@@ -414,6 +435,7 @@ export function normalizePayrollRows(
       matched_employee_id: empMatch.ambiguous ? null : empMatch.employee_id,
       employee_match_confidence: empMatch.confidence,
       employee_match_method: empMatch.method,
+      _match_status: empMatch.match_status,
       work_date: workDate,
       total_hours: totalHours,
       hourly_rate: hourlyRate,
