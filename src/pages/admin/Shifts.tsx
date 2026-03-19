@@ -1383,6 +1383,8 @@ export default function Shifts() {
                   <p><span className="font-medium">Ubicación:</span> {locations.find(l => l.id === locationId)?.name || "Sin asignar"}</p>
                   <p><span className="font-medium">Plazas:</span> {slots}</p>
                   <p><span className="font-medium">Empleados:</span> {selectedEmployees.length > 0 ? `${selectedEmployees.length} seleccionados` : "Ninguno"}</p>
+                  {transportRequired && <p><span className="font-medium">Transporte:</span> Requerido • {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 4))} vehículo(s) • Conductor: {driverEmployeeId ? employees.find(e => e.id === driverEmployeeId)?.first_name || "Asignado" : "⚠️ Sin asignar"}</p>}
+                  <p><span className="font-medium">Admin turno:</span> {shiftAdminId ? employees.find(e => e.id === shiftAdminId)?.first_name || "Asignado" : "⚠️ Sin asignar"}</p>
                   {claimable && <p><span className="font-medium">Reclamable:</span> Sí</p>}
                   {notes && <p><span className="font-medium">Notas:</span> {notes}</p>}
                 </div>
@@ -1392,6 +1394,8 @@ export default function Shifts() {
                   if (selectedEmployees.length === 0) warnings.push("No se asignaron empleados.");
                   if (!clientId) warnings.push("No se asignó un cliente.");
                   if (!locationId) warnings.push("No se asignó una ubicación.");
+                  if (transportRequired && !driverEmployeeId) warnings.push("🚗 Transporte requerido pero no se asignó un conductor.");
+                  if (!shiftAdminId) warnings.push("🛡️ No se asignó un admin/líder del turno.");
                   const slotsNum = parseInt(slots) || 1;
                   if (selectedEmployees.length > slotsNum) warnings.push(`Se asignaron ${selectedEmployees.length} empleados pero solo hay ${slotsNum} plaza(s).`);
                   if (date && new Date(date + "T00:00:00") < new Date(new Date().toDateString())) warnings.push("La fecha es anterior a hoy.");

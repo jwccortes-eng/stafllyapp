@@ -375,10 +375,11 @@ export default function ShiftOperations() {
             </div>
           </div>
 
-          {/* C) Staff by Area */}
-          {byArea.length > 0 && (
-            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4">
-              <h2 className="text-sm font-bold flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Staff por Área</h2>
+          {/* C) Staff by Area — assigned + unassigned pool */}
+          <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4">
+            <h2 className="text-sm font-bold flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Staff por Área</h2>
+            {/* Assigned by area */}
+            {byArea.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {byArea.map(([area, areaAssignments]) => (
                   <div key={area} className="rounded-xl border border-border/30 p-3">
@@ -398,8 +399,67 @@ export default function ShiftOperations() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Unassigned employee pool by area */}
+            {(() => {
+              const assignedIds = new Set(assignments.map(a => a.employee_id));
+              const unassigned = employees.filter(e => !assignedIds.has(e.id));
+              if (unassigned.length === 0) return null;
+
+              const unassignedByArea = new Map<string, typeof unassigned>();
+              unassigned.forEach(e => {
+                const area = e.county || "Sin área";
+                if (!unassignedByArea.has(area)) unassignedByArea.set(area, []);
+                unassignedByArea.get(area)!.push(e);
+              });
+              const sortedAreas = Array.from(unassignedByArea.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+              return (
+                <div className="space-y-2 mt-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Disponibles para asignar</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {sortedAreas.map(([area, areaEmps]) => (
+                      <div key={area} className="rounded-xl border border-dashed border-border/40 p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-bold text-muted-foreground">{area}</p>
+                          <Badge variant="outline" className="text-[9px]">{areaEmps.length}</Badge>
+                        </div>
+                        <div className="space-y-1">
+                          {areaEmps.slice(0, 8).map(e => (
+                            <div key={e.id} className="flex items-center gap-2 text-[11px] group">
+                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 shrink-0" />
+                              <span className="truncate text-muted-foreground">{e.first_name} {e.last_name}</span>
+                              {e.has_car === "yes" && <Car className="h-2.5 w-2.5 text-warning shrink-0" />}
+                              <button
+                                className="ml-auto text-[9px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={async () => {
+                                  if (!shiftId || !selectedCompanyId) return;
+                                  const { error } = await supabase.from("shift_assignments").insert({
+                                    company_id: selectedCompanyId,
+                                    shift_id: shiftId,
+                                    employee_id: e.id,
+                                    status: "pending",
+                                  } as any);
+                                  if (error) toast.error(error.message);
+                                  else { toast.success(`${e.first_name} asignado`); loadAll(); }
+                                }}
+                              >
+                                + Asignar
+                              </button>
+                            </div>
+                          ))}
+                          {areaEmps.length > 8 && (
+                            <p className="text-[9px] text-muted-foreground/50 text-center">+{areaEmps.length - 8} más</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         </div>
 
         {/* Right column: Transport, Timeline, Notes */}
