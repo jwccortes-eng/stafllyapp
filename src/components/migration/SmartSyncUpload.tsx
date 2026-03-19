@@ -242,11 +242,16 @@ export default function SmartSyncUpload({ companyId, onRefresh }: Props) {
               const Icon = meta.icon;
               return (
                 <Card key={idx} className={cn("relative overflow-hidden", df.type === "unknown" && "border-destructive/40")}>
-                  <div className={cn("absolute left-0 top-0 bottom-0 w-1", df.type === "scheduling" && "bg-primary", df.type === "timeclock" && "bg-amber-500", df.type === "payroll" && "bg-emerald-500", df.type === "unknown" && "bg-destructive")} />
+                  <div className={cn("absolute left-0 top-0 bottom-0 w-1",
+                    df.type === "scheduling" && "bg-primary",
+                    df.type === "timeclock" && "bg-warning",
+                    df.type === "payroll" && "bg-earning",
+                    df.type === "unknown" && "bg-destructive"
+                  )} />
                   <CardContent className="py-4 pl-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
-                        <div className={cn("mt-0.5 p-2 rounded-lg bg-muted")}>
+                        <div className="mt-0.5 p-2 rounded-lg bg-muted">
                           <Icon className={cn("h-5 w-5", meta.color)} />
                         </div>
                         <div className="min-w-0">
