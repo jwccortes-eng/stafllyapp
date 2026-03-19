@@ -138,30 +138,33 @@ export default function StagedReconciliation() {
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
-            <BarChart3 className="h-3.5 w-3.5" /> Dashboard
+        <TabsList className="grid w-full grid-cols-9">
+          <TabsTrigger value="dashboard" className="gap-1 text-[11px]">
+            <BarChart3 className="h-3 w-3" /> Dashboard
           </TabsTrigger>
-          <TabsTrigger value="import" className="gap-1.5 text-xs">
-            <Upload className="h-3.5 w-3.5" /> Importar
+          <TabsTrigger value="import" className="gap-1 text-[11px]">
+            <Upload className="h-3 w-3" /> Importar
           </TabsTrigger>
-          <TabsTrigger value="review" className="gap-1.5 text-xs">
-            <GitCompareArrows className="h-3.5 w-3.5" /> Matching
+          <TabsTrigger value="review" className="gap-1 text-[11px]">
+            <GitCompareArrows className="h-3 w-3" /> Matching
           </TabsTrigger>
-          <TabsTrigger value="exceptions" className="gap-1.5 text-xs">
-            <AlertTriangle className="h-3.5 w-3.5" /> Excepciones
+          <TabsTrigger value="exceptions" className="gap-1 text-[11px]">
+            <AlertTriangle className="h-3 w-3" /> Excepciones
           </TabsTrigger>
-          <TabsTrigger value="employees" className="gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" /> Empleados
+          <TabsTrigger value="employees" className="gap-1 text-[11px]">
+            <Users className="h-3 w-3" /> Empleados
           </TabsTrigger>
-          <TabsTrigger value="approve" className="gap-1.5 text-xs">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Aprobar
+          <TabsTrigger value="approve" className="gap-1 text-[11px]">
+            <CheckCircle2 className="h-3 w-3" /> Aprobar
           </TabsTrigger>
-          <TabsTrigger value="publish" className="gap-1.5 text-xs">
-            <Shield className="h-3.5 w-3.5" /> Publicar
+          <TabsTrigger value="validate" className="gap-1 text-[11px]">
+            <ClipboardCheck className="h-3 w-3" /> Validar
           </TabsTrigger>
-          <TabsTrigger value="history" className="gap-1.5 text-xs">
-            <FileText className="h-3.5 w-3.5" /> Historial
+          <TabsTrigger value="publish" className="gap-1 text-[11px]">
+            <Shield className="h-3 w-3" /> Publicar
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-1 text-[11px]">
+            <FileText className="h-3 w-3" /> Historial
           </TabsTrigger>
         </TabsList>
 
