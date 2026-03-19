@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ArrowRight, Eye, Loader2, Users, ShieldAlert, Info, UserX, Link2 } from "lucide-react";
 import UnmatchedResolutionPanel from "./UnmatchedResolutionPanel";
-import { parseAnyFileToJson } from "@/lib/safe-xlsx";
+import { parseAnyFileToJson, parseExcelWithSheets, getFileSheetNames } from "@/lib/safe-xlsx";
+import { findPayrollSheet } from "@/lib/payroll-interpreter";
 import { hashRow, detectColumns, normalizeText, resolveEmployeeName, detectSuspiciousNameColumn, type ColumnMapping } from "@/lib/reconciliation-engine";
 import {
   normalizeScheduleRows,
@@ -62,6 +63,8 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
   const [filter, setFilter] = useState<"all" | "matched" | "unmatched" | "system">("all");
   const [companyName, setCompanyName] = useState<string>("");
   const [rosterExpectedCount, setRosterExpectedCount] = useState<number | null>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState<string>("");
 
   const resolutionScopeKey = useMemo(
     () => (activePeriodId ? `period:${activePeriodId}` : "global"),
@@ -195,8 +198,35 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     if (!f) return;
     setFile(f);
     setNameColumnWarning("");
+    setSheetNames([]);
+    setSelectedSheet("");
     try {
-      const rows = await parseAnyFileToJson(f, { defval: "" });
+      const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+      const isExcel = ext === "xlsx" || ext === "xls";
+
+      let rows: Record<string, any>[];
+      if (isExcel) {
+        // Get sheet names first
+        const names = await getFileSheetNames(f);
+        setSheetNames(names);
+        console.log("[StagedImport] Sheet names:", names);
+
+        // Auto-select the best sheet based on source type
+        let targetSheet = names[0] ?? "";
+        if (sourceType === "payroll" && names.length > 1) {
+          const detected = findPayrollSheet(names);
+          if (detected) targetSheet = detected;
+          console.log("[StagedImport] Payroll sheet detected:", detected, "from", names);
+        }
+        setSelectedSheet(targetSheet);
+
+        const result = await parseExcelWithSheets(f, targetSheet, { defval: "" });
+        rows = result.rows;
+        console.log(`[StagedImport] Reading sheet "${targetSheet}" → ${rows.length} rows`);
+      } else {
+        rows = await parseAnyFileToJson(f, { defval: "" });
+      }
+
       if (!rows || rows.length === 0) {
         toast({ title: "Archivo vacío", description: "No se encontraron filas de datos en el archivo.", variant: "destructive" });
         return;
@@ -207,7 +237,6 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       const mapping = detectColumns(allHeaders);
       console.log("[StagedImport] Column mapping:", mapping);
 
-      // Content-based validation: check if mapped employee_name column looks suspicious
       const nameCol = mapping.employee_name || "";
       if (nameCol) {
         const suspicion = detectSuspiciousNameColumn(rows, nameCol);
@@ -223,6 +252,29 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     } catch (err: any) {
       console.error("[StagedImport] File parse error:", err);
       toast({ title: "Error al leer archivo", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleSheetChange = async (newSheet: string) => {
+    if (!file || newSheet === selectedSheet) return;
+    setSelectedSheet(newSheet);
+    try {
+      const result = await parseExcelWithSheets(file, newSheet, { defval: "" });
+      setRawRows(result.rows);
+      console.log(`[StagedImport] Switched to sheet "${newSheet}" → ${result.rows.length} rows`);
+      if (result.rows.length > 0) {
+        const allHeaders = Object.keys(result.rows[0]);
+        const mapping = detectColumns(allHeaders);
+        setColumnMapping(mapping);
+        setNameColumnWarning("");
+        const nameCol = mapping.employee_name || "";
+        if (nameCol) {
+          const suspicion = detectSuspiciousNameColumn(result.rows, nameCol);
+          if (suspicion.suspicious) setNameColumnWarning(`⚠ "${nameCol}": ${suspicion.reason}`);
+        }
+      }
+    } catch (err: any) {
+      toast({ title: "Error al leer hoja", description: err.message, variant: "destructive" });
     }
   };
 
@@ -636,6 +688,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
             <CardTitle className="text-base flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" />
               Vista Previa: {file?.name}
+              {selectedSheet && <Badge variant="outline" className="text-xs">Hoja: {selectedSheet}</Badge>}
               <Badge variant="secondary">{rawRows.length} filas</Badge>
             </CardTitle>
             <CardDescription>
@@ -643,6 +696,24 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Sheet selector for multi-sheet Excel files */}
+            {sheetNames.length > 1 && (
+              <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
+                <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Hoja activa:</span>
+                <Select value={selectedSheet} onValueChange={handleSheetChange}>
+                  <SelectTrigger className="h-8 w-[220px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sheetNames.map(name => (
+                      <SelectItem key={name} value={name}>{name.trim()}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground">({sheetNames.length} hojas disponibles)</span>
+              </div>
+            )}
             {/* Suspicious column warning */}
             {nameColumnWarning && (
               <Alert variant="destructive">
