@@ -48,19 +48,19 @@ export default function SyncStatusPanel({ companyId }: Props) {
     // Fetch recent imports as sync history
     const { data: imports } = await supabase
       .from("imports")
-      .select("id, file_name, status, created_at, total_rows, matched_rows, error_rows, import_type")
+      .select("id, file_name, status, created_at, row_count")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
       .limit(20);
 
     setHistory((imports || []).map(i => ({
       id: i.id,
-      sync_type: i.import_type || "unknown",
+      sync_type: "import",
       file_name: i.file_name || "",
       status: i.status || "pending",
-      rows_processed: i.total_rows || 0,
-      rows_matched: i.matched_rows || 0,
-      rows_errors: i.error_rows || 0,
+      rows_processed: i.row_count || 0,
+      rows_matched: 0,
+      rows_errors: 0,
       created_at: i.created_at,
     })));
     setLoading(false);
