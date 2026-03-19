@@ -419,7 +419,12 @@ export default function PeriodSummary() {
                 <SelectValue placeholder="Seleccionar periodo" />
               </SelectTrigger>
               <SelectContent>
-                {periods.map(p => {
+                {hasDateFilter && visiblePeriods.length !== periods.length && (
+                  <div className="px-2 py-1.5 text-[10px] text-muted-foreground border-b mb-1">
+                    {visiblePeriods.length} de {periods.length} periodos en rango
+                  </div>
+                )}
+                {visiblePeriods.map(p => {
                   const today = new Date().toISOString().slice(0, 10);
                   const isCurrent = p.start_date <= today && p.end_date >= today;
                   return (
@@ -428,6 +433,11 @@ export default function PeriodSummary() {
                     </SelectItem>
                   );
                 })}
+                {visiblePeriods.length === 0 && (
+                  <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                    No hay periodos en este rango
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>
