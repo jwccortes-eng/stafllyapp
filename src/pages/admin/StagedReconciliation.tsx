@@ -34,6 +34,9 @@ import PeriodJournal from "@/components/reconciliation/PeriodJournal";
 import PeriodComparison from "@/components/reconciliation/PeriodComparison";
 import FormalSignoffPanel from "@/components/reconciliation/FormalSignoffPanel";
 import RolloutReadiness from "@/components/reconciliation/RolloutReadiness";
+import UATIssueTracker from "@/components/reconciliation/UATIssueTracker";
+import PilotReviewReport from "@/components/reconciliation/PilotReviewReport";
+import StabilizationDashboard from "@/components/reconciliation/StabilizationDashboard";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 /* ── Status → workflow step mapping ── */
