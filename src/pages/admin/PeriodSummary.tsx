@@ -748,6 +748,9 @@ export default function PeriodSummary() {
                       <TableCell className="text-right font-mono font-bold tabular-nums">${fmt(grandBase)}</TableCell>
                       <TableCell className="text-right font-mono font-bold tabular-nums text-earning">+${fmt(grandExtras)}</TableCell>
                       <TableCell className="text-right font-mono font-bold tabular-nums text-deduction">−${fmt(grandDeductions)}</TableCell>
+                      {grandAdvances > 0 && (
+                        <TableCell className="text-right font-mono font-bold tabular-nums text-warning">−${fmt(grandAdvances)}</TableCell>
+                      )}
                       <TableCell className="text-right font-mono font-bold tabular-nums text-lg">${fmt(grandTotal)}</TableCell>
                     </TableRow>
                   </>
