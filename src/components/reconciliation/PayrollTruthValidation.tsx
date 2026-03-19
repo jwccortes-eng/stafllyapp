@@ -216,28 +216,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         .eq("company_id", companyId)
         .maybeSingle();
 
-      const periodStatus = periodStatusData as {
+      const periodStatus = periodStatusData as unknown as {
         period_id: string | null;
         period_start: string;
         period_end: string;
         payroll_batch_id: string | null;
       } | null;
-
-      if (!periodStatus) {
-        setReconData([]);
-        return;
-      }
-
-      let effectivePeriodId: string | null = periodStatus.period_id ?? null;
-      if (!effectivePeriodId) {
-        const { data: matchedPeriodData } = await supabase
-          .from("pay_periods" as any)
-          .select("id")
-          .eq("company_id", companyId)
-          .eq("start_date", periodStatus.period_start)
-          .eq("end_date", periodStatus.period_end)
-          .maybeSingle();
-        const matchedPeriod = matchedPeriodData as { id: string } | null;
+...
+        const matchedPeriod = matchedPeriodData as unknown as { id: string } | null;
         effectivePeriodId = matchedPeriod?.id ?? null;
       }
 
