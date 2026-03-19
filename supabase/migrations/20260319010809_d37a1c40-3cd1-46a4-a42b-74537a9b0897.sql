@@ -1,0 +1,1 @@
+ALTER TABLE public.employee_financial_records ADD COLUMN IF NOT EXISTS approval_note text;
