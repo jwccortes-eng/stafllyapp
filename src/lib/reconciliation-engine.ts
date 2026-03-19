@@ -54,6 +54,16 @@ export interface EmployeeMatchResult {
 function fuzzyNameScore(a: string, b: string): number {
   if (a === b) return 1;
   if (!a || !b) return 0;
+
+  // Try both orderings (handles first/last name inversion)
+  const score1 = _partScore(a, b);
+  const aParts = a.split(" ").filter(Boolean);
+  const reversed = [...aParts].reverse().join(" ");
+  const score2 = reversed !== a ? _partScore(reversed, b) : 0;
+  return Math.max(score1, score2);
+}
+
+function _partScore(a: string, b: string): number {
   const aParts = a.split(" ").filter(Boolean);
   const bParts = b.split(" ").filter(Boolean);
   let matched = 0;

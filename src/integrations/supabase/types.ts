@@ -1595,6 +1595,61 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_aliases: {
+        Row: {
+          alias_name: string
+          alias_name_normalized: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          source: string
+        }
+        Insert: {
+          alias_name: string
+          alias_name_normalized: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          source?: string
+        }
+        Update: {
+          alias_name?: string
+          alias_name_normalized?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_aliases_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_aliases_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_aliases_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_availability_config: {
         Row: {
           blocked_weekdays: number[]
