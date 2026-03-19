@@ -37,6 +37,9 @@ import RolloutReadiness from "@/components/reconciliation/RolloutReadiness";
 import UATIssueTracker from "@/components/reconciliation/UATIssueTracker";
 import PilotReviewReport from "@/components/reconciliation/PilotReviewReport";
 import StabilizationDashboard from "@/components/reconciliation/StabilizationDashboard";
+import PilotRunbook from "@/components/reconciliation/PilotRunbook";
+import PeriodNotes from "@/components/reconciliation/PeriodNotes";
+import StabilizationPriorities from "@/components/reconciliation/StabilizationPriorities";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 /* ── Status → workflow step mapping ── */
