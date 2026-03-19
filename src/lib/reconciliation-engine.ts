@@ -391,6 +391,8 @@ export function classifyPayrollRow(row: Record<string, any>): PayrollClassificat
 // ─── Column Detection ───
 export interface ColumnMapping {
   employee_name?: string;
+  employee_first_name?: string;
+  employee_last_name?: string;
   employee_phone?: string;
   employee_email?: string;
   external_id?: string;
@@ -406,31 +408,48 @@ export interface ColumnMapping {
   shift_title?: string;
   client_name?: string;
   location_name?: string;
+  notes?: string;
+}
+
+// Patterns that are NOTES columns — must be excluded from employee_name matching
+const NOTES_EXCLUSION_PATTERNS = [
+  /\bnotes?\b/i, /\bcomment/i, /\bobs(ervacion)?/i, /\bnotas?\b/i,
+  /\bcomentario/i, /\bdescription/i, /\bdetail/i,
+];
+
+function isNotesColumn(header: string): boolean {
+  const h = normalizeHeader(header);
+  return NOTES_EXCLUSION_PATTERNS.some(p => p.test(h));
 }
 
 // Aliases sorted from most specific to least specific per field
-const COLUMN_ALIASES: Record<keyof ColumnMapping, string[]> = {
-  employee_name: ["full name", "employee name", "worker name", "nombre completo", "nombre empleado", "empleado", "employee", "worker", "name", "nombre", "user"],
+const COLUMN_ALIASES: Record<string, string[]> = {
+  notes: ["employee notes", "manager notes", "notes", "note", "comments", "notas", "comentarios", "observaciones", "description"],
+  employee_first_name: ["first name", "first_name", "nombre", "given name", "primer nombre"],
+  employee_last_name: ["last name", "last_name", "apellido", "surname", "family name"],
+  employee_name: ["full name", "employee name", "worker name", "nombre completo", "nombre empleado", "empleado", "employee", "worker", "name", "nombre", "user", "users", "person", "staff"],
   employee_phone: ["phone number", "phone", "mobile", "tel", "telefono", "celular"],
   employee_email: ["email address", "email", "correo", "e-mail"],
-  external_id: ["connecteam id", "external id", "employee id", "worker id", "user id", "emp id"],
-  work_date: ["shift date", "work date", "schedule date", "fecha turno", "fecha", "date", "day"],
+  external_id: ["connecteam id", "external id", "employee id", "worker id", "user id", "emp id", "employer id"],
+  work_date: ["shift date", "work date", "schedule date", "fecha turno", "fecha", "date", "day", "start date"],
   start_time: ["scheduled start", "start time", "hora inicio", "check in", "start"],
   end_time: ["scheduled end", "end time", "hora fin", "check out", "end"],
-  clock_in: ["clock in", "actual start", "punch in", "entrada", "check-in", "clock-in"],
-  clock_out: ["clock out", "actual end", "punch out", "salida", "check-out", "clock-out"],
-  total_hours: ["total hours", "worked hours", "total time", "hours worked", "hours", "horas", "duration"],
+  clock_in: ["clock in", "actual start", "punch in", "entrada", "check-in", "clock-in", "in"],
+  clock_out: ["clock out", "actual end", "punch out", "salida", "check-out", "clock-out", "out"],
+  total_hours: ["total hours", "worked hours", "total time", "hours worked", "hours", "horas", "duration", "shift hours"],
   total_pay: ["total pay", "gross pay", "total amount", "total", "amount", "pay", "pago", "monto", "gross"],
-  hourly_rate: ["hourly rate", "pay rate", "rate", "tarifa"],
+  hourly_rate: ["hourly rate", "pay rate", "rate", "tarifa", "hourly rate (usd)"],
   job_title: ["job title", "job name", "job", "puesto", "position", "rol"],
-  shift_title: ["shift title", "shift name", "shift", "turno"],
+  shift_title: ["shift title", "shift name", "shift", "turno", "scheduled shift title"],
   client_name: ["client name", "client", "customer", "cliente", "account"],
   location_name: ["location name", "location", "site", "ubicacion", "place", "address"],
 };
 
-// Field detection priority: detect more specific fields first to avoid stealing columns
+// Field detection priority: detect notes first to prevent stealing, then specific fields, employee_name last
 const DETECTION_ORDER: (keyof ColumnMapping)[] = [
+  "notes",
   "external_id", "employee_email", "employee_phone",
+  "employee_first_name", "employee_last_name",
   "clock_in", "clock_out", "start_time", "end_time",
   "work_date", "total_hours", "total_pay", "hourly_rate",
   "job_title", "shift_title", "client_name", "location_name",
@@ -450,13 +469,17 @@ export function detectColumns(headers: string[]): ColumnMapping {
 
   for (const field of DETECTION_ORDER) {
     const aliases = COLUMN_ALIASES[field];
+    if (!aliases) continue;
     let bestIdx = -1;
-    let bestPriority = Infinity; // lower = better match
+    let bestPriority = Infinity;
 
     for (let i = 0; i < normHeaders.length; i++) {
       if (usedIndices.has(i)) continue;
       const nh = normHeaders[i];
       if (!nh) continue;
+
+      // For employee_name: skip anything that looks like notes
+      if (field === "employee_name" && isNotesColumn(headers[i])) continue;
 
       for (let a = 0; a < aliases.length; a++) {
         const alias = normalizeHeader(aliases[a]);
@@ -464,7 +487,7 @@ export function detectColumns(headers: string[]): ColumnMapping {
 
         // Tier 1: Exact match
         if (nh === alias) {
-          priority = a; // alias index as tiebreaker
+          priority = a;
         }
         // Tier 2: Header starts with alias
         else if (nh.startsWith(alias + " ") || nh.startsWith(alias)) {
@@ -489,6 +512,49 @@ export function detectColumns(headers: string[]): ColumnMapping {
   }
 
   return mapping;
+}
+
+/**
+ * Resolve the employee name from a raw data row using column mapping.
+ * Supports combined "employee_name" or separate "first_name" + "last_name".
+ */
+export function resolveEmployeeName(d: Record<string, any>, colMap: ColumnMapping): string {
+  // Try combined name first
+  const combined = (d[colMap.employee_name || ""] || "").trim();
+  if (combined) return combined;
+  // Fall back to first + last
+  const first = (d[colMap.employee_first_name || ""] || "").trim();
+  const last = (d[colMap.employee_last_name || ""] || "").trim();
+  if (first || last) return `${first} ${last}`.trim();
+  return "";
+}
+
+/**
+ * Content-based heuristic: check if a column contains free-text notes rather than person names.
+ * Samples a few values and checks for long text, sentences, etc.
+ */
+export function detectSuspiciousNameColumn(
+  rows: Record<string, any>[],
+  columnKey: string,
+): { suspicious: boolean; reason: string } {
+  const sample = rows.slice(0, Math.min(20, rows.length));
+  let longTextCount = 0;
+  let sentenceCount = 0;
+  let emptyCount = 0;
+
+  for (const row of sample) {
+    const val = (row[columnKey] || "").toString().trim();
+    if (!val) { emptyCount++; continue; }
+    if (val.length > 40) longTextCount++;
+    if (/\s{2,}|[.!?;]|\bpero\b|\bporque\b|\bpara\b/i.test(val)) sentenceCount++;
+  }
+
+  const nonEmpty = sample.length - emptyCount;
+  if (nonEmpty === 0) return { suspicious: false, reason: "" };
+
+  if (longTextCount / nonEmpty > 0.3) return { suspicious: true, reason: `${Math.round(longTextCount / nonEmpty * 100)}% de valores tienen >40 chars — parece texto libre, no nombres` };
+  if (sentenceCount / nonEmpty > 0.2) return { suspicious: true, reason: `${Math.round(sentenceCount / nonEmpty * 100)}% de valores contienen frases — parece notas/comentarios` };
+  return { suspicious: false, reason: "" };
 }
 
 // ─── Deduplication ───

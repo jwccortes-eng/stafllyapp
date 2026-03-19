@@ -13,7 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, ArrowRight, Eye, Loader2, Users, ShieldAlert, Info, UserX, Link2 } from "lucide-react";
 import UnmatchedResolutionPanel from "./UnmatchedResolutionPanel";
 import { parseAnyFileToJson } from "@/lib/safe-xlsx";
-import { hashRow, detectColumns, normalizeText, type ColumnMapping } from "@/lib/reconciliation-engine";
+import { hashRow, detectColumns, normalizeText, resolveEmployeeName, detectSuspiciousNameColumn, type ColumnMapping } from "@/lib/reconciliation-engine";
 import {
   normalizeScheduleRows,
   normalizeClockRows,
@@ -188,10 +188,13 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     }
   }, [companyId, resolutionScopeKey, sourceType, toast]);
 
+  const [nameColumnWarning, setNameColumnWarning] = useState<string>("");
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     setFile(f);
+    setNameColumnWarning("");
     try {
       const rows = await parseAnyFileToJson(f, { defval: "" });
       if (!rows || rows.length === 0) {
@@ -203,6 +206,17 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
       console.log("[StagedImport] Headers detected:", allHeaders);
       const mapping = detectColumns(allHeaders);
       console.log("[StagedImport] Column mapping:", mapping);
+
+      // Content-based validation: check if mapped employee_name column looks suspicious
+      const nameCol = mapping.employee_name || "";
+      if (nameCol) {
+        const suspicion = detectSuspiciousNameColumn(rows, nameCol);
+        if (suspicion.suspicious) {
+          console.warn("[StagedImport] Suspicious employee_name column:", nameCol, suspicion.reason);
+          setNameColumnWarning(`⚠ La columna "${nameCol}" parece contener notas/texto libre en lugar de nombres. ${suspicion.reason}. Revisa el mapeo antes de normalizar.`);
+        }
+      }
+
       setColumnMapping(mapping);
       setStep("preview");
       await loadEmployees();
@@ -237,9 +251,9 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     );
 
     let result: any;
-    if (sourceType === "schedule") result = normalizeScheduleRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot);
-    else if (sourceType === "clock") result = normalizeClockRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot);
-    else result = normalizePayrollRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot);
+    if (sourceType === "schedule") result = normalizeScheduleRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot, columnMapping);
+    else if (sourceType === "clock") result = normalizeClockRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot, columnMapping);
+    else result = normalizePayrollRows(rawWithIds, employees, aliasSnapshot, manualResolutionSnapshot, columnMapping);
 
     console.log("[StagedImport] Normalization result:", {
       normalized: result.normalized.length,
@@ -251,7 +265,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
     setErrors(result.errors);
     setDiagnostics(result.diagnostics);
     return result;
-  }, [rawRows, sourceType, employees, aliases, manualResolutions]);
+  }, [rawRows, sourceType, employees, aliases, manualResolutions, columnMapping]);
 
   const handleNormalize = () => {
     const result = runNormalization();
@@ -625,12 +639,101 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
               <Badge variant="secondary">{rawRows.length} filas</Badge>
             </CardTitle>
             <CardDescription>
-              Columnas detectadas: {Object.entries(columnMapping).filter(([, v]) => v).map(([k, v]) => `${k}→"${v}"`).join(", ") || "Ninguna auto-detectada"}
+              Revisa y ajusta el mapeo de columnas antes de normalizar.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Suspicious column warning */}
+            {nameColumnWarning && (
+              <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Mapeo de columna sospechoso</AlertTitle>
+                <AlertDescription className="text-sm">{nameColumnWarning}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Column Mapping Editor */}
+            <div className="border rounded-md p-3 space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Mapeo de Columnas</span>
+                <span className="text-xs text-muted-foreground">(ajusta si la auto-detección falló)</span>
+              </div>
+              {(() => {
+                const allHeaders = rawRows.length > 0 ? Object.keys(rawRows[0]) : [];
+                const FIELD_LABELS: Record<string, string> = {
+                  employee_name: "👤 Nombre completo",
+                  employee_first_name: "👤 Nombre (First)",
+                  employee_last_name: "👤 Apellido (Last)",
+                  employee_phone: "📞 Teléfono",
+                  employee_email: "✉️ Email",
+                  external_id: "🆔 ID externo",
+                  work_date: "📅 Fecha",
+                  start_time: "⏰ Hora inicio",
+                  end_time: "⏰ Hora fin",
+                  clock_in: "🟢 Clock In",
+                  clock_out: "🔴 Clock Out",
+                  total_hours: "⏱ Horas totales",
+                  total_pay: "💰 Pago total",
+                  hourly_rate: "💵 Tarifa/hora",
+                  job_title: "💼 Puesto/Job",
+                  shift_title: "📋 Turno/Shift",
+                  client_name: "🏢 Cliente",
+                  location_name: "📍 Ubicación",
+                  notes: "📝 Notas",
+                };
+                const relevantFields: (keyof ColumnMapping)[] = sourceType === "clock"
+                  ? ["employee_name", "employee_first_name", "employee_last_name", "external_id", "work_date", "clock_in", "clock_out", "total_hours", "hourly_rate", "shift_title", "client_name", "location_name", "notes"]
+                  : sourceType === "schedule"
+                  ? ["employee_name", "employee_first_name", "employee_last_name", "external_id", "work_date", "start_time", "end_time", "shift_title", "client_name", "location_name", "notes"]
+                  : ["employee_name", "employee_first_name", "employee_last_name", "external_id", "work_date", "total_hours", "total_pay", "hourly_rate", "notes"];
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {relevantFields.map(field => (
+                      <div key={field} className="flex items-center gap-1.5">
+                        <span className="text-xs w-32 truncate" title={field}>{FIELD_LABELS[field] || field}</span>
+                        <Select
+                          value={columnMapping[field] || "__none__"}
+                          onValueChange={(val) => {
+                            const next = { ...columnMapping };
+                            if (val === "__none__") {
+                              delete next[field];
+                            } else {
+                              next[field] = val;
+                            }
+                            setColumnMapping(next);
+                            setNameColumnWarning("");
+                            // Re-validate if employee name changed
+                            if ((field === "employee_name" || field === "employee_first_name") && val !== "__none__") {
+                              const suspicion = detectSuspiciousNameColumn(rawRows, val);
+                              if (suspicion.suspicious) setNameColumnWarning(`⚠ "${val}": ${suspicion.reason}`);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-xs flex-1">
+                            <SelectValue placeholder="(no mapeado)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">(no mapeado)</SelectItem>
+                            {allHeaders.map(h => (
+                              <SelectItem key={h} value={h}>{h}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              {/* Quick mapping info */}
+              <div className="text-xs text-muted-foreground mt-2 border-t pt-2">
+                Nombre resolverá de: {columnMapping.employee_name ? `"${columnMapping.employee_name}"` : columnMapping.employee_first_name ? `"${columnMapping.employee_first_name}" + "${columnMapping.employee_last_name || "(vacío)"}"` : "⚠ sin mapear"}
+              </div>
+            </div>
+
             {/* Employee roster diagnostic */}
-            <Alert className={`mb-4 ${employees.length === 0 ? "border-destructive" : ""}`} variant={employees.length === 0 ? "destructive" : "default"}>
+            <Alert className={`${employees.length === 0 ? "border-destructive" : ""}`} variant={employees.length === 0 ? "destructive" : "default"}>
               <Users className="h-4 w-4" />
               <AlertTitle>Diagnóstico de Empleados — Roster de Empresa</AlertTitle>
               <AlertDescription className="text-sm space-y-1">
@@ -653,7 +756,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                 </div>
                 {employees.length === 0 && (
                   <div className="mt-2 p-2 bg-destructive/10 rounded text-destructive font-semibold text-sm">
-                    🚫 Roster vacío — No hay empleados cargados para esta empresa. Verifica que el contexto de empresa sea correcto y que existan empleados registrados antes de importar.
+                    🚫 Roster vacío — No hay empleados cargados para esta empresa.
                   </div>
                 )}
               </AlertDescription>
@@ -683,7 +786,7 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" onClick={reset}>Cancelar</Button>
-              <Button onClick={handleNormalize} disabled={employees.length === 0}>
+              <Button onClick={handleNormalize} disabled={employees.length === 0 || !!(nameColumnWarning && !columnMapping.employee_first_name && !columnMapping.employee_name)}>
                 <ArrowRight className="h-4 w-4 mr-1" /> Normalizar & Emparejar
               </Button>
             </div>

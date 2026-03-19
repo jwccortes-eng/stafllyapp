@@ -5,7 +5,7 @@
  */
 import {
   normalizeText, normalizePhone, normalizeEmail, hashRow,
-  matchEmployee, classifyPayrollRow, detectColumns,
+  matchEmployee, classifyPayrollRow, detectColumns, resolveEmployeeName,
   type EmployeeRecord, type ColumnMapping, type EmployeeMatchStatus,
 } from "./reconciliation-engine";
 
@@ -251,23 +251,24 @@ export function normalizeScheduleRows(
   employees: EmployeeRecord[],
   aliases: EmployeeAlias[] = [],
   manualResolutions: ManualNameResolution[] = [],
+  customColumnMapping?: ColumnMapping,
 ): NormalizationResult<any> {
   if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
   const headers = Object.keys(rawRows[0].raw_data);
-  const colMap = detectColumns(headers);
+  const colMap = customColumnMapping ?? detectColumns(headers);
   const warnings: string[] = [];
   const errors: string[] = [];
   const systemRowNames: string[] = [];
   let blankNameRows = 0;
 
-  if (!colMap.employee_name && !colMap.external_id) {
+  if (!colMap.employee_name && !colMap.employee_first_name && !colMap.external_id) {
     errors.push("Could not detect employee name or ID column");
   }
 
   const normalized = rawRows.map(raw => {
     const d = raw.raw_data;
-    const nameRaw = d[colMap.employee_name || ""] || "";
+    const nameRaw = resolveEmployeeName(d, colMap);
     const phone = d[colMap.employee_phone || ""] || null;
     const email = d[colMap.employee_email || ""] || null;
     const extId = d[colMap.external_id || ""] || null;
@@ -353,11 +354,12 @@ export function normalizeClockRows(
   employees: EmployeeRecord[],
   aliases: EmployeeAlias[] = [],
   manualResolutions: ManualNameResolution[] = [],
+  customColumnMapping?: ColumnMapping,
 ): NormalizationResult<any> {
   if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
   const headers = Object.keys(rawRows[0].raw_data);
-  const colMap = detectColumns(headers);
+  const colMap = customColumnMapping ?? detectColumns(headers);
   const warnings: string[] = [];
   const errors: string[] = [];
   const systemRowNames: string[] = [];
@@ -365,7 +367,7 @@ export function normalizeClockRows(
 
   const normalized = rawRows.map(raw => {
     const d = raw.raw_data;
-    const nameRaw = d[colMap.employee_name || ""] || "";
+    const nameRaw = resolveEmployeeName(d, colMap);
     const phone = d[colMap.employee_phone || ""] || null;
     const email = d[colMap.employee_email || ""] || null;
     const extId = d[colMap.external_id || ""] || null;
@@ -415,11 +417,12 @@ export function normalizePayrollRows(
   employees: EmployeeRecord[],
   aliases: EmployeeAlias[] = [],
   manualResolutions: ManualNameResolution[] = [],
+  customColumnMapping?: ColumnMapping,
 ): NormalizationResult<any> {
   if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
   const headers = Object.keys(rawRows[0].raw_data);
-  const colMap = detectColumns(headers);
+  const colMap = customColumnMapping ?? detectColumns(headers);
   const warnings: string[] = [];
   const errors: string[] = [];
   const systemRowNames: string[] = [];
@@ -427,7 +430,7 @@ export function normalizePayrollRows(
 
   const normalized = rawRows.map(raw => {
     const d = raw.raw_data;
-    const nameRaw = d[colMap.employee_name || ""] || "";
+    const nameRaw = resolveEmployeeName(d, colMap);
     const phone = d[colMap.employee_phone || ""] || null;
     const email = d[colMap.employee_email || ""] || null;
     const extId = d[colMap.external_id || ""] || null;
