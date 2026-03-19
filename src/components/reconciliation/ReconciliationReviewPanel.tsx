@@ -267,6 +267,13 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
           </div>
         </Card>
       )}
+      <MatchDetailDrawer
+        match={selectedMatch}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onResolve={resolveMatch}
+        companyId={companyId}
+      />
     </div>
   );
 }
