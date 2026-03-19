@@ -14,17 +14,20 @@ import MatchDetailDrawer from "./MatchDetailDrawer";
 import MatchingConflictSummary from "./MatchingConflictSummary";
 import UnmatchedScheduleBreakdown from "./UnmatchedScheduleBreakdown";
 
-/** Fetch all rows from a table, bypassing the 1000-row default limit */
-async function fetchAll(table: string, companyId: string) {
+/** Fetch all rows from a table, scoped by batch_id if available, otherwise by company_id */
+async function fetchAllByBatch(table: string, companyId: string, batchId: string | null) {
   const PAGE = 1000;
   let all: any[] = [];
   let from = 0;
   while (true) {
-    const { data, error } = await supabase
+    let q = supabase
       .from(table as any)
       .select("*")
-      .eq("company_id", companyId)
-      .range(from, from + PAGE - 1);
+      .eq("company_id", companyId);
+    if (batchId) {
+      q = q.eq("batch_id", batchId);
+    }
+    const { data, error } = await q.range(from, from + PAGE - 1);
     if (error) { console.error(`[fetchAll] ${table} error:`, error); break; }
     if (!data || data.length === 0) break;
     all = all.concat(data);
@@ -34,9 +37,19 @@ async function fetchAll(table: string, companyId: string) {
   return all;
 }
 
+interface PeriodScope {
+  schedule_batch_id: string | null;
+  clock_batch_id: string | null;
+  payroll_batch_id: string | null;
+  period_start: string;
+  period_end: string;
+  period_label: string;
+}
+
 interface Props {
   companyId: string | null;
   onRefresh: () => void;
+  periodScope?: PeriodScope | null;
 }
 
 interface MatchRow {
