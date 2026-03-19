@@ -13,6 +13,7 @@ import { matchScheduleToClock, type NormalizedScheduleRow, type NormalizedClockR
 import MatchDetailDrawer from "./MatchDetailDrawer";
 import MatchingConflictSummary from "./MatchingConflictSummary";
 import UnmatchedScheduleBreakdown from "./UnmatchedScheduleBreakdown";
+import ClockWithoutScheduleBreakdown from "./ClockWithoutScheduleBreakdown";
 
 /** Fetch all rows from a table, scoped by batch_id if available, otherwise by company_id */
 async function fetchAllByBatch(table: string, companyId: string, batchId: string | null) {
@@ -329,6 +330,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
       </div>
 
       <MatchingConflictSummary companyId={companyId} />
+      <ClockWithoutScheduleBreakdown companyId={companyId} onRefresh={onRefresh} />
       <UnmatchedScheduleBreakdown companyId={companyId} onRefresh={onRefresh} />
 
       {loading ? (
