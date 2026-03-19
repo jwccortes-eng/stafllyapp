@@ -374,6 +374,7 @@ export function normalizeClockRows(
       matched_employee_id: empMatch.ambiguous ? null : empMatch.employee_id,
       employee_match_confidence: empMatch.confidence,
       employee_match_method: empMatch.method,
+      _match_status: empMatch.match_status,
       work_date: workDate,
       clock_in: clockIn,
       clock_out: clockOut,
