@@ -149,7 +149,7 @@ function classifyNoTitle(
   if (!hasLoc && !hasJob && !hasNotes) return "no_title_placeholder";
   if (!hasLoc) return "no_title_no_location";
 
-  if (row.start_time && row.end_time && hasLocation) return "no_title_likely_real";
+  if (row.start_time && row.end_time && hasLoc) return "no_title_likely_real";
   if (row.start_time || row.end_time) return "no_title_has_times";
 
   return "no_title_placeholder";
