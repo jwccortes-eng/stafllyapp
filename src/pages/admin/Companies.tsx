@@ -49,6 +49,8 @@ interface CompanyRecord {
   invite_code: string;
   company_code: number | null;
   created_at: string;
+  logo_url: string | null;
+  brand_color: string | null;
   user_count: number;
   users: CompanyUser[];
   active_modules: number;
