@@ -221,6 +221,7 @@ function App() {
                 <Route path="attendance" element={<Attendance />} />
                 <Route path="quality" element={<QualityDashboard />} />
                 <Route path="migration" element={<MigrationCommandCenter />} />
+                <Route path="company-migration" element={<CompanyMigration />} />
                 <Route path="reconciliation-report" element={<ReconciliationReport />} />
                 <Route path="advances-loans" element={<AdvancesLoans />} />
                 <Route path="kiosk-devices" element={<KioskDevices />} />
