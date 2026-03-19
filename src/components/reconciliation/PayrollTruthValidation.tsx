@@ -213,7 +213,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         dailyVariance: dailyVar,
         rideVariance: rideVar,
         totalVariance: totalVar,
-        status: absTotal < 1 ? "match" : absTotal < 50 ? "close" : "mismatch",
+        status: (absTotal < 1 ? "match" : absTotal < 50 ? "close" : "mismatch") as ComparisonRow["status"],
       };
     }).sort((a, b) => Math.abs(b.totalVariance) - Math.abs(a.totalVariance));
   }, [truthData, reconData]);
