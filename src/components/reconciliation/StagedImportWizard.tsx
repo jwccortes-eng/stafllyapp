@@ -640,6 +640,9 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                   <span><span className="font-semibold">{employees.length}</span> total roster</span>
                   <span><span className="font-semibold">{aliases.length}</span> alias</span>
                 </div>
+                <div className="text-xs text-muted-foreground">
+                  Resoluciones manuales cargadas: <code className="bg-muted px-1 rounded">{manualResolutions.length}</code> · Scope: <code className="bg-muted px-1 rounded">{resolutionScopeKey}</code>
+                </div>
                 <div className="text-xs text-muted-foreground mt-1 space-y-1">
                   <div>
                     Empresa: <code className="bg-muted px-1 rounded">{companyName || "N/A"}</code> · Company ID: <code className="bg-muted px-1 rounded">{companyId || "N/A"}</code>
