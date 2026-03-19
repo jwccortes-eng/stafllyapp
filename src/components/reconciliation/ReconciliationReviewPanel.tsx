@@ -62,21 +62,28 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
     if (!companyId) return;
     setRunningMatch(true);
     try {
+      console.log("[Matching] Fetching normalized rows for company:", companyId);
       // Fetch normalized rows
       const [schedRes, clockRes] = await Promise.all([
         supabase.from("normalized_schedule_rows" as any).select("*").eq("company_id", companyId),
         supabase.from("normalized_clock_rows" as any).select("*").eq("company_id", companyId),
       ]);
 
+      if (schedRes.error) console.error("[Matching] Schedule fetch error:", schedRes.error);
+      if (clockRes.error) console.error("[Matching] Clock fetch error:", clockRes.error);
+
       const schedules = (schedRes.data || []) as any as NormalizedScheduleRow[];
       const clocks = (clockRes.data || []) as any as NormalizedClockRow[];
 
+      console.log("[Matching] Found", schedules.length, "schedules and", clocks.length, "clocks");
+
       if (schedules.length === 0 && clocks.length === 0) {
-        toast({ title: "Sin datos", description: "Importa turnos y fichajes primero.", variant: "destructive" });
+        toast({ title: "Sin datos", description: "Importa turnos y fichajes primero desde la pestaña Importar.", variant: "destructive" });
         return;
       }
 
       const results = matchScheduleToClock(schedules, clocks);
+      console.log("[Matching] Generated", results.length, "match results");
 
       // Save matches
       const inserts = results.map(r => ({
@@ -94,7 +101,11 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
       }));
 
       for (let i = 0; i < inserts.length; i += 100) {
-        await supabase.from("reconciliation_matches" as any).insert(inserts.slice(i, i + 100) as any);
+        const { error } = await supabase.from("reconciliation_matches" as any).insert(inserts.slice(i, i + 100) as any);
+        if (error) {
+          console.error("[Matching] Match insert error:", error);
+          throw error;
+        }
       }
 
       // Create exceptions for unmatched
@@ -111,13 +122,24 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh }: Prop
           source_data: { flags: r.conflict_flags },
           status: "open",
         }));
-        await supabase.from("reconciliation_exceptions" as any).insert(exceptions as any);
+        const { error: excErr } = await supabase.from("reconciliation_exceptions" as any).insert(exceptions as any);
+        if (excErr) console.error("[Matching] Exception insert error:", excErr);
       }
 
       toast({ title: "Matching completado", description: `${results.length} emparejamientos generados, ${unmatched.length} sin match.` });
       onRefresh();
+
+      // Reload matches
+      const { data: newMatches } = await supabase
+        .from("reconciliation_matches" as any)
+        .select("*")
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      setMatches((newMatches || []) as any);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      console.error("[Matching] Error:", err);
+      toast({ title: "Error en matching", description: err.message, variant: "destructive" });
     } finally {
       setRunningMatch(false);
     }
