@@ -4922,6 +4922,56 @@ export type Database = {
           },
         ]
       }
+      payroll_concept_mappings: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          match_field: string
+          notes: string | null
+          pattern: string
+          priority: number
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          match_field?: string
+          notes?: string | null
+          pattern: string
+          priority?: number
+          target_type: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          match_field?: string
+          notes?: string | null
+          pattern?: string
+          priority?: number
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_concept_mappings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_import_batches: {
         Row: {
           company_id: string

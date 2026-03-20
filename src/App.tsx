@@ -102,6 +102,7 @@ const ShiftOperations = lazy(() => import("./pages/admin/ShiftOperations"));
 const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliation"));
 const CompensationValidation = lazy(() => import("./pages/admin/CompensationValidation"));
 const PayrollPilotClose = lazy(() => import("./pages/admin/PayrollPilotClose"));
+const PayrollMappings = lazy(() => import("./pages/admin/PayrollMappings"));
 
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
@@ -233,6 +234,7 @@ function App() {
                 <Route path="shift-ops" element={<ShiftOperations />} />
                 <Route path="compensation-validation" element={<CompensationValidation />} />
                 <Route path="payroll-pilot-close" element={<PayrollPilotClose />} />
+                <Route path="payroll-mappings" element={<PayrollMappings />} />
               </Route>
 
               {/* Employee portal routes */}
