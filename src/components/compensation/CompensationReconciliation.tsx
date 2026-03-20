@@ -595,8 +595,14 @@ export default function CompensationReconciliation() {
 
                                 {/* Quick actions */}
                                 <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/20">
-                                  <Button size="sm" variant="default" className="h-7 text-[11px]"
-                                    onClick={(e) => { e.stopPropagation(); setEditTarget({ id: row.employee_id, name: row.employee_name, profile: row.profile }); }}>
+                                  {!row.profile && (
+                                    <Button size="sm" variant="default" className="h-7 text-[11px]"
+                                      onClick={(e) => { e.stopPropagation(); handleEditOrCreate(row); }}>
+                                      <UserPlus className="h-3 w-3 mr-1" /> Crear perfil
+                                    </Button>
+                                  )}
+                                  <Button size="sm" variant={row.profile ? "default" : "secondary"} className="h-7 text-[11px]"
+                                    onClick={(e) => { e.stopPropagation(); handleEditOrCreate(row); }}>
                                     <Pencil className="h-3 w-3 mr-1" /> Editar compensación
                                   </Button>
                                   {row.profile && !row.profile.hourly_rate_override_manual && (row.profile.inferred_hourly_rate || row.profile.default_hourly_rate) && (
