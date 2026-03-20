@@ -22,6 +22,15 @@ export interface CompensationProfile {
   default_half_day_rate: number | null;
   default_ride_rate_regular: number | null;
   default_ride_rate_special: number | null;
+  overtime_hourly_rate: number | null;
+  kitchen_hourly_rate: number | null;
+  bonus_transport_hourly_rate: number | null;
+  double_pay_hourly_rate: number | null;
+  inferred_hourly_rate: number | null;
+  inferred_hourly_source: string | null;
+  inferred_hourly_confidence: string | null;
+  hourly_rate_last_verified_at: string | null;
+  hourly_rate_override_manual: boolean;
   rate_source: CompRateSource;
   effective_from: string;
   effective_to: string | null;
