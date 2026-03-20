@@ -50,6 +50,8 @@ interface ReconBreakdown {
   weekend_pay: number;
   manual_adj: number;
   other_pay: number;
+  unmapped_count: number;
+  unmapped_excluded_total: number;
   total_final: number;
   authoritative_total: number;
   authoritative_source: string | null;
