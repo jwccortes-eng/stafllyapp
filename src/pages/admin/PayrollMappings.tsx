@@ -44,7 +44,7 @@ export default function PayrollMappings() {
     <div className="space-y-6 p-4 md:p-6">
       <PageHeader
         title="Mapping de Conceptos de Payroll"
-        description="Configura cómo se clasifican los conceptos importados de nómina para reconciliación."
+        subtitle="Configura cómo se clasifican los conceptos importados de nómina para reconciliación."
       />
 
       {/* Stats */}

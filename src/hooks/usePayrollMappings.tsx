@@ -53,7 +53,7 @@ export const TARGET_TYPES = [
 ];
 
 export function usePayrollMappings() {
-  const { companyId } = useCompany();
+  const { selectedCompanyId: companyId } = useCompany();
   const { user } = useAuth();
   const [mappings, setMappings] = useState<PayrollMapping[]>([]);
   const [loading, setLoading] = useState(true);
