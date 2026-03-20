@@ -484,6 +484,14 @@ export default function CompensationValidation() {
 
                       {/* Quick actions */}
                       <div className="flex flex-wrap gap-1.5 pt-1">
+                        {!p && (
+                          <Button size="sm" variant="default" className="h-7 text-[11px]" onClick={() => handleCreateSingle(emp)}>
+                            <UserPlus className="h-3 w-3 mr-1" /> Crear perfil
+                          </Button>
+                        )}
+                        <Button size="sm" variant={p ? "outline" : "secondary"} className="h-7 text-[11px]" onClick={() => handleEditOrCreate(emp)}>
+                          <Pencil className="h-3 w-3 mr-1" /> Editar compensación
+                        </Button>
                         {p && !p.hourly_rate_override_manual && (p.inferred_hourly_rate || p.default_hourly_rate) && (
                           <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => confirmHourly(emp)}>
                             <CheckCircle className="h-3 w-3 mr-1" /> Confirmar hourly
