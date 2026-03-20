@@ -514,6 +514,20 @@ export function useReconciliationPeriod(companyId: string | null) {
         );
       }
 
+      // Hours breakdown
+      const hourlyHours = hourlyRows.reduce((s, r) => s + (Number(r.total_hours) || 0), 0);
+      const regularHours = Math.min(hourlyHours, OT_THRESHOLD);
+      const overtimeHours = Math.max(hourlyHours - OT_THRESHOLD, 0);
+
+      // Hourly rate detection
+      const hourlyRate = hourlyHours > 0 ? Math.round((hourlyPayTotal / hourlyHours) * 100) / 100 : null;
+      const dailyRate = dailyRows.length > 0 ? Math.round((dailyPayTotal / dailyRows.length) * 100) / 100 : null;
+
+      // Pay classification (only from classified rows, not unmapped)
+      const payTypes = classifiedPayrolls.filter(p => p._classified_type !== "unmapped").map(p => p._classified_type).filter(Boolean);
+      const uniqueTypes = [...new Set(payTypes)];
+      const classification = uniqueTypes.length === 0 ? "unknown" : uniqueTypes.length === 1 ? uniqueTypes[0] : "mixed";
+
       // Source payroll total (authoritative — use total_pay field directly, not sub-components)
       const sourcePayrollTotal = Math.round(totalPayrollAmount * 100) / 100;
 
@@ -528,6 +542,12 @@ export function useReconciliationPeriod(companyId: string | null) {
       }
       if (grandTotal === 0 && empPayrolls.length > 0) warnings.push("Total calculado es $0 con filas de nómina existentes");
       if (classification === "unknown") warnings.push("Clasificación de pago no determinada");
+      if (unmappedRows.length > 0) warnings.push(`${unmappedRows.length} registro(s) no clasificados ($${unmappedTotal.toFixed(2)}) excluidos del total`);
+      // Safety threshold: flag if unmapped > 20% of total
+      const totalWithUnmapped = grandTotal + unmappedTotal;
+      if (totalWithUnmapped > 0 && unmappedTotal / totalWithUnmapped > 0.20) {
+        warnings.push(`⚠️ CRÍTICO: "No clasificados" representa ${((unmappedTotal / totalWithUnmapped) * 100).toFixed(1)}% del total — requiere revisión`);
+      }
 
       // Variance: compare authoritative payroll total vs computed breakdown
       const varianceAmount = Math.round((grandTotal - sourcePayrollTotal) * 100) / 100;
