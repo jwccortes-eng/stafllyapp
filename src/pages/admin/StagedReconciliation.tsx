@@ -13,11 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
   ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool, Bug,
-  StickyNote, ListChecks, Target, DollarSign,
+  StickyNote, ListChecks, Target, DollarSign, RefreshCw, Calendar, Hash,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -98,6 +100,13 @@ function isTabEnabled(tab: TabDef, periodStatus: string | null): boolean {
   return STATUS_ORDER.indexOf(periodStatus) >= STATUS_ORDER.indexOf(tab.minStatus);
 }
 
+interface PayPeriodOption {
+  id: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
+
 export default function StagedReconciliation() {
   const { selectedCompanyId } = useCompany();
   const { toast } = useToast();
@@ -118,6 +127,8 @@ export default function StagedReconciliation() {
   const [newEnd, setNewEnd] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [employeeMap, setEmployeeMap] = useState<Map<string, string>>(new Map());
+  const [payPeriods, setPayPeriods] = useState<PayPeriodOption[]>([]);
+  const [reprocessing, setReprocessing] = useState(false);
 
   // ── Load employees ──
   useEffect(() => {
@@ -128,6 +139,17 @@ export default function StagedReconciliation() {
         (data || []).forEach(e => map.set(e.id, `${e.first_name} ${e.last_name}`));
         setEmployeeMap(map);
       });
+  }, [selectedCompanyId]);
+
+  // ── Load pay periods for selector ──
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    supabase.from("pay_periods")
+      .select("id, start_date, end_date, status")
+      .eq("company_id", selectedCompanyId)
+      .order("start_date", { ascending: false })
+      .limit(52)
+      .then(({ data }) => setPayPeriods((data || []) as PayPeriodOption[]));
   }, [selectedCompanyId]);
 
   // ── Auto-select latest active (non-locked) period on load ──
@@ -173,11 +195,57 @@ export default function StagedReconciliation() {
     }
   };
 
+  // ── Create from pay_period ──
+  const handleCreateFromPayPeriod = async (ppId: string) => {
+    const pp = payPeriods.find(p => p.id === ppId);
+    if (!pp) return;
+    // Check if reconciliation period already exists for this pay_period
+    const existing = periods.find(p => p.period_id === ppId);
+    if (existing) {
+      setActivePeriod(existing);
+      loadFinalRecords(existing.id);
+      loadClosingReceipt(existing.id);
+      setTab("closedesk");
+      toast({ title: "Periodo existente seleccionado" });
+      return;
+    }
+    const label = `${pp.start_date} → ${pp.end_date}`;
+    const p = await createPeriod(label, pp.start_date, pp.end_date, ppId);
+    if (p) {
+      setActivePeriod(p);
+      setTab("closedesk");
+    }
+  };
+
   const handleSelectPeriod = (p: PeriodStatus) => {
     setActivePeriod(p);
     loadFinalRecords(p.id);
     loadClosingReceipt(p.id);
     setTab("closedesk");
+  };
+
+  // ── Selector change (reconciliation period) ──
+  const handlePeriodSelectorChange = (periodId: string) => {
+    if (periodId === "__create__") {
+      setShowCreateDialog(true);
+      return;
+    }
+    if (periodId.startsWith("pp:")) {
+      handleCreateFromPayPeriod(periodId.replace("pp:", ""));
+      return;
+    }
+    const p = periods.find(pr => pr.id === periodId);
+    if (p) handleSelectPeriod(p);
+  };
+
+  // ── Reprocess period ──
+  const handleReprocessPeriod = async () => {
+    if (!activePeriod) return;
+    setReprocessing(true);
+    await generateFinalRecords(activePeriod.id);
+    await logJournal("reprocess", "Periodo reprocesado", `Clasificación y mappings reaplicados`);
+    toast({ title: "Periodo reprocesado", description: "Clasificación, mappings y varianzas recalculados." });
+    setReprocessing(false);
   };
 
   // ── Core actions with journal logging ──
@@ -274,6 +342,9 @@ export default function StagedReconciliation() {
     </div>
   );
 
+  // ── Tabs that require a period ──
+  const periodRequiredTabs = ["closedesk", "import", "review", "exceptions", "employees", "workbench", "approve", "validate", "publish", "signoff", "journal", "notes", "pilot"];
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -281,7 +352,84 @@ export default function StagedReconciliation() {
         subtitle="Importar → Emparejar → Revisar → Aprobar → Publicar → Cerrar"
       />
 
-      {/* ── Active Period Status Bar ── */}
+      {/* ── Period Selector Bar ── */}
+      <Card className="border-primary/20">
+        <CardContent className="py-3 px-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+            <div className="flex items-center gap-2 shrink-0">
+              <Calendar className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Periodo:</span>
+            </div>
+            <Select
+              value={activePeriod?.id || ""}
+              onValueChange={handlePeriodSelectorChange}
+            >
+              <SelectTrigger className="w-full md:w-[340px]">
+                <SelectValue placeholder="Selecciona un periodo para operar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__create__">➕ Crear nuevo periodo...</SelectItem>
+                {/* Reconciliation periods */}
+                {periods.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Periodos de reconciliación</div>
+                    {periods.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.period_label} ({p.status})
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                {/* Pay periods not yet linked */}
+                {payPeriods.filter(pp => !periods.some(p => p.period_id === pp.id)).length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Periodos de nómina (sin reconciliar)</div>
+                    {payPeriods
+                      .filter(pp => !periods.some(p => p.period_id === pp.id))
+                      .map(pp => (
+                        <SelectItem key={`pp:${pp.id}`} value={`pp:${pp.id}`}>
+                          {pp.start_date} → {pp.end_date} ({pp.status})
+                        </SelectItem>
+                      ))
+                    }
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+
+            {/* Reprocess button */}
+            {activePeriod && !isLocked && (
+              <Button size="sm" variant="outline" className="gap-1 shrink-0" onClick={handleReprocessPeriod} disabled={reprocessing}>
+                <RefreshCw className={`h-3.5 w-3.5 ${reprocessing ? "animate-spin" : ""}`} />
+                {reprocessing ? "Reprocesando..." : "Reprocesar período"}
+              </Button>
+            )}
+
+            {/* Period stats */}
+            {activePeriod && (
+              <div className="flex items-center gap-3 ml-auto text-xs text-muted-foreground">
+                <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{finalRecords.length} registros</span>
+                <span className="font-mono">{activePeriod.period_start} → {activePeriod.period_end}</span>
+                {activePeriod.total_schedules > 0 && <Badge variant="secondary" className="text-[10px]">{activePeriod.total_schedules} turnos</Badge>}
+                {activePeriod.total_clocks > 0 && <Badge variant="secondary" className="text-[10px]">{activePeriod.total_clocks} fichajes</Badge>}
+                {activePeriod.total_payroll_rows > 0 && <Badge variant="secondary" className="text-[10px]">{activePeriod.total_payroll_rows} nómina</Badge>}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── No Period Warning ── */}
+      {!activePeriod && tab !== "dashboard" && periodRequiredTabs.includes(tab) && (
+        <Alert className="border-warning bg-warning/10">
+          <AlertTriangle className="h-4 w-4 text-warning" />
+          <AlertDescription className="text-sm">
+            <strong>Selecciona un período para operar.</strong> La reconciliación requiere un período activo para procesar datos.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* ── Active Period Workflow Bar ── */}
       {activePeriod && (
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-muted/40 border">
           <div className="flex items-center gap-1 flex-1 min-w-0">
