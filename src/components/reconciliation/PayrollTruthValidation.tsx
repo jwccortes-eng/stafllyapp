@@ -817,6 +817,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                       <TableHead className="text-right">Recon Ride</TableHead>
                       <TableHead className="text-right">Recon Wknd</TableHead>
                       <TableHead className="text-right">Recon Adj</TableHead>
+                      <TableHead className="text-right text-destructive">Otros</TableHead>
                       <TableHead className="text-right">Recon TOTAL</TableHead>
                       <TableHead className="text-right">Varianza</TableHead>
                       <TableHead className="text-center">Sched</TableHead>
