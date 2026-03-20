@@ -678,7 +678,7 @@ export function useReconciliationPeriod(companyId: string | null) {
               work_date: r.work_date,
               notes: r.notes?.substring(0, 50),
               concept_name: r.concept_name || r.original_concept_name,
-              shift_source: ctx?.shift_titles?.join(", ") || null,
+              shift_source: ctx?.shift_names?.join(", ") || null,
               location_source: ctx?.location_names?.join(", ") || null,
               client_source: ctx?.client_names?.join(", ") || null,
             };
