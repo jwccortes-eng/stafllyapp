@@ -119,6 +119,7 @@ export default function CompensationReconciliation() {
   const [historyEmp, setHistoryEmp] = useState<{ id: string; name: string } | null>(null);
   const [editTarget, setEditTarget] = useState<{ id: string; name: string; profile: CompensationProfile | null } | null>(null);
   const [periodFilter, setPeriodFilter] = useState("last_30");
+  const [bulkCreating, setBulkCreating] = useState(false);
 
   // Fetch employees
   const { data: employees } = useQuery({
