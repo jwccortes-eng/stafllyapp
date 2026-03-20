@@ -100,6 +100,7 @@ const ReconciliationReport = lazy(() => import("./pages/admin/ReconciliationRepo
 const AdvancesLoans = lazy(() => import("./pages/admin/AdvancesLoans"));
 const ShiftOperations = lazy(() => import("./pages/admin/ShiftOperations"));
 const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliation"));
+const CompensationValidation = lazy(() => import("./pages/admin/CompensationValidation"));
 
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
@@ -229,6 +230,7 @@ function App() {
                 <Route path="advances-loans" element={<AdvancesLoans />} />
                 <Route path="kiosk-devices" element={<KioskDevices />} />
                 <Route path="shift-ops" element={<ShiftOperations />} />
+                <Route path="compensation-validation" element={<CompensationValidation />} />
               </Route>
 
               {/* Employee portal routes */}
