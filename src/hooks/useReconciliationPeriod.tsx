@@ -485,6 +485,15 @@ export function useReconciliationPeriod(companyId: string | null) {
         half_day_units: number;
       }>();
 
+      // Also build employee-level aggregate context for fallback when payroll work_date doesn't match
+      const empLevelContext = {
+        all_shift_names: [] as string[],
+        has_weekend_job: false,
+        total_full_day_shifts: 0,
+        total_half_day_shifts: 0,
+        total_shift_count: 0,
+      };
+
       for (const s of empSchedules) {
         const dateKey = s.work_date || "no-date";
         const existing = scheduleContextMap.get(dateKey) || {
@@ -517,14 +526,22 @@ export function useReconciliationPeriod(companyId: string | null) {
         if (shiftName) {
           existing.shift_names.push(shiftName);
           existing.job_names.push(jobName);
+          empLevelContext.all_shift_names.push(shiftName);
+          if (/weekend\s*(job|shift)/i.test(shiftName)) empLevelContext.has_weekend_job = true;
         }
         if (locationName) existing.location_names.push(locationName);
         if (clientName) existing.client_names.push(clientName);
         if (clientLocation) existing.client_locations.push(clientLocation);
 
         existing.shift_count += 1;
-        if (hours > 0 && hours <= 4) existing.half_day_units += 0.5;
-        else existing.full_day_units += 1;
+        empLevelContext.total_shift_count += 1;
+        if (hours > 0 && hours <= 4) {
+          existing.half_day_units += 0.5;
+          empLevelContext.total_half_day_shifts += 1;
+        } else {
+          existing.full_day_units += 1;
+          empLevelContext.total_full_day_shifts += 1;
+        }
 
         scheduleContextMap.set(dateKey, existing);
       }
