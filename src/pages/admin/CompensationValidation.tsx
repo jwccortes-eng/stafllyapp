@@ -22,7 +22,7 @@ import {
   Search, CheckCircle, AlertTriangle, ShieldAlert, Clock, DollarSign,
   Calculator, History, Pencil, Filter, ChevronDown, ChevronUp, Info, Wallet,
   Plus, Users, UserPlus,
-};
+} from "lucide-react";
 
 /* ── Types ── */
 interface EmployeeComp {
