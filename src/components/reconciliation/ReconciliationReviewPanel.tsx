@@ -16,8 +16,8 @@ import UnmatchedScheduleBreakdown from "./UnmatchedScheduleBreakdown";
 import ClockWithoutScheduleBreakdown from "./ClockWithoutScheduleBreakdown";
 import CaseSamplingDiagnostic from "./CaseSamplingDiagnostic";
 
-/** Fetch all rows from a table, scoped by batch_id if available, otherwise by company_id */
-async function fetchAllByBatch(table: string, companyId: string, batchId: string | null) {
+/** Fetch all rows from a table, scoped by batch_id if available, otherwise by date range, otherwise by company_id */
+async function fetchAllByBatch(table: string, companyId: string, batchId: string | null, periodStart?: string | null, periodEnd?: string | null) {
   const PAGE = 1000;
   let all: any[] = [];
   let from = 0;
@@ -28,6 +28,10 @@ async function fetchAllByBatch(table: string, companyId: string, batchId: string
       .eq("company_id", companyId);
     if (batchId) {
       q = q.eq("batch_id", batchId);
+    } else if (periodStart && periodEnd) {
+      // Fallback: filter by work_date range when no batch scoping
+      q = q.gte("work_date", periodStart).lte("work_date", periodEnd);
+      console.log(`[fetchAllByBatch] ${table}: no batch_id, using date range ${periodStart} → ${periodEnd}`);
     }
     const { data, error } = await q.range(from, from + PAGE - 1);
     if (error) { console.error(`[fetchAll] ${table} error:`, error); break; }
@@ -36,6 +40,7 @@ async function fetchAllByBatch(table: string, companyId: string, batchId: string
     if (data.length < PAGE) break;
     from += PAGE;
   }
+  console.log(`[fetchAllByBatch] ${table}: ${all.length} rows fetched (batch: ${batchId || "NONE"}, dates: ${periodStart || "NONE"}→${periodEnd || "NONE"})`);
   return all;
 }
 
