@@ -351,11 +351,11 @@ export function useReconciliationPeriod(companyId: string | null) {
     // Load company-specific payroll concept mappings
     const { data: dbMappings } = await supabase
       .from("payroll_concept_mappings" as any)
-      .select("pattern, target_type, priority, is_active")
+      .select("pattern, target_type, priority, is_active, match_field")
       .eq("company_id", companyId)
       .eq("is_active", true)
       .order("priority", { ascending: true });
-    const activeMappings = (dbMappings || []) as unknown as { pattern: string; target_type: string; priority: number; is_active: boolean }[];
+    const activeMappings = (dbMappings || []) as unknown as { pattern: string; target_type: string; priority: number; is_active: boolean; match_field: string }[];
     console.log(`[generateFinalRecords] Loaded ${activeMappings.length} payroll concept mappings from DB`);
 
     const period = periods.find(p => p.id === periodStatusId);
