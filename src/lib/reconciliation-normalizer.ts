@@ -102,6 +102,12 @@ export interface ImportDiagnostics {
   likelyAliasNames: string[];
   companyEmployeesActive: number;
   companyEmployeesInactive: number;
+  /** Context field coverage */
+  nullShiftTitle: number;
+  nullLocationName: number;
+  nullClientName: number;
+  nullAvailabilityStatus: number;
+  availabilityBlockCount: number;
 }
 
 export interface NormalizationResult<T> {
