@@ -827,7 +827,8 @@ export function useReconciliationPeriod(companyId: string | null) {
   // ── Variance analysis for a set of final records ──
   const analyzeVariances = useCallback((records: EmployeeFinalRecord[], empNames: Map<string, string>): EmployeeVariance[] => {
     return records.map(r => {
-      const sourceTotal = r.source_payroll_total || r.total_payroll_amount || 0;
+      const sourceTotal = r.source_payroll_total || 0; // histórico limpio
+      const sourceGrossTotal = r.total_payroll_amount || 0; // referencia (incluye unmapped)
       const reconciledTotal = r.grand_total || r.final_total_pay || 0;
       const variance = Math.round((reconciledTotal - sourceTotal) * 100) / 100;
       const absVariance = Math.abs(variance);
@@ -843,8 +844,16 @@ export function useReconciliationPeriod(companyId: string | null) {
       const worked = r.worked_shifts || [];
       if (scheduled.length > 0 && worked.length === 0) reasons.push("Turnos programados sin fichajes");
 
+      const unmappedWarning = Array.isArray(r.warnings)
+        ? r.warnings.find((w: any) => String(w).startsWith("CRITICAL_UNMAPPED_RATIO:"))
+        : null;
+      if (unmappedWarning) reasons.push("Bloqueado: unmapped > 20% del histórico bruto");
+      if (sourceGrossTotal > sourceTotal) {
+        reasons.push(`Excluido de histórico limpio: $${(sourceGrossTotal - sourceTotal).toFixed(2)}`);
+      }
+
       let status: EmployeeVariance["variance_status"];
-      if (r.reconciliation_status === "pending" || r.reconciliation_status === "partial") status = "unresolved";
+      if (["pending", "partial", "blocked"].includes(r.reconciliation_status) || Boolean(unmappedWarning)) status = "unresolved";
       else if (absVariance <= 0.01) status = "exact_match";
       else if (absVariance <= 10) status = "minor_variance";
       else status = "major_variance";
