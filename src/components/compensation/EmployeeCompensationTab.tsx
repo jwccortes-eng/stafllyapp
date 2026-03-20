@@ -89,6 +89,7 @@ export default function EmployeeCompensationTab({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
   const [inferring, setInferring] = useState(false);
+  const [initializing, setInitializing] = useState(false);
   const qc = useQueryClient();
 
   const { data: profile, isLoading } = useQuery({
@@ -256,19 +257,81 @@ export default function EmployeeCompensationTab({
     toast.success(`Tarifa $${rate}/h confirmada manualmente`);
   };
 
+  const initializeProfile = async () => {
+    if (!user) return;
+    setInitializing(true);
+    try {
+      const { data: rates } = await supabase.from("concept_employee_rates")
+        .select("rate, concepts(name)").eq("employee_id", employeeId);
+      const hr = (rates ?? []).find((r: any) => r.concepts?.name === "Hourly Rate")?.rate ?? null;
+      const dr = (rates ?? []).find((r: any) => r.concepts?.name === "Daily Pay")?.rate ?? null;
+      const { error } = await supabase.from("compensation_profiles").insert({
+        company_id: companyId,
+        employee_id: employeeId,
+        payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
+        default_hourly_rate: hr,
+        default_daily_rate: dr,
+        default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : null,
+        is_active: true,
+        effective_from: new Date().toISOString().split("T")[0],
+        rate_source: (hr || dr ? "imported" : "company_default") as any,
+        created_by: user.id,
+        updated_by: user.id,
+      });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["comp-profile-single", employeeId] });
+      toast.success(hr || dr ? `Perfil creado con hourly: $${hr ?? "—"}, daily: $${dr ?? "—"}` : "Perfil creado — configure las tarifas");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    setInitializing(false);
+  };
+
+  const seedFromRates = async () => {
+    if (!profile || !user) return;
+    setInitializing(true);
+    try {
+      const { data: rates } = await supabase.from("concept_employee_rates")
+        .select("rate, concepts(name)").eq("employee_id", employeeId);
+      const hr = (rates ?? []).find((r: any) => r.concepts?.name === "Hourly Rate")?.rate ?? null;
+      const dr = (rates ?? []).find((r: any) => r.concepts?.name === "Daily Pay")?.rate ?? null;
+      if (!hr && !dr) { toast.info("No se encontraron tarifas en datos existentes"); setInitializing(false); return; }
+      await supabase.from("compensation_profiles").update({
+        default_hourly_rate: hr ?? profile.default_hourly_rate,
+        default_daily_rate: dr ?? profile.default_daily_rate,
+        default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : profile.default_half_day_rate,
+        payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
+        rate_source: "imported" as any,
+        updated_by: user.id,
+      }).eq("id", profile.id);
+      qc.invalidateQueries({ queryKey: ["comp-profile-single", employeeId] });
+      toast.success(`Tarifas actualizadas: hourly $${hr ?? "—"}, daily $${dr ?? "—"}`);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    setInitializing(false);
+  };
+
   if (isLoading) return <div className="py-8 text-center text-xs text-muted-foreground">Cargando...</div>;
 
   if (!profile) {
     return (
       <div className="space-y-3">
         <EmptyState icon={Wallet} title="Sin perfil de compensación" description="Este empleado no tiene un perfil de compensación configurado." compact />
-        <Button size="sm" onClick={() => setChangeOpen(true)}>
-          <Pencil className="h-3 w-3 mr-1" /> Configurar compensación
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={initializeProfile} disabled={initializing}>
+            <DollarSign className="h-3 w-3 mr-1" /> {initializing ? "Inicializando..." : "Inicializar compensación"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setChangeOpen(true)}>
+            <Pencil className="h-3 w-3 mr-1" /> Configurar manual
+          </Button>
+        </div>
         <CompensationChangeForm open={changeOpen} onOpenChange={setChangeOpen} employeeId={employeeId} employeeName={employeeName} currentProfile={null} />
       </div>
     );
   }
+
+  const profileIsEmpty = profile.default_hourly_rate == null && profile.default_daily_rate == null;
 
   const src = SOURCE_LABELS[profile.rate_source] ?? SOURCE_LABELS.company_default;
   const hourly = resolveHourlyRate(profile);
@@ -284,6 +347,19 @@ export default function EmployeeCompensationTab({
 
   return (
     <div className="space-y-4">
+      {/* ── Empty profile banner ── */}
+      {profileIsEmpty && (
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-warning/10 border border-warning/20">
+          <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+          <div className="flex-1 text-xs text-warning">
+            Perfil sin tarifas configuradas. Siembre valores desde datos existentes o configure manualmente.
+          </div>
+          <Button size="sm" variant="outline" className="h-7 text-[11px] shrink-0" onClick={seedFromRates} disabled={initializing}>
+            <DollarSign className="h-3 w-3 mr-1" /> {initializing ? "Sembrando..." : "Sembrar desde datos"}
+          </Button>
+        </div>
+      )}
+
       {/* ── Validation Alerts ── */}
       {alerts.length > 0 && (
         <div className="space-y-1.5">
