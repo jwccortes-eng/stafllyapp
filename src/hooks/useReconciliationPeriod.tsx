@@ -632,7 +632,14 @@ export function useReconciliationPeriod(companyId: string | null) {
         const shiftFields = schedCtx ? [...schedCtx.shift_names, ...schedCtx.job_names] : [];
         const locationFields = schedCtx ? [...schedCtx.location_names, ...schedCtx.client_locations] : [];
         const clientFields = schedCtx ? [...schedCtx.client_names] : [];
-        const allFields = [...rowFields, ...shiftFields, ...locationFields, ...clientFields];
+
+        // CRITICAL FIX: When payroll work_date doesn't match any schedule date,
+        // include employee-level shift names so DB mappings and weekend detection still work
+        const empShiftNames = !schedCtx && empLevelContext.total_shift_count > 0
+          ? empLevelContext.all_shift_names
+          : [];
+
+        const allFields = [...rowFields, ...shiftFields, ...locationFields, ...clientFields, ...empShiftNames];
 
         // 1) Explicit DB mappings (manual priority)
         if (activeMappings.length > 0) {
@@ -655,7 +662,7 @@ export function useReconciliationPeriod(companyId: string | null) {
         }
 
         // 2) Shift/location mapping (Connecteam-first) — check per-date context first
-        const shiftLocationPool = [...shiftFields, ...locationFields, rowShiftName, rowLocationName, rowJobName, rowClientLocation].filter(Boolean);
+        const shiftLocationPool = [...shiftFields, ...locationFields, ...empShiftNames, rowShiftName, rowLocationName, rowJobName, rowClientLocation].filter(Boolean);
         const weekendHit = shiftLocationPool.find((f) => /weekend\s*(job|shift)/i.test(f));
         if (weekendHit) {
           return { classifiedType: "daily", assignedTargetType: "full_day", source: "shift_location:weekend_job", matchedValue: weekendHit };
@@ -729,6 +736,26 @@ export function useReconciliationPeriod(companyId: string | null) {
 
         return { classifiedType: "unmapped", assignedTargetType: "unmapped", source: "fallback:unmapped" };
       };
+
+      // ── DEBUG: Employee shift-calc diagnostic ──
+      const scheduleDates = [...scheduleContextMap.keys()].filter(k => k !== "no-date");
+      const payrollDates = [...new Set(empPayrolls.map(p => p.work_date).filter(Boolean))];
+      const dateOverlap = scheduleDates.filter(d => payrollDates.includes(d));
+      console.log(`[SHIFT-CALC-DEBUG] ${empMap.get(empId) || empId}`, {
+        schedule_dates: scheduleDates,
+        payroll_dates: payrollDates,
+        date_overlap_count: dateOverlap.length,
+        date_overlap: dateOverlap,
+        empLevelContext: {
+          has_weekend_job: empLevelContext.has_weekend_job,
+          total_shift_count: empLevelContext.total_shift_count,
+          total_full_day_shifts: empLevelContext.total_full_day_shifts,
+          total_half_day_shifts: empLevelContext.total_half_day_shifts,
+          all_shift_names: [...new Set(empLevelContext.all_shift_names)],
+        },
+        schedules_loaded: empSchedules.length,
+        payrolls_loaded: empPayrolls.length,
+      });
 
       // Classify all payroll rows + source trace
       const classifiedPayrolls = empPayrolls.map((p) => {
