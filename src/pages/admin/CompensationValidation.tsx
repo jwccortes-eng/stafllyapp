@@ -172,7 +172,101 @@ export default function CompensationValidation() {
     return { total, withProfile, confirmed, inferred, needsReview, withAlerts };
   }, [rows]);
 
-  /* ── Quick actions ── */
+  /* ── Profile creation ── */
+  const noProfileIds = useMemo(() => rows.filter(r => !r.profile).map(r => r.employee_id), [rows]);
+
+  const createProfileForEmployee = useCallback(async (employeeId: string): Promise<CompensationProfile | null> => {
+    if (!user || !selectedCompanyId) return null;
+    const { data, error } = await supabase.from("compensation_profiles").insert({
+      company_id: selectedCompanyId,
+      employee_id: employeeId,
+      payment_mode: "hourly" as any,
+      is_active: true,
+      effective_from: new Date().toISOString().split("T")[0],
+      created_by: user.id,
+      updated_by: user.id,
+    }).select("*").single();
+    if (error) { toast.error(error.message); return null; }
+    await supabase.from("compensation_change_log").insert({
+      company_id: selectedCompanyId,
+      employee_id: employeeId,
+      compensation_profile_id: data.id,
+      action_type: "created" as any,
+      changed_field: "profile",
+      new_value: "created",
+      reason: "Perfil creado desde validación",
+      source_type: "admin_edit" as any,
+      changed_by: user.id,
+    });
+    return data as unknown as CompensationProfile;
+  }, [user, selectedCompanyId]);
+
+  const bulkCreateProfiles = useCallback(async (employeeIds: string[]) => {
+    if (!user || !selectedCompanyId || employeeIds.length === 0) return;
+    setBulkCreating(true);
+    try {
+      const rows = employeeIds.map(eid => ({
+        company_id: selectedCompanyId,
+        employee_id: eid,
+        payment_mode: "hourly" as any,
+        is_active: true,
+        effective_from: new Date().toISOString().split("T")[0],
+        created_by: user.id,
+        updated_by: user.id,
+      }));
+      const { data, error } = await supabase.from("compensation_profiles").insert(rows).select("id, employee_id");
+      if (error) throw error;
+      // Log all creations
+      const logs = (data ?? []).map((d: any) => ({
+        company_id: selectedCompanyId,
+        employee_id: d.employee_id,
+        compensation_profile_id: d.id,
+        action_type: "created" as any,
+        changed_field: "profile",
+        new_value: "created",
+        reason: "Perfil creado en lote desde validación",
+        source_type: "admin_edit" as any,
+        changed_by: user.id,
+      }));
+      if (logs.length > 0) await supabase.from("compensation_change_log").insert(logs);
+      qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
+      qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+      toast.success(`${data?.length ?? 0} perfiles creados`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al crear perfiles");
+    } finally {
+      setBulkCreating(false);
+    }
+  }, [user, selectedCompanyId, qc]);
+
+  const handleEditOrCreate = useCallback(async (emp: EmployeeComp) => {
+    const name = `${emp.first_name} ${emp.last_name}`;
+    if (emp.profile) {
+      setEditTarget({ id: emp.employee_id, name, profile: emp.profile });
+      return;
+    }
+    // Auto-create profile then open edit
+    toast.info("Creando perfil...");
+    const newProfile = await createProfileForEmployee(emp.employee_id);
+    if (newProfile) {
+      qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
+      qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+      setEditTarget({ id: emp.employee_id, name, profile: newProfile });
+      toast.success("Perfil creado");
+    }
+  }, [createProfileForEmployee, qc]);
+
+  const handleCreateSingle = useCallback(async (emp: EmployeeComp) => {
+    const name = `${emp.first_name} ${emp.last_name}`;
+    toast.info("Creando perfil...");
+    const newProfile = await createProfileForEmployee(emp.employee_id);
+    if (newProfile) {
+      qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
+      qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+      setEditTarget({ id: emp.employee_id, name, profile: newProfile });
+      toast.success(`Perfil creado para ${emp.first_name}`);
+    }
+  }, [createProfileForEmployee, qc]);
   const confirmHourly = async (emp: EmployeeComp) => {
     if (!emp.profile || !user) return;
     const rate = emp.profile.inferred_hourly_rate ?? emp.profile.default_hourly_rate;
