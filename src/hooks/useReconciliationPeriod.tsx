@@ -468,7 +468,23 @@ export function useReconciliationPeriod(companyId: string | null) {
       const empPayrolls = dedupedPayrolls.filter(p => p.matched_employee_id === empId);
       const empMatches = matches.filter(m => m.employee_id === empId);
 
-      const totalScheduledHours = empSchedules.reduce((sum, s) => sum + (Number(s.total_hours) || 0), 0);
+      // For full_day shifts with 0 hours, count as 8h equivalent per shift for H.Prog
+      const FULL_DAY_EQUIVALENT_HOURS = 8;
+      const HALF_DAY_EQUIVALENT_HOURS = 4;
+      const totalScheduledHours = empSchedules.reduce((sum, s) => {
+        const rawHours = Number(s.total_hours) || 0;
+        if (rawHours > 0) return sum + rawHours;
+        // If hours=0 but it's a real shift (not availability block), count equivalent
+        const avail = String((s as any).availability_status || "").trim().toLowerCase();
+        const isAvailBlock = avail === "unavailable" || avail === "no disponible" || avail.includes("block");
+        const shiftTitle = String(s.shift_title || "").trim();
+        const hasContext = shiftTitle || String(s.location_name || "").trim() || String(s.client_name || "").trim();
+        if (!isAvailBlock && hasContext) {
+          // Check if it's a half-day shift
+          return sum + (/half|media|1\/2/i.test(shiftTitle) ? HALF_DAY_EQUIVALENT_HOURS : FULL_DAY_EQUIVALENT_HOURS);
+        }
+        return sum;
+      }, 0);
       const totalWorkedHours = empClocks.reduce((sum, c) => sum + (Number(c.total_hours) || 0), 0);
       const totalPayrollHours = empPayrolls.reduce((sum, p) => sum + (Number(p.total_hours) || 0), 0);
       const totalPayrollAmount = empPayrolls.reduce((sum, p) => sum + (Number(p.total_pay) || 0), 0);
@@ -484,6 +500,15 @@ export function useReconciliationPeriod(companyId: string | null) {
         full_day_units: number;
         half_day_units: number;
       }>();
+
+      // Also build employee-level aggregate context for fallback when payroll work_date doesn't match
+      const empLevelContext = {
+        all_shift_names: [] as string[],
+        has_weekend_job: false,
+        total_full_day_shifts: 0,
+        total_half_day_shifts: 0,
+        total_shift_count: 0,
+      };
 
       for (const s of empSchedules) {
         const dateKey = s.work_date || "no-date";
@@ -517,14 +542,22 @@ export function useReconciliationPeriod(companyId: string | null) {
         if (shiftName) {
           existing.shift_names.push(shiftName);
           existing.job_names.push(jobName);
+          empLevelContext.all_shift_names.push(shiftName);
+          if (/weekend\s*(job|shift)/i.test(shiftName)) empLevelContext.has_weekend_job = true;
         }
         if (locationName) existing.location_names.push(locationName);
         if (clientName) existing.client_names.push(clientName);
         if (clientLocation) existing.client_locations.push(clientLocation);
 
         existing.shift_count += 1;
-        if (hours > 0 && hours <= 4) existing.half_day_units += 0.5;
-        else existing.full_day_units += 1;
+        empLevelContext.total_shift_count += 1;
+        if (hours > 0 && hours <= 4) {
+          existing.half_day_units += 0.5;
+          empLevelContext.total_half_day_shifts += 1;
+        } else {
+          existing.full_day_units += 1;
+          empLevelContext.total_full_day_shifts += 1;
+        }
 
         scheduleContextMap.set(dateKey, existing);
       }
@@ -590,14 +623,14 @@ export function useReconciliationPeriod(companyId: string | null) {
           }
         }
 
-        // 2) Shift/location mapping (Connecteam-first)
+        // 2) Shift/location mapping (Connecteam-first) — check per-date context first
         const shiftLocationPool = [...shiftFields, ...locationFields, rowShiftName, rowLocationName, rowJobName, rowClientLocation].filter(Boolean);
-        const weekendHit = shiftLocationPool.find((f) => f.includes("weekend job"));
+        const weekendHit = shiftLocationPool.find((f) => /weekend\s*(job|shift)/i.test(f));
         if (weekendHit) {
           return { classifiedType: "daily", assignedTargetType: "full_day", source: "shift_location:weekend_job", matchedValue: weekendHit };
         }
 
-        // 2b) Shift units heuristic: 1 shift=1 full_day, 0.5 shift=half_day, múltiples shifts=múltiples full_day
+        // 2b) Shift units heuristic: 1 shift=1 full_day, 0.5 shift=half_day
         if (schedCtx && schedCtx.shift_count > 0) {
           if ((schedCtx.full_day_units === 0 && schedCtx.half_day_units > 0) || ((Number(p.total_hours) || 0) > 0 && (Number(p.total_hours) || 0) <= 4)) {
             return { classifiedType: "daily", assignedTargetType: "half_day", source: "shift_units:half_day" };
@@ -605,9 +638,28 @@ export function useReconciliationPeriod(companyId: string | null) {
           return { classifiedType: "daily", assignedTargetType: "full_day", source: `shift_units:${schedCtx.shift_count}_shifts` };
         }
 
+        // 2c) Employee-level shift context fallback (when payroll work_date doesn't match any schedule date)
+        if (!schedCtx && empLevelContext.total_shift_count > 0) {
+          // If this employee has weekend jobs in their schedule for this period, classify accordingly
+          if (empLevelContext.has_weekend_job) {
+            return { classifiedType: "daily", assignedTargetType: "full_day", source: "emp_context:weekend_job_period", matchedValue: "employee has weekend_job shifts in period" };
+          }
+          // Otherwise use aggregate shift context
+          if (empLevelContext.total_full_day_shifts > 0) {
+            return { classifiedType: "daily", assignedTargetType: "full_day", source: `emp_context:${empLevelContext.total_shift_count}_shifts_in_period` };
+          }
+          if (empLevelContext.total_half_day_shifts > 0) {
+            return { classifiedType: "daily", assignedTargetType: "half_day", source: "emp_context:half_day_period" };
+          }
+        }
+
         // 3) Fallback legacy (pay_type/concept/notes)
         const t = String(p.pay_type || "").toLowerCase().trim();
         if (["hourly", "regular", "regular pay", "base", "base pay", "hora"].includes(t)) {
+          // CRITICAL: Do NOT override to hourly if employee has weekend_job shifts in this period
+          if (empLevelContext.has_weekend_job) {
+            return { classifiedType: "daily", assignedTargetType: "full_day", source: "shift_override:weekend_job_blocks_hourly", matchedValue: `pay_type="${t}" overridden by schedule context` };
+          }
           return { classifiedType: "hourly", assignedTargetType: "hourly", source: "fallback:pay_type" };
         }
         if (["daily", "daily pay", "diario"].includes(t)) {
@@ -637,6 +689,10 @@ export function useReconciliationPeriod(companyId: string | null) {
           return { classifiedType: "daily", assignedTargetType: "full_day", source: "fallback:notes" };
         }
         if ((Number(p.total_hours) || 0) > 0 && (Number(p.hourly_rate) || 0) > 0) {
+          // CRITICAL: Do NOT classify as hourly if employee has shift-based (full_day) context
+          if (empLevelContext.has_weekend_job || empLevelContext.total_full_day_shifts > 0) {
+            return { classifiedType: "daily", assignedTargetType: "full_day", source: "shift_override:schedule_blocks_hours_rate", matchedValue: `hours=${p.total_hours}, rate=${p.hourly_rate} overridden by ${empLevelContext.total_full_day_shifts} full_day shifts` };
+          }
           return { classifiedType: "hourly", assignedTargetType: "hourly", source: "fallback:hours_rate" };
         }
 
