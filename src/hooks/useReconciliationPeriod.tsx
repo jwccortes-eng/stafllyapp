@@ -587,19 +587,25 @@ export function useReconciliationPeriod(companyId: string | null) {
       // CRITICAL: grandTotal only includes classified rows — unmapped excluded
       const grandTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
 
-      // Log unmapped rows per employee
+      // Log unmapped rows per employee with shift/location context
       if (unmappedRows.length > 0) {
         console.warn(`[UNMAPPED] ${empMap.get(empId) || empId}: ${unmappedRows.length} unmapped rows, $${unmappedTotal.toFixed(2)} excluded from total`, 
-          unmappedRows.map(r => ({
-            id: r.id?.substring(0, 8),
-            raw_row_id: r.raw_row_id?.substring(0, 8),
-            pay_type: r.pay_type,
-            total_pay: r.total_pay,
-            total_hours: r.total_hours,
-            work_date: r.work_date,
-            notes: r.notes?.substring(0, 50),
-            concept_name: r.concept_name || r.original_concept_name,
-          }))
+          unmappedRows.map(r => {
+            const ctx = scheduleContextMap.get(r.work_date || "no-date");
+            return {
+              id: r.id?.substring(0, 8),
+              raw_row_id: r.raw_row_id?.substring(0, 8),
+              pay_type: r.pay_type,
+              total_pay: r.total_pay,
+              total_hours: r.total_hours,
+              work_date: r.work_date,
+              notes: r.notes?.substring(0, 50),
+              concept_name: r.concept_name || r.original_concept_name,
+              shift_source: ctx?.shift_titles?.join(", ") || null,
+              location_source: ctx?.location_names?.join(", ") || null,
+              client_source: ctx?.client_names?.join(", ") || null,
+            };
+          })
         );
       }
 

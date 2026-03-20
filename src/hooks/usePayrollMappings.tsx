@@ -19,7 +19,10 @@ export interface PayrollMapping {
 }
 
 const DEFAULT_MAPPINGS: Omit<PayrollMapping, "id" | "company_id" | "created_at" | "updated_at" | "created_by">[] = [
-  { pattern: "weekend", match_field: "any", target_type: "full_day", priority: 10, is_active: true, notes: "Weekend job → full day" },
+  // Shift/location-based mappings (high priority)
+  { pattern: "weekend job", match_field: "shift_title", target_type: "full_day", priority: 5, is_active: true, notes: "Weekend Job shift → full day" },
+  { pattern: "weekend", match_field: "shift_title", target_type: "full_day", priority: 6, is_active: true, notes: "Weekend shift → full day" },
+  { pattern: "weekend", match_field: "any", target_type: "full_day", priority: 10, is_active: true, notes: "Weekend keyword → full day" },
   { pattern: "daily", match_field: "any", target_type: "full_day", priority: 20, is_active: true, notes: "Daily pay → full day" },
   { pattern: "diario", match_field: "any", target_type: "full_day", priority: 20, is_active: true, notes: "Diario → full day" },
   { pattern: "half", match_field: "any", target_type: "half_day", priority: 15, is_active: true, notes: "Half day" },
@@ -50,6 +53,13 @@ export const TARGET_TYPES = [
   { value: "ride", label: "Ride" },
   { value: "bonus", label: "Bonus / Manual" },
   { value: "other", label: "Other (excluido)" },
+];
+
+export const MATCH_FIELDS = [
+  { value: "any", label: "Cualquier campo" },
+  { value: "shift_title", label: "Nombre del turno" },
+  { value: "location_name", label: "Ubicación" },
+  { value: "client_name", label: "Cliente" },
 ];
 
 export function usePayrollMappings() {
