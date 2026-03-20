@@ -127,6 +127,8 @@ export default function StagedReconciliation() {
   const [newEnd, setNewEnd] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [employeeMap, setEmployeeMap] = useState<Map<string, string>>(new Map());
+  const [payPeriods, setPayPeriods] = useState<PayPeriodOption[]>([]);
+  const [reprocessing, setReprocessing] = useState(false);
 
   // ── Load employees ──
   useEffect(() => {
@@ -137,6 +139,17 @@ export default function StagedReconciliation() {
         (data || []).forEach(e => map.set(e.id, `${e.first_name} ${e.last_name}`));
         setEmployeeMap(map);
       });
+  }, [selectedCompanyId]);
+
+  // ── Load pay periods for selector ──
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    supabase.from("pay_periods")
+      .select("id, start_date, end_date, status")
+      .eq("company_id", selectedCompanyId)
+      .order("start_date", { ascending: false })
+      .limit(52)
+      .then(({ data }) => setPayPeriods((data || []) as PayPeriodOption[]));
   }, [selectedCompanyId]);
 
   // ── Auto-select latest active (non-locked) period on load ──
@@ -182,11 +195,57 @@ export default function StagedReconciliation() {
     }
   };
 
+  // ── Create from pay_period ──
+  const handleCreateFromPayPeriod = async (ppId: string) => {
+    const pp = payPeriods.find(p => p.id === ppId);
+    if (!pp) return;
+    // Check if reconciliation period already exists for this pay_period
+    const existing = periods.find(p => p.period_id === ppId);
+    if (existing) {
+      setActivePeriod(existing);
+      loadFinalRecords(existing.id);
+      loadClosingReceipt(existing.id);
+      setTab("closedesk");
+      toast({ title: "Periodo existente seleccionado" });
+      return;
+    }
+    const label = `${pp.start_date} → ${pp.end_date}`;
+    const p = await createPeriod(label, pp.start_date, pp.end_date, ppId);
+    if (p) {
+      setActivePeriod(p);
+      setTab("closedesk");
+    }
+  };
+
   const handleSelectPeriod = (p: PeriodStatus) => {
     setActivePeriod(p);
     loadFinalRecords(p.id);
     loadClosingReceipt(p.id);
     setTab("closedesk");
+  };
+
+  // ── Selector change (reconciliation period) ──
+  const handlePeriodSelectorChange = (periodId: string) => {
+    if (periodId === "__create__") {
+      setShowCreateDialog(true);
+      return;
+    }
+    if (periodId.startsWith("pp:")) {
+      handleCreateFromPayPeriod(periodId.replace("pp:", ""));
+      return;
+    }
+    const p = periods.find(pr => pr.id === periodId);
+    if (p) handleSelectPeriod(p);
+  };
+
+  // ── Reprocess period ──
+  const handleReprocessPeriod = async () => {
+    if (!activePeriod) return;
+    setReprocessing(true);
+    await generateFinalRecords(activePeriod.id);
+    await logJournal("reprocess", "Periodo reprocesado", `Clasificación y mappings reaplicados`);
+    toast({ title: "Periodo reprocesado", description: "Clasificación, mappings y varianzas recalculados." });
+    setReprocessing(false);
   };
 
   // ── Core actions with journal logging ──
