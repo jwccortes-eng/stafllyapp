@@ -475,6 +475,34 @@ export function useReconciliationPeriod(companyId: string | null) {
 
       // ── Auto-classify unrecognized pay_type values ──
       const classifyPayType = (p: any): string => {
+        // 1. Try DB mappings first (sorted by priority)
+        if (activeMappings.length > 0) {
+          const fieldsToCheck: string[] = [];
+          if (p.pay_type) fieldsToCheck.push(p.pay_type.toLowerCase().trim());
+          if (p.concept_name) fieldsToCheck.push(p.concept_name.toLowerCase().trim());
+          if (p.original_concept_name) fieldsToCheck.push(String(p.original_concept_name).toLowerCase().trim());
+          if (p.notes) fieldsToCheck.push(p.notes.toLowerCase().trim());
+          if (p.title) fieldsToCheck.push(String(p.title).toLowerCase().trim());
+
+          for (const mapping of activeMappings) {
+            const pat = mapping.pattern.toLowerCase().trim();
+            for (const field of fieldsToCheck) {
+              if (field.includes(pat)) {
+                // Map target_type to internal types
+                const tt = mapping.target_type;
+                if (tt === "hourly") return "hourly";
+                if (tt === "full_day") return "daily";
+                if (tt === "half_day") return "daily";
+                if (tt === "ride") return "pay_ride";
+                if (tt === "bonus") return "manual_adjustment";
+                if (tt === "other") return "unmapped";
+                return tt;
+              }
+            }
+          }
+        }
+
+        // 2. Fallback: hardcoded classification
         const t = (p.pay_type || "").toLowerCase().trim();
         if (t === "hourly" || t === "regular" || t === "regular pay" || t === "base" || t === "base pay" || t === "hora") return "hourly";
         if (t === "daily" || t === "daily pay" || t === "diario") return "daily";
