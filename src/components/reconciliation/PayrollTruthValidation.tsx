@@ -382,11 +382,19 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         const value = round2(pr.total_pay);
         const qty = pr.total_hours > 0 ? pr.total_hours : 1;
         const rate = pr.hourly_rate != null ? pr.hourly_rate : qty > 0 ? round2(value / qty) : value;
+        const isMapped = category !== "other";
 
         row.payroll_row_count += 1;
-        row.authoritative_total = round2(row.authoritative_total + value);
-        row.authoritative_source = "payroll_rows_total";
-        addCategoryAmount(row, category, value);
+
+        if (isMapped) {
+          row.authoritative_total = round2(row.authoritative_total + value);
+          row.authoritative_source = "payroll_rows_total";
+          addCategoryAmount(row, category, value);
+        } else {
+          row.other_pay = round2(row.other_pay + value);
+          row.unmapped_count += 1;
+          row.unmapped_excluded_total = round2(row.unmapped_excluded_total + value);
+        }
 
         row.ledger.push({
           id: `payroll-${pr.id}`,
@@ -397,9 +405,11 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
           qty,
           rate,
           value,
-          included: true,
-          compositionRole: "authoritative",
-          reason: "Included in authoritative payroll-row total for this period.",
+          included: isMapped,
+          compositionRole: isMapped ? "authoritative" : "informational_only",
+          reason: isMapped
+            ? "Included in clean authoritative payroll total for this period."
+            : "Excluded from clean historical total: unmapped/unclassified payroll row.",
           category,
         });
       }
