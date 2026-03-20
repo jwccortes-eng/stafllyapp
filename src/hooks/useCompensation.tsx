@@ -31,6 +31,9 @@ export interface CompensationProfile {
   inferred_hourly_confidence: string | null;
   hourly_rate_last_verified_at: string | null;
   hourly_rate_override_manual: boolean;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  previous_inferred_rate: number | null;
   rate_source: CompRateSource;
   effective_from: string;
   effective_to: string | null;

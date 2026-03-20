@@ -1071,6 +1071,8 @@ export type Database = {
         Row: {
           bonus_transport_hourly_rate: number | null
           company_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           created_by: string | null
           default_daily_rate: number | null
@@ -1093,6 +1095,7 @@ export type Database = {
           notes: string | null
           overtime_hourly_rate: number | null
           payment_mode: Database["public"]["Enums"]["payment_mode_type"]
+          previous_inferred_rate: number | null
           rate_source: Database["public"]["Enums"]["comp_rate_source"]
           updated_at: string
           updated_by: string | null
@@ -1100,6 +1103,8 @@ export type Database = {
         Insert: {
           bonus_transport_hourly_rate?: number | null
           company_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           default_daily_rate?: number | null
@@ -1122,6 +1127,7 @@ export type Database = {
           notes?: string | null
           overtime_hourly_rate?: number | null
           payment_mode?: Database["public"]["Enums"]["payment_mode_type"]
+          previous_inferred_rate?: number | null
           rate_source?: Database["public"]["Enums"]["comp_rate_source"]
           updated_at?: string
           updated_by?: string | null
@@ -1129,6 +1135,8 @@ export type Database = {
         Update: {
           bonus_transport_hourly_rate?: number | null
           company_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           default_daily_rate?: number | null
@@ -1151,6 +1159,7 @@ export type Database = {
           notes?: string | null
           overtime_hourly_rate?: number | null
           payment_mode?: Database["public"]["Enums"]["payment_mode_type"]
+          previous_inferred_rate?: number | null
           rate_source?: Database["public"]["Enums"]["comp_rate_source"]
           updated_at?: string
           updated_by?: string | null
@@ -2586,6 +2595,92 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hourly_rate_inference_evidence: {
+        Row: {
+          company_id: string
+          compensation_profile_id: string | null
+          confidence: string
+          created_at: string
+          employee_id: string
+          id: string
+          imported_at: string
+          inferred_rate: number
+          is_active: boolean
+          match_method: string
+          source_amount: number | null
+          source_file: string | null
+          source_qty: number | null
+          source_rate: number | null
+          source_record_label: string | null
+          source_work_date: string | null
+        }
+        Insert: {
+          company_id: string
+          compensation_profile_id?: string | null
+          confidence?: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          imported_at?: string
+          inferred_rate: number
+          is_active?: boolean
+          match_method?: string
+          source_amount?: number | null
+          source_file?: string | null
+          source_qty?: number | null
+          source_rate?: number | null
+          source_record_label?: string | null
+          source_work_date?: string | null
+        }
+        Update: {
+          company_id?: string
+          compensation_profile_id?: string | null
+          confidence?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          imported_at?: string
+          inferred_rate?: number
+          is_active?: boolean
+          match_method?: string
+          source_amount?: number | null
+          source_file?: string | null
+          source_qty?: number | null
+          source_rate?: number | null
+          source_record_label?: string | null
+          source_work_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hourly_rate_inference_evidence_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hourly_rate_inference_evidence_compensation_profile_id_fkey"
+            columns: ["compensation_profile_id"]
+            isOneToOne: false
+            referencedRelation: "compensation_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hourly_rate_inference_evidence_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hourly_rate_inference_evidence_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
