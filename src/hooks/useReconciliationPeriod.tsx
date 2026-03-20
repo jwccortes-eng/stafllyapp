@@ -458,45 +458,61 @@ export function useReconciliationPeriod(companyId: string | null) {
       const totalPayrollHours = empPayrolls.reduce((sum, p) => sum + (Number(p.total_hours) || 0), 0);
       const totalPayrollAmount = empPayrolls.reduce((sum, p) => sum + (Number(p.total_pay) || 0), 0);
 
-      // Full payment breakdown by type
-      const hourlyRows = empPayrolls.filter(p => p.pay_type === "hourly");
-      const dailyRows = empPayrolls.filter(p => p.pay_type === "daily");
-      const rideRows = empPayrolls.filter(p => p.pay_type === "pay_ride");
-      const weekendRows = empPayrolls.filter(p => p.pay_type === "weekend_job");
-      const manualRows = empPayrolls.filter(p => p.pay_type === "manual_adjustment");
+      // ── Auto-classify unrecognized pay_type values ──
+      const classifyPayType = (p: any): string => {
+        const t = (p.pay_type || "").toLowerCase().trim();
+        if (t === "hourly" || t === "regular" || t === "regular pay" || t === "base" || t === "base pay" || t === "hora") return "hourly";
+        if (t === "daily" || t === "daily pay" || t === "diario") return "daily";
+        if (t === "pay_ride" || t === "ride" || t === "ryde" || t === "transporte") return "pay_ride";
+        if (t === "weekend_job" || t === "weekend" || t === "doble" || t === "double" || t === "paga doble") return "weekend_job";
+        if (t === "manual_adjustment" || t === "manual" || t === "adjustment" || t === "bonus" || t === "reintegro" || t === "correction") return "manual_adjustment";
+        // Try notes-based classification
+        const n = (p.notes || "").toLowerCase();
+        if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "pay_ride";
+        if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend_job";
+        if (n.includes("bonus") || n.includes("manual") || n.includes("adjust") || n.includes("reintegro")) return "manual_adjustment";
+        if (n.includes("daily") || n.includes("diario")) return "daily";
+        // If it has hours and a rate, treat as hourly
+        if (Number(p.total_hours) > 0 && Number(p.hourly_rate) > 0) return "hourly";
+        return "unmapped";
+      };
+
+      // Classify all payroll rows
+      const classifiedPayrolls = empPayrolls.map(p => ({ ...p, _classified_type: classifyPayType(p) }));
+
+      // Full payment breakdown by classified type
+      const hourlyRows = classifiedPayrolls.filter(p => p._classified_type === "hourly");
+      const dailyRows = classifiedPayrolls.filter(p => p._classified_type === "daily");
+      const rideRows = classifiedPayrolls.filter(p => p._classified_type === "pay_ride");
+      const weekendRows = classifiedPayrolls.filter(p => p._classified_type === "weekend_job");
+      const manualRows = classifiedPayrolls.filter(p => p._classified_type === "manual_adjustment");
+      const unmappedRows = classifiedPayrolls.filter(p => p._classified_type === "unmapped");
 
       const hourlyPayTotal = hourlyRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
       const dailyPayTotal = dailyRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
       const ridePayTotal = rideRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
       const weekendPayTotal = weekendRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
       const manualTotal = manualRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
+      const unmappedTotal = unmappedRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
 
-      // Debug: per-employee payroll breakdown
-      const empName = empMap.get(empId) || empId.substring(0, 8);
-      console.log(`[DEDUP] ${empName}: ${empPayrolls.length} payroll rows, total=$${totalPayrollAmount.toFixed(2)}`, {
-        hourly: `${hourlyRows.length} rows / $${hourlyPayTotal.toFixed(2)}`,
-        daily: `${dailyRows.length} rows / $${dailyPayTotal.toFixed(2)}`,
-        ride: `${rideRows.length} rows / $${ridePayTotal.toFixed(2)}`,
-        weekend: `${weekendRows.length} rows / $${weekendPayTotal.toFixed(2)}`,
-        manual: `${manualRows.length} rows / $${manualTotal.toFixed(2)}`,
-        ids: empPayrolls.map(p => p.id.substring(0, 8)),
-      });
-
-      // Hours breakdown
-      const hourlyHours = hourlyRows.reduce((s, r) => s + (Number(r.total_hours) || 0), 0);
-      const regularHours = Math.min(hourlyHours, OT_THRESHOLD);
-      const overtimeHours = Math.max(hourlyHours - OT_THRESHOLD, 0);
-
-      // Hourly rate detection
-      const hourlyRate = hourlyHours > 0 ? Math.round((hourlyPayTotal / hourlyHours) * 100) / 100 : null;
-      const dailyRate = dailyRows.length > 0 ? Math.round((dailyPayTotal / dailyRows.length) * 100) / 100 : null;
-
-      // Pay classification
-      const payTypes = empPayrolls.map(p => p.pay_type).filter(Boolean);
-      const uniqueTypes = [...new Set(payTypes)];
-      const classification = uniqueTypes.length === 0 ? "unknown" : uniqueTypes.length === 1 ? uniqueTypes[0] : "mixed";
-
+      // CRITICAL: grandTotal only includes classified rows — unmapped excluded
       const grandTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
+
+      // Log unmapped rows per employee
+      if (unmappedRows.length > 0) {
+        console.warn(`[UNMAPPED] ${empMap.get(empId) || empId}: ${unmappedRows.length} unmapped rows, $${unmappedTotal.toFixed(2)} excluded from total`, 
+          unmappedRows.map(r => ({
+            id: r.id?.substring(0, 8),
+            raw_row_id: r.raw_row_id?.substring(0, 8),
+            pay_type: r.pay_type,
+            total_pay: r.total_pay,
+            total_hours: r.total_hours,
+            work_date: r.work_date,
+            notes: r.notes?.substring(0, 50),
+            concept_name: r.concept_name || r.original_concept_name,
+          }))
+        );
+      }
 
       // Source payroll total (authoritative — use total_pay field directly, not sub-components)
       const sourcePayrollTotal = Math.round(totalPayrollAmount * 100) / 100;
