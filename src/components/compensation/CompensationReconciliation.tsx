@@ -30,7 +30,14 @@ interface ReconciliationRow {
   profile: CompensationProfile | null;
   hourly: { rate: number | null; source: string; label: string };
   components: ComponentComparison[];
-  totals: { configured: number; historical: number; variance: number; variancePct: number };
+  totals: {
+    configured: number;
+    historical_clean: number;
+    historical_total: number;
+    unmapped_total: number;
+    variance: number;
+    variancePct: number;
+  };
   status: ReconciliationStatus;
 }
 
