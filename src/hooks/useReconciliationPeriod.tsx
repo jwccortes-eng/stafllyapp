@@ -385,9 +385,21 @@ export function useReconciliationPeriod(companyId: string | null) {
     ]);
 
     const schedules = (schedRes.data || []) as any[];
+    const schedules = (schedRes.data || []) as any[];
     const clocks = (clockRes.data || []) as any[];
     const payrolls = (payrollRes.data || []) as any[];
     const matches = (matchRes.data || []) as any[];
+
+    // Debug: log actual date ranges of fetched data
+    const schedDates = schedules.map(s => s.work_date).filter(Boolean).sort();
+    const clockDates = clocks.map(c => c.work_date).filter(Boolean).sort();
+    const payrollDates = payrolls.map(p => p.work_date).filter(Boolean).sort();
+    console.log("[generateFinalRecords] Fetched:", {
+      schedules: schedules.length, schedDateRange: schedDates.length ? `${schedDates[0]} → ${schedDates[schedDates.length - 1]}` : "none",
+      clocks: clocks.length, clockDateRange: clockDates.length ? `${clockDates[0]} → ${clockDates[clockDates.length - 1]}` : "none",
+      payrolls: payrolls.length, payrollDateRange: payrollDates.length ? `${payrollDates[0]} → ${payrollDates[payrollDates.length - 1]}` : "none",
+      matches: matches.length,
+    });
 
     if (schedules.length === 0 && clocks.length === 0 && payrolls.length === 0) {
       toast({ title: "Sin datos", description: "No hay datos importados para este periodo.", variant: "destructive" });
