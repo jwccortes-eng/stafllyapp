@@ -347,6 +347,19 @@ export default function EmployeeCompensationTab({
 
   return (
     <div className="space-y-4">
+      {/* ── Empty profile banner ── */}
+      {profileIsEmpty && (
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-warning/10 border border-warning/20">
+          <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+          <div className="flex-1 text-xs text-warning">
+            Perfil sin tarifas configuradas. Siembre valores desde datos existentes o configure manualmente.
+          </div>
+          <Button size="sm" variant="outline" className="h-7 text-[11px] shrink-0" onClick={seedFromRates} disabled={initializing}>
+            <DollarSign className="h-3 w-3 mr-1" /> {initializing ? "Sembrando..." : "Sembrar desde datos"}
+          </Button>
+        </div>
+      )}
+
       {/* ── Validation Alerts ── */}
       {alerts.length > 0 && (
         <div className="space-y-1.5">
