@@ -366,8 +366,19 @@ export function useReconciliationPeriod(companyId: string | null) {
     else clockQuery = clockQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
 
     if (period.payroll_batch_id) payrollQuery = payrollQuery.eq("batch_id", period.payroll_batch_id);
+    else payrollQuery = payrollQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
 
-    const matchQuery = supabase.from("reconciliation_matches" as any).select("*").eq("company_id", companyId);
+    // Matches should also be scoped — filter by period's batch or by created_at within period range
+    let matchQuery = supabase.from("reconciliation_matches" as any).select("*").eq("company_id", companyId);
+
+    console.log("[generateFinalRecords] Scope:", {
+      periodLabel: period.period_label,
+      start: period.period_start,
+      end: period.period_end,
+      schedBatch: period.schedule_batch_id || "DATE_RANGE",
+      clockBatch: period.clock_batch_id || "DATE_RANGE",
+      payrollBatch: period.payroll_batch_id || "DATE_RANGE",
+    });
 
     const [schedRes, clockRes, payrollRes, matchRes] = await Promise.all([
       schedQuery, clockQuery, payrollQuery, matchQuery,

@@ -122,9 +122,11 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
         periodEnd: periodScope?.period_end,
       });
 
+      const pStart = periodScope?.period_start || null;
+      const pEnd = periodScope?.period_end || null;
       const [schedules, clocks] = await Promise.all([
-        fetchAllByBatch("normalized_schedule_rows", companyId, schedBatch),
-        fetchAllByBatch("normalized_clock_rows", companyId, clockBatch),
+        fetchAllByBatch("normalized_schedule_rows", companyId, schedBatch, pStart, pEnd),
+        fetchAllByBatch("normalized_clock_rows", companyId, clockBatch, pStart, pEnd),
       ]) as [NormalizedScheduleRow[], NormalizedClockRow[]];
 
       setScopeDebug({ schedules: schedules.length, clocks: clocks.length, scheduleBatch: schedBatch, clockBatch: clockBatch });
