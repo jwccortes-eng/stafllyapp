@@ -759,7 +759,25 @@ export function useReconciliationPeriod(companyId: string | null) {
         worked_shifts: empClocks.map(c => ({ id: c.id, date: c.work_date, hours: c.total_hours, clock_in: c.clock_in, clock_out: c.clock_out })),
         payroll_rows: classifiedPayrolls.map(p => {
           const ctx = scheduleContextMap.get(p.work_date || "no-date");
-          return { id: p.id, source_row_id: p.raw_row_id || p.external_id || null, employee_id: empId, date: p.work_date, hours: p.total_hours, pay: p.total_pay, type: p.pay_type, classified_type: p._classified_type, notes: p.notes?.substring(0, 60), concept_name: p.concept_name || p.original_concept_name, shift_source: ctx ? ctx.shift_titles.join(", ") : null, location_source: ctx ? ctx.location_names.join(", ") : null };
+          return {
+            id: p.id,
+            source_row_id: p.raw_row_id || p.external_id || null,
+            employee_id: empId,
+            date: p.work_date,
+            hours: p.total_hours,
+            pay: p.total_pay,
+            type: p.pay_type,
+            classified_type: p._classified_type,
+            assigned_target_type: p._assigned_target_type,
+            classification_source: p._classification_source,
+            classification_match: p._classification_match,
+            notes: p.notes?.substring(0, 60),
+            concept_name: p.concept_name || p.original_concept_name,
+            shift_source: ctx ? ctx.shift_names.join(", ") : null,
+            location_source: ctx ? ctx.location_names.join(", ") : null,
+            job_source: ctx ? ctx.job_names.join(", ") : null,
+            client_location_source: ctx ? ctx.client_locations.join(", ") : null,
+          };
         }),
         total_scheduled_hours: Math.round(totalScheduledHours * 100) / 100,
         total_worked_hours: Math.round(totalWorkedHours * 100) / 100,
