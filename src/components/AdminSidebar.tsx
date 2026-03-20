@@ -49,10 +49,11 @@ const ALL_LINKS: LinkDef[] = [
 
   // NÓMINA — payroll & finance
   { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
+  { to: "/app/compensation-validation", icon: Receipt, label: "Compensación", module: null, section: "Nómina" },
   { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Nómina" },
-  { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes", module: "summary", section: "Nómina" },
   { to: "/app/staged-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Nómina" },
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes", module: "summary", section: "Nómina" },
 
   // MÁS — communication, monitoring & config
   { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Más" },
