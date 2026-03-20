@@ -406,6 +406,12 @@ export default function CompensationValidation() {
 
       {/* Simulator dialog */}
       <SimulatorDialog open={simOpen} onOpenChange={setSimOpen} employees={rows} />
+
+        </TabsContent>
+        <TabsContent value="reconciliation" className="mt-4">
+          <CompensationReconciliation />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
