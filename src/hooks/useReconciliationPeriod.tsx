@@ -632,7 +632,14 @@ export function useReconciliationPeriod(companyId: string | null) {
         const shiftFields = schedCtx ? [...schedCtx.shift_names, ...schedCtx.job_names] : [];
         const locationFields = schedCtx ? [...schedCtx.location_names, ...schedCtx.client_locations] : [];
         const clientFields = schedCtx ? [...schedCtx.client_names] : [];
-        const allFields = [...rowFields, ...shiftFields, ...locationFields, ...clientFields];
+
+        // CRITICAL FIX: When payroll work_date doesn't match any schedule date,
+        // include employee-level shift names so DB mappings and weekend detection still work
+        const empShiftNames = !schedCtx && empLevelContext.total_shift_count > 0
+          ? empLevelContext.all_shift_names
+          : [];
+
+        const allFields = [...rowFields, ...shiftFields, ...locationFields, ...clientFields, ...empShiftNames];
 
         // 1) Explicit DB mappings (manual priority)
         if (activeMappings.length > 0) {
