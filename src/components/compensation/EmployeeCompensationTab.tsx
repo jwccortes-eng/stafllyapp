@@ -89,6 +89,7 @@ export default function EmployeeCompensationTab({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
   const [inferring, setInferring] = useState(false);
+  const [initializing, setInitializing] = useState(false);
   const qc = useQueryClient();
 
   const { data: profile, isLoading } = useQuery({
