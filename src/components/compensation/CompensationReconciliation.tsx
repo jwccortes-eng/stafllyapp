@@ -475,6 +475,16 @@ export default function CompensationReconciliation() {
             <SelectItem value="last_60">Últimos 60 días</SelectItem>
           </SelectContent>
         </Select>
+        {noProfileIds.length > 0 && (
+          <Button
+            variant="default"
+            disabled={bulkCreating}
+            onClick={() => bulkCreateProfiles(noProfileIds)}
+          >
+            <Users className="h-4 w-4 mr-1.5" />
+            {bulkCreating ? "Creando..." : `Generar ${noProfileIds.length} perfiles`}
+          </Button>
+        )}
       </div>
 
       {/* Table */}
