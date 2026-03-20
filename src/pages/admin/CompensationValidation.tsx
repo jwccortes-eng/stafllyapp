@@ -94,6 +94,8 @@ export default function CompensationValidation() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [simOpen, setSimOpen] = useState(false);
   const [historyEmp, setHistoryEmp] = useState<{ id: string; name: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<{ id: string; name: string; profile: CompensationProfile | null } | null>(null);
+  const [bulkCreating, setBulkCreating] = useState(false);
 
   // Fetch employees + compensation profiles
   const { data: employees, isLoading: loadingEmp } = useQuery({
