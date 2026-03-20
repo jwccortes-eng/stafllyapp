@@ -373,6 +373,16 @@ export default function CompensationValidation() {
             {FILTER_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        {noProfileIds.length > 0 && (
+          <Button
+            variant="default"
+            disabled={bulkCreating}
+            onClick={() => bulkCreateProfiles(noProfileIds)}
+          >
+            <Users className="h-4 w-4 mr-1.5" />
+            {bulkCreating ? "Creando..." : `Generar ${noProfileIds.length} perfiles`}
+          </Button>
+        )}
         <Button variant="outline" onClick={() => setSimOpen(true)}>
           <Calculator className="h-4 w-4 mr-1.5" /> Simulador
         </Button>
