@@ -230,14 +230,28 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                   <div className="col-span-3 font-medium text-sm flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" /> {name}
                   </div>
-                  <div className="col-span-1 text-center text-sm font-mono">{record.total_scheduled_hours}</div>
-                  <div className={`col-span-1 text-center text-sm font-mono ${hasHoursIssue ? "text-destructive font-semibold" : ""}`}>
+                  <div className="col-span-1 text-center text-sm font-mono">
+                    {(record as any).shift_full_day_count > 0 || (record as any).shift_half_day_count > 0
+                      ? `${(record as any).shift_full_day_count || 0}d${(record as any).shift_half_day_count > 0 ? `+${(record as any).shift_half_day_count}½` : ""}`
+                      : `${record.total_scheduled_hours}h`}
+                  </div>
+                  <div className={`col-span-1 text-center text-sm font-mono ${Math.abs(record.total_scheduled_hours - record.total_worked_hours) > 1 ? "text-destructive font-semibold" : ""}`}>
                     {record.total_worked_hours}
                   </div>
-                  <div className="col-span-1 text-center text-sm font-mono">{record.total_payroll_hours}</div>
-                  <div className="col-span-1 text-center text-sm font-mono font-semibold">${record.final_total_pay}</div>
+                  <div className="col-span-1 text-center text-sm font-mono font-semibold">
+                    {(record as any).shift_calculated_total > 0
+                      ? `$${(record as any).shift_calculated_total}`
+                      : `$${record.grand_total || record.final_total_pay}`}
+                  </div>
+                  <div className="col-span-1 text-center text-sm font-mono text-muted-foreground">
+                    ${record.total_payroll_amount || 0}
+                  </div>
                   <div className="col-span-1 text-center">
-                    <Badge variant="outline" className="text-xs">{record.pay_classification}</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {(record as any).shift_calculated_total > 0
+                        ? ((record as any).shift_full_day_count > 0 ? "full_day" : record.pay_classification)
+                        : record.pay_classification}
+                    </Badge>
                   </div>
                   <div className="col-span-1 text-center">
                     {record.conflict_count > 0 ? (
