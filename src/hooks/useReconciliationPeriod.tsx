@@ -419,10 +419,38 @@ export function useReconciliationPeriod(companyId: string | null) {
     const OT_THRESHOLD = 40;
     const records: any[] = [];
 
+    // ── Deduplication helper: composite key per payroll row ──
+    const makePayrollKey = (p: any): string => {
+      const date = p.work_date || "no-date";
+      const empId = p.matched_employee_id || "no-emp";
+      const payType = p.pay_type || "unknown";
+      const totalPay = Number(p.total_pay) || 0;
+      const totalHours = Number(p.total_hours) || 0;
+      const rawRowId = p.raw_row_id || "";
+      // Use raw_row_id as primary uniqueness signal (it links to the source import row)
+      if (rawRowId) return `${empId}|${rawRowId}`.toLowerCase();
+      // Fallback: composite of employee + date + type + amounts
+      return `${empId}|${date}|${payType}|${totalPay}|${totalHours}`.toLowerCase();
+    };
+
+    // Global deduplication of all payroll rows BEFORE per-employee processing
+    const seenPayrollKeys = new Set<string>();
+    const dedupedPayrolls: any[] = [];
+    for (const p of payrolls) {
+      const key = makePayrollKey(p);
+      if (!seenPayrollKeys.has(key)) {
+        seenPayrollKeys.add(key);
+        dedupedPayrolls.push(p);
+      }
+    }
+    if (dedupedPayrolls.length < payrolls.length) {
+      console.warn(`[generateFinalRecords] DEDUP: removed ${payrolls.length - dedupedPayrolls.length} duplicate payroll rows (${payrolls.length} → ${dedupedPayrolls.length})`);
+    }
+
     for (const empId of employeeIds) {
       const empSchedules = schedules.filter(s => s.matched_employee_id === empId);
       const empClocks = clocks.filter(c => c.matched_employee_id === empId);
-      const empPayrolls = payrolls.filter(p => p.matched_employee_id === empId);
+      const empPayrolls = dedupedPayrolls.filter(p => p.matched_employee_id === empId);
       const empMatches = matches.filter(m => m.employee_id === empId);
 
       const totalScheduledHours = empSchedules.reduce((sum, s) => sum + (Number(s.total_hours) || 0), 0);
@@ -443,6 +471,17 @@ export function useReconciliationPeriod(companyId: string | null) {
       const weekendPayTotal = weekendRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
       const manualTotal = manualRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
 
+      // Debug: per-employee payroll breakdown
+      const empName = empMap.get(empId) || empId.substring(0, 8);
+      console.log(`[DEDUP] ${empName}: ${empPayrolls.length} payroll rows, total=$${totalPayrollAmount.toFixed(2)}`, {
+        hourly: `${hourlyRows.length} rows / $${hourlyPayTotal.toFixed(2)}`,
+        daily: `${dailyRows.length} rows / $${dailyPayTotal.toFixed(2)}`,
+        ride: `${rideRows.length} rows / $${ridePayTotal.toFixed(2)}`,
+        weekend: `${weekendRows.length} rows / $${weekendPayTotal.toFixed(2)}`,
+        manual: `${manualRows.length} rows / $${manualTotal.toFixed(2)}`,
+        ids: empPayrolls.map(p => p.id.substring(0, 8)),
+      });
+
       // Hours breakdown
       const hourlyHours = hourlyRows.reduce((s, r) => s + (Number(r.total_hours) || 0), 0);
       const regularHours = Math.min(hourlyHours, OT_THRESHOLD);
@@ -459,6 +498,9 @@ export function useReconciliationPeriod(companyId: string | null) {
 
       const grandTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
 
+      // Source payroll total (authoritative — use total_pay field directly, not sub-components)
+      const sourcePayrollTotal = Math.round(totalPayrollAmount * 100) / 100;
+
       // Conflicts
       const unresolvedMatches = empMatches.filter(m => m.match_status === "ambiguous" || m.match_status === "unmatched");
       const conflictCount = unresolvedMatches.length;
@@ -470,6 +512,15 @@ export function useReconciliationPeriod(companyId: string | null) {
       }
       if (grandTotal === 0 && empPayrolls.length > 0) warnings.push("Total calculado es $0 con filas de nómina existentes");
       if (classification === "unknown") warnings.push("Clasificación de pago no determinada");
+
+      // Variance: compare authoritative payroll total vs computed breakdown
+      const varianceAmount = Math.round((grandTotal - sourcePayrollTotal) * 100) / 100;
+      const varianceStatus = Math.abs(varianceAmount) < 0.01 ? "exact_match"
+        : Math.abs(varianceAmount) < 10 ? "minor_variance" : "major_variance";
+      const varianceReasons: string[] = [];
+      if (Math.abs(varianceAmount) >= 0.01) {
+        varianceReasons.push(`Breakdown sum ($${grandTotal}) vs source total ($${sourcePayrollTotal})`);
+      }
 
       records.push({
         company_id: companyId,
@@ -498,6 +549,10 @@ export function useReconciliationPeriod(companyId: string | null) {
         manual_amount: Math.round(manualTotal * 100) / 100,
         base_pay: Math.round(hourlyPayTotal * 100) / 100,
         final_total_pay: grandTotal,
+        source_payroll_total: sourcePayrollTotal,
+        variance_amount: varianceAmount,
+        variance_status: varianceStatus,
+        variance_reasons: varianceReasons,
         reconciliation_status: conflictCount > 0 ? "partial" : "resolved",
         conflict_count: conflictCount,
         warnings: warnings,
