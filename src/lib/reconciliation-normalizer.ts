@@ -445,6 +445,7 @@ export function normalizeClockRows(
       break_minutes: 0,
       location_name: d[colMap.location_name || ""] || null,
       client_name: d[colMap.client_name || ""] || null,
+      notes: d[colMap.notes || ""] || null,
       external_clock_id: extId,
       clock_method: "import",
       has_conflict: empMatch.ambiguous,
