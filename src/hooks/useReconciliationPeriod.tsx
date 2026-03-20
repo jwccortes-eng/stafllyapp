@@ -541,6 +541,16 @@ export function useReconciliationPeriod(companyId: string | null) {
       const unmappedRatio = historicalTotal > 0 ? unmappedExcludedAmount / historicalTotal : 0;
       const hasCriticalUnmapped = unmappedRatio > 0.2;
 
+      console.log("[generateFinalRecords][historical_debug]", {
+        employee_id: empId,
+        employee_name: empMap.get(empId) || empId,
+        historical_clean: sourcePayrollTotal,
+        historical_total: historicalTotal,
+        unmapped_total: unmappedExcludedAmount,
+        unmapped_ratio_pct: Number((unmappedRatio * 100).toFixed(2)),
+        critical_unmapped: hasCriticalUnmapped,
+      });
+
       // Conflicts
       const unresolvedMatches = empMatches.filter(m => m.match_status === "ambiguous" || m.match_status === "unmatched");
       const conflictCount = unresolvedMatches.length;

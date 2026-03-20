@@ -30,7 +30,14 @@ interface ReconciliationRow {
   profile: CompensationProfile | null;
   hourly: { rate: number | null; source: string; label: string };
   components: ComponentComparison[];
-  totals: { configured: number; historical: number; variance: number; variancePct: number };
+  totals: {
+    configured: number;
+    historical_clean: number;
+    historical_total: number;
+    unmapped_total: number;
+    variance: number;
+    variancePct: number;
+  };
   status: ReconciliationStatus;
 }
 
@@ -200,10 +207,13 @@ export default function CompensationReconciliation() {
       const allCats = new Set([...empMovements.keys(), "full_day", "half_day", "hourly", "ride"]);
 
       let totalConfigured = 0;
-      let totalHistorical = 0;
+      let totalHistoricalClean = 0;
+      let totalHistoricalTotal = 0;
+      let totalUnmapped = 0;
 
       for (const cat of allCats) {
         const hist = empMovements.get(cat) ?? 0;
+        const isUnmapped = cat === "other";
         let configured = 0;
         let reason = "";
 
@@ -238,14 +248,18 @@ export default function CompensationReconciliation() {
             reason = hist > 0 ? "Ajuste manual" : "";
             break;
           default:
-            reason = hist > 0 ? "Concepto no clasificado" : "";
+            reason = hist > 0 ? "Concepto no clasificado (excluido del cálculo)" : "";
         }
 
-        // Only include if either side has data
         if (hist === 0 && configured === 0) continue;
 
-        const variance = configured - hist;
-        const variancePct = hist !== 0 ? (variance / Math.abs(hist)) * 100 : configured !== 0 ? 100 : 0;
+        const historicalForVariance = isUnmapped ? 0 : hist;
+        const variance = configured - historicalForVariance;
+        const variancePct = historicalForVariance !== 0
+          ? (variance / Math.abs(historicalForVariance)) * 100
+          : configured !== 0
+            ? 100
+            : 0;
 
         components.push({
           concept: cat,
@@ -258,14 +272,33 @@ export default function CompensationReconciliation() {
         });
 
         totalConfigured += configured;
-        totalHistorical += hist;
+        totalHistoricalTotal += hist;
+        if (isUnmapped) totalUnmapped += hist;
+        else totalHistoricalClean += hist;
       }
 
-      const totalVariance = totalConfigured - totalHistorical;
-      const totalVariancePct = totalHistorical !== 0
-        ? (totalVariance / Math.abs(totalHistorical)) * 100 : 0;
+      const totalVariance = totalConfigured - totalHistoricalClean;
+      const totalVariancePct = totalHistoricalClean !== 0
+        ? (totalVariance / Math.abs(totalHistoricalClean)) * 100
+        : totalConfigured !== 0
+          ? 100
+          : 0;
 
-      const status = getStatus(totalVariancePct, hasHistorical);
+      const unmappedRatio = totalHistoricalTotal > 0 ? totalUnmapped / totalHistoricalTotal : 0;
+      const hasCriticalUnmapped = unmappedRatio > 0.2;
+      const status = hasCriticalUnmapped ? "needs_review" : getStatus(totalVariancePct, hasHistorical);
+
+      if (totalHistoricalTotal > 0) {
+        console.log("[comp-reconciliation][historical_debug]", {
+          employee_id: e.id,
+          employee_name: `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim(),
+          historical_clean: Number(totalHistoricalClean.toFixed(2)),
+          historical_total: Number(totalHistoricalTotal.toFixed(2)),
+          unmapped_total: Number(totalUnmapped.toFixed(2)),
+          unmapped_ratio_pct: Number((unmappedRatio * 100).toFixed(2)),
+          critical_unmapped: hasCriticalUnmapped,
+        });
+      }
 
       return {
         employee_id: e.id,
@@ -274,7 +307,14 @@ export default function CompensationReconciliation() {
         profile: p,
         hourly,
         components,
-        totals: { configured: totalConfigured, historical: totalHistorical, variance: totalVariance, variancePct: totalVariancePct },
+        totals: {
+          configured: totalConfigured,
+          historical_clean: totalHistoricalClean,
+          historical_total: totalHistoricalTotal,
+          unmapped_total: totalUnmapped,
+          variance: totalVariance,
+          variancePct: totalVariancePct,
+        },
         status,
       };
     });
@@ -504,7 +544,7 @@ export default function CompensationReconciliation() {
                     <TableHead className="text-xs">Empleado</TableHead>
                     <TableHead className="text-xs text-center">Estado</TableHead>
                     <TableHead className="text-xs text-right">Configurado</TableHead>
-                    <TableHead className="text-xs text-right">Histórico</TableHead>
+                    <TableHead className="text-xs text-right">Histórico (limpio)</TableHead>
                     <TableHead className="text-xs text-right">Varianza</TableHead>
                     <TableHead className="text-xs text-right">%</TableHead>
                     <TableHead className="text-xs text-center">Hourly</TableHead>
@@ -542,9 +582,22 @@ export default function CompensationReconciliation() {
                             <Badge className={`text-[10px] border-0 gap-1 ${sc.color}`}>
                               <Icon className="h-3 w-3" /> {sc.label}
                             </Badge>
+                            {row.totals.historical_total > 0 && (row.totals.unmapped_total / row.totals.historical_total) > 0.2 && (
+                              <div className="text-[10px] text-destructive mt-1">Crítico unmapped &gt; 20%</div>
+                            )}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs">{fmt(row.totals.configured)}</TableCell>
-                          <TableCell className="text-right font-mono text-xs">{fmt(row.totals.historical)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            <div>{fmt(row.totals.historical_clean)}</div>
+                            {row.totals.unmapped_total > 0 && (
+                              <div
+                                className="mt-0.5 text-[10px] font-normal text-muted-foreground"
+                                title={`Histórico total (incluye excluidos): ${fmt(row.totals.historical_total)} · Excluido unmapped: ${fmt(row.totals.unmapped_total)}`}
+                              >
+                                Total: {fmt(row.totals.historical_total)} · Excluido: {fmt(row.totals.unmapped_total)}
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell className={`text-right font-mono text-xs font-bold ${
                             Math.abs(row.totals.variance) > 10 ? "text-destructive" : "text-primary"
                           }`}>
