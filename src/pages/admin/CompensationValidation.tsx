@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "@/hooks/useCompany";
@@ -15,12 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CompensationHistoryDialog } from "@/components/compensation/CompensationHistoryDialog";
+import CompensationEditDialog from "@/components/compensation/CompensationEditDialog";
 import CompensationReconciliation from "@/components/compensation/CompensationReconciliation";
 import { toast } from "sonner";
 import {
   Search, CheckCircle, AlertTriangle, ShieldAlert, Clock, DollarSign,
   Calculator, History, Pencil, Filter, ChevronDown, ChevronUp, Info, Wallet,
-} from "lucide-react";
+  Plus, Users, UserPlus,
+};
 
 /* ── Types ── */
 interface EmployeeComp {
