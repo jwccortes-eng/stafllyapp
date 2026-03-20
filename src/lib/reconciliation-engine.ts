@@ -265,6 +265,7 @@ export interface NormalizedScheduleRow {
   job_title?: string | null;
   shift_title?: string | null;
   notes?: string | null;
+  availability_status?: string | null;
 }
 
 export interface NormalizedClockRow {
