@@ -355,7 +355,7 @@ export function useReconciliationPeriod(companyId: string | null) {
       .eq("company_id", companyId)
       .eq("is_active", true)
       .order("priority", { ascending: true });
-    const activeMappings = (dbMappings || []) as { pattern: string; target_type: string; priority: number; is_active: boolean }[];
+    const activeMappings = (dbMappings || []) as unknown as { pattern: string; target_type: string; priority: number; is_active: boolean }[];
     console.log(`[generateFinalRecords] Loaded ${activeMappings.length} payroll concept mappings from DB`);
 
     const period = periods.find(p => p.id === periodStatusId);
