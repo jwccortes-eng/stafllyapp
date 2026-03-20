@@ -313,7 +313,7 @@ export function matchScheduleToClock(
   for (const sched of schedules) {
     // Detect special compensation BEFORE employee check — these categories
     // are valid even without a matched employee (e.g. Weekend shift, Pay Ride)
-    const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes);
+    const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes, sched.availability_status);
 
     // Check if this is a double-pay modifier (PAGA DOBLE) — NOT clock-exempt
     const isDoublePay = hasDoublePay(sched.shift_title) || hasDoublePay(sched.job_title);
