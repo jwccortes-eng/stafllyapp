@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CompensationHistoryDialog } from "@/components/compensation/CompensationHistoryDialog";
+import CompensationReconciliation from "@/components/compensation/CompensationReconciliation";
 import { toast } from "sonner";
 import {
   Search, CheckCircle, AlertTriangle, ShieldAlert, Clock, DollarSign,
