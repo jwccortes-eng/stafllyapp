@@ -310,6 +310,86 @@ export default function CompensationReconciliation() {
     return { total, exact, close, mismatch, review, conciliated };
   }, [rows]);
 
+  const noProfileIds = useMemo(() => rows.filter(r => !r.profile).map(r => r.employee_id), [rows]);
+
+  const createProfileForEmployee = useCallback(async (employeeId: string): Promise<CompensationProfile | null> => {
+    if (!user || !selectedCompanyId) return null;
+    const { data, error } = await supabase.from("compensation_profiles").insert({
+      company_id: selectedCompanyId,
+      employee_id: employeeId,
+      payment_mode: "hourly" as any,
+      is_active: true,
+      effective_from: new Date().toISOString().split("T")[0],
+      created_by: user.id,
+      updated_by: user.id,
+    }).select("*").single();
+    if (error) { toast.error(error.message); return null; }
+    await supabase.from("compensation_change_log").insert({
+      company_id: selectedCompanyId,
+      employee_id: employeeId,
+      compensation_profile_id: data.id,
+      action_type: "created" as any,
+      changed_field: "profile",
+      new_value: "created",
+      reason: "Perfil creado desde reconciliación",
+      source_type: "admin_edit" as any,
+      changed_by: user.id,
+    });
+    return data as unknown as CompensationProfile;
+  }, [user, selectedCompanyId]);
+
+  const bulkCreateProfiles = useCallback(async (employeeIds: string[]) => {
+    if (!user || !selectedCompanyId || employeeIds.length === 0) return;
+    setBulkCreating(true);
+    try {
+      const inserts = employeeIds.map(eid => ({
+        company_id: selectedCompanyId,
+        employee_id: eid,
+        payment_mode: "hourly" as any,
+        is_active: true,
+        effective_from: new Date().toISOString().split("T")[0],
+        created_by: user.id,
+        updated_by: user.id,
+      }));
+      const { data, error } = await supabase.from("compensation_profiles").insert(inserts).select("id, employee_id");
+      if (error) throw error;
+      const logs = (data ?? []).map((d: any) => ({
+        company_id: selectedCompanyId,
+        employee_id: d.employee_id,
+        compensation_profile_id: d.id,
+        action_type: "created" as any,
+        changed_field: "profile",
+        new_value: "created",
+        reason: "Perfil creado en lote desde reconciliación",
+        source_type: "admin_edit" as any,
+        changed_by: user.id,
+      }));
+      if (logs.length > 0) await supabase.from("compensation_change_log").insert(logs);
+      qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+      qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
+      toast.success(`${data?.length ?? 0} perfiles creados`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al crear perfiles");
+    } finally {
+      setBulkCreating(false);
+    }
+  }, [user, selectedCompanyId, qc]);
+
+  const handleEditOrCreate = useCallback(async (row: ReconciliationRow) => {
+    if (row.profile) {
+      setEditTarget({ id: row.employee_id, name: row.employee_name, profile: row.profile });
+      return;
+    }
+    toast.info("Creando perfil...");
+    const newProfile = await createProfileForEmployee(row.employee_id);
+    if (newProfile) {
+      qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+      qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
+      setEditTarget({ id: row.employee_id, name: row.employee_name, profile: newProfile });
+      toast.success("Perfil creado");
+    }
+  }, [createProfileForEmployee, qc]);
+
   // Quick actions
   const confirmHourly = async (row: ReconciliationRow) => {
     if (!row.profile || !user) return;
