@@ -232,6 +232,7 @@ function App() {
                 <Route path="kiosk-devices" element={<KioskDevices />} />
                 <Route path="shift-ops" element={<ShiftOperations />} />
                 <Route path="compensation-validation" element={<CompensationValidation />} />
+                <Route path="payroll-pilot-close" element={<PayrollPilotClose />} />
               </Route>
 
               {/* Employee portal routes */}
