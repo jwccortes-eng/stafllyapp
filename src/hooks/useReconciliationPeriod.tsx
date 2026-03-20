@@ -564,7 +564,7 @@ export function useReconciliationPeriod(companyId: string | null) {
         employee_id: empId,
         scheduled_shifts: empSchedules.map(s => ({ id: s.id, date: s.work_date, hours: s.total_hours, title: s.shift_title })),
         worked_shifts: empClocks.map(c => ({ id: c.id, date: c.work_date, hours: c.total_hours, clock_in: c.clock_in, clock_out: c.clock_out })),
-        payroll_rows: empPayrolls.map(p => ({ id: p.id, date: p.work_date, hours: p.total_hours, pay: p.total_pay, type: p.pay_type })),
+        payroll_rows: classifiedPayrolls.map(p => ({ id: p.id, date: p.work_date, hours: p.total_hours, pay: p.total_pay, type: p.pay_type, classified_type: p._classified_type, notes: p.notes?.substring(0, 60), concept_name: p.concept_name || p.original_concept_name })),
         total_scheduled_hours: Math.round(totalScheduledHours * 100) / 100,
         total_worked_hours: Math.round(totalWorkedHours * 100) / 100,
         total_payroll_hours: Math.round(totalPayrollHours * 100) / 100,
