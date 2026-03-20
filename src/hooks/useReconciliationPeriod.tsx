@@ -607,14 +607,14 @@ export function useReconciliationPeriod(companyId: string | null) {
           }
         }
 
-        // 2) Shift/location mapping (Connecteam-first)
+        // 2) Shift/location mapping (Connecteam-first) — check per-date context first
         const shiftLocationPool = [...shiftFields, ...locationFields, rowShiftName, rowLocationName, rowJobName, rowClientLocation].filter(Boolean);
-        const weekendHit = shiftLocationPool.find((f) => f.includes("weekend job"));
+        const weekendHit = shiftLocationPool.find((f) => /weekend\s*(job|shift)/i.test(f));
         if (weekendHit) {
           return { classifiedType: "daily", assignedTargetType: "full_day", source: "shift_location:weekend_job", matchedValue: weekendHit };
         }
 
-        // 2b) Shift units heuristic: 1 shift=1 full_day, 0.5 shift=half_day, múltiples shifts=múltiples full_day
+        // 2b) Shift units heuristic: 1 shift=1 full_day, 0.5 shift=half_day
         if (schedCtx && schedCtx.shift_count > 0) {
           if ((schedCtx.full_day_units === 0 && schedCtx.half_day_units > 0) || ((Number(p.total_hours) || 0) > 0 && (Number(p.total_hours) || 0) <= 4)) {
             return { classifiedType: "daily", assignedTargetType: "half_day", source: "shift_units:half_day" };
@@ -622,9 +622,28 @@ export function useReconciliationPeriod(companyId: string | null) {
           return { classifiedType: "daily", assignedTargetType: "full_day", source: `shift_units:${schedCtx.shift_count}_shifts` };
         }
 
+        // 2c) Employee-level shift context fallback (when payroll work_date doesn't match any schedule date)
+        if (!schedCtx && empLevelContext.total_shift_count > 0) {
+          // If this employee has weekend jobs in their schedule for this period, classify accordingly
+          if (empLevelContext.has_weekend_job) {
+            return { classifiedType: "daily", assignedTargetType: "full_day", source: "emp_context:weekend_job_period", matchedValue: "employee has weekend_job shifts in period" };
+          }
+          // Otherwise use aggregate shift context
+          if (empLevelContext.total_full_day_shifts > 0) {
+            return { classifiedType: "daily", assignedTargetType: "full_day", source: `emp_context:${empLevelContext.total_shift_count}_shifts_in_period` };
+          }
+          if (empLevelContext.total_half_day_shifts > 0) {
+            return { classifiedType: "daily", assignedTargetType: "half_day", source: "emp_context:half_day_period" };
+          }
+        }
+
         // 3) Fallback legacy (pay_type/concept/notes)
         const t = String(p.pay_type || "").toLowerCase().trim();
         if (["hourly", "regular", "regular pay", "base", "base pay", "hora"].includes(t)) {
+          // CRITICAL: Do NOT override to hourly if employee has weekend_job shifts in this period
+          if (empLevelContext.has_weekend_job) {
+            return { classifiedType: "daily", assignedTargetType: "full_day", source: "shift_override:weekend_job_blocks_hourly", matchedValue: `pay_type="${t}" overridden by schedule context` };
+          }
           return { classifiedType: "hourly", assignedTargetType: "hourly", source: "fallback:pay_type" };
         }
         if (["daily", "daily pay", "diario"].includes(t)) {
