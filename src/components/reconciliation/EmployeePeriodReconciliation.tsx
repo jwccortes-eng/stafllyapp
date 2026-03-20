@@ -202,10 +202,10 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
               <input type="checkbox" checked={bulkSelection.size === finalRecords.length} onChange={selectAll} className="rounded" />
             </div>
             <div className="col-span-3">Empleado</div>
-            <div className="col-span-1 text-center">H. Prog.</div>
+            <div className="col-span-1 text-center">Días</div>
             <div className="col-span-1 text-center">H. Trab.</div>
-            <div className="col-span-1 text-center">H. Nóm.</div>
-            <div className="col-span-1 text-center">Total $</div>
+            <div className="col-span-1 text-center">Calc $</div>
+            <div className="col-span-1 text-center">Payroll $</div>
             <div className="col-span-1 text-center">Tipo</div>
             <div className="col-span-1 text-center">Conflictos</div>
             <div className="col-span-2 text-right">Estado</div>
