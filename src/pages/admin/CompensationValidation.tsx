@@ -529,6 +529,21 @@ export default function CompensationValidation() {
       {/* Simulator dialog */}
       <SimulatorDialog open={simOpen} onOpenChange={setSimOpen} employees={rows} />
 
+      {/* Edit dialog (Validation tab) */}
+      {editTarget && (
+        <CompensationEditDialog
+          open={!!editTarget}
+          onOpenChange={() => setEditTarget(null)}
+          employeeId={editTarget.id}
+          employeeName={editTarget.name}
+          profile={editTarget.profile}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
+            qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+          }}
+        />
+      )}
+
         </TabsContent>
         <TabsContent value="reconciliation" className="mt-4">
           <CompensationReconciliation />
