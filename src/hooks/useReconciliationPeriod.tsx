@@ -662,7 +662,7 @@ export function useReconciliationPeriod(companyId: string | null) {
         }
 
         // 2) Shift/location mapping (Connecteam-first) — check per-date context first
-        const shiftLocationPool = [...shiftFields, ...locationFields, rowShiftName, rowLocationName, rowJobName, rowClientLocation].filter(Boolean);
+        const shiftLocationPool = [...shiftFields, ...locationFields, ...empShiftNames, rowShiftName, rowLocationName, rowJobName, rowClientLocation].filter(Boolean);
         const weekendHit = shiftLocationPool.find((f) => /weekend\s*(job|shift)/i.test(f));
         if (weekendHit) {
           return { classifiedType: "daily", assignedTargetType: "full_day", source: "shift_location:weekend_job", matchedValue: weekendHit };
