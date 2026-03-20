@@ -308,7 +308,7 @@ export function useReconciliationPeriod(companyId: string | null) {
       return { canPublish: false, errors, warnings };
     }
 
-    const unresolved = records.filter(r => r.reconciliation_status === "pending" || r.reconciliation_status === "partial");
+    const unresolved = records.filter(r => ["pending", "partial", "blocked"].includes(r.reconciliation_status));
     if (unresolved.length > 0) {
       errors.push(`${unresolved.length} empleado(s) con conflictos sin resolver.`);
     }
@@ -316,6 +316,11 @@ export function useReconciliationPeriod(companyId: string | null) {
     const withConflicts = records.filter(r => r.conflict_count > 0 && r.reconciliation_status !== "approved");
     if (withConflicts.length > 0) {
       errors.push(`${withConflicts.length} empleado(s) con conflictos críticos no aprobados.`);
+    }
+
+    const blockedByUnmapped = records.filter(r => Array.isArray(r.warnings) && r.warnings.some((w: any) => String(w).startsWith("CRITICAL_UNMAPPED_RATIO:")));
+    if (blockedByUnmapped.length > 0) {
+      errors.push(`${blockedByUnmapped.length} empleado(s) bloqueados por unmapped > 20%.`);
     }
 
     const unknownPay = records.filter(r => r.pay_classification === "unknown");
