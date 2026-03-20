@@ -22,6 +22,65 @@ import {
   Users, UserPlus,
 } from "lucide-react";
 
+/* ── Types ── */
+interface ReconciliationRow {
+  employee_id: string;
+  employee_name: string;
+  employee_role: string | null;
+  profile: CompensationProfile | null;
+  hourly: { rate: number | null; source: string; label: string };
+  components: ComponentComparison[];
+  totals: { configured: number; historical: number; variance: number; variancePct: number };
+  status: ReconciliationStatus;
+}
+
+type ReconciliationStatus = "exact_match" | "close_match" | "mismatch" | "needs_review";
+
+interface ComponentComparison {
+  concept: string;
+  label: string;
+  configured: number;
+  historical: number;
+  variance: number;
+  variancePct: number;
+  reason: string;
+}
+
+/* ── Helpers ── */
+function resolveHourly(p: CompensationProfile | null) {
+  if (!p) return { rate: null, source: "none", label: "Sin perfil" };
+  if (p.hourly_rate_override_manual && p.default_hourly_rate != null)
+    return { rate: p.default_hourly_rate, source: "manual", label: "Confirmado" };
+  if (p.inferred_hourly_rate != null)
+    return { rate: p.inferred_hourly_rate, source: "inferred", label: "Inferido" };
+  if (p.default_hourly_rate != null)
+    return { rate: p.default_hourly_rate, source: "inherited", label: "Heredado" };
+  return { rate: null, source: "none", label: "Sin tarifa" };
+}
+
+function classifyMovement(conceptName: string, note: string): string {
+  const text = `${conceptName} ${note}`.toLowerCase();
+  if (/full|completo|w\.?j\s*compl/i.test(text)) return "full_day";
+  if (/half|medio|w\.?j\s*half/i.test(text)) return "half_day";
+  if (/hourly|hora|waiter|kitchen/i.test(text)) return "hourly";
+  if (/ride|ryde/i.test(text)) return "ride";
+  if (/bonus|bono|transport/i.test(text)) return "bonus";
+  if (/doble|double/i.test(text)) return "hourly_double";
+  if (/manual|adjustment|ajuste/i.test(text)) return "manual";
+  return "other";
+}
+
+const CONCEPT_LABELS: Record<string, string> = {
+  full_day: "Día completo",
+  half_day: "Medio día",
+  hourly: "Hourly Pay",
+  hourly_double: "Double Pay",
+  ride: "Pay Ride",
+  bonus: "Bono/Transport",
+  manual: "Ajuste manual",
+  other: "Otros",
+};
+
 function getStatus(variancePct: number, hasData: boolean): ReconciliationStatus {
   if (!hasData) return "needs_review";
   const abs = Math.abs(variancePct);
