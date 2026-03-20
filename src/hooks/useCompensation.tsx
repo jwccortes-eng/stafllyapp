@@ -22,6 +22,15 @@ export interface CompensationProfile {
   default_half_day_rate: number | null;
   default_ride_rate_regular: number | null;
   default_ride_rate_special: number | null;
+  overtime_hourly_rate: number | null;
+  kitchen_hourly_rate: number | null;
+  bonus_transport_hourly_rate: number | null;
+  double_pay_hourly_rate: number | null;
+  inferred_hourly_rate: number | null;
+  inferred_hourly_source: string | null;
+  inferred_hourly_confidence: string | null;
+  hourly_rate_last_verified_at: string | null;
+  hourly_rate_override_manual: boolean;
   rate_source: CompRateSource;
   effective_from: string;
   effective_to: string | null;
@@ -163,6 +172,10 @@ export function useCompensationMutations() {
       default_half_day_rate: updates.default_half_day_rate ?? existing?.default_half_day_rate,
       default_ride_rate_regular: updates.default_ride_rate_regular ?? existing?.default_ride_rate_regular,
       default_ride_rate_special: updates.default_ride_rate_special ?? existing?.default_ride_rate_special,
+      overtime_hourly_rate: updates.overtime_hourly_rate ?? existing?.overtime_hourly_rate,
+      kitchen_hourly_rate: updates.kitchen_hourly_rate ?? existing?.kitchen_hourly_rate,
+      bonus_transport_hourly_rate: updates.bonus_transport_hourly_rate ?? existing?.bonus_transport_hourly_rate,
+      double_pay_hourly_rate: updates.double_pay_hourly_rate ?? existing?.double_pay_hourly_rate,
       rate_source: updates.rate_source ?? existing?.rate_source ?? "employee_custom",
       effective_from: updates.effective_from ?? new Date().toISOString().split("T")[0],
       is_active: true,
