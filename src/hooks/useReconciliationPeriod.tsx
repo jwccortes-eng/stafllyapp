@@ -351,11 +351,11 @@ export function useReconciliationPeriod(companyId: string | null) {
     // Load company-specific payroll concept mappings
     const { data: dbMappings } = await supabase
       .from("payroll_concept_mappings" as any)
-      .select("pattern, target_type, priority, is_active")
+      .select("pattern, target_type, priority, is_active, match_field")
       .eq("company_id", companyId)
       .eq("is_active", true)
       .order("priority", { ascending: true });
-    const activeMappings = (dbMappings || []) as unknown as { pattern: string; target_type: string; priority: number; is_active: boolean }[];
+    const activeMappings = (dbMappings || []) as unknown as { pattern: string; target_type: string; priority: number; is_active: boolean; match_field: string }[];
     console.log(`[generateFinalRecords] Loaded ${activeMappings.length} payroll concept mappings from DB`);
 
     const period = periods.find(p => p.id === periodStatusId);
@@ -473,36 +473,82 @@ export function useReconciliationPeriod(companyId: string | null) {
       const totalPayrollHours = empPayrolls.reduce((sum, p) => sum + (Number(p.total_hours) || 0), 0);
       const totalPayrollAmount = empPayrolls.reduce((sum, p) => sum + (Number(p.total_pay) || 0), 0);
 
+      // ── Build schedule context: shift_title + location_name + client_name per employee+date ──
+      const scheduleContextMap = new Map<string, { shift_titles: string[]; location_names: string[]; client_names: string[]; shift_count: number }>();
+      for (const s of empSchedules) {
+        const dateKey = s.work_date || "no-date";
+        const existing = scheduleContextMap.get(dateKey) || { shift_titles: [], location_names: [], client_names: [], shift_count: 0 };
+        if (s.shift_title) existing.shift_titles.push(s.shift_title.toLowerCase().trim());
+        if (s.location_name) existing.location_names.push(s.location_name.toLowerCase().trim());
+        if (s.client_name) existing.client_names.push(s.client_name.toLowerCase().trim());
+        existing.shift_count += 1;
+        scheduleContextMap.set(dateKey, existing);
+      }
+
       // ── Auto-classify unrecognized pay_type values ──
       const classifyPayType = (p: any): string => {
+        // Gather all text fields from the payroll row itself
+        const fieldsToCheck: string[] = [];
+        if (p.pay_type) fieldsToCheck.push(p.pay_type.toLowerCase().trim());
+        if (p.concept_name) fieldsToCheck.push(p.concept_name.toLowerCase().trim());
+        if (p.original_concept_name) fieldsToCheck.push(String(p.original_concept_name).toLowerCase().trim());
+        if (p.notes) fieldsToCheck.push(p.notes.toLowerCase().trim());
+        if (p.title) fieldsToCheck.push(String(p.title).toLowerCase().trim());
+
+        // Enrich with schedule context (shift_title, location_name, client_name) for same employee+date
+        const schedCtx = scheduleContextMap.get(p.work_date || "no-date");
+        if (schedCtx) {
+          fieldsToCheck.push(...schedCtx.shift_titles);
+          fieldsToCheck.push(...schedCtx.location_names);
+          fieldsToCheck.push(...schedCtx.client_names);
+        }
+
+        // Helper to map target_type to internal classification
+        const mapTargetType = (tt: string): string => {
+          if (tt === "hourly") return "hourly";
+          if (tt === "full_day") return "daily";
+          if (tt === "half_day") return "daily";
+          if (tt === "ride") return "pay_ride";
+          if (tt === "bonus") return "manual_adjustment";
+          if (tt === "other") return "unmapped";
+          return tt;
+        };
+
         // 1. Try DB mappings first (sorted by priority)
         if (activeMappings.length > 0) {
-          const fieldsToCheck: string[] = [];
-          if (p.pay_type) fieldsToCheck.push(p.pay_type.toLowerCase().trim());
-          if (p.concept_name) fieldsToCheck.push(p.concept_name.toLowerCase().trim());
-          if (p.original_concept_name) fieldsToCheck.push(String(p.original_concept_name).toLowerCase().trim());
-          if (p.notes) fieldsToCheck.push(p.notes.toLowerCase().trim());
-          if (p.title) fieldsToCheck.push(String(p.title).toLowerCase().trim());
-
           for (const mapping of activeMappings) {
             const pat = mapping.pattern.toLowerCase().trim();
+            const mf = mapping.match_field || "any";
+
+            // If match_field is specific, only check that source
+            if (mf === "shift_title" && schedCtx) {
+              for (const st of schedCtx.shift_titles) { if (st.includes(pat)) return mapTargetType(mapping.target_type); }
+              continue;
+            }
+            if (mf === "location_name" && schedCtx) {
+              for (const ln of schedCtx.location_names) { if (ln.includes(pat)) return mapTargetType(mapping.target_type); }
+              continue;
+            }
+            if (mf === "client_name" && schedCtx) {
+              for (const cn of schedCtx.client_names) { if (cn.includes(pat)) return mapTargetType(mapping.target_type); }
+              continue;
+            }
+            // "any" → check all fields
             for (const field of fieldsToCheck) {
-              if (field.includes(pat)) {
-                // Map target_type to internal types
-                const tt = mapping.target_type;
-                if (tt === "hourly") return "hourly";
-                if (tt === "full_day") return "daily";
-                if (tt === "half_day") return "daily";
-                if (tt === "ride") return "pay_ride";
-                if (tt === "bonus") return "manual_adjustment";
-                if (tt === "other") return "unmapped";
-                return tt;
-              }
+              if (field.includes(pat)) return mapTargetType(mapping.target_type);
             }
           }
         }
 
-        // 2. Fallback: hardcoded classification
+        // 2. Shift-count heuristic: if schedule says 1 shift that day & no other classification, treat as full_day
+        if (schedCtx && schedCtx.shift_count >= 1) {
+          // Check if any shift title suggests a daily pay pattern
+          for (const st of schedCtx.shift_titles) {
+            if (st.includes("weekend") || st.includes("daily") || st.includes("diario") || st.includes("doble") || st.includes("double")) return "daily";
+          }
+        }
+
+        // 3. Fallback: hardcoded classification
         const t = (p.pay_type || "").toLowerCase().trim();
         if (t === "hourly" || t === "regular" || t === "regular pay" || t === "base" || t === "base pay" || t === "hora") return "hourly";
         if (t === "daily" || t === "daily pay" || t === "diario") return "daily";
@@ -541,19 +587,25 @@ export function useReconciliationPeriod(companyId: string | null) {
       // CRITICAL: grandTotal only includes classified rows — unmapped excluded
       const grandTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
 
-      // Log unmapped rows per employee
+      // Log unmapped rows per employee with shift/location context
       if (unmappedRows.length > 0) {
         console.warn(`[UNMAPPED] ${empMap.get(empId) || empId}: ${unmappedRows.length} unmapped rows, $${unmappedTotal.toFixed(2)} excluded from total`, 
-          unmappedRows.map(r => ({
-            id: r.id?.substring(0, 8),
-            raw_row_id: r.raw_row_id?.substring(0, 8),
-            pay_type: r.pay_type,
-            total_pay: r.total_pay,
-            total_hours: r.total_hours,
-            work_date: r.work_date,
-            notes: r.notes?.substring(0, 50),
-            concept_name: r.concept_name || r.original_concept_name,
-          }))
+          unmappedRows.map(r => {
+            const ctx = scheduleContextMap.get(r.work_date || "no-date");
+            return {
+              id: r.id?.substring(0, 8),
+              raw_row_id: r.raw_row_id?.substring(0, 8),
+              pay_type: r.pay_type,
+              total_pay: r.total_pay,
+              total_hours: r.total_hours,
+              work_date: r.work_date,
+              notes: r.notes?.substring(0, 50),
+              concept_name: r.concept_name || r.original_concept_name,
+              shift_source: ctx?.shift_titles?.join(", ") || null,
+              location_source: ctx?.location_names?.join(", ") || null,
+              client_source: ctx?.client_names?.join(", ") || null,
+            };
+          })
         );
       }
 
@@ -628,7 +680,10 @@ export function useReconciliationPeriod(companyId: string | null) {
         employee_id: empId,
         scheduled_shifts: empSchedules.map(s => ({ id: s.id, date: s.work_date, hours: s.total_hours, title: s.shift_title })),
         worked_shifts: empClocks.map(c => ({ id: c.id, date: c.work_date, hours: c.total_hours, clock_in: c.clock_in, clock_out: c.clock_out })),
-        payroll_rows: classifiedPayrolls.map(p => ({ id: p.id, source_row_id: p.raw_row_id || p.external_id || null, employee_id: empId, date: p.work_date, hours: p.total_hours, pay: p.total_pay, type: p.pay_type, classified_type: p._classified_type, notes: p.notes?.substring(0, 60), concept_name: p.concept_name || p.original_concept_name })),
+        payroll_rows: classifiedPayrolls.map(p => {
+          const ctx = scheduleContextMap.get(p.work_date || "no-date");
+          return { id: p.id, source_row_id: p.raw_row_id || p.external_id || null, employee_id: empId, date: p.work_date, hours: p.total_hours, pay: p.total_pay, type: p.pay_type, classified_type: p._classified_type, notes: p.notes?.substring(0, 60), concept_name: p.concept_name || p.original_concept_name, shift_source: ctx ? ctx.shift_titles.join(", ") : null, location_source: ctx ? ctx.location_names.join(", ") : null };
+        }),
         total_scheduled_hours: Math.round(totalScheduledHours * 100) / 100,
         total_worked_hours: Math.round(totalWorkedHours * 100) / 100,
         total_payroll_hours: Math.round(totalPayrollHours * 100) / 100,
