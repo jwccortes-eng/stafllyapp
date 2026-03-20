@@ -53,6 +53,7 @@ interface BlockerQueue {
 export default function CloseDesk({ period, finalRecords, variances, employeeMap, onNavigate, onApproveRecord, onBulkApprove, onClassifyRecords, onMarkReviewed }: Props) {
   const [showAllBlockers, setShowAllBlockers] = useState(false);
   const [showFinancial, setShowFinancial] = useState(false);
+  const [showAutoApproval, setShowAutoApproval] = useState(false);
 
   const readiness = useMemo((): ReadinessLevel => {
     if (period.status === "locked" || period.status === "posted") return "closed";
