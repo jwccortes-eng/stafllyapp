@@ -240,7 +240,7 @@ function parseTimestamp(dateStr: string | null, timeStr: string | null): string 
 // ─── Core normalizer with diagnostics ───
 
 function emptyDiagnostics(employees: EmployeeRecord[]): ImportDiagnostics {
-  return { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedActive: 0, matchedInactive: 0, matchedByAlias: 0, matchedByMethod: {}, matchedByStatus: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.filter(e => e.is_active !== false).length, companyEmployeesInactive: employees.filter(e => e.is_active === false).length };
+  return { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedActive: 0, matchedInactive: 0, matchedByAlias: 0, matchedByMethod: {}, matchedByStatus: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.filter(e => e.is_active !== false).length, companyEmployeesInactive: employees.filter(e => e.is_active === false).length, nullShiftTitle: 0, nullLocationName: 0, nullClientName: 0, nullAvailabilityStatus: 0, availabilityBlockCount: 0 };
 }
 
 function buildDiagnostics(

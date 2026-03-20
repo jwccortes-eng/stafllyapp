@@ -1,0 +1,1 @@
+ALTER TABLE normalized_schedule_rows ADD COLUMN IF NOT EXISTS availability_status text;
