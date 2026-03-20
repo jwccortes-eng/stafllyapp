@@ -230,6 +230,7 @@ function App() {
                 <Route path="advances-loans" element={<AdvancesLoans />} />
                 <Route path="kiosk-devices" element={<KioskDevices />} />
                 <Route path="shift-ops" element={<ShiftOperations />} />
+                <Route path="compensation-validation" element={<CompensationValidation />} />
               </Route>
 
               {/* Employee portal routes */}
