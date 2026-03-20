@@ -468,7 +468,23 @@ export function useReconciliationPeriod(companyId: string | null) {
       const empPayrolls = dedupedPayrolls.filter(p => p.matched_employee_id === empId);
       const empMatches = matches.filter(m => m.employee_id === empId);
 
-      const totalScheduledHours = empSchedules.reduce((sum, s) => sum + (Number(s.total_hours) || 0), 0);
+      // For full_day shifts with 0 hours, count as 8h equivalent per shift for H.Prog
+      const FULL_DAY_EQUIVALENT_HOURS = 8;
+      const HALF_DAY_EQUIVALENT_HOURS = 4;
+      const totalScheduledHours = empSchedules.reduce((sum, s) => {
+        const rawHours = Number(s.total_hours) || 0;
+        if (rawHours > 0) return sum + rawHours;
+        // If hours=0 but it's a real shift (not availability block), count equivalent
+        const avail = String((s as any).availability_status || "").trim().toLowerCase();
+        const isAvailBlock = avail === "unavailable" || avail === "no disponible" || avail.includes("block");
+        const shiftTitle = String(s.shift_title || "").trim();
+        const hasContext = shiftTitle || String(s.location_name || "").trim() || String(s.client_name || "").trim();
+        if (!isAvailBlock && hasContext) {
+          // Check if it's a half-day shift
+          return sum + (/half|media|1\/2/i.test(shiftTitle) ? HALF_DAY_EQUIVALENT_HOURS : FULL_DAY_EQUIVALENT_HOURS);
+        }
+        return sum;
+      }, 0);
       const totalWorkedHours = empClocks.reduce((sum, c) => sum + (Number(c.total_hours) || 0), 0);
       const totalPayrollHours = empPayrolls.reduce((sum, p) => sum + (Number(p.total_hours) || 0), 0);
       const totalPayrollAmount = empPayrolls.reduce((sum, p) => sum + (Number(p.total_pay) || 0), 0);
