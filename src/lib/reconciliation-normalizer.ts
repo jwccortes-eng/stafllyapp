@@ -327,16 +327,38 @@ export function normalizeScheduleRows(
   const systemRowNames: string[] = [];
   let blankNameRows = 0;
 
+  const normalizeLocalHeader = (h: string) => h.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[_\-]+/g, " ").replace(/\s+/g, " ");
+  const pickFirst = (...values: any[]): string | null => {
+    for (const value of values) {
+      if (value == null) continue;
+      const txt = String(value).trim();
+      if (txt) return txt;
+    }
+    return null;
+  };
+
   if (!colMap.employee_name && !colMap.employee_first_name && !colMap.external_id) {
     errors.push("Could not detect employee name or ID column");
   }
 
+  const hasSubItemHeader = headers.some((h) => normalizeLocalHeader(h) === "sub item");
+  const mappedShiftHeader = normalizeLocalHeader(colMap.shift_title || "");
+  if (hasSubItemHeader && mappedShiftHeader !== "sub item") {
+    errors.push("CRITICAL: Se detectó columna 'Sub item' pero no está mapeada a shift_title. Corrige el mapeo antes de continuar.");
+  }
+
   const normalized = rawRows.map(raw => {
     const d = raw.raw_data;
-    const nameRaw = resolveEmployeeName(d, colMap);
-    const phone = d[colMap.employee_phone || ""] || null;
-    const email = d[colMap.employee_email || ""] || null;
-    const extId = d[colMap.external_id || ""] || null;
+    const usersName = pickFirst(d["Users"], d["users"]);
+    const nameRaw = pickFirst(resolveEmployeeName(d, colMap), usersName) || "";
+    const phone = pickFirst(d[colMap.employee_phone || ""], d["Phone"], d["phone"]);
+    const email = pickFirst(d[colMap.employee_email || ""], d["Email"], d["email"]);
+    const extId = pickFirst(d[colMap.external_id || ""], d["Employer identification"], d["Employer Identification"]);
+
+    const subItem = pickFirst(d["Sub item"], d["Sub Item"], d[colMap.shift_title || ""]);
+    const job = pickFirst(d["Job"], d["job"], d[colMap.client_name || ""], d[colMap.job_title || ""]);
+    const address = pickFirst(d["Address"], d["address"], d[colMap.location_name || ""]);
+    const availabilityStatus = pickFirst(d["Availability status"], d["availability status"], d["Last Status"], d[colMap.availability_status || ""]);
 
     // Check for system/non-employee rows
     if (!nameRaw.trim()) {
@@ -398,13 +420,13 @@ export function normalizeScheduleRows(
       start_time: startTime,
       end_time: endTime,
       total_hours: totalHours,
-      client_name: d[colMap.client_name || ""] || d[colMap.job_title || ""] || null,
-      location_name: d[colMap.location_name || ""] || null,
-      shift_title: d[colMap.shift_title || ""] || d[colMap.job_title || ""] || null,
+      shift_title: subItem || job,
+      client_name: job,
+      location_name: address,
       external_shift_id: extId,
       pay_type: "unknown",
       notes: d[colMap.notes || ""] || null,
-      availability_status: d[colMap.availability_status || ""] || null,
+      availability_status: availabilityStatus,
       has_conflict: empMatch.ambiguous,
       conflict_details: empMatch.ambiguous ? { candidates: empMatch.candidates } : null,
       _is_system: false,

@@ -886,18 +886,19 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                 </div>
 
                 {/* Context field coverage */}
-                {(diagnostics.nullShiftTitle > 0 || diagnostics.nullLocationName > 0 || diagnostics.availabilityBlockCount > 0) && (
+                {sourceType === "schedule" && (
                   <div className="mt-3">
                     <p className="text-xs font-medium text-muted-foreground mb-1.5">Cobertura de contexto (campos de turno):</p>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                      <DiagnosticStat label="Sin shift_title" value={diagnostics.nullShiftTitle} variant={diagnostics.nullShiftTitle > 0 ? "warning" : "success"} />
-                      <DiagnosticStat label="Sin location" value={diagnostics.nullLocationName} variant={diagnostics.nullLocationName > 0 ? "warning" : "success"} />
-                      <DiagnosticStat label="Sin cliente" value={diagnostics.nullClientName} variant="muted" />
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                      <DiagnosticStat label="Con shift_title" value={Math.max(0, diagnostics.realEmployeeRows - diagnostics.nullShiftTitle)} variant="success" />
+                      <DiagnosticStat label="Con cliente" value={Math.max(0, diagnostics.realEmployeeRows - diagnostics.nullClientName)} variant="success" />
+                      <DiagnosticStat label="Con ubicación" value={Math.max(0, diagnostics.realEmployeeRows - diagnostics.nullLocationName)} variant="success" />
                       <DiagnosticStat label="Bloques disponibilidad" value={diagnostics.availabilityBlockCount} variant="muted" />
+                      <DiagnosticStat label="Turnos reales sin contexto" value={Math.max(0, diagnostics.nullShiftTitle - diagnostics.availabilityBlockCount)} variant={Math.max(0, diagnostics.nullShiftTitle - diagnostics.availabilityBlockCount) > 0 ? "destructive" : "success"} />
                     </div>
                     {diagnostics.availabilityBlockCount > 0 && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        ℹ️ {diagnostics.availabilityBlockCount} filas son bloques de disponibilidad (Unavailable) — no requieren turno ni reloj.
+                        ℹ️ {diagnostics.availabilityBlockCount} filas son bloques de disponibilidad (Unavailable) — no entran a cálculo de payroll.
                       </p>
                     )}
                   </div>
