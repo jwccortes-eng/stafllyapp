@@ -498,10 +498,19 @@ export function useReconciliationPeriod(companyId: string | null) {
           half_day_units: 0,
         };
 
-        const shiftName = (s.shift_title || "").toLowerCase().trim();
-        const locationName = (s.location_name || "").toLowerCase().trim();
-        const clientName = (s.client_name || "").toLowerCase().trim();
-        const jobName = shiftName; // Connecteam: job/turno normalmente via shift_title
+        const shiftTitleRaw = String(s.shift_title || "").trim();
+        const locationRaw = String(s.location_name || "").trim();
+        const clientRaw = String(s.client_name || "").trim();
+        const availabilityRaw = String((s as any).availability_status || "").trim().toLowerCase();
+
+        const isAvailabilityBlock = availabilityRaw === "unavailable" || availabilityRaw === "no disponible" || availabilityRaw.includes("block");
+        const isNoContext = !shiftTitleRaw && !locationRaw && !clientRaw;
+        if (isAvailabilityBlock || isNoContext) continue;
+
+        const shiftName = shiftTitleRaw.toLowerCase();
+        const locationName = locationRaw.toLowerCase();
+        const clientName = clientRaw.toLowerCase();
+        const jobName = clientName || shiftName; // Job secundario desde cliente/proyecto
         const clientLocation = [clientName, locationName].filter(Boolean).join(" ").trim();
         const hours = Number(s.total_hours) || 0;
 

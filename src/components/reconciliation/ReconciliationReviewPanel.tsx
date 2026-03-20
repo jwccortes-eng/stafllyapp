@@ -155,19 +155,48 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
       console.log("[Matching] clock-exempt total:", specialCount, "| structural_no_context:", structuralCount, "| availability_block:", availBlockCount);
       console.log("[Matching] unmatched_schedule:", unmatchedSchedCount);
 
-      // Context coverage stats
+      // Context coverage stats + per-row debug
       const realScheds = schedules.filter((s: any) => !s._is_system);
-      const nullTitle = realScheds.filter(s => !s.shift_title?.trim()).length;
-      const nullLoc = realScheds.filter(s => !s.location_name?.trim()).length;
-      const nullClient = realScheds.filter(s => !s.client_name?.trim()).length;
-      const withAvail = realScheds.filter((s: any) => s.availability_status?.trim()).length;
-      console.log("[Matching] Schedule context coverage:", {
-        total: realScheds.length,
-        nullShiftTitle: nullTitle,
-        nullLocation: nullLoc,
-        nullClient: nullClient,
-        withAvailabilityStatus: withAvail,
+      const debugRows = realScheds.map((s: any) => {
+        const shiftTitle = String(s.shift_title || "").trim();
+        const clientName = String(s.client_name || "").trim();
+        const locationName = String(s.location_name || "").trim();
+        const availabilityStatus = String(s.availability_status || "").trim();
+        const lowered = `${shiftTitle} ${clientName} ${locationName} ${String(s.notes || "")}`.toLowerCase();
+
+        let shiftCategory = "regular";
+        if (availabilityStatus.toLowerCase() === "unavailable" || availabilityStatus.toLowerCase().includes("block")) shiftCategory = "availability_block";
+        else if (!shiftTitle && !clientName && !locationName) shiftCategory = "structural_no_context";
+        else if (lowered.includes("weekend job")) shiftCategory = "daily_pay";
+        else if (lowered.includes("pay ride") || lowered.includes("ride")) shiftCategory = "ride_pay";
+
+        return {
+          work_date: s.work_date || "(null)",
+          employee: s.employee_name_raw || s.employee_name_normalized || s.matched_employee_id || "(null)",
+          shift_title: shiftTitle || "(null)",
+          client_name: clientName || "(null)",
+          location_name: locationName || "(null)",
+          availability_status: availabilityStatus || "(null)",
+          shift_category: shiftCategory,
+        };
       });
+
+      const nullTitle = debugRows.filter(r => r.shift_title === "(null)").length;
+      const nullLoc = debugRows.filter(r => r.location_name === "(null)").length;
+      const nullClient = debugRows.filter(r => r.client_name === "(null)").length;
+      const availabilityRows = debugRows.filter(r => r.shift_category === "availability_block").length;
+      const realNoContext = debugRows.filter(r => r.shift_category === "structural_no_context").length;
+
+      console.log("[Matching] Schedule context coverage:", {
+        total: debugRows.length,
+        withShiftTitle: debugRows.length - nullTitle,
+        withClientName: debugRows.length - nullClient,
+        withLocationName: debugRows.length - nullLoc,
+        availabilityBlock: availabilityRows,
+        realNoContext,
+      });
+      console.log("[Matching] Per-row normalized schedule debug (Connecteam):");
+      console.table(debugRows);
 
       // Debug: show examples of structural_no_context matches
       const structExamples = results.filter(r => r.conflict_flags.includes("structural_no_context")).slice(0, 10);
