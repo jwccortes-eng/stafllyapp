@@ -332,29 +332,72 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                       ) : <p className="text-xs text-muted-foreground">Sin datos de nómina</p>}
                     </div>
 
-                    {/* Summary */}
-                    <div className="grid grid-cols-5 gap-3 bg-muted/30 rounded-lg p-3">
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground">Base</div>
-                        <div className="font-mono font-semibold text-sm">${record.base_pay}</div>
+                    {/* Summary — shift-calc primary */}
+                    {(record as any).shift_calculated_total > 0 ? (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-5 gap-3 bg-primary/5 border border-primary/20 rounded-lg p-3">
+                          <div className="text-center">
+                            <div className="text-xs text-muted-foreground">Full Days</div>
+                            <div className="font-mono font-semibold text-sm">{(record as any).shift_full_day_count || 0} × ${(record as any).shift_daily_rate_used || "?"}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-muted-foreground">Half Days</div>
+                            <div className="font-mono text-sm">{(record as any).shift_half_day_count || 0} × ${(record as any).shift_half_day_rate_used || "?"}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-muted-foreground">Ride</div>
+                            <div className="font-mono text-sm">${record.ride_amount}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-muted-foreground">Manual</div>
+                            <div className="font-mono text-sm">${record.manual_amount}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-primary font-bold">TOTAL CALC</div>
+                            <div className="font-mono font-bold text-sm text-primary">${record.grand_total || record.final_total_pay}</div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 bg-muted/30 rounded-lg p-2 text-[11px]">
+                          <div className="text-center">
+                            <div className="text-muted-foreground">Referencia Payroll</div>
+                            <div className="font-mono font-medium text-muted-foreground">${record.total_payroll_amount || 0}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-muted-foreground">Diferencia</div>
+                            <div className={`font-mono font-medium ${Math.abs((record as any).shift_vs_payroll_diff || 0) > 10 ? "text-destructive" : "text-muted-foreground"}`}>
+                              {((record as any).shift_vs_payroll_diff || 0) >= 0 ? "+" : ""}${(record as any).shift_vs_payroll_diff || 0}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-muted-foreground">Fuente</div>
+                            <div className="font-mono truncate">{(record as any).shift_calculation_source?.split(":")[0] || "—"}</div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground">Ride</div>
-                        <div className="font-mono text-sm">${record.ride_amount}</div>
+                    ) : (
+                      <div className="grid grid-cols-5 gap-3 bg-muted/30 rounded-lg p-3">
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground">Base</div>
+                          <div className="font-mono font-semibold text-sm">${record.base_pay}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground">Ride</div>
+                          <div className="font-mono text-sm">${record.ride_amount}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground">Weekend</div>
+                          <div className="font-mono text-sm">${record.weekend_amount}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground">Manual</div>
+                          <div className="font-mono text-sm">${record.manual_amount}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground font-bold">TOTAL</div>
+                          <div className="font-mono font-bold text-sm text-primary">${record.final_total_pay}</div>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground">Weekend</div>
-                        <div className="font-mono text-sm">${record.weekend_amount}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground">Manual</div>
-                        <div className="font-mono text-sm">${record.manual_amount}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground font-bold">TOTAL</div>
-                        <div className="font-mono font-bold text-sm text-primary">${record.final_total_pay}</div>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex gap-2 flex-wrap">
