@@ -385,7 +385,6 @@ export function useReconciliationPeriod(companyId: string | null) {
     ]);
 
     const schedules = (schedRes.data || []) as any[];
-    const schedules = (schedRes.data || []) as any[];
     const clocks = (clockRes.data || []) as any[];
     const payrolls = (payrollRes.data || []) as any[];
     const matches = (matchRes.data || []) as any[];
