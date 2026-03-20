@@ -4,16 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCompensationMutations, type CompensationProfile } from "@/hooks/useCompensation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+const NUM_FIELDS = [
+  "default_hourly_rate", "default_daily_rate", "default_half_day_rate",
+  "default_ride_rate_regular", "default_ride_rate_special",
+  "overtime_hourly_rate", "kitchen_hourly_rate",
+  "bonus_transport_hourly_rate", "double_pay_hourly_rate",
+] as const;
+
+type NumField = typeof NUM_FIELDS[number];
+
 export function CompensationChangeForm({
-  open,
-  onOpenChange,
-  employeeId,
-  employeeName,
-  currentProfile,
+  open, onOpenChange, employeeId, employeeName, currentProfile,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -23,24 +29,31 @@ export function CompensationChangeForm({
 }) {
   const { upsertProfile } = useCompensationMutations();
   const [saving, setSaving] = useState(false);
+
+  const init = (f: NumField) => currentProfile?.[f]?.toString() ?? "";
+
   const [form, setForm] = useState({
     payment_mode: currentProfile?.payment_mode ?? "hourly",
-    default_hourly_rate: currentProfile?.default_hourly_rate?.toString() ?? "",
-    default_daily_rate: currentProfile?.default_daily_rate?.toString() ?? "",
-    default_half_day_rate: currentProfile?.default_half_day_rate?.toString() ?? "",
-    default_ride_rate_regular: currentProfile?.default_ride_rate_regular?.toString() ?? "",
-    default_ride_rate_special: currentProfile?.default_ride_rate_special?.toString() ?? "",
+    default_hourly_rate: init("default_hourly_rate"),
+    default_daily_rate: init("default_daily_rate"),
+    default_half_day_rate: init("default_half_day_rate"),
+    default_ride_rate_regular: init("default_ride_rate_regular"),
+    default_ride_rate_special: init("default_ride_rate_special"),
+    overtime_hourly_rate: init("overtime_hourly_rate"),
+    kitchen_hourly_rate: init("kitchen_hourly_rate"),
+    bonus_transport_hourly_rate: init("bonus_transport_hourly_rate"),
+    double_pay_hourly_rate: init("double_pay_hourly_rate"),
     effective_from: new Date().toISOString().split("T")[0],
     reason: "",
   });
+
+  const set = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const changedFields: { field: string; oldVal: string | null; newVal: string | null }[] = [];
-      const numFields = ["default_hourly_rate", "default_daily_rate", "default_half_day_rate", "default_ride_rate_regular", "default_ride_rate_special"] as const;
-      
-      for (const f of numFields) {
+      for (const f of NUM_FIELDS) {
         const newVal = form[f] ? Number(form[f]) : null;
         const oldVal = currentProfile?.[f] ?? null;
         if (newVal !== oldVal) {
@@ -51,16 +64,16 @@ export function CompensationChangeForm({
         changedFields.push({ field: "payment_mode", oldVal: currentProfile?.payment_mode ?? null, newVal: form.payment_mode });
       }
 
+      const numPayload: Record<string, number | null> = {};
+      for (const f of NUM_FIELDS) numPayload[f] = form[f] ? Number(form[f]) : null;
+
       await upsertProfile(employeeId, {
         payment_mode: form.payment_mode as any,
-        default_hourly_rate: form.default_hourly_rate ? Number(form.default_hourly_rate) : null,
-        default_daily_rate: form.default_daily_rate ? Number(form.default_daily_rate) : null,
-        default_half_day_rate: form.default_half_day_rate ? Number(form.default_half_day_rate) : null,
-        default_ride_rate_regular: form.default_ride_rate_regular ? Number(form.default_ride_rate_regular) : null,
-        default_ride_rate_special: form.default_ride_rate_special ? Number(form.default_ride_rate_special) : null,
+        ...numPayload,
         effective_from: form.effective_from,
         rate_source: "employee_custom" as any,
-      }, {
+        hourly_rate_override_manual: true,
+      } as any, {
         reason: form.reason || "Cambio manual desde perfil",
         sourceType: "admin_edit",
         changedFields,
@@ -74,16 +87,23 @@ export function CompensationChangeForm({
     setSaving(false);
   };
 
+  const RateInput = ({ label, field }: { label: string; field: string }) => (
+    <div>
+      <Label className="text-xs">{label}</Label>
+      <Input type="number" value={(form as any)[field]} onChange={e => set(field, e.target.value)} placeholder="—" />
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base">Cambiar compensación — {employeeName}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Modo de pago</Label>
-            <Select value={form.payment_mode} onValueChange={v => setForm(f => ({ ...f, payment_mode: v as "hourly" | "daily" | "mixed" }))}>
+            <Select value={form.payment_mode} onValueChange={v => set("payment_mode", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="hourly">Por hora</SelectItem>
@@ -92,35 +112,42 @@ export function CompensationChangeForm({
               </SelectContent>
             </Select>
           </div>
+
+          <Tabs defaultValue="daily" className="w-full">
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="daily">Día / Pieza</TabsTrigger>
+              <TabsTrigger value="hourly">Por Hora</TabsTrigger>
+              <TabsTrigger value="rides">Rides</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="daily" className="grid grid-cols-2 gap-3 pt-2">
+              <RateInput label="Día completo ($)" field="default_daily_rate" />
+              <RateInput label="Medio día ($)" field="default_half_day_rate" />
+            </TabsContent>
+
+            <TabsContent value="hourly" className="grid grid-cols-2 gap-3 pt-2">
+              <RateInput label="Hora regular ($)" field="default_hourly_rate" />
+              <RateInput label="Hora overtime ($)" field="overtime_hourly_rate" />
+              <RateInput label="Hora kitchen ($)" field="kitchen_hourly_rate" />
+              <RateInput label="Hora transporte ($)" field="bonus_transport_hourly_rate" />
+              <RateInput label="Hora doble ($)" field="double_pay_hourly_rate" />
+            </TabsContent>
+
+            <TabsContent value="rides" className="grid grid-cols-2 gap-3 pt-2">
+              <RateInput label="Ride regular ($)" field="default_ride_rate_regular" />
+              <RateInput label="Ride especial ($)" field="default_ride_rate_special" />
+            </TabsContent>
+          </Tabs>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Tarifa hora ($)</Label>
-              <Input type="number" value={form.default_hourly_rate} onChange={e => setForm(f => ({ ...f, default_hourly_rate: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs">Tarifa día completo ($)</Label>
-              <Input type="number" value={form.default_daily_rate} onChange={e => setForm(f => ({ ...f, default_daily_rate: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs">Tarifa medio día ($)</Label>
-              <Input type="number" value={form.default_half_day_rate} onChange={e => setForm(f => ({ ...f, default_half_day_rate: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs">Ride regular ($)</Label>
-              <Input type="number" value={form.default_ride_rate_regular} onChange={e => setForm(f => ({ ...f, default_ride_rate_regular: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs">Ride especial ($)</Label>
-              <Input type="number" value={form.default_ride_rate_special} onChange={e => setForm(f => ({ ...f, default_ride_rate_special: e.target.value }))} />
-            </div>
-            <div>
               <Label className="text-xs">Vigente desde</Label>
-              <Input type="date" value={form.effective_from} onChange={e => setForm(f => ({ ...f, effective_from: e.target.value }))} />
+              <Input type="date" value={form.effective_from} onChange={e => set("effective_from", e.target.value)} />
             </div>
-          </div>
-          <div>
-            <Label className="text-xs">Razón del cambio</Label>
-            <Input value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder="Ej: Aumento por desempeño" />
+            <div>
+              <Label className="text-xs">Razón del cambio</Label>
+              <Input value={form.reason} onChange={e => set("reason", e.target.value)} placeholder="Ej: Aumento" />
+            </div>
           </div>
         </div>
         <DialogFooter>
