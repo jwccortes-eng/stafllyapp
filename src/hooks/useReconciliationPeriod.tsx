@@ -821,6 +821,7 @@ export function useReconciliationPeriod(companyId: string | null) {
       let shiftCalculatedTotal = 0;
       let shiftCalcSource = "none";
       const hasShiftContext = empLevelContext.total_shift_count > 0 || shiftFullDayCount > 0 || shiftHalfDayCount > 0;
+      const shouldForceShiftPrimary = shiftFullDayCount > 0 || shiftHalfDayCount > 0 || empLevelContext.has_weekend_job;
 
       if (hasShiftContext && (empDailyRate || empHalfDayRate)) {
         const fullDayAmount = shiftFullDayCount * (empDailyRate || 0);
@@ -840,17 +841,23 @@ export function useReconciliationPeriod(companyId: string | null) {
         }
       }
 
+      // Hard guard: if there are full/half day shifts in period, keep shift-calc as primary path
+      if (shouldForceShiftPrimary && shiftCalculatedTotal <= 0 && (empDailyRate || empHalfDayRate)) {
+        const fullDayAmount = shiftFullDayCount * (empDailyRate || 0);
+        const halfDayAmount = shiftHalfDayCount * (empHalfDayRate || 0);
+        shiftCalculatedTotal = Math.round((fullDayAmount + halfDayAmount) * 100) / 100;
+        shiftCalcSource = `forced_shift_calc:${shiftFullDayCount}fd×$${empDailyRate || 0}+${shiftHalfDayCount}hd×$${empHalfDayRate || 0}`;
+      }
+
       // Payroll reference total (all classified rows)
       const payrollReferenceTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
 
-      // GRAND TOTAL: Use shift-calculated if available; otherwise fall back to payroll classified
-      // For ride/manual/weekend extras, always add from payroll since those aren't shift-counted
+      // GRAND TOTAL: when full/half day shifts exist, always use shift-calc as primary
       let grandTotal: number;
-      if (shiftCalculatedTotal > 0) {
-        // Shift-based: daily component from shifts + extras from payroll
+      const calculationPrimarySource = shouldForceShiftPrimary ? "shift_calc" : "payroll";
+      if (shouldForceShiftPrimary) {
         grandTotal = Math.round((shiftCalculatedTotal + ridePayTotal + manualTotal) * 100) / 100;
       } else {
-        // Fallback: payroll-based (legacy behavior)
         grandTotal = payrollReferenceTotal;
       }
 
@@ -858,14 +865,15 @@ export function useReconciliationPeriod(companyId: string | null) {
 
       console.log("[generateFinalRecords][shift_calc]", {
         employee: empMap.get(empId) || empId,
-        shift_full_day: shiftFullDayCount,
-        shift_half_day: shiftHalfDayCount,
+        shift_full_day_count: shiftFullDayCount,
+        shift_half_day_count: shiftHalfDayCount,
+        shift_calculated_total: shiftCalculatedTotal,
         daily_rate: empDailyRate,
         half_day_rate: empHalfDayRate,
-        shift_calculated: shiftCalculatedTotal,
         payroll_daily_weekend: dailyPayTotal + weekendPayTotal,
         diff: shiftVsPayrollDiff,
         source: shiftCalcSource,
+        primary_source: calculationPrimarySource,
         grand_total: grandTotal,
       });
 
@@ -900,13 +908,14 @@ export function useReconciliationPeriod(companyId: string | null) {
       const hourlyRate = hourlyHours > 0 ? Math.round((hourlyPayTotal / hourlyHours) * 100) / 100 : null;
       const dailyRate = empDailyRate || (dailyRows.length > 0 ? Math.round((dailyPayTotal / dailyRows.length) * 100) / 100 : null);
 
-      // Pay classification — shift-first: if shifts exist, classify as daily regardless
-      const hasShiftBasedPay = shiftCalculatedTotal > 0 || empLevelContext.total_full_day_shifts > 0 || empLevelContext.has_weekend_job;
+      // Pay classification — shift-first and explicit full_day/half_day labels
+      const hasShiftBasedPay = shouldForceShiftPrimary;
       let classification: string;
       if (hasShiftBasedPay) {
-        const hasHourly = hourlyRows.length > 0;
-        const hasExtras = rideRows.length > 0 || manualRows.length > 0;
-        classification = (hasHourly || hasExtras) ? "mixed" : "daily";
+        if (shiftFullDayCount > 0 && shiftHalfDayCount === 0) classification = "full_day";
+        else if (shiftHalfDayCount > 0 && shiftFullDayCount === 0) classification = "half_day";
+        else if (shiftHalfDayCount > 0 && shiftFullDayCount > 0) classification = "mixed_daily";
+        else classification = "daily";
       } else {
         const payTypes = classifiedPayrolls.filter(p => p._classified_type !== "unmapped").map(p => p._classified_type).filter(Boolean);
         const uniqueTypes = [...new Set(payTypes)];

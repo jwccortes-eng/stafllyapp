@@ -5973,8 +5973,11 @@ export type Database = {
           ride_pay_total: number | null
           schedule_batch_id: string | null
           scheduled_shifts: Json | null
+          shift_calculated_total: number | null
           shift_calculation_source: string | null
           shift_daily_rate_used: number | null
+          shift_full_day_count: number | null
+          shift_half_day_count: number | null
           shift_half_day_rate_used: number | null
           shift_vs_payroll_diff: number | null
           source_payroll_total: number | null
@@ -6025,8 +6028,11 @@ export type Database = {
           ride_pay_total?: number | null
           schedule_batch_id?: string | null
           scheduled_shifts?: Json | null
+          shift_calculated_total?: number | null
           shift_calculation_source?: string | null
           shift_daily_rate_used?: number | null
+          shift_full_day_count?: number | null
+          shift_half_day_count?: number | null
           shift_half_day_rate_used?: number | null
           shift_vs_payroll_diff?: number | null
           source_payroll_total?: number | null
@@ -6077,8 +6083,11 @@ export type Database = {
           ride_pay_total?: number | null
           schedule_batch_id?: string | null
           scheduled_shifts?: Json | null
+          shift_calculated_total?: number | null
           shift_calculation_source?: string | null
           shift_daily_rate_used?: number | null
+          shift_full_day_count?: number | null
+          shift_half_day_count?: number | null
           shift_half_day_rate_used?: number | null
           shift_vs_payroll_diff?: number | null
           source_payroll_total?: number | null
