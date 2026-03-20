@@ -516,7 +516,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
           let compositionRole: CompositionRole = "excluded_from_total";
           let reason = "Excluded from total.";
 
-          if (!hasAuthoritative) {
+          if (category === "other") {
+            include = false;
+            compositionRole = "informational_only";
+            reason = "Excluded from clean historical total: unmapped/unclassified movement.";
+            row.other_pay = round2(row.other_pay + value);
+            row.unmapped_count += 1;
+            row.unmapped_excluded_total = round2(row.unmapped_excluded_total + value);
+          } else if (!hasAuthoritative) {
             include = true;
             compositionRole = "inferred";
             reason = "Included as inferred payable amount (no authoritative payroll total present).";
