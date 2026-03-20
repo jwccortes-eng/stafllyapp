@@ -419,10 +419,38 @@ export function useReconciliationPeriod(companyId: string | null) {
     const OT_THRESHOLD = 40;
     const records: any[] = [];
 
+    // ── Deduplication helper: composite key per payroll row ──
+    const makePayrollKey = (p: any): string => {
+      const date = p.work_date || "no-date";
+      const empId = p.matched_employee_id || "no-emp";
+      const payType = p.pay_type || "unknown";
+      const totalPay = Number(p.total_pay) || 0;
+      const totalHours = Number(p.total_hours) || 0;
+      const rawRowId = p.raw_row_id || "";
+      // Use raw_row_id as primary uniqueness signal (it links to the source import row)
+      if (rawRowId) return `${empId}|${rawRowId}`.toLowerCase();
+      // Fallback: composite of employee + date + type + amounts
+      return `${empId}|${date}|${payType}|${totalPay}|${totalHours}`.toLowerCase();
+    };
+
+    // Global deduplication of all payroll rows BEFORE per-employee processing
+    const seenPayrollKeys = new Set<string>();
+    const dedupedPayrolls: any[] = [];
+    for (const p of payrolls) {
+      const key = makePayrollKey(p);
+      if (!seenPayrollKeys.has(key)) {
+        seenPayrollKeys.add(key);
+        dedupedPayrolls.push(p);
+      }
+    }
+    if (dedupedPayrolls.length < payrolls.length) {
+      console.warn(`[generateFinalRecords] DEDUP: removed ${payrolls.length - dedupedPayrolls.length} duplicate payroll rows (${payrolls.length} → ${dedupedPayrolls.length})`);
+    }
+
     for (const empId of employeeIds) {
       const empSchedules = schedules.filter(s => s.matched_employee_id === empId);
       const empClocks = clocks.filter(c => c.matched_employee_id === empId);
-      const empPayrolls = payrolls.filter(p => p.matched_employee_id === empId);
+      const empPayrolls = dedupedPayrolls.filter(p => p.matched_employee_id === empId);
       const empMatches = matches.filter(m => m.employee_id === empId);
 
       const totalScheduledHours = empSchedules.reduce((sum, s) => sum + (Number(s.total_hours) || 0), 0);
@@ -443,70 +471,16 @@ export function useReconciliationPeriod(companyId: string | null) {
       const weekendPayTotal = weekendRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
       const manualTotal = manualRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
 
-      // Hours breakdown
-      const hourlyHours = hourlyRows.reduce((s, r) => s + (Number(r.total_hours) || 0), 0);
-      const regularHours = Math.min(hourlyHours, OT_THRESHOLD);
-      const overtimeHours = Math.max(hourlyHours - OT_THRESHOLD, 0);
-
-      // Hourly rate detection
-      const hourlyRate = hourlyHours > 0 ? Math.round((hourlyPayTotal / hourlyHours) * 100) / 100 : null;
-      const dailyRate = dailyRows.length > 0 ? Math.round((dailyPayTotal / dailyRows.length) * 100) / 100 : null;
-
-      // Pay classification
-      const payTypes = empPayrolls.map(p => p.pay_type).filter(Boolean);
-      const uniqueTypes = [...new Set(payTypes)];
-      const classification = uniqueTypes.length === 0 ? "unknown" : uniqueTypes.length === 1 ? uniqueTypes[0] : "mixed";
-
-      const grandTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
-
-      // Conflicts
-      const unresolvedMatches = empMatches.filter(m => m.match_status === "ambiguous" || m.match_status === "unmatched");
-      const conflictCount = unresolvedMatches.length;
-
-      // Warnings
-      const warnings: string[] = [];
-      if (Math.abs(totalScheduledHours - totalWorkedHours) > 4 && totalScheduledHours > 0) {
-        warnings.push(`Variación de ${Math.abs(totalScheduledHours - totalWorkedHours).toFixed(1)}h entre programado y trabajado`);
-      }
-      if (grandTotal === 0 && empPayrolls.length > 0) warnings.push("Total calculado es $0 con filas de nómina existentes");
-      if (classification === "unknown") warnings.push("Clasificación de pago no determinada");
-
-      records.push({
-        company_id: companyId,
-        period_status_id: periodStatusId,
-        employee_id: empId,
-        scheduled_shifts: empSchedules.map(s => ({ id: s.id, date: s.work_date, hours: s.total_hours, title: s.shift_title })),
-        worked_shifts: empClocks.map(c => ({ id: c.id, date: c.work_date, hours: c.total_hours, clock_in: c.clock_in, clock_out: c.clock_out })),
-        payroll_rows: empPayrolls.map(p => ({ id: p.id, date: p.work_date, hours: p.total_hours, pay: p.total_pay, type: p.pay_type })),
-        total_scheduled_hours: Math.round(totalScheduledHours * 100) / 100,
-        total_worked_hours: Math.round(totalWorkedHours * 100) / 100,
-        total_payroll_hours: Math.round(totalPayrollHours * 100) / 100,
-        total_payroll_amount: Math.round(totalPayrollAmount * 100) / 100,
-        pay_classification: classification,
-        hourly_rate: hourlyRate,
-        daily_rate: dailyRate,
-        regular_hours: Math.round(regularHours * 100) / 100,
-        overtime_hours: Math.round(overtimeHours * 100) / 100,
-        hourly_pay_total: Math.round(hourlyPayTotal * 100) / 100,
-        daily_pay_total: Math.round(dailyPayTotal * 100) / 100,
-        ride_pay_total: Math.round(ridePayTotal * 100) / 100,
-        weekend_pay_total: Math.round(weekendPayTotal * 100) / 100,
-        manual_adjustment_total: Math.round(manualTotal * 100) / 100,
-        grand_total: grandTotal,
-        ride_amount: Math.round(ridePayTotal * 100) / 100,
-        weekend_amount: Math.round(weekendPayTotal * 100) / 100,
-        manual_amount: Math.round(manualTotal * 100) / 100,
-        base_pay: Math.round(hourlyPayTotal * 100) / 100,
-        final_total_pay: grandTotal,
-        reconciliation_status: conflictCount > 0 ? "partial" : "resolved",
-        conflict_count: conflictCount,
-        warnings: warnings,
-        schedule_batch_id: period.schedule_batch_id,
-        clock_batch_id: period.clock_batch_id,
-        payroll_batch_id: period.payroll_batch_id,
-        match_ids: empMatches.map(m => m.id),
+      // Debug: per-employee payroll breakdown
+      const empName = empMap.get(empId) || empId.substring(0, 8);
+      console.log(`[DEDUP] ${empName}: ${empPayrolls.length} payroll rows, total=$${totalPayrollAmount.toFixed(2)}`, {
+        hourly: `${hourlyRows.length} rows / $${hourlyPayTotal.toFixed(2)}`,
+        daily: `${dailyRows.length} rows / $${dailyPayTotal.toFixed(2)}`,
+        ride: `${rideRows.length} rows / $${ridePayTotal.toFixed(2)}`,
+        weekend: `${weekendRows.length} rows / $${weekendPayTotal.toFixed(2)}`,
+        manual: `${manualRows.length} rows / $${manualTotal.toFixed(2)}`,
+        ids: empPayrolls.map(p => p.id.substring(0, 8)),
       });
-    }
 
     // Upsert final records
     for (const rec of records) {
