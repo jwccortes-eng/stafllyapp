@@ -885,6 +885,24 @@ export default function StagedImportWizard({ companyId, onComplete, activePeriod
                   <DiagnosticStat label="Sin match" value={diagnostics.unmatched} variant={diagnostics.unmatched > 0 ? "destructive" : "success"} />
                 </div>
 
+                {/* Context field coverage */}
+                {(diagnostics.nullShiftTitle > 0 || diagnostics.nullLocationName > 0 || diagnostics.availabilityBlockCount > 0) && (
+                  <div className="mt-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1.5">Cobertura de contexto (campos de turno):</p>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                      <DiagnosticStat label="Sin shift_title" value={diagnostics.nullShiftTitle} variant={diagnostics.nullShiftTitle > 0 ? "warning" : "success"} />
+                      <DiagnosticStat label="Sin location" value={diagnostics.nullLocationName} variant={diagnostics.nullLocationName > 0 ? "warning" : "success"} />
+                      <DiagnosticStat label="Sin cliente" value={diagnostics.nullClientName} variant="muted" />
+                      <DiagnosticStat label="Bloques disponibilidad" value={diagnostics.availabilityBlockCount} variant="muted" />
+                    </div>
+                    {diagnostics.availabilityBlockCount > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ℹ️ {diagnostics.availabilityBlockCount} filas son bloques de disponibilidad (Unavailable) — no requieren turno ni reloj.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Match breakdown by status */}
                 {diagnostics.matched > 0 && (
                   <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
