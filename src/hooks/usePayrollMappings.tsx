@@ -134,21 +134,55 @@ export function usePayrollMappings() {
   }, [fetchMappings]);
 
   /** Classify a payroll row using loaded mappings. Returns target_type or "unmapped". */
-  const classifyWithMappings = useCallback((row: { pay_type?: string; notes?: string; concept_name?: string; original_concept_name?: string; title?: string }): string => {
+  const classifyWithMappings = useCallback((row: {
+    pay_type?: string;
+    notes?: string;
+    concept_name?: string;
+    original_concept_name?: string;
+    title?: string;
+    shift_title?: string;
+    shift_name?: string;
+    location_name?: string;
+    job_name?: string;
+    client_location?: string;
+    client_name?: string;
+  }): string => {
     const activeMappings = mappings.filter(m => m.is_active).sort((a, b) => a.priority - b.priority);
-    
-    const fieldsToCheck: string[] = [];
-    if (row.pay_type) fieldsToCheck.push(row.pay_type.toLowerCase().trim());
-    if (row.concept_name) fieldsToCheck.push(row.concept_name.toLowerCase().trim());
-    if (row.original_concept_name) fieldsToCheck.push((row.original_concept_name as string).toLowerCase().trim());
-    if (row.notes) fieldsToCheck.push(row.notes.toLowerCase().trim());
-    if (row.title) fieldsToCheck.push(row.title.toLowerCase().trim());
+
+    const allFields: string[] = [
+      row.pay_type,
+      row.concept_name,
+      row.original_concept_name,
+      row.notes,
+      row.title,
+      row.shift_title,
+      row.shift_name,
+      row.location_name,
+      row.job_name,
+      row.client_location,
+      row.client_name,
+    ]
+      .filter(Boolean)
+      .map((v) => String(v).toLowerCase().trim());
+
+    const shiftFields = [row.shift_title, row.shift_name, row.job_name, row.title]
+      .filter(Boolean)
+      .map((v) => String(v).toLowerCase().trim());
+
+    const locationFields = [row.location_name, row.client_location, row.client_name]
+      .filter(Boolean)
+      .map((v) => String(v).toLowerCase().trim());
 
     for (const mapping of activeMappings) {
-      const pat = mapping.pattern.toLowerCase().trim();
-      for (const field of fieldsToCheck) {
-        if (field.includes(pat)) return mapping.target_type;
-      }
+      const pat = String(mapping.pattern || "").toLowerCase().trim();
+      if (!pat) continue;
+      const mf = String(mapping.match_field || "any").toLowerCase().trim();
+
+      let fieldsToCheck = allFields;
+      if (["shift_title", "shift_name", "job_name"].includes(mf)) fieldsToCheck = shiftFields;
+      else if (["location_name", "client_location", "client_name"].includes(mf)) fieldsToCheck = locationFields;
+
+      if (fieldsToCheck.some((field) => field.includes(pat))) return mapping.target_type;
     }
     return "unmapped";
   }, [mappings]);
