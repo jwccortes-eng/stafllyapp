@@ -854,6 +854,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                             <TableCell className="text-right font-mono text-sm">{r && r.ride_pay > 0 ? fmt(r.ride_pay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{r && r.weekend_pay > 0 ? fmt(r.weekend_pay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{r && r.manual_adj !== 0 ? fmt(r.manual_adj) : "—"}</TableCell>
+                            <TableCell className={`text-right font-mono text-sm ${r && r.other_pay > 0 ? "text-destructive font-medium" : ""}`}>{r && r.other_pay > 0 ? fmt(r.other_pay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-sm font-medium">{r ? fmt(r.total_final) : "—"}</TableCell>
                             <TableCell className={`text-right font-mono text-sm font-medium ${
                               Math.abs(c.totalVariance) > 50 ? "text-destructive" :
