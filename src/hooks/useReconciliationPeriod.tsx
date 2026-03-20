@@ -429,11 +429,33 @@ export function useReconciliationPeriod(companyId: string | null) {
       return;
     }
 
-    const { data: employees } = await supabase
-      .from("employees")
-      .select("id, first_name, last_name")
-      .eq("company_id", companyId);
-    const empMap = new Map((employees || []).map(e => [e.id, `${e.first_name} ${e.last_name}`]));
+    const [empRes, compProfilesRes] = await Promise.all([
+      supabase.from("employees").select("id, first_name, last_name").eq("company_id", companyId),
+      supabase.from("compensation_profiles").select("employee_id, default_daily_rate, default_half_day_rate, default_hourly_rate, payment_mode, is_active").eq("company_id", companyId).eq("is_active", true),
+    ]);
+    const employees = empRes.data || [];
+    const empMap = new Map(employees.map(e => [e.id, `${e.first_name} ${e.last_name}`]));
+
+    // Build compensation rate map: employee_id -> { daily_rate, half_day_rate, hourly_rate }
+    const compRateMap = new Map<string, { daily_rate: number | null; half_day_rate: number | null; hourly_rate: number | null; payment_mode: string }>();
+    for (const cp of (compProfilesRes.data || []) as any[]) {
+      compRateMap.set(cp.employee_id, {
+        daily_rate: cp.default_daily_rate,
+        half_day_rate: cp.default_half_day_rate,
+        hourly_rate: cp.default_hourly_rate,
+        payment_mode: cp.payment_mode,
+      });
+    }
+
+    // Also load company-level compensation rules as fallback rates
+    const { data: compRules } = await supabase
+      .from("company_compensation_rules" as any)
+      .select("rule_type, amount, is_active")
+      .eq("company_id", companyId)
+      .eq("is_active", true);
+    const rulesArr = (compRules || []) as any[];
+    const fallbackDailyRate = rulesArr.find(r => r.rule_type === "daily_full")?.amount || null;
+    const fallbackHalfDayRate = rulesArr.find(r => r.rule_type === "daily_half")?.amount || null;
 
     const employeeIds = new Set<string>();
     schedules.forEach(s => { if (s.matched_employee_id) employeeIds.add(s.matched_employee_id); });
