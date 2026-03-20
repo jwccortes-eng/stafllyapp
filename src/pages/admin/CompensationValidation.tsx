@@ -240,7 +240,7 @@ export default function CompensationValidation() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Validación de Compensación" description="Revisión operativa de tarifas por empleado" />
+      <PageHeader title="Validación de Compensación" subtitle="Revisión operativa de tarifas por empleado" />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
