@@ -366,8 +366,19 @@ export function useReconciliationPeriod(companyId: string | null) {
     else clockQuery = clockQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
 
     if (period.payroll_batch_id) payrollQuery = payrollQuery.eq("batch_id", period.payroll_batch_id);
+    else payrollQuery = payrollQuery.gte("work_date", period.period_start).lte("work_date", period.period_end);
 
-    const matchQuery = supabase.from("reconciliation_matches" as any).select("*").eq("company_id", companyId);
+    // Matches should also be scoped — filter by period's batch or by created_at within period range
+    let matchQuery = supabase.from("reconciliation_matches" as any).select("*").eq("company_id", companyId);
+
+    console.log("[generateFinalRecords] Scope:", {
+      periodLabel: period.period_label,
+      start: period.period_start,
+      end: period.period_end,
+      schedBatch: period.schedule_batch_id || "DATE_RANGE",
+      clockBatch: period.clock_batch_id || "DATE_RANGE",
+      payrollBatch: period.payroll_batch_id || "DATE_RANGE",
+    });
 
     const [schedRes, clockRes, payrollRes, matchRes] = await Promise.all([
       schedQuery, clockQuery, payrollQuery, matchQuery,
@@ -377,6 +388,17 @@ export function useReconciliationPeriod(companyId: string | null) {
     const clocks = (clockRes.data || []) as any[];
     const payrolls = (payrollRes.data || []) as any[];
     const matches = (matchRes.data || []) as any[];
+
+    // Debug: log actual date ranges of fetched data
+    const schedDates = schedules.map(s => s.work_date).filter(Boolean).sort();
+    const clockDates = clocks.map(c => c.work_date).filter(Boolean).sort();
+    const payrollDates = payrolls.map(p => p.work_date).filter(Boolean).sort();
+    console.log("[generateFinalRecords] Fetched:", {
+      schedules: schedules.length, schedDateRange: schedDates.length ? `${schedDates[0]} → ${schedDates[schedDates.length - 1]}` : "none",
+      clocks: clocks.length, clockDateRange: clockDates.length ? `${clockDates[0]} → ${clockDates[clockDates.length - 1]}` : "none",
+      payrolls: payrolls.length, payrollDateRange: payrollDates.length ? `${payrollDates[0]} → ${payrollDates[payrollDates.length - 1]}` : "none",
+      matches: matches.length,
+    });
 
     if (schedules.length === 0 && clocks.length === 0 && payrolls.length === 0) {
       toast({ title: "Sin datos", description: "No hay datos importados para este periodo.", variant: "destructive" });
