@@ -543,6 +543,20 @@ export default function CompensationReconciliation() {
           employeeName={historyEmp.name}
         />
       )}
+
+      {editTarget && (
+        <CompensationEditDialog
+          open={!!editTarget}
+          onOpenChange={() => setEditTarget(null)}
+          employeeId={editTarget.id}
+          employeeName={editTarget.name}
+          profile={editTarget.profile}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+            qc.invalidateQueries({ queryKey: ["comp-recon-movements"] });
+          }}
+        />
+      )}
     </div>
   );
 }
