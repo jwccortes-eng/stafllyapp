@@ -572,6 +572,21 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         if (row.total_suppressed > 0) {
           row.flags.push(`duplicate_suppressed_total: ${fmt(row.total_suppressed)}`);
         }
+
+        // Safety threshold: flag if "other" exceeds 20% of total
+        if (row.other_pay > 0 && row.total_final > 0) {
+          const otherPct = (row.other_pay / row.total_final) * 100;
+          if (otherPct > 20) {
+            row.flags.push(`⚠️ CRITICAL: "Otros" is ${otherPct.toFixed(1)}% of total (${fmt(row.other_pay)} of ${fmt(row.total_final)})`);
+          }
+          // Log unmapped details
+          const otherLedger = row.ledger.filter(l => l.category === "other" && l.included);
+          if (otherLedger.length > 0) {
+            console.warn(`[OTROS] ${row.employee_name}: ${otherLedger.length} "other" entries, $${row.other_pay.toFixed(2)}`,
+              otherLedger.map(l => ({ concept: l.concept, value: l.value, id: l.id, sourceType: l.sourceType }))
+            );
+          }
+        }
       });
 
       setReconData(Array.from(breakdowns.values()));
