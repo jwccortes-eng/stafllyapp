@@ -609,7 +609,7 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   total_pay: ["total pay", "gross pay", "total amount", "total", "amount", "pay", "pago", "monto", "gross"],
   hourly_rate: ["hourly rate", "pay rate", "rate", "tarifa", "hourly rate (usd)"],
   job_title: ["job title", "job name", "job", "puesto", "position", "rol"],
-  shift_title: ["shift title", "shift name", "shift", "turno", "scheduled shift title"],
+  shift_title: ["sub item", "shift title", "shift name", "shift", "turno", "scheduled shift title"],
   client_name: ["client name", "client", "customer", "cliente", "account"],
   location_name: ["location name", "location", "site", "ubicacion", "place", "address", "start location", "start - location"],
   availability_status: ["availability status", "availability", "disponibilidad", "last status"],

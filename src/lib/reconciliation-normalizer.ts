@@ -398,7 +398,7 @@ export function normalizeScheduleRows(
       start_time: startTime,
       end_time: endTime,
       total_hours: totalHours,
-      client_name: d[colMap.client_name || ""] || null,
+      client_name: d[colMap.client_name || ""] || d[colMap.job_title || ""] || null,
       location_name: d[colMap.location_name || ""] || null,
       shift_title: d[colMap.shift_title || ""] || d[colMap.job_title || ""] || null,
       external_shift_id: extId,
