@@ -348,6 +348,16 @@ export function useReconciliationPeriod(companyId: string | null) {
   const generateFinalRecords = useCallback(async (periodStatusId: string) => {
     if (!companyId || !user?.id) return;
 
+    // Load company-specific payroll concept mappings
+    const { data: dbMappings } = await supabase
+      .from("payroll_concept_mappings" as any)
+      .select("pattern, target_type, priority, is_active")
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .order("priority", { ascending: true });
+    const activeMappings = (dbMappings || []) as { pattern: string; target_type: string; priority: number; is_active: boolean }[];
+    console.log(`[generateFinalRecords] Loaded ${activeMappings.length} payroll concept mappings from DB`);
+
     const period = periods.find(p => p.id === periodStatusId);
     if (!period) {
       toast({ title: "Error", description: "Periodo no encontrado", variant: "destructive" });
