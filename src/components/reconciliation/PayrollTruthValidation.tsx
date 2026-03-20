@@ -92,25 +92,28 @@ function round2(n: number): number {
 
 function classifyMovement(conceptName: string): LedgerCategory {
   const n = conceptName.toLowerCase();
+  if (n.includes("hourly") || n.includes("hora") || n.includes("regular") || n.includes("base pay")) return "hourly";
   if (n.includes("daily") || n.includes("diario")) return "daily";
   if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "ride";
   if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend";
-  if (n.includes("adjust") || n.includes("manual") || n.includes("correction") || n.includes("reintegro")) return "manual";
+  if (n.includes("adjust") || n.includes("manual") || n.includes("correction") || n.includes("reintegro") || n.includes("bonus")) return "manual";
   return "other";
 }
 
 function classifyPayrollType(payType: string | null | undefined, notes: string | null | undefined): LedgerCategory {
-  const t = (payType || "").toLowerCase();
-  if (t === "hourly") return "hourly";
-  if (t === "daily") return "daily";
-  if (t === "pay_ride" || t === "ride") return "ride";
-  if (t === "weekend_job") return "weekend";
-  if (t === "manual_adjustment") return "manual";
+  const t = (payType || "").toLowerCase().trim();
+  if (t === "hourly" || t === "regular" || t === "regular pay" || t === "base" || t === "base pay" || t === "hora") return "hourly";
+  if (t === "daily" || t === "daily pay" || t === "diario") return "daily";
+  if (t === "pay_ride" || t === "ride" || t === "ryde" || t === "transporte") return "ride";
+  if (t === "weekend_job" || t === "weekend" || t === "doble" || t === "double" || t === "paga doble") return "weekend";
+  if (t === "manual_adjustment" || t === "manual" || t === "adjustment" || t === "bonus" || t === "reintegro" || t === "correction") return "manual";
 
   const n = (notes || "").toLowerCase();
   if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend";
   if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "ride";
   if (n.includes("manual") || n.includes("adjust") || n.includes("reintegro") || n.includes("bonus")) return "manual";
+  if (n.includes("daily") || n.includes("diario")) return "daily";
+  if (n.includes("hourly") || n.includes("regular") || n.includes("hora")) return "hourly";
 
   return "other";
 }
@@ -569,6 +572,21 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         if (row.total_suppressed > 0) {
           row.flags.push(`duplicate_suppressed_total: ${fmt(row.total_suppressed)}`);
         }
+
+        // Safety threshold: flag if "other" exceeds 20% of total
+        if (row.other_pay > 0 && row.total_final > 0) {
+          const otherPct = (row.other_pay / row.total_final) * 100;
+          if (otherPct > 20) {
+            row.flags.push(`⚠️ CRITICAL: "Otros" is ${otherPct.toFixed(1)}% of total (${fmt(row.other_pay)} of ${fmt(row.total_final)})`);
+          }
+          // Log unmapped details
+          const otherLedger = row.ledger.filter(l => l.category === "other" && l.included);
+          if (otherLedger.length > 0) {
+            console.warn(`[OTROS] ${row.employee_name}: ${otherLedger.length} "other" entries, $${row.other_pay.toFixed(2)}`,
+              otherLedger.map(l => ({ concept: l.concept, value: l.value, id: l.id, sourceType: l.sourceType }))
+            );
+          }
+        }
       });
 
       setReconData(Array.from(breakdowns.values()));
@@ -633,6 +651,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
     const totalTruth = truthData.reduce((sum, row) => sum + row.total, 0);
     const totalRecon = comparison.reduce((sum, row) => sum + (row.recon?.total_final || 0), 0);
     const totalSuppressed = comparison.reduce((sum, row) => sum + (row.recon?.total_suppressed || 0), 0);
+    const totalOther = reconData.reduce((sum, row) => sum + (row.other_pay || 0), 0);
     return {
       matched,
       close,
@@ -643,8 +662,11 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
       totalRecon,
       variance: totalRecon - totalTruth,
       totalSuppressed,
+      totalOther,
     };
-  }, [comparison, truthData]);
+  }, [comparison, truthData, reconData]);
+
+  const [showRawRecords, setShowRawRecords] = useState(false);
 
   const statusBadge = (s: ComparisonRow["status"]) => {
     switch (s) {
@@ -731,7 +753,56 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                   accent={Math.abs(stats.variance) > 100 ? "deduction" : "primary"}
                 />
                 <KpiCard label="Dups Suprimidos" value={fmt(stats.totalSuppressed)} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
+                <KpiCard label="Otros / Sin clasificar" value={fmt(stats.totalOther)} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.totalOther > 0 ? "deduction" : "muted"} />
               </div>
+
+              {/* Safety threshold warning for "Otros" */}
+              {stats.totalOther > 0 && stats.totalRecon > 0 && (stats.totalOther / stats.totalRecon) > 0.20 && (
+                <div className="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm">
+                  <p className="font-semibold text-destructive">⚠️ ALERTA CRÍTICA: "Otros / Sin clasificar" representa {((stats.totalOther / stats.totalRecon) * 100).toFixed(1)}% del total reconciliado</p>
+                  <p className="text-muted-foreground mt-1">Esto indica que hay registros de nómina que no están siendo clasificados correctamente. Revisa los registros crudos para identificar los conceptos no mapeados.</p>
+                </div>
+              )}
+
+              {/* Raw records debug button */}
+              <Button variant="outline" size="sm" onClick={() => setShowRawRecords(!showRawRecords)}>
+                {showRawRecords ? "Ocultar" : "Ver"} registros crudos ({reconData.reduce((s, r) => s + r.ledger.length, 0)})
+              </Button>
+
+              {showRawRecords && (
+                <div className="overflow-auto max-h-[400px] rounded border border-border bg-muted/30">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Empleado</TableHead>
+                        <TableHead>Concepto</TableHead>
+                        <TableHead>Categoría</TableHead>
+                        <TableHead>Tipo fuente</TableHead>
+                        <TableHead className="text-right">Monto</TableHead>
+                        <TableHead>Incluido</TableHead>
+                        <TableHead>Rol</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reconData.flatMap(r => 
+                        r.ledger
+                          .filter(l => l.category === "other" || !l.included || l.compositionRole === "excluded_from_total")
+                          .map(l => (
+                            <TableRow key={l.id} className={l.category === "other" ? "bg-destructive/5" : ""}>
+                              <TableCell className="text-xs">{r.employee_name}</TableCell>
+                              <TableCell className="text-xs font-mono">{l.concept}</TableCell>
+                              <TableCell><Badge variant={l.category === "other" ? "destructive" : "outline"} className="text-xs">{l.category}</Badge></TableCell>
+                              <TableCell className="text-xs">{l.sourceType}</TableCell>
+                              <TableCell className="text-right font-mono text-xs">{fmt(l.value)}</TableCell>
+                              <TableCell className="text-xs">{l.included ? "✓" : "✗"}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{l.compositionRole}</TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
 
               <div className="overflow-auto max-h-[600px]">
                 <Table>
@@ -746,6 +817,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                       <TableHead className="text-right">Recon Ride</TableHead>
                       <TableHead className="text-right">Recon Wknd</TableHead>
                       <TableHead className="text-right">Recon Adj</TableHead>
+                      <TableHead className="text-right text-destructive">Otros</TableHead>
                       <TableHead className="text-right">Recon TOTAL</TableHead>
                       <TableHead className="text-right">Varianza</TableHead>
                       <TableHead className="text-center">Sched</TableHead>
@@ -782,6 +854,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                             <TableCell className="text-right font-mono text-sm">{r && r.ride_pay > 0 ? fmt(r.ride_pay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{r && r.weekend_pay > 0 ? fmt(r.weekend_pay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{r && r.manual_adj !== 0 ? fmt(r.manual_adj) : "—"}</TableCell>
+                            <TableCell className={`text-right font-mono text-sm ${r && r.other_pay > 0 ? "text-destructive font-medium" : ""}`}>{r && r.other_pay > 0 ? fmt(r.other_pay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-sm font-medium">{r ? fmt(r.total_final) : "—"}</TableCell>
                             <TableCell className={`text-right font-mono text-sm font-medium ${
                               Math.abs(c.totalVariance) > 50 ? "text-destructive" :
@@ -801,7 +874,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
 
                           {isExpanded && (
                             <TableRow key={`${c.employee}-detail`} className="bg-muted/20 hover:bg-muted/20">
-                              <TableCell colSpan={15} className="p-3">
+                              <TableCell colSpan={16} className="p-3">
                                 <div className="space-y-3 text-xs">
                                   <div className="rounded bg-background border border-border p-2">
                                     <p className="font-medium text-foreground mb-1">Explicación de varianza:</p>
