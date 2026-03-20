@@ -13,11 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { KpiCard } from "@/components/ui/kpi-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CompensationHistoryDialog } from "@/components/compensation/CompensationHistoryDialog";
+import CompensationEditDialog from "@/components/compensation/CompensationEditDialog";
 import { toast } from "sonner";
 import {
   Search, CheckCircle, AlertTriangle, XCircle, ArrowRight,
   Filter, RefreshCw, User, FileText, Eye, DollarSign,
-  ChevronDown, ChevronUp, MessageSquare, ShieldCheck,
+  ChevronDown, ChevronUp, MessageSquare, ShieldCheck, Pencil,
 } from "lucide-react";
 
 /* ── Types ── */
