@@ -448,7 +448,17 @@ export default function CompensationValidation() {
             onClick={() => bulkCreateProfiles(noProfileIds)}
           >
             <Users className="h-4 w-4 mr-1.5" />
-            {bulkCreating ? "Creando..." : `Generar ${noProfileIds.length} perfiles`}
+            {bulkCreating ? "Procesando..." : `Generar ${noProfileIds.length} perfiles`}
+          </Button>
+        )}
+        {emptyProfileIds.length > 0 && (
+          <Button
+            variant="secondary"
+            disabled={bulkCreating}
+            onClick={seedEmptyProfiles}
+          >
+            <DollarSign className="h-4 w-4 mr-1.5" />
+            {bulkCreating ? "Procesando..." : `Sembrar ${emptyProfileIds.length} vacíos`}
           </Button>
         )}
         <Button variant="outline" onClick={() => setSimOpen(true)}>
