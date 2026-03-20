@@ -118,7 +118,7 @@ export function usePayrollMappings() {
     else { toast.success("Mapping agregado"); await fetchMappings(); }
   }, [companyId, user, fetchMappings]);
 
-  const updateMapping = useCallback(async (id: string, updates: Partial<Pick<PayrollMapping, "pattern" | "target_type" | "priority" | "is_active" | "notes">>) => {
+  const updateMapping = useCallback(async (id: string, updates: Partial<Pick<PayrollMapping, "pattern" | "target_type" | "match_field" | "priority" | "is_active" | "notes">>) => {
     const { error } = await supabase.from("payroll_concept_mappings" as any).update({ ...updates, updated_at: new Date().toISOString() } as any).eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success("Mapping actualizado"); await fetchMappings(); }
