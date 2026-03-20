@@ -181,6 +181,10 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
         const varianceBadge = varianceStatus === "exact_match" ? "default"
           : varianceStatus === "minor_variance" ? "secondary"
           : "destructive";
+        const cleanHistorical = record.source_payroll_total || 0;
+        const grossHistorical = record.total_payroll_amount || 0;
+        const excludedUnmapped = Math.max(0, grossHistorical - cleanHistorical);
+        const unmappedCount = (record.payroll_rows || []).filter((row: any) => row?.classified_type === "unmapped" || row?.type === "other" || row?.type === "unclassified").length;
 
         return (
           <Card key={record.employee_id} className={hasEdits ? "border-primary/50" : ""}>
