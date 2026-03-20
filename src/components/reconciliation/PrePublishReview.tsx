@@ -43,6 +43,10 @@ export default function PrePublishReview({
 
   const stats = useMemo(() => {
     const approved = finalRecords.filter(r => ["resolved", "approved"].includes(r.reconciliation_status));
+    const shiftCalcTotal = finalRecords.reduce((s, r) => s + ((r as any).shift_calculated_total || 0), 0);
+    const empsWithShiftCalc = finalRecords.filter(r => ((r as any).shift_calculated_total || 0) > 0).length;
+    const totalFullDays = finalRecords.reduce((s, r) => s + ((r as any).shift_full_day_count || 0), 0);
+    const totalHalfDays = finalRecords.reduce((s, r) => s + ((r as any).shift_half_day_count || 0), 0);
     return {
       totalEmployees: finalRecords.length,
       approvedEmployees: approved.length,
@@ -57,6 +61,10 @@ export default function PrePublishReview({
       weekendPay: finalRecords.reduce((s, r) => s + (r.weekend_pay_total || r.weekend_amount || 0), 0),
       manualAdj: finalRecords.reduce((s, r) => s + (r.manual_adjustment_total || r.manual_amount || 0), 0),
       grandTotal: finalRecords.reduce((s, r) => s + (r.grand_total || r.final_total_pay || 0), 0),
+      shiftCalcTotal,
+      empsWithShiftCalc,
+      totalFullDays,
+      totalHalfDays,
     };
   }, [finalRecords]);
 
