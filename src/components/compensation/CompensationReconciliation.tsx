@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "@/hooks/useCompany";
@@ -19,6 +19,7 @@ import {
   Search, CheckCircle, AlertTriangle, XCircle, ArrowRight,
   Filter, RefreshCw, User, FileText, Eye, DollarSign,
   ChevronDown, ChevronUp, MessageSquare, ShieldCheck, Pencil,
+  Users, UserPlus,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -97,6 +98,7 @@ const STATUS_CONFIG: Record<ReconciliationStatus, { label: string; color: string
 
 const FILTER_OPTIONS = [
   { value: "all", label: "Todos" },
+  { value: "no_profile", label: "Sin perfil" },
   { value: "exact_match", label: "Match exacto" },
   { value: "close_match", label: "Match cercano" },
   { value: "mismatch", label: "Mismatch" },
@@ -118,6 +120,7 @@ export default function CompensationReconciliation() {
   const [historyEmp, setHistoryEmp] = useState<{ id: string; name: string } | null>(null);
   const [editTarget, setEditTarget] = useState<{ id: string; name: string; profile: CompensationProfile | null } | null>(null);
   const [periodFilter, setPeriodFilter] = useState("last_30");
+  const [bulkCreating, setBulkCreating] = useState(false);
 
   // Fetch employees
   const { data: employees } = useQuery({
@@ -285,6 +288,7 @@ export default function CompensationReconciliation() {
       result = result.filter(r => r.employee_name.toLowerCase().includes(s));
     }
     switch (filter) {
+      case "no_profile": result = result.filter(r => !r.profile); break;
       case "exact_match": result = result.filter(r => r.status === "exact_match"); break;
       case "close_match": result = result.filter(r => r.status === "close_match"); break;
       case "mismatch": result = result.filter(r => r.status === "mismatch"); break;
@@ -307,6 +311,86 @@ export default function CompensationReconciliation() {
     const conciliated = total > 0 ? Math.round(((exact + close) / total) * 100) : 0;
     return { total, exact, close, mismatch, review, conciliated };
   }, [rows]);
+
+  const noProfileIds = useMemo(() => rows.filter(r => !r.profile).map(r => r.employee_id), [rows]);
+
+  const createProfileForEmployee = useCallback(async (employeeId: string): Promise<CompensationProfile | null> => {
+    if (!user || !selectedCompanyId) return null;
+    const { data, error } = await supabase.from("compensation_profiles").insert({
+      company_id: selectedCompanyId,
+      employee_id: employeeId,
+      payment_mode: "hourly" as any,
+      is_active: true,
+      effective_from: new Date().toISOString().split("T")[0],
+      created_by: user.id,
+      updated_by: user.id,
+    }).select("*").single();
+    if (error) { toast.error(error.message); return null; }
+    await supabase.from("compensation_change_log").insert({
+      company_id: selectedCompanyId,
+      employee_id: employeeId,
+      compensation_profile_id: data.id,
+      action_type: "created" as any,
+      changed_field: "profile",
+      new_value: "created",
+      reason: "Perfil creado desde reconciliación",
+      source_type: "admin_edit" as any,
+      changed_by: user.id,
+    });
+    return data as unknown as CompensationProfile;
+  }, [user, selectedCompanyId]);
+
+  const bulkCreateProfiles = useCallback(async (employeeIds: string[]) => {
+    if (!user || !selectedCompanyId || employeeIds.length === 0) return;
+    setBulkCreating(true);
+    try {
+      const inserts = employeeIds.map(eid => ({
+        company_id: selectedCompanyId,
+        employee_id: eid,
+        payment_mode: "hourly" as any,
+        is_active: true,
+        effective_from: new Date().toISOString().split("T")[0],
+        created_by: user.id,
+        updated_by: user.id,
+      }));
+      const { data, error } = await supabase.from("compensation_profiles").insert(inserts).select("id, employee_id");
+      if (error) throw error;
+      const logs = (data ?? []).map((d: any) => ({
+        company_id: selectedCompanyId,
+        employee_id: d.employee_id,
+        compensation_profile_id: d.id,
+        action_type: "created" as any,
+        changed_field: "profile",
+        new_value: "created",
+        reason: "Perfil creado en lote desde reconciliación",
+        source_type: "admin_edit" as any,
+        changed_by: user.id,
+      }));
+      if (logs.length > 0) await supabase.from("compensation_change_log").insert(logs);
+      qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+      qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
+      toast.success(`${data?.length ?? 0} perfiles creados`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al crear perfiles");
+    } finally {
+      setBulkCreating(false);
+    }
+  }, [user, selectedCompanyId, qc]);
+
+  const handleEditOrCreate = useCallback(async (row: ReconciliationRow) => {
+    if (row.profile) {
+      setEditTarget({ id: row.employee_id, name: row.employee_name, profile: row.profile });
+      return;
+    }
+    toast.info("Creando perfil...");
+    const newProfile = await createProfileForEmployee(row.employee_id);
+    if (newProfile) {
+      qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+      qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
+      setEditTarget({ id: row.employee_id, name: row.employee_name, profile: newProfile });
+      toast.success("Perfil creado");
+    }
+  }, [createProfileForEmployee, qc]);
 
   // Quick actions
   const confirmHourly = async (row: ReconciliationRow) => {
@@ -393,6 +477,16 @@ export default function CompensationReconciliation() {
             <SelectItem value="last_60">Últimos 60 días</SelectItem>
           </SelectContent>
         </Select>
+        {noProfileIds.length > 0 && (
+          <Button
+            variant="default"
+            disabled={bulkCreating}
+            onClick={() => bulkCreateProfiles(noProfileIds)}
+          >
+            <Users className="h-4 w-4 mr-1.5" />
+            {bulkCreating ? "Creando..." : `Generar ${noProfileIds.length} perfiles`}
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -434,6 +528,12 @@ export default function CompensationReconciliation() {
                               <div className="text-sm font-medium">{row.employee_name}</div>
                               {row.profile?.hourly_rate_override_manual && (
                                 <Badge className="text-[9px] border-0 bg-warning/10 text-warning px-1 py-0">Override</Badge>
+                              )}
+                              {row.profile && (
+                                <Badge className="text-[9px] border-0 bg-earning/10 text-earning px-1 py-0">Perfil activo</Badge>
+                              )}
+                              {!row.profile && (
+                                <Badge className="text-[9px] border-0 bg-destructive/10 text-destructive px-1 py-0">Sin perfil</Badge>
                               )}
                             </div>
                             {row.employee_role && <span className="text-[10px] text-muted-foreground">{row.employee_role}</span>}
@@ -497,8 +597,14 @@ export default function CompensationReconciliation() {
 
                                 {/* Quick actions */}
                                 <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/20">
-                                  <Button size="sm" variant="default" className="h-7 text-[11px]"
-                                    onClick={(e) => { e.stopPropagation(); setEditTarget({ id: row.employee_id, name: row.employee_name, profile: row.profile }); }}>
+                                  {!row.profile && (
+                                    <Button size="sm" variant="default" className="h-7 text-[11px]"
+                                      onClick={(e) => { e.stopPropagation(); handleEditOrCreate(row); }}>
+                                      <UserPlus className="h-3 w-3 mr-1" /> Crear perfil
+                                    </Button>
+                                  )}
+                                  <Button size="sm" variant={row.profile ? "default" : "secondary"} className="h-7 text-[11px]"
+                                    onClick={(e) => { e.stopPropagation(); handleEditOrCreate(row); }}>
                                     <Pencil className="h-3 w-3 mr-1" /> Editar compensación
                                   </Button>
                                   {row.profile && !row.profile.hourly_rate_override_manual && (row.profile.inferred_hourly_rate || row.profile.default_hourly_rate) && (
