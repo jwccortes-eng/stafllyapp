@@ -232,7 +232,12 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                       <span title="Nómina">{(r.payroll_rows || []).length}N</span>
                     </div>
                     <div className="text-right shrink-0 min-w-[100px]">
-                      <div className="text-xs font-mono font-bold">{fmt(r.grand_total || r.final_total_pay || 0)}</div>
+                      <div className="text-xs font-mono font-bold">{fmt(displayTotal)}</div>
+                      {(r as any).shift_calculated_total > 0 && (
+                        <div className="text-[10px] font-mono text-muted-foreground">
+                          ref: {fmt(r.total_payroll_amount || 0)}
+                        </div>
+                      )}
                       {v && v.variance_amount !== 0 && (
                         <div className={`text-[10px] font-mono ${Math.abs(v.variance_amount) > 10 ? "text-destructive" : "text-amber-600"}`}>
                           Δ {fmt(v.variance_amount)}
