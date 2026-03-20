@@ -257,7 +257,16 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                           <span className="text-muted-foreground">Nómina:</span> <strong>{(r.payroll_rows || []).length}</strong> filas ({r.total_payroll_hours?.toFixed(1)}h)
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Fuente:</span> <strong className="font-mono">{fmt(v?.source_payroll_total || r.total_payroll_amount || 0)}</strong>
+                          <span className="text-muted-foreground">Histórico limpio:</span> <strong className="font-mono">{fmt(cleanHistorical)}</strong>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Histórico total:</span> <strong className="font-mono">{fmt(grossHistorical)}</strong>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Excluido (unmapped):</span> <strong className={`font-mono ${excludedUnmappedAmount > 0 ? "text-destructive" : ""}`}>{fmt(excludedUnmappedAmount)}</strong>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Registros unmapped:</span> <strong>{unmappedCount}</strong>
                         </div>
                       </div>
                       {/* Payment breakdown */}
@@ -267,13 +276,14 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                         {(r.ride_pay_total || r.ride_amount || 0) > 0 && <Badge variant="secondary">Ride: {fmt(r.ride_pay_total || r.ride_amount || 0)}</Badge>}
                         {(r.weekend_pay_total || r.weekend_amount || 0) > 0 && <Badge variant="secondary">Weekend: {fmt(r.weekend_pay_total || r.weekend_amount || 0)}</Badge>}
                         {(r.manual_adjustment_total || r.manual_amount || 0) > 0 && <Badge variant="secondary">Manual: {fmt(r.manual_adjustment_total || r.manual_amount || 0)}</Badge>}
+                        {excludedUnmappedAmount > 0 && <Badge variant="destructive">Otros (excluido): {fmt(excludedUnmappedAmount)}</Badge>}
                       </div>
                       {/* Variance explanation */}
                       {v && v.variance_amount !== 0 && (
                         <div className="mt-1.5 p-2 rounded bg-muted/30 space-y-0.5">
                           <div className="text-[10px] font-medium text-muted-foreground">¿Por qué hay varianza?</div>
                           <div className="text-[11px] font-mono">
-                            Fuente: {fmt(v.source_payroll_total)} → Reconciliado: {fmt(v.reconciled_total)} = Δ {fmt(v.variance_amount)}
+                            Histórico limpio: {fmt(v.source_payroll_total)} → Reconciliado: {fmt(v.reconciled_total)} = Δ {fmt(v.variance_amount)}
                           </div>
                           {v.variance_reasons && v.variance_reasons.length > 0 && v.variance_reasons.map((reason, i) => (
                             <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
