@@ -527,6 +527,12 @@ export default function CompensationReconciliation() {
                               {row.profile?.hourly_rate_override_manual && (
                                 <Badge className="text-[9px] border-0 bg-warning/10 text-warning px-1 py-0">Override</Badge>
                               )}
+                              {row.profile && (
+                                <Badge className="text-[9px] border-0 bg-earning/10 text-earning px-1 py-0">Perfil activo</Badge>
+                              )}
+                              {!row.profile && (
+                                <Badge className="text-[9px] border-0 bg-destructive/10 text-destructive px-1 py-0">Sin perfil</Badge>
+                              )}
                             </div>
                             {row.employee_role && <span className="text-[10px] text-muted-foreground">{row.employee_role}</span>}
                           </TableCell>
