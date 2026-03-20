@@ -7,12 +7,13 @@ import {
   CheckCircle2, AlertTriangle, XCircle, Users, Shield, ArrowRight, Wrench,
   Lock, Upload, Zap, Clock, FileText,
   RotateCcw, TrendingUp, DollarSign, ClipboardCheck,
-  CircleDot,
+  CircleDot, Bot,
 } from "lucide-react";
 import type { PeriodStatus, EmployeeFinalRecord, EmployeeVariance } from "@/hooks/useReconciliationPeriod";
 import type { ClassifyAction } from "./QuickClassifyBar";
 import EmployeeCloseCards from "./EmployeeCloseCards";
 import FinancialAccuracyPanel from "./FinancialAccuracyPanel";
+import AutoApprovalPanel from "./AutoApprovalPanel";
 
 interface Props {
   period: PeriodStatus;
@@ -52,6 +53,7 @@ interface BlockerQueue {
 export default function CloseDesk({ period, finalRecords, variances, employeeMap, onNavigate, onApproveRecord, onBulkApprove, onClassifyRecords, onMarkReviewed }: Props) {
   const [showAllBlockers, setShowAllBlockers] = useState(false);
   const [showFinancial, setShowFinancial] = useState(false);
+  const [showAutoApproval, setShowAutoApproval] = useState(false);
 
   const readiness = useMemo((): ReadinessLevel => {
     if (period.status === "locked" || period.status === "posted") return "closed";
@@ -179,12 +181,25 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
         <span className="text-[11px] text-muted-foreground font-medium">{period.status}</span>
       </div>
 
-      {/* FINANCIAL ACCURACY TOGGLE */}
+      {/* PANEL TOGGLES */}
       <div className="flex items-center gap-2">
+        <Button size="sm" variant={showAutoApproval ? "default" : "outline"} className="gap-1 text-xs" onClick={() => setShowAutoApproval(!showAutoApproval)}>
+          <Bot className="h-3.5 w-3.5" /> {showAutoApproval ? "Ocultar Auto-Aprobación" : "Motor Auto-Aprobación"}
+        </Button>
         <Button size="sm" variant={showFinancial ? "default" : "outline"} className="gap-1 text-xs" onClick={() => setShowFinancial(!showFinancial)}>
           <DollarSign className="h-3.5 w-3.5" /> {showFinancial ? "Ocultar Panel Financiero" : "Panel Financiero"}
         </Button>
       </div>
+
+      {showAutoApproval && finalRecords.length > 0 && (
+        <AutoApprovalPanel
+          finalRecords={finalRecords}
+          employeeMap={employeeMap}
+          onNavigate={onNavigate}
+          onApproveRecord={onApproveRecord}
+          onBulkApprove={onBulkApprove}
+        />
+      )}
 
       {showFinancial && (
         <FinancialAccuracyPanel finalRecords={finalRecords} variances={variances} />
