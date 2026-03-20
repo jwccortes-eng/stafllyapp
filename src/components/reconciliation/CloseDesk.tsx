@@ -7,12 +7,13 @@ import {
   CheckCircle2, AlertTriangle, XCircle, Users, Shield, ArrowRight, Wrench,
   Lock, Upload, Zap, Clock, FileText,
   RotateCcw, TrendingUp, DollarSign, ClipboardCheck,
-  CircleDot,
+  CircleDot, Bot,
 } from "lucide-react";
 import type { PeriodStatus, EmployeeFinalRecord, EmployeeVariance } from "@/hooks/useReconciliationPeriod";
 import type { ClassifyAction } from "./QuickClassifyBar";
 import EmployeeCloseCards from "./EmployeeCloseCards";
 import FinancialAccuracyPanel from "./FinancialAccuracyPanel";
+import AutoApprovalPanel from "./AutoApprovalPanel";
 
 interface Props {
   period: PeriodStatus;
