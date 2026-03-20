@@ -204,9 +204,19 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
               </div>
               <div className="flex items-center gap-4 text-xs font-mono">
                 <div>
-                  <span className="text-muted-foreground">Fuente:</span>{" "}
-                  <span className="font-semibold">{fmt(record.source_payroll_total || record.total_payroll_amount || 0)}</span>
+                  <span className="text-muted-foreground">Histórico limpio:</span>{" "}
+                  <span className="font-semibold">{fmt(cleanHistorical)}</span>
                 </div>
+                <div>
+                  <span className="text-muted-foreground">Histórico total:</span>{" "}
+                  <span className="font-semibold">{fmt(grossHistorical)}</span>
+                </div>
+                {excludedUnmapped > 0 && (
+                  <div>
+                    <span className="text-muted-foreground">Excluido:</span>{" "}
+                    <span className="font-semibold text-destructive">{fmt(excludedUnmapped)} ({unmappedCount})</span>
+                  </div>
+                )}
                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
                 <div>
                   <span className="text-muted-foreground">Reconciliado:</span>{" "}
