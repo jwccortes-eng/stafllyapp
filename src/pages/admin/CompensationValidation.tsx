@@ -243,6 +243,13 @@ export default function CompensationValidation() {
     <div className="space-y-6">
       <PageHeader title="Validación de Compensación" subtitle="Revisión operativa de tarifas por empleado" />
 
+      <Tabs defaultValue="validation" className="w-full">
+        <TabsList>
+          <TabsTrigger value="validation">Validación</TabsTrigger>
+          <TabsTrigger value="reconciliation">Reconciliación vs Payroll</TabsTrigger>
+        </TabsList>
+        <TabsContent value="validation" className="space-y-6 mt-4">
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Total empleados" value={stats.total} />
