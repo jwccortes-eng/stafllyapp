@@ -430,7 +430,12 @@ export default function CompensationReconciliation() {
                           onClick={() => setExpandedId(expanded ? null : row.employee_id)}
                         >
                           <TableCell>
-                            <div className="text-sm font-medium">{row.employee_name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <div className="text-sm font-medium">{row.employee_name}</div>
+                              {row.profile?.hourly_rate_override_manual && (
+                                <Badge className="text-[9px] border-0 bg-warning/10 text-warning px-1 py-0">Override</Badge>
+                              )}
+                            </div>
                             {row.employee_role && <span className="text-[10px] text-muted-foreground">{row.employee_role}</span>}
                           </TableCell>
                           <TableCell className="text-center">
