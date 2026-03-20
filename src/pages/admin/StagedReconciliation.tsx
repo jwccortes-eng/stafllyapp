@@ -13,11 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
   ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool, Bug,
-  StickyNote, ListChecks, Target, DollarSign,
+  StickyNote, ListChecks, Target, DollarSign, RefreshCw, Calendar, Hash,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -96,6 +98,13 @@ function isTabEnabled(tab: TabDef, periodStatus: string | null): boolean {
   if (!periodStatus) return tab.value === "import" || tab.value === "checklist" || tab.value === "journal";
   if (!tab.minStatus) return true;
   return STATUS_ORDER.indexOf(periodStatus) >= STATUS_ORDER.indexOf(tab.minStatus);
+}
+
+interface PayPeriodOption {
+  id: string;
+  start_date: string;
+  end_date: string;
+  status: string;
 }
 
 export default function StagedReconciliation() {
