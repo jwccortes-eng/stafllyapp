@@ -174,15 +174,28 @@ export default function CompensationValidation() {
 
   /* ── Profile creation ── */
   const noProfileIds = useMemo(() => rows.filter(r => !r.profile).map(r => r.employee_id), [rows]);
+  const emptyProfileIds = useMemo(() => rows.filter(r => r.profile && r.profile.default_hourly_rate == null && r.profile.default_daily_rate == null).map(r => r.employee_id), [rows]);
 
   const createProfileForEmployee = useCallback(async (employeeId: string): Promise<CompensationProfile | null> => {
     if (!user || !selectedCompanyId) return null;
+    // Try to seed from concept_employee_rates
+    const { data: rates } = await supabase.from("concept_employee_rates")
+      .select("rate, concepts(name)").eq("employee_id", employeeId);
+    const hourlyRate = (rates ?? []).find((r: any) => r.concepts?.name === "Hourly Rate");
+    const dailyRate = (rates ?? []).find((r: any) => r.concepts?.name === "Daily Pay");
+    const hr = hourlyRate?.rate ?? null;
+    const dr = dailyRate?.rate ?? null;
+
     const { data, error } = await supabase.from("compensation_profiles").insert({
       company_id: selectedCompanyId,
       employee_id: employeeId,
-      payment_mode: "hourly" as any,
+      payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
+      default_hourly_rate: hr,
+      default_daily_rate: dr,
+      default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : null,
       is_active: true,
       effective_from: new Date().toISOString().split("T")[0],
+      rate_source: (hr || dr ? "imported" : "company_default") as any,
       created_by: user.id,
       updated_by: user.id,
     }).select("*").single();
@@ -193,7 +206,7 @@ export default function CompensationValidation() {
       compensation_profile_id: data.id,
       action_type: "created" as any,
       changed_field: "profile",
-      new_value: "created",
+      new_value: hr ? `hourly:$${hr}` : "created_empty",
       reason: "Perfil creado desde validación",
       source_type: "admin_edit" as any,
       changed_by: user.id,
@@ -205,18 +218,38 @@ export default function CompensationValidation() {
     if (!user || !selectedCompanyId || employeeIds.length === 0) return;
     setBulkCreating(true);
     try {
-      const rows = employeeIds.map(eid => ({
-        company_id: selectedCompanyId,
-        employee_id: eid,
-        payment_mode: "hourly" as any,
-        is_active: true,
-        effective_from: new Date().toISOString().split("T")[0],
-        created_by: user.id,
-        updated_by: user.id,
-      }));
-      const { data, error } = await supabase.from("compensation_profiles").insert(rows).select("id, employee_id");
+      // Fetch existing rates for all employees in one query
+      const { data: allRates } = await supabase.from("concept_employee_rates")
+        .select("employee_id, rate, concepts(name)")
+        .in("employee_id", employeeIds);
+      const rateMap = new Map<string, { hourly: number | null; daily: number | null }>();
+      (allRates ?? []).forEach((r: any) => {
+        if (!rateMap.has(r.employee_id)) rateMap.set(r.employee_id, { hourly: null, daily: null });
+        const entry = rateMap.get(r.employee_id)!;
+        if (r.concepts?.name === "Hourly Rate") entry.hourly = r.rate;
+        if (r.concepts?.name === "Daily Pay") entry.daily = r.rate;
+      });
+
+      const inserts = employeeIds.map(eid => {
+        const rates = rateMap.get(eid);
+        const hr = rates?.hourly ?? null;
+        const dr = rates?.daily ?? null;
+        return {
+          company_id: selectedCompanyId,
+          employee_id: eid,
+          payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
+          default_hourly_rate: hr,
+          default_daily_rate: dr,
+          default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : null,
+          is_active: true,
+          effective_from: new Date().toISOString().split("T")[0],
+          rate_source: (hr || dr ? "imported" : "company_default") as any,
+          created_by: user.id,
+          updated_by: user.id,
+        };
+      });
+      const { data, error } = await supabase.from("compensation_profiles").insert(inserts).select("id, employee_id");
       if (error) throw error;
-      // Log all creations
       const logs = (data ?? []).map((d: any) => ({
         company_id: selectedCompanyId,
         employee_id: d.employee_id,
@@ -231,13 +264,48 @@ export default function CompensationValidation() {
       if (logs.length > 0) await supabase.from("compensation_change_log").insert(logs);
       qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
       qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
-      toast.success(`${data?.length ?? 0} perfiles creados`);
+      toast.success(`${data?.length ?? 0} perfiles creados con datos existentes`);
     } catch (err: any) {
       toast.error(err.message ?? "Error al crear perfiles");
     } finally {
       setBulkCreating(false);
     }
   }, [user, selectedCompanyId, qc]);
+
+  const seedEmptyProfiles = useCallback(async () => {
+    if (!user || !selectedCompanyId || emptyProfileIds.length === 0) return;
+    setBulkCreating(true);
+    try {
+      const { data: allRates } = await supabase.from("concept_employee_rates")
+        .select("employee_id, rate, concepts(name)")
+        .in("employee_id", emptyProfileIds);
+      let seeded = 0;
+      for (const eid of emptyProfileIds) {
+        const empRates = (allRates ?? []).filter((r: any) => r.employee_id === eid);
+        const hr = empRates.find((r: any) => r.concepts?.name === "Hourly Rate")?.rate ?? null;
+        const dr = empRates.find((r: any) => r.concepts?.name === "Daily Pay")?.rate ?? null;
+        if (!hr && !dr) continue;
+        const profile = rows.find(r => r.employee_id === eid)?.profile;
+        if (!profile) continue;
+        await supabase.from("compensation_profiles").update({
+          default_hourly_rate: hr,
+          default_daily_rate: dr,
+          default_half_day_rate: dr ? Math.round(dr * 0.625 * 100) / 100 : null,
+          payment_mode: (hr && dr ? "mixed" : dr ? "daily" : "hourly") as any,
+          rate_source: "imported" as any,
+          updated_by: user.id,
+        }).eq("id", profile.id);
+        seeded++;
+      }
+      qc.invalidateQueries({ queryKey: ["comp-validation-profiles"] });
+      qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+      toast.success(`${seeded} perfiles actualizados con datos existentes`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al sembrar datos");
+    } finally {
+      setBulkCreating(false);
+    }
+  }, [user, selectedCompanyId, emptyProfileIds, rows, qc]);
 
   const handleEditOrCreate = useCallback(async (emp: EmployeeComp) => {
     const name = `${emp.first_name} ${emp.last_name}`;
