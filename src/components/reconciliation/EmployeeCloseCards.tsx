@@ -186,8 +186,9 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
               const isExpanded = expanded.has(r.id);
               const isPending = !["approved", "resolved", "posted"].includes(r.reconciliation_status);
               const StatusIcon = vBadge.icon;
-              const PayIcon = PAY_ICONS[r.pay_classification] || DollarSign;
+              const PayIcon = (r as any).shift_calculated_total > 0 ? Calendar : (PAY_ICONS[r.pay_classification] || DollarSign);
               const cleanHistorical = v?.source_payroll_total || r.source_payroll_total || 0;
+              const displayTotal = r.grand_total || r.final_total_pay || 0;
               const grossHistorical = r.total_payroll_amount || 0;
               const excludedUnmappedAmount = Math.max(0, grossHistorical - cleanHistorical);
               const unmappedCount = (r.payroll_rows || []).filter((p: any) => p?.classified_type === "unmapped" || p?.type === "other" || p?.type === "unclassified").length;
@@ -211,8 +212,13 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                         <Badge variant={vBadge.variant as any} className="text-[10px] gap-0.5 shrink-0">
                           <StatusIcon className="h-2.5 w-2.5" /> {vBadge.label}
                         </Badge>
-                        {r.pay_classification === "unknown" && (
+                        {r.pay_classification === "unknown" && !(r as any).shift_calculated_total && (
                           <Badge variant="destructive" className="text-[10px] shrink-0">Sin clasificar</Badge>
+                        )}
+                        {(r as any).shift_calculated_total > 0 && (
+                          <Badge variant="secondary" className="text-[10px] shrink-0 bg-primary/10 text-primary border-primary/20">
+                            {(r as any).shift_full_day_count || 0}d shift-calc
+                          </Badge>
                         )}
                         {Array.isArray(r.warnings) && r.warnings.some((w: any) => String(w).startsWith("CRITICAL_UNMAPPED_RATIO:")) && (
                           <Badge variant="destructive" className="text-[10px] shrink-0">Crítico unmapped</Badge>
@@ -227,7 +233,12 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                       <span title="Nómina">{(r.payroll_rows || []).length}N</span>
                     </div>
                     <div className="text-right shrink-0 min-w-[100px]">
-                      <div className="text-xs font-mono font-bold">{fmt(r.grand_total || r.final_total_pay || 0)}</div>
+                      <div className="text-xs font-mono font-bold">{fmt(displayTotal)}</div>
+                      {(r as any).shift_calculated_total > 0 && (
+                        <div className="text-[10px] font-mono text-muted-foreground">
+                          ref: {fmt(r.total_payroll_amount || 0)}
+                        </div>
+                      )}
                       {v && v.variance_amount !== 0 && (
                         <div className={`text-[10px] font-mono ${Math.abs(v.variance_amount) > 10 ? "text-destructive" : "text-amber-600"}`}>
                           Δ {fmt(v.variance_amount)}
@@ -274,12 +285,35 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                       </div>
                       {/* Payment breakdown */}
                       <div className="flex flex-wrap gap-2 text-[10px]">
-                        {(r.hourly_pay_total || 0) > 0 && <Badge variant="secondary">Hourly: {fmt(r.hourly_pay_total)}</Badge>}
-                        {(r.daily_pay_total || 0) > 0 && <Badge variant="secondary">Daily: {fmt(r.daily_pay_total)}</Badge>}
-                        {(r.ride_pay_total || r.ride_amount || 0) > 0 && <Badge variant="secondary">Ride: {fmt(r.ride_pay_total || r.ride_amount || 0)}</Badge>}
-                        {(r.weekend_pay_total || r.weekend_amount || 0) > 0 && <Badge variant="secondary">Weekend: {fmt(r.weekend_pay_total || r.weekend_amount || 0)}</Badge>}
-                        {(r.manual_adjustment_total || r.manual_amount || 0) > 0 && <Badge variant="secondary">Manual: {fmt(r.manual_adjustment_total || r.manual_amount || 0)}</Badge>}
-                        {excludedUnmappedAmount > 0 && <Badge variant="destructive">Otros (excluido): {fmt(excludedUnmappedAmount)}</Badge>}
+                      {/* Shift-calc breakdown (if available) */}
+                      {(r as any).shift_calculated_total > 0 && (
+                        <>
+                          <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                            Full Days: {(r as any).shift_full_day_count} × ${(r as any).shift_daily_rate_used || "?"}
+                          </Badge>
+                          {((r as any).shift_half_day_count || 0) > 0 && (
+                            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                              Half Days: {(r as any).shift_half_day_count} × ${(r as any).shift_half_day_rate_used || "?"}
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-bold">
+                            Shift-Calc: {fmt((r as any).shift_calculated_total)}
+                          </Badge>
+                        </>
+                      )}
+                      {/* Legacy payroll badges */}
+                      {!(r as any).shift_calculated_total && (r.hourly_pay_total || 0) > 0 && <Badge variant="secondary">Hourly: {fmt(r.hourly_pay_total)}</Badge>}
+                      {!(r as any).shift_calculated_total && (r.daily_pay_total || 0) > 0 && <Badge variant="secondary">Daily: {fmt(r.daily_pay_total)}</Badge>}
+                      {(r.ride_pay_total || r.ride_amount || 0) > 0 && <Badge variant="secondary">Ride: {fmt(r.ride_pay_total || r.ride_amount || 0)}</Badge>}
+                      {(r.weekend_pay_total || r.weekend_amount || 0) > 0 && <Badge variant="secondary">Weekend: {fmt(r.weekend_pay_total || r.weekend_amount || 0)}</Badge>}
+                      {(r.manual_adjustment_total || r.manual_amount || 0) > 0 && <Badge variant="secondary">Manual: {fmt(r.manual_adjustment_total || r.manual_amount || 0)}</Badge>}
+                      {excludedUnmappedAmount > 0 && <Badge variant="destructive">Otros (excluido): {fmt(excludedUnmappedAmount)}</Badge>}
+                      {/* Payroll reference */}
+                      {(r as any).shift_calculated_total > 0 && (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Ref Payroll: {fmt(r.total_payroll_amount || 0)} (Δ{fmt((r as any).shift_vs_payroll_diff || 0)})
+                        </Badge>
+                      )}
                       </div>
                       {/* Clasificación por source (debug Connecteam) */}
                       <div className="mt-1.5 p-2 rounded bg-muted/30 space-y-1">

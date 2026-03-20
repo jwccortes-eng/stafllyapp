@@ -43,6 +43,10 @@ export default function PrePublishReview({
 
   const stats = useMemo(() => {
     const approved = finalRecords.filter(r => ["resolved", "approved"].includes(r.reconciliation_status));
+    const shiftCalcTotal = finalRecords.reduce((s, r) => s + ((r as any).shift_calculated_total || 0), 0);
+    const empsWithShiftCalc = finalRecords.filter(r => ((r as any).shift_calculated_total || 0) > 0).length;
+    const totalFullDays = finalRecords.reduce((s, r) => s + ((r as any).shift_full_day_count || 0), 0);
+    const totalHalfDays = finalRecords.reduce((s, r) => s + ((r as any).shift_half_day_count || 0), 0);
     return {
       totalEmployees: finalRecords.length,
       approvedEmployees: approved.length,
@@ -57,6 +61,10 @@ export default function PrePublishReview({
       weekendPay: finalRecords.reduce((s, r) => s + (r.weekend_pay_total || r.weekend_amount || 0), 0),
       manualAdj: finalRecords.reduce((s, r) => s + (r.manual_adjustment_total || r.manual_amount || 0), 0),
       grandTotal: finalRecords.reduce((s, r) => s + (r.grand_total || r.final_total_pay || 0), 0),
+      shiftCalcTotal,
+      empsWithShiftCalc,
+      totalFullDays,
+      totalHalfDays,
     };
   }, [finalRecords]);
 
@@ -324,10 +332,10 @@ export default function PrePublishReview({
                 <TableRow>
                   <TableHead className="text-xs">Empleado</TableHead>
                   <TableHead className="text-xs text-center">Tipo</TableHead>
-                  <TableHead className="text-xs text-right">H. Reg</TableHead>
+                  <TableHead className="text-xs text-right">Días/H.Reg</TableHead>
                   <TableHead className="text-xs text-right">H. OT</TableHead>
-                  <TableHead className="text-xs text-right">Hourly</TableHead>
-                  <TableHead className="text-xs text-right">Daily</TableHead>
+                  <TableHead className="text-xs text-right">Calc/Base</TableHead>
+                  <TableHead className="text-xs text-right">Ref Payroll</TableHead>
                   <TableHead className="text-xs text-right">Ride</TableHead>
                   <TableHead className="text-xs text-right">Manual</TableHead>
                   <TableHead className="text-xs text-right">Total</TableHead>
@@ -341,11 +349,25 @@ export default function PrePublishReview({
                   return (
                     <TableRow key={r.id}>
                       <TableCell className="text-xs font-medium">{name}</TableCell>
-                      <TableCell className="text-center"><Badge variant="outline" className="text-[10px]">{r.pay_classification}</Badge></TableCell>
-                      <TableCell className="text-xs text-right font-mono">{(r.regular_hours || 0).toFixed(1)}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="text-[10px]">
+                          {(r as any).shift_calculated_total > 0
+                            ? ((r as any).shift_full_day_count > 0 ? "full_day" : r.pay_classification)
+                            : r.pay_classification}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-right font-mono">
+                        {(r as any).shift_full_day_count > 0
+                          ? `${(r as any).shift_full_day_count}d`
+                          : (r.regular_hours || 0).toFixed(1)}
+                      </TableCell>
                       <TableCell className="text-xs text-right font-mono">{(r.overtime_hours || 0).toFixed(1)}</TableCell>
-                      <TableCell className="text-xs text-right font-mono">{fmt(r.hourly_pay_total || r.base_pay || 0)}</TableCell>
-                      <TableCell className="text-xs text-right font-mono">{fmt(r.daily_pay_total || 0)}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">
+                        {(r as any).shift_calculated_total > 0
+                          ? fmt((r as any).shift_calculated_total)
+                          : fmt(r.hourly_pay_total || r.base_pay || 0)}
+                      </TableCell>
+                      <TableCell className="text-xs text-right font-mono text-muted-foreground">{fmt(r.total_payroll_amount || 0)}</TableCell>
                       <TableCell className="text-xs text-right font-mono">{fmt(r.ride_pay_total || r.ride_amount || 0)}</TableCell>
                       <TableCell className="text-xs text-right font-mono">{fmt(r.manual_adjustment_total || r.manual_amount || 0)}</TableCell>
                       <TableCell className="text-xs text-right font-mono font-bold">{fmt(total)}</TableCell>
