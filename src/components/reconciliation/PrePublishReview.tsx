@@ -332,10 +332,10 @@ export default function PrePublishReview({
                 <TableRow>
                   <TableHead className="text-xs">Empleado</TableHead>
                   <TableHead className="text-xs text-center">Tipo</TableHead>
-                  <TableHead className="text-xs text-right">H. Reg</TableHead>
+                  <TableHead className="text-xs text-right">Días/H.Reg</TableHead>
                   <TableHead className="text-xs text-right">H. OT</TableHead>
-                  <TableHead className="text-xs text-right">Hourly</TableHead>
-                  <TableHead className="text-xs text-right">Daily</TableHead>
+                  <TableHead className="text-xs text-right">Calc/Base</TableHead>
+                  <TableHead className="text-xs text-right">Ref Payroll</TableHead>
                   <TableHead className="text-xs text-right">Ride</TableHead>
                   <TableHead className="text-xs text-right">Manual</TableHead>
                   <TableHead className="text-xs text-right">Total</TableHead>
