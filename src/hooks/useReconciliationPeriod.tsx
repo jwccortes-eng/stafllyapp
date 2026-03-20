@@ -673,6 +673,10 @@ export function useReconciliationPeriod(companyId: string | null) {
           return { classifiedType: "daily", assignedTargetType: "full_day", source: "fallback:notes" };
         }
         if ((Number(p.total_hours) || 0) > 0 && (Number(p.hourly_rate) || 0) > 0) {
+          // CRITICAL: Do NOT classify as hourly if employee has shift-based (full_day) context
+          if (empLevelContext.has_weekend_job || empLevelContext.total_full_day_shifts > 0) {
+            return { classifiedType: "daily", assignedTargetType: "full_day", source: "shift_override:schedule_blocks_hours_rate", matchedValue: `hours=${p.total_hours}, rate=${p.hourly_rate} overridden by ${empLevelContext.total_full_day_shifts} full_day shifts` };
+          }
           return { classifiedType: "hourly", assignedTargetType: "hourly", source: "fallback:hours_rate" };
         }
 
