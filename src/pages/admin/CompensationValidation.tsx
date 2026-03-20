@@ -413,6 +413,12 @@ export default function CompensationValidation() {
                       </div>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <Badge className={`text-[10px] border-0 ${SOURCE_COLOR[emp.hourly.source]}`}>{emp.hourly.label}</Badge>
+                        {p && (
+                          <Badge className="text-[10px] border-0 bg-earning/10 text-earning">Perfil activo</Badge>
+                        )}
+                        {!p && (
+                          <Badge className="text-[10px] border-0 bg-destructive/10 text-destructive">Sin perfil</Badge>
+                        )}
                         {emp.alerts.length > 0 && (
                           <Badge className="text-[10px] border-0 bg-destructive/10 text-destructive">
                             {emp.alerts.length} alerta{emp.alerts.length > 1 ? "s" : ""}
