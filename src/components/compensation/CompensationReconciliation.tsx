@@ -13,11 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { KpiCard } from "@/components/ui/kpi-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CompensationHistoryDialog } from "@/components/compensation/CompensationHistoryDialog";
+import CompensationEditDialog from "@/components/compensation/CompensationEditDialog";
 import { toast } from "sonner";
 import {
   Search, CheckCircle, AlertTriangle, XCircle, ArrowRight,
   Filter, RefreshCw, User, FileText, Eye, DollarSign,
-  ChevronDown, ChevronUp, MessageSquare, ShieldCheck,
+  ChevronDown, ChevronUp, MessageSquare, ShieldCheck, Pencil,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -115,6 +116,7 @@ export default function CompensationReconciliation() {
   const [filter, setFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [historyEmp, setHistoryEmp] = useState<{ id: string; name: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<{ id: string; name: string; profile: CompensationProfile | null } | null>(null);
   const [periodFilter, setPeriodFilter] = useState("last_30");
 
   // Fetch employees
@@ -428,7 +430,12 @@ export default function CompensationReconciliation() {
                           onClick={() => setExpandedId(expanded ? null : row.employee_id)}
                         >
                           <TableCell>
-                            <div className="text-sm font-medium">{row.employee_name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <div className="text-sm font-medium">{row.employee_name}</div>
+                              {row.profile?.hourly_rate_override_manual && (
+                                <Badge className="text-[9px] border-0 bg-warning/10 text-warning px-1 py-0">Override</Badge>
+                              )}
+                            </div>
                             {row.employee_role && <span className="text-[10px] text-muted-foreground">{row.employee_role}</span>}
                           </TableCell>
                           <TableCell className="text-center">
@@ -490,6 +497,10 @@ export default function CompensationReconciliation() {
 
                                 {/* Quick actions */}
                                 <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/20">
+                                  <Button size="sm" variant="default" className="h-7 text-[11px]"
+                                    onClick={(e) => { e.stopPropagation(); setEditTarget({ id: row.employee_id, name: row.employee_name, profile: row.profile }); }}>
+                                    <Pencil className="h-3 w-3 mr-1" /> Editar compensación
+                                  </Button>
                                   {row.profile && !row.profile.hourly_rate_override_manual && (row.profile.inferred_hourly_rate || row.profile.default_hourly_rate) && (
                                     <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={(e) => { e.stopPropagation(); confirmHourly(row); }}>
                                       <CheckCircle className="h-3 w-3 mr-1" /> Confirmar hourly
@@ -530,6 +541,20 @@ export default function CompensationReconciliation() {
           onOpenChange={() => setHistoryEmp(null)}
           employeeId={historyEmp.id}
           employeeName={historyEmp.name}
+        />
+      )}
+
+      {editTarget && (
+        <CompensationEditDialog
+          open={!!editTarget}
+          onOpenChange={() => setEditTarget(null)}
+          employeeId={editTarget.id}
+          employeeName={editTarget.name}
+          profile={editTarget.profile}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["comp-recon-profiles"] });
+            qc.invalidateQueries({ queryKey: ["comp-recon-movements"] });
+          }}
         />
       )}
     </div>
