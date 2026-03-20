@@ -57,9 +57,12 @@ export const TARGET_TYPES = [
 
 export const MATCH_FIELDS = [
   { value: "any", label: "Cualquier campo" },
-  { value: "shift_title", label: "Nombre del turno" },
-  { value: "location_name", label: "Ubicación" },
-  { value: "client_name", label: "Cliente" },
+  { value: "shift_title", label: "Shift title" },
+  { value: "shift_name", label: "Shift name" },
+  { value: "job_name", label: "Job name" },
+  { value: "location_name", label: "Location name" },
+  { value: "client_location", label: "Client location" },
+  { value: "client_name", label: "Client name" },
 ];
 
 export function usePayrollMappings() {
