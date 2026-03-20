@@ -4293,6 +4293,7 @@ export type Database = {
       }
       normalized_schedule_rows: {
         Row: {
+          availability_status: string | null
           batch_id: string
           client_name: string | null
           company_id: string
@@ -4319,6 +4320,7 @@ export type Database = {
           work_date: string | null
         }
         Insert: {
+          availability_status?: string | null
           batch_id: string
           client_name?: string | null
           company_id: string
@@ -4345,6 +4347,7 @@ export type Database = {
           work_date?: string | null
         }
         Update: {
+          availability_status?: string | null
           batch_id?: string
           client_name?: string | null
           company_id?: string

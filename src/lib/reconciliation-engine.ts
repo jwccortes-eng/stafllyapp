@@ -216,10 +216,18 @@ export function detectShiftCategory(
   clientName: string | null | undefined,
   locationName: string | null | undefined,
   notes?: string | null,
+  availabilityStatus?: string | null,
 ): ShiftCategory {
   const fields = [jobTitle, shiftTitle, clientName, locationName, notes].map(f => (f || ""));
   const combined = fields.join(" ");
-  // Check availability/blocking FIRST — these are not real work
+
+  // Check availability status field from Connecteam (explicit signal)
+  const avStatus = (availabilityStatus || "").trim().toLowerCase();
+  if (avStatus && (avStatus === "unavailable" || avStatus === "no disponible" || avStatus.includes("block"))) {
+    return "availability_block";
+  }
+
+  // Check availability/blocking patterns in text fields
   if (AVAILABILITY_BLOCK_PATTERN.test(combined)) return "availability_block";
 
   // Structural detection: no title + no client + no location = availability placeholder
@@ -257,6 +265,7 @@ export interface NormalizedScheduleRow {
   job_title?: string | null;
   shift_title?: string | null;
   notes?: string | null;
+  availability_status?: string | null;
 }
 
 export interface NormalizedClockRow {
@@ -304,7 +313,7 @@ export function matchScheduleToClock(
   for (const sched of schedules) {
     // Detect special compensation BEFORE employee check — these categories
     // are valid even without a matched employee (e.g. Weekend shift, Pay Ride)
-    const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes);
+    const category = detectShiftCategory(sched.job_title, sched.shift_title, sched.client_name, sched.location_name, sched.notes, sched.availability_status);
 
     // Check if this is a double-pay modifier (PAGA DOBLE) — NOT clock-exempt
     const isDoublePay = hasDoublePay(sched.shift_title) || hasDoublePay(sched.job_title);
@@ -568,6 +577,7 @@ export interface ColumnMapping {
   client_name?: string;
   location_name?: string;
   notes?: string;
+  availability_status?: string;
 }
 
 // Patterns that are NOTES columns — must be excluded from employee_name matching
@@ -583,16 +593,16 @@ function isNotesColumn(header: string): boolean {
 
 // Aliases sorted from most specific to least specific per field
 const COLUMN_ALIASES: Record<string, string[]> = {
-  notes: ["employee notes", "manager notes", "notes", "note", "comments", "notas", "comentarios", "observaciones", "description"],
+  notes: ["employee notes", "manager notes", "notes", "note", "comments", "notas", "comentarios", "observaciones", "description", "complete note", "check in note"],
   employee_first_name: ["first name", "first_name", "nombre", "given name", "primer nombre"],
   employee_last_name: ["last name", "last_name", "apellido", "surname", "family name"],
   employee_name: ["full name", "employee name", "worker name", "nombre completo", "nombre empleado", "empleado", "employee", "worker", "name", "nombre", "user", "users", "person", "staff"],
   employee_phone: ["phone number", "phone", "mobile", "tel", "telefono", "celular"],
   employee_email: ["email address", "email", "correo", "e-mail"],
-  external_id: ["connecteam id", "external id", "employee id", "worker id", "user id", "emp id", "employer id"],
+  external_id: ["connecteam id", "external id", "employee id", "worker id", "user id", "emp id", "employer id", "employer identification"],
   work_date: ["shift date", "work date", "schedule date", "fecha turno", "fecha", "date", "day", "start date"],
   start_time: ["scheduled start", "start time", "hora inicio", "check in", "start"],
-  end_time: ["scheduled end", "end time", "hora fin", "check out", "end"],
+  end_time: ["scheduled end", "end time", "hora fin", "check out", "end", "complete"],
   clock_in: ["clock in", "actual start", "punch in", "entrada", "check-in", "clock-in", "in"],
   clock_out: ["clock out", "actual end", "punch out", "salida", "check-out", "clock-out", "out"],
   total_hours: ["total hours", "worked hours", "total time", "hours worked", "hours", "horas", "duration", "shift hours"],
@@ -601,12 +611,14 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   job_title: ["job title", "job name", "job", "puesto", "position", "rol"],
   shift_title: ["shift title", "shift name", "shift", "turno", "scheduled shift title"],
   client_name: ["client name", "client", "customer", "cliente", "account"],
-  location_name: ["location name", "location", "site", "ubicacion", "place", "address"],
+  location_name: ["location name", "location", "site", "ubicacion", "place", "address", "start location", "start - location"],
+  availability_status: ["availability status", "availability", "disponibilidad", "last status"],
 };
 
 // Field detection priority: detect notes first to prevent stealing, then specific fields, employee_name last
 const DETECTION_ORDER: (keyof ColumnMapping)[] = [
   "notes",
+  "availability_status",
   "external_id", "employee_email", "employee_phone",
   "employee_first_name", "employee_last_name",
   "clock_in", "clock_out", "start_time", "end_time",

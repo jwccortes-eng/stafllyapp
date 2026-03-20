@@ -152,8 +152,22 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
       const availBlockCount = results.filter(r => r.conflict_flags.includes("availability_block")).length;
       const unmatchedSchedCount = results.filter(r => r.conflict_flags.includes("unmatched_schedule")).length;
       console.log("[Matching] Generated", results.length, "match results");
-      console.log("[Matching] clock-exempt total:", specialCount, "| structural_no_context:", structuralCount, "| availability_block (text):", availBlockCount);
+      console.log("[Matching] clock-exempt total:", specialCount, "| structural_no_context:", structuralCount, "| availability_block:", availBlockCount);
       console.log("[Matching] unmatched_schedule:", unmatchedSchedCount);
+
+      // Context coverage stats
+      const realScheds = schedules.filter((s: any) => !s._is_system);
+      const nullTitle = realScheds.filter(s => !s.shift_title?.trim()).length;
+      const nullLoc = realScheds.filter(s => !s.location_name?.trim()).length;
+      const nullClient = realScheds.filter(s => !s.client_name?.trim()).length;
+      const withAvail = realScheds.filter((s: any) => s.availability_status?.trim()).length;
+      console.log("[Matching] Schedule context coverage:", {
+        total: realScheds.length,
+        nullShiftTitle: nullTitle,
+        nullLocation: nullLoc,
+        nullClient: nullClient,
+        withAvailabilityStatus: withAvail,
+      });
 
       // Debug: show examples of structural_no_context matches
       const structExamples = results.filter(r => r.conflict_flags.includes("structural_no_context")).slice(0, 10);
@@ -168,6 +182,7 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
             client: sched?.client_name || "(null)",
             location: sched?.location_name || "(null)",
             notes: sched?.notes || "(null)",
+            availability_status: (sched as any)?.availability_status || "(null)",
             date: sched?.work_date || "(null)",
           });
         });

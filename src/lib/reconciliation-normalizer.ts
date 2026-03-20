@@ -102,6 +102,12 @@ export interface ImportDiagnostics {
   likelyAliasNames: string[];
   companyEmployeesActive: number;
   companyEmployeesInactive: number;
+  /** Context field coverage */
+  nullShiftTitle: number;
+  nullLocationName: number;
+  nullClientName: number;
+  nullAvailabilityStatus: number;
+  availabilityBlockCount: number;
 }
 
 export interface NormalizationResult<T> {
@@ -234,7 +240,7 @@ function parseTimestamp(dateStr: string | null, timeStr: string | null): string 
 // ─── Core normalizer with diagnostics ───
 
 function emptyDiagnostics(employees: EmployeeRecord[]): ImportDiagnostics {
-  return { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedActive: 0, matchedInactive: 0, matchedByAlias: 0, matchedByMethod: {}, matchedByStatus: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.filter(e => e.is_active !== false).length, companyEmployeesInactive: employees.filter(e => e.is_active === false).length };
+  return { totalRows: 0, systemRows: 0, systemRowNames: [], blankNameRows: 0, realEmployeeRows: 0, matched: 0, matchedActive: 0, matchedInactive: 0, matchedByAlias: 0, matchedByMethod: {}, matchedByStatus: {}, unmatched: 0, unmatchedNames: [], ambiguous: 0, likelyAliasMatches: 0, likelyAliasNames: [], companyEmployeesActive: employees.filter(e => e.is_active !== false).length, companyEmployeesInactive: employees.filter(e => e.is_active === false).length, nullShiftTitle: 0, nullLocationName: 0, nullClientName: 0, nullAvailabilityStatus: 0, availabilityBlockCount: 0 };
 }
 
 function buildDiagnostics(
@@ -267,12 +273,23 @@ function buildDiagnostics(
   const activeEmps = employees.filter((e: any) => e.is_active !== false);
   const inactiveEmps = employees.filter((e: any) => e.is_active === false);
 
+  // Context field coverage
+  const nonSystem = normalized.filter(r => !r._is_system);
+  const nullShiftTitle = nonSystem.filter(r => !r.shift_title?.trim()).length;
+  const nullLocationName = nonSystem.filter(r => !r.location_name?.trim()).length;
+  const nullClientName = nonSystem.filter(r => !r.client_name?.trim()).length;
+  const nullAvailabilityStatus = nonSystem.filter(r => !r.availability_status?.trim()).length;
+  const availabilityBlockCount = nonSystem.filter(r => {
+    const av = (r.availability_status || "").toLowerCase();
+    return av === "unavailable" || av === "no disponible" || av.includes("block");
+  }).length;
+
   return {
     totalRows,
     systemRows: systemRowNames.length,
     systemRowNames: [...new Set(systemRowNames)],
     blankNameRows,
-    realEmployeeRows: normalized.filter(r => !r._is_system).length,
+    realEmployeeRows: nonSystem.length,
     matched: matched.length,
     matchedActive,
     matchedInactive,
@@ -286,6 +303,11 @@ function buildDiagnostics(
     likelyAliasNames: [...new Set(likelyAlias.map(r => r.employee_name_raw))],
     companyEmployeesActive: activeEmps.length,
     companyEmployeesInactive: inactiveEmps.length,
+    nullShiftTitle,
+    nullLocationName,
+    nullClientName,
+    nullAvailabilityStatus,
+    availabilityBlockCount,
   };
 }
 
@@ -381,6 +403,8 @@ export function normalizeScheduleRows(
       shift_title: d[colMap.shift_title || ""] || d[colMap.job_title || ""] || null,
       external_shift_id: extId,
       pay_type: "unknown",
+      notes: d[colMap.notes || ""] || null,
+      availability_status: d[colMap.availability_status || ""] || null,
       has_conflict: empMatch.ambiguous,
       conflict_details: empMatch.ambiguous ? { candidates: empMatch.candidates } : null,
       _is_system: false,
@@ -443,6 +467,7 @@ export function normalizeClockRows(
       break_minutes: 0,
       location_name: d[colMap.location_name || ""] || null,
       client_name: d[colMap.client_name || ""] || null,
+      notes: d[colMap.notes || ""] || null,
       external_clock_id: extId,
       clock_method: "import",
       has_conflict: empMatch.ambiguous,

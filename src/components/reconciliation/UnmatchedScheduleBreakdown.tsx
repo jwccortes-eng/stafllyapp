@@ -367,6 +367,7 @@ export default function UnmatchedScheduleBreakdown({ companyId, onRefresh }: Pro
         row.client_name,
         row.location_name,
         row.notes,
+        (row as any).availability_status,
       );
       const requiresClock = !isClockExemptCategory(detectedCategory);
       const subCategory = classifyScheduleRow(row, duplicateKeys, payrollDates);
