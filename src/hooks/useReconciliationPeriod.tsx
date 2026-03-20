@@ -82,6 +82,15 @@ export interface EmployeeFinalRecord {
   variance_amount: number;
   variance_status: string;
   variance_reasons: string[];
+  // Shift-based compensation fields
+  shift_full_day_count: number;
+  shift_half_day_count: number;
+  shift_calculated_total: number;
+  shift_daily_rate_used: number | null;
+  shift_half_day_rate_used: number | null;
+  shift_calculation_source: string;
+  payroll_reference_total: number;
+  shift_vs_payroll_diff: number;
 }
 
 export interface EmployeeVariance {
@@ -420,11 +429,33 @@ export function useReconciliationPeriod(companyId: string | null) {
       return;
     }
 
-    const { data: employees } = await supabase
-      .from("employees")
-      .select("id, first_name, last_name")
-      .eq("company_id", companyId);
-    const empMap = new Map((employees || []).map(e => [e.id, `${e.first_name} ${e.last_name}`]));
+    const [empRes, compProfilesRes] = await Promise.all([
+      supabase.from("employees").select("id, first_name, last_name").eq("company_id", companyId),
+      supabase.from("compensation_profiles").select("employee_id, default_daily_rate, default_half_day_rate, default_hourly_rate, payment_mode, is_active").eq("company_id", companyId).eq("is_active", true),
+    ]);
+    const employees = empRes.data || [];
+    const empMap = new Map(employees.map(e => [e.id, `${e.first_name} ${e.last_name}`]));
+
+    // Build compensation rate map: employee_id -> { daily_rate, half_day_rate, hourly_rate }
+    const compRateMap = new Map<string, { daily_rate: number | null; half_day_rate: number | null; hourly_rate: number | null; payment_mode: string }>();
+    for (const cp of (compProfilesRes.data || []) as any[]) {
+      compRateMap.set(cp.employee_id, {
+        daily_rate: cp.default_daily_rate,
+        half_day_rate: cp.default_half_day_rate,
+        hourly_rate: cp.default_hourly_rate,
+        payment_mode: cp.payment_mode,
+      });
+    }
+
+    // Also load company-level compensation rules as fallback rates
+    const { data: compRules } = await supabase
+      .from("company_compensation_rules" as any)
+      .select("rule_type, amount, is_active")
+      .eq("company_id", companyId)
+      .eq("is_active", true);
+    const rulesArr = (compRules || []) as any[];
+    const fallbackDailyRate = rulesArr.find(r => r.rule_type === "daily_full")?.amount || null;
+    const fallbackHalfDayRate = rulesArr.find(r => r.rule_type === "daily_half")?.amount || null;
 
     const employeeIds = new Set<string>();
     schedules.forEach(s => { if (s.matched_employee_id) employeeIds.add(s.matched_employee_id); });
@@ -711,7 +742,7 @@ export function useReconciliationPeriod(companyId: string | null) {
         };
       });
 
-      // Full payment breakdown by classified type
+      // Full payment breakdown by classified type (payroll reference values)
       const hourlyRows = classifiedPayrolls.filter(p => p._classified_type === "hourly");
       const dailyRows = classifiedPayrolls.filter(p => p._classified_type === "daily");
       const rideRows = classifiedPayrolls.filter(p => p._classified_type === "pay_ride");
@@ -726,8 +757,70 @@ export function useReconciliationPeriod(companyId: string | null) {
       const manualTotal = manualRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
       const unmappedTotal = unmappedRows.reduce((s, r) => s + (Number(r.total_pay) || 0), 0);
 
-      // CRITICAL: grandTotal only includes classified rows — unmapped excluded
-      const grandTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
+      // ── SHIFT-BASED COMPENSATION CALCULATION (PRIMARY SOURCE) ──
+      const empCompProfile = compRateMap.get(empId);
+      const empDailyRate = empCompProfile?.daily_rate || fallbackDailyRate || null;
+      const empHalfDayRate = empCompProfile?.half_day_rate || fallbackHalfDayRate || (empDailyRate ? Math.round(empDailyRate * 0.5 * 100) / 100 : null);
+
+      // Count shifts from schedule context (aggregated across all dates)
+      let shiftFullDayCount = 0;
+      let shiftHalfDayCount = 0;
+      for (const [, ctx] of scheduleContextMap) {
+        shiftFullDayCount += ctx.full_day_units;
+        shiftHalfDayCount += ctx.half_day_units * 2; // half_day_units stored as 0.5, convert to count
+      }
+
+      // Calculate shift-based total
+      let shiftCalculatedTotal = 0;
+      let shiftCalcSource = "none";
+      const hasShiftContext = empLevelContext.total_shift_count > 0;
+
+      if (hasShiftContext && (empDailyRate || empHalfDayRate)) {
+        const fullDayAmount = shiftFullDayCount * (empDailyRate || 0);
+        const halfDayAmount = shiftHalfDayCount * (empHalfDayRate || 0);
+        shiftCalculatedTotal = Math.round((fullDayAmount + halfDayAmount) * 100) / 100;
+        shiftCalcSource = `shift_calc:${shiftFullDayCount}fd×$${empDailyRate || 0}+${shiftHalfDayCount}hd×$${empHalfDayRate || 0}`;
+      } else if (hasShiftContext && !empDailyRate) {
+        // Has shifts but no rate configured — try to infer from payroll
+        const totalDailyAndWeekend = dailyPayTotal + weekendPayTotal;
+        const totalShiftUnits = shiftFullDayCount + shiftHalfDayCount * 0.5;
+        if (totalShiftUnits > 0 && totalDailyAndWeekend > 0) {
+          const inferredRate = Math.round((totalDailyAndWeekend / totalShiftUnits) * 100) / 100;
+          shiftCalculatedTotal = Math.round(totalDailyAndWeekend * 100) / 100;
+          shiftCalcSource = `shift_calc_inferred:${shiftFullDayCount}fd+${shiftHalfDayCount}hd, rate≈$${inferredRate}/day from payroll`;
+        } else {
+          shiftCalcSource = "no_rate_configured";
+        }
+      }
+
+      // Payroll reference total (all classified rows)
+      const payrollReferenceTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
+
+      // GRAND TOTAL: Use shift-calculated if available; otherwise fall back to payroll classified
+      // For ride/manual/weekend extras, always add from payroll since those aren't shift-counted
+      let grandTotal: number;
+      if (shiftCalculatedTotal > 0) {
+        // Shift-based: daily component from shifts + extras from payroll
+        grandTotal = Math.round((shiftCalculatedTotal + ridePayTotal + manualTotal) * 100) / 100;
+      } else {
+        // Fallback: payroll-based (legacy behavior)
+        grandTotal = payrollReferenceTotal;
+      }
+
+      const shiftVsPayrollDiff = Math.round((shiftCalculatedTotal - (dailyPayTotal + weekendPayTotal)) * 100) / 100;
+
+      console.log("[generateFinalRecords][shift_calc]", {
+        employee: empMap.get(empId) || empId,
+        shift_full_day: shiftFullDayCount,
+        shift_half_day: shiftHalfDayCount,
+        daily_rate: empDailyRate,
+        half_day_rate: empHalfDayRate,
+        shift_calculated: shiftCalculatedTotal,
+        payroll_daily_weekend: dailyPayTotal + weekendPayTotal,
+        diff: shiftVsPayrollDiff,
+        source: shiftCalcSource,
+        grand_total: grandTotal,
+      });
 
       // Log unmapped rows per employee with shift/location context
       if (unmappedRows.length > 0) {
@@ -758,12 +851,20 @@ export function useReconciliationPeriod(companyId: string | null) {
 
       // Hourly rate detection
       const hourlyRate = hourlyHours > 0 ? Math.round((hourlyPayTotal / hourlyHours) * 100) / 100 : null;
-      const dailyRate = dailyRows.length > 0 ? Math.round((dailyPayTotal / dailyRows.length) * 100) / 100 : null;
+      const dailyRate = empDailyRate || (dailyRows.length > 0 ? Math.round((dailyPayTotal / dailyRows.length) * 100) / 100 : null);
 
-      // Pay classification (only from classified rows, not unmapped)
-      const payTypes = classifiedPayrolls.filter(p => p._classified_type !== "unmapped").map(p => p._classified_type).filter(Boolean);
-      const uniqueTypes = [...new Set(payTypes)];
-      const classification = uniqueTypes.length === 0 ? "unknown" : uniqueTypes.length === 1 ? uniqueTypes[0] : "mixed";
+      // Pay classification — shift-first: if shifts exist, classify as daily regardless
+      const hasShiftBasedPay = shiftCalculatedTotal > 0 || empLevelContext.total_full_day_shifts > 0 || empLevelContext.has_weekend_job;
+      let classification: string;
+      if (hasShiftBasedPay) {
+        const hasHourly = hourlyRows.length > 0;
+        const hasExtras = rideRows.length > 0 || manualRows.length > 0;
+        classification = (hasHourly || hasExtras) ? "mixed" : "daily";
+      } else {
+        const payTypes = classifiedPayrolls.filter(p => p._classified_type !== "unmapped").map(p => p._classified_type).filter(Boolean);
+        const uniqueTypes = [...new Set(payTypes)];
+        classification = uniqueTypes.length === 0 ? "unknown" : uniqueTypes.length === 1 ? uniqueTypes[0] : "mixed";
+      }
 
       // Históricos: limpio (clasificado) vs total bruto (incluye unmapped)
       const historicalTotal = Math.round(totalPayrollAmount * 100) / 100;
@@ -794,6 +895,13 @@ export function useReconciliationPeriod(companyId: string | null) {
       }
       if (grandTotal === 0 && empPayrolls.length > 0) warnings.push("Total calculado es $0 con filas de nómina existentes");
       if (classification === "unknown") warnings.push("Clasificación de pago no determinada");
+      if (hasShiftContext && !empDailyRate && !fallbackDailyRate) {
+        warnings.push("⚠️ Sin tarifa diaria configurada — usando payroll como fallback");
+      }
+      if (shiftCalculatedTotal > 0 && Math.abs(shiftVsPayrollDiff) > 10) {
+        warnings.push(`SHIFT_VS_PAYROLL_DIFF:${shiftVsPayrollDiff.toFixed(2)}`);
+        warnings.push(`Diferencia shift-calc vs payroll: $${shiftVsPayrollDiff.toFixed(2)}`);
+      }
       if (unmappedCount > 0) {
         warnings.push(`UNMAPPED_COUNT:${unmappedCount}`);
         warnings.push(`UNMAPPED_EXCLUDED:${unmappedExcludedAmount.toFixed(2)}`);
@@ -804,13 +912,15 @@ export function useReconciliationPeriod(companyId: string | null) {
         warnings.push(`⚠️ CRÍTICO: No clasificados ${(unmappedRatio * 100).toFixed(1)}% (>20%) — reconciliación bloqueada`);
       }
 
-      // Variance: compare reconciled vs clean historical (unmapped excluded)
-      const varianceAmount = Math.round((grandTotal - sourcePayrollTotal) * 100) / 100;
+      // Variance: compare shift-calculated total vs payroll reference
+      const varianceAmount = shiftCalculatedTotal > 0
+        ? Math.round(shiftVsPayrollDiff * 100) / 100
+        : 0; // If no shift calc, variance is 0 (payroll = payroll)
       const varianceStatus = Math.abs(varianceAmount) < 0.01 ? "exact_match"
         : Math.abs(varianceAmount) < 10 ? "minor_variance" : "major_variance";
       const varianceReasons: string[] = [];
-      if (Math.abs(varianceAmount) >= 0.01) {
-        varianceReasons.push(`Reconciliado ($${grandTotal}) vs histórico limpio ($${sourcePayrollTotal})`);
+      if (shiftCalculatedTotal > 0 && Math.abs(varianceAmount) >= 0.01) {
+        varianceReasons.push(`Shift-calc ($${shiftCalculatedTotal}) vs payroll ($${(dailyPayTotal + weekendPayTotal).toFixed(2)}): diff $${varianceAmount.toFixed(2)}`);
       }
       if (unmappedCount > 0) {
         varianceReasons.push(`Excluidos ${unmappedCount} unmapped por $${unmappedExcludedAmount.toFixed(2)} (histórico bruto: $${historicalTotal.toFixed(2)})`);
@@ -853,8 +963,8 @@ export function useReconciliationPeriod(companyId: string | null) {
         daily_rate: dailyRate,
         regular_hours: Math.round(regularHours * 100) / 100,
         overtime_hours: Math.round(overtimeHours * 100) / 100,
-        hourly_pay_total: Math.round(hourlyPayTotal * 100) / 100,
-        daily_pay_total: Math.round(dailyPayTotal * 100) / 100,
+        hourly_pay_total: shiftCalculatedTotal > 0 ? Math.round(shiftCalculatedTotal * 100) / 100 : Math.round(hourlyPayTotal * 100) / 100,
+        daily_pay_total: shiftCalculatedTotal > 0 ? Math.round(shiftCalculatedTotal * 100) / 100 : Math.round(dailyPayTotal * 100) / 100,
         ride_pay_total: Math.round(ridePayTotal * 100) / 100,
         weekend_pay_total: Math.round(weekendPayTotal * 100) / 100,
         manual_adjustment_total: Math.round(manualTotal * 100) / 100,
@@ -862,12 +972,21 @@ export function useReconciliationPeriod(companyId: string | null) {
         ride_amount: Math.round(ridePayTotal * 100) / 100,
         weekend_amount: Math.round(weekendPayTotal * 100) / 100,
         manual_amount: Math.round(manualTotal * 100) / 100,
-        base_pay: Math.round(hourlyPayTotal * 100) / 100,
+        base_pay: shiftCalculatedTotal > 0 ? Math.round(shiftCalculatedTotal * 100) / 100 : Math.round((hourlyPayTotal + dailyPayTotal) * 100) / 100,
         final_total_pay: grandTotal,
-        source_payroll_total: sourcePayrollTotal,
+        source_payroll_total: Math.round(payrollReferenceTotal * 100) / 100,
         variance_amount: varianceAmount,
         variance_status: varianceStatus,
         variance_reasons: varianceReasons,
+        // Shift-based compensation fields
+        shift_full_day_count: shiftFullDayCount,
+        shift_half_day_count: shiftHalfDayCount,
+        shift_calculated_total: shiftCalculatedTotal,
+        shift_daily_rate_used: empDailyRate,
+        shift_half_day_rate_used: empHalfDayRate,
+        shift_calculation_source: shiftCalcSource,
+        payroll_reference_total: Math.round(payrollReferenceTotal * 100) / 100,
+        shift_vs_payroll_diff: shiftVsPayrollDiff,
         reconciliation_status: hasCriticalUnmapped ? "blocked" : (conflictCount > 0 ? "partial" : "resolved"),
         conflict_count: conflictCount + (hasCriticalUnmapped ? 1 : 0),
         warnings: warnings,

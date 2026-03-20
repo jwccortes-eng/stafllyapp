@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   DollarSign, CheckCircle2, AlertTriangle, XCircle, TrendingUp,
-  Clock, Calendar, Car, Briefcase, PenTool, Users, Shield,
+  Clock, Calendar, Car, Briefcase, PenTool, Users, Shield, CalendarDays,
 } from "lucide-react";
 import type { EmployeeFinalRecord, EmployeeVariance } from "@/hooks/useReconciliationPeriod";
 
@@ -34,7 +34,15 @@ export default function FinancialAccuracyPanel({ finalRecords, variances, publis
     const manualTotal = finalRecords.reduce((s, r) => s + (r.manual_adjustment_total || r.manual_amount || 0), 0);
     const grandTotal = finalRecords.reduce((s, r) => s + (r.grand_total || r.final_total_pay || 0), 0);
 
-    return { sourceTotal, reconciledTotal, totalVariance, matchPct, exact, minor, major, unresolved, empPct, hourlyTotal, dailyTotal, rideTotal, weekendTotal, manualTotal, grandTotal };
+    // Shift-based calculation aggregates
+    const shiftCalcTotal = finalRecords.reduce((s, r) => s + (r.shift_calculated_total || 0), 0);
+    const payrollRefTotal = finalRecords.reduce((s, r) => s + (r.payroll_reference_total || r.source_payroll_total || 0), 0);
+    const totalFullDays = finalRecords.reduce((s, r) => s + (r.shift_full_day_count || 0), 0);
+    const totalHalfDays = finalRecords.reduce((s, r) => s + (r.shift_half_day_count || 0), 0);
+    const shiftVsPayrollDiff = Math.round((shiftCalcTotal - payrollRefTotal) * 100) / 100;
+    const empsWithShiftCalc = finalRecords.filter(r => (r.shift_calculated_total || 0) > 0).length;
+
+    return { sourceTotal, reconciledTotal, totalVariance, matchPct, exact, minor, major, unresolved, empPct, hourlyTotal, dailyTotal, rideTotal, weekendTotal, manualTotal, grandTotal, shiftCalcTotal, payrollRefTotal, totalFullDays, totalHalfDays, shiftVsPayrollDiff, empsWithShiftCalc };
   }, [finalRecords, variances]);
 
   const fmt = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -61,6 +69,54 @@ export default function FinancialAccuracyPanel({ finalRecords, variances, publis
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Shift-based calculation panel (PRIMARY) */}
+        {data.empsWithShiftCalc > 0 && (
+          <>
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <h4 className="text-xs font-medium text-primary mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Cálculo por Turnos (Fuente Primaria)
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="text-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Días Completos</div>
+                  <div className="text-lg font-bold">{data.totalFullDays}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Medios Días</div>
+                  <div className="text-lg font-bold">{data.totalHalfDays}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Calculado</div>
+                  <div className="text-lg font-bold font-mono text-primary">{fmt(data.shiftCalcTotal)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Empleados</div>
+                  <div className="text-lg font-bold">{data.empsWithShiftCalc}</div>
+                </div>
+              </div>
+              {/* Shift vs Payroll comparison */}
+              <div className="mt-3 pt-2 border-t border-primary/10 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-[10px] text-muted-foreground">Shift-Calc</div>
+                  <div className="text-sm font-bold font-mono text-primary">{fmt(data.shiftCalcTotal)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">Payroll (ref)</div>
+                  <div className="text-sm font-bold font-mono text-muted-foreground">{fmt(data.payrollRefTotal)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">Diferencia</div>
+                  <div className={`text-sm font-bold font-mono ${Math.abs(data.shiftVsPayrollDiff) > 10 ? "text-destructive" : "text-primary"}`}>
+                    {data.shiftVsPayrollDiff >= 0 ? "+" : ""}{fmt(data.shiftVsPayrollDiff)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
+
         {/* Main totals */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="p-3 rounded-lg bg-muted/30 text-center">
@@ -144,6 +200,7 @@ export default function FinancialAccuracyPanel({ finalRecords, variances, publis
           <div className="text-2xl font-bold font-mono text-primary">{fmt(data.grandTotal)}</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">
             {variances.length} empleados · {data.empPct}% exact match
+            {data.empsWithShiftCalc > 0 && ` · ${data.empsWithShiftCalc} con cálculo por turnos`}
           </div>
         </div>
       </CardContent>
