@@ -288,6 +288,7 @@ export default function CompensationReconciliation() {
       result = result.filter(r => r.employee_name.toLowerCase().includes(s));
     }
     switch (filter) {
+      case "no_profile": result = result.filter(r => !r.profile); break;
       case "exact_match": result = result.filter(r => r.status === "exact_match"); break;
       case "close_match": result = result.filter(r => r.status === "close_match"); break;
       case "mismatch": result = result.filter(r => r.status === "mismatch"); break;
