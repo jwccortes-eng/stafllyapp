@@ -582,9 +582,22 @@ export default function CompensationReconciliation() {
                             <Badge className={`text-[10px] border-0 gap-1 ${sc.color}`}>
                               <Icon className="h-3 w-3" /> {sc.label}
                             </Badge>
+                            {row.totals.historical_total > 0 && (row.totals.unmapped_total / row.totals.historical_total) > 0.2 && (
+                              <div className="text-[10px] text-destructive mt-1">Crítico unmapped &gt; 20%</div>
+                            )}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs">{fmt(row.totals.configured)}</TableCell>
-                          <TableCell className="text-right font-mono text-xs">{fmt(row.totals.historical)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            <div>{fmt(row.totals.historical_clean)}</div>
+                            {row.totals.unmapped_total > 0 && (
+                              <div
+                                className="mt-0.5 text-[10px] font-normal text-muted-foreground"
+                                title={`Histórico total (incluye excluidos): ${fmt(row.totals.historical_total)} · Excluido unmapped: ${fmt(row.totals.unmapped_total)}`}
+                              >
+                                Total: {fmt(row.totals.historical_total)} · Excluido: {fmt(row.totals.unmapped_total)}
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell className={`text-right font-mono text-xs font-bold ${
                             Math.abs(row.totals.variance) > 10 ? "text-destructive" : "text-primary"
                           }`}>
