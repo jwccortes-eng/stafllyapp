@@ -20,7 +20,7 @@ import {
   Filter, RefreshCw, User, FileText, Eye, DollarSign,
   ChevronDown, ChevronUp, MessageSquare, ShieldCheck, Pencil,
   Users, UserPlus,
-};
+} from "lucide-react";
 
 function getStatus(variancePct: number, hasData: boolean): ReconciliationStatus {
   if (!hasData) return "needs_review";
