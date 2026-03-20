@@ -1069,6 +1069,7 @@ export type Database = {
       }
       compensation_profiles: {
         Row: {
+          bonus_transport_hourly_rate: number | null
           company_id: string
           created_at: string
           created_by: string | null
@@ -1077,18 +1078,27 @@ export type Database = {
           default_hourly_rate: number | null
           default_ride_rate_regular: number | null
           default_ride_rate_special: number | null
+          double_pay_hourly_rate: number | null
           effective_from: string
           effective_to: string | null
           employee_id: string
+          hourly_rate_last_verified_at: string | null
+          hourly_rate_override_manual: boolean | null
           id: string
+          inferred_hourly_confidence: string | null
+          inferred_hourly_rate: number | null
+          inferred_hourly_source: string | null
           is_active: boolean
+          kitchen_hourly_rate: number | null
           notes: string | null
+          overtime_hourly_rate: number | null
           payment_mode: Database["public"]["Enums"]["payment_mode_type"]
           rate_source: Database["public"]["Enums"]["comp_rate_source"]
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          bonus_transport_hourly_rate?: number | null
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -1097,18 +1107,27 @@ export type Database = {
           default_hourly_rate?: number | null
           default_ride_rate_regular?: number | null
           default_ride_rate_special?: number | null
+          double_pay_hourly_rate?: number | null
           effective_from?: string
           effective_to?: string | null
           employee_id: string
+          hourly_rate_last_verified_at?: string | null
+          hourly_rate_override_manual?: boolean | null
           id?: string
+          inferred_hourly_confidence?: string | null
+          inferred_hourly_rate?: number | null
+          inferred_hourly_source?: string | null
           is_active?: boolean
+          kitchen_hourly_rate?: number | null
           notes?: string | null
+          overtime_hourly_rate?: number | null
           payment_mode?: Database["public"]["Enums"]["payment_mode_type"]
           rate_source?: Database["public"]["Enums"]["comp_rate_source"]
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          bonus_transport_hourly_rate?: number | null
           company_id?: string
           created_at?: string
           created_by?: string | null
@@ -1117,12 +1136,20 @@ export type Database = {
           default_hourly_rate?: number | null
           default_ride_rate_regular?: number | null
           default_ride_rate_special?: number | null
+          double_pay_hourly_rate?: number | null
           effective_from?: string
           effective_to?: string | null
           employee_id?: string
+          hourly_rate_last_verified_at?: string | null
+          hourly_rate_override_manual?: boolean | null
           id?: string
+          inferred_hourly_confidence?: string | null
+          inferred_hourly_rate?: number | null
+          inferred_hourly_source?: string | null
           is_active?: boolean
+          kitchen_hourly_rate?: number | null
           notes?: string | null
+          overtime_hourly_rate?: number | null
           payment_mode?: Database["public"]["Enums"]["payment_mode_type"]
           rate_source?: Database["public"]["Enums"]["comp_rate_source"]
           updated_at?: string
