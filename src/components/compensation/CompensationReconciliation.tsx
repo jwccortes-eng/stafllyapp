@@ -207,10 +207,13 @@ export default function CompensationReconciliation() {
       const allCats = new Set([...empMovements.keys(), "full_day", "half_day", "hourly", "ride"]);
 
       let totalConfigured = 0;
-      let totalHistorical = 0;
+      let totalHistoricalClean = 0;
+      let totalHistoricalTotal = 0;
+      let totalUnmapped = 0;
 
       for (const cat of allCats) {
         const hist = empMovements.get(cat) ?? 0;
+        const isUnmapped = cat === "other";
         let configured = 0;
         let reason = "";
 
@@ -245,14 +248,18 @@ export default function CompensationReconciliation() {
             reason = hist > 0 ? "Ajuste manual" : "";
             break;
           default:
-            reason = hist > 0 ? "Concepto no clasificado" : "";
+            reason = hist > 0 ? "Concepto no clasificado (excluido del cálculo)" : "";
         }
 
-        // Only include if either side has data
         if (hist === 0 && configured === 0) continue;
 
-        const variance = configured - hist;
-        const variancePct = hist !== 0 ? (variance / Math.abs(hist)) * 100 : configured !== 0 ? 100 : 0;
+        const historicalForVariance = isUnmapped ? 0 : hist;
+        const variance = configured - historicalForVariance;
+        const variancePct = historicalForVariance !== 0
+          ? (variance / Math.abs(historicalForVariance)) * 100
+          : configured !== 0
+            ? 100
+            : 0;
 
         components.push({
           concept: cat,
@@ -265,14 +272,33 @@ export default function CompensationReconciliation() {
         });
 
         totalConfigured += configured;
-        totalHistorical += hist;
+        totalHistoricalTotal += hist;
+        if (isUnmapped) totalUnmapped += hist;
+        else totalHistoricalClean += hist;
       }
 
-      const totalVariance = totalConfigured - totalHistorical;
-      const totalVariancePct = totalHistorical !== 0
-        ? (totalVariance / Math.abs(totalHistorical)) * 100 : 0;
+      const totalVariance = totalConfigured - totalHistoricalClean;
+      const totalVariancePct = totalHistoricalClean !== 0
+        ? (totalVariance / Math.abs(totalHistoricalClean)) * 100
+        : totalConfigured !== 0
+          ? 100
+          : 0;
 
-      const status = getStatus(totalVariancePct, hasHistorical);
+      const unmappedRatio = totalHistoricalTotal > 0 ? totalUnmapped / totalHistoricalTotal : 0;
+      const hasCriticalUnmapped = unmappedRatio > 0.2;
+      const status = hasCriticalUnmapped ? "needs_review" : getStatus(totalVariancePct, hasHistorical);
+
+      if (totalHistoricalTotal > 0) {
+        console.log("[comp-reconciliation][historical_debug]", {
+          employee_id: e.id,
+          employee_name: `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim(),
+          historical_clean: Number(totalHistoricalClean.toFixed(2)),
+          historical_total: Number(totalHistoricalTotal.toFixed(2)),
+          unmapped_total: Number(totalUnmapped.toFixed(2)),
+          unmapped_ratio_pct: Number((unmappedRatio * 100).toFixed(2)),
+          critical_unmapped: hasCriticalUnmapped,
+        });
+      }
 
       return {
         employee_id: e.id,
@@ -281,7 +307,14 @@ export default function CompensationReconciliation() {
         profile: p,
         hourly,
         components,
-        totals: { configured: totalConfigured, historical: totalHistorical, variance: totalVariance, variancePct: totalVariancePct },
+        totals: {
+          configured: totalConfigured,
+          historical_clean: totalHistoricalClean,
+          historical_total: totalHistoricalTotal,
+          unmapped_total: totalUnmapped,
+          variance: totalVariance,
+          variancePct: totalVariancePct,
+        },
         status,
       };
     });
