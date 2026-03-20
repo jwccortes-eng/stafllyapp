@@ -281,6 +281,25 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                         {(r.manual_adjustment_total || r.manual_amount || 0) > 0 && <Badge variant="secondary">Manual: {fmt(r.manual_adjustment_total || r.manual_amount || 0)}</Badge>}
                         {excludedUnmappedAmount > 0 && <Badge variant="destructive">Otros (excluido): {fmt(excludedUnmappedAmount)}</Badge>}
                       </div>
+                      {/* Clasificación por source (debug Connecteam) */}
+                      <div className="mt-1.5 p-2 rounded bg-muted/30 space-y-1">
+                        <div className="text-[10px] font-medium text-muted-foreground">Clasificación detectada</div>
+                        <div className="flex flex-wrap gap-1 text-[10px]">
+                          {Array.from(new Set((r.payroll_rows || []).map((row: any) => row?.classification_source).filter(Boolean))).slice(0, 4).map((src: string) => (
+                            <Badge key={src} variant="outline" className="text-[10px]">{src}</Badge>
+                          ))}
+                          {Array.from(new Set((r.payroll_rows || []).map((row: any) => row?.assigned_target_type).filter(Boolean))).slice(0, 4).map((tt: string) => (
+                            <Badge key={tt} variant="secondary" className="text-[10px]">{tt}</Badge>
+                          ))}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          Shift detectado: {(r.payroll_rows || []).map((row: any) => row?.shift_source).filter(Boolean)[0] || "—"}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          Location detectada: {(r.payroll_rows || []).map((row: any) => row?.location_source || row?.client_location_source).filter(Boolean)[0] || "—"}
+                        </div>
+                      </div>
+
                       {/* Variance explanation */}
                       {v && v.variance_amount !== 0 && (
                         <div className="mt-1.5 p-2 rounded bg-muted/30 space-y-0.5">

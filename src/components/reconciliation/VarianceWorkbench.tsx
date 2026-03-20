@@ -244,7 +244,9 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
                           <TableHead className="text-[10px]">Fecha</TableHead>
                           <TableHead className="text-[10px]">Horas</TableHead>
                           <TableHead className="text-[10px] text-right">Monto</TableHead>
-                          <TableHead className="text-[10px]">Tipo Original</TableHead>
+                          <TableHead className="text-[10px]">Tipo</TableHead>
+                          <TableHead className="text-[10px]">Shift/Location</TableHead>
+                          <TableHead className="text-[10px]">Fuente</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -257,13 +259,21 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
                               <TableCell className={`text-xs text-right font-mono font-semibold ${isUnmapped ? "text-destructive" : ""}`}>{fmt(row.pay || 0)}</TableCell>
                               <TableCell className="space-x-1">
                                 <Badge variant="outline" className="text-[10px]">{row.type || "?"}</Badge>
+                                {row.assigned_target_type && <Badge variant="secondary" className="text-[10px]">{row.assigned_target_type}</Badge>}
                                 {row.classified_type && <Badge variant={isUnmapped ? "destructive" : "secondary"} className="text-[10px]">{row.classified_type}</Badge>}
+                              </TableCell>
+                              <TableCell className="text-[10px] text-muted-foreground max-w-[180px]">
+                                <div className="truncate">{row.shift_source || "—"}</div>
+                                <div className="truncate">{row.location_source || row.client_location_source || "—"}</div>
+                              </TableCell>
+                              <TableCell className="text-[10px]">
+                                <Badge variant="outline" className="text-[10px]">{row.classification_source || "fallback"}</Badge>
                               </TableCell>
                             </TableRow>
                           );
                         })}
                         {(record.payroll_rows || []).length === 0 && (
-                          <TableRow><TableCell colSpan={4} className="text-xs text-muted-foreground text-center">Sin filas de nómina</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={6} className="text-xs text-muted-foreground text-center">Sin filas de nómina</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>

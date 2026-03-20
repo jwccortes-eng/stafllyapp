@@ -473,101 +473,178 @@ export function useReconciliationPeriod(companyId: string | null) {
       const totalPayrollHours = empPayrolls.reduce((sum, p) => sum + (Number(p.total_hours) || 0), 0);
       const totalPayrollAmount = empPayrolls.reduce((sum, p) => sum + (Number(p.total_pay) || 0), 0);
 
-      // ── Build schedule context: shift_title + location_name + client_name per employee+date ──
-      const scheduleContextMap = new Map<string, { shift_titles: string[]; location_names: string[]; client_names: string[]; shift_count: number }>();
+      // ── Build schedule context per employee+date (Connecteam shift-first) ──
+      const scheduleContextMap = new Map<string, {
+        shift_names: string[];
+        location_names: string[];
+        job_names: string[];
+        client_locations: string[];
+        client_names: string[];
+        shift_count: number;
+        full_day_units: number;
+        half_day_units: number;
+      }>();
+
       for (const s of empSchedules) {
         const dateKey = s.work_date || "no-date";
-        const existing = scheduleContextMap.get(dateKey) || { shift_titles: [], location_names: [], client_names: [], shift_count: 0 };
-        if (s.shift_title) existing.shift_titles.push(s.shift_title.toLowerCase().trim());
-        if (s.location_name) existing.location_names.push(s.location_name.toLowerCase().trim());
-        if (s.client_name) existing.client_names.push(s.client_name.toLowerCase().trim());
+        const existing = scheduleContextMap.get(dateKey) || {
+          shift_names: [],
+          location_names: [],
+          job_names: [],
+          client_locations: [],
+          client_names: [],
+          shift_count: 0,
+          full_day_units: 0,
+          half_day_units: 0,
+        };
+
+        const shiftName = (s.shift_title || "").toLowerCase().trim();
+        const locationName = (s.location_name || "").toLowerCase().trim();
+        const clientName = (s.client_name || "").toLowerCase().trim();
+        const jobName = shiftName; // Connecteam: job/turno normalmente via shift_title
+        const clientLocation = [clientName, locationName].filter(Boolean).join(" ").trim();
+        const hours = Number(s.total_hours) || 0;
+
+        if (shiftName) {
+          existing.shift_names.push(shiftName);
+          existing.job_names.push(jobName);
+        }
+        if (locationName) existing.location_names.push(locationName);
+        if (clientName) existing.client_names.push(clientName);
+        if (clientLocation) existing.client_locations.push(clientLocation);
+
         existing.shift_count += 1;
+        if (hours > 0 && hours <= 4) existing.half_day_units += 0.5;
+        else existing.full_day_units += 1;
+
         scheduleContextMap.set(dateKey, existing);
       }
 
-      // ── Auto-classify unrecognized pay_type values ──
-      const classifyPayType = (p: any): string => {
-        // Gather all text fields from the payroll row itself
-        const fieldsToCheck: string[] = [];
-        if (p.pay_type) fieldsToCheck.push(p.pay_type.toLowerCase().trim());
-        if (p.concept_name) fieldsToCheck.push(p.concept_name.toLowerCase().trim());
-        if (p.original_concept_name) fieldsToCheck.push(String(p.original_concept_name).toLowerCase().trim());
-        if (p.notes) fieldsToCheck.push(p.notes.toLowerCase().trim());
-        if (p.title) fieldsToCheck.push(String(p.title).toLowerCase().trim());
-
-        // Enrich with schedule context (shift_title, location_name, client_name) for same employee+date
-        const schedCtx = scheduleContextMap.get(p.work_date || "no-date");
-        if (schedCtx) {
-          fieldsToCheck.push(...schedCtx.shift_titles);
-          fieldsToCheck.push(...schedCtx.location_names);
-          fieldsToCheck.push(...schedCtx.client_names);
-        }
-
-        // Helper to map target_type to internal classification
-        const mapTargetType = (tt: string): string => {
-          if (tt === "hourly") return "hourly";
-          if (tt === "full_day") return "daily";
-          if (tt === "half_day") return "daily";
-          if (tt === "ride") return "pay_ride";
-          if (tt === "bonus") return "manual_adjustment";
-          if (tt === "other") return "unmapped";
-          return tt;
-        };
-
-        // 1. Try DB mappings first (sorted by priority)
-        if (activeMappings.length > 0) {
-          for (const mapping of activeMappings) {
-            const pat = mapping.pattern.toLowerCase().trim();
-            const mf = mapping.match_field || "any";
-
-            // If match_field is specific, only check that source
-            if (mf === "shift_title" && schedCtx) {
-              for (const st of schedCtx.shift_titles) { if (st.includes(pat)) return mapTargetType(mapping.target_type); }
-              continue;
-            }
-            if (mf === "location_name" && schedCtx) {
-              for (const ln of schedCtx.location_names) { if (ln.includes(pat)) return mapTargetType(mapping.target_type); }
-              continue;
-            }
-            if (mf === "client_name" && schedCtx) {
-              for (const cn of schedCtx.client_names) { if (cn.includes(pat)) return mapTargetType(mapping.target_type); }
-              continue;
-            }
-            // "any" → check all fields
-            for (const field of fieldsToCheck) {
-              if (field.includes(pat)) return mapTargetType(mapping.target_type);
-            }
-          }
-        }
-
-        // 2. Shift-count heuristic: if schedule says 1 shift that day & no other classification, treat as full_day
-        if (schedCtx && schedCtx.shift_count >= 1) {
-          // Check if any shift title suggests a daily pay pattern
-          for (const st of schedCtx.shift_titles) {
-            if (st.includes("weekend") || st.includes("daily") || st.includes("diario") || st.includes("doble") || st.includes("double")) return "daily";
-          }
-        }
-
-        // 3. Fallback: hardcoded classification
-        const t = (p.pay_type || "").toLowerCase().trim();
-        if (t === "hourly" || t === "regular" || t === "regular pay" || t === "base" || t === "base pay" || t === "hora") return "hourly";
-        if (t === "daily" || t === "daily pay" || t === "diario") return "daily";
-        if (t === "pay_ride" || t === "ride" || t === "ryde" || t === "transporte") return "pay_ride";
-        if (t === "weekend_job" || t === "weekend" || t === "doble" || t === "double" || t === "paga doble") return "weekend_job";
-        if (t === "manual_adjustment" || t === "manual" || t === "adjustment" || t === "bonus" || t === "reintegro" || t === "correction") return "manual_adjustment";
-        // Try notes-based classification
-        const n = (p.notes || "").toLowerCase();
-        if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "pay_ride";
-        if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend_job";
-        if (n.includes("bonus") || n.includes("manual") || n.includes("adjust") || n.includes("reintegro")) return "manual_adjustment";
-        if (n.includes("daily") || n.includes("diario")) return "daily";
-        // If it has hours and a rate, treat as hourly
-        if (Number(p.total_hours) > 0 && Number(p.hourly_rate) > 0) return "hourly";
-        return "unmapped";
+      type ClassificationDecision = {
+        classifiedType: string;
+        assignedTargetType: "hourly" | "full_day" | "half_day" | "ride" | "bonus" | "other" | "unmapped";
+        source: string;
+        matchedValue?: string;
       };
 
-      // Classify all payroll rows
-      const classifiedPayrolls = empPayrolls.map(p => ({ ...p, _classified_type: classifyPayType(p) }));
+      const mapTargetType = (tt: string): ClassificationDecision => {
+        if (tt === "hourly") return { classifiedType: "hourly", assignedTargetType: "hourly", source: "mapping" };
+        if (tt === "full_day") return { classifiedType: "daily", assignedTargetType: "full_day", source: "mapping" };
+        if (tt === "half_day") return { classifiedType: "daily", assignedTargetType: "half_day", source: "mapping" };
+        if (tt === "ride") return { classifiedType: "pay_ride", assignedTargetType: "ride", source: "mapping" };
+        if (tt === "bonus") return { classifiedType: "manual_adjustment", assignedTargetType: "bonus", source: "mapping" };
+        if (tt === "other") return { classifiedType: "unmapped", assignedTargetType: "other", source: "mapping" };
+        return { classifiedType: tt, assignedTargetType: "unmapped", source: "mapping" };
+      };
+
+      // ── Classification with strict priority: mapping DB -> shift/location -> fallback legacy ──
+      const classifyPayType = (p: any): ClassificationDecision => {
+        const rowShiftName = String(p.shift_name || p.shift_title || p.title || "").toLowerCase().trim();
+        const rowLocationName = String(p.location_name || "").toLowerCase().trim();
+        const rowJobName = String(p.job_name || "").toLowerCase().trim();
+        const rowClientLocation = String(p.client_location || "").toLowerCase().trim();
+
+        const rowFields = [
+          String(p.pay_type || "").toLowerCase().trim(),
+          String(p.concept_name || "").toLowerCase().trim(),
+          String(p.original_concept_name || "").toLowerCase().trim(),
+          String(p.notes || "").toLowerCase().trim(),
+          rowShiftName,
+          rowLocationName,
+          rowJobName,
+          rowClientLocation,
+        ].filter(Boolean);
+
+        const schedCtx = scheduleContextMap.get(p.work_date || "no-date");
+        const shiftFields = schedCtx ? [...schedCtx.shift_names, ...schedCtx.job_names] : [];
+        const locationFields = schedCtx ? [...schedCtx.location_names, ...schedCtx.client_locations] : [];
+        const clientFields = schedCtx ? [...schedCtx.client_names] : [];
+        const allFields = [...rowFields, ...shiftFields, ...locationFields, ...clientFields];
+
+        // 1) Explicit DB mappings (manual priority)
+        if (activeMappings.length > 0) {
+          for (const mapping of activeMappings) {
+            const pat = String(mapping.pattern || "").toLowerCase().trim();
+            if (!pat) continue;
+            const mf = String(mapping.match_field || "any").toLowerCase().trim();
+
+            let fieldsForMatch = allFields;
+            if (["shift_title", "shift_name", "job_name"].includes(mf)) fieldsForMatch = [...shiftFields, rowShiftName, rowJobName].filter(Boolean);
+            else if (["location_name", "client_location"].includes(mf)) fieldsForMatch = [...locationFields, rowLocationName, rowClientLocation].filter(Boolean);
+            else if (["client_name"].includes(mf)) fieldsForMatch = [...clientFields].filter(Boolean);
+
+            const hit = fieldsForMatch.find((f) => f.includes(pat));
+            if (hit) {
+              const mapped = mapTargetType(mapping.target_type);
+              return { ...mapped, source: `mapping:${mf || "any"}`, matchedValue: hit };
+            }
+          }
+        }
+
+        // 2) Shift/location mapping (Connecteam-first)
+        const shiftLocationPool = [...shiftFields, ...locationFields, rowShiftName, rowLocationName, rowJobName, rowClientLocation].filter(Boolean);
+        const weekendHit = shiftLocationPool.find((f) => f.includes("weekend job"));
+        if (weekendHit) {
+          return { classifiedType: "daily", assignedTargetType: "full_day", source: "shift_location:weekend_job", matchedValue: weekendHit };
+        }
+
+        // 2b) Shift units heuristic: 1 shift=1 full_day, 0.5 shift=half_day, múltiples shifts=múltiples full_day
+        if (schedCtx && schedCtx.shift_count > 0) {
+          if ((schedCtx.full_day_units === 0 && schedCtx.half_day_units > 0) || ((Number(p.total_hours) || 0) > 0 && (Number(p.total_hours) || 0) <= 4)) {
+            return { classifiedType: "daily", assignedTargetType: "half_day", source: "shift_units:half_day" };
+          }
+          return { classifiedType: "daily", assignedTargetType: "full_day", source: `shift_units:${schedCtx.shift_count}_shifts` };
+        }
+
+        // 3) Fallback legacy (pay_type/concept/notes)
+        const t = String(p.pay_type || "").toLowerCase().trim();
+        if (["hourly", "regular", "regular pay", "base", "base pay", "hora"].includes(t)) {
+          return { classifiedType: "hourly", assignedTargetType: "hourly", source: "fallback:pay_type" };
+        }
+        if (["daily", "daily pay", "diario"].includes(t)) {
+          return { classifiedType: "daily", assignedTargetType: "full_day", source: "fallback:pay_type" };
+        }
+        if (["pay_ride", "ride", "ryde", "transporte"].includes(t)) {
+          return { classifiedType: "pay_ride", assignedTargetType: "ride", source: "fallback:pay_type" };
+        }
+        if (["weekend_job", "weekend", "doble", "double", "paga doble"].includes(t)) {
+          return { classifiedType: "weekend_job", assignedTargetType: "full_day", source: "fallback:pay_type" };
+        }
+        if (["manual_adjustment", "manual", "adjustment", "bonus", "reintegro", "correction"].includes(t)) {
+          return { classifiedType: "manual_adjustment", assignedTargetType: "bonus", source: "fallback:pay_type" };
+        }
+
+        const n = String(p.notes || "").toLowerCase();
+        if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) {
+          return { classifiedType: "pay_ride", assignedTargetType: "ride", source: "fallback:notes" };
+        }
+        if (n.includes("weekend") || n.includes("doble") || n.includes("double")) {
+          return { classifiedType: "weekend_job", assignedTargetType: "full_day", source: "fallback:notes" };
+        }
+        if (n.includes("bonus") || n.includes("manual") || n.includes("adjust") || n.includes("reintegro")) {
+          return { classifiedType: "manual_adjustment", assignedTargetType: "bonus", source: "fallback:notes" };
+        }
+        if (n.includes("daily") || n.includes("diario")) {
+          return { classifiedType: "daily", assignedTargetType: "full_day", source: "fallback:notes" };
+        }
+        if ((Number(p.total_hours) || 0) > 0 && (Number(p.hourly_rate) || 0) > 0) {
+          return { classifiedType: "hourly", assignedTargetType: "hourly", source: "fallback:hours_rate" };
+        }
+
+        return { classifiedType: "unmapped", assignedTargetType: "unmapped", source: "fallback:unmapped" };
+      };
+
+      // Classify all payroll rows + source trace
+      const classifiedPayrolls = empPayrolls.map((p) => {
+        const decision = classifyPayType(p);
+        return {
+          ...p,
+          _classified_type: decision.classifiedType,
+          _assigned_target_type: decision.assignedTargetType,
+          _classification_source: decision.source,
+          _classification_match: decision.matchedValue || null,
+        };
+      });
 
       // Full payment breakdown by classified type
       const hourlyRows = classifiedPayrolls.filter(p => p._classified_type === "hourly");
@@ -601,7 +678,7 @@ export function useReconciliationPeriod(companyId: string | null) {
               work_date: r.work_date,
               notes: r.notes?.substring(0, 50),
               concept_name: r.concept_name || r.original_concept_name,
-              shift_source: ctx?.shift_titles?.join(", ") || null,
+              shift_source: ctx?.shift_names?.join(", ") || null,
               location_source: ctx?.location_names?.join(", ") || null,
               client_source: ctx?.client_names?.join(", ") || null,
             };
@@ -682,7 +759,25 @@ export function useReconciliationPeriod(companyId: string | null) {
         worked_shifts: empClocks.map(c => ({ id: c.id, date: c.work_date, hours: c.total_hours, clock_in: c.clock_in, clock_out: c.clock_out })),
         payroll_rows: classifiedPayrolls.map(p => {
           const ctx = scheduleContextMap.get(p.work_date || "no-date");
-          return { id: p.id, source_row_id: p.raw_row_id || p.external_id || null, employee_id: empId, date: p.work_date, hours: p.total_hours, pay: p.total_pay, type: p.pay_type, classified_type: p._classified_type, notes: p.notes?.substring(0, 60), concept_name: p.concept_name || p.original_concept_name, shift_source: ctx ? ctx.shift_titles.join(", ") : null, location_source: ctx ? ctx.location_names.join(", ") : null };
+          return {
+            id: p.id,
+            source_row_id: p.raw_row_id || p.external_id || null,
+            employee_id: empId,
+            date: p.work_date,
+            hours: p.total_hours,
+            pay: p.total_pay,
+            type: p.pay_type,
+            classified_type: p._classified_type,
+            assigned_target_type: p._assigned_target_type,
+            classification_source: p._classification_source,
+            classification_match: p._classification_match,
+            notes: p.notes?.substring(0, 60),
+            concept_name: p.concept_name || p.original_concept_name,
+            shift_source: ctx ? ctx.shift_names.join(", ") : null,
+            location_source: ctx ? ctx.location_names.join(", ") : null,
+            job_source: ctx ? ctx.job_names.join(", ") : null,
+            client_location_source: ctx ? ctx.client_locations.join(", ") : null,
+          };
         }),
         total_scheduled_hours: Math.round(totalScheduledHours * 100) / 100,
         total_worked_hours: Math.round(totalWorkedHours * 100) / 100,
