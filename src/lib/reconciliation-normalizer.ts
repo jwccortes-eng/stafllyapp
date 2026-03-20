@@ -381,6 +381,8 @@ export function normalizeScheduleRows(
       shift_title: d[colMap.shift_title || ""] || d[colMap.job_title || ""] || null,
       external_shift_id: extId,
       pay_type: "unknown",
+      notes: d[colMap.notes || ""] || null,
+      availability_status: d[colMap.availability_status || ""] || null,
       has_conflict: empMatch.ambiguous,
       conflict_details: empMatch.ambiguous ? { candidates: empMatch.candidates } : null,
       _is_system: false,
