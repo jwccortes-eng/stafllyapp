@@ -354,6 +354,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
             weekend_pay: 0,
             manual_adj: 0,
             other_pay: 0,
+            unmapped_count: 0,
+            unmapped_excluded_total: 0,
             total_final: 0,
             authoritative_total: 0,
             authoritative_source: null,
