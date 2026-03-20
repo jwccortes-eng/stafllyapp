@@ -216,10 +216,18 @@ export function detectShiftCategory(
   clientName: string | null | undefined,
   locationName: string | null | undefined,
   notes?: string | null,
+  availabilityStatus?: string | null,
 ): ShiftCategory {
   const fields = [jobTitle, shiftTitle, clientName, locationName, notes].map(f => (f || ""));
   const combined = fields.join(" ");
-  // Check availability/blocking FIRST — these are not real work
+
+  // Check availability status field from Connecteam (explicit signal)
+  const avStatus = (availabilityStatus || "").trim().toLowerCase();
+  if (avStatus && (avStatus === "unavailable" || avStatus === "no disponible" || avStatus.includes("block"))) {
+    return "availability_block";
+  }
+
+  // Check availability/blocking patterns in text fields
   if (AVAILABILITY_BLOCK_PATTERN.test(combined)) return "availability_block";
 
   // Structural detection: no title + no client + no location = availability placeholder
