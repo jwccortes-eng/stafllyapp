@@ -98,6 +98,7 @@ const STATUS_CONFIG: Record<ReconciliationStatus, { label: string; color: string
 
 const FILTER_OPTIONS = [
   { value: "all", label: "Todos" },
+  { value: "no_profile", label: "Sin perfil" },
   { value: "exact_match", label: "Match exacto" },
   { value: "close_match", label: "Match cercano" },
   { value: "mismatch", label: "Mismatch" },
