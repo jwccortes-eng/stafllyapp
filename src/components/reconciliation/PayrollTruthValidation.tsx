@@ -753,7 +753,56 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                   accent={Math.abs(stats.variance) > 100 ? "deduction" : "primary"}
                 />
                 <KpiCard label="Dups Suprimidos" value={fmt(stats.totalSuppressed)} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
+                <KpiCard label="Otros / Sin clasificar" value={fmt(stats.totalOther)} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.totalOther > 0 ? "deduction" : "muted"} />
               </div>
+
+              {/* Safety threshold warning for "Otros" */}
+              {stats.totalOther > 0 && stats.totalRecon > 0 && (stats.totalOther / stats.totalRecon) > 0.20 && (
+                <div className="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm">
+                  <p className="font-semibold text-destructive">⚠️ ALERTA CRÍTICA: "Otros / Sin clasificar" representa {((stats.totalOther / stats.totalRecon) * 100).toFixed(1)}% del total reconciliado</p>
+                  <p className="text-muted-foreground mt-1">Esto indica que hay registros de nómina que no están siendo clasificados correctamente. Revisa los registros crudos para identificar los conceptos no mapeados.</p>
+                </div>
+              )}
+
+              {/* Raw records debug button */}
+              <Button variant="outline" size="sm" onClick={() => setShowRawRecords(!showRawRecords)}>
+                {showRawRecords ? "Ocultar" : "Ver"} registros crudos ({reconData.reduce((s, r) => s + r.ledger.length, 0)})
+              </Button>
+
+              {showRawRecords && (
+                <div className="overflow-auto max-h-[400px] rounded border border-border bg-muted/30">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Empleado</TableHead>
+                        <TableHead>Concepto</TableHead>
+                        <TableHead>Categoría</TableHead>
+                        <TableHead>Tipo fuente</TableHead>
+                        <TableHead className="text-right">Monto</TableHead>
+                        <TableHead>Incluido</TableHead>
+                        <TableHead>Rol</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reconData.flatMap(r => 
+                        r.ledger
+                          .filter(l => l.category === "other" || !l.included || l.compositionRole === "excluded_from_total")
+                          .map(l => (
+                            <TableRow key={l.id} className={l.category === "other" ? "bg-destructive/5" : ""}>
+                              <TableCell className="text-xs">{r.employee_name}</TableCell>
+                              <TableCell className="text-xs font-mono">{l.concept}</TableCell>
+                              <TableCell><Badge variant={l.category === "other" ? "destructive" : "outline"} className="text-xs">{l.category}</Badge></TableCell>
+                              <TableCell className="text-xs">{l.sourceType}</TableCell>
+                              <TableCell className="text-right font-mono text-xs">{fmt(l.value)}</TableCell>
+                              <TableCell className="text-xs">{l.included ? "✓" : "✗"}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{l.compositionRole}</TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
 
               <div className="overflow-auto max-h-[600px]">
                 <Table>
