@@ -568,6 +568,7 @@ export interface ColumnMapping {
   client_name?: string;
   location_name?: string;
   notes?: string;
+  availability_status?: string;
 }
 
 // Patterns that are NOTES columns — must be excluded from employee_name matching
