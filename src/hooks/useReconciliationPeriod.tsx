@@ -737,6 +737,26 @@ export function useReconciliationPeriod(companyId: string | null) {
         return { classifiedType: "unmapped", assignedTargetType: "unmapped", source: "fallback:unmapped" };
       };
 
+      // ── DEBUG: Employee shift-calc diagnostic ──
+      const scheduleDates = [...scheduleContextMap.keys()].filter(k => k !== "no-date");
+      const payrollDates = [...new Set(empPayrolls.map(p => p.work_date).filter(Boolean))];
+      const dateOverlap = scheduleDates.filter(d => payrollDates.includes(d));
+      console.log(`[SHIFT-CALC-DEBUG] ${empMap.get(empId) || empId}`, {
+        schedule_dates: scheduleDates,
+        payroll_dates: payrollDates,
+        date_overlap_count: dateOverlap.length,
+        date_overlap: dateOverlap,
+        empLevelContext: {
+          has_weekend_job: empLevelContext.has_weekend_job,
+          total_shift_count: empLevelContext.total_shift_count,
+          total_full_day_shifts: empLevelContext.total_full_day_shifts,
+          total_half_day_shifts: empLevelContext.total_half_day_shifts,
+          all_shift_names: [...new Set(empLevelContext.all_shift_names)],
+        },
+        schedules_loaded: empSchedules.length,
+        payrolls_loaded: empPayrolls.length,
+      });
+
       // Classify all payroll rows + source trace
       const classifiedPayrolls = empPayrolls.map((p) => {
         const decision = classifyPayType(p);
