@@ -189,6 +189,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
               const PayIcon = (r as any).shift_calculated_total > 0 ? Calendar : (PAY_ICONS[r.pay_classification] || DollarSign);
               const cleanHistorical = v?.source_payroll_total || r.source_payroll_total || 0;
               const displayTotal = r.grand_total || r.final_total_pay || 0;
+              const grossHistorical = r.total_payroll_amount || 0;
               const excludedUnmappedAmount = Math.max(0, grossHistorical - cleanHistorical);
               const unmappedCount = (r.payroll_rows || []).filter((p: any) => p?.classified_type === "unmapped" || p?.type === "other" || p?.type === "unclassified").length;
 

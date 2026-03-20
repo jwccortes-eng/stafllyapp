@@ -215,7 +215,6 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
             const name = employees.get(record.employee_id) || "Desconocido";
             const isExpanded = expandedEmp === record.employee_id;
             const hasHoursIssue = Math.abs(record.total_scheduled_hours - record.total_worked_hours) > 1;
-            const hasHoursIssue = hoursVariance > 1;
 
             return (
               <Card key={record.id} className={record.conflict_count > 0 ? "border-destructive/30" : ""}>
