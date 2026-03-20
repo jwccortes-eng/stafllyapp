@@ -82,6 +82,15 @@ export interface EmployeeFinalRecord {
   variance_amount: number;
   variance_status: string;
   variance_reasons: string[];
+  // Shift-based compensation fields
+  shift_full_day_count: number;
+  shift_half_day_count: number;
+  shift_calculated_total: number;
+  shift_daily_rate_used: number | null;
+  shift_half_day_rate_used: number | null;
+  shift_calculation_source: string;
+  payroll_reference_total: number;
+  shift_vs_payroll_diff: number;
 }
 
 export interface EmployeeVariance {
