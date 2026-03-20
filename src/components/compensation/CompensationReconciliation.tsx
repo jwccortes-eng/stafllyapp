@@ -544,7 +544,7 @@ export default function CompensationReconciliation() {
                     <TableHead className="text-xs">Empleado</TableHead>
                     <TableHead className="text-xs text-center">Estado</TableHead>
                     <TableHead className="text-xs text-right">Configurado</TableHead>
-                    <TableHead className="text-xs text-right">Histórico</TableHead>
+                    <TableHead className="text-xs text-right">Histórico (limpio)</TableHead>
                     <TableHead className="text-xs text-right">Varianza</TableHead>
                     <TableHead className="text-xs text-right">%</TableHead>
                     <TableHead className="text-xs text-center">Hourly</TableHead>
