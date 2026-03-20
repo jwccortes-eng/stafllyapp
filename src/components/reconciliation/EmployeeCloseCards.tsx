@@ -214,6 +214,9 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                         {r.pay_classification === "unknown" && (
                           <Badge variant="destructive" className="text-[10px] shrink-0">Sin clasificar</Badge>
                         )}
+                        {Array.isArray(r.warnings) && r.warnings.some((w: any) => String(w).startsWith("CRITICAL_UNMAPPED_RATIO:")) && (
+                          <Badge variant="destructive" className="text-[10px] shrink-0">Crítico unmapped</Badge>
+                        )}
                         {isPending && <Badge variant="outline" className="text-[10px] shrink-0">Pendiente</Badge>}
                       </div>
                     </div>
