@@ -5961,6 +5961,7 @@ export type Database = {
           overtime_hours: number | null
           pay_classification: string | null
           payroll_batch_id: string | null
+          payroll_reference_total: number | null
           payroll_rows: Json | null
           period_status_id: string
           published_at: string | null
@@ -5972,6 +5973,10 @@ export type Database = {
           ride_pay_total: number | null
           schedule_batch_id: string | null
           scheduled_shifts: Json | null
+          shift_calculation_source: string | null
+          shift_daily_rate_used: number | null
+          shift_half_day_rate_used: number | null
+          shift_vs_payroll_diff: number | null
           source_payroll_total: number | null
           total_payroll_amount: number | null
           total_payroll_hours: number | null
@@ -6008,6 +6013,7 @@ export type Database = {
           overtime_hours?: number | null
           pay_classification?: string | null
           payroll_batch_id?: string | null
+          payroll_reference_total?: number | null
           payroll_rows?: Json | null
           period_status_id: string
           published_at?: string | null
@@ -6019,6 +6025,10 @@ export type Database = {
           ride_pay_total?: number | null
           schedule_batch_id?: string | null
           scheduled_shifts?: Json | null
+          shift_calculation_source?: string | null
+          shift_daily_rate_used?: number | null
+          shift_half_day_rate_used?: number | null
+          shift_vs_payroll_diff?: number | null
           source_payroll_total?: number | null
           total_payroll_amount?: number | null
           total_payroll_hours?: number | null
@@ -6055,6 +6065,7 @@ export type Database = {
           overtime_hours?: number | null
           pay_classification?: string | null
           payroll_batch_id?: string | null
+          payroll_reference_total?: number | null
           payroll_rows?: Json | null
           period_status_id?: string
           published_at?: string | null
@@ -6066,6 +6077,10 @@ export type Database = {
           ride_pay_total?: number | null
           schedule_batch_id?: string | null
           scheduled_shifts?: Json | null
+          shift_calculation_source?: string | null
+          shift_daily_rate_used?: number | null
+          shift_half_day_rate_used?: number | null
+          shift_vs_payroll_diff?: number | null
           source_payroll_total?: number | null
           total_payroll_amount?: number | null
           total_payroll_hours?: number | null

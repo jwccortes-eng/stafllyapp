@@ -797,10 +797,30 @@ export function useReconciliationPeriod(companyId: string | null) {
         shiftHalfDayCount += ctx.half_day_units * 2; // half_day_units stored as 0.5, convert to count
       }
 
+      // ── CRITICAL FIX: If schedule-based counting gives 0 but classified payroll rows say full_day,
+      // count from classified payroll rows as fallback ──
+      if (shiftFullDayCount === 0 && shiftHalfDayCount === 0 && empLevelContext.total_shift_count > 0) {
+        // Schedule rows exist but counting from scheduleContextMap gave 0 — use empLevelContext directly
+        shiftFullDayCount = empLevelContext.total_full_day_shifts;
+        shiftHalfDayCount = empLevelContext.total_half_day_shifts;
+        console.log(`[SHIFT-CALC-FIX] ${empMap.get(empId)}: Using empLevelContext counts: ${shiftFullDayCount}fd, ${shiftHalfDayCount}hd (scheduleContextMap was empty)`);
+      }
+
+      // ── ADDITIONAL FALLBACK: If still 0 but classified payroll rows are full_day, count those ──
+      if (shiftFullDayCount === 0 && shiftHalfDayCount === 0) {
+        const classifiedFullDayRows = classifiedPayrolls.filter(p => p._assigned_target_type === "full_day");
+        const classifiedHalfDayRows = classifiedPayrolls.filter(p => p._assigned_target_type === "half_day");
+        if (classifiedFullDayRows.length > 0 || classifiedHalfDayRows.length > 0) {
+          shiftFullDayCount = classifiedFullDayRows.length;
+          shiftHalfDayCount = classifiedHalfDayRows.length;
+          console.log(`[SHIFT-CALC-FIX] ${empMap.get(empId)}: Using classified payroll rows: ${shiftFullDayCount}fd, ${shiftHalfDayCount}hd`);
+        }
+      }
+
       // Calculate shift-based total
       let shiftCalculatedTotal = 0;
       let shiftCalcSource = "none";
-      const hasShiftContext = empLevelContext.total_shift_count > 0;
+      const hasShiftContext = empLevelContext.total_shift_count > 0 || shiftFullDayCount > 0 || shiftHalfDayCount > 0;
 
       if (hasShiftContext && (empDailyRate || empHalfDayRate)) {
         const fullDayAmount = shiftFullDayCount * (empDailyRate || 0);
