@@ -349,11 +349,25 @@ export default function PrePublishReview({
                   return (
                     <TableRow key={r.id}>
                       <TableCell className="text-xs font-medium">{name}</TableCell>
-                      <TableCell className="text-center"><Badge variant="outline" className="text-[10px]">{r.pay_classification}</Badge></TableCell>
-                      <TableCell className="text-xs text-right font-mono">{(r.regular_hours || 0).toFixed(1)}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="text-[10px]">
+                          {(r as any).shift_calculated_total > 0
+                            ? ((r as any).shift_full_day_count > 0 ? "full_day" : r.pay_classification)
+                            : r.pay_classification}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-right font-mono">
+                        {(r as any).shift_full_day_count > 0
+                          ? `${(r as any).shift_full_day_count}d`
+                          : (r.regular_hours || 0).toFixed(1)}
+                      </TableCell>
                       <TableCell className="text-xs text-right font-mono">{(r.overtime_hours || 0).toFixed(1)}</TableCell>
-                      <TableCell className="text-xs text-right font-mono">{fmt(r.hourly_pay_total || r.base_pay || 0)}</TableCell>
-                      <TableCell className="text-xs text-right font-mono">{fmt(r.daily_pay_total || 0)}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">
+                        {(r as any).shift_calculated_total > 0
+                          ? fmt((r as any).shift_calculated_total)
+                          : fmt(r.hourly_pay_total || r.base_pay || 0)}
+                      </TableCell>
+                      <TableCell className="text-xs text-right font-mono text-muted-foreground">{fmt(r.total_payroll_amount || 0)}</TableCell>
                       <TableCell className="text-xs text-right font-mono">{fmt(r.ride_pay_total || r.ride_amount || 0)}</TableCell>
                       <TableCell className="text-xs text-right font-mono">{fmt(r.manual_adjustment_total || r.manual_amount || 0)}</TableCell>
                       <TableCell className="text-xs text-right font-mono font-bold">{fmt(total)}</TableCell>
