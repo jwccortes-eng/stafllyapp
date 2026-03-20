@@ -181,6 +181,10 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
         const varianceBadge = varianceStatus === "exact_match" ? "default"
           : varianceStatus === "minor_variance" ? "secondary"
           : "destructive";
+        const cleanHistorical = record.source_payroll_total || 0;
+        const grossHistorical = record.total_payroll_amount || 0;
+        const excludedUnmapped = Math.max(0, grossHistorical - cleanHistorical);
+        const unmappedCount = (record.payroll_rows || []).filter((row: any) => row?.classified_type === "unmapped" || row?.type === "other" || row?.type === "unclassified").length;
 
         return (
           <Card key={record.employee_id} className={hasEdits ? "border-primary/50" : ""}>
@@ -200,9 +204,19 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
               </div>
               <div className="flex items-center gap-4 text-xs font-mono">
                 <div>
-                  <span className="text-muted-foreground">Fuente:</span>{" "}
-                  <span className="font-semibold">{fmt(record.source_payroll_total || record.total_payroll_amount || 0)}</span>
+                  <span className="text-muted-foreground">Histórico limpio:</span>{" "}
+                  <span className="font-semibold">{fmt(cleanHistorical)}</span>
                 </div>
+                <div>
+                  <span className="text-muted-foreground">Histórico total:</span>{" "}
+                  <span className="font-semibold">{fmt(grossHistorical)}</span>
+                </div>
+                {excludedUnmapped > 0 && (
+                  <div>
+                    <span className="text-muted-foreground">Excluido:</span>{" "}
+                    <span className="font-semibold text-destructive">{fmt(excludedUnmapped)} ({unmappedCount})</span>
+                  </div>
+                )}
                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
                 <div>
                   <span className="text-muted-foreground">Reconciliado:</span>{" "}
@@ -234,16 +248,20 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(record.payroll_rows || []).map((row: any, i: number) => (
-                          <TableRow key={row.id || i}>
-                            <TableCell className="text-xs">{row.date || "—"}</TableCell>
-                            <TableCell className="text-xs font-mono">{row.hours?.toFixed(1) || "—"}</TableCell>
-                            <TableCell className="text-xs text-right font-mono font-semibold">{fmt(row.pay || 0)}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-[10px]">{row.type || "?"}</Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {(record.payroll_rows || []).map((row: any, i: number) => {
+                          const isUnmapped = row?.classified_type === "unmapped" || row?.type === "other" || row?.type === "unclassified";
+                          return (
+                            <TableRow key={row.id || i} className={isUnmapped ? "bg-destructive/5" : ""}>
+                              <TableCell className="text-xs">{row.date || "—"}</TableCell>
+                              <TableCell className="text-xs font-mono">{row.hours?.toFixed(1) || "—"}</TableCell>
+                              <TableCell className={`text-xs text-right font-mono font-semibold ${isUnmapped ? "text-destructive" : ""}`}>{fmt(row.pay || 0)}</TableCell>
+                              <TableCell className="space-x-1">
+                                <Badge variant="outline" className="text-[10px]">{row.type || "?"}</Badge>
+                                {row.classified_type && <Badge variant={isUnmapped ? "destructive" : "secondary"} className="text-[10px]">{row.classified_type}</Badge>}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                         {(record.payroll_rows || []).length === 0 && (
                           <TableRow><TableCell colSpan={4} className="text-xs text-muted-foreground text-center">Sin filas de nómina</TableCell></TableRow>
                         )}

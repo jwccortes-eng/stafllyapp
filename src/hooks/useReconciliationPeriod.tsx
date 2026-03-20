@@ -308,7 +308,7 @@ export function useReconciliationPeriod(companyId: string | null) {
       return { canPublish: false, errors, warnings };
     }
 
-    const unresolved = records.filter(r => r.reconciliation_status === "pending" || r.reconciliation_status === "partial");
+    const unresolved = records.filter(r => ["pending", "partial", "blocked"].includes(r.reconciliation_status));
     if (unresolved.length > 0) {
       errors.push(`${unresolved.length} empleado(s) con conflictos sin resolver.`);
     }
@@ -316,6 +316,11 @@ export function useReconciliationPeriod(companyId: string | null) {
     const withConflicts = records.filter(r => r.conflict_count > 0 && r.reconciliation_status !== "approved");
     if (withConflicts.length > 0) {
       errors.push(`${withConflicts.length} empleado(s) con conflictos críticos no aprobados.`);
+    }
+
+    const blockedByUnmapped = records.filter(r => Array.isArray(r.warnings) && r.warnings.some((w: any) => String(w).startsWith("CRITICAL_UNMAPPED_RATIO:")));
+    if (blockedByUnmapped.length > 0) {
+      errors.push(`${blockedByUnmapped.length} empleado(s) bloqueados por unmapped > 20%.`);
     }
 
     const unknownPay = records.filter(r => r.pay_classification === "unknown");
@@ -528,8 +533,13 @@ export function useReconciliationPeriod(companyId: string | null) {
       const uniqueTypes = [...new Set(payTypes)];
       const classification = uniqueTypes.length === 0 ? "unknown" : uniqueTypes.length === 1 ? uniqueTypes[0] : "mixed";
 
-      // Source payroll total (authoritative — use total_pay field directly, not sub-components)
-      const sourcePayrollTotal = Math.round(totalPayrollAmount * 100) / 100;
+      // Históricos: limpio (clasificado) vs total bruto (incluye unmapped)
+      const historicalTotal = Math.round(totalPayrollAmount * 100) / 100;
+      const sourcePayrollTotal = Math.round(grandTotal * 100) / 100;
+      const unmappedCount = unmappedRows.length;
+      const unmappedExcludedAmount = Math.round(unmappedTotal * 100) / 100;
+      const unmappedRatio = historicalTotal > 0 ? unmappedExcludedAmount / historicalTotal : 0;
+      const hasCriticalUnmapped = unmappedRatio > 0.2;
 
       // Conflicts
       const unresolvedMatches = empMatches.filter(m => m.match_status === "ambiguous" || m.match_status === "unmatched");
@@ -542,20 +552,26 @@ export function useReconciliationPeriod(companyId: string | null) {
       }
       if (grandTotal === 0 && empPayrolls.length > 0) warnings.push("Total calculado es $0 con filas de nómina existentes");
       if (classification === "unknown") warnings.push("Clasificación de pago no determinada");
-      if (unmappedRows.length > 0) warnings.push(`${unmappedRows.length} registro(s) no clasificados ($${unmappedTotal.toFixed(2)}) excluidos del total`);
-      // Safety threshold: flag if unmapped > 20% of total
-      const totalWithUnmapped = grandTotal + unmappedTotal;
-      if (totalWithUnmapped > 0 && unmappedTotal / totalWithUnmapped > 0.20) {
-        warnings.push(`⚠️ CRÍTICO: "No clasificados" representa ${((unmappedTotal / totalWithUnmapped) * 100).toFixed(1)}% del total — requiere revisión`);
+      if (unmappedCount > 0) {
+        warnings.push(`UNMAPPED_COUNT:${unmappedCount}`);
+        warnings.push(`UNMAPPED_EXCLUDED:${unmappedExcludedAmount.toFixed(2)}`);
+        warnings.push(`${unmappedCount} registro(s) no clasificados (${unmappedExcludedAmount.toFixed(2)}) excluidos del cálculo`);
+      }
+      if (hasCriticalUnmapped) {
+        warnings.push(`CRITICAL_UNMAPPED_RATIO:${(unmappedRatio * 100).toFixed(2)}`);
+        warnings.push(`⚠️ CRÍTICO: No clasificados ${(unmappedRatio * 100).toFixed(1)}% (>20%) — reconciliación bloqueada`);
       }
 
-      // Variance: compare authoritative payroll total vs computed breakdown
+      // Variance: compare reconciled vs clean historical (unmapped excluded)
       const varianceAmount = Math.round((grandTotal - sourcePayrollTotal) * 100) / 100;
       const varianceStatus = Math.abs(varianceAmount) < 0.01 ? "exact_match"
         : Math.abs(varianceAmount) < 10 ? "minor_variance" : "major_variance";
       const varianceReasons: string[] = [];
       if (Math.abs(varianceAmount) >= 0.01) {
-        varianceReasons.push(`Breakdown sum ($${grandTotal}) vs source total ($${sourcePayrollTotal})`);
+        varianceReasons.push(`Reconciliado ($${grandTotal}) vs histórico limpio ($${sourcePayrollTotal})`);
+      }
+      if (unmappedCount > 0) {
+        varianceReasons.push(`Excluidos ${unmappedCount} unmapped por $${unmappedExcludedAmount.toFixed(2)} (histórico bruto: $${historicalTotal.toFixed(2)})`);
       }
 
       records.push({
@@ -564,11 +580,11 @@ export function useReconciliationPeriod(companyId: string | null) {
         employee_id: empId,
         scheduled_shifts: empSchedules.map(s => ({ id: s.id, date: s.work_date, hours: s.total_hours, title: s.shift_title })),
         worked_shifts: empClocks.map(c => ({ id: c.id, date: c.work_date, hours: c.total_hours, clock_in: c.clock_in, clock_out: c.clock_out })),
-        payroll_rows: classifiedPayrolls.map(p => ({ id: p.id, date: p.work_date, hours: p.total_hours, pay: p.total_pay, type: p.pay_type, classified_type: p._classified_type, notes: p.notes?.substring(0, 60), concept_name: p.concept_name || p.original_concept_name })),
+        payroll_rows: classifiedPayrolls.map(p => ({ id: p.id, source_row_id: p.raw_row_id || p.external_id || null, employee_id: empId, date: p.work_date, hours: p.total_hours, pay: p.total_pay, type: p.pay_type, classified_type: p._classified_type, notes: p.notes?.substring(0, 60), concept_name: p.concept_name || p.original_concept_name })),
         total_scheduled_hours: Math.round(totalScheduledHours * 100) / 100,
         total_worked_hours: Math.round(totalWorkedHours * 100) / 100,
         total_payroll_hours: Math.round(totalPayrollHours * 100) / 100,
-        total_payroll_amount: Math.round(totalPayrollAmount * 100) / 100,
+        total_payroll_amount: historicalTotal,
         pay_classification: classification,
         hourly_rate: hourlyRate,
         daily_rate: dailyRate,
@@ -589,8 +605,8 @@ export function useReconciliationPeriod(companyId: string | null) {
         variance_amount: varianceAmount,
         variance_status: varianceStatus,
         variance_reasons: varianceReasons,
-        reconciliation_status: conflictCount > 0 ? "partial" : "resolved",
-        conflict_count: conflictCount,
+        reconciliation_status: hasCriticalUnmapped ? "blocked" : (conflictCount > 0 ? "partial" : "resolved"),
+        conflict_count: conflictCount + (hasCriticalUnmapped ? 1 : 0),
         warnings: warnings,
         schedule_batch_id: period.schedule_batch_id,
         clock_batch_id: period.clock_batch_id,
@@ -811,7 +827,8 @@ export function useReconciliationPeriod(companyId: string | null) {
   // ── Variance analysis for a set of final records ──
   const analyzeVariances = useCallback((records: EmployeeFinalRecord[], empNames: Map<string, string>): EmployeeVariance[] => {
     return records.map(r => {
-      const sourceTotal = r.source_payroll_total || r.total_payroll_amount || 0;
+      const sourceTotal = r.source_payroll_total || 0; // histórico limpio
+      const sourceGrossTotal = r.total_payroll_amount || 0; // referencia (incluye unmapped)
       const reconciledTotal = r.grand_total || r.final_total_pay || 0;
       const variance = Math.round((reconciledTotal - sourceTotal) * 100) / 100;
       const absVariance = Math.abs(variance);
@@ -827,8 +844,16 @@ export function useReconciliationPeriod(companyId: string | null) {
       const worked = r.worked_shifts || [];
       if (scheduled.length > 0 && worked.length === 0) reasons.push("Turnos programados sin fichajes");
 
+      const unmappedWarning = Array.isArray(r.warnings)
+        ? r.warnings.find((w: any) => String(w).startsWith("CRITICAL_UNMAPPED_RATIO:"))
+        : null;
+      if (unmappedWarning) reasons.push("Bloqueado: unmapped > 20% del histórico bruto");
+      if (sourceGrossTotal > sourceTotal) {
+        reasons.push(`Excluido de histórico limpio: $${(sourceGrossTotal - sourceTotal).toFixed(2)}`);
+      }
+
       let status: EmployeeVariance["variance_status"];
-      if (r.reconciliation_status === "pending" || r.reconciliation_status === "partial") status = "unresolved";
+      if (["pending", "partial", "blocked"].includes(r.reconciliation_status) || Boolean(unmappedWarning)) status = "unresolved";
       else if (absVariance <= 0.01) status = "exact_match";
       else if (absVariance <= 10) status = "minor_variance";
       else status = "major_variance";

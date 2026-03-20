@@ -50,6 +50,8 @@ interface ReconBreakdown {
   weekend_pay: number;
   manual_adj: number;
   other_pay: number;
+  unmapped_count: number;
+  unmapped_excluded_total: number;
   total_final: number;
   authoritative_total: number;
   authoritative_source: string | null;
@@ -352,6 +354,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
             weekend_pay: 0,
             manual_adj: 0,
             other_pay: 0,
+            unmapped_count: 0,
+            unmapped_excluded_total: 0,
             total_final: 0,
             authoritative_total: 0,
             authoritative_source: null,
@@ -378,11 +382,19 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         const value = round2(pr.total_pay);
         const qty = pr.total_hours > 0 ? pr.total_hours : 1;
         const rate = pr.hourly_rate != null ? pr.hourly_rate : qty > 0 ? round2(value / qty) : value;
+        const isMapped = category !== "other";
 
         row.payroll_row_count += 1;
-        row.authoritative_total = round2(row.authoritative_total + value);
-        row.authoritative_source = "payroll_rows_total";
-        addCategoryAmount(row, category, value);
+
+        if (isMapped) {
+          row.authoritative_total = round2(row.authoritative_total + value);
+          row.authoritative_source = "payroll_rows_total";
+          addCategoryAmount(row, category, value);
+        } else {
+          row.other_pay = round2(row.other_pay + value);
+          row.unmapped_count += 1;
+          row.unmapped_excluded_total = round2(row.unmapped_excluded_total + value);
+        }
 
         row.ledger.push({
           id: `payroll-${pr.id}`,
@@ -393,9 +405,11 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
           qty,
           rate,
           value,
-          included: true,
-          compositionRole: "authoritative",
-          reason: "Included in authoritative payroll-row total for this period.",
+          included: isMapped,
+          compositionRole: isMapped ? "authoritative" : "informational_only",
+          reason: isMapped
+            ? "Included in clean authoritative payroll total for this period."
+            : "Excluded from clean historical total: unmapped/unclassified payroll row.",
           category,
         });
       }
@@ -502,7 +516,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
           let compositionRole: CompositionRole = "excluded_from_total";
           let reason = "Excluded from total.";
 
-          if (!hasAuthoritative) {
+          if (category === "other") {
+            include = false;
+            compositionRole = "informational_only";
+            reason = "Excluded from clean historical total: unmapped/unclassified movement.";
+            row.other_pay = round2(row.other_pay + value);
+            row.unmapped_count += 1;
+            row.unmapped_excluded_total = round2(row.unmapped_excluded_total + value);
+          } else if (!hasAuthoritative) {
             include = true;
             compositionRole = "inferred";
             reason = "Included as inferred payable amount (no authoritative payroll total present).";
