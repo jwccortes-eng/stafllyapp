@@ -273,12 +273,23 @@ function buildDiagnostics(
   const activeEmps = employees.filter((e: any) => e.is_active !== false);
   const inactiveEmps = employees.filter((e: any) => e.is_active === false);
 
+  // Context field coverage
+  const nonSystem = normalized.filter(r => !r._is_system);
+  const nullShiftTitle = nonSystem.filter(r => !r.shift_title?.trim()).length;
+  const nullLocationName = nonSystem.filter(r => !r.location_name?.trim()).length;
+  const nullClientName = nonSystem.filter(r => !r.client_name?.trim()).length;
+  const nullAvailabilityStatus = nonSystem.filter(r => !r.availability_status?.trim()).length;
+  const availabilityBlockCount = nonSystem.filter(r => {
+    const av = (r.availability_status || "").toLowerCase();
+    return av === "unavailable" || av === "no disponible" || av.includes("block");
+  }).length;
+
   return {
     totalRows,
     systemRows: systemRowNames.length,
     systemRowNames: [...new Set(systemRowNames)],
     blankNameRows,
-    realEmployeeRows: normalized.filter(r => !r._is_system).length,
+    realEmployeeRows: nonSystem.length,
     matched: matched.length,
     matchedActive,
     matchedInactive,
@@ -292,6 +303,11 @@ function buildDiagnostics(
     likelyAliasNames: [...new Set(likelyAlias.map(r => r.employee_name_raw))],
     companyEmployeesActive: activeEmps.length,
     companyEmployeesInactive: inactiveEmps.length,
+    nullShiftTitle,
+    nullLocationName,
+    nullClientName,
+    nullAvailabilityStatus,
+    availabilityBlockCount,
   };
 }
 
