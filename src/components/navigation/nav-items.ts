@@ -4,7 +4,7 @@ import {
   Clock, MapPin, Megaphone, MessageCircle, ScanEye, Inbox, Bell, Monitor,
   MessageSquare, Settings2, Home, User, Wrench, UserPlus, FileText, GitCompareArrows,
   ClipboardList, Receipt, Brain, Map as MapIcon, Award, CalendarCheck, ArrowLeftRight,
-  Banknote,
+  Banknote, ShieldCheck,
 } from "lucide-react";
 
 export interface NavItem {
@@ -55,6 +55,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "staged-recon", to: "/app/staged-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
   { id: "advances-loans", to: "/app/advances-loans", icon: Banknote, label: "Anticipos", module: null, section: "Nómina" },
   { id: "comp-validation", to: "/app/compensation-validation", icon: DollarSign, label: "Compensación", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
+  { id: "pilot-close", to: "/app/payroll-pilot-close", icon: ShieldCheck, label: "Cierre Piloto", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
 ];
 
 export const ADMIN_DEFAULT_PINS = ["dashboard", "shifts", "employees", "movements"];
