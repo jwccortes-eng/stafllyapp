@@ -651,6 +651,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
     const totalTruth = truthData.reduce((sum, row) => sum + row.total, 0);
     const totalRecon = comparison.reduce((sum, row) => sum + (row.recon?.total_final || 0), 0);
     const totalSuppressed = comparison.reduce((sum, row) => sum + (row.recon?.total_suppressed || 0), 0);
+    const totalOther = reconData.reduce((sum, row) => sum + (row.other_pay || 0), 0);
     return {
       matched,
       close,
@@ -661,8 +662,11 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
       totalRecon,
       variance: totalRecon - totalTruth,
       totalSuppressed,
+      totalOther,
     };
-  }, [comparison, truthData]);
+  }, [comparison, truthData, reconData]);
+
+  const [showRawRecords, setShowRawRecords] = useState(false);
 
   const statusBadge = (s: ComparisonRow["status"]) => {
     switch (s) {
