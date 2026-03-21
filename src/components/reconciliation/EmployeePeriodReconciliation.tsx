@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -11,9 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   User, Calendar, Clock, DollarSign, CheckCircle2, AlertTriangle, XCircle,
   ChevronDown, ChevronRight, ArrowRight, Link2, Unlink, Tag, Trash2, FileText,
+  ShieldCheck, ShieldAlert, Info,
 } from "lucide-react";
 import type { EmployeeFinalRecord } from "@/hooks/useReconciliationPeriod";
 
@@ -43,6 +45,19 @@ const STATUS_COLORS: Record<string, string> = {
   posted: "outline",
 };
 
+type CompStatus = "match" | "close_match" | "mismatch" | "needs_review";
+
+interface CompValidation {
+  configuredDailyRate: number | null;
+  configuredHalfRate: number | null;
+  expectedTotal: number;
+  shiftCalcTotal: number;
+  variance: number;
+  variancePct: number;
+  status: CompStatus;
+  reason: string;
+}
+
 export default function EmployeePeriodReconciliation({ companyId, periodStatusId, finalRecords, onRefresh, onSaveMapping }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -51,6 +66,7 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
   const [actionDialog, setActionDialog] = useState<{ record: EmployeeFinalRecord; action: string } | null>(null);
   const [actionNote, setActionNote] = useState("");
   const [bulkSelection, setBulkSelection] = useState<Set<string>>(new Set());
+  const [compProfiles, setCompProfiles] = useState<Map<string, { daily: number | null; half: number | null }>>(new Map());
 
   useEffect(() => {
     if (!companyId) return;
@@ -59,6 +75,14 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
         const map = new Map<string, string>();
         (data || []).forEach(e => map.set(e.id, `${e.first_name} ${e.last_name}`));
         setEmployees(map);
+      });
+    // Fetch active compensation profiles
+    supabase.from("compensation_profiles").select("employee_id, default_daily_rate, default_half_day_rate")
+      .eq("company_id", companyId).eq("is_active", true)
+      .then(({ data }) => {
+        const map = new Map<string, { daily: number | null; half: number | null }>();
+        (data || []).forEach(p => map.set(p.employee_id, { daily: p.default_daily_rate, half: p.default_half_day_rate }));
+        setCompProfiles(map);
       });
   }, [companyId]);
 
@@ -165,14 +189,73 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
   const resolvedCount = finalRecords.filter(r => ["resolved", "approved", "posted"].includes(r.reconciliation_status)).length;
   const pendingCount = finalRecords.filter(r => r.reconciliation_status === "pending" || r.reconciliation_status === "partial").length;
 
+  const getCompValidation = useCallback((record: EmployeeFinalRecord): CompValidation | null => {
+    const fullDays = (record as any).shift_full_day_count || 0;
+    const halfDays = (record as any).shift_half_day_count || 0;
+    if (fullDays === 0 && halfDays === 0) return null;
+
+    const profile = compProfiles.get(record.employee_id);
+    const configuredDaily = profile?.daily ?? null;
+    const configuredHalf = profile?.half ?? null;
+    const rateUsed = (record as any).shift_daily_rate_used ?? null;
+    const halfRateUsed = (record as any).shift_half_day_rate_used ?? null;
+    const shiftCalcTotal = (record as any).shift_calculated_total || 0;
+
+    if (configuredDaily === null && configuredHalf === null) {
+      return { configuredDailyRate: null, configuredHalfRate: null, expectedTotal: 0, shiftCalcTotal, variance: 0, variancePct: 0, status: "needs_review", reason: "Falta tarifa configurada" };
+    }
+
+    const expectedTotal = (fullDays * (configuredDaily ?? 0)) + (halfDays * (configuredHalf ?? 0));
+    const variance = expectedTotal - shiftCalcTotal;
+    const variancePct = shiftCalcTotal > 0 ? (variance / shiftCalcTotal) * 100 : (expectedTotal > 0 ? 100 : 0);
+    const absDiff = Math.abs(variance);
+
+    let status: CompStatus = "needs_review";
+    let reason = "";
+
+    if (configuredDaily !== null && rateUsed !== null && Math.abs(configuredDaily - rateUsed) > 0.01) {
+      status = "mismatch";
+      reason = `Tarifa config ($${configuredDaily}) ≠ usada ($${rateUsed})`;
+    } else if (absDiff <= 1) {
+      status = "match";
+      reason = "Coincidencia exacta";
+    } else if (Math.abs(variancePct) <= 5) {
+      status = "close_match";
+      reason = `Dentro de tolerancia (${variancePct.toFixed(1)}%)`;
+    } else {
+      status = "mismatch";
+      reason = `Diferencia: $${variance.toFixed(0)} (${variancePct.toFixed(1)}%)`;
+    }
+
+    return { configuredDailyRate: configuredDaily, configuredHalfRate: configuredHalf, expectedTotal, shiftCalcTotal, variance, variancePct, status, reason };
+  }, [compProfiles]);
+
+  const compStats = useMemo(() => {
+    let match = 0, close = 0, mismatch = 0, review = 0, noShift = 0;
+    finalRecords.forEach(r => {
+      const v = getCompValidation(r);
+      if (!v) { noShift++; return; }
+      if (v.status === "match") match++;
+      else if (v.status === "close_match") close++;
+      else if (v.status === "mismatch") mismatch++;
+      else review++;
+    });
+    return { match, close, mismatch, review, noShift };
+  }, [finalRecords, getCompValidation]);
+
   return (
     <div className="space-y-4">
       {/* Summary bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {resolvedCount} resueltos</Badge>
           <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> {pendingCount} pendientes</Badge>
           <Badge variant="secondary">{finalRecords.length} empleados</Badge>
+          <Separator orientation="vertical" className="h-5" />
+          <Badge variant="default" className="gap-1 bg-earning/15 text-earning border-earning/30"><ShieldCheck className="h-3 w-3" /> {compStats.match} match</Badge>
+          {compStats.close > 0 && <Badge variant="warning" className="gap-1">{compStats.close} cercano</Badge>}
+          {compStats.mismatch > 0 && <Badge variant="destructive" className="gap-1"><ShieldAlert className="h-3 w-3" /> {compStats.mismatch} mismatch</Badge>}
+          {compStats.review > 0 && <Badge variant="secondary" className="gap-1">{compStats.review} sin tarifa</Badge>}
         </div>
         {bulkSelection.size > 0 && (
           <div className="flex gap-2 items-center">
@@ -197,16 +280,20 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
       ) : (
         <div className="space-y-2">
           {/* Header row */}
-          <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground border-b">
+          <div className="grid grid-cols-16 gap-1 px-3 py-2 text-[10px] font-medium text-muted-foreground border-b uppercase tracking-wider">
             <div className="col-span-1 flex items-center">
               <input type="checkbox" checked={bulkSelection.size === finalRecords.length} onChange={selectAll} className="rounded" />
             </div>
-            <div className="col-span-3">Empleado</div>
+            <div className="col-span-2">Empleado</div>
             <div className="col-span-1 text-center">Días</div>
             <div className="col-span-1 text-center">H. Trab.</div>
             <div className="col-span-1 text-center">Calc $</div>
             <div className="col-span-1 text-center">Payroll $</div>
             <div className="col-span-1 text-center">Tipo</div>
+            <div className="col-span-1 text-center">Tarifa</div>
+            <div className="col-span-1 text-center">Esperado</div>
+            <div className="col-span-1 text-center">Varianza</div>
+            <div className="col-span-1 text-center">Comp.</div>
             <div className="col-span-1 text-center">Conflictos</div>
             <div className="col-span-2 text-right">Estado</div>
           </div>
@@ -214,51 +301,91 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
           {finalRecords.map(record => {
             const name = employees.get(record.employee_id) || "Desconocido";
             const isExpanded = expandedEmp === record.employee_id;
-            const hasHoursIssue = Math.abs(record.total_scheduled_hours - record.total_worked_hours) > 1;
+            const comp = getCompValidation(record);
+
+            const compStatusIcon = comp ? {
+              match: <ShieldCheck className="h-3.5 w-3.5 text-earning" />,
+              close_match: <ShieldCheck className="h-3.5 w-3.5 text-warning" />,
+              mismatch: <ShieldAlert className="h-3.5 w-3.5 text-destructive" />,
+              needs_review: <Info className="h-3.5 w-3.5 text-muted-foreground" />,
+            }[comp.status] : null;
 
             return (
-              <Card key={record.id} className={record.conflict_count > 0 ? "border-destructive/30" : ""}>
+              <Card key={record.id} className={comp?.status === "mismatch" ? "border-destructive/30" : record.conflict_count > 0 ? "border-warning/30" : ""}>
                 <div
-                  className="grid grid-cols-12 gap-2 px-3 py-3 items-center cursor-pointer hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-16 gap-1 px-3 py-3 items-center cursor-pointer hover:bg-muted/30 transition-colors"
                   onClick={() => toggleExpand(record.employee_id)}
                 >
                   <div className="col-span-1 flex items-center gap-2" onClick={e => e.stopPropagation()}>
                     <input type="checkbox" checked={bulkSelection.has(record.id)} onChange={() => toggleBulkSelect(record.id)} className="rounded" />
                     {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </div>
-                  <div className="col-span-3 font-medium text-sm flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" /> {name}
+                  <div className="col-span-2 font-medium text-xs flex items-center gap-1 truncate">
+                    <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> {name}
                   </div>
-                  <div className="col-span-1 text-center text-sm font-mono">
+                  <div className="col-span-1 text-center text-xs font-mono">
                     {(record as any).shift_full_day_count > 0 || (record as any).shift_half_day_count > 0
                       ? `${(record as any).shift_full_day_count || 0}d${(record as any).shift_half_day_count > 0 ? `+${(record as any).shift_half_day_count}½` : ""}`
                       : `${record.total_scheduled_hours}h`}
                   </div>
-                  <div className={`col-span-1 text-center text-sm font-mono ${Math.abs(record.total_scheduled_hours - record.total_worked_hours) > 1 ? "text-destructive font-semibold" : ""}`}>
+                  <div className={`col-span-1 text-center text-xs font-mono ${Math.abs(record.total_scheduled_hours - record.total_worked_hours) > 1 ? "text-destructive font-semibold" : ""}`}>
                     {record.total_worked_hours}
                   </div>
-                  <div className="col-span-1 text-center text-sm font-mono font-semibold">
+                  <div className="col-span-1 text-center text-xs font-mono font-semibold">
                     {(record as any).shift_calculated_total > 0
                       ? `$${(record as any).shift_calculated_total}`
                       : `$${record.grand_total || record.final_total_pay}`}
                   </div>
-                  <div className="col-span-1 text-center text-sm font-mono text-muted-foreground">
+                  <div className="col-span-1 text-center text-xs font-mono text-muted-foreground">
                     ${record.total_payroll_amount || 0}
                   </div>
                   <div className="col-span-1 text-center">
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-[10px]">
                       {(record as any).shift_calculated_total > 0
                         ? ((record as any).shift_full_day_count > 0 ? "full_day" : record.pay_classification)
                         : record.pay_classification}
                     </Badge>
                   </div>
+                  {/* Tarifa configurada */}
+                  <div className="col-span-1 text-center text-xs font-mono">
+                    {comp?.configuredDailyRate != null ? (
+                      <span className={comp.configuredDailyRate !== ((record as any).shift_daily_rate_used ?? comp.configuredDailyRate) ? "text-destructive font-semibold" : ""}>
+                        ${comp.configuredDailyRate}
+                      </span>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </div>
+                  {/* Esperado */}
+                  <div className="col-span-1 text-center text-xs font-mono">
+                    {comp ? `$${comp.expectedTotal}` : "—"}
+                  </div>
+                  {/* Varianza */}
+                  <div className="col-span-1 text-center text-xs font-mono">
+                    {comp ? (
+                      <span className={Math.abs(comp.variance) > 1 ? (comp.variance > 0 ? "text-earning" : "text-destructive") : "text-muted-foreground"}>
+                        {comp.variance >= 0 ? "+" : ""}${comp.variance.toFixed(0)}
+                      </span>
+                    ) : "—"}
+                  </div>
+                  {/* Comp status */}
+                  <div className="col-span-1 text-center">
+                    {comp ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-0.5 cursor-help">
+                            {compStatusIcon}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs max-w-[200px]">{comp.reason}</TooltipContent>
+                      </Tooltip>
+                    ) : <span className="text-[10px] text-muted-foreground">n/a</span>}
+                  </div>
                   <div className="col-span-1 text-center">
                     {record.conflict_count > 0 ? (
-                      <Badge variant="destructive" className="text-xs">{record.conflict_count}</Badge>
+                      <Badge variant="destructive" className="text-[10px]">{record.conflict_count}</Badge>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
                   </div>
                   <div className="col-span-2 text-right">
-                    <Badge variant={STATUS_COLORS[record.reconciliation_status] as any || "outline"} className="text-xs">
+                    <Badge variant={STATUS_COLORS[record.reconciliation_status] as any || "outline"} className="text-[10px]">
                       {record.reconciliation_status}
                     </Badge>
                   </div>
