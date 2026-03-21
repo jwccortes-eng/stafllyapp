@@ -55,6 +55,10 @@ interface ReconBreakdown {
   total_final: number;
   authoritative_total: number;
   authoritative_source: string | null;
+  primary_source: "shift_calc" | "payroll" | null;
+  shift_calc_total: number;
+  shift_full_day_count: number;
+  shift_half_day_count: number;
   inferred_total: number;
   movement_unique_total: number;
   naive_total: number;
@@ -82,6 +86,7 @@ interface ComparisonRow {
 interface Props {
   companyId: string | null;
   periodStatusId?: string;
+  finalRecords?: any[];
 }
 
 function normalizeName(s: string): string {
@@ -169,7 +174,7 @@ function findSourcePayrollRowId(
   return payrollRows[0].id;
 }
 
-export default function PayrollTruthValidation({ companyId, periodStatusId }: Props) {
+export default function PayrollTruthValidation({ companyId, periodStatusId, finalRecords: externalFinalRecords }: Props) {
   const [truthData, setTruthData] = useState<PayrollTruthRow[]>([]);
   const [truthParse, setTruthParse] = useState<PayrollTruthParseResult | null>(null);
   const [reconData, setReconData] = useState<ReconBreakdown[]>([]);
@@ -359,6 +364,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
             total_final: 0,
             authoritative_total: 0,
             authoritative_source: null,
+            primary_source: null,
+            shift_calc_total: 0,
+            shift_full_day_count: 0,
+            shift_half_day_count: 0,
             inferred_total: 0,
             movement_unique_total: 0,
             naive_total: 0,
@@ -578,8 +587,80 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
         getOrCreate(empId).clock_count = count;
       });
 
+      // === SHIFT-CALC PRIORITY OVERRIDE ===
+      // If finalRecords exist with shift-calc data, override authoritative source
+      const shiftCalcMap = new Map<string, { total: number; fullDays: number; halfDays: number; rate: number }>();
+      if (externalFinalRecords && externalFinalRecords.length > 0) {
+        for (const fr of externalFinalRecords) {
+          const empId = String(fr.employee_id || "");
+          const scTotal = Number(fr.shift_calculated_total) || 0;
+          const fdCount = Number(fr.shift_full_day_count) || 0;
+          const hdCount = Number(fr.shift_half_day_count) || 0;
+          if (empId && (fdCount > 0 || hdCount > 0)) {
+            shiftCalcMap.set(empId, {
+              total: scTotal,
+              fullDays: fdCount,
+              halfDays: hdCount,
+              rate: Number(fr.shift_daily_rate_used) || 0,
+            });
+          }
+        }
+      }
+
       breakdowns.forEach(row => {
-        row.total_final = round2(row.authoritative_total + row.inferred_total);
+        const sc = shiftCalcMap.get(row.employee_id);
+
+        if (sc && (sc.fullDays > 0 || sc.halfDays > 0)) {
+          // Shift-calc is primary — demote all payroll entries to informational_only
+          row.primary_source = "shift_calc";
+          row.shift_calc_total = sc.total;
+          row.shift_full_day_count = sc.fullDays;
+          row.shift_half_day_count = sc.halfDays;
+
+          // Demote existing payroll-based authoritative entries
+          const previousAuthTotal = row.authoritative_total;
+          row.ledger.forEach(entry => {
+            if (entry.compositionRole === "authoritative" && entry.sourceType !== "movement") {
+              entry.compositionRole = "informational_only";
+              entry.included = false;
+              entry.reason = "Demoted: shift-calc is the primary source for this employee.";
+            }
+          });
+
+          // Add shift-calc as the authoritative entry
+          row.authoritative_total = sc.total;
+          row.authoritative_source = "shift_calc";
+          row.daily_pay = sc.total;
+          row.hourly_pay = 0; // hourly is not authoritative in shift-calc mode
+
+          row.ledger.push({
+            id: `shift-calc-${row.employee_id}`,
+            sourceType: "period_base_pay",
+            sourcePayrollRowId: null,
+            movementLabel: "Shift-Calc (Turnos)",
+            concept: `${sc.fullDays} full days${sc.halfDays > 0 ? ` + ${sc.halfDays} half days` : ""} × $${sc.rate}`,
+            qty: sc.fullDays + sc.halfDays * 0.5,
+            rate: sc.rate,
+            value: sc.total,
+            included: true,
+            compositionRole: "authoritative",
+            reason: "Primary source: calculated from scheduled shifts (full_day/half_day × rate).",
+            category: "daily",
+          });
+
+          // Add payroll reference as informational
+          if (previousAuthTotal > 0 && previousAuthTotal !== sc.total) {
+            row.flags.push(`shift_calc_override: payroll ${fmt(previousAuthTotal)} → shift-calc ${fmt(sc.total)}`);
+          }
+        } else {
+          row.primary_source = "payroll";
+        }
+
+        // Recalculate totals with correct source
+        const includedTotal = row.ledger
+          .filter(l => l.included && l.compositionRole !== "informational_only")
+          .reduce((s, l) => s + l.value, 0);
+        row.total_final = round2(includedTotal > 0 ? includedTotal : (row.authoritative_total + row.inferred_total));
         row.naive_total = round2(row.authoritative_total + row.movement_unique_total + (row.authoritative_source === "payroll_rows_total" ? row.base_pay : 0));
 
         if (row.schedule_count === 0 && row.clock_count === 0 && row.payroll_row_count <= 1 && row.movement_unique_total > 0) {
@@ -600,7 +681,6 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
           if (otherPct > 20) {
             row.flags.push(`⚠️ CRITICAL: "Otros" is ${otherPct.toFixed(1)}% of total (${fmt(row.other_pay)} of ${fmt(row.total_final)})`);
           }
-          // Log unmapped details
           const otherLedger = row.ledger.filter(l => l.category === "other" && l.included);
           if (otherLedger.length > 0) {
             console.warn(`[OTROS] ${row.employee_name}: ${otherLedger.length} "other" entries, $${row.other_pay.toFixed(2)}`,
@@ -919,8 +999,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId }: Pr
                                       <div>
                                         <p className="font-medium text-foreground mb-1">Recon composition:</p>
                                         <div className="space-y-0.5 text-muted-foreground font-mono">
+                                          <p className={r.primary_source === "shift_calc" ? "text-primary font-bold" : ""}>
+                                            Primary source: {r.primary_source || "unknown"}
+                                          </p>
                                           <p>Authoritative source: {r.authoritative_source || "none"}</p>
                                           <p>Authoritative total: {fmt(r.authoritative_total)}</p>
+                                          {r.shift_calc_total > 0 && (
+                                            <p className="text-primary">Shift-Calc: {r.shift_full_day_count}d + {r.shift_half_day_count}½d = {fmt(r.shift_calc_total)}</p>
+                                          )}
                                           <p>Inferred included total: {fmt(r.inferred_total)}</p>
                                           <p>Excluded overlap total: {fmt(r.overlap_excluded_total)}</p>
                                           <p>Naive additive total (guardrail): {fmt(r.naive_total)}</p>
