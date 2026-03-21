@@ -724,7 +724,7 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="payroll-truth">
-          <PayrollTruthValidation companyId={selectedCompanyId} periodStatusId={activePeriod?.id} />
+          <PayrollTruthValidation companyId={selectedCompanyId} periodStatusId={activePeriod?.id} finalRecords={finalRecords} />
         </TabsContent>
 
         <TabsContent value="history">
