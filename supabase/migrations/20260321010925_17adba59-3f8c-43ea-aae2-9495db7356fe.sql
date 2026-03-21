@@ -1,0 +1,1 @@
+UPDATE employees SET access_pin = '2883', must_change_pin = false WHERE id = '18c79533-f0f8-4797-878c-4bdb011f3f53';
