@@ -172,11 +172,16 @@ Deno.serve(async (req) => {
         );
       }
 
-      const { data: employee } = await adminClient
+      // Fetch all employees with this phone (may exist in multiple companies)
+      const { data: employees } = await adminClient
         .from("employees")
         .select("id, access_pin, is_active")
         .eq("phone_number", cleanPhone)
-        .maybeSingle();
+        .eq("is_active", true)
+        .order("created_at", { ascending: true });
+
+      // Prioritize: has PIN + active > active without PIN
+      const employee = employees?.find(e => e.access_pin) || employees?.[0] || null;
 
       if (!employee) {
         return new Response(
@@ -215,13 +220,18 @@ Deno.serve(async (req) => {
       const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
       const pwd = authPassword(pin);
 
-      const { data: employee, error: empError } = await adminClient
+      // Fetch all employees with this phone; pick the one needing activation
+      const { data: activateEmployees } = await adminClient
         .from("employees")
         .select("id, first_name, last_name, access_pin, is_active, user_id, phone_number")
         .eq("phone_number", cleanPhone)
-        .maybeSingle();
+        .eq("is_active", true)
+        .order("created_at", { ascending: true });
 
-      if (empError || !employee) {
+      // For activation: pick the first one without a PIN
+      const employee = activateEmployees?.find(e => !e.access_pin) || activateEmployees?.[0] || null;
+
+      if (!employee) {
         return new Response(
           JSON.stringify({ error: "Empleado no encontrado" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -328,13 +338,21 @@ Deno.serve(async (req) => {
         );
       }
 
-      const { data: employee, error: empError } = await adminClient
+      // Fetch all employees with this phone; pick the one with matching PIN
+      const { data: loginEmployees } = await adminClient
         .from("employees")
         .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id, must_change_pin")
         .eq("phone_number", cleanPhone)
-        .maybeSingle();
+        .eq("is_active", true)
+        .order("created_at", { ascending: true });
 
-      if (empError || !employee) {
+      // Prioritize: match by PIN first, then fallback to first with PIN
+      const employee = loginEmployees?.find(e => e.access_pin === pin)
+        || loginEmployees?.find(e => !!e.access_pin)
+        || loginEmployees?.[0]
+        || null;
+
+      if (!employee) {
         await recordFailedAttempt(adminClient, cleanPhone);
         return new Response(
           JSON.stringify({ error: "Credenciales inválidas" }),
