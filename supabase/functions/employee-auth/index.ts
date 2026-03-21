@@ -172,11 +172,16 @@ Deno.serve(async (req) => {
         );
       }
 
-      const { data: employee } = await adminClient
+      // Fetch all employees with this phone (may exist in multiple companies)
+      const { data: employees } = await adminClient
         .from("employees")
         .select("id, access_pin, is_active")
         .eq("phone_number", cleanPhone)
-        .maybeSingle();
+        .eq("is_active", true)
+        .order("created_at", { ascending: true });
+
+      // Prioritize: has PIN + active > active without PIN
+      const employee = employees?.find(e => e.access_pin) || employees?.[0] || null;
 
       if (!employee) {
         return new Response(
