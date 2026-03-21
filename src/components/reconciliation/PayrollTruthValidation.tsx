@@ -86,6 +86,7 @@ interface ComparisonRow {
 interface Props {
   companyId: string | null;
   periodStatusId?: string;
+  finalRecords?: any[];
 }
 
 function normalizeName(s: string): string {
