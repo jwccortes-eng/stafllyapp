@@ -2729,6 +2729,7 @@ export type Database = {
       }
       import_batches: {
         Row: {
+          audit_notes: string | null
           batch_type: string
           company_id: string
           created_at: string
@@ -2737,6 +2738,7 @@ export type Database = {
           date_range_to: string | null
           errors: Json | null
           id: string
+          is_legacy: boolean
           payroll_duplicates_skipped: number | null
           payroll_file_name: string | null
           payroll_movements_created: number | null
@@ -2762,6 +2764,7 @@ export type Database = {
           warnings: Json | null
         }
         Insert: {
+          audit_notes?: string | null
           batch_type?: string
           company_id: string
           created_at?: string
@@ -2770,6 +2773,7 @@ export type Database = {
           date_range_to?: string | null
           errors?: Json | null
           id?: string
+          is_legacy?: boolean
           payroll_duplicates_skipped?: number | null
           payroll_file_name?: string | null
           payroll_movements_created?: number | null
@@ -2795,6 +2799,7 @@ export type Database = {
           warnings?: Json | null
         }
         Update: {
+          audit_notes?: string | null
           batch_type?: string
           company_id?: string
           created_at?: string
@@ -2803,6 +2808,7 @@ export type Database = {
           date_range_to?: string | null
           errors?: Json | null
           id?: string
+          is_legacy?: boolean
           payroll_duplicates_skipped?: number | null
           payroll_file_name?: string | null
           payroll_movements_created?: number | null

@@ -19,7 +19,7 @@ import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
   ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool, Bug,
-  StickyNote, ListChecks, Target, DollarSign, RefreshCw, Calendar, Hash,
+  StickyNote, ListChecks, Target, DollarSign, RefreshCw, Calendar, Hash, ShieldAlert,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -44,6 +44,7 @@ import PilotRunbook from "@/components/reconciliation/PilotRunbook";
 import PeriodNotes from "@/components/reconciliation/PeriodNotes";
 import StabilizationPriorities from "@/components/reconciliation/StabilizationPriorities";
 import PayrollTruthValidation from "@/components/reconciliation/PayrollTruthValidation";
+import DataIntegrityAudit from "@/components/reconciliation/DataIntegrityAudit";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 /* ── Status → workflow step mapping ── */
@@ -90,6 +91,7 @@ const TABS: TabDef[] = [
   { value: "stabilization", label: "Estabilización", icon: TrendingUp, alwaysEnabled: true },
   { value: "priorities", label: "Prioridades", icon: Target, alwaysEnabled: true },
   { value: "payroll-truth", label: "Payroll Truth", icon: DollarSign, alwaysEnabled: true },
+  { value: "audit", label: "Auditoría", icon: ShieldAlert, alwaysEnabled: true },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
 
@@ -729,6 +731,10 @@ export default function StagedReconciliation() {
 
         <TabsContent value="history">
           <ImportBatchHistory companyId={selectedCompanyId} key={refreshKey} />
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <DataIntegrityAudit companyId={selectedCompanyId} />
         </TabsContent>
       </Tabs>
 
