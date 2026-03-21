@@ -90,6 +90,7 @@ const TABS: TabDef[] = [
   { value: "stabilization", label: "Estabilización", icon: TrendingUp, alwaysEnabled: true },
   { value: "priorities", label: "Prioridades", icon: Target, alwaysEnabled: true },
   { value: "payroll-truth", label: "Payroll Truth", icon: DollarSign, alwaysEnabled: true },
+  { value: "audit", label: "Auditoría", icon: ShieldAlert, alwaysEnabled: true },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
 
