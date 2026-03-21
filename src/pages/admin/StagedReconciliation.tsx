@@ -19,7 +19,7 @@ import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
   ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool, Bug,
-  StickyNote, ListChecks, Target, DollarSign, RefreshCw, Calendar, Hash,
+  StickyNote, ListChecks, Target, DollarSign, RefreshCw, Calendar, Hash, ShieldAlert,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
