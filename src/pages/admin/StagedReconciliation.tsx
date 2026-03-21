@@ -44,6 +44,7 @@ import PilotRunbook from "@/components/reconciliation/PilotRunbook";
 import PeriodNotes from "@/components/reconciliation/PeriodNotes";
 import StabilizationPriorities from "@/components/reconciliation/StabilizationPriorities";
 import PayrollTruthValidation from "@/components/reconciliation/PayrollTruthValidation";
+import DataIntegrityAudit from "@/components/reconciliation/DataIntegrityAudit";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 /* ── Status → workflow step mapping ── */
