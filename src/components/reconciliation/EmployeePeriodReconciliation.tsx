@@ -301,51 +301,91 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
           {finalRecords.map(record => {
             const name = employees.get(record.employee_id) || "Desconocido";
             const isExpanded = expandedEmp === record.employee_id;
-            const hasHoursIssue = Math.abs(record.total_scheduled_hours - record.total_worked_hours) > 1;
+            const comp = getCompValidation(record);
+
+            const compStatusIcon = comp ? {
+              match: <ShieldCheck className="h-3.5 w-3.5 text-earning" />,
+              close_match: <ShieldCheck className="h-3.5 w-3.5 text-warning" />,
+              mismatch: <ShieldAlert className="h-3.5 w-3.5 text-destructive" />,
+              needs_review: <Info className="h-3.5 w-3.5 text-muted-foreground" />,
+            }[comp.status] : null;
 
             return (
-              <Card key={record.id} className={record.conflict_count > 0 ? "border-destructive/30" : ""}>
+              <Card key={record.id} className={comp?.status === "mismatch" ? "border-destructive/30" : record.conflict_count > 0 ? "border-warning/30" : ""}>
                 <div
-                  className="grid grid-cols-12 gap-2 px-3 py-3 items-center cursor-pointer hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-16 gap-1 px-3 py-3 items-center cursor-pointer hover:bg-muted/30 transition-colors"
                   onClick={() => toggleExpand(record.employee_id)}
                 >
                   <div className="col-span-1 flex items-center gap-2" onClick={e => e.stopPropagation()}>
                     <input type="checkbox" checked={bulkSelection.has(record.id)} onChange={() => toggleBulkSelect(record.id)} className="rounded" />
                     {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </div>
-                  <div className="col-span-3 font-medium text-sm flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" /> {name}
+                  <div className="col-span-2 font-medium text-xs flex items-center gap-1 truncate">
+                    <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> {name}
                   </div>
-                  <div className="col-span-1 text-center text-sm font-mono">
+                  <div className="col-span-1 text-center text-xs font-mono">
                     {(record as any).shift_full_day_count > 0 || (record as any).shift_half_day_count > 0
                       ? `${(record as any).shift_full_day_count || 0}d${(record as any).shift_half_day_count > 0 ? `+${(record as any).shift_half_day_count}½` : ""}`
                       : `${record.total_scheduled_hours}h`}
                   </div>
-                  <div className={`col-span-1 text-center text-sm font-mono ${Math.abs(record.total_scheduled_hours - record.total_worked_hours) > 1 ? "text-destructive font-semibold" : ""}`}>
+                  <div className={`col-span-1 text-center text-xs font-mono ${Math.abs(record.total_scheduled_hours - record.total_worked_hours) > 1 ? "text-destructive font-semibold" : ""}`}>
                     {record.total_worked_hours}
                   </div>
-                  <div className="col-span-1 text-center text-sm font-mono font-semibold">
+                  <div className="col-span-1 text-center text-xs font-mono font-semibold">
                     {(record as any).shift_calculated_total > 0
                       ? `$${(record as any).shift_calculated_total}`
                       : `$${record.grand_total || record.final_total_pay}`}
                   </div>
-                  <div className="col-span-1 text-center text-sm font-mono text-muted-foreground">
+                  <div className="col-span-1 text-center text-xs font-mono text-muted-foreground">
                     ${record.total_payroll_amount || 0}
                   </div>
                   <div className="col-span-1 text-center">
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-[10px]">
                       {(record as any).shift_calculated_total > 0
                         ? ((record as any).shift_full_day_count > 0 ? "full_day" : record.pay_classification)
                         : record.pay_classification}
                     </Badge>
                   </div>
+                  {/* Tarifa configurada */}
+                  <div className="col-span-1 text-center text-xs font-mono">
+                    {comp?.configuredDailyRate != null ? (
+                      <span className={comp.configuredDailyRate !== ((record as any).shift_daily_rate_used ?? comp.configuredDailyRate) ? "text-destructive font-semibold" : ""}>
+                        ${comp.configuredDailyRate}
+                      </span>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </div>
+                  {/* Esperado */}
+                  <div className="col-span-1 text-center text-xs font-mono">
+                    {comp ? `$${comp.expectedTotal}` : "—"}
+                  </div>
+                  {/* Varianza */}
+                  <div className="col-span-1 text-center text-xs font-mono">
+                    {comp ? (
+                      <span className={Math.abs(comp.variance) > 1 ? (comp.variance > 0 ? "text-earning" : "text-destructive") : "text-muted-foreground"}>
+                        {comp.variance >= 0 ? "+" : ""}${comp.variance.toFixed(0)}
+                      </span>
+                    ) : "—"}
+                  </div>
+                  {/* Comp status */}
+                  <div className="col-span-1 text-center">
+                    {comp ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-0.5 cursor-help">
+                            {compStatusIcon}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs max-w-[200px]">{comp.reason}</TooltipContent>
+                      </Tooltip>
+                    ) : <span className="text-[10px] text-muted-foreground">n/a</span>}
+                  </div>
                   <div className="col-span-1 text-center">
                     {record.conflict_count > 0 ? (
-                      <Badge variant="destructive" className="text-xs">{record.conflict_count}</Badge>
+                      <Badge variant="destructive" className="text-[10px]">{record.conflict_count}</Badge>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
                   </div>
                   <div className="col-span-2 text-right">
-                    <Badge variant={STATUS_COLORS[record.reconciliation_status] as any || "outline"} className="text-xs">
+                    <Badge variant={STATUS_COLORS[record.reconciliation_status] as any || "outline"} className="text-[10px]">
                       {record.reconciliation_status}
                     </Badge>
                   </div>
