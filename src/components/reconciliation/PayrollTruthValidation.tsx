@@ -999,8 +999,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                       <div>
                                         <p className="font-medium text-foreground mb-1">Recon composition:</p>
                                         <div className="space-y-0.5 text-muted-foreground font-mono">
+                                          <p className={r.primary_source === "shift_calc" ? "text-primary font-bold" : ""}>
+                                            Primary source: {r.primary_source || "unknown"}
+                                          </p>
                                           <p>Authoritative source: {r.authoritative_source || "none"}</p>
                                           <p>Authoritative total: {fmt(r.authoritative_total)}</p>
+                                          {r.shift_calc_total > 0 && (
+                                            <p className="text-primary">Shift-Calc: {r.shift_full_day_count}d + {r.shift_half_day_count}½d = {fmt(r.shift_calc_total)}</p>
+                                          )}
                                           <p>Inferred included total: {fmt(r.inferred_total)}</p>
                                           <p>Excluded overlap total: {fmt(r.overlap_excluded_total)}</p>
                                           <p>Naive additive total (guardrail): {fmt(r.naive_total)}</p>
