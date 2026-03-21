@@ -731,6 +731,10 @@ export default function StagedReconciliation() {
         <TabsContent value="history">
           <ImportBatchHistory companyId={selectedCompanyId} key={refreshKey} />
         </TabsContent>
+
+        <TabsContent value="audit">
+          <DataIntegrityAudit companyId={selectedCompanyId} />
+        </TabsContent>
       </Tabs>
 
       {/* Create Period Dialog */}
