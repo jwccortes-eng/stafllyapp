@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -11,9 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   User, Calendar, Clock, DollarSign, CheckCircle2, AlertTriangle, XCircle,
   ChevronDown, ChevronRight, ArrowRight, Link2, Unlink, Tag, Trash2, FileText,
+  ShieldCheck, ShieldAlert, Info,
 } from "lucide-react";
 import type { EmployeeFinalRecord } from "@/hooks/useReconciliationPeriod";
 
@@ -43,6 +45,19 @@ const STATUS_COLORS: Record<string, string> = {
   posted: "outline",
 };
 
+type CompStatus = "match" | "close_match" | "mismatch" | "needs_review";
+
+interface CompValidation {
+  configuredDailyRate: number | null;
+  configuredHalfRate: number | null;
+  expectedTotal: number;
+  shiftCalcTotal: number;
+  variance: number;
+  variancePct: number;
+  status: CompStatus;
+  reason: string;
+}
+
 export default function EmployeePeriodReconciliation({ companyId, periodStatusId, finalRecords, onRefresh, onSaveMapping }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -51,6 +66,7 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
   const [actionDialog, setActionDialog] = useState<{ record: EmployeeFinalRecord; action: string } | null>(null);
   const [actionNote, setActionNote] = useState("");
   const [bulkSelection, setBulkSelection] = useState<Set<string>>(new Set());
+  const [compProfiles, setCompProfiles] = useState<Map<string, { daily: number | null; half: number | null }>>(new Map());
 
   useEffect(() => {
     if (!companyId) return;
@@ -59,6 +75,14 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
         const map = new Map<string, string>();
         (data || []).forEach(e => map.set(e.id, `${e.first_name} ${e.last_name}`));
         setEmployees(map);
+      });
+    // Fetch active compensation profiles
+    supabase.from("compensation_profiles").select("employee_id, default_daily_rate, default_half_day_rate")
+      .eq("company_id", companyId).eq("is_active", true)
+      .then(({ data }) => {
+        const map = new Map<string, { daily: number | null; half: number | null }>();
+        (data || []).forEach(p => map.set(p.employee_id, { daily: p.default_daily_rate, half: p.default_half_day_rate }));
+        setCompProfiles(map);
       });
   }, [companyId]);
 
