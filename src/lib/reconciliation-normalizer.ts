@@ -169,6 +169,13 @@ export function matchEmployeeWithAliases(
 
 // ─── Parsers (unchanged) ───
 
+// Guardrail: reject dates outside a reasonable operational window
+function isReasonableDate(dateStr: string): boolean {
+  const year = parseInt(dateStr.substring(0, 4), 10);
+  // Only accept 2020–2030 range for operational data
+  return year >= 2020 && year <= 2030;
+}
+
 function parseDate(val: string | number | null | undefined): string | null {
   if (val == null) return null;
 
@@ -176,8 +183,9 @@ function parseDate(val: string | number | null | undefined): string | null {
   if (typeof val === "number" && val > 1 && val < 100000) {
     const excelEpoch = new Date(Date.UTC(1899, 11, 30));
     const date = new Date(excelEpoch.getTime() + val * 86400000);
-    if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
-      return date.toISOString().substring(0, 10);
+    if (!isNaN(date.getTime())) {
+      const iso = date.toISOString().substring(0, 10);
+      return isReasonableDate(iso) ? iso : null;
     }
   }
 
@@ -185,13 +193,17 @@ function parseDate(val: string | number | null | undefined): string | null {
   if (!s) return null;
 
   // ISO format
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const iso = s.substring(0, 10);
+    return isReasonableDate(iso) ? iso : null;
+  }
 
   // MM/DD/YYYY or DD/MM/YYYY
   const mdy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
   if (mdy) {
     const y = mdy[3].length === 2 ? `20${mdy[3]}` : mdy[3];
-    return `${y}-${mdy[1].padStart(2, "0")}-${mdy[2].padStart(2, "0")}`;
+    const iso = `${y}-${mdy[1].padStart(2, "0")}-${mdy[2].padStart(2, "0")}`;
+    return isReasonableDate(iso) ? iso : null;
   }
 
   // Numeric string that looks like an Excel serial date
@@ -199,13 +211,17 @@ function parseDate(val: string | number | null | undefined): string | null {
   if (!isNaN(numericVal) && numericVal > 1 && numericVal < 100000 && /^\d+(\.\d+)?$/.test(s)) {
     const excelEpoch = new Date(Date.UTC(1899, 11, 30));
     const date = new Date(excelEpoch.getTime() + numericVal * 86400000);
-    if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
-      return date.toISOString().substring(0, 10);
+    if (!isNaN(date.getTime())) {
+      const iso = date.toISOString().substring(0, 10);
+      return isReasonableDate(iso) ? iso : null;
     }
   }
 
   const d = new Date(s);
-  if (!isNaN(d.getTime()) && d.getFullYear() > 1900) return d.toISOString().substring(0, 10);
+  if (!isNaN(d.getTime())) {
+    const iso = d.toISOString().substring(0, 10);
+    return isReasonableDate(iso) ? iso : null;
+  }
   return null;
 }
 
