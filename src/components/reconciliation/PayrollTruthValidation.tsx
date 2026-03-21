@@ -55,6 +55,10 @@ interface ReconBreakdown {
   total_final: number;
   authoritative_total: number;
   authoritative_source: string | null;
+  primary_source: "shift_calc" | "payroll" | null;
+  shift_calc_total: number;
+  shift_full_day_count: number;
+  shift_half_day_count: number;
   inferred_total: number;
   movement_unique_total: number;
   naive_total: number;
