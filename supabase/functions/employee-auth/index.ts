@@ -338,13 +338,21 @@ Deno.serve(async (req) => {
         );
       }
 
-      const { data: employee, error: empError } = await adminClient
+      // Fetch all employees with this phone; pick the one with matching PIN
+      const { data: loginEmployees } = await adminClient
         .from("employees")
         .select("id, first_name, last_name, phone_number, access_pin, is_active, user_id, must_change_pin")
         .eq("phone_number", cleanPhone)
-        .maybeSingle();
+        .eq("is_active", true)
+        .order("created_at", { ascending: true });
 
-      if (empError || !employee) {
+      // Prioritize: match by PIN first, then fallback to first with PIN
+      const employee = loginEmployees?.find(e => e.access_pin === pin)
+        || loginEmployees?.find(e => !!e.access_pin)
+        || loginEmployees?.[0]
+        || null;
+
+      if (!employee) {
         await recordFailedAttempt(adminClient, cleanPhone);
         return new Response(
           JSON.stringify({ error: "Credenciales inválidas" }),
