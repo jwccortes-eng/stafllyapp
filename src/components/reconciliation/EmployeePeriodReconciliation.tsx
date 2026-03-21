@@ -189,14 +189,73 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
   const resolvedCount = finalRecords.filter(r => ["resolved", "approved", "posted"].includes(r.reconciliation_status)).length;
   const pendingCount = finalRecords.filter(r => r.reconciliation_status === "pending" || r.reconciliation_status === "partial").length;
 
+  const getCompValidation = useCallback((record: EmployeeFinalRecord): CompValidation | null => {
+    const fullDays = (record as any).shift_full_day_count || 0;
+    const halfDays = (record as any).shift_half_day_count || 0;
+    if (fullDays === 0 && halfDays === 0) return null;
+
+    const profile = compProfiles.get(record.employee_id);
+    const configuredDaily = profile?.daily ?? null;
+    const configuredHalf = profile?.half ?? null;
+    const rateUsed = (record as any).shift_daily_rate_used ?? null;
+    const halfRateUsed = (record as any).shift_half_day_rate_used ?? null;
+    const shiftCalcTotal = (record as any).shift_calculated_total || 0;
+
+    if (configuredDaily === null && configuredHalf === null) {
+      return { configuredDailyRate: null, configuredHalfRate: null, expectedTotal: 0, shiftCalcTotal, variance: 0, variancePct: 0, status: "needs_review", reason: "Falta tarifa configurada" };
+    }
+
+    const expectedTotal = (fullDays * (configuredDaily ?? 0)) + (halfDays * (configuredHalf ?? 0));
+    const variance = expectedTotal - shiftCalcTotal;
+    const variancePct = shiftCalcTotal > 0 ? (variance / shiftCalcTotal) * 100 : (expectedTotal > 0 ? 100 : 0);
+    const absDiff = Math.abs(variance);
+
+    let status: CompStatus = "needs_review";
+    let reason = "";
+
+    if (configuredDaily !== null && rateUsed !== null && Math.abs(configuredDaily - rateUsed) > 0.01) {
+      status = "mismatch";
+      reason = `Tarifa config ($${configuredDaily}) ≠ usada ($${rateUsed})`;
+    } else if (absDiff <= 1) {
+      status = "match";
+      reason = "Coincidencia exacta";
+    } else if (Math.abs(variancePct) <= 5) {
+      status = "close_match";
+      reason = `Dentro de tolerancia (${variancePct.toFixed(1)}%)`;
+    } else {
+      status = "mismatch";
+      reason = `Diferencia: $${variance.toFixed(0)} (${variancePct.toFixed(1)}%)`;
+    }
+
+    return { configuredDailyRate: configuredDaily, configuredHalfRate: configuredHalf, expectedTotal, shiftCalcTotal, variance, variancePct, status, reason };
+  }, [compProfiles]);
+
+  const compStats = useMemo(() => {
+    let match = 0, close = 0, mismatch = 0, review = 0, noShift = 0;
+    finalRecords.forEach(r => {
+      const v = getCompValidation(r);
+      if (!v) { noShift++; return; }
+      if (v.status === "match") match++;
+      else if (v.status === "close_match") close++;
+      else if (v.status === "mismatch") mismatch++;
+      else review++;
+    });
+    return { match, close, mismatch, review, noShift };
+  }, [finalRecords, getCompValidation]);
+
   return (
     <div className="space-y-4">
       {/* Summary bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {resolvedCount} resueltos</Badge>
           <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> {pendingCount} pendientes</Badge>
           <Badge variant="secondary">{finalRecords.length} empleados</Badge>
+          <Separator orientation="vertical" className="h-5" />
+          <Badge variant="default" className="gap-1 bg-earning/15 text-earning border-earning/30"><ShieldCheck className="h-3 w-3" /> {compStats.match} match</Badge>
+          {compStats.close > 0 && <Badge variant="warning" className="gap-1">{compStats.close} cercano</Badge>}
+          {compStats.mismatch > 0 && <Badge variant="destructive" className="gap-1"><ShieldAlert className="h-3 w-3" /> {compStats.mismatch} mismatch</Badge>}
+          {compStats.review > 0 && <Badge variant="secondary" className="gap-1">{compStats.review} sin tarifa</Badge>}
         </div>
         {bulkSelection.size > 0 && (
           <div className="flex gap-2 items-center">
@@ -221,16 +280,20 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
       ) : (
         <div className="space-y-2">
           {/* Header row */}
-          <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-muted-foreground border-b">
+          <div className="grid grid-cols-16 gap-1 px-3 py-2 text-[10px] font-medium text-muted-foreground border-b uppercase tracking-wider">
             <div className="col-span-1 flex items-center">
               <input type="checkbox" checked={bulkSelection.size === finalRecords.length} onChange={selectAll} className="rounded" />
             </div>
-            <div className="col-span-3">Empleado</div>
+            <div className="col-span-2">Empleado</div>
             <div className="col-span-1 text-center">Días</div>
             <div className="col-span-1 text-center">H. Trab.</div>
             <div className="col-span-1 text-center">Calc $</div>
             <div className="col-span-1 text-center">Payroll $</div>
             <div className="col-span-1 text-center">Tipo</div>
+            <div className="col-span-1 text-center">Tarifa</div>
+            <div className="col-span-1 text-center">Esperado</div>
+            <div className="col-span-1 text-center">Varianza</div>
+            <div className="col-span-1 text-center">Comp.</div>
             <div className="col-span-1 text-center">Conflictos</div>
             <div className="col-span-2 text-right">Estado</div>
           </div>
