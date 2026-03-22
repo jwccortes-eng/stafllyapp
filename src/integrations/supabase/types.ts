@@ -6445,6 +6445,53 @@ export type Database = {
           },
         ]
       }
+      reconciliation_overrides: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          employee_id: string
+          id: string
+          notes: string | null
+          override_source: string
+          override_type: string
+          period_status_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          override_source?: string
+          override_type: string
+          period_status_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          override_source?: string
+          override_type?: string
+          period_status_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_overrides_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_period_journal: {
         Row: {
           company_id: string
