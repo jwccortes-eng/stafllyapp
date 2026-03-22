@@ -937,10 +937,12 @@ export function useReconciliationPeriod(companyId: string | null) {
       const hourlyRate = hourlyHours > 0 ? Math.round((hourlyPayTotal / hourlyHours) * 100) / 100 : null;
       const dailyRate = empDailyRate || (dailyRows.length > 0 ? Math.round((dailyPayTotal / dailyRows.length) * 100) / 100 : null);
 
-      // Pay classification — shift-first and explicit full_day/half_day labels
+      // Pay classification — override-first, then shift-first
       const hasShiftBasedPay = shouldForceShiftPrimary;
       let classification: string;
-      if (hasShiftBasedPay) {
+      if (hasOverride) {
+        classification = empOverride.override_type;
+      } else if (hasShiftBasedPay) {
         if (shiftFullDayCount > 0 && shiftHalfDayCount === 0) classification = "full_day";
         else if (shiftHalfDayCount > 0 && shiftFullDayCount === 0) classification = "half_day";
         else if (shiftHalfDayCount > 0 && shiftFullDayCount > 0) classification = "mixed_daily";
