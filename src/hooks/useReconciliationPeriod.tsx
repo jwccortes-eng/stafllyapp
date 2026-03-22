@@ -429,12 +429,22 @@ export function useReconciliationPeriod(companyId: string | null) {
       return;
     }
 
-    const [empRes, compProfilesRes] = await Promise.all([
+    const [empRes, compProfilesRes, overridesRes] = await Promise.all([
       supabase.from("employees").select("id, first_name, last_name").eq("company_id", companyId),
       supabase.from("compensation_profiles").select("employee_id, default_daily_rate, default_half_day_rate, default_hourly_rate, payment_mode, is_active").eq("company_id", companyId).eq("is_active", true),
+      supabase.from("reconciliation_overrides" as any).select("*").eq("company_id", companyId).eq("period_status_id", periodStatusId),
     ]);
     const employees = empRes.data || [];
     const empMap = new Map(employees.map(e => [e.id, `${e.first_name} ${e.last_name}`]));
+
+    // Build override map: employee_id -> override_type
+    const overrideMap = new Map<string, { override_type: string; notes: string | null }>();
+    for (const ov of (overridesRes.data || []) as any[]) {
+      overrideMap.set(ov.employee_id, { override_type: ov.override_type, notes: ov.notes });
+    }
+    if (overrideMap.size > 0) {
+      console.log(`[generateFinalRecords] Loaded ${overrideMap.size} classification overrides`);
+    }
 
     // Build compensation rate map: employee_id -> { daily_rate, half_day_rate, hourly_rate }
     const compRateMap = new Map<string, { daily_rate: number | null; half_day_rate: number | null; hourly_rate: number | null; payment_mode: string }>();
@@ -820,16 +830,27 @@ export function useReconciliationPeriod(companyId: string | null) {
       // Calculate shift-based total
       let shiftCalculatedTotal = 0;
       let shiftCalcSource = "none";
-      const hasShiftContext = empLevelContext.total_shift_count > 0 || shiftFullDayCount > 0 || shiftHalfDayCount > 0;
-      const shouldForceShiftPrimary = shiftFullDayCount > 0 || shiftHalfDayCount > 0 || empLevelContext.has_weekend_job;
 
-      if (hasShiftContext && (empDailyRate || empHalfDayRate)) {
+      // ── CHECK FOR CLASSIFICATION OVERRIDE ──
+      const empOverride = overrideMap.get(empId);
+      const hasOverride = !!empOverride;
+
+      const hasShiftContext = empLevelContext.total_shift_count > 0 || shiftFullDayCount > 0 || shiftHalfDayCount > 0;
+      // If override says hourly, do NOT force shift primary
+      const shouldForceShiftPrimary = hasOverride
+        ? (empOverride.override_type === "full_day" || empOverride.override_type === "half_day" || empOverride.override_type === "mixed_daily")
+        : (shiftFullDayCount > 0 || shiftHalfDayCount > 0 || empLevelContext.has_weekend_job);
+
+      if (hasOverride) {
+        console.log(`[generateFinalRecords][OVERRIDE] ${empMap.get(empId)}: override_type=${empOverride.override_type}, shouldForceShiftPrimary=${shouldForceShiftPrimary}`);
+      }
+
+      if (hasShiftContext && (empDailyRate || empHalfDayRate) && shouldForceShiftPrimary) {
         const fullDayAmount = shiftFullDayCount * (empDailyRate || 0);
         const halfDayAmount = shiftHalfDayCount * (empHalfDayRate || 0);
         shiftCalculatedTotal = Math.round((fullDayAmount + halfDayAmount) * 100) / 100;
         shiftCalcSource = `shift_calc:${shiftFullDayCount}fd×$${empDailyRate || 0}+${shiftHalfDayCount}hd×$${empHalfDayRate || 0}`;
-      } else if (hasShiftContext && !empDailyRate) {
-        // Has shifts but no rate configured — try to infer from payroll
+      } else if (hasShiftContext && !empDailyRate && shouldForceShiftPrimary) {
         const totalDailyAndWeekend = dailyPayTotal + weekendPayTotal;
         const totalShiftUnits = shiftFullDayCount + shiftHalfDayCount * 0.5;
         if (totalShiftUnits > 0 && totalDailyAndWeekend > 0) {
@@ -841,7 +862,7 @@ export function useReconciliationPeriod(companyId: string | null) {
         }
       }
 
-      // Hard guard: if there are full/half day shifts in period, keep shift-calc as primary path
+      // Hard guard: if forcing shift primary and still 0
       if (shouldForceShiftPrimary && shiftCalculatedTotal <= 0 && (empDailyRate || empHalfDayRate)) {
         const fullDayAmount = shiftFullDayCount * (empDailyRate || 0);
         const halfDayAmount = shiftHalfDayCount * (empHalfDayRate || 0);
@@ -849,13 +870,21 @@ export function useReconciliationPeriod(companyId: string | null) {
         shiftCalcSource = `forced_shift_calc:${shiftFullDayCount}fd×$${empDailyRate || 0}+${shiftHalfDayCount}hd×$${empHalfDayRate || 0}`;
       }
 
+      // If override is hourly, reset shift calc — use payroll as primary
+      if (hasOverride && empOverride.override_type === "hourly") {
+        shiftCalculatedTotal = 0;
+        shiftCalcSource = "override:hourly";
+      }
+
       // Payroll reference total (all classified rows)
       const payrollReferenceTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
 
-      // GRAND TOTAL: when full/half day shifts exist, always use shift-calc as primary
+      // GRAND TOTAL: respects override
       let grandTotal: number;
-      const calculationPrimarySource = shouldForceShiftPrimary ? "shift_calc" : "payroll";
-      if (shouldForceShiftPrimary) {
+      const calculationPrimarySource = hasOverride ? `override:${empOverride.override_type}` : (shouldForceShiftPrimary ? "shift_calc" : "payroll");
+      if (hasOverride && (empOverride.override_type === "hourly" || empOverride.override_type === "pay_ride" || empOverride.override_type === "manual_adjustment")) {
+        grandTotal = payrollReferenceTotal;
+      } else if (shouldForceShiftPrimary) {
         grandTotal = Math.round((shiftCalculatedTotal + ridePayTotal + manualTotal) * 100) / 100;
       } else {
         grandTotal = payrollReferenceTotal;
@@ -908,10 +937,12 @@ export function useReconciliationPeriod(companyId: string | null) {
       const hourlyRate = hourlyHours > 0 ? Math.round((hourlyPayTotal / hourlyHours) * 100) / 100 : null;
       const dailyRate = empDailyRate || (dailyRows.length > 0 ? Math.round((dailyPayTotal / dailyRows.length) * 100) / 100 : null);
 
-      // Pay classification — shift-first and explicit full_day/half_day labels
+      // Pay classification — override-first, then shift-first
       const hasShiftBasedPay = shouldForceShiftPrimary;
       let classification: string;
-      if (hasShiftBasedPay) {
+      if (hasOverride) {
+        classification = empOverride.override_type;
+      } else if (hasShiftBasedPay) {
         if (shiftFullDayCount > 0 && shiftHalfDayCount === 0) classification = "full_day";
         else if (shiftHalfDayCount > 0 && shiftFullDayCount === 0) classification = "half_day";
         else if (shiftHalfDayCount > 0 && shiftFullDayCount > 0) classification = "mixed_daily";
@@ -1041,6 +1072,9 @@ export function useReconciliationPeriod(companyId: string | null) {
         shift_daily_rate_used: empDailyRate,
         shift_half_day_rate_used: empHalfDayRate,
         shift_calculation_source: shiftCalcSource,
+        primary_source: calculationPrimarySource,
+        override_type: hasOverride ? empOverride.override_type : null,
+        override_applied: hasOverride,
         payroll_reference_total: Math.round(payrollReferenceTotal * 100) / 100,
         shift_vs_payroll_diff: shiftVsPayrollDiff,
         reconciliation_status: hasCriticalUnmapped ? "blocked" : (conflictCount > 0 ? "partial" : "resolved"),

@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  Wrench, ArrowRight, Save, Undo2, BookOpen, SplitSquareVertical,
-  Link2Off, UserCheck, ChevronDown, ChevronRight,
+  Wrench, ArrowRight, Save, Undo2, BookOpen,
+  ChevronDown, ChevronRight, ShieldAlert, ShieldCheck,
 } from "lucide-react";
 import type { EmployeeFinalRecord } from "@/hooks/useReconciliationPeriod";
 
@@ -28,34 +27,47 @@ interface Props {
 }
 
 const PAY_TYPE_OPTIONS = [
-  { value: "hourly", label: "Hourly", color: "bg-blue-100 text-blue-700" },
-  { value: "daily", label: "Daily Pay", color: "bg-green-100 text-green-700" },
-  { value: "pay_ride", label: "Ride", color: "bg-orange-100 text-orange-700" },
-  { value: "weekend_job", label: "Weekend Job", color: "bg-purple-100 text-purple-700" },
-  { value: "manual_adjustment", label: "Manual Adj.", color: "bg-yellow-100 text-yellow-800" },
+  { value: "hourly", label: "Hourly" },
+  { value: "full_day", label: "Full Day" },
+  { value: "half_day", label: "Half Day" },
+  { value: "mixed_daily", label: "Mixed Daily" },
+  { value: "pay_ride", label: "Ride" },
+  { value: "manual_adjustment", label: "Manual Adj." },
 ];
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
-interface PayrollRowEdit {
-  id: string;
-  original_pay_type: string;
-  new_pay_type: string;
-  total_pay: number;
-  total_hours: number;
-  work_date: string;
-  description: string;
+interface EmployeeOverride {
+  employee_id: string;
+  override_type: string;
 }
 
 export default function VarianceWorkbench({ companyId, periodStatusId, finalRecords, employees, onRefresh }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null);
-  const [edits, setEdits] = useState<Map<string, PayrollRowEdit>>(new Map());
+  const [overrides, setOverrides] = useState<Map<string, string>>(new Map());
+  const [savedOverrides, setSavedOverrides] = useState<Map<string, string>>(new Map());
   const [saving, setSaving] = useState(false);
   const [showLearnDialog, setShowLearnDialog] = useState(false);
   const [learnForm, setLearnForm] = useState({ label: "", save_for_employee: false });
-  const [currentEdit, setCurrentEdit] = useState<PayrollRowEdit | null>(null);
+  const [currentLearnData, setCurrentLearnData] = useState<{ empId: string; overrideType: string } | null>(null);
+
+  // Load existing overrides from DB
+  useEffect(() => {
+    if (!companyId || !periodStatusId) return;
+    supabase.from("reconciliation_overrides" as any)
+      .select("employee_id, override_type")
+      .eq("company_id", companyId)
+      .eq("period_status_id", periodStatusId)
+      .then(({ data }) => {
+        const map = new Map<string, string>();
+        for (const row of (data || []) as any[]) {
+          map.set(row.employee_id, row.override_type);
+        }
+        setSavedOverrides(map);
+      });
+  }, [companyId, periodStatusId]);
 
   const recordsWithVariance = useMemo(() => {
     return finalRecords
@@ -67,93 +79,92 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
       .sort((a, b) => b.variance - a.variance);
   }, [finalRecords, employees]);
 
-  const setPayType = (rowId: string, payrollRow: any, newType: string) => {
-    setEdits(prev => {
+  const setEmployeeOverride = (empId: string, newType: string) => {
+    setOverrides(prev => {
       const next = new Map(prev);
-      next.set(rowId, {
-        id: rowId,
-        original_pay_type: payrollRow.type || "unknown",
-        new_pay_type: newType,
-        total_pay: payrollRow.pay || 0,
-        total_hours: payrollRow.hours || 0,
-        work_date: payrollRow.date || "",
-        description: payrollRow.description || "",
-      });
+      next.set(empId, newType);
       return next;
     });
   };
 
-  const revertEdit = (rowId: string) => {
-    setEdits(prev => {
+  const revertOverride = (empId: string) => {
+    setOverrides(prev => {
       const next = new Map(prev);
-      next.delete(rowId);
+      next.delete(empId);
       return next;
     });
   };
 
-  const applyEdits = async () => {
-    if (!companyId || edits.size === 0) return;
+  const applyOverrides = async () => {
+    if (!companyId || !user?.id || overrides.size === 0) return;
     setSaving(true);
 
-    for (const [rowId, edit] of edits) {
-      // Update the normalized payroll row's pay_type
-      await supabase.from("normalized_payroll_rows" as any)
-        .update({ pay_type: edit.new_pay_type, updated_at: new Date().toISOString() } as any)
-        .eq("id", rowId);
+    for (const [empId, overrideType] of overrides) {
+      await supabase.from("reconciliation_overrides" as any).upsert({
+        company_id: companyId,
+        period_status_id: periodStatusId,
+        employee_id: empId,
+        override_type: overrideType,
+        override_source: "variance_workbench",
+        notes: `Manual override: ${overrideType}`,
+        created_by: user.id,
+        updated_at: new Date().toISOString(),
+      } as any, { onConflict: "company_id,period_status_id,employee_id" });
     }
 
-    toast({ title: `${edits.size} clasificación(es) actualizadas`, description: "Regenera los registros finales para ver el efecto." });
-    setEdits(new Map());
+    toast({ title: `${overrides.size} override(s) guardados`, description: "Reprocesa el período para aplicar los cambios al cálculo." });
+
+    // Merge into saved
+    setSavedOverrides(prev => {
+      const next = new Map(prev);
+      for (const [k, v] of overrides) next.set(k, v);
+      return next;
+    });
+    setOverrides(new Map());
     setSaving(false);
     onRefresh();
   };
 
-  const openLearnDialog = (edit: PayrollRowEdit, empId: string) => {
-    setCurrentEdit(edit);
-    setLearnForm({
-      label: `${edit.total_pay} → ${PAY_TYPE_OPTIONS.find(o => o.value === edit.new_pay_type)?.label || edit.new_pay_type}`,
-      save_for_employee: false,
+  const removeOverride = async (empId: string) => {
+    if (!companyId) return;
+    await supabase.from("reconciliation_overrides" as any)
+      .delete()
+      .eq("company_id", companyId)
+      .eq("period_status_id", periodStatusId)
+      .eq("employee_id", empId);
+    setSavedOverrides(prev => {
+      const next = new Map(prev);
+      next.delete(empId);
+      return next;
     });
+    toast({ title: "Override eliminado", description: "Reprocesa para volver al cálculo automático." });
+    onRefresh();
+  };
+
+  const openLearnDialog = (empId: string, overrideType: string) => {
+    setCurrentLearnData({ empId, overrideType });
+    const label = PAY_TYPE_OPTIONS.find(o => o.value === overrideType)?.label || overrideType;
+    setLearnForm({ label: `${employees.get(empId) || empId} → ${label}`, save_for_employee: false });
     setShowLearnDialog(true);
   };
 
   const saveLearnedRule = async () => {
-    if (!companyId || !user?.id || !currentEdit) return;
-
-    const empId = expandedEmployee;
+    if (!companyId || !user?.id || !currentLearnData) return;
     await supabase.from("reconciliation_learned_rules" as any).insert({
       company_id: companyId,
       source_type: "variance_correction",
       rule_label: learnForm.label,
-      match_criteria: {
-        field: "amount",
-        operator: "equals",
-        value: String(currentEdit.total_pay),
-      },
-      result_action: {
-        pay_type: currentEdit.new_pay_type,
-        description: `Auto: ${currentEdit.original_pay_type} → ${currentEdit.new_pay_type}`,
-      },
-      employee_id: learnForm.save_for_employee ? empId : null,
+      match_criteria: { field: "employee_id", operator: "equals", value: currentLearnData.empId },
+      result_action: { override_type: currentLearnData.overrideType },
+      employee_id: learnForm.save_for_employee ? currentLearnData.empId : null,
       created_by: user.id,
     } as any);
-
     toast({ title: "Regla aprendida guardada" });
     setShowLearnDialog(false);
-    setCurrentEdit(null);
+    setCurrentLearnData(null);
   };
 
-  const computeNewTotal = (record: EmployeeFinalRecord) => {
-    let total = 0;
-    for (const row of (record.payroll_rows || [])) {
-      const edit = edits.get(row.id);
-      total += row.pay || 0;
-      // The actual amount doesn't change — only classification changes
-    }
-    return total || record.grand_total || record.final_total_pay || 0;
-  };
-
-  const pendingEditCount = edits.size;
+  const pendingCount = overrides.size;
 
   return (
     <div className="space-y-4">
@@ -162,13 +173,18 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
         <div className="flex items-center gap-2">
           <Wrench className="h-5 w-5" />
           <h3 className="font-semibold text-sm">Variance Workbench</h3>
-          {pendingEditCount > 0 && (
-            <Badge variant="secondary">{pendingEditCount} cambio(s) pendientes</Badge>
+          {pendingCount > 0 && (
+            <Badge variant="secondary">{pendingCount} override(s) pendientes</Badge>
+          )}
+          {savedOverrides.size > 0 && (
+            <Badge className="bg-primary/20 text-primary text-[10px]">
+              <ShieldCheck className="h-3 w-3 mr-1" /> {savedOverrides.size} override(s) activos
+            </Badge>
           )}
         </div>
-        {pendingEditCount > 0 && (
-          <Button size="sm" onClick={applyEdits} disabled={saving} className="gap-1">
-            <Save className="h-3 w-3" /> {saving ? "Guardando..." : "Aplicar Cambios"}
+        {pendingCount > 0 && (
+          <Button size="sm" onClick={applyOverrides} disabled={saving} className="gap-1">
+            <Save className="h-3 w-3" /> {saving ? "Guardando..." : "Aplicar Overrides"}
           </Button>
         )}
       </div>
@@ -176,51 +192,49 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
       {/* Employee List */}
       {recordsWithVariance.map(record => {
         const isExpanded = expandedEmployee === record.employee_id;
-        const hasEdits = (record.payroll_rows || []).some((r: any) => edits.has(r.id));
+        const pendingOverride = overrides.get(record.employee_id);
+        const activeOverride = savedOverrides.get(record.employee_id);
+        const currentOverrideType = pendingOverride || activeOverride || null;
+        const hasPendingChange = !!pendingOverride;
+        const hasActiveOverride = !!activeOverride;
         const varianceStatus = record.variance_status || "unresolved";
         const varianceBadge = varianceStatus === "exact_match" ? "default"
-          : varianceStatus === "minor_variance" ? "secondary"
-          : "destructive";
-        const cleanHistorical = record.source_payroll_total || 0;
-        const grossHistorical = record.total_payroll_amount || 0;
-        const excludedUnmapped = Math.max(0, grossHistorical - cleanHistorical);
-        const unmappedCount = (record.payroll_rows || []).filter((row: any) => row?.classified_type === "unmapped" || row?.type === "other" || row?.type === "unclassified").length;
+          : varianceStatus === "minor_variance" ? "secondary" : "destructive";
+        const primarySource = (record as any).primary_source || (record as any).shift_calculation_source || "auto";
 
         return (
-          <Card key={record.employee_id} className={hasEdits ? "border-primary/50" : ""}>
-            {/* Employee Header */}
+          <Card key={record.employee_id} className={hasPendingChange ? "border-primary/50" : hasActiveOverride ? "border-accent/50" : ""}>
             <div
               className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30 transition-colors"
               onClick={() => setExpandedEmployee(isExpanded ? null : record.employee_id)}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 <span className="font-medium text-sm">{record.name}</span>
                 <Badge variant="outline" className="text-[10px]">{record.pay_classification}</Badge>
                 <Badge variant={varianceBadge as any} className="text-[10px]">
-                  {varianceStatus === "exact_match" ? "Exacto" : varianceStatus === "minor_variance" ? "Menor" : varianceStatus === "major_variance" ? "Mayor" : "Sin resolver"}
+                  {varianceStatus === "exact_match" ? "Exacto" : varianceStatus === "minor_variance" ? "Menor" : "Mayor"}
                 </Badge>
-                {hasEdits && <Badge className="text-[10px] bg-primary/20 text-primary">Editado</Badge>}
+                {hasActiveOverride && (
+                  <Badge className="text-[10px] bg-accent text-accent-foreground gap-1">
+                    <ShieldAlert className="h-3 w-3" /> Override: {PAY_TYPE_OPTIONS.find(o => o.value === activeOverride)?.label || activeOverride}
+                  </Badge>
+                )}
+                {hasPendingChange && (
+                  <Badge className="text-[10px] bg-primary/20 text-primary">Pendiente</Badge>
+                )}
+                {primarySource && (
+                  <Badge variant="outline" className="text-[9px] font-mono">{primarySource}</Badge>
+                )}
               </div>
               <div className="flex items-center gap-4 text-xs font-mono">
                 <div>
-                  <span className="text-muted-foreground">Histórico limpio:</span>{" "}
-                  <span className="font-semibold">{fmt(cleanHistorical)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Histórico total:</span>{" "}
-                  <span className="font-semibold">{fmt(grossHistorical)}</span>
-                </div>
-                {excludedUnmapped > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">Excluido:</span>{" "}
-                    <span className="font-semibold text-destructive">{fmt(excludedUnmapped)} ({unmappedCount})</span>
-                  </div>
-                )}
-                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                <div>
-                  <span className="text-muted-foreground">Reconciliado:</span>{" "}
+                  <span className="text-muted-foreground">Calc:</span>{" "}
                   <span className="font-semibold">{fmt(record.grand_total || record.final_total_pay || 0)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Payroll:</span>{" "}
+                  <span className="font-semibold">{fmt(record.total_payroll_amount || 0)}</span>
                 </div>
                 <div className={`font-bold ${Math.abs(record.variance_amount || 0) > 10 ? "text-destructive" : "text-primary"}`}>
                   Δ {fmt(record.variance_amount || 0)}
@@ -228,108 +242,87 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
               </div>
             </div>
 
-            {/* Expanded Detail */}
             {isExpanded && (
               <CardContent className="pt-0 space-y-4">
                 <Separator />
 
-                {/* Side by side: Source Evidence vs System Interpretation */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Left: Source payroll rows */}
-                  <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Evidencia Fuente (Nómina)</h4>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-[10px]">Fecha</TableHead>
-                          <TableHead className="text-[10px]">Horas</TableHead>
-                          <TableHead className="text-[10px] text-right">Monto</TableHead>
-                          <TableHead className="text-[10px]">Tipo</TableHead>
-                          <TableHead className="text-[10px]">Shift/Location</TableHead>
-                          <TableHead className="text-[10px]">Fuente</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(record.payroll_rows || []).map((row: any, i: number) => {
-                          const isUnmapped = row?.classified_type === "unmapped" || row?.type === "other" || row?.type === "unclassified";
-                          return (
-                            <TableRow key={row.id || i} className={isUnmapped ? "bg-destructive/5" : ""}>
-                              <TableCell className="text-xs">{row.date || "—"}</TableCell>
-                              <TableCell className="text-xs font-mono">{row.hours?.toFixed(1) || "—"}</TableCell>
-                              <TableCell className={`text-xs text-right font-mono font-semibold ${isUnmapped ? "text-destructive" : ""}`}>{fmt(row.pay || 0)}</TableCell>
-                              <TableCell className="space-x-1">
-                                <Badge variant="outline" className="text-[10px]">{row.type || "?"}</Badge>
-                                {row.assigned_target_type && <Badge variant="secondary" className="text-[10px]">{row.assigned_target_type}</Badge>}
-                                {row.classified_type && <Badge variant={isUnmapped ? "destructive" : "secondary"} className="text-[10px]">{row.classified_type}</Badge>}
-                              </TableCell>
-                              <TableCell className="text-[10px] text-muted-foreground max-w-[180px]">
-                                <div className="truncate">{row.shift_source || "—"}</div>
-                                <div className="truncate">{row.location_source || row.client_location_source || "—"}</div>
-                              </TableCell>
-                              <TableCell className="text-[10px]">
-                                <Badge variant="outline" className="text-[10px]">{row.classification_source || "fallback"}</Badge>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                        {(record.payroll_rows || []).length === 0 && (
-                          <TableRow><TableCell colSpan={6} className="text-xs text-muted-foreground text-center">Sin filas de nómina</TableCell></TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Right: Editable classification */}
-                  <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Resolución Editable</h4>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-[10px]">Monto</TableHead>
-                          <TableHead className="text-[10px]">Clasificar como</TableHead>
-                          <TableHead className="text-[10px]"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(record.payroll_rows || []).map((row: any, i: number) => {
-                          const edit = edits.get(row.id);
-                          const currentType = edit?.new_pay_type || row.type || "unknown";
-                          return (
-                            <TableRow key={row.id || i} className={edit ? "bg-primary/5" : ""}>
-                              <TableCell className="text-xs font-mono font-semibold">{fmt(row.pay || 0)}</TableCell>
-                              <TableCell>
-                                <Select value={currentType} onValueChange={v => setPayType(row.id, row, v)}>
-                                  <SelectTrigger className="h-7 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {PAY_TYPE_OPTIONS.map(o => (
-                                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell className="flex gap-1">
-                                {edit && (
-                                  <>
-                                    <Button variant="ghost" size="sm" onClick={() => revertEdit(row.id)} className="h-6 w-6 p-0">
-                                      <Undo2 className="h-3 w-3" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => openLearnDialog(edit, record.employee_id)} className="h-6 w-6 p-0" title="Guardar como regla">
-                                      <BookOpen className="h-3 w-3" />
-                                    </Button>
-                                  </>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
+                {/* Employee-Level Override Selector */}
+                <div className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
+                  <Label className="text-xs font-semibold whitespace-nowrap">Override de clasificación:</Label>
+                  <Select
+                    value={currentOverrideType || record.pay_classification || ""}
+                    onValueChange={v => setEmployeeOverride(record.employee_id, v)}
+                  >
+                    <SelectTrigger className="h-8 w-48 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAY_TYPE_OPTIONS.map(o => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {hasPendingChange && (
+                    <Button variant="ghost" size="sm" onClick={() => revertOverride(record.employee_id)} className="h-7 text-xs gap-1">
+                      <Undo2 className="h-3 w-3" /> Revertir
+                    </Button>
+                  )}
+                  {hasActiveOverride && !hasPendingChange && (
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => removeOverride(record.employee_id)} className="h-7 text-xs text-destructive gap-1">
+                        <Undo2 className="h-3 w-3" /> Eliminar Override
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openLearnDialog(record.employee_id, activeOverride)} className="h-7 text-xs gap-1">
+                        <BookOpen className="h-3 w-3" /> Guardar Regla
+                      </Button>
+                    </>
+                  )}
                 </div>
 
-                {/* Additional context rows */}
+                {/* Source Evidence */}
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Evidencia Fuente (Nómina)</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-[10px]">Fecha</TableHead>
+                        <TableHead className="text-[10px]">Horas</TableHead>
+                        <TableHead className="text-[10px] text-right">Monto</TableHead>
+                        <TableHead className="text-[10px]">Tipo</TableHead>
+                        <TableHead className="text-[10px]">Shift/Location</TableHead>
+                        <TableHead className="text-[10px]">Fuente</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(record.payroll_rows || []).map((row: any, i: number) => {
+                        const isUnmapped = row?.classified_type === "unmapped" || row?.type === "other" || row?.type === "unclassified";
+                        return (
+                          <TableRow key={row.id || i} className={isUnmapped ? "bg-destructive/5" : ""}>
+                            <TableCell className="text-xs">{row.date || "—"}</TableCell>
+                            <TableCell className="text-xs font-mono">{row.hours?.toFixed(1) || "—"}</TableCell>
+                            <TableCell className={`text-xs text-right font-mono font-semibold ${isUnmapped ? "text-destructive" : ""}`}>{fmt(row.pay || 0)}</TableCell>
+                            <TableCell className="space-x-1">
+                              <Badge variant="outline" className="text-[10px]">{row.type || "?"}</Badge>
+                              {row.classified_type && <Badge variant={isUnmapped ? "destructive" : "secondary"} className="text-[10px]">{row.classified_type}</Badge>}
+                            </TableCell>
+                            <TableCell className="text-[10px] text-muted-foreground max-w-[180px]">
+                              <div className="truncate">{row.shift_source || "—"}</div>
+                              <div className="truncate">{row.location_source || row.client_location_source || "—"}</div>
+                            </TableCell>
+                            <TableCell className="text-[10px]">
+                              <Badge variant="outline" className="text-[10px]">{row.classification_source || "fallback"}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {(record.payroll_rows || []).length === 0 && (
+                        <TableRow><TableCell colSpan={6} className="text-xs text-muted-foreground text-center">Sin filas de nómina</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Context cards */}
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <div className="p-2 bg-muted/30 rounded">
                     <div className="text-muted-foreground mb-1">Turnos programados</div>
@@ -340,8 +333,8 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
                     <div className="font-semibold">{(record.worked_shifts || []).length} turnos — {record.total_worked_hours?.toFixed(1)}h</div>
                   </div>
                   <div className="p-2 bg-muted/30 rounded">
-                    <div className="text-muted-foreground mb-1">Warnings</div>
-                    <div className="font-semibold">{(record.warnings || []).length > 0 ? (record.warnings || []).join(", ") : "Ninguno"}</div>
+                    <div className="text-muted-foreground mb-1">Fuente primaria</div>
+                    <div className="font-semibold">{primarySource}</div>
                   </div>
                 </div>
               </CardContent>
@@ -365,11 +358,11 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
               <BookOpen className="h-5 w-5" /> Guardar como Regla Aprendida
             </DialogTitle>
           </DialogHeader>
-          {currentEdit && (
+          {currentLearnData && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Cuando el sistema vea <span className="font-mono font-bold">{fmt(currentEdit.total_pay)}</span> en futuros periodos, automáticamente lo clasificará como{" "}
-                <Badge variant="secondary">{PAY_TYPE_OPTIONS.find(o => o.value === currentEdit.new_pay_type)?.label}</Badge>.
+                En futuros periodos, este empleado se clasificará automáticamente como{" "}
+                <Badge variant="secondary">{PAY_TYPE_OPTIONS.find(o => o.value === currentLearnData.overrideType)?.label}</Badge>.
               </p>
               <div>
                 <Label className="text-xs">Etiqueta</Label>
