@@ -429,12 +429,22 @@ export function useReconciliationPeriod(companyId: string | null) {
       return;
     }
 
-    const [empRes, compProfilesRes] = await Promise.all([
+    const [empRes, compProfilesRes, overridesRes] = await Promise.all([
       supabase.from("employees").select("id, first_name, last_name").eq("company_id", companyId),
       supabase.from("compensation_profiles").select("employee_id, default_daily_rate, default_half_day_rate, default_hourly_rate, payment_mode, is_active").eq("company_id", companyId).eq("is_active", true),
+      supabase.from("reconciliation_overrides" as any).select("*").eq("company_id", companyId).eq("period_status_id", periodStatusId),
     ]);
     const employees = empRes.data || [];
     const empMap = new Map(employees.map(e => [e.id, `${e.first_name} ${e.last_name}`]));
+
+    // Build override map: employee_id -> override_type
+    const overrideMap = new Map<string, { override_type: string; notes: string | null }>();
+    for (const ov of (overridesRes.data || []) as any[]) {
+      overrideMap.set(ov.employee_id, { override_type: ov.override_type, notes: ov.notes });
+    }
+    if (overrideMap.size > 0) {
+      console.log(`[generateFinalRecords] Loaded ${overrideMap.size} classification overrides`);
+    }
 
     // Build compensation rate map: employee_id -> { daily_rate, half_day_rate, hourly_rate }
     const compRateMap = new Map<string, { daily_rate: number | null; half_day_rate: number | null; hourly_rate: number | null; payment_mode: string }>();
