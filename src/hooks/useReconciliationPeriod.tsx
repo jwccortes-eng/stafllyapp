@@ -830,16 +830,27 @@ export function useReconciliationPeriod(companyId: string | null) {
       // Calculate shift-based total
       let shiftCalculatedTotal = 0;
       let shiftCalcSource = "none";
-      const hasShiftContext = empLevelContext.total_shift_count > 0 || shiftFullDayCount > 0 || shiftHalfDayCount > 0;
-      const shouldForceShiftPrimary = shiftFullDayCount > 0 || shiftHalfDayCount > 0 || empLevelContext.has_weekend_job;
 
-      if (hasShiftContext && (empDailyRate || empHalfDayRate)) {
+      // ── CHECK FOR CLASSIFICATION OVERRIDE ──
+      const empOverride = overrideMap.get(empId);
+      const hasOverride = !!empOverride;
+
+      const hasShiftContext = empLevelContext.total_shift_count > 0 || shiftFullDayCount > 0 || shiftHalfDayCount > 0;
+      // If override says hourly, do NOT force shift primary
+      const shouldForceShiftPrimary = hasOverride
+        ? (empOverride.override_type === "full_day" || empOverride.override_type === "half_day" || empOverride.override_type === "mixed_daily")
+        : (shiftFullDayCount > 0 || shiftHalfDayCount > 0 || empLevelContext.has_weekend_job);
+
+      if (hasOverride) {
+        console.log(`[generateFinalRecords][OVERRIDE] ${empMap.get(empId)}: override_type=${empOverride.override_type}, shouldForceShiftPrimary=${shouldForceShiftPrimary}`);
+      }
+
+      if (hasShiftContext && (empDailyRate || empHalfDayRate) && shouldForceShiftPrimary) {
         const fullDayAmount = shiftFullDayCount * (empDailyRate || 0);
         const halfDayAmount = shiftHalfDayCount * (empHalfDayRate || 0);
         shiftCalculatedTotal = Math.round((fullDayAmount + halfDayAmount) * 100) / 100;
         shiftCalcSource = `shift_calc:${shiftFullDayCount}fd×$${empDailyRate || 0}+${shiftHalfDayCount}hd×$${empHalfDayRate || 0}`;
-      } else if (hasShiftContext && !empDailyRate) {
-        // Has shifts but no rate configured — try to infer from payroll
+      } else if (hasShiftContext && !empDailyRate && shouldForceShiftPrimary) {
         const totalDailyAndWeekend = dailyPayTotal + weekendPayTotal;
         const totalShiftUnits = shiftFullDayCount + shiftHalfDayCount * 0.5;
         if (totalShiftUnits > 0 && totalDailyAndWeekend > 0) {
@@ -851,7 +862,7 @@ export function useReconciliationPeriod(companyId: string | null) {
         }
       }
 
-      // Hard guard: if there are full/half day shifts in period, keep shift-calc as primary path
+      // Hard guard: if forcing shift primary and still 0
       if (shouldForceShiftPrimary && shiftCalculatedTotal <= 0 && (empDailyRate || empHalfDayRate)) {
         const fullDayAmount = shiftFullDayCount * (empDailyRate || 0);
         const halfDayAmount = shiftHalfDayCount * (empHalfDayRate || 0);
@@ -859,13 +870,21 @@ export function useReconciliationPeriod(companyId: string | null) {
         shiftCalcSource = `forced_shift_calc:${shiftFullDayCount}fd×$${empDailyRate || 0}+${shiftHalfDayCount}hd×$${empHalfDayRate || 0}`;
       }
 
+      // If override is hourly, reset shift calc — use payroll as primary
+      if (hasOverride && empOverride.override_type === "hourly") {
+        shiftCalculatedTotal = 0;
+        shiftCalcSource = "override:hourly";
+      }
+
       // Payroll reference total (all classified rows)
       const payrollReferenceTotal = Math.round((hourlyPayTotal + dailyPayTotal + ridePayTotal + weekendPayTotal + manualTotal) * 100) / 100;
 
-      // GRAND TOTAL: when full/half day shifts exist, always use shift-calc as primary
+      // GRAND TOTAL: respects override
       let grandTotal: number;
-      const calculationPrimarySource = shouldForceShiftPrimary ? "shift_calc" : "payroll";
-      if (shouldForceShiftPrimary) {
+      const calculationPrimarySource = hasOverride ? `override:${empOverride.override_type}` : (shouldForceShiftPrimary ? "shift_calc" : "payroll");
+      if (hasOverride && (empOverride.override_type === "hourly" || empOverride.override_type === "pay_ride" || empOverride.override_type === "manual_adjustment")) {
+        grandTotal = payrollReferenceTotal;
+      } else if (shouldForceShiftPrimary) {
         grandTotal = Math.round((shiftCalculatedTotal + ridePayTotal + manualTotal) * 100) / 100;
       } else {
         grandTotal = payrollReferenceTotal;
