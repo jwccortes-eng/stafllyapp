@@ -216,7 +216,7 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
                   {varianceStatus === "exact_match" ? "Exacto" : varianceStatus === "minor_variance" ? "Menor" : "Mayor"}
                 </Badge>
                 {hasActiveOverride && (
-                  <Badge className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 gap-1">
+                  <Badge className="text-[10px] bg-accent text-accent-foreground gap-1">
                     <ShieldAlert className="h-3 w-3" /> Override: {PAY_TYPE_OPTIONS.find(o => o.value === activeOverride)?.label || activeOverride}
                   </Badge>
                 )}
