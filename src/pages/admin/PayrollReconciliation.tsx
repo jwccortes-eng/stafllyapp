@@ -804,7 +804,11 @@ export default function PayrollReconciliationPage() {
                   <div className="flex items-center gap-4">
                     {batchStatusBadge(b.status)}
                     <div>
-                      <p className="font-medium text-sm group-hover:text-primary transition-colors">{b.truth_source_file_name || "Sin archivo"}</p>
+                      <p className="font-medium text-sm group-hover:text-primary transition-colors">
+                        {b.truth_source_file_name || "Sin archivo"}
+                        {b.payroll_period_start && <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">({b.payroll_period_start} → {b.payroll_period_end})</span>}
+                        {!b.payroll_period_start && <span className="ml-1.5 text-[10px] text-destructive">⚠ sin periodo</span>}
+                      </p>
                       <p className="text-[11px] text-muted-foreground">
                         {b.employees_truth_count} empleados • {b.matched_count} matched • {b.critical_mismatch_count} críticos
                       </p>
