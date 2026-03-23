@@ -228,7 +228,12 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                     </div>
                   </div>
                   {/* Expanded detail */}
-                  {isExpanded && (
+                  {isExpanded && (() => {
+                    const cleanHistorical = v?.source_payroll_total || r.source_payroll_total || 0;
+                    const grossHistorical = r.total_payroll_amount || 0;
+                    const excludedUnmappedAmount = Math.max(0, grossHistorical - cleanHistorical);
+                    const unmappedCount = (r.payroll_rows || []).filter((p: any) => p?.classified_type === "unmapped" || p?.type === "other" || p?.type === "unclassified").length;
+                    return (
                     <div className="px-3 pb-2 pt-0 border-t border-dashed">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 py-2 text-[11px]">
                         <div>
