@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { usePayrollReconciliation, type ReconciliationBatch } from "@/hooks/usePayrollReconciliation";
 import type { ReconciliationRowResult, BatchSummary, TopIssue, MatchBreakdown } from "@/lib/payroll-reconciliation-engine";
 import { usePageView } from "@/hooks/useAuditLog";
+import { useCompany } from "@/hooks/useCompany";
+import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
