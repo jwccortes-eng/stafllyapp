@@ -297,10 +297,10 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
                       {(record.payroll_rows || []).map((row: any, i: number) => {
                         const isUnmapped = row?.classified_type === "unmapped" || row?.type === "other" || row?.type === "unclassified";
                         return (
-                          <TableRow key={row.id || i} className={isUnmapped ? "bg-destructive/5" : ""}>
+                          <TableRow key={row.id || i} className={isUnmapped ? "bg-warning/5" : ""}>
                             <TableCell className="text-xs">{row.date || "—"}</TableCell>
                             <TableCell className="text-xs font-mono">{row.hours?.toFixed(1) || "—"}</TableCell>
-                            <TableCell className={`text-xs text-right font-mono font-semibold ${isUnmapped ? "text-destructive" : ""}`}>{fmt(row.pay || 0)}</TableCell>
+                            <TableCell className={`text-xs text-right font-mono font-semibold ${isUnmapped ? "text-warning" : ""}`}>{fmt(row.pay || 0)}</TableCell>
                             <TableCell className="space-x-1">
                               <Badge variant="outline" className="text-[10px]">{row.type || "?"}</Badge>
                               {row.classified_type && <Badge variant={isUnmapped ? "destructive" : "secondary"} className="text-[10px]">{row.classified_type}</Badge>}
