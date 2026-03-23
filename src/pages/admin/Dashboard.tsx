@@ -384,7 +384,7 @@ export default function AdminDashboard() {
       try {
         const [empRes, periodRes, ticketsRes, todayShiftsRes, openEntriesRes] = await Promise.all([
           supabase.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", cid),
-          supabase.from("pay_periods").select("*").eq("company_id", cid).lte("start_date", today).order("start_date", { ascending: false }).limit(1).maybeSingle(),
+          supabase.from("pay_periods").select("*").eq("company_id", cid).lte("start_date", today).order("start_date", { ascending: false }).limit(3),
           supabase.from("employee_tickets").select("id", { count: "exact", head: true }).eq("company_id", cid).in("status", ["new", "in_progress"]),
           supabase.from("scheduled_shifts").select("id").eq("company_id", cid).eq("date", today).is("deleted_at", null),
           supabase.from("time_entries" as any).select("id", { count: "exact", head: true }).eq("company_id", cid).is("clock_out" as any, null),
@@ -392,23 +392,21 @@ export default function AdminDashboard() {
 
         let periodTotal = 0;
         let hours = 0;
-        if (periodRes.data) {
-          // Try reconciliation_final_records first (real source of truth)
-          const { data: rpsData } = await supabase.from("reconciliation_period_status")
-            .select("id").eq("period_id", periodRes.data.id).limit(1).maybeSingle();
-          
-          if (rpsData) {
-            const { data: rfrData } = await supabase.from("reconciliation_final_records")
-              .select("grand_total, total_worked_hours").eq("period_status_id", rpsData.id);
-            periodTotal = (rfrData ?? []).reduce((s, r: any) => s + Number(r.grand_total || 0), 0);
-            hours = (rfrData ?? []).reduce((s, r: any) => s + Number(r.total_worked_hours || 0), 0);
-          }
-          
-          // Fallback to period_base_pay if no reconciliation data
-          if (periodTotal === 0) {
-            const { data: basePays } = await supabase.from("period_base_pay").select("base_total_pay, total_work_hours").eq("period_id", periodRes.data.id);
-            periodTotal = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.base_total_pay || 0), 0);
-            hours = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.total_work_hours || 0), 0);
+        let heroLabel = "";
+        const recentPeriods = (periodRes as any).data ?? [];
+        
+        // Try periods in order — pick first one with actual payroll data
+        for (const period of recentPeriods) {
+          // Try period_base_pay
+          const { data: basePays } = await supabase.from("period_base_pay")
+            .select("base_total_pay, total_work_hours").eq("period_id", period.id);
+          const pTotal = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.base_total_pay || 0), 0);
+          const pHours = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.total_work_hours || 0), 0);
+          if (pTotal > 0) {
+            periodTotal = pTotal;
+            hours = pHours;
+            heroLabel = period.status === "open" ? "" : `(${format(parseISO(period.start_date), "dd MMM", { locale: es })})`;
+            break;
           }
         }
         setTotalHoursWorked(Math.round(hours * 10) / 10);
@@ -421,15 +419,16 @@ export default function AdminDashboard() {
         }
         setTodaySummary({ shiftsToday: todayShiftIds.length, assignedToday: assignedCount, clockedIn: 0, openEntries: openEntriesRes.count ?? 0 });
 
+        const currentPeriod = recentPeriods[0] ?? null;
         setStats({
           totalEmployees: empRes.count ?? 0,
-          activePeriod: periodRes.data ? `${periodRes.data.start_date} → ${periodRes.data.end_date}` : null,
-          periodStatus: periodRes.data?.status ?? null,
+          activePeriod: currentPeriod ? `${currentPeriod.start_date} → ${currentPeriod.end_date}` : null,
+          periodStatus: currentPeriod?.status ?? null,
           totalImports: 0,
           totalMovements: 0,
           periodTotal: Math.round(periodTotal * 100) / 100,
-          periodStartDate: periodRes.data?.start_date ?? null,
-          periodEndDate: periodRes.data?.end_date ?? null,
+          periodStartDate: currentPeriod?.start_date ?? null,
+          periodEndDate: currentPeriod?.end_date ?? null,
           pendingTickets: ticketsRes.count ?? 0,
         });
 
@@ -530,8 +529,12 @@ export default function AdminDashboard() {
           });
         }
 
-        // ── Chart: Use reconciliation_final_records as the real base pay source ──
-        const chartPeriods = [...allPeriods].reverse().slice(-8);
+        // ── Chart: Show periods with actual payroll activity, not empty future periods ──
+        // allPeriods is DESC — filter to periods with status != 'open' OR that have base pay, then take last 8
+        const closedOrPaid = allPeriods.filter(p => ["closed", "paid", "published"].includes(p.status) || !!p.paid_at || !!p.published_at);
+        const chartPeriods = closedOrPaid.length > 0
+          ? [...closedOrPaid].reverse().slice(-8)
+          : [...allPeriods].reverse().slice(-8); // fallback if no closed periods
         if (chartPeriods.length > 0) {
           const periodIds = chartPeriods.map(p => p.id);
 
