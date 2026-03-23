@@ -882,7 +882,17 @@ export default function PayrollReconciliationPage() {
             <h1 className="text-xl font-bold font-heading">Reconciliación</h1>
             {batchStatusBadge(activeBatch.status)}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">{activeBatch.truth_source_file_name || "Sin archivo de verdad"}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {activeBatch.truth_source_file_name || "Sin archivo de verdad"}
+            {activeBatch.payroll_period_start && (
+              <span className="ml-2 font-mono text-[10px] bg-muted/50 px-1.5 py-0.5 rounded">
+                {activeBatch.payroll_period_start} → {activeBatch.payroll_period_end}
+              </span>
+            )}
+            {!activeBatch.payroll_period_start && (
+              <span className="ml-2 text-[10px] text-destructive font-medium">⚠ Sin periodo vinculado</span>
+            )}
+          </p>
         </div>
       </div>
 
