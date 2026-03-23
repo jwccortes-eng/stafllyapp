@@ -297,7 +297,7 @@ export default function StagedReconciliation() {
       })
       .filter(pp => {
         if (!q) return true;
-        const label = `${pp.start_date} ${pp.end_date} ${pp.status} ${pp.start_date} → ${pp.end_date}`.toLowerCase();
+        const label = periodLabel(pp).toLowerCase();
         return label.includes(q);
       });
   }, [payPeriods, batchSearch]);
