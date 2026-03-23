@@ -393,9 +393,23 @@ export default function AdminDashboard() {
         let periodTotal = 0;
         let hours = 0;
         if (periodRes.data) {
-          const { data: basePays } = await supabase.from("period_base_pay").select("base_total_pay, total_hours").eq("period_id", periodRes.data.id);
-          periodTotal = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.base_total_pay || 0), 0);
-          hours = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.total_hours || 0), 0);
+          // Try reconciliation_final_records first (real source of truth)
+          const { data: rpsData } = await supabase.from("reconciliation_period_status")
+            .select("id").eq("period_id", periodRes.data.id).limit(1).maybeSingle();
+          
+          if (rpsData) {
+            const { data: rfrData } = await supabase.from("reconciliation_final_records")
+              .select("grand_total, total_worked_hours").eq("period_status_id", rpsData.id);
+            periodTotal = (rfrData ?? []).reduce((s, r: any) => s + Number(r.grand_total || 0), 0);
+            hours = (rfrData ?? []).reduce((s, r: any) => s + Number(r.total_worked_hours || 0), 0);
+          }
+          
+          // Fallback to period_base_pay if no reconciliation data
+          if (periodTotal === 0) {
+            const { data: basePays } = await supabase.from("period_base_pay").select("base_total_pay, total_work_hours").eq("period_id", periodRes.data.id);
+            periodTotal = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.base_total_pay || 0), 0);
+            hours = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.total_work_hours || 0), 0);
+          }
         }
         setTotalHoursWorked(Math.round(hours * 10) / 10);
 
