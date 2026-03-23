@@ -868,8 +868,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
             <div className="text-center py-6 space-y-3">
               <p className="text-sm text-muted-foreground">Carga el archivo de nómina pagada para comparar.</p>
               {reconData.length > 0 && (
-                <div className="rounded-lg border border-yellow-500/30 bg-yellow-50/50 dark:bg-yellow-900/10 px-4 py-3 text-sm text-left max-w-md mx-auto">
-                  <p className="font-medium text-yellow-800 dark:text-yellow-300">Datos del sistema ya disponibles</p>
+                <div className="rounded-lg border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-left max-w-md mx-auto">
+                  <p className="font-medium text-foreground">Datos del sistema ya disponibles</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {reconData.length} empleados con datos de period_base_pay y/o movements para este periodo.
                     Estos datos se cargan automáticamente del sistema — no provienen de un archivo Truth.
