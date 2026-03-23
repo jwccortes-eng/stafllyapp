@@ -1233,10 +1233,34 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 </div>
               )}
 
-              {/* Raw records debug button */}
-              <Button variant="outline" size="sm" onClick={() => setShowRawRecords(!showRawRecords)}>
-                {showRawRecords ? "Ocultar" : "Ver"} registros crudos ({reconData.reduce((s, r) => s + r.ledger.length, 0)})
-              </Button>
+              {/* Action buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowRawRecords(!showRawRecords)}>
+                  {showRawRecords ? "Ocultar" : "Ver"} registros crudos ({reconData.reduce((s, r) => s + r.ledger.length, 0)})
+                </Button>
+
+                <Button variant="outline" size="sm" onClick={() => exportDetailedCSV(comparison)}>
+                  <Download className="h-3 w-3 mr-1" />
+                  Descargar detalle CSV
+                </Button>
+
+                <Button
+                  variant={dbPersisted ? "secondary" : "default"}
+                  size="sm"
+                  onClick={() => persistResultsToDb(comparison, stats)}
+                  disabled={persistingToDb}
+                >
+                  {persistingToDb ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Database className="h-3 w-3 mr-1" />}
+                  {dbPersisted ? "✓ Guardado en BD" : "Guardar en BD"}
+                </Button>
+
+                {dbPersisted && (
+                  <Badge variant="default" className="text-[10px] gap-1">
+                    <CheckCircle2 className="h-2.5 w-2.5" />
+                    Resultados persistidos
+                  </Badge>
+                )}
+              </div>
 
               {showRawRecords && (
                 <div className="overflow-auto max-h-[400px] rounded border border-border bg-muted/30">
