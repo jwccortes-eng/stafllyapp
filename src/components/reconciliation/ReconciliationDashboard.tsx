@@ -12,6 +12,7 @@ interface Props {
   periods: PeriodStatus[];
   onSelectPeriod: (p: PeriodStatus) => void;
   onCreatePeriod: () => void;
+  formatLabel?: (p: PeriodStatus) => string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -24,7 +25,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   locked: { label: "Cerrado", color: "destructive", icon: Lock },
 };
 
-export default function ReconciliationDashboard({ periods, onSelectPeriod, onCreatePeriod }: Props) {
+export default function ReconciliationDashboard({ periods, onSelectPeriod, onCreatePeriod, formatLabel }: Props) {
+  const getLabel = (p: PeriodStatus) => formatLabel ? formatLabel(p) : (p.period_label || "Sin nombre");
   const stats = useMemo(() => {
     const importing = periods.filter(p => ["importing", "normalizing", "matching"].includes(p.status)).length;
     const reviewing = periods.filter(p => p.status === "reviewing").length;
@@ -41,11 +43,11 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
     periods.forEach(p => {
       const openExceptions = p.total_exceptions - p.resolved_exceptions;
       if (p.status === "reviewing" && openExceptions > 0) {
-        actions.push({ label: `"${p.period_label || 'Periodo'}" tiene ${openExceptions} excepción(es) sin resolver`, severity: openExceptions > 5 ? "critical" : "warning", period: p });
+        actions.push({ label: `"${getLabel(p)}" tiene ${openExceptions} excepción(es) sin resolver`, severity: openExceptions > 5 ? "critical" : "warning", period: p });
       } else if (p.status === "reviewing" && openExceptions === 0) {
-        actions.push({ label: `"${p.period_label || 'Periodo'}" listo para aprobar`, severity: "info", period: p });
+        actions.push({ label: `"${getLabel(p)}" listo para aprobar`, severity: "info", period: p });
       } else if (["importing", "normalizing", "matching"].includes(p.status)) {
-        actions.push({ label: `"${p.period_label || 'Periodo'}" en proceso de importación`, severity: "info", period: p });
+        actions.push({ label: `"${getLabel(p)}" en proceso de importación`, severity: "info", period: p });
       }
     });
     return actions.sort((a, b) => {
@@ -129,7 +131,7 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
                     const openExceptions = p.total_exceptions - p.resolved_exceptions;
                     return (
                       <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onSelectPeriod(p)}>
-                        <TableCell className="font-medium">{p.period_label || "Sin nombre"}</TableCell>
+                        <TableCell className="font-medium">{getLabel(p)}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {p.period_start} → {p.period_end}
                         </TableCell>

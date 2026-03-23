@@ -46,6 +46,7 @@ import StabilizationPriorities from "@/components/reconciliation/StabilizationPr
 import PayrollTruthValidation from "@/components/reconciliation/PayrollTruthValidation";
 import DataIntegrityAudit from "@/components/reconciliation/DataIntegrityAudit";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
+import { formatPeriodLabel } from "@/lib/format-helpers";
 
 /* ── Status → workflow step mapping ── */
 const WORKFLOW_STEPS = [
@@ -118,8 +119,7 @@ interface PayPeriodOption {
 }
 
 function periodLabel(pp: PayPeriodOption): string {
-  const seq = pp.sequence_number ? `Periodo ${pp.sequence_number} · ` : "";
-  return `${seq}${pp.start_date} → ${pp.end_date}`;
+  return formatPeriodLabel(pp.start_date, pp.end_date, pp.sequence_number);
 }
 
 export default function StagedReconciliation() {
@@ -286,6 +286,19 @@ export default function StagedReconciliation() {
     handleCreateFromPayPeriod(targetPP.id);
   };
 
+  // ── Sequence number lookup for reconciliation periods ──
+  const seqMap = useMemo(() => {
+    const m = new Map<string, number>();
+    payPeriods.forEach(pp => { if (pp.sequence_number) m.set(pp.id, pp.sequence_number); });
+    return m;
+  }, [payPeriods]);
+
+  /** Get unified label for a reconciliation period */
+  const reconPeriodLabel = useCallback((p: PeriodStatus) => {
+    const seq = p.period_id ? seqMap.get(p.period_id) : null;
+    return formatPeriodLabel(p.period_start, p.period_end, seq, p.period_label);
+  }, [seqMap]);
+
   const batchCandidates = useMemo(() => {
     const q = batchSearch.trim().toLowerCase();
     return [...payPeriods]
@@ -450,14 +463,14 @@ export default function StagedReconciliation() {
                 </div>
                 <SelectItem value="__create__">➕ Crear nuevo periodo...</SelectItem>
                 {/* Reconciliation periods */}
-                {periods.filter(p => !periodSearch || p.period_label.toLowerCase().includes(periodSearch.toLowerCase())).length > 0 && (
+                {periods.filter(p => !periodSearch || reconPeriodLabel(p).toLowerCase().includes(periodSearch.toLowerCase())).length > 0 && (
                   <>
                     <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Periodos de reconciliación</div>
                     {periods
-                      .filter(p => !periodSearch || p.period_label.toLowerCase().includes(periodSearch.toLowerCase()))
+                      .filter(p => !periodSearch || reconPeriodLabel(p).toLowerCase().includes(periodSearch.toLowerCase()))
                       .map(p => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.period_label} ({p.status})
+                          {reconPeriodLabel(p)} ({p.status})
                         </SelectItem>
                       ))}
                   </>
@@ -519,7 +532,7 @@ export default function StagedReconciliation() {
             {activePeriod && (
               <div className="flex items-center gap-3 ml-auto text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{finalRecords.length} registros</span>
-                <span className="font-mono">{activePeriod.period_start} → {activePeriod.period_end}</span>
+                <span className="font-mono">{reconPeriodLabel(activePeriod)}</span>
                 {activePeriod.total_schedules > 0 && <Badge variant="secondary" className="text-[10px]">{activePeriod.total_schedules} turnos</Badge>}
                 {activePeriod.total_clocks > 0 && <Badge variant="secondary" className="text-[10px]">{activePeriod.total_clocks} fichajes</Badge>}
                 {activePeriod.total_payroll_rows > 0 && <Badge variant="secondary" className="text-[10px]">{activePeriod.total_payroll_rows} nómina</Badge>}
@@ -564,7 +577,7 @@ export default function StagedReconciliation() {
             })}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className="text-[11px] font-mono">{activePeriod.period_label}</Badge>
+            <Badge variant="outline" className="text-[11px] font-mono">{reconPeriodLabel(activePeriod)}</Badge>
             {activePeriod.reopen_count > 0 && <Badge variant="warning" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
           </div>
           {nextAction && activePeriod.status !== "locked" && (
@@ -620,7 +633,7 @@ export default function StagedReconciliation() {
         </ScrollArea>
 
         <TabsContent value="dashboard">
-          <ReconciliationDashboard periods={periods} onSelectPeriod={handleSelectPeriod} onCreatePeriod={() => setShowBatchDialog(true)} />
+          <ReconciliationDashboard periods={periods} onSelectPeriod={handleSelectPeriod} onCreatePeriod={() => setShowBatchDialog(true)} formatLabel={reconPeriodLabel} />
         </TabsContent>
 
         <TabsContent value="closedesk">
