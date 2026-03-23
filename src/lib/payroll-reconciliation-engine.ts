@@ -409,8 +409,9 @@ export function classifyRow(
     return { row_status: "MISSING_IN_SYSTEM", is_exact_match: false, has_component_mismatch: false, has_critical_mismatch: true, has_manual_adjustment: false };
   }
 
+  const isComponentOnlyRow = (truth.total_pay == null || truth.total_pay === 0) && ((truth.pay_per_day ?? 0) > 0 || (truth.ryde ?? 0) > 0 || (truth.tips ?? 0) > 0);
   const hasManualAdj = !!(truth.observaciones && truth.observaciones.trim().length > 0) ||
-    (truth.total_hours == null || truth.total_hours === 0) && ((truth.total ?? 0) > 0);
+    ((truth.total_hours == null || truth.total_hours === 0) && ((truth.total ?? 0) > 0) && !isComponentOnlyRow);
 
   const hoursOk = withinTolerance(variances.hours, tolerance.hours);
   const payOk = withinTolerance(variances.total_pay, tolerance.money);
