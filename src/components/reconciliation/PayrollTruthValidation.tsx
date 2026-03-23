@@ -177,6 +177,7 @@ function findSourcePayrollRowId(
 }
 
 export default function PayrollTruthValidation({ companyId, periodStatusId, finalRecords: externalFinalRecords }: Props) {
+  const { user } = useAuth();
   const [truthData, setTruthData] = useState<PayrollTruthRow[]>([]);
   const [truthParse, setTruthParse] = useState<PayrollTruthParseResult | null>(null);
   const [reconData, setReconData] = useState<ReconBreakdown[]>([]);
@@ -185,6 +186,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [truthSource, setTruthSource] = useState<{ type: "pre-staged" | "manual" | "persisted"; fileName: string; loadedAt: string } | null>(null);
   const [persisted, setPersisted] = useState(false);
+  const [dbPersisted, setDbPersisted] = useState(false);
+  const [persistingToDb, setPersistingToDb] = useState(false);
 
   const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
