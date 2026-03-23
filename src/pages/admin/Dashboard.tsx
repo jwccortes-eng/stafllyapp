@@ -695,21 +695,21 @@ export default function AdminDashboard() {
       const items = [
         { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
         { label: "Novedades pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
-        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/[0.08]", to: "/app/requests" },
+        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
         { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
-        { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/employees" },
+        { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
       ];
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
           <CardHeader className="pb-3 px-5 pt-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-destructive/[0.08] flex items-center justify-center">
-                  <Inbox className="h-3.5 w-3.5 text-destructive" />
+                <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
+                  <Inbox className="h-3.5 w-3.5 text-warning" />
                 </div>
                 <CardTitle className="text-sm font-semibold font-heading">Pendientes</CardTitle>
                 {totalPending > 0 && (
-                  <Badge variant="destructive" className="text-[10px] h-5 px-1.5 rounded-full animate-pulse">
+                  <Badge variant="warning" className="text-[10px] h-5 px-1.5 rounded-full">
                     {totalPending}
                   </Badge>
                 )}
