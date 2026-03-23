@@ -61,10 +61,10 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
     const hasUnresolved = variances.some(v => v.variance_status === "unresolved");
     const hasMajor = variances.some(v => v.variance_status === "major_variance");
     const openEx = period.total_exceptions - period.resolved_exceptions;
-    if (hasUnresolved || hasMajor || openEx > 0) return "blocked";
+    if (hasUnresolved || openEx > 0) return "blocked";
+    if (period.status === "approved") return hasMajor ? "ready_warnings" : "ready_publish";
     const hasMinor = variances.some(v => v.variance_status === "minor_variance");
-    if (period.status === "approved") return hasMinor ? "ready_warnings" : "ready_publish";
-    return hasMinor ? "ready_warnings" : "ready_validate";
+    return (hasMajor || hasMinor) ? "ready_warnings" : "ready_validate";
   }, [period, variances]);
 
   const readinessCfg = READINESS_CONFIG[readiness];
