@@ -139,6 +139,7 @@ export default function StagedReconciliation() {
   const [payPeriods, setPayPeriods] = useState<PayPeriodOption[]>([]);
   const [reprocessing, setReprocessing] = useState(false);
   const [showSecondaryTabs, setShowSecondaryTabs] = useState(false);
+  const [periodSearch, setPeriodSearch] = useState("");
 
   // ── Load employees ──
   useEffect(() => {
@@ -151,15 +152,31 @@ export default function StagedReconciliation() {
       });
   }, [selectedCompanyId]);
 
-  // ── Load pay periods for selector ──
+  // ── Load pay periods for selector (including exact truth target) ──
   useEffect(() => {
     if (!selectedCompanyId) return;
-    supabase.from("pay_periods")
-      .select("id, start_date, end_date, status")
-      .eq("company_id", selectedCompanyId)
-      .order("start_date", { ascending: false })
-      .limit(52)
-      .then(({ data }) => setPayPeriods((data || []) as PayPeriodOption[]));
+    Promise.all([
+      supabase.from("pay_periods")
+        .select("id, start_date, end_date, status")
+        .eq("company_id", selectedCompanyId)
+        .order("start_date", { ascending: false })
+        .limit(100),
+      supabase.from("pay_periods")
+        .select("id, start_date, end_date, status")
+        .eq("company_id", selectedCompanyId)
+        .eq("start_date", "2025-12-24")
+        .eq("end_date", "2025-12-30")
+        .limit(1),
+    ]).then(([listRes, exactRes]) => {
+      const list = (listRes.data || []) as PayPeriodOption[];
+      const exact = (exactRes.data || []) as PayPeriodOption[];
+      // Merge exact target if not already in list
+      const ids = new Set(list.map(p => p.id));
+      for (const e of exact) {
+        if (!ids.has(e.id)) list.push(e);
+      }
+      setPayPeriods(list);
+    });
   }, [selectedCompanyId]);
 
   // ── Auto-select latest active (non-locked) period on load ──
@@ -246,6 +263,16 @@ export default function StagedReconciliation() {
     }
     const p = periods.find(pr => pr.id === periodId);
     if (p) handleSelectPeriod(p);
+  };
+
+  // ── Open exact truth period shortcut ──
+  const handleOpenTruthPeriod = () => {
+    const targetPP = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
+    if (!targetPP) {
+      toast({ title: "Periodo 2025-12-24 → 2025-12-30 no encontrado", variant: "destructive" });
+      return;
+    }
+    handleCreateFromPayPeriod(targetPP.id);
   };
 
   // ── Reprocess period ──
@@ -378,34 +405,69 @@ export default function StagedReconciliation() {
                 <SelectValue placeholder="Selecciona un periodo para operar" />
               </SelectTrigger>
               <SelectContent>
+                {/* Search input */}
+                <div className="px-2 py-1.5">
+                  <Input
+                    placeholder="Buscar periodo... (ej: 2025-12-24)"
+                    value={periodSearch}
+                    onChange={e => setPeriodSearch(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
                 <SelectItem value="__create__">➕ Crear nuevo periodo...</SelectItem>
                 {/* Reconciliation periods */}
-                {periods.length > 0 && (
+                {periods.filter(p => !periodSearch || p.period_label.toLowerCase().includes(periodSearch.toLowerCase())).length > 0 && (
                   <>
                     <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Periodos de reconciliación</div>
-                    {periods.map(p => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.period_label} ({p.status})
-                      </SelectItem>
-                    ))}
-                  </>
-                )}
-                {/* Pay periods not yet linked */}
-                {payPeriods.filter(pp => !periods.some(p => p.period_id === pp.id)).length > 0 && (
-                  <>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Periodos de nómina (sin reconciliar)</div>
-                    {payPeriods
-                      .filter(pp => !periods.some(p => p.period_id === pp.id))
-                      .map(pp => (
-                        <SelectItem key={`pp:${pp.id}`} value={`pp:${pp.id}`}>
-                          {pp.start_date} → {pp.end_date} ({pp.status})
+                    {periods
+                      .filter(p => !periodSearch || p.period_label.toLowerCase().includes(periodSearch.toLowerCase()))
+                      .map(p => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.period_label} ({p.status})
                         </SelectItem>
-                      ))
-                    }
+                      ))}
                   </>
                 )}
+                {/* Pay periods not yet linked — filtered */}
+                {(() => {
+                  const unlinked = payPeriods
+                    .filter(pp => !periods.some(p => p.period_id === pp.id))
+                    .filter(pp => !periodSearch || `${pp.start_date} ${pp.end_date}`.includes(periodSearch.toLowerCase()));
+                  // Sort: truth target first
+                  const sorted = [...unlinked].sort((a, b) => {
+                    const aTarget = a.start_date === "2025-12-24" && a.end_date === "2025-12-30" ? 1 : 0;
+                    const bTarget = b.start_date === "2025-12-24" && b.end_date === "2025-12-30" ? 1 : 0;
+                    return bTarget - aTarget;
+                  });
+                  if (sorted.length === 0) return null;
+                  return (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Periodos de nómina (sin reconciliar)</div>
+                      {sorted.map(pp => {
+                        const isTruth = pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30";
+                        return (
+                          <SelectItem key={`pp:${pp.id}`} value={`pp:${pp.id}`}>
+                            {pp.start_date} → {pp.end_date} ({pp.status})
+                            {isTruth && " ⭐ Truth target"}
+                          </SelectItem>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
               </SelectContent>
             </Select>
+
+            {/* Exact truth period shortcut */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 shrink-0 border-primary/40 text-primary hover:bg-primary/10"
+              onClick={handleOpenTruthPeriod}
+            >
+              <Target className="h-3.5 w-3.5" />
+              Abrir periodo 12/24 → 12/30
+            </Button>
 
             {/* Reprocess button */}
             {activePeriod && !isLocked && (
