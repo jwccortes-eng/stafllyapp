@@ -5686,6 +5686,173 @@ export type Database = {
           },
         ]
       }
+      reconciliation_audit_log: {
+        Row: {
+          action_type: string
+          batch_id: string
+          created_at: string
+          employee_row_id: string | null
+          id: string
+          new_value: string | null
+          note: string | null
+          performed_by: string | null
+          previous_value: string | null
+        }
+        Insert: {
+          action_type: string
+          batch_id: string
+          created_at?: string
+          employee_row_id?: string | null
+          id?: string
+          new_value?: string | null
+          note?: string | null
+          performed_by?: string | null
+          previous_value?: string | null
+        }
+        Update: {
+          action_type?: string
+          batch_id?: string
+          created_at?: string
+          employee_row_id?: string | null
+          id?: string
+          new_value?: string | null
+          note?: string | null
+          performed_by?: string | null
+          previous_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_audit_log_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_audit_log_employee_row_id_fkey"
+            columns: ["employee_row_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_employee_rows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_batches: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string
+          component_mismatch_count: number | null
+          created_at: string
+          created_by: string | null
+          critical_mismatch_count: number | null
+          employees_system_count: number | null
+          employees_truth_count: number | null
+          exact_match_count: number | null
+          id: string
+          locked_at: string | null
+          matched_count: number | null
+          mismatch_count: number | null
+          notes: string | null
+          payroll_corte: string | null
+          payroll_date: string | null
+          payroll_period_end: string | null
+          payroll_period_start: string | null
+          status: string
+          tolerance_hours: number | null
+          tolerance_money: number | null
+          tolerance_tips: number | null
+          total_variance_amount: number | null
+          totals_system_json: Json | null
+          totals_truth_json: Json | null
+          totals_variance_json: Json | null
+          truth_source_file_name: string | null
+          truth_source_file_url: string | null
+          truth_source_uploaded_at: string | null
+          unmatched_system_count: number | null
+          unmatched_truth_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id: string
+          component_mismatch_count?: number | null
+          created_at?: string
+          created_by?: string | null
+          critical_mismatch_count?: number | null
+          employees_system_count?: number | null
+          employees_truth_count?: number | null
+          exact_match_count?: number | null
+          id?: string
+          locked_at?: string | null
+          matched_count?: number | null
+          mismatch_count?: number | null
+          notes?: string | null
+          payroll_corte?: string | null
+          payroll_date?: string | null
+          payroll_period_end?: string | null
+          payroll_period_start?: string | null
+          status?: string
+          tolerance_hours?: number | null
+          tolerance_money?: number | null
+          tolerance_tips?: number | null
+          total_variance_amount?: number | null
+          totals_system_json?: Json | null
+          totals_truth_json?: Json | null
+          totals_variance_json?: Json | null
+          truth_source_file_name?: string | null
+          truth_source_file_url?: string | null
+          truth_source_uploaded_at?: string | null
+          unmatched_system_count?: number | null
+          unmatched_truth_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string
+          component_mismatch_count?: number | null
+          created_at?: string
+          created_by?: string | null
+          critical_mismatch_count?: number | null
+          employees_system_count?: number | null
+          employees_truth_count?: number | null
+          exact_match_count?: number | null
+          id?: string
+          locked_at?: string | null
+          matched_count?: number | null
+          mismatch_count?: number | null
+          notes?: string | null
+          payroll_corte?: string | null
+          payroll_date?: string | null
+          payroll_period_end?: string | null
+          payroll_period_start?: string | null
+          status?: string
+          tolerance_hours?: number | null
+          tolerance_money?: number | null
+          tolerance_tips?: number | null
+          total_variance_amount?: number | null
+          totals_system_json?: Json | null
+          totals_truth_json?: Json | null
+          totals_variance_json?: Json | null
+          truth_source_file_name?: string | null
+          truth_source_file_url?: string | null
+          truth_source_uploaded_at?: string | null
+          unmatched_system_count?: number | null
+          unmatched_truth_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_business_rules: {
         Row: {
           applies_to_employee: string | null
@@ -5841,6 +6008,214 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_employee_rows: {
+        Row: {
+          anomaly_flags_json: Json | null
+          batch_id: string
+          clock_count: number | null
+          created_at: string
+          email: string | null
+          employee_external_id: string | null
+          employer_identification: string | null
+          employer_identification_normalized: string | null
+          excluded_from_reconciliation: boolean | null
+          first_name: string | null
+          full_name_normalized: string | null
+          has_component_mismatch: boolean | null
+          has_critical_mismatch: boolean | null
+          has_manual_adjustment: boolean | null
+          id: string
+          is_exact_match: boolean | null
+          last_name: string | null
+          match_confidence: number | null
+          match_notes: string | null
+          match_status: string | null
+          matched_by: string | null
+          matched_system_employee_id: string | null
+          phone: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          row_status: string | null
+          shift_count: number | null
+          source_tags: string[] | null
+          system_date_range: string | null
+          system_pay_per_day: number | null
+          system_reimbursements: number | null
+          system_ryde: number | null
+          system_source_summary_json: Json | null
+          system_tips: number | null
+          system_total: number | null
+          system_total_hours: number | null
+          system_total_pay: number | null
+          truth_corte: string | null
+          truth_date: string | null
+          truth_observaciones: string | null
+          truth_pay_per_day: number | null
+          truth_raw_json: Json | null
+          truth_reimbursements: number | null
+          truth_ryde: number | null
+          truth_tips: number | null
+          truth_total: number | null
+          truth_total_hours: number | null
+          truth_total_pay: number | null
+          updated_at: string
+          variance_hours: number | null
+          variance_pay_per_day: number | null
+          variance_reimbursements: number | null
+          variance_ryde: number | null
+          variance_tips: number | null
+          variance_total: number | null
+          variance_total_pay: number | null
+          verification_ssn_ein: string | null
+          verification_ssn_ein_normalized: string | null
+        }
+        Insert: {
+          anomaly_flags_json?: Json | null
+          batch_id: string
+          clock_count?: number | null
+          created_at?: string
+          email?: string | null
+          employee_external_id?: string | null
+          employer_identification?: string | null
+          employer_identification_normalized?: string | null
+          excluded_from_reconciliation?: boolean | null
+          first_name?: string | null
+          full_name_normalized?: string | null
+          has_component_mismatch?: boolean | null
+          has_critical_mismatch?: boolean | null
+          has_manual_adjustment?: boolean | null
+          id?: string
+          is_exact_match?: boolean | null
+          last_name?: string | null
+          match_confidence?: number | null
+          match_notes?: string | null
+          match_status?: string | null
+          matched_by?: string | null
+          matched_system_employee_id?: string | null
+          phone?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          row_status?: string | null
+          shift_count?: number | null
+          source_tags?: string[] | null
+          system_date_range?: string | null
+          system_pay_per_day?: number | null
+          system_reimbursements?: number | null
+          system_ryde?: number | null
+          system_source_summary_json?: Json | null
+          system_tips?: number | null
+          system_total?: number | null
+          system_total_hours?: number | null
+          system_total_pay?: number | null
+          truth_corte?: string | null
+          truth_date?: string | null
+          truth_observaciones?: string | null
+          truth_pay_per_day?: number | null
+          truth_raw_json?: Json | null
+          truth_reimbursements?: number | null
+          truth_ryde?: number | null
+          truth_tips?: number | null
+          truth_total?: number | null
+          truth_total_hours?: number | null
+          truth_total_pay?: number | null
+          updated_at?: string
+          variance_hours?: number | null
+          variance_pay_per_day?: number | null
+          variance_reimbursements?: number | null
+          variance_ryde?: number | null
+          variance_tips?: number | null
+          variance_total?: number | null
+          variance_total_pay?: number | null
+          verification_ssn_ein?: string | null
+          verification_ssn_ein_normalized?: string | null
+        }
+        Update: {
+          anomaly_flags_json?: Json | null
+          batch_id?: string
+          clock_count?: number | null
+          created_at?: string
+          email?: string | null
+          employee_external_id?: string | null
+          employer_identification?: string | null
+          employer_identification_normalized?: string | null
+          excluded_from_reconciliation?: boolean | null
+          first_name?: string | null
+          full_name_normalized?: string | null
+          has_component_mismatch?: boolean | null
+          has_critical_mismatch?: boolean | null
+          has_manual_adjustment?: boolean | null
+          id?: string
+          is_exact_match?: boolean | null
+          last_name?: string | null
+          match_confidence?: number | null
+          match_notes?: string | null
+          match_status?: string | null
+          matched_by?: string | null
+          matched_system_employee_id?: string | null
+          phone?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          row_status?: string | null
+          shift_count?: number | null
+          source_tags?: string[] | null
+          system_date_range?: string | null
+          system_pay_per_day?: number | null
+          system_reimbursements?: number | null
+          system_ryde?: number | null
+          system_source_summary_json?: Json | null
+          system_tips?: number | null
+          system_total?: number | null
+          system_total_hours?: number | null
+          system_total_pay?: number | null
+          truth_corte?: string | null
+          truth_date?: string | null
+          truth_observaciones?: string | null
+          truth_pay_per_day?: number | null
+          truth_raw_json?: Json | null
+          truth_reimbursements?: number | null
+          truth_ryde?: number | null
+          truth_tips?: number | null
+          truth_total?: number | null
+          truth_total_hours?: number | null
+          truth_total_pay?: number | null
+          updated_at?: string
+          variance_hours?: number | null
+          variance_pay_per_day?: number | null
+          variance_reimbursements?: number | null
+          variance_ryde?: number | null
+          variance_tips?: number | null
+          variance_total?: number | null
+          variance_total_pay?: number | null
+          verification_ssn_ein?: string | null
+          verification_ssn_ein_normalized?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_employee_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_employee_rows_matched_system_employee_id_fkey"
+            columns: ["matched_system_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_employee_rows_matched_system_employee_id_fkey"
+            columns: ["matched_system_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
