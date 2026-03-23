@@ -467,6 +467,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   }, []);
 
 
+  useEffect(() => {
     if (!companyId || !periodStatusId) {
       setReconData([]);
       return;
