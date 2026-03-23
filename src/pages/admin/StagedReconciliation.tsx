@@ -919,7 +919,7 @@ export default function StagedReconciliation() {
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">{pp.start_date} → {pp.end_date}</span>
+                        <span className="text-sm font-medium">{periodLabel(pp)}</span>
                         <div className="flex items-center gap-1.5">
                           {isTruth && <Badge variant="default" className="text-[10px]">Truth target</Badge>}
                           {linked && <Badge variant="secondary" className="text-[10px]">Batch existente</Badge>}
