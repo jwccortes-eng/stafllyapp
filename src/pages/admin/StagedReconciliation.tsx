@@ -171,7 +171,7 @@ export default function StagedReconciliation() {
         .order("start_date", { ascending: false })
         .limit(200),
       supabase.from("pay_periods")
-        .select("id, start_date, end_date, status")
+        .select("id, start_date, end_date, status, sequence_number")
         .eq("company_id", selectedCompanyId)
         .eq("start_date", "2025-12-24")
         .eq("end_date", "2025-12-30")
