@@ -25,7 +25,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   locked: { label: "Cerrado", color: "destructive", icon: Lock },
 };
 
-export default function ReconciliationDashboard({ periods, onSelectPeriod, onCreatePeriod }: Props) {
+export default function ReconciliationDashboard({ periods, onSelectPeriod, onCreatePeriod, formatLabel }: Props) {
+  const getLabel = (p: PeriodStatus) => formatLabel ? formatLabel(p) : (p.period_label || "Sin nombre");
   const stats = useMemo(() => {
     const importing = periods.filter(p => ["importing", "normalizing", "matching"].includes(p.status)).length;
     const reviewing = periods.filter(p => p.status === "reviewing").length;
