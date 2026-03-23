@@ -541,7 +541,7 @@ export default function AdminDashboard() {
           // Get reconciliation period statuses that link to these pay_periods
           const [rpsRes, chartMovRes] = await Promise.all([
             supabase.from("reconciliation_period_status").select("id, period_id").in("period_id", periodIds),
-            supabase.from("movements").select("period_id, total_value, concept_id, concepts(category)").in("period_id", periodIds),
+            supabase.from("movements").select("period_id, total_value, concept_id, concepts(category, name)").in("period_id", periodIds),
           ]);
 
           const rpsList = rpsRes.data ?? [];
