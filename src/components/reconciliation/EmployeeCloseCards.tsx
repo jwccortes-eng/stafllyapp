@@ -240,7 +240,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                         </div>
                       )}
                       {v && v.variance_amount !== 0 && (
-                        <div className={`text-[10px] font-mono ${Math.abs(v.variance_amount) > 10 ? "text-destructive" : "text-amber-600"}`}>
+                        <div className={`text-[10px] font-mono ${Math.abs(v.variance_amount) > 50 ? "text-destructive" : Math.abs(v.variance_amount) > 10 ? "text-warning" : "text-muted-foreground"}`}>
                           Δ {fmt(v.variance_amount)}
                         </div>
                       )}
