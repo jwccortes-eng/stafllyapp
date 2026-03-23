@@ -608,8 +608,18 @@ export default function PayrollReconciliationPage() {
   };
 
   const handleCreateBatch = async () => {
-    await createBatch();
+    const period = periods.find(p => p.id === selectedPeriodId);
+    if (!period) return;
+    const batch = await createBatch(period.start_date, period.end_date);
     setShowCreateDialog(false);
+    // Load debug info for this period
+    if (batch && selectedCompanyId) {
+      const [{ count: bpCount }, { count: movCount }] = await Promise.all([
+        supabase.from("period_base_pay").select("id", { count: "exact", head: true }).eq("period_id", selectedPeriodId).eq("company_id", selectedCompanyId),
+        supabase.from("movements").select("id", { count: "exact", head: true }).eq("period_id", selectedPeriodId).eq("company_id", selectedCompanyId),
+      ]);
+      setDebugInfo({ basePay: bpCount || 0, movements: movCount || 0, truthRows: 0, periodId: selectedPeriodId });
+    }
   };
 
   const handleDownloadCSV = () => {
