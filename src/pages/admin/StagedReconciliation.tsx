@@ -130,7 +130,8 @@ export default function StagedReconciliation() {
 
   const [tab, setTab] = useState("dashboard");
   const [refreshKey, setRefreshKey] = useState(0);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showBatchDialog, setShowBatchDialog] = useState(false);
+  const [showWeeklyCreateDialog, setShowWeeklyCreateDialog] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
@@ -140,6 +141,8 @@ export default function StagedReconciliation() {
   const [reprocessing, setReprocessing] = useState(false);
   const [showSecondaryTabs, setShowSecondaryTabs] = useState(false);
   const [periodSearch, setPeriodSearch] = useState("");
+  const [batchSearch, setBatchSearch] = useState("");
+  const [selectedBatchPayPeriodId, setSelectedBatchPayPeriodId] = useState("");
 
   // ── Load employees ──
   useEffect(() => {
@@ -217,7 +220,7 @@ export default function StagedReconciliation() {
     if (p) {
       setActivePeriod(p);
       setTab("closedesk");
-      setShowCreateDialog(false);
+      setShowWeeklyCreateDialog(false);
       setNewLabel(""); setNewStart(""); setNewEnd("");
     }
   };
@@ -233,6 +236,7 @@ export default function StagedReconciliation() {
       loadFinalRecords(existing.id);
       loadClosingReceipt(existing.id);
       setTab("closedesk");
+      setShowBatchDialog(false);
       toast({ title: "Periodo existente seleccionado" });
       return;
     }
@@ -241,6 +245,7 @@ export default function StagedReconciliation() {
     if (p) {
       setActivePeriod(p);
       setTab("closedesk");
+      setShowBatchDialog(false);
     }
   };
 
@@ -254,7 +259,7 @@ export default function StagedReconciliation() {
   // ── Selector change (reconciliation period) ──
   const handlePeriodSelectorChange = (periodId: string) => {
     if (periodId === "__create__") {
-      setShowCreateDialog(true);
+      setShowBatchDialog(true);
       return;
     }
     if (periodId.startsWith("pp:")) {
@@ -274,6 +279,29 @@ export default function StagedReconciliation() {
     }
     handleCreateFromPayPeriod(targetPP.id);
   };
+
+  const batchCandidates = useMemo(() => {
+    const q = batchSearch.trim().toLowerCase();
+    return [...payPeriods]
+      .sort((a, b) => {
+        const aTruth = a.start_date === "2025-12-24" && a.end_date === "2025-12-30" ? 1 : 0;
+        const bTruth = b.start_date === "2025-12-24" && b.end_date === "2025-12-30" ? 1 : 0;
+        if (aTruth !== bTruth) return bTruth - aTruth;
+        return b.start_date.localeCompare(a.start_date);
+      })
+      .filter(pp => {
+        if (!q) return true;
+        const label = `${pp.start_date} ${pp.end_date} ${pp.status} ${pp.start_date} → ${pp.end_date}`.toLowerCase();
+        return label.includes(q);
+      });
+  }, [payPeriods, batchSearch]);
+
+  useEffect(() => {
+    if (!showBatchDialog) return;
+    if (selectedBatchPayPeriodId) return;
+    const truthTarget = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
+    setSelectedBatchPayPeriodId(truthTarget?.id || payPeriods[0]?.id || "");
+  }, [showBatchDialog, payPeriods, selectedBatchPayPeriodId]);
 
   // ── Reprocess period ──
   const handleReprocessPeriod = async () => {
@@ -466,8 +494,12 @@ export default function StagedReconciliation() {
               onClick={handleOpenTruthPeriod}
             >
               <Target className="h-3.5 w-3.5" />
-              Abrir periodo 12/24 → 12/30
+              Open exact period 2025-12-24 → 2025-12-30
             </Button>
+
+            <Badge variant="outline" className="text-[11px]">
+              Reconciliation Batch Mode
+            </Badge>
 
             {/* Reprocess button */}
             {activePeriod && !isLocked && (
@@ -582,7 +614,7 @@ export default function StagedReconciliation() {
         </ScrollArea>
 
         <TabsContent value="dashboard">
-          <ReconciliationDashboard periods={periods} onSelectPeriod={handleSelectPeriod} onCreatePeriod={() => setShowCreateDialog(true)} />
+          <ReconciliationDashboard periods={periods} onSelectPeriod={handleSelectPeriod} onCreatePeriod={() => setShowBatchDialog(true)} />
         </TabsContent>
 
         <TabsContent value="closedesk">
@@ -825,8 +857,105 @@ export default function StagedReconciliation() {
         </TabsContent>
       </Tabs>
 
-      {/* Create Period Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+      {/* Reconciliation Batch Dialog */}
+      <Dialog open={showBatchDialog} onOpenChange={setShowBatchDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Reconciliation Batch Mode</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Using existing pay period for truth validation</p>
+
+            <div className="space-y-2">
+              <Label>Buscar periodo existente</Label>
+              <Input
+                value={batchSearch}
+                onChange={e => setBatchSearch(e.target.value)}
+                placeholder="Search by start date, end date or label"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-primary/40 text-primary"
+                onClick={() => {
+                  const target = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
+                  if (!target) {
+                    toast({ title: "Periodo 2025-12-24 → 2025-12-30 no encontrado", variant: "destructive" });
+                    return;
+                  }
+                  setSelectedBatchPayPeriodId(target.id);
+                  setBatchSearch("2025-12-24 2025-12-30");
+                }}
+              >
+                <Target className="h-3.5 w-3.5" />
+                Open exact period 2025-12-24 → 2025-12-30
+              </Button>
+            </div>
+
+            <ScrollArea className="h-64 rounded-md border">
+              <div className="space-y-1 p-2">
+                {batchCandidates.map(pp => {
+                  const isTruth = pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30";
+                  const linked = periods.find(p => p.period_id === pp.id);
+                  const isSelected = selectedBatchPayPeriodId === pp.id;
+                  return (
+                    <button
+                      key={pp.id}
+                      type="button"
+                      onClick={() => setSelectedBatchPayPeriodId(pp.id)}
+                      className={`w-full rounded-md border px-3 py-2 text-left transition-colors ${
+                        isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">{pp.start_date} → {pp.end_date}</span>
+                        <div className="flex items-center gap-1.5">
+                          {isTruth && <Badge variant="default" className="text-[10px]">Truth target</Badge>}
+                          {linked && <Badge variant="secondary" className="text-[10px]">Batch existente</Badge>}
+                        </div>
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">Estado periodo: {pp.status}</p>
+                    </button>
+                  );
+                })}
+                {batchCandidates.length === 0 && (
+                  <p className="p-3 text-xs text-muted-foreground">No hay periodos que coincidan con la búsqueda.</p>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBatchDialog(false)}>Cancelar</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowBatchDialog(false);
+                setShowWeeklyCreateDialog(true);
+              }}
+            >
+              Crear nuevo periodo semanal
+            </Button>
+            <Button
+              onClick={() => {
+                if (!selectedBatchPayPeriodId) {
+                  toast({ title: "Selecciona un periodo", variant: "destructive" });
+                  return;
+                }
+                handleCreateFromPayPeriod(selectedBatchPayPeriodId);
+              }}
+            >
+              Crear/Reusar batch de reconciliación
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Weekly Period Dialog (manual) */}
+      <Dialog open={showWeeklyCreateDialog} onOpenChange={setShowWeeklyCreateDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nuevo Periodo Semanal</DialogTitle>
@@ -848,7 +977,7 @@ export default function StagedReconciliation() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setShowWeeklyCreateDialog(false)}>Cancelar</Button>
             <Button onClick={handleCreatePeriod}>Crear Periodo</Button>
           </DialogFooter>
         </DialogContent>
