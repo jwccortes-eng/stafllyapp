@@ -4,7 +4,7 @@ import {
   Clock, MapPin, Megaphone, MessageCircle, ScanEye, Inbox, Bell, Monitor,
   MessageSquare, Settings2, Home, User, Wrench, UserPlus, FileText, GitCompareArrows,
   ClipboardList, Receipt, Brain, Map as MapIcon, Award, CalendarCheck, ArrowLeftRight,
-  Banknote, ShieldCheck,
+  Banknote, ShieldCheck, Scale,
 } from "lucide-react";
 
 export interface NavItem {
