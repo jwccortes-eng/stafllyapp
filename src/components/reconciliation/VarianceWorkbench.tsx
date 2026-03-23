@@ -303,7 +303,7 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
                             <TableCell className={`text-xs text-right font-mono font-semibold ${isUnmapped ? "text-warning" : ""}`}>{fmt(row.pay || 0)}</TableCell>
                             <TableCell className="space-x-1">
                               <Badge variant="outline" className="text-[10px]">{row.type || "?"}</Badge>
-                              {row.classified_type && <Badge variant={isUnmapped ? "destructive" : "secondary"} className="text-[10px]">{row.classified_type}</Badge>}
+                              {row.classified_type && <Badge variant={isUnmapped ? "warning" : "secondary"} className="text-[10px]">{row.classified_type}</Badge>}
                             </TableCell>
                             <TableCell className="text-[10px] text-muted-foreground max-w-[180px]">
                               <div className="truncate">{row.shift_source || "—"}</div>
