@@ -464,7 +464,7 @@ export default function StagedReconciliation() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Badge variant="outline" className="text-[11px] font-mono">{activePeriod.period_label}</Badge>
-            {activePeriod.reopen_count > 0 && <Badge variant="destructive" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
+            {activePeriod.reopen_count > 0 && <Badge variant="warning" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
           </div>
           {nextAction && activePeriod.status !== "locked" && (
             <Button size="sm" variant="default" className="gap-1 text-xs shrink-0" onClick={() => setTab(nextAction.tab)}>
