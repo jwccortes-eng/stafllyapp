@@ -691,14 +691,37 @@ export default function PayrollReconciliationPage() {
         )}
 
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Nuevo Batch</DialogTitle>
-              <DialogDescription>Se creará un batch donde podrás cargar el truth file y ejecutar la reconciliación.</DialogDescription>
+              <DialogTitle>Nuevo Batch de Reconciliación</DialogTitle>
+              <DialogDescription>Selecciona el periodo de nómina y luego carga el truth file para comparar.</DialogDescription>
             </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Periodo de nómina</label>
+                <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+                  <SelectTrigger className="h-9 text-xs rounded-lg">
+                    <SelectValue placeholder="Seleccionar periodo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {periods.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.start_date} → {p.end_date} ({p.status})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedPeriodId && (
+                <div className="p-3 rounded-lg bg-muted/40 border border-border/40 text-xs space-y-1">
+                  <p className="font-medium text-muted-foreground">El sistema comparará los datos de este periodo contra el truth file que cargues.</p>
+                  <p className="text-muted-foreground/70">Fuentes: period_base_pay + movements del periodo seleccionado.</p>
+                </div>
+              )}
+            </div>
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={() => setShowCreateDialog(false)} className="rounded-xl">Cancelar</Button>
-              <Button size="sm" onClick={handleCreateBatch} className="rounded-xl">Crear</Button>
+              <Button size="sm" onClick={handleCreateBatch} className="rounded-xl" disabled={!selectedPeriodId}>Crear</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
