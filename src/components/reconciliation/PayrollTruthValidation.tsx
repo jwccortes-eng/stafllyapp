@@ -315,7 +315,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   };
 
   // ── Persist reconciliation results to DB ──
-  const persistResultsToDb = useCallback(async (compRows: ComparisonRow[], statsData: typeof stats) => {
+  const persistResultsToDb = useCallback(async (compRows: ComparisonRow[], statsData: { matched: number; close: number; mismatch: number; missing: number; totalTruth: number; totalRecon: number; variance: number }) => {
     if (!companyId || !user?.id || compRows.length === 0) return;
     setPersistingToDb(true);
     try {
