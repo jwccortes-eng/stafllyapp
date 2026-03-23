@@ -213,17 +213,17 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                           <StatusIcon className="h-2.5 w-2.5" /> {vBadge.label}
                         </Badge>
                         {r.pay_classification === "unknown" && !(r as any).shift_calculated_total && (
-                          <Badge variant="destructive" className="text-[10px] shrink-0">Sin clasificar</Badge>
+                          <Badge variant="warning" className="text-[10px] shrink-0">Sin clasificar</Badge>
                         )}
                         {(r as any).shift_calculated_total > 0 && (
-                          <Badge variant="secondary" className="text-[10px] shrink-0 bg-primary/10 text-primary border-primary/20">
-                            {(r as any).shift_full_day_count || 0}d shift-calc
+                          <Badge variant="info" className="text-[10px] shrink-0">
+                            {(r as any).shift_full_day_count || 0}d calc
                           </Badge>
                         )}
                         {Array.isArray(r.warnings) && r.warnings.some((w: any) => String(w).startsWith("CRITICAL_UNMAPPED_RATIO:")) && (
-                          <Badge variant="destructive" className="text-[10px] shrink-0">Crítico unmapped</Badge>
+                          <Badge variant="warning" className="text-[10px] shrink-0">Unmapped</Badge>
                         )}
-                        {isPending && <Badge variant="outline" className="text-[10px] shrink-0">Pendiente</Badge>}
+                        {isPending && <Badge variant="outline" className="text-[10px] shrink-0 text-muted-foreground">Pendiente</Badge>}
                       </div>
                     </div>
                     {/* Compact metrics */}
