@@ -139,6 +139,7 @@ export default function StagedReconciliation() {
   const [payPeriods, setPayPeriods] = useState<PayPeriodOption[]>([]);
   const [reprocessing, setReprocessing] = useState(false);
   const [showSecondaryTabs, setShowSecondaryTabs] = useState(false);
+  const [periodSearch, setPeriodSearch] = useState("");
 
   // ── Load employees ──
   useEffect(() => {
