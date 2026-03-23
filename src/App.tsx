@@ -236,6 +236,7 @@ function App() {
                 <Route path="compensation-validation" element={<CompensationValidation />} />
                 <Route path="payroll-pilot-close" element={<PayrollPilotClose />} />
                 <Route path="payroll-mappings" element={<PayrollMappings />} />
+                <Route path="payroll-reconciliation" element={<PayrollReconciliation />} />
               </Route>
 
               {/* Employee portal routes */}

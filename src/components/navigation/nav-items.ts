@@ -56,6 +56,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "advances-loans", to: "/app/advances-loans", icon: Banknote, label: "Anticipos", module: null, section: "Nómina" },
   { id: "comp-validation", to: "/app/compensation-validation", icon: DollarSign, label: "Compensación", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
   { id: "pilot-close", to: "/app/payroll-pilot-close", icon: ShieldCheck, label: "Cierre Piloto", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
+  { id: "payroll-recon", to: "/app/payroll-reconciliation", icon: Scale, label: "Reconciliación Nómina", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
 ];
 
 export const ADMIN_DEFAULT_PINS = ["dashboard", "shifts", "employees", "movements"];
