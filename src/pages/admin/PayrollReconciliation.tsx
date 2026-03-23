@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { usePayrollReconciliation, type ReconciliationBatch } from "@/hooks/usePayrollReconciliation";
 import type { ReconciliationRowResult, BatchSummary, TopIssue, MatchBreakdown } from "@/lib/payroll-reconciliation-engine";
 import { usePageView } from "@/hooks/useAuditLog";
+import { useCompany } from "@/hooks/useCompany";
+import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -534,10 +537,145 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
   );
 }
 
+// ─── Debug Panel ─────────────────────────────────────────────────────
+
+function DebugPanel({ companyId, batch, batchSummary, reconciliationRows }: {
+  companyId: string;
+  batch: ReconciliationBatch;
+  batchSummary: BatchSummary | null;
+  reconciliationRows: ReconciliationRowResult[];
+}) {
+  const [info, setInfo] = useState<{
+    periodId: string | null;
+    basePay: number;
+    movements: number;
+    truthRows: number;
+    employees: number;
+  } | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!companyId || !batch.payroll_period_start) {
+      setInfo({ periodId: null, basePay: 0, movements: 0, truthRows: 0, employees: 0 });
+      return;
+    }
+    async function load() {
+      // Find real period ID
+      const { data: periods } = await supabase
+        .from("pay_periods")
+        .select("id")
+        .eq("company_id", companyId)
+        .lte("start_date", batch.payroll_period_end || batch.payroll_period_start!)
+        .gte("end_date", batch.payroll_period_start!);
+      const pid = periods?.[0]?.id || null;
+      if (!pid) {
+        setInfo({ periodId: null, basePay: 0, movements: 0, truthRows: 0, employees: 0 });
+        return;
+      }
+      const [{ count: bp }, { count: mv }, { count: tr }, { count: emp }] = await Promise.all([
+        supabase.from("period_base_pay").select("id", { count: "exact", head: true }).eq("period_id", pid).eq("company_id", companyId),
+        supabase.from("movements").select("id", { count: "exact", head: true }).eq("period_id", pid).eq("company_id", companyId),
+        supabase.from("reconciliation_employee_rows").select("id", { count: "exact", head: true }).eq("batch_id", batch.id),
+        supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("is_active", true),
+      ]);
+      setInfo({ periodId: pid, basePay: bp || 0, movements: mv || 0, truthRows: tr || 0, employees: emp || 0 });
+    }
+    load();
+  }, [companyId, batch.id, batch.payroll_period_start]);
+
+  if (!info) return null;
+
+  const hasPeriod = !!batch.payroll_period_start;
+  const hasData = info.basePay > 0 || info.movements > 0;
+  const hasTruth = info.truthRows > 0;
+
+  return (
+    <Card className={`shadow-none border-dashed ${!hasPeriod ? "border-destructive/40 bg-destructive/[0.03]" : !hasData ? "border-warning/40 bg-warning/[0.03]" : "border-info/40 bg-info/[0.03]"}`}>
+      <button className="w-full px-4 py-2.5 flex items-center justify-between text-left" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center gap-2">
+          <Info className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-semibold text-muted-foreground">Debug: Conectividad de datos</span>
+          {!hasPeriod && <Badge variant="destructive" className="text-[9px] px-1.5 py-0">Sin periodo</Badge>}
+          {hasPeriod && !hasData && <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-warning/40 text-warning">Sin datos</Badge>}
+          {hasPeriod && hasData && <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-earning/40 text-earning">Conectado</Badge>}
+        </div>
+        {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+      </button>
+      {expanded && (
+        <CardContent className="pt-0 pb-3 px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px]">
+            <div className="p-2 rounded-md bg-background border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Company</p>
+              <p className="font-mono text-[10px] truncate mt-0.5">{companyId.slice(0, 12)}...</p>
+            </div>
+            <div className="p-2 rounded-md bg-background border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Period ID</p>
+              <p className={`font-mono text-[10px] truncate mt-0.5 ${info.periodId ? "" : "text-destructive font-bold"}`}>{info.periodId ? info.periodId.slice(0, 12) + "..." : "NO PERIOD LINKED"}</p>
+            </div>
+            <div className="p-2 rounded-md bg-background border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Period dates</p>
+              <p className="font-mono text-[10px] mt-0.5">{batch.payroll_period_start || "—"} → {batch.payroll_period_end || "—"}</p>
+            </div>
+            <div className="p-2 rounded-md bg-background border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Batch status</p>
+              <p className="font-mono text-[10px] mt-0.5">{batch.status}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-3 mt-2 text-[11px]">
+            <div className={`p-2 rounded-md border ${info.truthRows > 0 ? "bg-earning/5 border-earning/20" : "bg-muted/30 border-border/40"}`}>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Truth rows</p>
+              <p className="font-bold text-lg tabular-nums mt-0.5">{info.truthRows}</p>
+              <p className="text-[9px] text-muted-foreground">{hasTruth ? "✓ Cargado" : "Pendiente subir"}</p>
+            </div>
+            <div className={`p-2 rounded-md border ${info.basePay > 0 ? "bg-earning/5 border-earning/20" : "bg-warning/5 border-warning/20"}`}>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Base pay rows</p>
+              <p className="font-bold text-lg tabular-nums mt-0.5">{info.basePay}</p>
+              <p className="text-[9px] text-muted-foreground">{info.basePay > 0 ? "✓ Disponible" : "⚠ Vacío"}</p>
+            </div>
+            <div className={`p-2 rounded-md border ${info.movements > 0 ? "bg-earning/5 border-earning/20" : "bg-muted/30 border-border/40"}`}>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Movements</p>
+              <p className="font-bold text-lg tabular-nums mt-0.5">{info.movements}</p>
+              <p className="text-[9px] text-muted-foreground">{info.movements > 0 ? "✓ Componentes" : "Sin novedades"}</p>
+            </div>
+            <div className="p-2 rounded-md bg-muted/30 border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">System employees</p>
+              <p className="font-bold text-lg tabular-nums mt-0.5">{info.employees}</p>
+              <p className="text-[9px] text-muted-foreground">Activos en roster</p>
+            </div>
+          </div>
+          {batchSummary && (
+            <div className="grid grid-cols-3 gap-3 mt-2 text-[11px]">
+              <div className="p-2 rounded-md bg-background border border-border/40">
+                <p className="text-[9px] text-muted-foreground uppercase font-semibold">Truth Grand Total</p>
+                <p className="font-mono font-bold mt-0.5">{fmt(batchSummary.totals_truth.grand_total)}</p>
+              </div>
+              <div className="p-2 rounded-md bg-background border border-border/40">
+                <p className="text-[9px] text-muted-foreground uppercase font-semibold">System Grand Total</p>
+                <p className="font-mono font-bold mt-0.5">{fmt(batchSummary.totals_system.grand_total)}</p>
+              </div>
+              <div className={`p-2 rounded-md border ${Math.abs(batchSummary.totals_variance.grand_total) < 10 ? "bg-earning/5 border-earning/20" : "bg-destructive/5 border-destructive/20"}`}>
+                <p className="text-[9px] text-muted-foreground uppercase font-semibold">Variance</p>
+                <p className="font-mono font-bold mt-0.5">{fmtVar(batchSummary.totals_variance.grand_total)}</p>
+              </div>
+            </div>
+          )}
+          {!hasPeriod && (
+            <div className="mt-2 p-2 rounded-md bg-destructive/8 border border-destructive/15 text-[10px] text-destructive">
+              <strong>⚠ Batch sin periodo:</strong> Este batch fue creado sin vincular a un periodo de nómina. El sistema no puede cargar period_base_pay ni movements. Crea un nuevo batch seleccionando un periodo.
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────
 
 export default function PayrollReconciliationPage() {
   usePageView("Payroll Reconciliation");
+  const { selectedCompanyId } = useCompany();
+  const { role } = useAuth();
   const {
     batches, activeBatch, setActiveBatch,
     truthParseResult, reconciliationRows, systemOnlyEmployees, batchSummary,
@@ -553,6 +691,27 @@ export default function PayrollReconciliationPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [periods, setPeriods] = useState<{ id: string; start_date: string; end_date: string; status: string }[]>([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState("");
+  const [debugInfo, setDebugInfo] = useState<{ basePay: number; movements: number; truthRows: number; periodId: string } | null>(null);
+  const isDev = role === "developer" || role === "owner" || role === "admin";
+
+  // Load periods for the create dialog
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    supabase.from("pay_periods").select("id, start_date, end_date, status")
+      .eq("company_id", selectedCompanyId)
+      .order("start_date", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        setPeriods((data as any[]) || []);
+        // Auto-select current or most recent period
+        const today = new Date().toISOString().slice(0, 10);
+        const current = (data || []).find((p: any) => p.start_date <= today && p.end_date >= today);
+        const fallback = (data || [])[0];
+        setSelectedPeriodId((current || fallback)?.id || "");
+      });
+  }, [selectedCompanyId]);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
@@ -582,8 +741,18 @@ export default function PayrollReconciliationPage() {
   };
 
   const handleCreateBatch = async () => {
-    await createBatch();
+    const period = periods.find(p => p.id === selectedPeriodId);
+    if (!period) return;
+    const batch = await createBatch(period.start_date, period.end_date);
     setShowCreateDialog(false);
+    // Load debug info for this period
+    if (batch && selectedCompanyId) {
+      const [{ count: bpCount }, { count: movCount }] = await Promise.all([
+        supabase.from("period_base_pay").select("id", { count: "exact", head: true }).eq("period_id", selectedPeriodId).eq("company_id", selectedCompanyId),
+        supabase.from("movements").select("id", { count: "exact", head: true }).eq("period_id", selectedPeriodId).eq("company_id", selectedCompanyId),
+      ]);
+      setDebugInfo({ basePay: bpCount || 0, movements: movCount || 0, truthRows: 0, periodId: selectedPeriodId });
+    }
   };
 
   const handleDownloadCSV = () => {
@@ -635,7 +804,11 @@ export default function PayrollReconciliationPage() {
                   <div className="flex items-center gap-4">
                     {batchStatusBadge(b.status)}
                     <div>
-                      <p className="font-medium text-sm group-hover:text-primary transition-colors">{b.truth_source_file_name || "Sin archivo"}</p>
+                      <p className="font-medium text-sm group-hover:text-primary transition-colors">
+                        {b.truth_source_file_name || "Sin archivo"}
+                        {b.payroll_period_start && <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">({b.payroll_period_start} → {b.payroll_period_end})</span>}
+                        {!b.payroll_period_start && <span className="ml-1.5 text-[10px] text-destructive">⚠ sin periodo</span>}
+                      </p>
                       <p className="text-[11px] text-muted-foreground">
                         {b.employees_truth_count} empleados • {b.matched_count} matched • {b.critical_mismatch_count} críticos
                       </p>
@@ -655,14 +828,37 @@ export default function PayrollReconciliationPage() {
         )}
 
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Nuevo Batch</DialogTitle>
-              <DialogDescription>Se creará un batch donde podrás cargar el truth file y ejecutar la reconciliación.</DialogDescription>
+              <DialogTitle>Nuevo Batch de Reconciliación</DialogTitle>
+              <DialogDescription>Selecciona el periodo de nómina y luego carga el truth file para comparar.</DialogDescription>
             </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Periodo de nómina</label>
+                <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+                  <SelectTrigger className="h-9 text-xs rounded-lg">
+                    <SelectValue placeholder="Seleccionar periodo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {periods.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.start_date} → {p.end_date} ({p.status})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedPeriodId && (
+                <div className="p-3 rounded-lg bg-muted/40 border border-border/40 text-xs space-y-1">
+                  <p className="font-medium text-muted-foreground">El sistema comparará los datos de este periodo contra el truth file que cargues.</p>
+                  <p className="text-muted-foreground/70">Fuentes: period_base_pay + movements del periodo seleccionado.</p>
+                </div>
+              )}
+            </div>
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={() => setShowCreateDialog(false)} className="rounded-xl">Cancelar</Button>
-              <Button size="sm" onClick={handleCreateBatch} className="rounded-xl">Crear</Button>
+              <Button size="sm" onClick={handleCreateBatch} className="rounded-xl" disabled={!selectedPeriodId}>Crear</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -690,7 +886,17 @@ export default function PayrollReconciliationPage() {
             <h1 className="text-xl font-bold font-heading">Reconciliación</h1>
             {batchStatusBadge(activeBatch.status)}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">{activeBatch.truth_source_file_name || "Sin archivo de verdad"}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {activeBatch.truth_source_file_name || "Sin archivo de verdad"}
+            {activeBatch.payroll_period_start && (
+              <span className="ml-2 font-mono text-[10px] bg-muted/50 px-1.5 py-0.5 rounded">
+                {activeBatch.payroll_period_start} → {activeBatch.payroll_period_end}
+              </span>
+            )}
+            {!activeBatch.payroll_period_start && (
+              <span className="ml-2 text-[10px] text-destructive font-medium">⚠ Sin periodo vinculado</span>
+            )}
+          </p>
         </div>
       </div>
 
@@ -728,6 +934,16 @@ export default function PayrollReconciliationPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Debug Panel — visible to dev/admin/owner */}
+      {isDev && activeBatch && (
+        <DebugPanel
+          companyId={selectedCompanyId || ""}
+          batch={activeBatch}
+          batchSummary={batchSummary}
+          reconciliationRows={reconciliationRows}
+        />
+      )}
 
       {/* KPI strip */}
       {batchSummary && (
