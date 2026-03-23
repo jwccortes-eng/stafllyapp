@@ -282,6 +282,7 @@ export default function ImportPayrollExtras() {
           }
 
           // Check if movement already exists for this employee/concept/period
+          // Dedup: skip if same concept already exists for this employee in this period
           const { count } = await supabase
             .from("movements")
             .select("id", { count: "exact", head: true })
