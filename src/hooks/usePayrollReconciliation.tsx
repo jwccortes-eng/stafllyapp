@@ -389,10 +389,6 @@ export function usePayrollReconciliation() {
                 sd.total = sd.total_pay + sd.pay_per_day + sd.ryde + sd.tips + sd.reimbursements;
               }
             }
-          }
-              }
-            }
-          }
         } catch {
           // movements enrichment optional
         }
