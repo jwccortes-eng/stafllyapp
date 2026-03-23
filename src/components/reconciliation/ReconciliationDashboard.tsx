@@ -43,11 +43,11 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
     periods.forEach(p => {
       const openExceptions = p.total_exceptions - p.resolved_exceptions;
       if (p.status === "reviewing" && openExceptions > 0) {
-        actions.push({ label: `"${p.period_label || 'Periodo'}" tiene ${openExceptions} excepción(es) sin resolver`, severity: openExceptions > 5 ? "critical" : "warning", period: p });
+        actions.push({ label: `"${getLabel(p)}" tiene ${openExceptions} excepción(es) sin resolver`, severity: openExceptions > 5 ? "critical" : "warning", period: p });
       } else if (p.status === "reviewing" && openExceptions === 0) {
-        actions.push({ label: `"${p.period_label || 'Periodo'}" listo para aprobar`, severity: "info", period: p });
+        actions.push({ label: `"${getLabel(p)}" listo para aprobar`, severity: "info", period: p });
       } else if (["importing", "normalizing", "matching"].includes(p.status)) {
-        actions.push({ label: `"${p.period_label || 'Periodo'}" en proceso de importación`, severity: "info", period: p });
+        actions.push({ label: `"${getLabel(p)}" en proceso de importación`, severity: "info", period: p });
       }
     });
     return actions.sort((a, b) => {
