@@ -874,13 +874,12 @@ export default function AdminDashboard() {
               return (
                 <Card key={a.id} className={cn(
                   "rounded-xl shadow-2xs overflow-hidden transition-all hover:shadow-xs border-border/40",
-                  a.pinned && "border-primary/20",
-                  a.priority === "urgent" && "border-destructive/30"
+                  a.pinned && "border-primary/20"
                 )}>
-                  {a.priority === "urgent" && (
-                    <div className="bg-destructive/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-destructive/10">
-                      <AlertTriangle className="h-3 w-3 text-destructive" />
-                      <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
+                {a.priority === "urgent" && (
+                  <div className="bg-warning/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-warning/10">
+                    <AlertTriangle className="h-3 w-3 text-warning" />
+                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgente</span>
                     </div>
                   )}
                   <CardContent className="p-4 space-y-2">
