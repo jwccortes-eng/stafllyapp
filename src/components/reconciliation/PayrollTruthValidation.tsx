@@ -182,6 +182,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [loading, setLoading] = useState(false);
   const [truthLoaded, setTruthLoaded] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [truthSource, setTruthSource] = useState<{ type: "pre-staged" | "manual"; fileName: string; loadedAt: string } | null>(null);
 
   const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
@@ -194,23 +195,55 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     });
   };
 
+  const applyParsedTruth = (parsed: PayrollTruthParseResult, source: { type: "pre-staged" | "manual"; fileName: string }) => {
+    setTruthParse(parsed);
+    setTruthData(parsed.rows);
+    setTruthLoaded(true);
+    setTruthSource({ ...source, loadedAt: new Date().toLocaleTimeString() });
+  };
+
   const loadTruthFile = async () => {
     setLoading(true);
     setTruthLoaded(false);
     setTruthData([]);
     setTruthParse(null);
+    setTruthSource(null);
     try {
       const res = await fetch(`/temp-import/payroll_truth_2025-12-24_to_2025-12-30.xlsx?v=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) throw new Error(`No se pudo cargar (${res.status})`);
       const parsed = parsePayrollTruthWorkbook(await res.arrayBuffer());
-      setTruthParse(parsed);
-      setTruthData(parsed.rows);
-      setTruthLoaded(true);
+      applyParsedTruth(parsed, { type: "pre-staged", fileName: "payroll_truth_2025-12-24_to_2025-12-30.xlsx" });
     } catch (err: any) {
       console.error("Error loading truth file:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+    setTruthLoaded(false);
+    setTruthData([]);
+    setTruthParse(null);
+    setTruthSource(null);
+    try {
+      const parsed = parsePayrollTruthWorkbook(await file.arrayBuffer());
+      applyParsedTruth(parsed, { type: "manual", fileName: file.name });
+    } catch (err: any) {
+      console.error("Error parsing manual truth file:", err);
+    } finally {
+      setLoading(false);
+      e.target.value = "";
+    }
+  };
+
+  const clearTruth = () => {
+    setTruthData([]);
+    setTruthParse(null);
+    setTruthLoaded(false);
+    setTruthSource(null);
   };
 
   useEffect(() => {
