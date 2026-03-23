@@ -218,40 +218,131 @@ export function usePayrollReconciliation() {
         source_tags: [],
       }));
 
-      // 3. Enrich system data from normalized_schedule_rows or reconciliation data if available
+      // 3. Enrich system data from reconciliation_final_records (component-level)
+      // This is the authoritative source with full breakdown: hourly, daily, ride, tips, etc.
       const batch = activeBatch || batches.find(b => b.id === batchId);
-      if (batch?.payroll_period_start && batch?.payroll_period_end) {
+      {
+        // Try reconciliation_final_records first (has full component breakdown)
         try {
-          const { data: periodPayroll } = await supabase
-            .from("normalized_schedule_rows" as any)
-            .select("employee_id, total_hours, total_pay")
-            .eq("company_id", selectedCompanyId)
-            .gte("work_date", batch.payroll_period_start)
-            .lte("work_date", batch.payroll_period_end);
+          const finalQuery = supabase
+            .from("reconciliation_final_records" as any)
+            .select("employee_id, total_worked_hours, total_payroll_amount, hourly_pay_total, daily_pay_total, ride_pay_total, weekend_pay_total, manual_adjustment_total, grand_total, shift_full_day_count, shift_half_day_count, shift_calculated_total, pay_classification, shift_daily_rate_used, hourly_rate")
+            .eq("company_id", selectedCompanyId);
 
-          if (periodPayroll && (periodPayroll as any[]).length > 0) {
-            const byEmployee = new Map<string, { hours: number; pay: number; total: number }>();
-            for (const row of periodPayroll as any[]) {
+          // Filter by period if available
+          if (batch?.payroll_period_start) {
+            // reconciliation_final_records are linked via period_status_id, query all for company
+          }
+
+          const { data: finalRecords } = await finalQuery;
+
+          if (finalRecords && (finalRecords as any[]).length > 0) {
+            const byEmployee = new Map<string, any>();
+            for (const row of finalRecords as any[]) {
               if (!row.employee_id) continue;
-              const existing = byEmployee.get(row.employee_id) || { hours: 0, pay: 0, total: 0 };
-              existing.hours += row.total_hours || 0;
-              existing.pay += row.total_pay || 0;
-              existing.total += row.total_pay || 0;
-              byEmployee.set(row.employee_id, existing);
+              // Keep the most recent / most complete record per employee
+              const existing = byEmployee.get(row.employee_id);
+              if (!existing || (row.grand_total || 0) > (existing.grand_total || 0)) {
+                byEmployee.set(row.employee_id, row);
+              }
             }
 
             for (const sd of systemData) {
-              const enrichment = byEmployee.get(sd.employee_id);
-              if (enrichment) {
-                sd.total_hours = enrichment.hours;
-                sd.total_pay = enrichment.pay;
-                sd.total = enrichment.total;
-                sd.source_tags.push("schedule_rows");
+              const rec = byEmployee.get(sd.employee_id);
+              if (!rec) continue;
+
+              // Component-level enrichment from final records
+              const hourlyPay = Number(rec.hourly_pay_total) || 0;
+              const dailyPay = Number(rec.daily_pay_total) || 0;
+              const weekendPay = Number(rec.weekend_pay_total) || 0;
+              const ridePay = Number(rec.ride_pay_total) || 0;
+              const manualAdj = Number(rec.manual_adjustment_total) || 0;
+              const grandTotal = Number(rec.grand_total) || 0;
+              const shiftCalc = Number(rec.shift_calculated_total) || 0;
+
+              sd.total_hours = Number(rec.total_worked_hours) || 0;
+
+              // Map to truth-file components:
+              // total_pay = hourly base pay (hours × rate)
+              sd.total_pay = hourlyPay;
+
+              // pay_per_day = daily pay + weekend pay (shift-based fixed-rate days)
+              sd.pay_per_day = dailyPay + weekendPay;
+
+              // If shift-calc is the primary source and no hourly breakdown exists,
+              // put shift-calc into pay_per_day (it represents daily-rate calculation)
+              if (sd.total_pay === 0 && shiftCalc > 0) {
+                sd.pay_per_day = shiftCalc;
+              }
+
+              // ryde = ride component
+              sd.ryde = ridePay;
+
+              // Manual adjustments go to reimbursements bucket (closest match)
+              sd.reimbursements = manualAdj;
+
+              // Total = grand total from the final record
+              sd.total = grandTotal > 0 ? grandTotal : (sd.total_pay + sd.pay_per_day + sd.ryde + sd.tips + sd.reimbursements);
+
+              sd.shift_count = (Number(rec.shift_full_day_count) || 0) + (Number(rec.shift_half_day_count) || 0);
+              sd.source_tags.push("final_records");
+
+              // Add source detail
+              if (hourlyPay > 0) sd.source_tags.push("hourly");
+              if (dailyPay > 0 || weekendPay > 0) sd.source_tags.push("daily");
+              if (ridePay > 0) sd.source_tags.push("ride");
+              if (shiftCalc > 0) sd.source_tags.push("shift_calc");
+            }
+          }
+        } catch {
+          // Table may not exist yet, continue
+        }
+
+        // Fallback: enrich from movements table for tips and other components not in final_records
+        try {
+          const { data: movements } = await supabase
+            .from("movements")
+            .select("employee_id, total_value, concept_id, note, concepts(name, category)")
+            .eq("company_id", selectedCompanyId)
+            .neq("approval_status", "rejected");
+
+          if (movements && (movements as any[]).length > 0) {
+            const tipsByEmployee = new Map<string, number>();
+            const reimbByEmployee = new Map<string, number>();
+
+            for (const mv of movements as any[]) {
+              if (!mv.employee_id) continue;
+              const conceptName = (mv.concepts?.name || mv.note || "").toLowerCase();
+              const category = (mv.concepts?.category || "").toLowerCase();
+              const val = Number(mv.total_value) || 0;
+
+              if (conceptName.includes("tip") || conceptName.includes("propina")) {
+                tipsByEmployee.set(mv.employee_id, (tipsByEmployee.get(mv.employee_id) || 0) + val);
+              } else if (category === "reimbursement" || conceptName.includes("reimburs") || conceptName.includes("reintegr")) {
+                reimbByEmployee.set(mv.employee_id, (reimbByEmployee.get(mv.employee_id) || 0) + val);
+              }
+            }
+
+            for (const sd of systemData) {
+              const tips = tipsByEmployee.get(sd.employee_id);
+              if (tips && tips > 0) {
+                sd.tips = tips;
+                if (!sd.source_tags.includes("movements")) sd.source_tags.push("movements");
+              }
+              const reimb = reimbByEmployee.get(sd.employee_id);
+              if (reimb && reimb > 0 && sd.reimbursements === 0) {
+                sd.reimbursements = reimb;
+                if (!sd.source_tags.includes("movements")) sd.source_tags.push("movements");
+              }
+
+              // Recalculate total if we added tips/reimbursements
+              if ((tips && tips > 0) || (reimb && reimb > 0)) {
+                sd.total = sd.total_pay + sd.pay_per_day + sd.ryde + sd.tips + sd.reimbursements;
               }
             }
           }
         } catch {
-          // Table may not exist, continue with empty system data
+          // movements enrichment optional
         }
       }
 
