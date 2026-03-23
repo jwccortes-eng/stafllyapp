@@ -10,19 +10,19 @@ import { Input } from "@/components/ui/input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ReportActionsBar } from "@/components/ui/report-actions-bar";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2, Upload, Play, CheckCircle2, Lock, AlertTriangle, XCircle,
   Search, FileText, Plus, Eye, Shield, AlertOctagon, Info, ChevronDown,
   ChevronUp, Users, TrendingUp, Hash, Link2, UserCheck, Fingerprint,
-  Mail, Phone, Type, Sparkles, ShieldAlert, BarChart3
+  Mail, Phone, Type, Sparkles, ShieldAlert, BarChart3, ArrowLeft,
+  Download, Clock, DollarSign, Car, UtensilsCrossed, Receipt, ArrowUpDown
 } from "lucide-react";
 
-// ─── Formatting Helpers ──────────────────────────────────────────────
+// ─── Formatting ──────────────────────────────────────────────────────
 
 const fmt = (v: number | null | undefined) => v != null ? `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
 const fmtH = (v: number | null | undefined) => v != null ? v.toFixed(2) : "—";
@@ -37,18 +37,18 @@ const fmtPct = (v: number) => `${(v * 100).toFixed(1)}%`;
 // ─── Badge Helpers ───────────────────────────────────────────────────
 
 function statusBadge(status: string) {
-  const map: Record<string, { variant: any; label: string }> = {
-    EXACT_MATCH: { variant: "success", label: "Exacto" },
-    COMPONENT_MISMATCH: { variant: "warning", label: "Parcial" },
+  const map: Record<string, { variant: any; label: string; className?: string }> = {
+    EXACT_MATCH: { variant: "default", label: "Exacto", className: "bg-earning/15 text-earning border-earning/30 hover:bg-earning/20" },
+    COMPONENT_MISMATCH: { variant: "default", label: "Parcial", className: "bg-warning/15 text-warning border-warning/30 hover:bg-warning/20" },
     CRITICAL_MISMATCH: { variant: "destructive", label: "Crítico" },
     MISSING_IN_SYSTEM: { variant: "destructive", label: "Sin sistema" },
-    MISSING_IN_TRUTH: { variant: "info", label: "Sin truth" },
+    MISSING_IN_TRUTH: { variant: "default", label: "Sin truth", className: "bg-info/15 text-info border-info/30" },
     PENDING: { variant: "secondary", label: "Pendiente" },
     UNMATCHED: { variant: "destructive", label: "Sin match" },
-    NEEDS_REVIEW: { variant: "warning", label: "Revisión" },
+    NEEDS_REVIEW: { variant: "default", label: "Revisión", className: "bg-warning/15 text-warning border-warning/30" },
   };
   const s = map[status] || { variant: "outline", label: status };
-  return <Badge variant={s.variant} className="text-[10px] px-1.5 py-0">{s.label}</Badge>;
+  return <Badge variant={s.variant as any} className={`text-[10px] px-1.5 py-0 font-medium ${s.className || ""}`}>{s.label}</Badge>;
 }
 
 function matchMethodIcon(method: string) {
@@ -62,7 +62,13 @@ function matchMethodIcon(method: string) {
 }
 
 function matchBadge(confidence: number, method: string) {
-  const variant = confidence >= 90 ? "success" : confidence >= 75 ? "warning" : confidence > 0 ? "destructive" : "outline";
+  const cls = confidence >= 90
+    ? "bg-earning/10 text-earning border-earning/25"
+    : confidence >= 75
+      ? "bg-warning/10 text-warning border-warning/25"
+      : confidence > 0
+        ? "bg-destructive/10 text-destructive border-destructive/25"
+        : "bg-muted text-muted-foreground border-border";
   const labels: Record<string, string> = {
     employer_id: "ID", ssn_ein: "SSN", email: "Email", phone: "Tel",
     external_id: "ExtID", full_name_exact: "Nombre", alias: "Alias",
@@ -71,10 +77,10 @@ function matchBadge(confidence: number, method: string) {
   return (
     <Tooltip>
       <TooltipTrigger>
-        <Badge variant={variant as any} className="text-[10px] px-1.5 py-0 gap-0.5">
+        <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${cls}`}>
           {matchMethodIcon(method)}
           {confidence > 0 ? `${confidence}%` : "—"}
-        </Badge>
+        </span>
       </TooltipTrigger>
       <TooltipContent className="text-xs">
         <p className="font-medium">Matched by: {labels[method] || method}</p>
@@ -85,27 +91,31 @@ function matchBadge(confidence: number, method: string) {
 }
 
 function batchStatusBadge(status: string) {
-  const map: Record<string, { variant: any; icon: any; label: string }> = {
-    DRAFT: { variant: "secondary", icon: FileText, label: "Borrador" },
-    TRUTH_UPLOADED: { variant: "info", icon: Upload, label: "Truth cargado" },
-    RECONCILED: { variant: "success", icon: CheckCircle2, label: "Reconciliado" },
-    NEEDS_REVIEW: { variant: "warning", icon: AlertTriangle, label: "Revisión" },
-    CRITICAL: { variant: "destructive", icon: AlertOctagon, label: "Crítico" },
-    APPROVED: { variant: "success", icon: Shield, label: "Aprobado" },
-    LOCKED: { variant: "secondary", icon: Lock, label: "Bloqueado" },
-    MISMATCHED: { variant: "warning", icon: AlertTriangle, label: "Discrepancias" },
+  const map: Record<string, { icon: any; label: string; className: string }> = {
+    DRAFT: { icon: FileText, label: "Borrador", className: "bg-muted text-muted-foreground border-border" },
+    TRUTH_UPLOADED: { icon: Upload, label: "Truth cargado", className: "bg-info/15 text-info border-info/30" },
+    RECONCILED: { icon: CheckCircle2, label: "Reconciliado", className: "bg-earning/15 text-earning border-earning/30" },
+    NEEDS_REVIEW: { icon: AlertTriangle, label: "Revisión", className: "bg-warning/15 text-warning border-warning/30" },
+    CRITICAL: { icon: AlertOctagon, label: "Crítico", className: "bg-destructive/15 text-destructive border-destructive/30" },
+    APPROVED: { icon: Shield, label: "Aprobado", className: "bg-earning/15 text-earning border-earning/30" },
+    LOCKED: { icon: Lock, label: "Bloqueado", className: "bg-muted text-muted-foreground border-border" },
+    MISMATCHED: { icon: AlertTriangle, label: "Discrepancias", className: "bg-warning/15 text-warning border-warning/30" },
   };
-  const s = map[status] || { variant: "outline", icon: Info, label: status };
+  const s = map[status] || { icon: Info, label: status, className: "bg-muted text-muted-foreground border-border" };
   const Icon = s.icon;
-  return <Badge variant={s.variant} className="gap-1 text-[10px]"><Icon className="h-3 w-3" />{s.label}</Badge>;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${s.className}`}>
+      <Icon className="h-3 w-3" />{s.label}
+    </span>
+  );
 }
 
 function varianceCell(val: number | null | undefined, tolerance: number) {
-  if (val == null) return <span className="text-muted-foreground">—</span>;
+  if (val == null) return <span className="text-muted-foreground/50">—</span>;
   const abs = Math.abs(val);
   const ok = abs <= tolerance;
   return (
-    <span className={ok ? "text-earning" : abs > tolerance * 5 ? "text-destructive font-bold" : "text-warning font-medium"}>
+    <span className={`tabular-nums ${ok ? "text-earning" : abs > tolerance * 5 ? "text-destructive font-semibold" : "text-warning font-medium"}`}>
       {fmtVar(val)}
     </span>
   );
@@ -114,48 +124,54 @@ function varianceCell(val: number | null | undefined, tolerance: number) {
 // ─── KPI Card ────────────────────────────────────────────────────────
 
 function KpiCard({ label, value, subtitle, icon: Icon, accent }: { label: string; value: string | number; subtitle?: string; icon: any; accent?: "success" | "warning" | "destructive" | "muted" }) {
-  const colors = {
-    success: "text-earning border-earning/20 bg-earning/5",
-    warning: "text-warning border-warning/20 bg-warning/5",
-    destructive: "text-destructive border-destructive/20 bg-destructive/5",
-    muted: "text-muted-foreground border-border bg-muted/30",
+  const styles = {
+    success: { card: "border-earning/20 bg-gradient-to-br from-earning/[0.04] to-earning/[0.08]", icon: "bg-earning/12 text-earning", value: "text-earning" },
+    warning: { card: "border-warning/20 bg-gradient-to-br from-warning/[0.04] to-warning/[0.08]", icon: "bg-warning/12 text-warning", value: "text-warning" },
+    destructive: { card: "border-destructive/20 bg-gradient-to-br from-destructive/[0.04] to-destructive/[0.08]", icon: "bg-destructive/12 text-destructive", value: "text-destructive" },
+    muted: { card: "border-border/60 bg-card", icon: "bg-muted text-muted-foreground", value: "text-foreground" },
   };
+  const s = styles[accent || "muted"];
   return (
-    <Card className={`${colors[accent || "muted"]} border`}>
-      <CardContent className="p-3 flex items-start gap-3">
-        <div className={`p-1.5 rounded-md ${accent === "success" ? "bg-earning/10" : accent === "warning" ? "bg-warning/10" : accent === "destructive" ? "bg-destructive/10" : "bg-muted"}`}>
+    <Card className={`${s.card} shadow-none`}>
+      <CardContent className="p-3.5 flex items-start gap-3">
+        <div className={`p-2 rounded-xl ${s.icon}`}>
           <Icon className="h-4 w-4" />
         </div>
-        <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{label}</p>
-          <p className="text-xl font-bold tabular-nums leading-tight">{value}</p>
-          {subtitle && <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">{label}</p>
+          <p className={`text-xl font-bold font-heading tabular-nums leading-tight mt-0.5 ${s.value}`}>{value}</p>
+          {subtitle && <p className="text-[10px] text-muted-foreground/70 mt-0.5 font-medium">{subtitle}</p>}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-// ─── Summary Card ────────────────────────────────────────────────────
+// ─── Component Summary Card ──────────────────────────────────────────
 
-function SummaryCard({ label, truth, system, variance, tolerance }: { label: string; truth: number; system: number; variance: number; tolerance: number }) {
-  const ok = Math.abs(variance) <= tolerance;
-  const borderColor = ok ? "border-earning/30" : Math.abs(variance) > tolerance * 5 ? "border-destructive/40" : "border-warning/40";
+function SummaryCard({ label, truth, system, variance, tolerance, icon: Icon }: { label: string; truth: number; system: number; variance: number; tolerance: number; icon?: any }) {
+  const abs = Math.abs(variance);
+  const ok = abs <= tolerance;
+  const status = ok ? "earning" : abs > tolerance * 5 ? "destructive" : "warning";
   return (
-    <Card className={`${borderColor} border`}>
-      <CardContent className="p-3 space-y-1.5">
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{label}</p>
-        <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">Truth</span>
-          <span className="font-mono font-medium">{fmt(truth)}</span>
+    <Card className={`shadow-none border-${status}/20 hover:shadow-sm transition-shadow`}>
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">{label}</p>
+          {Icon && <Icon className="h-3 w-3 text-muted-foreground/50" />}
         </div>
-        <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">System</span>
-          <span className="font-mono font-medium">{fmt(system)}</span>
+        <div className="space-y-1">
+          <div className="flex justify-between text-[11px]">
+            <span className="text-muted-foreground">Truth</span>
+            <span className="font-mono font-semibold">{fmt(truth)}</span>
+          </div>
+          <div className="flex justify-between text-[11px]">
+            <span className="text-muted-foreground">System</span>
+            <span className="font-mono font-semibold">{fmt(system)}</span>
+          </div>
         </div>
-        <Separator />
-        <div className="flex justify-between text-xs font-semibold">
-          <span>Δ</span>
+        <div className={`flex items-center justify-between pt-1.5 border-t border-${status}/15`}>
+          <span className="text-[10px] font-semibold text-muted-foreground">Δ Varianza</span>
           {varianceCell(variance, tolerance)}
         </div>
       </CardContent>
@@ -163,57 +179,74 @@ function SummaryCard({ label, truth, system, variance, tolerance }: { label: str
   );
 }
 
-// ─── Validation Report Panel ─────────────────────────────────────────
+// ─── Validation Report ───────────────────────────────────────────────
 
 function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary; parseResult?: { skipped_summary_rows: number; duplicate_names: string[]; parse_warnings: string[] } | null }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const matchRate = summary.truth_count > 0 ? summary.matched / summary.truth_count : 0;
   const exactRate = summary.truth_count > 0 ? summary.exact_match / summary.truth_count : 0;
 
   const mb = summary.match_breakdown;
   const matchMethods = [
-    { label: "Employer ID", count: mb.by_employer_id, icon: Fingerprint },
-    { label: "SSN/EIN", count: mb.by_ssn, icon: Hash },
-    { label: "Email", count: mb.by_email, icon: Mail },
-    { label: "Phone", count: mb.by_phone, icon: Phone },
-    { label: "External ID", count: mb.by_external_id, icon: Link2 },
-    { label: "Nombre exacto", count: mb.by_full_name_exact, icon: UserCheck },
-    { label: "Alias", count: mb.by_alias, icon: Sparkles },
-    { label: "Fuzzy", count: mb.by_fuzzy_name, icon: Type },
-    { label: "Sin match", count: mb.unmatched, icon: XCircle },
+    { label: "Employer ID", count: mb.by_employer_id, icon: Fingerprint, accent: "secondary" },
+    { label: "SSN/EIN", count: mb.by_ssn, icon: Hash, accent: "secondary" },
+    { label: "Email", count: mb.by_email, icon: Mail, accent: "secondary" },
+    { label: "Phone", count: mb.by_phone, icon: Phone, accent: "secondary" },
+    { label: "External ID", count: mb.by_external_id, icon: Link2, accent: "secondary" },
+    { label: "Nombre exacto", count: mb.by_full_name_exact, icon: UserCheck, accent: "secondary" },
+    { label: "Alias", count: mb.by_alias, icon: Sparkles, accent: "secondary" },
+    { label: "Fuzzy", count: mb.by_fuzzy_name, icon: Type, accent: "warning" },
+    { label: "Sin match", count: mb.unmatched, icon: XCircle, accent: "destructive" },
   ].filter(m => m.count > 0);
 
   return (
-    <Card className="border-primary/20">
-      <CardHeader className="py-3 px-4 cursor-pointer flex flex-row items-center justify-between" onClick={() => setExpanded(!expanded)}>
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-primary" />
-          <CardTitle className="text-sm font-semibold">Reporte de Validación</CardTitle>
+    <Card className="shadow-none border-primary/15">
+      <button
+        className="w-full py-3 px-4 flex items-center justify-between text-left hover:bg-accent/30 transition-colors rounded-t-2xl"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <BarChart3 className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold font-heading">Reporte de Validación</p>
+            <p className="text-[10px] text-muted-foreground">
+              {summary.matched}/{summary.truth_count} matched • {summary.exact_match} exactos • {summary.critical_mismatch} críticos
+            </p>
+          </div>
         </div>
-        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-      </CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2">
+            <Progress value={matchRate * 100} className="h-1.5 w-20" />
+            <span className="text-xs font-semibold text-muted-foreground">{fmtPct(matchRate)}</span>
+          </div>
+          {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </div>
+      </button>
+
       {expanded && (
-        <CardContent className="px-4 pb-4 space-y-4">
+        <CardContent className="px-4 pb-4 pt-0 space-y-5 border-t border-border/50">
           {/* Progress bars */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6 pt-4">
             <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-muted-foreground">Tasa de match</span>
-                <span className="font-semibold">{fmtPct(matchRate)}</span>
+              <div className="flex justify-between text-[11px] mb-1.5">
+                <span className="text-muted-foreground font-medium">Tasa de match</span>
+                <span className="font-bold">{fmtPct(matchRate)}</span>
               </div>
               <Progress value={matchRate * 100} className="h-2" />
             </div>
             <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-muted-foreground">Match exacto</span>
-                <span className="font-semibold">{fmtPct(exactRate)}</span>
+              <div className="flex justify-between text-[11px] mb-1.5">
+                <span className="text-muted-foreground font-medium">Match exacto</span>
+                <span className="font-bold">{fmtPct(exactRate)}</span>
               </div>
               <Progress value={exactRate * 100} className="h-2" />
             </div>
           </div>
 
           {/* Stats grid */}
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
             <StatMini label="Truth rows" value={summary.truth_count} />
             <StatMini label="System rows" value={summary.system_count} />
             <StatMini label="Matched" value={summary.matched} accent="success" />
@@ -222,17 +255,21 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
             <StatMini label="Críticos" value={summary.critical_mismatch} accent="destructive" />
           </div>
 
-          <Separator />
+          <Separator className="bg-border/50" />
 
           {/* Match method breakdown */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Método de match</p>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2.5">Método de match</p>
             <div className="flex flex-wrap gap-1.5">
               {matchMethods.map(m => (
-                <Badge key={m.label} variant={m.label === "Sin match" ? "destructive" : m.label === "Fuzzy" ? "warning" : "secondary"} className="gap-1 text-[10px]">
+                <span key={m.label} className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md border ${
+                  m.accent === "destructive" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                  m.accent === "warning" ? "bg-warning/10 text-warning border-warning/20" :
+                  "bg-muted/50 text-muted-foreground border-border/60"
+                }`}>
                   <m.icon className="h-3 w-3" />
-                  {m.label}: {m.count}
-                </Badge>
+                  {m.label}: <span className="font-bold">{m.count}</span>
+                </span>
               ))}
             </div>
           </div>
@@ -240,15 +277,15 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
           {/* Parse info */}
           {parseResult && (
             <>
-              <Separator />
-              <div className="grid grid-cols-3 gap-3">
+              <Separator className="bg-border/50" />
+              <div className="grid grid-cols-3 gap-4">
                 <StatMini label="Filas totales saltadas" value={parseResult.skipped_summary_rows} />
                 <StatMini label="Nombres duplicados" value={parseResult.duplicate_names.length} accent={parseResult.duplicate_names.length > 0 ? "warning" : undefined} />
                 <StatMini label="Advertencias" value={parseResult.parse_warnings.length} accent={parseResult.parse_warnings.length > 0 ? "warning" : undefined} />
               </div>
               {parseResult.duplicate_names.length > 0 && (
-                <div className="text-xs text-warning bg-warning/10 rounded p-2">
-                  Duplicados: {parseResult.duplicate_names.join(", ")}
+                <div className="text-[11px] text-warning bg-warning/8 rounded-lg p-2.5 border border-warning/15">
+                  <span className="font-semibold">Duplicados:</span> {parseResult.duplicate_names.join(", ")}
                 </div>
               )}
             </>
@@ -257,17 +294,21 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
           {/* Top Issues */}
           {summary.top_issues.length > 0 && (
             <>
-              <Separator />
+              <Separator className="bg-border/50" />
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Problemas principales</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2.5">Problemas principales</p>
                 <div className="space-y-1.5">
                   {summary.top_issues.map((issue, i) => (
-                    <div key={i} className={`flex items-center justify-between text-xs p-2 rounded ${issue.severity === "critical" ? "bg-destructive/10 text-destructive" : issue.severity === "warning" ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"}`}>
-                      <div className="flex items-center gap-1.5">
-                        {issue.severity === "critical" ? <AlertOctagon className="h-3 w-3" /> : issue.severity === "warning" ? <AlertTriangle className="h-3 w-3" /> : <Info className="h-3 w-3" />}
-                        <span>{issue.label}</span>
+                    <div key={i} className={`flex items-center justify-between text-[11px] px-3 py-2 rounded-lg border ${
+                      issue.severity === "critical" ? "bg-destructive/6 border-destructive/15 text-destructive" :
+                      issue.severity === "warning" ? "bg-warning/6 border-warning/15 text-warning" :
+                      "bg-muted/40 border-border/40 text-muted-foreground"
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        {issue.severity === "critical" ? <AlertOctagon className="h-3.5 w-3.5" /> : issue.severity === "warning" ? <AlertTriangle className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
+                        <span className="font-medium">{issue.label}</span>
                       </div>
-                      <Badge variant={issue.severity === "critical" ? "destructive" : issue.severity === "warning" ? "warning" : "secondary"} className="text-[10px]">{issue.count}</Badge>
+                      <span className="font-bold text-xs">{issue.count}</span>
                     </div>
                   ))}
                 </div>
@@ -278,12 +319,12 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
           {/* Anomaly summary */}
           {Object.keys(summary.anomaly_summary).length > 0 && (
             <>
-              <Separator />
+              <Separator className="bg-border/50" />
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Anomalías detectadas</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2.5">Anomalías detectadas</p>
                 <div className="flex flex-wrap gap-1">
                   {Object.entries(summary.anomaly_summary).sort((a, b) => b[1] - a[1]).map(([flag, count]) => (
-                    <Badge key={flag} variant="outline" className="text-[10px] gap-1">
+                    <Badge key={flag} variant="outline" className="text-[9px] gap-1 font-normal">
                       {flag.replace(/_/g, " ")} <span className="font-bold">{count}</span>
                     </Badge>
                   ))}
@@ -293,10 +334,16 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
           )}
 
           {/* Variance totals */}
-          <Separator />
-          <div className="text-xs space-y-1">
-            <div className="flex justify-between"><span className="text-muted-foreground">Varianza total horas</span>{varianceCell(summary.totals_variance.hours, 0.1)}</div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Varianza grand total</span>{varianceCell(summary.totals_variance.grand_total, 1)}</div>
+          <Separator className="bg-border/50" />
+          <div className="grid grid-cols-2 gap-4 text-[11px]">
+            <div className="flex justify-between items-center p-2 rounded-md bg-muted/30">
+              <span className="text-muted-foreground font-medium">Varianza total horas</span>
+              {varianceCell(summary.totals_variance.hours, 0.1)}
+            </div>
+            <div className="flex justify-between items-center p-2 rounded-md bg-muted/30">
+              <span className="text-muted-foreground font-medium">Varianza grand total</span>
+              {varianceCell(summary.totals_variance.grand_total, 1)}
+            </div>
           </div>
         </CardContent>
       )}
@@ -307,9 +354,9 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
 function StatMini({ label, value, accent }: { label: string; value: number | string; accent?: "success" | "warning" | "destructive" }) {
   const color = accent === "success" ? "text-earning" : accent === "warning" ? "text-warning" : accent === "destructive" ? "text-destructive" : "text-foreground";
   return (
-    <div>
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
-      <p className={`text-lg font-bold tabular-nums ${color}`}>{value}</p>
+    <div className="space-y-0.5">
+      <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">{label}</p>
+      <p className={`text-lg font-bold font-heading tabular-nums ${color}`}>{value}</p>
     </div>
   );
 }
@@ -328,32 +375,34 @@ function PreApprovalSafetyPanel({ summary, onApprove, onCancel }: { summary: Bat
   return (
     <DialogContent className="max-w-md">
       <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <ShieldAlert className="h-5 w-5 text-warning" />
+        <DialogTitle className="flex items-center gap-2.5">
+          <div className={`p-2 rounded-xl ${hasBlockers ? "bg-warning/12" : "bg-earning/12"}`}>
+            <ShieldAlert className={`h-5 w-5 ${hasBlockers ? "text-warning" : "text-earning"}`} />
+          </div>
           Verificación pre-aprobación
         </DialogTitle>
         <DialogDescription>Revisa los indicadores antes de aprobar el batch.</DialogDescription>
       </DialogHeader>
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {checks.map((c, i) => (
-          <div key={i} className={`flex items-center justify-between p-2.5 rounded-md border text-sm ${c.ok ? "border-earning/30 bg-earning/5" : "border-destructive/30 bg-destructive/5"}`}>
-            <div className="flex items-center gap-2">
+          <div key={i} className={`flex items-center justify-between p-3 rounded-xl border text-sm transition-colors ${c.ok ? "border-earning/25 bg-earning/5" : "border-destructive/25 bg-destructive/5"}`}>
+            <div className="flex items-center gap-2.5">
               {c.ok ? <CheckCircle2 className="h-4 w-4 text-earning" /> : <AlertOctagon className="h-4 w-4 text-destructive" />}
-              <span>{c.label}</span>
+              <span className="font-medium">{c.label}</span>
             </div>
-            <span className={`font-mono font-semibold ${c.ok ? "text-earning" : "text-destructive"}`}>{c.value}</span>
+            <span className={`font-mono font-bold ${c.ok ? "text-earning" : "text-destructive"}`}>{c.value}</span>
           </div>
         ))}
       </div>
       {hasBlockers && (
-        <div className="bg-warning/10 border border-warning/30 rounded-md p-3 text-xs text-warning flex items-start gap-2">
+        <div className="bg-warning/8 border border-warning/20 rounded-xl p-3.5 text-xs text-warning flex items-start gap-2.5">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>Existen problemas críticos sin resolver. Aprobar de todas formas registrará un override en la auditoría.</span>
         </div>
       )}
-      <DialogFooter className="gap-2">
-        <Button variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button onClick={onApprove} variant={hasBlockers ? "destructive" : "default"}>
+      <DialogFooter className="gap-2 pt-2">
+        <Button variant="outline" onClick={onCancel} className="rounded-xl">Cancelar</Button>
+        <Button onClick={onApprove} variant={hasBlockers ? "destructive" : "default"} className="rounded-xl">
           {hasBlockers ? "Aprobar con advertencias" : "Aprobar batch"}
         </Button>
       </DialogFooter>
@@ -366,59 +415,76 @@ function PreApprovalSafetyPanel({ summary, onApprove, onCancel }: { summary: Bat
 function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClose: () => void }) {
   const name = `${row.truth.first_name} ${row.truth.last_name}`;
   const components = [
-    { label: "Hours", truth: row.truth.total_hours, system: row.system?.total_hours ?? null, variance: row.variances.hours, isHours: true },
-    { label: "Total Pay", truth: row.truth.total_pay, system: row.system?.total_pay ?? null, variance: row.variances.total_pay },
-    { label: "Pay Per Day", truth: row.truth.pay_per_day, system: row.system?.pay_per_day ?? null, variance: row.variances.pay_per_day },
-    { label: "Ryde", truth: row.truth.ryde, system: row.system?.ryde ?? null, variance: row.variances.ryde },
-    { label: "Tips", truth: row.truth.tips, system: row.system?.tips ?? null, variance: row.variances.tips },
-    { label: "Reimbursements", truth: row.truth.reimbursements, system: row.system?.reimbursements ?? null, variance: row.variances.reimbursements },
-    { label: "TOTAL", truth: row.truth.total, system: row.system?.total ?? null, variance: row.variances.total },
+    { label: "Hours", truth: row.truth.total_hours, system: row.system?.total_hours ?? null, variance: row.variances.hours, isHours: true, icon: Clock },
+    { label: "Total Pay", truth: row.truth.total_pay, system: row.system?.total_pay ?? null, variance: row.variances.total_pay, icon: DollarSign },
+    { label: "Pay Per Day", truth: row.truth.pay_per_day, system: row.system?.pay_per_day ?? null, variance: row.variances.pay_per_day, icon: DollarSign },
+    { label: "Ryde", truth: row.truth.ryde, system: row.system?.ryde ?? null, variance: row.variances.ryde, icon: Car },
+    { label: "Tips", truth: row.truth.tips, system: row.system?.tips ?? null, variance: row.variances.tips, icon: UtensilsCrossed },
+    { label: "Reimbursements", truth: row.truth.reimbursements, system: row.system?.reimbursements ?? null, variance: row.variances.reimbursements, icon: Receipt },
+    { label: "TOTAL", truth: row.truth.total, system: row.system?.total ?? null, variance: row.variances.total, icon: DollarSign },
   ];
 
   return (
-    <DialogContent className="max-w-2xl max-h-[85vh] overflow-auto">
-      <DialogHeader>
-        <DialogTitle className="text-base">{name}</DialogTitle>
-        <DialogDescription className="flex items-center gap-2 flex-wrap">
-          {statusBadge(row.classification.row_status)}
-          {matchBadge(row.match.match_confidence, row.match.matched_by)}
-          {row.match.match_notes && <span className="text-[10px] text-muted-foreground italic">{row.match.match_notes}</span>}
-        </DialogDescription>
-      </DialogHeader>
+    <DialogContent className="max-w-2xl max-h-[85vh] overflow-auto p-0">
+      {/* Header */}
+      <div className="sticky top-0 bg-background z-10 px-6 pt-6 pb-4 border-b border-border/50">
+        <DialogHeader className="space-y-2">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg font-heading">{name}</DialogTitle>
+          </div>
+          <DialogDescription className="flex items-center gap-2 flex-wrap">
+            {statusBadge(row.classification.row_status)}
+            {matchBadge(row.match.match_confidence, row.match.matched_by)}
+            {row.match.match_notes && <span className="text-[10px] text-muted-foreground/70 italic">{row.match.match_notes}</span>}
+          </DialogDescription>
+        </DialogHeader>
+      </div>
 
-      <div className="space-y-4">
+      <div className="px-6 py-5 space-y-5">
         {/* Identity */}
         {(row.truth.employer_identification || row.truth.verification_ssn_ein) && (
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="grid grid-cols-2 gap-3">
             {row.truth.employer_identification && (
-              <div><span className="text-muted-foreground">Employer ID: </span><span className="font-mono">{row.truth.employer_identification}</span></div>
+              <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Employer ID</p>
+                <p className="font-mono text-sm font-semibold mt-0.5">{row.truth.employer_identification}</p>
+              </div>
             )}
             {row.truth.verification_ssn_ein && (
-              <div><span className="text-muted-foreground">SSN/EIN: </span><span className="font-mono">{row.truth.verification_ssn_ein}</span></div>
+              <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">SSN / EIN</p>
+                <p className="font-mono text-sm font-semibold mt-0.5">{row.truth.verification_ssn_ein}</p>
+              </div>
             )}
           </div>
         )}
 
         {/* Component comparison */}
-        <div className="border rounded-md overflow-hidden">
+        <div className="rounded-xl border overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
-                <TableHead className="text-[10px] py-2">Componente</TableHead>
-                <TableHead className="text-[10px] py-2 text-right">Truth</TableHead>
-                <TableHead className="text-[10px] py-2 text-right">System</TableHead>
-                <TableHead className="text-[10px] py-2 text-right">Δ</TableHead>
+                <TableHead className="text-[10px] py-2.5 pl-4">Componente</TableHead>
+                <TableHead className="text-[10px] py-2.5 text-right">Truth</TableHead>
+                <TableHead className="text-[10px] py-2.5 text-right">System</TableHead>
+                <TableHead className="text-[10px] py-2.5 text-right pr-4">Δ Varianza</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {components.map(c => {
                 const hasIssue = c.variance != null && Math.abs(c.variance) > (c.isHours ? 0.1 : 1);
+                const isTotal = c.label === "TOTAL";
                 return (
-                  <TableRow key={c.label} className={c.label === "TOTAL" ? "bg-muted/20 font-semibold" : hasIssue ? "bg-destructive/5" : ""}>
-                    <TableCell className="py-1.5 text-xs">{c.label}</TableCell>
-                    <TableCell className="py-1.5 text-right font-mono text-xs">{c.isHours ? fmtH(c.truth) : fmt(c.truth)}</TableCell>
-                    <TableCell className="py-1.5 text-right font-mono text-xs">{c.isHours ? fmtH(c.system) : fmt(c.system)}</TableCell>
-                    <TableCell className="py-1.5 text-right text-xs">{varianceCell(c.variance, c.isHours ? 0.1 : 1)}</TableCell>
+                  <TableRow key={c.label} className={`${isTotal ? "bg-muted/20 font-semibold border-t-2 border-border/50" : hasIssue ? "bg-destructive/[0.03]" : ""}`}>
+                    <TableCell className="py-2 pl-4 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <c.icon className="h-3 w-3 text-muted-foreground/50" />
+                        {c.label}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-2 text-right font-mono text-xs">{c.isHours ? fmtH(c.truth) : fmt(c.truth)}</TableCell>
+                    <TableCell className="py-2 text-right font-mono text-xs">{c.isHours ? fmtH(c.system) : fmt(c.system)}</TableCell>
+                    <TableCell className="py-2 text-right text-xs pr-4">{varianceCell(c.variance, c.isHours ? 0.1 : 1)}</TableCell>
                   </TableRow>
                 );
               })}
@@ -429,9 +495,13 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
         {/* Anomaly flags */}
         {row.anomaly_flags.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Anomalías</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Anomalías</p>
             <div className="flex flex-wrap gap-1">
-              {row.anomaly_flags.map(f => <Badge key={f} variant="destructive" className="text-[9px]">{f.replace(/_/g, " ")}</Badge>)}
+              {row.anomaly_flags.map(f => (
+                <span key={f} className="inline-flex text-[9px] font-medium px-1.5 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/15">
+                  {f.replace(/_/g, " ")}
+                </span>
+              ))}
             </div>
           </div>
         )}
@@ -439,17 +509,24 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
         {/* Observaciones */}
         {row.truth.observaciones && (
           <div>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Observaciones</p>
-            <p className="text-xs bg-muted/50 p-2 rounded border">{row.truth.observaciones}</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">Observaciones</p>
+            <p className="text-xs bg-muted/40 p-3 rounded-lg border border-border/40 leading-relaxed">{row.truth.observaciones}</p>
           </div>
         )}
 
         {/* System source info */}
         {row.system && (
-          <div className="grid grid-cols-3 gap-3 text-xs">
-            <div><span className="text-muted-foreground">Shifts: </span><span className="font-semibold">{row.system.shift_count}</span></div>
-            <div><span className="text-muted-foreground">Clocks: </span><span className="font-semibold">{row.system.clock_count}</span></div>
-            <div><span className="text-muted-foreground">Tags: </span><span className="font-mono text-[10px]">{row.system.source_tags.join(", ") || "—"}</span></div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Shifts", value: row.system.shift_count },
+              { label: "Clocks", value: row.system.clock_count },
+              { label: "Tags", value: row.system.source_tags.join(", ") || "—" },
+            ].map(item => (
+              <div key={item.label} className="p-2.5 rounded-lg bg-muted/30 border border-border/30 text-center">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">{item.label}</p>
+                <p className="font-semibold text-sm mt-0.5 font-mono">{item.value}</p>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -525,39 +602,51 @@ export default function PayrollReconciliationPage() {
   if (!activeBatch) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Payroll Reconciliation" subtitle="Motor de auditoría y reconciliación de nómina" />
-
-        <Button onClick={() => setShowCreateDialog(true)} size="sm">
-          <Plus className="h-4 w-4 mr-1.5" />Nuevo Batch
-        </Button>
+        <div className="flex items-center justify-between">
+          <PageHeader title="Payroll Reconciliation" subtitle="Motor de auditoría y reconciliación de nómina" />
+          <Button onClick={() => setShowCreateDialog(true)} size="sm" className="rounded-xl gap-1.5">
+            <Plus className="h-4 w-4" />Nuevo Batch
+          </Button>
+        </div>
 
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Cargando batches...</p>
+          </div>
         ) : batches.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="py-16 text-center">
-              <FileText className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-              <p className="text-muted-foreground text-sm">No hay batches de reconciliación.</p>
-              <p className="text-muted-foreground text-xs mt-1">Crea uno para comenzar a comparar truth vs sistema.</p>
+          <Card className="border-dashed border-2 shadow-none">
+            <CardContent className="py-20 flex flex-col items-center text-center">
+              <div className="p-4 rounded-2xl bg-muted/50 mb-4">
+                <FileText className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <p className="text-muted-foreground font-medium">No hay batches de reconciliación</p>
+              <p className="text-muted-foreground/70 text-sm mt-1 max-w-sm">Crea uno para comenzar a comparar el truth file contra los datos del sistema.</p>
+              <Button onClick={() => setShowCreateDialog(true)} size="sm" className="mt-4 rounded-xl gap-1.5">
+                <Plus className="h-4 w-4" />Crear primer batch
+              </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-2">
             {batches.map(b => (
-              <Card key={b.id} className="cursor-pointer hover:border-primary/30 transition-all" onClick={() => setActiveBatch(b)}>
-                <CardContent className="py-3 px-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+              <Card key={b.id} className="cursor-pointer hover:border-primary/30 hover:shadow-md transition-all shadow-none group" onClick={() => setActiveBatch(b)}>
+                <CardContent className="py-3.5 px-5 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
                     {batchStatusBadge(b.status)}
                     <div>
-                      <p className="font-medium text-sm">{b.truth_source_file_name || "Sin archivo"}</p>
+                      <p className="font-medium text-sm group-hover:text-primary transition-colors">{b.truth_source_file_name || "Sin archivo"}</p>
                       <p className="text-[11px] text-muted-foreground">
                         {b.employees_truth_count} empleados • {b.matched_count} matched • {b.critical_mismatch_count} críticos
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[11px] text-muted-foreground">{new Date(b.created_at).toLocaleDateString()}</p>
-                    {b.total_variance_amount > 0 && <p className="text-sm font-mono text-destructive">{fmtVar(b.total_variance_amount)}</p>}
+                  <div className="text-right flex items-center gap-4">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">{new Date(b.created_at).toLocaleDateString()}</p>
+                      {b.total_variance_amount > 0 && <p className="text-sm font-mono font-semibold text-destructive">{fmtVar(b.total_variance_amount)}</p>}
+                    </div>
+                    <ArrowUpDown className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50 transition-colors" />
                   </div>
                 </CardContent>
               </Card>
@@ -572,8 +661,8 @@ export default function PayrollReconciliationPage() {
               <DialogDescription>Se creará un batch donde podrás cargar el truth file y ejecutar la reconciliación.</DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
-              <Button size="sm" onClick={handleCreateBatch}>Crear</Button>
+              <Button variant="outline" size="sm" onClick={() => setShowCreateDialog(false)} className="rounded-xl">Cancelar</Button>
+              <Button size="sm" onClick={handleCreateBatch} className="rounded-xl">Crear</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -586,53 +675,63 @@ export default function PayrollReconciliationPage() {
   const tolerance = { hours: activeBatch.tolerance_hours, money: activeBatch.tolerance_money, tips: activeBatch.tolerance_tips };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <Button variant="ghost" size="sm" className="mb-1 text-muted-foreground text-xs h-7" onClick={() => { setActiveBatch(null); setSearch(""); setFilter("all"); }}>
-            ← Batches
-          </Button>
+          <button
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
+            onClick={() => { setActiveBatch(null); setSearch(""); setFilter("all"); }}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Todos los batches</span>
+          </button>
           <div className="flex items-center gap-3">
-            <h1 className="text-lg font-bold">Reconciliación</h1>
+            <h1 className="text-xl font-bold font-heading">Reconciliación</h1>
             {batchStatusBadge(activeBatch.status)}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{activeBatch.truth_source_file_name || "Sin archivo de verdad"}</p>
+          <p className="text-xs text-muted-foreground mt-1">{activeBatch.truth_source_file_name || "Sin archivo de verdad"}</p>
         </div>
       </div>
 
       {/* Actions bar */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileUpload} />
-        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => fileInputRef.current?.click()} disabled={isLocked || processing}>
-          <Upload className="h-3.5 w-3.5 mr-1" />Truth File
-        </Button>
-        <Button size="sm" className="h-8 text-xs" onClick={() => runReconciliationForBatch(activeBatch.id)} disabled={isLocked || processing || activeBatch.status === "DRAFT"}>
-          {processing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Play className="h-3.5 w-3.5 mr-1" />}
-          Ejecutar
-        </Button>
-        {!isLocked && batchSummary && (
-          <>
-            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setShowApproveDialog(true)}>
-              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />Aprobar
-            </Button>
-            {activeBatch.status === "APPROVED" && (
-              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => lockBatch(activeBatch.id)}>
-                <Lock className="h-3.5 w-3.5 mr-1" />Bloquear
-              </Button>
-            )}
-          </>
-        )}
-        {reconciliationRows.length > 0 && (
-          <Button variant="ghost" size="sm" className="h-8 text-xs ml-auto" onClick={handleDownloadCSV}>
-            <FileText className="h-3.5 w-3.5 mr-1" />Exportar CSV
+      <Card className="shadow-none bg-muted/20 border-border/40">
+        <CardContent className="py-2.5 px-4 flex items-center gap-2 flex-wrap">
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileUpload} />
+          <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg gap-1.5" onClick={() => fileInputRef.current?.click()} disabled={isLocked || processing}>
+            <Upload className="h-3.5 w-3.5" />Truth File
           </Button>
-        )}
-      </div>
+          <Button size="sm" className="h-8 text-xs rounded-lg gap-1.5" onClick={() => runReconciliationForBatch(activeBatch.id)} disabled={isLocked || processing || activeBatch.status === "DRAFT"}>
+            {processing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+            Ejecutar
+          </Button>
+
+          <Separator orientation="vertical" className="h-5 mx-1" />
+
+          {!isLocked && batchSummary && (
+            <>
+              <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1.5" onClick={() => setShowApproveDialog(true)}>
+                <CheckCircle2 className="h-3.5 w-3.5" />Aprobar
+              </Button>
+              {activeBatch.status === "APPROVED" && (
+                <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1.5" onClick={() => lockBatch(activeBatch.id)}>
+                  <Lock className="h-3.5 w-3.5" />Bloquear
+                </Button>
+              )}
+            </>
+          )}
+
+          {reconciliationRows.length > 0 && (
+            <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg gap-1.5 ml-auto" onClick={handleDownloadCSV}>
+              <Download className="h-3.5 w-3.5" />Exportar CSV
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       {/* KPI strip */}
       {batchSummary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KpiCard label="Empleados Truth" value={batchSummary.truth_count} icon={Users} />
           <KpiCard label="Matched" value={batchSummary.matched} subtitle={fmtPct(batchSummary.truth_count > 0 ? batchSummary.matched / batchSummary.truth_count : 0)} icon={UserCheck} accent="success" />
           <KpiCard label="Match exacto" value={batchSummary.exact_match} icon={CheckCircle2} accent="success" />
@@ -645,13 +744,13 @@ export default function PayrollReconciliationPage() {
       {/* Component summary cards */}
       {batchSummary && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-          <SummaryCard label="Hours" truth={batchSummary.totals_truth.hours} system={batchSummary.totals_system.hours} variance={batchSummary.totals_variance.hours} tolerance={tolerance.hours} />
-          <SummaryCard label="Total Pay" truth={batchSummary.totals_truth.total_pay} system={batchSummary.totals_system.total_pay} variance={batchSummary.totals_variance.total_pay} tolerance={tolerance.money} />
-          <SummaryCard label="Pay/Day" truth={batchSummary.totals_truth.pay_per_day} system={batchSummary.totals_system.pay_per_day} variance={batchSummary.totals_variance.pay_per_day} tolerance={tolerance.money} />
-          <SummaryCard label="Ryde" truth={batchSummary.totals_truth.ryde} system={batchSummary.totals_system.ryde} variance={batchSummary.totals_variance.ryde} tolerance={tolerance.money} />
-          <SummaryCard label="Tips" truth={batchSummary.totals_truth.tips} system={batchSummary.totals_system.tips} variance={batchSummary.totals_variance.tips} tolerance={tolerance.tips} />
-          <SummaryCard label="Reimb." truth={batchSummary.totals_truth.reimbursements} system={batchSummary.totals_system.reimbursements} variance={batchSummary.totals_variance.reimbursements} tolerance={tolerance.money} />
-          <SummaryCard label="TOTAL" truth={batchSummary.totals_truth.grand_total} system={batchSummary.totals_system.grand_total} variance={batchSummary.totals_variance.grand_total} tolerance={tolerance.money} />
+          <SummaryCard label="Hours" truth={batchSummary.totals_truth.hours} system={batchSummary.totals_system.hours} variance={batchSummary.totals_variance.hours} tolerance={tolerance.hours} icon={Clock} />
+          <SummaryCard label="Total Pay" truth={batchSummary.totals_truth.total_pay} system={batchSummary.totals_system.total_pay} variance={batchSummary.totals_variance.total_pay} tolerance={tolerance.money} icon={DollarSign} />
+          <SummaryCard label="Pay/Day" truth={batchSummary.totals_truth.pay_per_day} system={batchSummary.totals_system.pay_per_day} variance={batchSummary.totals_variance.pay_per_day} tolerance={tolerance.money} icon={DollarSign} />
+          <SummaryCard label="Ryde" truth={batchSummary.totals_truth.ryde} system={batchSummary.totals_system.ryde} variance={batchSummary.totals_variance.ryde} tolerance={tolerance.money} icon={Car} />
+          <SummaryCard label="Tips" truth={batchSummary.totals_truth.tips} system={batchSummary.totals_system.tips} variance={batchSummary.totals_variance.tips} tolerance={tolerance.tips} icon={UtensilsCrossed} />
+          <SummaryCard label="Reimb." truth={batchSummary.totals_truth.reimbursements} system={batchSummary.totals_system.reimbursements} variance={batchSummary.totals_variance.reimbursements} tolerance={tolerance.money} icon={Receipt} />
+          <SummaryCard label="TOTAL" truth={batchSummary.totals_truth.grand_total} system={batchSummary.totals_system.grand_total} variance={batchSummary.totals_variance.grand_total} tolerance={tolerance.money} icon={DollarSign} />
         </div>
       )}
 
@@ -660,117 +759,131 @@ export default function PayrollReconciliationPage() {
         <ValidationReportPanel summary={batchSummary} parseResult={truthParseResult} />
       )}
 
-      {/* Filters */}
+      {/* Filters + Search */}
       {reconciliationRows.length > 0 && (
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input placeholder="Buscar empleado..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-xs" />
-          </div>
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[180px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos ({reconciliationRows.length})</SelectItem>
-              <SelectItem value="exact">Match exacto ({reconciliationRows.filter(r => r.classification.is_exact_match).length})</SelectItem>
-              <SelectItem value="mismatch">Parcial ({reconciliationRows.filter(r => r.classification.has_component_mismatch && !r.classification.has_critical_mismatch).length})</SelectItem>
-              <SelectItem value="critical">Críticos ({reconciliationRows.filter(r => r.classification.has_critical_mismatch).length})</SelectItem>
-              <SelectItem value="missing_system">Sin sistema ({reconciliationRows.filter(r => r.classification.row_status === "MISSING_IN_SYSTEM").length})</SelectItem>
-              <SelectItem value="manual">Ajuste manual ({reconciliationRows.filter(r => r.classification.has_manual_adjustment).length})</SelectItem>
-              <SelectItem value="low_confidence">Baja confianza ({reconciliationRows.filter(r => r.match.match_confidence > 0 && r.match.match_confidence < 80).length})</SelectItem>
-              <SelectItem value="flags">Anomalías ({reconciliationRows.filter(r => r.anomaly_flags.length > 0).length})</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-[11px] text-muted-foreground ml-auto">{filteredRows.length} de {reconciliationRows.length} filas</p>
-        </div>
+        <Card className="shadow-none border-border/50">
+          <CardContent className="py-2.5 px-4 flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input placeholder="Buscar empleado..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-xs rounded-lg" />
+            </div>
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-[200px] h-8 text-xs rounded-lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos ({reconciliationRows.length})</SelectItem>
+                <SelectItem value="exact">✓ Match exacto ({reconciliationRows.filter(r => r.classification.is_exact_match).length})</SelectItem>
+                <SelectItem value="mismatch">⚠ Parcial ({reconciliationRows.filter(r => r.classification.has_component_mismatch && !r.classification.has_critical_mismatch).length})</SelectItem>
+                <SelectItem value="critical">✕ Críticos ({reconciliationRows.filter(r => r.classification.has_critical_mismatch).length})</SelectItem>
+                <SelectItem value="missing_system">⊘ Sin sistema ({reconciliationRows.filter(r => r.classification.row_status === "MISSING_IN_SYSTEM").length})</SelectItem>
+                <SelectItem value="manual">◉ Ajuste manual ({reconciliationRows.filter(r => r.classification.has_manual_adjustment).length})</SelectItem>
+                <SelectItem value="low_confidence">◎ Baja confianza ({reconciliationRows.filter(r => r.match.match_confidence > 0 && r.match.match_confidence < 80).length})</SelectItem>
+                <SelectItem value="flags">⚑ Anomalías ({reconciliationRows.filter(r => r.anomaly_flags.length > 0).length})</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground ml-auto tabular-nums font-medium">{filteredRows.length} de {reconciliationRows.length} filas</p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Main grid */}
       {filteredRows.length > 0 && (
-        <div className="border rounded-lg overflow-auto max-h-[55vh]">
-          <Table>
-            <TableHeader className="sticky top-0 z-30 bg-background">
-              <TableRow className="text-[10px]">
-                <TableHead className="sticky left-0 bg-background z-40 min-w-[160px] py-2">Empleado</TableHead>
-                <TableHead className="py-2">Status</TableHead>
-                <TableHead className="py-2">Match</TableHead>
-                <TableHead className="text-right py-2">T.Hrs</TableHead>
-                <TableHead className="text-right py-2">S.Hrs</TableHead>
-                <TableHead className="text-right py-2">Δ</TableHead>
-                <TableHead className="text-right py-2">T.Pay</TableHead>
-                <TableHead className="text-right py-2">S.Pay</TableHead>
-                <TableHead className="text-right py-2">Δ</TableHead>
-                <TableHead className="text-right py-2">T.PPD</TableHead>
-                <TableHead className="text-right py-2">Δ</TableHead>
-                <TableHead className="text-right py-2">T.Ryde</TableHead>
-                <TableHead className="text-right py-2">Δ</TableHead>
-                <TableHead className="text-right py-2">T.Tips</TableHead>
-                <TableHead className="text-right py-2">Δ</TableHead>
-                <TableHead className="text-right py-2 font-bold">T.Total</TableHead>
-                <TableHead className="text-right py-2 font-bold">S.Total</TableHead>
-                <TableHead className="text-right py-2 font-bold">Δ Total</TableHead>
-                <TableHead className="py-2 w-8"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRows.map((row, i) => (
-                <TableRow
-                  key={i}
-                  className={`text-xs cursor-pointer hover:bg-accent/30 transition-colors ${row.classification.has_critical_mismatch ? "bg-destructive/5" : row.classification.is_exact_match ? "" : ""}`}
-                  onClick={() => setSelectedRow(row)}
-                >
-                  <TableCell className="sticky left-0 bg-background z-10 py-1.5">
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium truncate max-w-[140px]">{row.truth.first_name} {row.truth.last_name}</span>
-                      {row.anomaly_flags.length > 0 && (
-                        <Tooltip>
-                          <TooltipTrigger><Badge variant="destructive" className="text-[8px] px-1 py-0 h-3.5">{row.anomaly_flags.length}</Badge></TooltipTrigger>
-                          <TooltipContent className="text-[10px] max-w-xs">{row.anomaly_flags.join(", ")}</TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-1.5">{statusBadge(row.classification.row_status)}</TableCell>
-                  <TableCell className="py-1.5">{matchBadge(row.match.match_confidence, row.match.matched_by)}</TableCell>
-                  <TableCell className="text-right font-mono py-1.5">{fmtH(row.truth.total_hours)}</TableCell>
-                  <TableCell className="text-right font-mono py-1.5">{fmtH(row.system?.total_hours)}</TableCell>
-                  <TableCell className="text-right py-1.5">{varianceCell(row.variances.hours, tolerance.hours)}</TableCell>
-                  <TableCell className="text-right font-mono py-1.5">{fmt(row.truth.total_pay)}</TableCell>
-                  <TableCell className="text-right font-mono py-1.5">{fmt(row.system?.total_pay)}</TableCell>
-                  <TableCell className="text-right py-1.5">{varianceCell(row.variances.total_pay, tolerance.money)}</TableCell>
-                  <TableCell className="text-right font-mono py-1.5">{fmt(row.truth.pay_per_day)}</TableCell>
-                  <TableCell className="text-right py-1.5">{varianceCell(row.variances.pay_per_day, tolerance.money)}</TableCell>
-                  <TableCell className="text-right font-mono py-1.5">{fmt(row.truth.ryde)}</TableCell>
-                  <TableCell className="text-right py-1.5">{varianceCell(row.variances.ryde, tolerance.money)}</TableCell>
-                  <TableCell className="text-right font-mono py-1.5">{fmt(row.truth.tips)}</TableCell>
-                  <TableCell className="text-right py-1.5">{varianceCell(row.variances.tips, tolerance.tips)}</TableCell>
-                  <TableCell className="text-right font-mono font-semibold py-1.5">{fmt(row.truth.total)}</TableCell>
-                  <TableCell className="text-right font-mono font-semibold py-1.5">{fmt(row.system?.total)}</TableCell>
-                  <TableCell className="text-right font-semibold py-1.5">{varianceCell(row.variances.total, tolerance.money)}</TableCell>
-                  <TableCell className="py-1.5">
-                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                  </TableCell>
+        <Card className="shadow-none overflow-hidden">
+          <div className="overflow-auto max-h-[55vh]">
+            <Table>
+              <TableHeader className="sticky top-0 z-30">
+                <TableRow>
+                  <TableHead className="sticky left-0 z-40 bg-surface-2 min-w-[170px] py-2.5">Empleado</TableHead>
+                  <TableHead className="py-2.5">Status</TableHead>
+                  <TableHead className="py-2.5">Match</TableHead>
+                  <TableHead className="text-right py-2.5">T.Hrs</TableHead>
+                  <TableHead className="text-right py-2.5">S.Hrs</TableHead>
+                  <TableHead className="text-right py-2.5">Δ</TableHead>
+                  <TableHead className="text-right py-2.5">T.Pay</TableHead>
+                  <TableHead className="text-right py-2.5">S.Pay</TableHead>
+                  <TableHead className="text-right py-2.5">Δ</TableHead>
+                  <TableHead className="text-right py-2.5">T.PPD</TableHead>
+                  <TableHead className="text-right py-2.5">Δ</TableHead>
+                  <TableHead className="text-right py-2.5">T.Ryde</TableHead>
+                  <TableHead className="text-right py-2.5">Δ</TableHead>
+                  <TableHead className="text-right py-2.5">T.Tips</TableHead>
+                  <TableHead className="text-right py-2.5">Δ</TableHead>
+                  <TableHead className="text-right py-2.5 !font-bold">T.Total</TableHead>
+                  <TableHead className="text-right py-2.5 !font-bold">S.Total</TableHead>
+                  <TableHead className="text-right py-2.5 !font-bold">Δ Total</TableHead>
+                  <TableHead className="py-2.5 w-8"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {filteredRows.map((row, i) => {
+                  const isCritical = row.classification.has_critical_mismatch;
+                  const isExact = row.classification.is_exact_match;
+                  return (
+                    <TableRow
+                      key={i}
+                      className={`text-xs cursor-pointer transition-colors ${isCritical ? "bg-destructive/[0.04] hover:bg-destructive/[0.08]" : isExact ? "hover:bg-earning/[0.04]" : "hover:bg-accent/40"}`}
+                      onClick={() => setSelectedRow(row)}
+                    >
+                      <TableCell className="sticky left-0 bg-card z-10 py-2">
+                        <div className="flex items-center gap-1.5">
+                          {isExact && <div className="h-1.5 w-1.5 rounded-full bg-earning shrink-0" />}
+                          {isCritical && <div className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />}
+                          <span className="font-medium truncate max-w-[130px]">{row.truth.first_name} {row.truth.last_name}</span>
+                          {row.anomaly_flags.length > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-destructive/15 text-destructive text-[8px] font-bold">{row.anomaly_flags.length}</span>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-[10px] max-w-xs">{row.anomaly_flags.join(", ")}</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2">{statusBadge(row.classification.row_status)}</TableCell>
+                      <TableCell className="py-2">{matchBadge(row.match.match_confidence, row.match.matched_by)}</TableCell>
+                      <TableCell className="text-right font-mono py-2">{fmtH(row.truth.total_hours)}</TableCell>
+                      <TableCell className="text-right font-mono py-2 text-muted-foreground">{fmtH(row.system?.total_hours)}</TableCell>
+                      <TableCell className="text-right py-2">{varianceCell(row.variances.hours, tolerance.hours)}</TableCell>
+                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.total_pay)}</TableCell>
+                      <TableCell className="text-right font-mono py-2 text-muted-foreground">{fmt(row.system?.total_pay)}</TableCell>
+                      <TableCell className="text-right py-2">{varianceCell(row.variances.total_pay, tolerance.money)}</TableCell>
+                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.pay_per_day)}</TableCell>
+                      <TableCell className="text-right py-2">{varianceCell(row.variances.pay_per_day, tolerance.money)}</TableCell>
+                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.ryde)}</TableCell>
+                      <TableCell className="text-right py-2">{varianceCell(row.variances.ryde, tolerance.money)}</TableCell>
+                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.tips)}</TableCell>
+                      <TableCell className="text-right py-2">{varianceCell(row.variances.tips, tolerance.tips)}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold py-2">{fmt(row.truth.total)}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold py-2 text-muted-foreground">{fmt(row.system?.total)}</TableCell>
+                      <TableCell className="text-right font-semibold py-2">{varianceCell(row.variances.total, tolerance.money)}</TableCell>
+                      <TableCell className="py-2">
+                        <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary" />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
       )}
 
       {/* System-only employees */}
       {systemOnlyEmployees.length > 0 && (
-        <Card className="border-warning/30">
-          <CardHeader className="py-2.5 px-4">
-            <CardTitle className="text-xs flex items-center gap-2">
-              <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+        <Card className="shadow-none border-warning/25 bg-warning/[0.03]">
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-xs flex items-center gap-2 font-semibold">
+              <div className="p-1 rounded-md bg-warning/12">
+                <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+              </div>
               Solo en sistema — no en truth ({systemOnlyEmployees.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-3">
             <div className="flex flex-wrap gap-1.5">
               {systemOnlyEmployees.map(e => (
-                <Badge key={e.employee_id} variant="outline" className="text-[10px]">{e.first_name} {e.last_name}</Badge>
+                <Badge key={e.employee_id} variant="outline" className="text-[10px] bg-card">{e.first_name} {e.last_name}</Badge>
               ))}
             </div>
           </CardContent>
@@ -795,20 +908,26 @@ export default function PayrollReconciliationPage() {
 
       {/* Empty state */}
       {reconciliationRows.length === 0 && !processing && activeBatch.status !== "DRAFT" && (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <Upload className="h-8 w-8 mx-auto text-muted-foreground/40 mb-3" />
-            <p className="text-sm text-muted-foreground">Carga un truth file y ejecuta la reconciliación.</p>
+        <Card className="border-dashed border-2 shadow-none">
+          <CardContent className="py-16 flex flex-col items-center text-center">
+            <div className="p-4 rounded-2xl bg-muted/50 mb-4">
+              <Upload className="h-8 w-8 text-muted-foreground/40" />
+            </div>
+            <p className="font-medium text-muted-foreground">Carga un truth file y ejecuta la reconciliación</p>
+            <p className="text-sm text-muted-foreground/60 mt-1">Sube un archivo .xlsx o .csv con los datos de nómina reales.</p>
           </CardContent>
         </Card>
       )}
 
       {/* Processing state */}
       {processing && (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <Loader2 className="h-6 w-6 mx-auto animate-spin text-primary mb-2" />
-            <p className="text-sm text-muted-foreground">Procesando reconciliación...</p>
+        <Card className="shadow-none">
+          <CardContent className="py-12 flex flex-col items-center text-center">
+            <div className="p-4 rounded-2xl bg-primary/8 mb-3">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+            <p className="font-medium text-sm">Procesando reconciliación...</p>
+            <p className="text-xs text-muted-foreground mt-1">Comparando truth vs sistema, esto puede tomar unos segundos.</p>
           </CardContent>
         </Card>
       )}
