@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePayrollConfig, calculateOverdue, DAY_NAMES, type PeriodOverdueInfo } from "@/hooks/usePayrollConfig";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
 import { format, parseISO, formatDistanceToNow, startOfWeek, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
