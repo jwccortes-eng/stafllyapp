@@ -392,141 +392,263 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                 </div>
 
                 {isExpanded && (
-                  <CardContent className="pt-0 pb-4 space-y-4">
+                  <CardContent className="pt-0 pb-5 space-y-5">
                     <Separator />
-                    {/* Scheduled Shifts */}
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> Turnos Programados ({record.scheduled_shifts.length})
+
+                    {/* ── COMPARISON SUMMARY — what matters most ── */}
+                    <div className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] p-4 space-y-3">
+                      <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                        <DollarSign className="h-3.5 w-3.5" /> Resumen de Comparación
                       </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* System Calculation */}
+                        <div className="bg-card rounded-lg border p-3 text-center">
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                            Cálculo del Sistema
+                          </div>
+                          <div className="text-xl font-bold font-mono text-primary">
+                            ${(record as any).shift_calculated_total > 0
+                              ? (record.grand_total || record.final_total_pay)
+                              : record.final_total_pay}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-1">
+                            {(record as any).shift_calculated_total > 0
+                              ? `${(record as any).shift_full_day_count || 0} días × $${(record as any).shift_daily_rate_used || "?"}`
+                              : `${record.total_worked_hours}h trabajadas`
+                            }
+                            {(record.ride_amount > 0 || record.manual_amount > 0) && (
+                              <span> + extras</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Payroll Reference */}
+                        <div className="bg-card rounded-lg border p-3 text-center">
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                            Referencia Nómina
+                          </div>
+                          <div className="text-xl font-bold font-mono text-muted-foreground">
+                            ${record.total_payroll_amount || 0}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-1">
+                            {record.payroll_rows.length} registro(s) importado(s)
+                          </div>
+                        </div>
+
+                        {/* Variance */}
+                        {(() => {
+                          const sysTotal = (record as any).shift_calculated_total > 0
+                            ? (record.grand_total || record.final_total_pay)
+                            : record.final_total_pay;
+                          const payRef = record.total_payroll_amount || 0;
+                          const diff = sysTotal - payRef;
+                          const absDiff = Math.abs(diff);
+                          return (
+                            <div className={`bg-card rounded-lg border p-3 text-center ${absDiff > 10 ? "border-destructive/40" : absDiff > 0 ? "border-warning/40" : "border-earning/40"}`}>
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                Varianza
+                              </div>
+                              <div className={`text-xl font-bold font-mono ${absDiff > 10 ? "text-destructive" : absDiff > 0 ? "text-warning" : "text-earning"}`}>
+                                {diff >= 0 ? "+" : ""}${diff.toFixed(0)}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground mt-1">
+                                {absDiff <= 1 ? "✓ Match exacto" : absDiff <= 10 ? "≈ Dentro de tolerancia" : "⚠ Requiere revisión"}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Compensation Validation */}
+                        {comp && (
+                          <div className={`bg-card rounded-lg border p-3 text-center ${
+                            comp.status === "match" ? "border-earning/40" :
+                            comp.status === "close_match" ? "border-warning/40" :
+                            comp.status === "mismatch" ? "border-destructive/40" : ""
+                          }`}>
+                            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                              Validación Tarifa
+                            </div>
+                            <div className="flex items-center justify-center gap-1">
+                              {compStatusIcon}
+                              <span className="text-sm font-semibold">
+                                {comp.status === "match" ? "OK" :
+                                 comp.status === "close_match" ? "Cercano" :
+                                 comp.status === "mismatch" ? "Error" : "Revisar"}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-1">{comp.reason}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* ── SECTION 1: Scheduled Shifts ── */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5" /> Turnos Programados
+                        </h4>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {record.scheduled_shifts.length} turno(s) · {record.total_scheduled_hours}h prog.
+                        </Badge>
+                      </div>
                       {record.scheduled_shifts.length > 0 ? (
-                        <div className="grid grid-cols-4 gap-1 text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                           {record.scheduled_shifts.map((s: any, i: number) => (
-                            <div key={i} className="p-2 bg-muted/50 rounded-md">
-                              <div className="font-medium">{s.date}</div>
-                              <div className="text-muted-foreground">{s.hours}h — {s.title || "—"}</div>
+                            <div key={i} className="p-2.5 bg-muted/40 rounded-lg border border-border/30">
+                              <div className="font-semibold text-xs">{s.date}</div>
+                              <div className="text-[11px] text-muted-foreground">{s.title || "Sin título"}</div>
+                              <div className="text-[11px] text-muted-foreground font-mono">{s.hours}h programadas</div>
                             </div>
                           ))}
                         </div>
-                      ) : <p className="text-xs text-muted-foreground">Sin turnos programados</p>}
+                      ) : <p className="text-xs text-muted-foreground italic">Sin turnos programados en este periodo</p>}
                     </div>
 
-                    {/* Clock Records */}
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> Fichajes ({record.worked_shifts.length})
-                      </h4>
+                    {/* ── SECTION 2: Clocked Time ── */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" /> Horas Fichadas (Reloj)
+                        </h4>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {record.worked_shifts.length} fichaje(s) · {record.total_worked_hours}h total
+                        </Badge>
+                      </div>
                       {record.worked_shifts.length > 0 ? (
-                        <div className="grid grid-cols-4 gap-1 text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                           {record.worked_shifts.map((c: any, i: number) => (
-                            <div key={i} className="p-2 bg-muted/50 rounded-md">
-                              <div className="font-medium">{c.date}</div>
-                              <div className="text-muted-foreground">{c.hours}h</div>
-                              {c.clock_in && <div className="text-muted-foreground">{c.clock_in?.substring(11, 16)} → {c.clock_out?.substring(11, 16)}</div>}
+                            <div key={i} className="p-2.5 bg-muted/40 rounded-lg border border-border/30">
+                              <div className="font-semibold text-xs">{c.date}</div>
+                              <div className="text-[11px] font-mono font-medium">{c.hours}h fichadas</div>
+                              {c.clock_in && (
+                                <div className="text-[10px] text-muted-foreground">
+                                  {c.clock_in?.substring(11, 16)} → {c.clock_out?.substring(11, 16)}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
-                      ) : <p className="text-xs text-muted-foreground">Sin fichajes</p>}
+                      ) : <p className="text-xs text-muted-foreground italic">Sin fichajes en este periodo</p>}
                     </div>
 
-                    {/* Payroll Rows */}
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" /> Nómina ({record.payroll_rows.length})
-                      </h4>
+                    {/* ── SECTION 3: Imported Payroll Reference ── */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <FileText className="h-3.5 w-3.5" /> Nómina Importada (Referencia)
+                        </h4>
+                        <Badge variant="outline" className="text-[10px]">
+                          {record.payroll_rows.length} fila(s) · ${record.total_payroll_amount || 0} total
+                        </Badge>
+                      </div>
                       {record.payroll_rows.length > 0 ? (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="text-xs">Fecha</TableHead>
-                              <TableHead className="text-xs">Horas</TableHead>
-                              <TableHead className="text-xs">Pago</TableHead>
-                              <TableHead className="text-xs">Tipo</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {record.payroll_rows.map((p: any, i: number) => (
-                              <TableRow key={i}>
-                                <TableCell className="text-xs">{p.date || "—"}</TableCell>
-                                <TableCell className="text-xs font-mono">{p.hours ?? "—"}</TableCell>
-                                <TableCell className="text-xs font-mono font-semibold">${p.pay ?? 0}</TableCell>
-                                <TableCell><Badge variant="outline" className="text-xs">{p.type || "?"}</Badge></TableCell>
+                        <div className="rounded-lg border overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/30">
+                                <TableHead className="text-[10px] font-semibold uppercase">Fecha</TableHead>
+                                <TableHead className="text-[10px] font-semibold uppercase">Horas (fila)</TableHead>
+                                <TableHead className="text-[10px] font-semibold uppercase">Monto (fila)</TableHead>
+                                <TableHead className="text-[10px] font-semibold uppercase">Tipo</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      ) : <p className="text-xs text-muted-foreground">Sin datos de nómina</p>}
+                            </TableHeader>
+                            <TableBody>
+                              {record.payroll_rows.map((p: any, i: number) => (
+                                <TableRow key={i} className="text-xs">
+                                  <TableCell className="font-mono">{p.date || "—"}</TableCell>
+                                  <TableCell className="font-mono">{p.hours ?? "—"}</TableCell>
+                                  <TableCell className="font-mono font-semibold">${p.pay ?? 0}</TableCell>
+                                  <TableCell><Badge variant="outline" className="text-[10px]">{p.type || "?"}</Badge></TableCell>
+                                </TableRow>
+                              ))}
+                              {record.payroll_rows.length > 1 && (
+                                <TableRow className="bg-muted/20 font-semibold">
+                                  <TableCell className="text-[10px] uppercase">Total Referencia</TableCell>
+                                  <TableCell className="font-mono">
+                                    {record.payroll_rows.reduce((s: number, p: any) => s + Number(p.hours || 0), 0).toFixed(1)}h
+                                  </TableCell>
+                                  <TableCell className="font-mono">${record.total_payroll_amount || 0}</TableCell>
+                                  <TableCell />
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : <p className="text-xs text-muted-foreground italic">Sin datos de nómina importada</p>}
+                      <p className="text-[10px] text-muted-foreground">
+                        ⓘ Estos montos provienen del archivo importado y se usan solo como referencia de comparación. Las horas mostradas son por fila individual, no representan el total del periodo.
+                      </p>
                     </div>
 
-                    {/* Summary — shift-calc primary */}
-                    {(record as any).shift_calculated_total > 0 ? (
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-5 gap-3 bg-primary/5 border border-primary/20 rounded-lg p-3">
-                          <div className="text-center">
-                            <div className="text-xs text-muted-foreground">Full Days</div>
-                            <div className="font-mono font-semibold text-sm">{(record as any).shift_full_day_count || 0} × ${(record as any).shift_daily_rate_used || "?"}</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-xs text-muted-foreground">Half Days</div>
-                            <div className="font-mono text-sm">{(record as any).shift_half_day_count || 0} × ${(record as any).shift_half_day_rate_used || "?"}</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-xs text-muted-foreground">Ride</div>
-                            <div className="font-mono text-sm">${record.ride_amount}</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-xs text-muted-foreground">Manual</div>
-                            <div className="font-mono text-sm">${record.manual_amount}</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-xs text-primary font-bold">TOTAL CALC</div>
-                            <div className="font-mono font-bold text-sm text-primary">${record.grand_total || record.final_total_pay}</div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 bg-muted/30 rounded-lg p-2 text-[11px]">
-                          <div className="text-center">
-                            <div className="text-muted-foreground">Referencia Payroll</div>
-                            <div className="font-mono font-medium text-muted-foreground">${record.total_payroll_amount || 0}</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-muted-foreground">Diferencia</div>
-                            <div className={`font-mono font-medium ${Math.abs((record as any).shift_vs_payroll_diff || 0) > 10 ? "text-destructive" : "text-muted-foreground"}`}>
-                              {((record as any).shift_vs_payroll_diff || 0) >= 0 ? "+" : ""}${(record as any).shift_vs_payroll_diff || 0}
+                    {/* ── SECTION 4: System Calculation Breakdown ── */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <DollarSign className="h-3.5 w-3.5" /> Cálculo del Sistema (Fuente Primaria)
+                      </h4>
+                      {(record as any).shift_calculated_total > 0 ? (
+                        <div className="rounded-xl border-2 border-earning/20 bg-earning/[0.03] p-4">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <div className="text-center">
+                              <div className="text-[10px] text-muted-foreground uppercase">Días Completos</div>
+                              <div className="font-mono font-bold text-sm">{(record as any).shift_full_day_count || 0}</div>
+                              <div className="text-[10px] text-muted-foreground">× ${(record as any).shift_daily_rate_used || "?"}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-muted-foreground uppercase">Medios Días</div>
+                              <div className="font-mono font-bold text-sm">{(record as any).shift_half_day_count || 0}</div>
+                              <div className="text-[10px] text-muted-foreground">× ${(record as any).shift_half_day_rate_used || "?"}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-muted-foreground uppercase">Ride / Transporte</div>
+                              <div className="font-mono font-bold text-sm">${record.ride_amount}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-muted-foreground uppercase">Ajuste Manual</div>
+                              <div className="font-mono font-bold text-sm">${record.manual_amount}</div>
+                            </div>
+                            <div className="text-center bg-earning/10 rounded-lg p-2">
+                              <div className="text-[10px] text-earning font-bold uppercase">Total Calculado</div>
+                              <div className="font-mono font-bold text-lg text-earning">${record.grand_total || record.final_total_pay}</div>
                             </div>
                           </div>
-                          <div className="text-center">
-                            <div className="text-muted-foreground">Fuente</div>
-                            <div className="font-mono truncate">{(record as any).shift_calculation_source?.split(":")[0] || "—"}</div>
+                          <div className="mt-2 text-[10px] text-muted-foreground text-center">
+                            Fuente: {(record as any).shift_calculation_source || "shift_calc"} · Primaria: {(record as any).primary_source || "shift_calc"}
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-5 gap-3 bg-muted/30 rounded-lg p-3">
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Base</div>
-                          <div className="font-mono font-semibold text-sm">${record.base_pay}</div>
+                      ) : (
+                        <div className="rounded-xl border bg-muted/20 p-4">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <div className="text-center">
+                              <div className="text-[10px] text-muted-foreground uppercase">Pago Base</div>
+                              <div className="font-mono font-bold text-sm">${record.base_pay}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-muted-foreground uppercase">Ride</div>
+                              <div className="font-mono font-bold text-sm">${record.ride_amount}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-muted-foreground uppercase">Weekend</div>
+                              <div className="font-mono font-bold text-sm">${record.weekend_amount}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-muted-foreground uppercase">Manual</div>
+                              <div className="font-mono font-bold text-sm">${record.manual_amount}</div>
+                            </div>
+                            <div className="text-center bg-primary/10 rounded-lg p-2">
+                              <div className="text-[10px] text-primary font-bold uppercase">Total</div>
+                              <div className="font-mono font-bold text-lg text-primary">${record.final_total_pay}</div>
+                            </div>
+                          </div>
+                          <div className="mt-2 text-[10px] text-muted-foreground text-center">
+                            Fuente: payroll (sin cálculo por turnos disponible)
+                          </div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Ride</div>
-                          <div className="font-mono text-sm">${record.ride_amount}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Weekend</div>
-                          <div className="font-mono text-sm">${record.weekend_amount}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Manual</div>
-                          <div className="font-mono text-sm">${record.manual_amount}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground font-bold">TOTAL</div>
-                          <div className="font-mono font-bold text-sm text-primary">${record.final_total_pay}</div>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap pt-1">
                       <Select value={record.pay_classification} onValueChange={(v) => updatePayClassification(record.id, v)}>
                         <SelectTrigger className="w-40 h-8 text-xs">
                           <Tag className="h-3 w-3 mr-1" />
@@ -554,7 +676,7 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                     </div>
 
                     {record.resolution_notes && (
-                      <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                      <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2.5">
                         <strong>Nota:</strong> {record.resolution_notes}
                       </div>
                     )}
