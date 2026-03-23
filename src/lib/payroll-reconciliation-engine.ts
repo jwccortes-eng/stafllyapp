@@ -62,7 +62,18 @@ export interface ReconciliationRowResult {
   variances: ComponentVariances;
   classification: RowClassification;
   anomaly_flags: string[];
+  exception_type: ExceptionType | null;
 }
+
+export type ExceptionType =
+  | "CRITICAL_TOTAL_MISMATCH"
+  | "MISSING_IN_SYSTEM"
+  | "MISSING_IN_TRUTH"
+  | "LOW_CONFIDENCE_MATCH"
+  | "COMPONENT_VARIANCE"
+  | "IDENTITY_ISSUE"
+  | "MANUAL_ADJUSTMENT_UNREVIEWED"
+  | "TOTAL_COMPONENT_INTEGRITY";
 
 export interface ComponentVariances {
   hours: number | null;
@@ -88,6 +99,21 @@ export interface ToleranceConfig {
   tips: number;
 }
 
+export interface BatchHealthScore {
+  score: number; // 0-100
+  grade: "A" | "B" | "C" | "D" | "F";
+  factors: HealthFactor[];
+  ready_to_close: boolean;
+  blockers: string[];
+}
+
+export interface HealthFactor {
+  label: string;
+  weight: number;
+  score: number; // 0-100
+  detail: string;
+}
+
 export interface BatchSummary {
   truth_count: number;
   system_count: number;
@@ -106,6 +132,23 @@ export interface BatchSummary {
   match_breakdown: MatchBreakdown;
   anomaly_summary: Record<string, number>;
   top_issues: TopIssue[];
+  health: BatchHealthScore;
+  exceptions: ExceptionSummary;
+}
+
+export interface ExceptionSummary {
+  total: number;
+  by_type: Record<ExceptionType, number>;
+  items: ExceptionItem[];
+}
+
+export interface ExceptionItem {
+  row_index: number;
+  employee_name: string;
+  type: ExceptionType;
+  severity: "critical" | "warning" | "info";
+  description: string;
+  variance_amount: number | null;
 }
 
 export interface MatchBreakdown {
@@ -213,7 +256,7 @@ export function matchEmployees(
     const truthSSN = normalizeSSN(truth.verification_ssn_ein);
     const truthEmployerId = truth.employer_identification?.trim();
 
-    // ── TIER 1: Employer Identification (exact numeric ID)
+    // ── TIER 1: Employer Identification
     if (truthEmployerId) {
       for (const c of candidates) {
         if (usedCandidateIds.has(c.id)) continue;
@@ -224,7 +267,7 @@ export function matchEmployees(
       }
     }
 
-    // ── TIER 2: SSN/EIN (non-placeholder)
+    // ── TIER 2: SSN/EIN
     if (truthSSN && !isPlaceholderSSN(truth.verification_ssn_ein || "")) {
       for (const c of candidates) {
         if (usedCandidateIds.has(c.id)) continue;
@@ -236,7 +279,7 @@ export function matchEmployees(
       }
     }
 
-    // ── TIER 3: External ID / Employee Code
+    // ── TIER 3: External ID
     if (truthEmployerId) {
       for (const c of candidates) {
         if (usedCandidateIds.has(c.id)) continue;
@@ -247,7 +290,7 @@ export function matchEmployees(
       }
     }
 
-    // ── TIER 4: Email match
+    // ── TIER 4: Email
     const truthEmail = truth.raw?.["email"] || truth.raw?.["Email"];
     if (truthEmail && typeof truthEmail === "string") {
       const normEmail = truthEmail.toLowerCase().trim();
@@ -260,7 +303,7 @@ export function matchEmployees(
       }
     }
 
-    // ── TIER 5: Phone match
+    // ── TIER 5: Phone
     const truthPhone = truth.raw?.["phone"] || truth.raw?.["Phone"];
     if (truthPhone && typeof truthPhone === "string") {
       const normPhone = normalizePhone(truthPhone);
@@ -284,7 +327,7 @@ export function matchEmployees(
       }
     }
 
-    // ── TIER 7: Alias match
+    // ── TIER 7: Alias
     for (const a of aliases) {
       if (usedCandidateIds.has(a.employee_id)) continue;
       if (normalizeName(a.alias_normalized) === truthName) {
@@ -293,7 +336,7 @@ export function matchEmployees(
       }
     }
 
-    // ── TIER 8: Fuzzy name match
+    // ── TIER 8: Fuzzy name
     let bestScore = Infinity;
     let bestCandidate: EmployeeCandidate | null = null;
     for (const c of candidates) {
@@ -364,7 +407,6 @@ export function classifyRow(
   if (matchStatus === "UNMATCHED") {
     return { row_status: "MISSING_IN_SYSTEM", is_exact_match: false, has_component_mismatch: false, has_critical_mismatch: true, has_manual_adjustment: false };
   }
-
   if (!system) {
     return { row_status: "MISSING_IN_SYSTEM", is_exact_match: false, has_component_mismatch: false, has_critical_mismatch: true, has_manual_adjustment: false };
   }
@@ -416,6 +458,120 @@ export function detectAnomalies(truth: TruthRow, system: SystemEmployeeData | nu
   if (!system) flags.push("MISSING_IN_SYSTEM");
 
   return flags;
+}
+
+// ─── Exception Classification ────────────────────────────────────────
+
+function classifyException(
+  row: { truth: TruthRow; system: SystemEmployeeData | null; match: MatchResult; variances: ComponentVariances; classification: RowClassification; anomaly_flags: string[] },
+  tolerance: ToleranceConfig
+): ExceptionType | null {
+  if (row.classification.row_status === "MISSING_IN_SYSTEM") return "MISSING_IN_SYSTEM";
+  if (row.classification.has_critical_mismatch) return "CRITICAL_TOTAL_MISMATCH";
+  if (row.match.match_confidence > 0 && row.match.match_confidence < 80) return "LOW_CONFIDENCE_MATCH";
+  if (row.anomaly_flags.includes("INVALID_SSN_EIN") || row.anomaly_flags.includes("PLACEHOLDER_SSN_EIN")) return "IDENTITY_ISSUE";
+  if (row.anomaly_flags.includes("TOTAL_DOES_NOT_MATCH_COMPONENTS")) return "TOTAL_COMPONENT_INTEGRITY";
+  if (row.classification.has_manual_adjustment && !row.classification.is_exact_match) return "MANUAL_ADJUSTMENT_UNREVIEWED";
+  if (row.classification.has_component_mismatch) return "COMPONENT_VARIANCE";
+  return null;
+}
+
+function buildExceptionSummary(rows: ReconciliationRowResult[], systemOnly: SystemEmployeeData[]): ExceptionSummary {
+  const items: ExceptionItem[] = [];
+  const byType: Record<string, number> = {};
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r.exception_type) continue;
+    byType[r.exception_type] = (byType[r.exception_type] || 0) + 1;
+    items.push({
+      row_index: i,
+      employee_name: `${r.truth.first_name} ${r.truth.last_name}`,
+      type: r.exception_type,
+      severity: r.classification.has_critical_mismatch ? "critical" : r.classification.has_component_mismatch ? "warning" : "info",
+      description: exceptionDescription(r.exception_type),
+      variance_amount: r.variances.total,
+    });
+  }
+
+  // System-only employees as exceptions
+  for (const e of systemOnly) {
+    const type: ExceptionType = "MISSING_IN_TRUTH";
+    byType[type] = (byType[type] || 0) + 1;
+    items.push({
+      row_index: -1,
+      employee_name: `${e.first_name} ${e.last_name}`,
+      type,
+      severity: "warning",
+      description: "Empleado en sistema pero no en archivo de verdad",
+      variance_amount: null,
+    });
+  }
+
+  items.sort((a, b) => {
+    const sev = { critical: 0, warning: 1, info: 2 };
+    return sev[a.severity] - sev[b.severity];
+  });
+
+  return { total: items.length, by_type: byType as Record<ExceptionType, number>, items };
+}
+
+function exceptionDescription(type: ExceptionType): string {
+  const map: Record<ExceptionType, string> = {
+    CRITICAL_TOTAL_MISMATCH: "Varianza crítica en total — fuera de tolerancia",
+    MISSING_IN_SYSTEM: "Empleado en truth file pero no encontrado en sistema",
+    MISSING_IN_TRUTH: "Empleado en sistema pero no en truth file",
+    LOW_CONFIDENCE_MATCH: "Match por nombre aproximado — requiere confirmación",
+    COMPONENT_VARIANCE: "Componente(s) fuera de tolerancia (total dentro)",
+    IDENTITY_ISSUE: "SSN/EIN inválido o placeholder",
+    MANUAL_ADJUSTMENT_UNREVIEWED: "Ajuste manual sin revisión",
+    TOTAL_COMPONENT_INTEGRITY: "Suma de componentes no cuadra con total reportado",
+  };
+  return map[type] || type;
+}
+
+// ─── Health Score ────────────────────────────────────────────────────
+
+function computeHealthScore(rows: ReconciliationRowResult[], systemOnly: SystemEmployeeData[], summary: Omit<BatchSummary, "health" | "exceptions">): BatchHealthScore {
+  const factors: HealthFactor[] = [];
+  const blockers: string[] = [];
+  const tc = summary.truth_count || 1;
+
+  // Factor 1: Match rate (25%)
+  const matchRate = summary.matched / tc;
+  const matchScore = Math.min(100, Math.round(matchRate * 100));
+  factors.push({ label: "Tasa de match", weight: 25, score: matchScore, detail: `${summary.matched}/${tc} empleados matched` });
+
+  // Factor 2: Exact match rate (25%)
+  const exactRate = summary.exact_match / tc;
+  const exactScore = Math.min(100, Math.round(exactRate * 100));
+  factors.push({ label: "Match exacto", weight: 25, score: exactScore, detail: `${summary.exact_match}/${tc} exactos` });
+
+  // Factor 3: No critical mismatches (20%)
+  const critScore = summary.critical_mismatch === 0 ? 100 : Math.max(0, 100 - summary.critical_mismatch * 20);
+  factors.push({ label: "Sin críticos", weight: 20, score: critScore, detail: `${summary.critical_mismatch} discrepancias críticas` });
+  if (summary.critical_mismatch > 0) blockers.push(`${summary.critical_mismatch} discrepancias críticas sin resolver`);
+
+  // Factor 4: No unmatched truth (15%)
+  const unmatchScore = summary.unmatched_truth === 0 ? 100 : Math.max(0, 100 - summary.unmatched_truth * 25);
+  factors.push({ label: "Sin faltantes", weight: 15, score: unmatchScore, detail: `${summary.unmatched_truth} empleados sin match` });
+  if (summary.unmatched_truth > 0) blockers.push(`${summary.unmatched_truth} empleados no encontrados en sistema`);
+
+  // Factor 5: Variance within threshold (15%)
+  const varThreshold = 50; // $50 total acceptable
+  const varScore = summary.total_variance <= 1 ? 100 : summary.total_variance <= varThreshold ? 80 : Math.max(0, 100 - Math.round(summary.total_variance / 10));
+  factors.push({ label: "Varianza total", weight: 15, score: varScore, detail: `$${summary.total_variance.toFixed(2)} varianza` });
+
+  const weightedScore = Math.round(factors.reduce((sum, f) => sum + f.score * f.weight, 0) / 100);
+
+  let grade: "A" | "B" | "C" | "D" | "F";
+  if (weightedScore >= 90) grade = "A";
+  else if (weightedScore >= 75) grade = "B";
+  else if (weightedScore >= 60) grade = "C";
+  else if (weightedScore >= 40) grade = "D";
+  else grade = "F";
+
+  return { score: weightedScore, grade, factors, ready_to_close: blockers.length === 0 && weightedScore >= 75, blockers };
 }
 
 // ─── Batch Summary ───────────────────────────────────────────────────
@@ -472,7 +628,6 @@ export function computeBatchSummary(
 
   const totalVariance = Math.abs(totals_variance.grand_total);
 
-  // Match breakdown
   const match_breakdown: MatchBreakdown = {
     by_employer_id: rows.filter(r => r.match.matched_by === "employer_id").length,
     by_ssn: rows.filter(r => r.match.matched_by === "ssn_ein").length,
@@ -485,7 +640,6 @@ export function computeBatchSummary(
     unmatched: rows.filter(r => r.match.matched_by === "none").length,
   };
 
-  // Anomaly summary
   const anomaly_summary: Record<string, number> = {};
   for (const row of rows) {
     for (const flag of row.anomaly_flags) {
@@ -493,7 +647,6 @@ export function computeBatchSummary(
     }
   }
 
-  // Top issues
   const top_issues: TopIssue[] = [];
   if (criticalMismatch > 0) top_issues.push({ severity: "critical", label: "Discrepancias críticas en total", count: criticalMismatch });
   if (unmatchedTruth > 0) top_issues.push({ severity: "critical", label: "Empleados sin match en sistema", count: unmatchedTruth });
@@ -513,25 +666,17 @@ export function computeBatchSummary(
   if (criticalMismatch > 0) batch_status = "CRITICAL";
   else if (componentMismatch > 0 || unmatchedTruth > 0) batch_status = "MISMATCHED";
 
-  return {
-    truth_count: truthCount,
-    system_count: systemCount,
-    matched,
-    unmatched_truth: unmatchedTruth,
-    unmatched_system: systemOnlyEmployees.length,
-    exact_match: exactMatch,
-    mismatch,
-    component_mismatch: componentMismatch,
-    critical_mismatch: criticalMismatch,
-    total_variance: totalVariance,
-    totals_truth,
-    totals_system,
-    totals_variance,
-    batch_status,
-    match_breakdown,
-    anomaly_summary,
-    top_issues,
+  const partialSummary = {
+    truth_count: truthCount, system_count: systemCount, matched, unmatched_truth: unmatchedTruth,
+    unmatched_system: systemOnlyEmployees.length, exact_match: exactMatch, mismatch, component_mismatch: componentMismatch,
+    critical_mismatch: criticalMismatch, total_variance: totalVariance, totals_truth, totals_system, totals_variance,
+    batch_status, match_breakdown, anomaly_summary, top_issues,
   };
+
+  const health = computeHealthScore(rows, systemOnlyEmployees, partialSummary);
+  const exceptions = buildExceptionSummary(rows, systemOnlyEmployees);
+
+  return { ...partialSummary, health, exceptions };
 }
 
 // ─── Full Reconciliation Run ─────────────────────────────────────────
@@ -574,12 +719,82 @@ export function runReconciliation(
     const variances = computeRowVariances(truth, system);
     const classification = classifyRow(truth, system, variances, match.match_status, tolerance);
     const anomaly_flags = detectAnomalies(truth, system);
+    const baseRow = { truth, system, match, variances, classification, anomaly_flags };
+    const exception_type = classifyException(baseRow, tolerance);
 
-    return { truth, system, match, variances, classification, anomaly_flags };
+    return { ...baseRow, exception_type };
   });
 
   const systemOnly = systemData.filter(s => !matchedSystemIds.has(s.employee_id));
   const summary = computeBatchSummary(rows, systemOnly);
 
   return { rows, systemOnly, summary };
+}
+
+// ─── Executive Export Helpers ─────────────────────────────────────────
+
+export function generateExecutiveCSV(rows: ReconciliationRowResult[], summary: BatchSummary): string[][] {
+  return [
+    ["RECONCILIATION EXECUTIVE SUMMARY"],
+    [""],
+    ["Metric", "Value"],
+    ["Truth Employees", String(summary.truth_count)],
+    ["System Employees", String(summary.system_count)],
+    ["Matched", String(summary.matched)],
+    ["Exact Match", String(summary.exact_match)],
+    ["Component Mismatch", String(summary.component_mismatch)],
+    ["Critical Mismatch", String(summary.critical_mismatch)],
+    ["Unmatched (Truth)", String(summary.unmatched_truth)],
+    ["Unmatched (System)", String(summary.unmatched_system)],
+    [""],
+    ["Health Score", `${summary.health.score}/100 (${summary.health.grade})`],
+    ["Ready to Close", summary.health.ready_to_close ? "YES" : "NO"],
+    ...(summary.health.blockers.length > 0 ? [["Blockers", summary.health.blockers.join("; ")]] : []),
+    [""],
+    ["Component", "Truth", "System", "Variance"],
+    ["Hours", String(summary.totals_truth.hours), String(summary.totals_system.hours), String(summary.totals_variance.hours)],
+    ["Total Pay", String(summary.totals_truth.total_pay), String(summary.totals_system.total_pay), String(summary.totals_variance.total_pay)],
+    ["Pay Per Day", String(summary.totals_truth.pay_per_day), String(summary.totals_system.pay_per_day), String(summary.totals_variance.pay_per_day)],
+    ["Ryde", String(summary.totals_truth.ryde), String(summary.totals_system.ryde), String(summary.totals_variance.ryde)],
+    ["Tips", String(summary.totals_truth.tips), String(summary.totals_system.tips), String(summary.totals_variance.tips)],
+    ["Reimbursements", String(summary.totals_truth.reimbursements), String(summary.totals_system.reimbursements), String(summary.totals_variance.reimbursements)],
+    ["GRAND TOTAL", String(summary.totals_truth.grand_total), String(summary.totals_system.grand_total), String(summary.totals_variance.grand_total)],
+    [""],
+    ["EXCEPTIONS"],
+    ["Employee", "Type", "Severity", "Description", "Variance"],
+    ...summary.exceptions.items.map(e => [e.employee_name, e.type, e.severity, e.description, e.variance_amount != null ? String(e.variance_amount) : ""]),
+  ];
+}
+
+export function generateMismatchCSV(rows: ReconciliationRowResult[]): string[][] {
+  const mismatches = rows.filter(r => !r.classification.is_exact_match);
+  return [
+    ["Employee", "Status", "Match Method", "Confidence", "Truth Total", "System Total", "Variance", "Flags", "Observaciones"],
+    ...mismatches.map(r => [
+      `${r.truth.first_name} ${r.truth.last_name}`,
+      r.classification.row_status,
+      r.match.matched_by,
+      String(r.match.match_confidence),
+      String(r.truth.total ?? ""),
+      String(r.system?.total ?? ""),
+      String(r.variances.total ?? ""),
+      r.anomaly_flags.join("; "),
+      r.truth.observaciones || "",
+    ]),
+  ];
+}
+
+export function generateCriticalCSV(rows: ReconciliationRowResult[]): string[][] {
+  const critical = rows.filter(r => r.classification.has_critical_mismatch);
+  return [
+    ["Employee", "Status", "Truth Total", "System Total", "Variance", "Flags"],
+    ...critical.map(r => [
+      `${r.truth.first_name} ${r.truth.last_name}`,
+      r.classification.row_status,
+      String(r.truth.total ?? ""),
+      String(r.system?.total ?? ""),
+      String(r.variances.total ?? ""),
+      r.anomaly_flags.join("; "),
+    ]),
+  ];
 }
