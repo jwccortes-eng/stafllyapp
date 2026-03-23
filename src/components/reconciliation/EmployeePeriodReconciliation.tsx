@@ -467,6 +467,7 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                             </span>
                           </span>
                         </div>
+                      </div>
                     </div>
 
                     {/* ═══ DETAIL SECTIONS — collapsible for power users ═══ */}
