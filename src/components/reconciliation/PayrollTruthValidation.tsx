@@ -844,7 +844,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   return (
     <div className="space-y-4">
       {/* ── Data Source Transparency Banner ── */}
-      <Alert className={`border-l-4 ${truthLoaded ? 'border-l-primary' : reconData.length > 0 ? 'border-l-yellow-500' : 'border-l-muted-foreground'}`}>
+      <Alert className={`border-l-4 ${truthLoaded ? 'border-l-primary' : reconData.length > 0 ? 'border-l-accent' : 'border-l-muted-foreground'}`}>
         <AlertDescription className="space-y-1">
           <div className="flex items-center gap-2 text-sm font-medium">
             <span>{dataSourceInfo.icon}</span>
