@@ -68,18 +68,23 @@ interface TabDef {
   minStatus?: string | null;
 }
 
-const TABS: TabDef[] = [
+/* Primary operational tabs */
+const PRIMARY_TABS: TabDef[] = [
   { value: "dashboard", label: "Dashboard", icon: BarChart3, alwaysEnabled: true },
   { value: "closedesk", label: "Close Desk", icon: Shield, minStatus: null },
   { value: "import", label: "Importar", icon: Upload, minStatus: null },
   { value: "review", label: "Matching", icon: GitCompareArrows, minStatus: "importing" },
   { value: "exceptions", label: "Excepciones", icon: AlertTriangle, minStatus: "importing" },
   { value: "employees", label: "Empleados", icon: Users, minStatus: "matching" },
-  { value: "rules", label: "Reglas", icon: Settings2, alwaysEnabled: true },
   { value: "workbench", label: "Workbench", icon: Wrench, minStatus: "reviewing" },
-  { value: "approve", label: "Aprobar", icon: CheckCircle2, minStatus: "reviewing" },
   { value: "validate", label: "Validar", icon: ClipboardCheck, minStatus: "reviewing" },
+  { value: "approve", label: "Aprobar", icon: CheckCircle2, minStatus: "reviewing" },
   { value: "publish", label: "Publicar", icon: Shield, minStatus: "approved" },
+];
+
+/* Secondary / dev tabs — collapsed behind a toggle */
+const SECONDARY_TABS: TabDef[] = [
+  { value: "rules", label: "Reglas", icon: Settings2, alwaysEnabled: true },
   { value: "compare", label: "Comparar", icon: TrendingUp, alwaysEnabled: true },
   { value: "signoff", label: "Signoff", icon: PenTool, minStatus: "reviewing" },
   { value: "journal", label: "Diario", icon: BookOpen, minStatus: null },
@@ -94,6 +99,8 @@ const TABS: TabDef[] = [
   { value: "audit", label: "Auditoría", icon: ShieldAlert, alwaysEnabled: true },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
+
+const TABS: TabDef[] = [...PRIMARY_TABS, ...SECONDARY_TABS];
 
 function isTabEnabled(tab: TabDef, periodStatus: string | null): boolean {
   if (tab.alwaysEnabled) return true;
@@ -131,6 +138,7 @@ export default function StagedReconciliation() {
   const [employeeMap, setEmployeeMap] = useState<Map<string, string>>(new Map());
   const [payPeriods, setPayPeriods] = useState<PayPeriodOption[]>([]);
   const [reprocessing, setReprocessing] = useState(false);
+  const [showSecondaryTabs, setShowSecondaryTabs] = useState(false);
 
   // ── Load employees ──
   useEffect(() => {
@@ -457,7 +465,7 @@ export default function StagedReconciliation() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Badge variant="outline" className="text-[11px] font-mono">{activePeriod.period_label}</Badge>
-            {activePeriod.reopen_count > 0 && <Badge variant="destructive" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
+            {activePeriod.reopen_count > 0 && <Badge variant="warning" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
           </div>
           {nextAction && activePeriod.status !== "locked" && (
             <Button size="sm" variant="default" className="gap-1 text-xs shrink-0" onClick={() => setTab(nextAction.tab)}>
@@ -469,10 +477,10 @@ export default function StagedReconciliation() {
 
       {/* ── Warning bar for unresolved exceptions ── */}
       {activePeriod && activePeriod.total_exceptions > activePeriod.resolved_exceptions && (
-        <Alert variant="destructive" className="py-2">
-          <AlertTriangle className="h-4 w-4" />
+        <Alert className="py-2 border-warning bg-warning/5">
+          <AlertTriangle className="h-4 w-4 text-warning" />
           <AlertDescription className="text-xs flex items-center gap-2">
-            {activePeriod.total_exceptions - activePeriod.resolved_exceptions} excepción(es) sin resolver
+            {activePeriod.total_exceptions - activePeriod.resolved_exceptions} excepción(es) pendiente(s)
             <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setTab("exceptions")}>Ver excepciones</Button>
           </AlertDescription>
         </Alert>
@@ -481,11 +489,28 @@ export default function StagedReconciliation() {
       <Tabs value={tab} onValueChange={setTab}>
         <ScrollArea className="w-full">
           <TabsList className="inline-flex w-max">
-            {TABS.map(t => {
+            {PRIMARY_TABS.map(t => {
               const enabled = isTabEnabled(t, activePeriod?.status || null);
               const Icon = t.icon;
               return (
                 <TabsTrigger key={t.value} value={t.value} disabled={!enabled} className="gap-1 text-[11px]">
+                  <Icon className="h-3 w-3" /> {t.label}
+                </TabsTrigger>
+              );
+            })}
+            <button
+              onClick={() => setShowSecondaryTabs(!showSecondaryTabs)}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Settings2 className="h-3 w-3" />
+              {showSecondaryTabs ? "Menos" : "Más"}
+              <ChevronRight className={`h-3 w-3 transition-transform ${showSecondaryTabs ? "rotate-90" : ""}`} />
+            </button>
+            {showSecondaryTabs && SECONDARY_TABS.map(t => {
+              const enabled = isTabEnabled(t, activePeriod?.status || null);
+              const Icon = t.icon;
+              return (
+                <TabsTrigger key={t.value} value={t.value} disabled={!enabled} className="gap-1 text-[11px] text-muted-foreground">
                   <Icon className="h-3 w-3" /> {t.label}
                 </TabsTrigger>
               );

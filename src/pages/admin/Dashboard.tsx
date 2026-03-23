@@ -648,24 +648,24 @@ export default function AdminDashboard() {
       </div>
     ) : (
       <>
-        {/* Hero KPI row — 3 large cards like reference */}
+        {/* Hero KPI row — 3 large cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <HeroKpiCard
-            label="Hours Worked"
+            label="Horas Trabajadas"
             value={animHours || animEmployees}
             icon={Clock}
             color="primary"
             onClick={() => navigate("/app/timeclock")}
           />
           <HeroKpiCard
-            label="Employees Scheduled"
+            label="Empleados Programados"
             value={`${animEmployees}`}
             icon={Users}
             color="earning"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="Payroll Total"
+            label="Total Nómina"
             value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
             icon={DollarSign}
             color="warning"
@@ -695,21 +695,21 @@ export default function AdminDashboard() {
       const items = [
         { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
         { label: "Novedades pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
-        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/[0.08]", to: "/app/requests" },
+        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
         { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
-        { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/employees" },
+        { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
       ];
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
           <CardHeader className="pb-3 px-5 pt-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-destructive/[0.08] flex items-center justify-center">
-                  <Inbox className="h-3.5 w-3.5 text-destructive" />
+                <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
+                  <Inbox className="h-3.5 w-3.5 text-warning" />
                 </div>
                 <CardTitle className="text-sm font-semibold font-heading">Pendientes</CardTitle>
                 {totalPending > 0 && (
-                  <Badge variant="destructive" className="text-[10px] h-5 px-1.5 rounded-full animate-pulse">
+                  <Badge variant="warning" className="text-[10px] h-5 px-1.5 rounded-full">
                     {totalPending}
                   </Badge>
                 )}
@@ -874,13 +874,12 @@ export default function AdminDashboard() {
               return (
                 <Card key={a.id} className={cn(
                   "rounded-xl shadow-2xs overflow-hidden transition-all hover:shadow-xs border-border/40",
-                  a.pinned && "border-primary/20",
-                  a.priority === "urgent" && "border-destructive/30"
+                  a.pinned && "border-primary/20"
                 )}>
-                  {a.priority === "urgent" && (
-                    <div className="bg-destructive/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-destructive/10">
-                      <AlertTriangle className="h-3 w-3 text-destructive" />
-                      <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Urgente</span>
+                {a.priority === "urgent" && (
+                  <div className="bg-warning/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-warning/10">
+                    <AlertTriangle className="h-3 w-3 text-warning" />
+                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgente</span>
                     </div>
                   )}
                   <CardContent className="p-4 space-y-2">
@@ -974,7 +973,7 @@ export default function AdminDashboard() {
           <KpiStatCard label="Cambios de tarifa" value={compKpis.rateChanges} subtitle="este mes" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
           <KpiStatCard label="Pago diario" value={compKpis.dailyPatterns} subtitle="empleados detectados" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
           <KpiStatCard label="Pagos ride" value={compKpis.ridePayments} subtitle="empleados con ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Alertas" value={compKpis.warnings} subtitle="requieren atención" icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Alertas" value={compKpis.warnings} subtitle="requieren atención" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/payroll-settings")} />
         </div>
       </div>
     ),
