@@ -131,7 +131,7 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
                     const openExceptions = p.total_exceptions - p.resolved_exceptions;
                     return (
                       <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onSelectPeriod(p)}>
-                        <TableCell className="font-medium">{p.period_label || "Sin nombre"}</TableCell>
+                        <TableCell className="font-medium">{getLabel(p)}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {p.period_start} → {p.period_end}
                         </TableCell>
