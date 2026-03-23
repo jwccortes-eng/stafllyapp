@@ -889,30 +889,64 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         </AlertDescription>
       </Alert>
 
+      {/* ── Truth Source Controls ── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Validación vs. Nómina Pagada (12/24–12/30/2025)
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Validación vs. Nómina Pagada
+            </CardTitle>
+            {truthLoaded && truthSource && (
+              <div className="flex items-center gap-2">
+                <Badge variant={truthSource.type === "manual" ? "default" : "secondary"} className="text-[10px]">
+                  {truthSource.type === "manual" ? "📁 Archivo manual" : "📦 Pre-cargado"}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">{truthSource.loadedAt}</span>
+              </div>
+            )}
+          </div>
+          {truthLoaded && truthSource && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Archivo: <span className="font-medium text-foreground">{truthSource.fileName}</span>
+              {" · "}{truthData.length} empleados · Periodo vinculado: {periodStatusId ? "Sí" : "No"}
+            </p>
+          )}
         </CardHeader>
         <CardContent>
-          {!truthLoaded ? (
-            <div className="text-center py-6 space-y-3">
-              <p className="text-sm text-muted-foreground">Carga el archivo de nómina pagada para comparar.</p>
-              {reconData.length > 0 && (
-                <div className="rounded-lg border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-left max-w-md mx-auto">
-                  <p className="font-medium text-foreground">Datos del sistema ya disponibles</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {reconData.length} empleados con datos de period_base_pay y/o movements para este periodo.
-                    Estos datos se cargan automáticamente del sistema — no provienen de un archivo Truth.
-                  </p>
-                </div>
-              )}
-              <Button onClick={loadTruthFile} disabled={loading}>
-                {loading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
-                Cargar Payroll Truth Set
+          {/* ── Upload Actions — always visible ── */}
+          <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-border bg-muted/20">
+            <Button variant="outline" size="sm" onClick={loadTruthFile} disabled={loading}>
+              {loading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
+              {truthLoaded ? "Recargar Truth pre-cargado" : "Usar Payroll Truth pre-cargado"}
+            </Button>
+
+            <label className="inline-flex">
+              <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleManualUpload} disabled={loading} />
+              <Button variant="default" size="sm" asChild disabled={loading}>
+                <span className="cursor-pointer">
+                  {loading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
+                  {truthLoaded ? "Reemplazar Truth File" : "Subir Payroll Truth desde mi archivo"}
+                </span>
               </Button>
+            </label>
+
+            {truthLoaded && (
+              <Button variant="ghost" size="sm" onClick={clearTruth} className="text-destructive hover:text-destructive">
+                Quitar Truth cargado
+              </Button>
+            )}
+
+            {!truthLoaded && reconData.length > 0 && (
+              <span className="text-xs text-muted-foreground ml-2">
+                ⚠️ {reconData.length} empleados con datos del sistema — sin archivo Truth para comparar
+              </span>
+            )}
+          </div>
+
+          {!truthLoaded ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground">Selecciona una opción arriba para cargar el archivo de nómina pagada.</p>
             </div>
           ) : (
             <div className="space-y-4">
