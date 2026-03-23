@@ -239,7 +239,7 @@ export default function PayrollReconciliationPage() {
   if (!activeBatch) {
     return (
       <div className="space-y-6">
-        <PageHeader heading="Payroll Reconciliation" text="Motor de reconciliación de nómina contra archivo de verdad" />
+        <PageHeader title="Payroll Reconciliation" subtitle="Motor de reconciliación de nómina contra archivo de verdad" />
 
         <div className="flex items-center gap-3">
           <Button onClick={() => setShowCreateDialog(true)}>
