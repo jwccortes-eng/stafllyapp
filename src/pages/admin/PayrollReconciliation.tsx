@@ -537,6 +537,139 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
   );
 }
 
+// ─── Debug Panel ─────────────────────────────────────────────────────
+
+function DebugPanel({ companyId, batch, batchSummary, reconciliationRows }: {
+  companyId: string;
+  batch: ReconciliationBatch;
+  batchSummary: BatchSummary | null;
+  reconciliationRows: ReconciliationRowResult[];
+}) {
+  const [info, setInfo] = useState<{
+    periodId: string | null;
+    basePay: number;
+    movements: number;
+    truthRows: number;
+    employees: number;
+  } | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!companyId || !batch.payroll_period_start) {
+      setInfo({ periodId: null, basePay: 0, movements: 0, truthRows: 0, employees: 0 });
+      return;
+    }
+    async function load() {
+      // Find real period ID
+      const { data: periods } = await supabase
+        .from("pay_periods")
+        .select("id")
+        .eq("company_id", companyId)
+        .lte("start_date", batch.payroll_period_end || batch.payroll_period_start!)
+        .gte("end_date", batch.payroll_period_start!);
+      const pid = periods?.[0]?.id || null;
+      if (!pid) {
+        setInfo({ periodId: null, basePay: 0, movements: 0, truthRows: 0, employees: 0 });
+        return;
+      }
+      const [{ count: bp }, { count: mv }, { count: tr }, { count: emp }] = await Promise.all([
+        supabase.from("period_base_pay").select("id", { count: "exact", head: true }).eq("period_id", pid).eq("company_id", companyId),
+        supabase.from("movements").select("id", { count: "exact", head: true }).eq("period_id", pid).eq("company_id", companyId),
+        supabase.from("reconciliation_employee_rows").select("id", { count: "exact", head: true }).eq("batch_id", batch.id),
+        supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("is_active", true),
+      ]);
+      setInfo({ periodId: pid, basePay: bp || 0, movements: mv || 0, truthRows: tr || 0, employees: emp || 0 });
+    }
+    load();
+  }, [companyId, batch.id, batch.payroll_period_start]);
+
+  if (!info) return null;
+
+  const hasPeriod = !!batch.payroll_period_start;
+  const hasData = info.basePay > 0 || info.movements > 0;
+  const hasTruth = info.truthRows > 0;
+
+  return (
+    <Card className={`shadow-none border-dashed ${!hasPeriod ? "border-destructive/40 bg-destructive/[0.03]" : !hasData ? "border-warning/40 bg-warning/[0.03]" : "border-info/40 bg-info/[0.03]"}`}>
+      <button className="w-full px-4 py-2.5 flex items-center justify-between text-left" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center gap-2">
+          <Info className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-semibold text-muted-foreground">Debug: Conectividad de datos</span>
+          {!hasPeriod && <Badge variant="destructive" className="text-[9px] px-1.5 py-0">Sin periodo</Badge>}
+          {hasPeriod && !hasData && <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-warning/40 text-warning">Sin datos</Badge>}
+          {hasPeriod && hasData && <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-earning/40 text-earning">Conectado</Badge>}
+        </div>
+        {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+      </button>
+      {expanded && (
+        <CardContent className="pt-0 pb-3 px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px]">
+            <div className="p-2 rounded-md bg-background border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Company</p>
+              <p className="font-mono text-[10px] truncate mt-0.5">{companyId.slice(0, 12)}...</p>
+            </div>
+            <div className="p-2 rounded-md bg-background border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Period ID</p>
+              <p className={`font-mono text-[10px] truncate mt-0.5 ${info.periodId ? "" : "text-destructive font-bold"}`}>{info.periodId ? info.periodId.slice(0, 12) + "..." : "NO PERIOD LINKED"}</p>
+            </div>
+            <div className="p-2 rounded-md bg-background border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Period dates</p>
+              <p className="font-mono text-[10px] mt-0.5">{batch.payroll_period_start || "—"} → {batch.payroll_period_end || "—"}</p>
+            </div>
+            <div className="p-2 rounded-md bg-background border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Batch status</p>
+              <p className="font-mono text-[10px] mt-0.5">{batch.status}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-3 mt-2 text-[11px]">
+            <div className={`p-2 rounded-md border ${info.truthRows > 0 ? "bg-earning/5 border-earning/20" : "bg-muted/30 border-border/40"}`}>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Truth rows</p>
+              <p className="font-bold text-lg tabular-nums mt-0.5">{info.truthRows}</p>
+              <p className="text-[9px] text-muted-foreground">{hasTruth ? "✓ Cargado" : "Pendiente subir"}</p>
+            </div>
+            <div className={`p-2 rounded-md border ${info.basePay > 0 ? "bg-earning/5 border-earning/20" : "bg-warning/5 border-warning/20"}`}>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Base pay rows</p>
+              <p className="font-bold text-lg tabular-nums mt-0.5">{info.basePay}</p>
+              <p className="text-[9px] text-muted-foreground">{info.basePay > 0 ? "✓ Disponible" : "⚠ Vacío"}</p>
+            </div>
+            <div className={`p-2 rounded-md border ${info.movements > 0 ? "bg-earning/5 border-earning/20" : "bg-muted/30 border-border/40"}`}>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Movements</p>
+              <p className="font-bold text-lg tabular-nums mt-0.5">{info.movements}</p>
+              <p className="text-[9px] text-muted-foreground">{info.movements > 0 ? "✓ Componentes" : "Sin novedades"}</p>
+            </div>
+            <div className="p-2 rounded-md bg-muted/30 border border-border/40">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">System employees</p>
+              <p className="font-bold text-lg tabular-nums mt-0.5">{info.employees}</p>
+              <p className="text-[9px] text-muted-foreground">Activos en roster</p>
+            </div>
+          </div>
+          {batchSummary && (
+            <div className="grid grid-cols-3 gap-3 mt-2 text-[11px]">
+              <div className="p-2 rounded-md bg-background border border-border/40">
+                <p className="text-[9px] text-muted-foreground uppercase font-semibold">Truth Grand Total</p>
+                <p className="font-mono font-bold mt-0.5">{fmt(batchSummary.totals_truth.grand_total)}</p>
+              </div>
+              <div className="p-2 rounded-md bg-background border border-border/40">
+                <p className="text-[9px] text-muted-foreground uppercase font-semibold">System Grand Total</p>
+                <p className="font-mono font-bold mt-0.5">{fmt(batchSummary.totals_system.grand_total)}</p>
+              </div>
+              <div className={`p-2 rounded-md border ${Math.abs(batchSummary.totals_variance.grand_total) < 10 ? "bg-earning/5 border-earning/20" : "bg-destructive/5 border-destructive/20"}`}>
+                <p className="text-[9px] text-muted-foreground uppercase font-semibold">Variance</p>
+                <p className="font-mono font-bold mt-0.5">{fmtVar(batchSummary.totals_variance.grand_total)}</p>
+              </div>
+            </div>
+          )}
+          {!hasPeriod && (
+            <div className="mt-2 p-2 rounded-md bg-destructive/8 border border-destructive/15 text-[10px] text-destructive">
+              <strong>⚠ Batch sin periodo:</strong> Este batch fue creado sin vincular a un periodo de nómina. El sistema no puede cargar period_base_pay ni movements. Crea un nuevo batch seleccionando un periodo.
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────
 
 export default function PayrollReconciliationPage() {
