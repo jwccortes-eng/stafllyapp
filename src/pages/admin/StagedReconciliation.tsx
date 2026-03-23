@@ -466,7 +466,7 @@ export default function StagedReconciliation() {
                 {(() => {
                   const unlinked = payPeriods
                     .filter(pp => !periods.some(p => p.period_id === pp.id))
-                    .filter(pp => !periodSearch || `${pp.start_date} ${pp.end_date}`.includes(periodSearch.toLowerCase()));
+                    .filter(pp => !periodSearch || periodLabel(pp).toLowerCase().includes(periodSearch.toLowerCase()));
                   // Sort: truth target first
                   const sorted = [...unlinked].sort((a, b) => {
                     const aTarget = a.start_date === "2025-12-24" && a.end_date === "2025-12-30" ? 1 : 0;
