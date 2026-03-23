@@ -489,11 +489,28 @@ export default function StagedReconciliation() {
       <Tabs value={tab} onValueChange={setTab}>
         <ScrollArea className="w-full">
           <TabsList className="inline-flex w-max">
-            {TABS.map(t => {
+            {PRIMARY_TABS.map(t => {
               const enabled = isTabEnabled(t, activePeriod?.status || null);
               const Icon = t.icon;
               return (
                 <TabsTrigger key={t.value} value={t.value} disabled={!enabled} className="gap-1 text-[11px]">
+                  <Icon className="h-3 w-3" /> {t.label}
+                </TabsTrigger>
+              );
+            })}
+            <button
+              onClick={() => setShowSecondaryTabs(!showSecondaryTabs)}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Settings2 className="h-3 w-3" />
+              {showSecondaryTabs ? "Menos" : "Más"}
+              <ChevronRight className={`h-3 w-3 transition-transform ${showSecondaryTabs ? "rotate-90" : ""}`} />
+            </button>
+            {showSecondaryTabs && SECONDARY_TABS.map(t => {
+              const enabled = isTabEnabled(t, activePeriod?.status || null);
+              const Icon = t.icon;
+              return (
+                <TabsTrigger key={t.value} value={t.value} disabled={!enabled} className="gap-1 text-[11px] text-muted-foreground">
                   <Icon className="h-3 w-3" /> {t.label}
                 </TabsTrigger>
               );
