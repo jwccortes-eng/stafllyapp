@@ -481,8 +481,9 @@ export default function StagedReconciliation() {
                         const isTruth = pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30";
                         return (
                           <SelectItem key={`pp:${pp.id}`} value={`pp:${pp.id}`}>
-                            {pp.start_date} → {pp.end_date} ({pp.status})
+                            {periodLabel(pp)} ({pp.status})
                             {isTruth && " ⭐ Truth target"}
+                          </SelectItem>
                           </SelectItem>
                         );
                       })}
