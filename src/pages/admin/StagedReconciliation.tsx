@@ -898,7 +898,7 @@ export default function StagedReconciliation() {
                 }}
               >
                 <Target className="h-3.5 w-3.5" />
-                Open exact period 2025-12-24 → 2025-12-30
+                Periodo 112 · 2025-12-24 → 2025-12-30
               </Button>
             </div>
 
