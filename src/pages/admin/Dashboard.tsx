@@ -577,20 +577,48 @@ export default function AdminDashboard() {
             });
           }
 
-          // Mark periods that have movements but no base as "pending"
+          // Classify extras into sub-buckets by concept name pattern
+          const classifyExtra = (name: string): string => {
+            const n = (name || "").toLowerCase();
+            if (n.includes("weekend") || n.includes("daily pay")) return "turnos";
+            if (n.includes("transporte") || n.includes("ryde") || n.includes("ride") || n.includes("especial ryde")) return "transporte";
+            if (n.includes("propina") || n.includes("tip")) return "propinas";
+            if (n.includes("reintegro") || n.includes("reimbursement")) return "reintegros";
+            if (n.includes("viaje") || n.includes("travel")) return "viaje";
+            return "otros";
+          };
+
           const mapped = chartPeriods.map(p => {
             const baseInfo = rfrByPeriod[p.id];
             const base = baseInfo ? Math.round(baseInfo.base) : 0;
-            const extras = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id && m.concepts?.category === "extra").reduce((s, m) => s + Number(m.total_value || 0), 0);
-            const deducciones = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id && m.concepts?.category === "deduction").reduce((s, m) => s + Math.abs(Number(m.total_value || 0)), 0);
-            const hasMov = extras > 0 || deducciones > 0;
-            const pending = base === 0 && hasMov; // has activity but no base = incomplete
+            const periodMovs = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id);
+            const extraBuckets: Record<string, number> = { turnos: 0, transporte: 0, propinas: 0, reintegros: 0, viaje: 0, otros: 0 };
+            let extrasTotal = 0;
+            let deducciones = 0;
+            for (const m of periodMovs) {
+              const val = Number(m.total_value || 0);
+              if (m.concepts?.category === "deduction") {
+                deducciones += Math.abs(val);
+              } else if (m.concepts?.category === "extra") {
+                extrasTotal += val;
+                const bucket = classifyExtra(m.concepts?.name || "");
+                extraBuckets[bucket] += val;
+              }
+            }
+            const hasMov = extrasTotal > 0 || deducciones > 0;
+            const pending = base === 0 && hasMov;
             return {
               label: format(parseISO(p.start_date), "dd MMM", { locale: es }),
               base: Math.round(base),
-              extras: Math.round(extras),
+              extras: Math.round(extrasTotal),
               deducciones: Math.round(deducciones),
               pending,
+              _turnos: Math.round(extraBuckets.turnos),
+              _transporte: Math.round(extraBuckets.transporte),
+              _propinas: Math.round(extraBuckets.propinas),
+              _reintegros: Math.round(extraBuckets.reintegros),
+              _viaje: Math.round(extraBuckets.viaje),
+              _otros: Math.round(extraBuckets.otros),
             };
           });
           setChartData(mapped);
