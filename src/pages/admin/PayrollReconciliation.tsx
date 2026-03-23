@@ -538,6 +538,8 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
 
 export default function PayrollReconciliationPage() {
   usePageView("Payroll Reconciliation");
+  const { selectedCompanyId } = useCompany();
+  const { role } = useAuth();
   const {
     batches, activeBatch, setActiveBatch,
     truthParseResult, reconciliationRows, systemOnlyEmployees, batchSummary,
@@ -553,6 +555,27 @@ export default function PayrollReconciliationPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [periods, setPeriods] = useState<{ id: string; start_date: string; end_date: string; status: string }[]>([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState("");
+  const [debugInfo, setDebugInfo] = useState<{ basePay: number; movements: number; truthRows: number; periodId: string } | null>(null);
+  const isDev = role === "developer" || role === "owner" || role === "admin";
+
+  // Load periods for the create dialog
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    supabase.from("pay_periods").select("id, start_date, end_date, status")
+      .eq("company_id", selectedCompanyId)
+      .order("start_date", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        setPeriods((data as any[]) || []);
+        // Auto-select current or most recent period
+        const today = new Date().toISOString().slice(0, 10);
+        const current = (data || []).find((p: any) => p.start_date <= today && p.end_date >= today);
+        const fallback = (data || [])[0];
+        setSelectedPeriodId((current || fallback)?.id || "");
+      });
+  }, [selectedCompanyId]);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
