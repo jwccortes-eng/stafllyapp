@@ -30,6 +30,8 @@ export interface SystemEmployeeData {
   phone?: string;
   email?: string;
   external_id?: string;
+  employer_identification?: string;
+  verification_ssn_ein?: string;
   total_hours: number;
   total_pay: number;
   pay_per_day: number;
@@ -101,6 +103,28 @@ export interface BatchSummary {
   totals_system: ComponentTotals;
   totals_variance: ComponentTotals;
   batch_status: string;
+  match_breakdown: MatchBreakdown;
+  anomaly_summary: Record<string, number>;
+  top_issues: TopIssue[];
+}
+
+export interface MatchBreakdown {
+  by_employer_id: number;
+  by_ssn: number;
+  by_email: number;
+  by_phone: number;
+  by_external_id: number;
+  by_full_name_exact: number;
+  by_alias: number;
+  by_fuzzy_name: number;
+  unmatched: number;
+}
+
+export interface TopIssue {
+  severity: "critical" | "warning" | "info";
+  label: string;
+  count: number;
+  detail?: string;
 }
 
 export interface ComponentTotals {
@@ -140,7 +164,7 @@ function isPlaceholderSSN(ssn: string): boolean {
   return norm === "000000000" || norm === "" || /^0+$/.test(norm);
 }
 
-// ─── Matching Engine ─────────────────────────────────────────────────
+// ─── Matching Engine (Hardened Priority) ─────────────────────────────
 
 interface EmployeeCandidate {
   id: string;
@@ -149,6 +173,8 @@ interface EmployeeCandidate {
   phone?: string;
   email?: string;
   external_id?: string;
+  employer_identification?: string;
+  verification_ssn_ein?: string;
   full_name_normalized: string;
 }
 
@@ -180,33 +206,98 @@ export function matchEmployees(
   candidates: EmployeeCandidate[],
   aliases: AliasEntry[]
 ): MatchResult[] {
+  const usedCandidateIds = new Set<string>();
+
   return truthRows.map((truth, idx) => {
     const truthName = normalizeName(`${truth.first_name} ${truth.last_name}`);
     const truthSSN = normalizeSSN(truth.verification_ssn_ein);
+    const truthEmployerId = truth.employer_identification?.trim();
 
-    // Tier 1: SSN match (non-placeholder)
-    if (truthSSN && !isPlaceholderSSN(truth.verification_ssn_ein || "")) {
-      // We don't have SSN in candidates typically, skip
-    }
-
-    // Tier 2: Exact name match
-    for (const c of candidates) {
-      if (c.full_name_normalized === truthName) {
-        return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 95, matched_by: "full_name_exact", match_notes: "" };
+    // ── TIER 1: Employer Identification (exact numeric ID)
+    if (truthEmployerId) {
+      for (const c of candidates) {
+        if (usedCandidateIds.has(c.id)) continue;
+        if (c.employer_identification && c.employer_identification.trim() === truthEmployerId) {
+          usedCandidateIds.add(c.id);
+          return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 100, matched_by: "employer_id", match_notes: `Employer ID: ${truthEmployerId}` };
+        }
       }
     }
 
-    // Tier 3: Alias match
+    // ── TIER 2: SSN/EIN (non-placeholder)
+    if (truthSSN && !isPlaceholderSSN(truth.verification_ssn_ein || "")) {
+      for (const c of candidates) {
+        if (usedCandidateIds.has(c.id)) continue;
+        const candidateSSN = normalizeSSN(c.verification_ssn_ein);
+        if (candidateSSN && candidateSSN === truthSSN) {
+          usedCandidateIds.add(c.id);
+          return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 99, matched_by: "ssn_ein", match_notes: `SSN match (last 4: ...${truthSSN.slice(-4)})` };
+        }
+      }
+    }
+
+    // ── TIER 3: External ID / Employee Code
+    if (truthEmployerId) {
+      for (const c of candidates) {
+        if (usedCandidateIds.has(c.id)) continue;
+        if (c.external_id && c.external_id.trim() === truthEmployerId) {
+          usedCandidateIds.add(c.id);
+          return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 98, matched_by: "external_id", match_notes: `External ID: ${truthEmployerId}` };
+        }
+      }
+    }
+
+    // ── TIER 4: Email match
+    const truthEmail = truth.raw?.["email"] || truth.raw?.["Email"];
+    if (truthEmail && typeof truthEmail === "string") {
+      const normEmail = truthEmail.toLowerCase().trim();
+      for (const c of candidates) {
+        if (usedCandidateIds.has(c.id)) continue;
+        if (c.email && c.email.toLowerCase().trim() === normEmail) {
+          usedCandidateIds.add(c.id);
+          return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 96, matched_by: "email", match_notes: `Email: ${normEmail}` };
+        }
+      }
+    }
+
+    // ── TIER 5: Phone match
+    const truthPhone = truth.raw?.["phone"] || truth.raw?.["Phone"];
+    if (truthPhone && typeof truthPhone === "string") {
+      const normPhone = normalizePhone(truthPhone);
+      if (normPhone.length >= 7) {
+        for (const c of candidates) {
+          if (usedCandidateIds.has(c.id)) continue;
+          if (normalizePhone(c.phone) === normPhone) {
+            usedCandidateIds.add(c.id);
+            return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 95, matched_by: "phone", match_notes: `Phone: ...${normPhone.slice(-4)}` };
+          }
+        }
+      }
+    }
+
+    // ── TIER 6: Exact normalized full name
+    for (const c of candidates) {
+      if (usedCandidateIds.has(c.id)) continue;
+      if (c.full_name_normalized === truthName && truthName.length > 3) {
+        usedCandidateIds.add(c.id);
+        return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 90, matched_by: "full_name_exact", match_notes: "" };
+      }
+    }
+
+    // ── TIER 7: Alias match
     for (const a of aliases) {
-      if (a.alias_normalized === truthName) {
+      if (usedCandidateIds.has(a.employee_id)) continue;
+      if (normalizeName(a.alias_normalized) === truthName) {
+        usedCandidateIds.add(a.employee_id);
         return { truth_index: idx, system_employee_id: a.employee_id, match_status: "MATCHED" as const, match_confidence: a.confidence, matched_by: "alias", match_notes: `Alias: ${truthName}` };
       }
     }
 
-    // Tier 4: Fuzzy match
+    // ── TIER 8: Fuzzy name match
     let bestScore = Infinity;
     let bestCandidate: EmployeeCandidate | null = null;
     for (const c of candidates) {
+      if (usedCandidateIds.has(c.id)) continue;
       const dist = levenshtein(truthName, c.full_name_normalized);
       const maxLen = Math.max(truthName.length, c.full_name_normalized.length);
       if (maxLen === 0) continue;
@@ -220,10 +311,11 @@ export function matchEmployees(
     if (bestCandidate) {
       const maxLen = Math.max(truthName.length, bestCandidate.full_name_normalized.length);
       const confidence = Math.round((1 - bestScore / maxLen) * 100);
-      return { truth_index: idx, system_employee_id: bestCandidate.id, match_status: "MATCHED" as const, match_confidence: confidence, matched_by: "fuzzy_name", match_notes: `Distance: ${bestScore}` };
+      usedCandidateIds.add(bestCandidate.id);
+      return { truth_index: idx, system_employee_id: bestCandidate.id, match_status: "MATCHED" as const, match_confidence: confidence, matched_by: "fuzzy_name", match_notes: `Fuzzy distance: ${bestScore}, matched "${bestCandidate.first_name} ${bestCandidate.last_name}"` };
     }
 
-    return { truth_index: idx, system_employee_id: null, match_status: "UNMATCHED" as const, match_confidence: 0, matched_by: "none", match_notes: "No match found" };
+    return { truth_index: idx, system_employee_id: null, match_status: "UNMATCHED" as const, match_confidence: 0, matched_by: "none", match_notes: "No match found in any tier" };
   });
 }
 
@@ -289,7 +381,6 @@ export function classifyRow(
   const totalOk = withinTolerance(variances.total, tolerance.money);
 
   const allOk = hoursOk && payOk && ppdOk && rydeOk && tipsOk && reimbOk && totalOk;
-  const componentIssue = !allOk && totalOk;
   const criticalIssue = !totalOk;
 
   if (allOk) {
@@ -306,28 +397,22 @@ export function classifyRow(
 export function detectAnomalies(truth: TruthRow, system: SystemEmployeeData | null): string[] {
   const flags: string[] = [];
 
-  // Identity
   if (truth.verification_ssn_ein) {
     const norm = normalizeSSN(truth.verification_ssn_ein);
     if (norm === "000000000" || /^0+$/.test(norm)) flags.push("PLACEHOLDER_SSN_EIN");
     else if (norm.length > 0 && norm.length !== 9) flags.push("INVALID_SSN_EIN");
   }
 
-  // Financial
   if ((truth.total_hours == null || truth.total_hours === 0) && (truth.total ?? 0) > 0) flags.push("MISSING_HOURS_WITH_PAY");
   if ((truth.total ?? 0) < 0) flags.push("NEGATIVE_PAY");
   if ((truth.total_hours ?? 0) > 0 && (truth.total ?? 0) === 0) flags.push("ZERO_PAY_WITH_HOURS");
   if ((truth.tips ?? 0) > 500) flags.push("HIGH_TIPS_OUTLIER");
   if ((truth.ryde ?? 0) > 500) flags.push("EXTREME_RYDE");
-
-  // Observaciones → manual adjustment
   if (truth.observaciones && truth.observaciones.trim()) flags.push("MANUAL_ADJUSTMENT");
 
-  // Total vs components
   const componentSum = (truth.total_pay ?? 0) + (truth.pay_per_day ?? 0) + (truth.ryde ?? 0) + (truth.tips ?? 0) + (truth.reimbursements ?? 0);
   if (truth.total != null && Math.abs(truth.total - componentSum) > 1) flags.push("TOTAL_DOES_NOT_MATCH_COMPONENTS");
 
-  // Missing in system
   if (!system) flags.push("MISSING_IN_SYSTEM");
 
   return flags;
@@ -387,6 +472,43 @@ export function computeBatchSummary(
 
   const totalVariance = Math.abs(totals_variance.grand_total);
 
+  // Match breakdown
+  const match_breakdown: MatchBreakdown = {
+    by_employer_id: rows.filter(r => r.match.matched_by === "employer_id").length,
+    by_ssn: rows.filter(r => r.match.matched_by === "ssn_ein").length,
+    by_email: rows.filter(r => r.match.matched_by === "email").length,
+    by_phone: rows.filter(r => r.match.matched_by === "phone").length,
+    by_external_id: rows.filter(r => r.match.matched_by === "external_id").length,
+    by_full_name_exact: rows.filter(r => r.match.matched_by === "full_name_exact").length,
+    by_alias: rows.filter(r => r.match.matched_by === "alias").length,
+    by_fuzzy_name: rows.filter(r => r.match.matched_by === "fuzzy_name").length,
+    unmatched: rows.filter(r => r.match.matched_by === "none").length,
+  };
+
+  // Anomaly summary
+  const anomaly_summary: Record<string, number> = {};
+  for (const row of rows) {
+    for (const flag of row.anomaly_flags) {
+      anomaly_summary[flag] = (anomaly_summary[flag] || 0) + 1;
+    }
+  }
+
+  // Top issues
+  const top_issues: TopIssue[] = [];
+  if (criticalMismatch > 0) top_issues.push({ severity: "critical", label: "Discrepancias críticas en total", count: criticalMismatch });
+  if (unmatchedTruth > 0) top_issues.push({ severity: "critical", label: "Empleados sin match en sistema", count: unmatchedTruth });
+  if (systemOnlyEmployees.length > 0) top_issues.push({ severity: "warning", label: "Empleados solo en sistema (no en truth)", count: systemOnlyEmployees.length });
+  if (match_breakdown.by_fuzzy_name > 0) top_issues.push({ severity: "warning", label: "Matches por nombre aproximado (confirmar)", count: match_breakdown.by_fuzzy_name });
+  if (anomaly_summary["PLACEHOLDER_SSN_EIN"]) top_issues.push({ severity: "info", label: "SSN/EIN placeholder (000-00-0000)", count: anomaly_summary["PLACEHOLDER_SSN_EIN"] });
+  if (anomaly_summary["TOTAL_DOES_NOT_MATCH_COMPONENTS"]) top_issues.push({ severity: "warning", label: "Total no coincide con componentes", count: anomaly_summary["TOTAL_DOES_NOT_MATCH_COMPONENTS"] });
+  if (anomaly_summary["MISSING_HOURS_WITH_PAY"]) top_issues.push({ severity: "info", label: "Pago sin horas registradas", count: anomaly_summary["MISSING_HOURS_WITH_PAY"] });
+  if (anomaly_summary["MANUAL_ADJUSTMENT"]) top_issues.push({ severity: "info", label: "Ajustes manuales / observaciones", count: anomaly_summary["MANUAL_ADJUSTMENT"] });
+
+  top_issues.sort((a, b) => {
+    const sev = { critical: 0, warning: 1, info: 2 };
+    return sev[a.severity] - sev[b.severity] || b.count - a.count;
+  });
+
   let batch_status = "MATCHED";
   if (criticalMismatch > 0) batch_status = "CRITICAL";
   else if (componentMismatch > 0 || unmatchedTruth > 0) batch_status = "MISMATCHED";
@@ -406,6 +528,9 @@ export function computeBatchSummary(
     totals_system,
     totals_variance,
     batch_status,
+    match_breakdown,
+    anomaly_summary,
+    top_issues,
   };
 }
 
@@ -424,6 +549,8 @@ export function runReconciliation(
     phone: s.phone,
     email: s.email,
     external_id: s.external_id,
+    employer_identification: s.employer_identification,
+    verification_ssn_ein: s.verification_ssn_ein,
     full_name_normalized: normalizeName(`${s.first_name} ${s.last_name}`),
   }));
 
