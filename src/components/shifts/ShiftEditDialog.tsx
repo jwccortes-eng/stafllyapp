@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Loader2, Save, CalendarIcon, Clock, Building2, MapPin, Users,
   StickyNote, CreditCard, Compass, FileText, X, Car, QrCode,
+  ChevronDown, Settings2,
 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
