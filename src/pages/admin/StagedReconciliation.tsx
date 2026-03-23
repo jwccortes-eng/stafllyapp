@@ -46,6 +46,7 @@ import StabilizationPriorities from "@/components/reconciliation/StabilizationPr
 import PayrollTruthValidation from "@/components/reconciliation/PayrollTruthValidation";
 import DataIntegrityAudit from "@/components/reconciliation/DataIntegrityAudit";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
+import { formatPeriodLabel } from "@/lib/format-helpers";
 
 /* ── Status → workflow step mapping ── */
 const WORKFLOW_STEPS = [
