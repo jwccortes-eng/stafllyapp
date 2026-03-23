@@ -314,7 +314,159 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     }
   };
 
-  useEffect(() => {
+  // ── Persist reconciliation results to DB ──
+  const persistResultsToDb = useCallback(async (compRows: ComparisonRow[], statsData: typeof stats) => {
+    if (!companyId || !user?.id || compRows.length === 0) return;
+    setPersistingToDb(true);
+    try {
+      // Find period dates from reconciliation_period_status
+      const { data: ps } = await supabase
+        .from("reconciliation_period_status" as any)
+        .select("period_start, period_end")
+        .eq("id", periodStatusId)
+        .eq("company_id", companyId)
+        .maybeSingle();
+      const periodInfo = ps as any;
+      if (!periodInfo) { setPersistingToDb(false); return; }
+
+      // Upsert batch
+      const batchPayload = {
+        company_id: companyId,
+        payroll_period_start: periodInfo.period_start,
+        payroll_period_end: periodInfo.period_end,
+        status: statsData.mismatch === 0 && statsData.missing === 0 ? "RECONCILED" : "NEEDS_REVIEW",
+        truth_source_file_name: truthSource?.fileName || null,
+        truth_source_uploaded_at: new Date().toISOString(),
+        employees_truth_count: statsData.matched + statsData.close + statsData.mismatch + statsData.missing,
+        employees_system_count: reconData.length,
+        matched_count: statsData.matched + statsData.close,
+        exact_match_count: statsData.matched,
+        mismatch_count: statsData.mismatch,
+        critical_mismatch_count: statsData.mismatch,
+        total_variance_amount: Math.abs(statsData.variance),
+        created_by: user.id,
+        totals_truth_json: { total: statsData.totalTruth },
+        totals_system_json: { total: statsData.totalRecon },
+        totals_variance_json: { total: statsData.variance },
+      };
+
+      // Check for existing batch for this period
+      const { data: existingBatch } = await supabase
+        .from("reconciliation_batches")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("payroll_period_start", periodInfo.period_start)
+        .eq("payroll_period_end", periodInfo.period_end)
+        .maybeSingle();
+
+      let batchId: string;
+      if (existingBatch) {
+        batchId = (existingBatch as any).id;
+        await supabase.from("reconciliation_batches").update(batchPayload as any).eq("id", batchId);
+      } else {
+        const { data: newBatch } = await supabase.from("reconciliation_batches").insert(batchPayload as any).select("id").single();
+        batchId = (newBatch as any).id;
+      }
+
+      // Delete old rows for this batch
+      await supabase.from("reconciliation_employee_rows").delete().eq("batch_id", batchId);
+
+      // Insert employee rows in batches
+      const rows = compRows.map(c => {
+        const nameParts = c.employee.trim().split(/\s+/);
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+        const r = c.recon;
+        return {
+          batch_id: batchId,
+          first_name: firstName,
+          last_name: lastName,
+          full_name_normalized: c.employee.toLowerCase(),
+          matched_system_employee_id: r?.employee_id || null,
+          match_status: c.status === "missing" ? "UNMATCHED" : "MATCHED",
+          match_confidence: c.status === "match" ? 100 : c.status === "close" ? 80 : c.status === "mismatch" ? 50 : 0,
+          matched_by: "truth_validation",
+          truth_total_pay: c.truth.totalPay || 0,
+          truth_pay_per_day: c.truth.payperDay || 0,
+          truth_ryde: c.truth.ryde || 0,
+          truth_tips: 0,
+          truth_reimbursements: 0,
+          truth_total: c.truth.total,
+          system_total_pay: r?.hourly_pay ?? null,
+          system_pay_per_day: r ? (r.daily_pay + r.weekend_pay) : null,
+          system_ryde: r?.ride_pay ?? null,
+          system_tips: 0,
+          system_reimbursements: 0,
+          system_total: r?.total_final ?? null,
+          variance_total_pay: r ? round2((r.hourly_pay || 0) - (c.truth.totalPay || 0)) : null,
+          variance_pay_per_day: r ? round2((r.daily_pay + r.weekend_pay) - (c.truth.payperDay || 0)) : null,
+          variance_ryde: r ? round2((r.ride_pay || 0) - (c.truth.ryde || 0)) : null,
+          variance_tips: 0,
+          variance_reimbursements: 0,
+          variance_total: r ? round2(r.total_final - c.truth.total) : null,
+          row_status: c.status === "match" ? "EXACT_MATCH" : c.status === "close" ? "WITHIN_TOLERANCE" : c.status === "mismatch" ? "MISMATCH" : "UNMATCHED",
+          is_exact_match: c.status === "match",
+          has_component_mismatch: c.status === "mismatch" || c.status === "close",
+          has_critical_mismatch: c.status === "mismatch",
+          anomaly_flags_json: r?.flags || [],
+          shift_count: r?.schedule_count ?? 0,
+          clock_count: r?.clock_count ?? 0,
+          source_tags: r ? [r.authoritative_source || "unknown"] : [],
+        };
+      });
+
+      for (let i = 0; i < rows.length; i += 50) {
+        await supabase.from("reconciliation_employee_rows").insert(rows.slice(i, i + 50) as any[]);
+      }
+
+      setDbPersisted(true);
+    } catch (err) {
+      console.error("Failed to persist reconciliation to DB:", err);
+    }
+    setPersistingToDb(false);
+  }, [companyId, user?.id, periodStatusId, truthSource, reconData]);
+
+  // ── CSV Export ──
+  const exportDetailedCSV = useCallback((compRows: ComparisonRow[]) => {
+    const headers = [
+      "Empleado", "Estado", "Truth Base", "Truth PayperDay", "Truth Ryde", "Truth TOTAL",
+      "System Hourly", "System Daily", "System Weekend", "System Ride", "System Manual", "System Otros", "System TOTAL",
+      "Varianza", "Fuente Autoritativa", "Schedules", "Clocks", "Flags",
+    ];
+    const csvRows = compRows.map(c => {
+      const r = c.recon;
+      return [
+        c.employee,
+        c.status === "match" ? "EXACTO" : c.status === "close" ? "CERCANO" : c.status === "mismatch" ? "DIFERENTE" : "NO ENCONTRADO",
+        c.truth.totalPay?.toFixed(2) || "0.00",
+        c.truth.payperDay?.toFixed(2) || "0.00",
+        c.truth.ryde?.toFixed(2) || "0.00",
+        c.truth.total.toFixed(2),
+        r?.hourly_pay?.toFixed(2) || "",
+        r?.daily_pay?.toFixed(2) || "",
+        r?.weekend_pay?.toFixed(2) || "",
+        r?.ride_pay?.toFixed(2) || "",
+        r?.manual_adj?.toFixed(2) || "",
+        r?.other_pay?.toFixed(2) || "",
+        r?.total_final?.toFixed(2) || "",
+        c.totalVariance.toFixed(2),
+        r?.authoritative_source || "",
+        r?.schedule_count?.toString() || "",
+        r?.clock_count?.toString() || "",
+        r?.flags?.join("; ") || "",
+      ].join(",");
+    });
+    const csv = [headers.join(","), ...csvRows].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reconciliation_detail_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+
     if (!companyId || !periodStatusId) {
       setReconData([]);
       return;
