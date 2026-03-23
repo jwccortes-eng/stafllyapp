@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, GitCompareArrows, AlertTriangle, CheckCircle2, Lock, FileText, Eye, Clock, BarChart3 } from "lucide-react";
+import { Upload, GitCompareArrows, AlertTriangle, CheckCircle2, Lock, FileText, Eye, Clock, BarChart3, ArrowRight } from "lucide-react";
 import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 interface Props {
@@ -35,6 +35,31 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
     return { importing, reviewing, blocked, approved, posted, totalExceptions };
   }, [periods]);
 
+  // Next actions — what needs attention right now
+  const nextActions = useMemo(() => {
+    const actions: { label: string; severity: "critical" | "warning" | "info"; period: PeriodStatus }[] = [];
+    periods.forEach(p => {
+      const openExceptions = p.total_exceptions - p.resolved_exceptions;
+      if (p.status === "reviewing" && openExceptions > 0) {
+        actions.push({ label: `"${p.period_label || 'Periodo'}" tiene ${openExceptions} excepción(es) sin resolver`, severity: openExceptions > 5 ? "critical" : "warning", period: p });
+      } else if (p.status === "reviewing" && openExceptions === 0) {
+        actions.push({ label: `"${p.period_label || 'Periodo'}" listo para aprobar`, severity: "info", period: p });
+      } else if (["importing", "normalizing", "matching"].includes(p.status)) {
+        actions.push({ label: `"${p.period_label || 'Periodo'}" en proceso de importación`, severity: "info", period: p });
+      }
+    });
+    return actions.sort((a, b) => {
+      const order = { critical: 0, warning: 1, info: 2 };
+      return order[a.severity] - order[b.severity];
+    }).slice(0, 5);
+  }, [periods]);
+
+  const severityStyles = {
+    critical: "border-destructive/30 bg-destructive/[0.04] text-destructive",
+    warning: "border-warning/30 bg-warning/[0.04] text-warning",
+    info: "border-primary/30 bg-primary/[0.04] text-primary",
+  };
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
@@ -44,8 +69,31 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
         <KpiCard label="Bloqueados" value={stats.blocked} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.blocked > 0 ? "warning" : "muted"} />
         <KpiCard label="Aprobados" value={stats.approved} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" />
         <KpiCard label="Publicados" value={stats.posted} icon={<FileText className="h-4 w-4" />} accent="earning" />
-        <KpiCard label="Excepciones Abiertas" value={stats.totalExceptions} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.totalExceptions > 0 ? "deduction" : "muted"} />
+        <KpiCard label="Excepciones" value={stats.totalExceptions} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.totalExceptions > 0 ? "warning" : "muted"} />
       </div>
+
+      {/* Next Actions — confidence layer */}
+      {nextActions.length > 0 && (
+        <Card className="border-border/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <ArrowRight className="h-4 w-4 text-primary" /> Próximas acciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {nextActions.map((action, i) => (
+              <button
+                key={i}
+                onClick={() => onSelectPeriod(action.period)}
+                className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-between gap-2 transition-colors hover:opacity-80 ${severityStyles[action.severity]}`}
+              >
+                <span>{action.label}</span>
+                <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Period List */}
       <Card>
@@ -69,9 +117,6 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
                     <TableHead>Rango</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-center">Emp.</TableHead>
-                    <TableHead className="text-center">Turnos</TableHead>
-                    <TableHead className="text-center">Fichajes</TableHead>
-                    <TableHead className="text-center">Nómina</TableHead>
                     <TableHead className="text-center">Excepciones</TableHead>
                     <TableHead className="text-center">Matches</TableHead>
                     <TableHead></TableHead>
@@ -94,12 +139,9 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">{p.total_employees}</TableCell>
-                        <TableCell className="text-center">{p.total_schedules}</TableCell>
-                        <TableCell className="text-center">{p.total_clocks}</TableCell>
-                        <TableCell className="text-center">{p.total_payroll_rows}</TableCell>
                         <TableCell className="text-center">
                           {openExceptions > 0 ? (
-                            <Badge variant="destructive" className="text-xs">{openExceptions}</Badge>
+                            <Badge variant="warning" className="text-xs">{openExceptions}</Badge>
                           ) : p.total_exceptions > 0 ? (
                             <Badge variant="default" className="text-xs">✓ {p.total_exceptions}</Badge>
                           ) : "—"}

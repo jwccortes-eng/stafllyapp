@@ -371,6 +371,7 @@ export default function AdminDashboard() {
   const [totalHoursWorked, setTotalHoursWorked] = useState(0);
   const [compKpis, setCompKpis] = useState({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
 
+  // ── PHASE 1: Critical data (KPIs + today) ──
   useEffect(() => {
     if (!selectedCompanyId) return;
     setLoading(true);
@@ -378,54 +379,17 @@ export default function AdminDashboard() {
 
     const cid = selectedCompanyId;
     const today = new Date().toISOString().split("T")[0];
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    const monthStartStr = monthStart.toISOString().split("T")[0];
 
-    async function fetchAll() {
+    async function fetchCritical() {
       try {
-        // ── BATCH 1: All independent count/list queries in parallel ──
-        const [
-          empRes, periodRes, impRes, movRes, ticketsRes,
-          shiftReqRes, pendMovRes, attRes,
-          missingPhotoRes, todayShiftsRes, openEntriesRes,
-          clientsRes, staffReqRes, invRes,
-          compChangesRes, compAnalysisRes,
-          empCreatedRes, allPeriodsRes,
-          annRes, actRes,
-        ] = await Promise.all([
-          // Core stats
+        const [empRes, periodRes, ticketsRes, todayShiftsRes, openEntriesRes] = await Promise.all([
           supabase.from("employees").select("id", { count: "exact", head: true }).eq("is_active", true).eq("company_id", cid),
           supabase.from("pay_periods").select("*").eq("company_id", cid).lte("start_date", today).order("start_date", { ascending: false }).limit(1).maybeSingle(),
-          supabase.from("imports").select("id", { count: "exact", head: true }).eq("company_id", cid),
-          supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", cid),
           supabase.from("employee_tickets").select("id", { count: "exact", head: true }).eq("company_id", cid).in("status", ["new", "in_progress"]),
-          // Pending counts
-          supabase.from("shift_requests").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "pending"),
-          supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("approval_status", "pending"),
-          supabase.from("shift_attendance_confirmations").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "pending"),
-          // Missing photos
-          supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).is("avatar_url", null),
-          // Today summary
           supabase.from("scheduled_shifts").select("id").eq("company_id", cid).eq("date", today).is("deleted_at", null),
           supabase.from("time_entries" as any).select("id", { count: "exact", head: true }).eq("company_id", cid).is("clock_out" as any, null),
-          // Commercial
-          supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", cid).is("deleted_at", null).eq("status", "active"),
-          supabase.from("staffing_requests").select("id", { count: "exact", head: true }).eq("company_id", cid).not("status", "in", '("completed","cancelled","rejected")'),
-          supabase.from("invoices").select("id, status, grand_total").eq("company_id", cid),
-          // Compensation
-          supabase.from("compensation_change_log").select("id", { count: "exact", head: true }).eq("company_id", cid).gte("changed_at", monthStartStr),
-          supabase.from("compensation_analysis_summary").select("daily_payment_detected, ride_payment_detected, mixed_compensation_detected").eq("company_id", cid),
-          // Sparkline employees
-          supabase.from("employees").select("created_at").eq("company_id", cid).eq("is_active", true).order("created_at", { ascending: true }),
-          // Periods for overdue + chart
-          supabase.from("pay_periods").select("id, start_date, end_date, status, paid_at, published_at").eq("company_id", cid).order("start_date", { ascending: false }).limit(20),
-          // Feed
-          supabase.from("announcements").select("id, title, body, priority, pinned, published_at, media_urls").eq("company_id", cid).not("published_at", "is", null).is("deleted_at", null).order("published_at", { ascending: false }).limit(5),
-          supabase.from("activity_log").select("id, action, entity_type, entity_id, created_at, details").eq("company_id", cid).order("created_at", { ascending: false }).limit(10),
         ]);
 
-        // ── Process period + payroll total ──
         let periodTotal = 0;
         let hours = 0;
         if (periodRes.data) {
@@ -434,28 +398,7 @@ export default function AdminDashboard() {
           hours = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.total_hours || 0), 0);
         }
         setTotalHoursWorked(Math.round(hours * 10) / 10);
-        setStats({
-          totalEmployees: empRes.count ?? 0,
-          activePeriod: periodRes.data ? `${periodRes.data.start_date} → ${periodRes.data.end_date}` : null,
-          periodStatus: periodRes.data?.status ?? null,
-          totalImports: impRes.count ?? 0,
-          totalMovements: movRes.count ?? 0,
-          periodTotal: Math.round(periodTotal * 100) / 100,
-          periodStartDate: periodRes.data?.start_date ?? null,
-          periodEndDate: periodRes.data?.end_date ?? null,
-          pendingTickets: ticketsRes.count ?? 0,
-        });
 
-        // ── Pending counts ──
-        setPendingCounts({
-          shiftRequests: shiftReqRes.count ?? 0,
-          pendingMovements: pendMovRes.count ?? 0,
-          openTickets: ticketsRes.count ?? 0,
-          pendingAttendance: attRes.count ?? 0,
-        });
-        setMissingPhotoCount(missingPhotoRes.count ?? 0);
-
-        // ── Today summary (use already-fetched shift ids for assignment count) ──
         const todayShiftIds = (todayShiftsRes.data ?? []).map((s: any) => s.id);
         let assignedCount = 0;
         if (todayShiftIds.length > 0) {
@@ -464,7 +407,74 @@ export default function AdminDashboard() {
         }
         setTodaySummary({ shiftsToday: todayShiftIds.length, assignedToday: assignedCount, clockedIn: 0, openEntries: openEntriesRes.count ?? 0 });
 
-        // ── Commercial KPIs ──
+        setStats({
+          totalEmployees: empRes.count ?? 0,
+          activePeriod: periodRes.data ? `${periodRes.data.start_date} → ${periodRes.data.end_date}` : null,
+          periodStatus: periodRes.data?.status ?? null,
+          totalImports: 0,
+          totalMovements: 0,
+          periodTotal: Math.round(periodTotal * 100) / 100,
+          periodStartDate: periodRes.data?.start_date ?? null,
+          periodEndDate: periodRes.data?.end_date ?? null,
+          pendingTickets: ticketsRes.count ?? 0,
+        });
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Dashboard critical fetch error:", err);
+        setFetchError(true);
+        setLoading(false);
+      }
+    }
+
+    fetchCritical();
+  }, [selectedCompanyId]);
+
+  // ── PHASE 2: Secondary data (deferred – charts, activity, sparklines) ──
+  useEffect(() => {
+    if (!selectedCompanyId || loading) return;
+
+    const cid = selectedCompanyId;
+    const today = new Date().toISOString().split("T")[0];
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    const monthStartStr = monthStart.toISOString().split("T")[0];
+
+    async function fetchSecondary() {
+      try {
+        const [
+          impRes, movRes, shiftReqRes, pendMovRes, attRes,
+          missingPhotoRes, clientsRes, staffReqRes, invRes,
+          compChangesRes, compAnalysisRes, empCreatedRes, allPeriodsRes,
+          annRes, actRes,
+        ] = await Promise.all([
+          supabase.from("imports").select("id", { count: "exact", head: true }).eq("company_id", cid),
+          supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", cid),
+          supabase.from("shift_requests").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "pending"),
+          supabase.from("movements").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("approval_status", "pending"),
+          supabase.from("shift_attendance_confirmations").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("status", "pending"),
+          supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).is("avatar_url", null),
+          supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", cid).is("deleted_at", null).eq("status", "active"),
+          supabase.from("staffing_requests").select("id", { count: "exact", head: true }).eq("company_id", cid).not("status", "in", '("completed","cancelled","rejected")'),
+          supabase.from("invoices").select("id, status, grand_total").eq("company_id", cid),
+          supabase.from("compensation_change_log").select("id", { count: "exact", head: true }).eq("company_id", cid).gte("changed_at", monthStartStr),
+          supabase.from("compensation_analysis_summary").select("daily_payment_detected, ride_payment_detected, mixed_compensation_detected").eq("company_id", cid),
+          supabase.from("employees").select("created_at").eq("company_id", cid).eq("is_active", true).order("created_at", { ascending: true }),
+          supabase.from("pay_periods").select("id, start_date, end_date, status, paid_at, published_at").eq("company_id", cid).order("start_date", { ascending: false }).limit(20),
+          supabase.from("announcements").select("id, title, body, priority, pinned, published_at, media_urls").eq("company_id", cid).not("published_at", "is", null).is("deleted_at", null).order("published_at", { ascending: false }).limit(5),
+          supabase.from("activity_log").select("id, action, entity_type, entity_id, created_at, details").eq("company_id", cid).order("created_at", { ascending: false }).limit(10),
+        ]);
+
+        setStats(prev => ({ ...prev, totalImports: impRes.count ?? 0, totalMovements: movRes.count ?? 0 }));
+
+        setPendingCounts({
+          shiftRequests: shiftReqRes.count ?? 0,
+          pendingMovements: pendMovRes.count ?? 0,
+          openTickets: stats.pendingTickets,
+          pendingAttendance: attRes.count ?? 0,
+        });
+        setMissingPhotoCount(missingPhotoRes.count ?? 0);
+
         const invoices = invRes.data ?? [];
         const unpaid = invoices.filter(i => ["issued", "sent", "viewed", "overdue"].includes(i.status));
         const overdue = invoices.filter(i => i.status === "overdue");
@@ -477,7 +487,6 @@ export default function AdminDashboard() {
           overdueTotal: overdue.reduce((s, i) => s + (i.grand_total || 0), 0),
         });
 
-        // ── Compensation KPIs ──
         const analysis = compAnalysisRes.data ?? [];
         setCompKpis({
           rateChanges: compChangesRes.count ?? 0,
@@ -486,7 +495,6 @@ export default function AdminDashboard() {
           warnings: analysis.filter(a => a.mixed_compensation_detected).length,
         });
 
-        // ── Employee sparkline ──
         const empCreated = empCreatedRes.data ?? [];
         if (empCreated.length > 0) {
           const months: Record<string, number> = {};
@@ -496,7 +504,6 @@ export default function AdminDashboard() {
           setSparkEmployees(keys.map(k => { cum += months[k]; return cum; }));
         }
 
-        // ── Overdue info ──
         const allPeriods = allPeriodsRes.data ?? [];
         if (allPeriods.length > 0) {
           const infos = allPeriods.map(p => calculateOverdue(p, payrollConfig));
@@ -509,7 +516,6 @@ export default function AdminDashboard() {
           });
         }
 
-        // ── Chart data (use last 8 periods from allPeriods) ──
         const chartPeriods = [...allPeriods].reverse().slice(-8);
         if (chartPeriods.length > 0) {
           const periodIds = chartPeriods.map(p => p.id);
@@ -527,7 +533,6 @@ export default function AdminDashboard() {
           setSparkPayments(mapped.map(d => d.base + d.extras));
         }
 
-        // ── Announcements with reactions ──
         const anns = (annRes.data ?? []) as any[];
         if (anns.length > 0) {
           const annIds = anns.map(a => a.id);
@@ -539,17 +544,13 @@ export default function AdminDashboard() {
           setFeedAnnouncements([]);
         }
         setActivityItems(actRes.data ?? []);
-
-        setLoading(false);
       } catch (err) {
-        console.error("Dashboard fetchAll error:", err);
-        setFetchError(true);
-        setLoading(false);
+        console.error("Dashboard secondary fetch error:", err);
       }
     }
 
-    fetchAll();
-  }, [selectedCompanyId, payrollConfig]);
+    fetchSecondary();
+  }, [selectedCompanyId, loading, payrollConfig]);
 
   const periodProgress = useMemo(() => {
     if (!stats.periodStartDate || !stats.periodEndDate) return 0;

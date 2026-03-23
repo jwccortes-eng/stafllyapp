@@ -186,75 +186,45 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
               const isExpanded = expanded.has(r.id);
               const isPending = !["approved", "resolved", "posted"].includes(r.reconciliation_status);
               const StatusIcon = vBadge.icon;
-              const PayIcon = (r as any).shift_calculated_total > 0 ? Calendar : (PAY_ICONS[r.pay_classification] || DollarSign);
-              const cleanHistorical = v?.source_payroll_total || r.source_payroll_total || 0;
               const displayTotal = r.grand_total || r.final_total_pay || 0;
-              const grossHistorical = r.total_payroll_amount || 0;
-              const excludedUnmappedAmount = Math.max(0, grossHistorical - cleanHistorical);
-              const unmappedCount = (r.payroll_rows || []).filter((p: any) => p?.classified_type === "unmapped" || p?.type === "other" || p?.type === "unclassified").length;
+              const varianceAbs = Math.abs(v?.variance_amount || 0);
+              const varianceClass = varianceAbs > 50 ? "text-destructive" : varianceAbs > 10 ? "text-warning" : "text-muted-foreground";
 
               return (
-                <div key={r.id} className={`rounded-lg border transition-colors ${isSelected ? "border-primary/50 bg-primary/3" : "border-border"}`}>
-                  {/* Main row */}
-                  <div className="flex items-center gap-2 px-3 py-2">
+                <div key={r.id} className={`rounded-lg border transition-colors ${isSelected ? "border-primary/50 bg-primary/[0.03]" : "border-border/60"}`}>
+                  {/* Main row — simplified */}
+                  <div className="flex items-center gap-2 px-3 py-2.5">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={() => toggleSelect(r.id)}
                       className="shrink-0"
                     />
-                    <button onClick={() => toggleExpand(r.id)} className="shrink-0 text-muted-foreground hover:text-foreground">
-                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                    </button>
-                    <PayIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <span className="text-sm font-medium truncate">{name}</span>
                         <Badge variant={vBadge.variant as any} className="text-[10px] gap-0.5 shrink-0">
                           <StatusIcon className="h-2.5 w-2.5" /> {vBadge.label}
                         </Badge>
-                        {r.pay_classification === "unknown" && !(r as any).shift_calculated_total && (
-                          <Badge variant="warning" className="text-[10px] shrink-0">Sin clasificar</Badge>
-                        )}
-                        {(r as any).shift_calculated_total > 0 && (
-                          <Badge variant="info" className="text-[10px] shrink-0">
-                            {(r as any).shift_full_day_count || 0}d calc
-                          </Badge>
-                        )}
-                        {Array.isArray(r.warnings) && r.warnings.some((w: any) => String(w).startsWith("CRITICAL_UNMAPPED_RATIO:")) && (
-                          <Badge variant="warning" className="text-[10px] shrink-0">Unmapped</Badge>
-                        )}
                         {isPending && <Badge variant="outline" className="text-[10px] shrink-0 text-muted-foreground">Pendiente</Badge>}
                       </div>
                     </div>
-                    {/* Compact metrics */}
-                    <div className="hidden md:flex items-center gap-3 text-[11px] text-muted-foreground shrink-0">
-                      <span title="Turnos">{(r.scheduled_shifts || []).length}S</span>
-                      <span title="Fichajes">{(r.worked_shifts || []).length}F</span>
-                      <span title="Nómina">{(r.payroll_rows || []).length}N</span>
-                    </div>
-                    <div className="text-right shrink-0 min-w-[100px]">
+                    <div className="text-right shrink-0 min-w-[80px]">
                       <div className="text-xs font-mono font-bold">{fmt(displayTotal)}</div>
-                      {(r as any).shift_calculated_total > 0 && (
-                        <div className="text-[10px] font-mono text-muted-foreground">
-                          ref: {fmt(r.total_payroll_amount || 0)}
-                        </div>
-                      )}
                       {v && v.variance_amount !== 0 && (
-                        <div className={`text-[10px] font-mono ${Math.abs(v.variance_amount) > 50 ? "text-destructive" : Math.abs(v.variance_amount) > 10 ? "text-warning" : "text-muted-foreground"}`}>
+                        <div className={`text-[10px] font-mono ${varianceClass}`}>
                           Δ {fmt(v.variance_amount)}
                         </div>
                       )}
                     </div>
-                    {/* Quick actions */}
                     <div className="flex items-center gap-0.5 shrink-0">
                       {isPending && onApproveRecord && (
                         <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Aprobar" onClick={() => onApproveRecord(r.id)}>
                           <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="Workbench" onClick={() => onNavigate("workbench")}>
-                        <Wrench className="h-3.5 w-3.5" />
-                      </Button>
+                      <button onClick={() => toggleExpand(r.id)} className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground">
+                        {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      </button>
                     </div>
                   </div>
                   {/* Expanded detail */}
