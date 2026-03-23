@@ -303,7 +303,7 @@ export default function PayrollReconciliationPage() {
           <Button variant="ghost" size="sm" className="mb-1 text-muted-foreground" onClick={() => { setActiveBatch(null); setSearch(""); setFilter("all"); }}>
             ← Volver a batches
           </Button>
-          <PageHeader heading="Reconciliación" text={activeBatch.truth_source_file_name || "Batch sin archivo"} />
+          <PageHeader title="Reconciliación" subtitle={activeBatch.truth_source_file_name || "Batch sin archivo"} />
         </div>
         <div className="flex items-center gap-2">
           {batchStatusBadge(activeBatch.status)}
