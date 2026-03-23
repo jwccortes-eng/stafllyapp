@@ -990,9 +990,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
             </CardTitle>
             {truthLoaded && truthSource && (
               <div className="flex items-center gap-2">
-                <Badge variant={truthSource.type === "manual" ? "default" : "secondary"} className="text-[10px]">
-                  {truthSource.type === "manual" ? "📁 Archivo manual" : "📦 Pre-cargado"}
+                <Badge variant={truthSource.type === "manual" ? "default" : truthSource.type === "persisted" ? "secondary" : "secondary"} className="text-[10px]">
+                  {truthSource.type === "manual" ? "📁 Archivo manual" : truthSource.type === "persisted" ? "💾 Restaurado" : "📦 Pre-cargado"}
                 </Badge>
+                {persisted && <Badge variant="outline" className="text-[10px] text-primary border-primary/30">✓ Persistido</Badge>}
                 <span className="text-[10px] text-muted-foreground">{truthSource.loadedAt}</span>
               </div>
             )}
