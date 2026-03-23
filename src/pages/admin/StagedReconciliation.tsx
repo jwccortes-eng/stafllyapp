@@ -246,7 +246,7 @@ export default function StagedReconciliation() {
       toast({ title: "Periodo existente seleccionado" });
       return;
     }
-    const label = `${pp.start_date} → ${pp.end_date}`;
+    const label = periodLabel(pp);
     const p = await createPeriod(label, pp.start_date, pp.end_date, ppId);
     if (p) {
       setActivePeriod(p);
