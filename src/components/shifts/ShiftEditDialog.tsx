@@ -267,98 +267,110 @@ export function ShiftEditDialog({
             )}
           </SectionCard>
 
-          {/* ── Clock Method ── */}
-          <SectionCard icon={Clock} title="Método de fichaje">
-            <Select value={clockMethod} onValueChange={v => setClockMethod(v as "mobile" | "kiosk" | "both")}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="both">📱🖥 Ambos (Móvil + Kiosk)</SelectItem>
-                <SelectItem value="mobile">📱 Solo Móvil</SelectItem>
-                <SelectItem value="kiosk">🖥 Solo Kiosk</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-muted-foreground">Define desde dónde pueden fichar los empleados.</p>
-          </SectionCard>
+          {/* ── Advanced options (collapsed by default) ── */}
+          <Collapsible>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 transition-colors group">
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] font-semibold text-muted-foreground">Opciones avanzadas</span>
+              </div>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-3">
+              {/* ── Clock Method ── */}
+              <SectionCard icon={Clock} title="Método de fichaje">
+                <Select value={clockMethod} onValueChange={v => setClockMethod(v as "mobile" | "kiosk" | "both")}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="both">📱🖥 Ambos (Móvil + Kiosk)</SelectItem>
+                    <SelectItem value="mobile">📱 Solo Móvil</SelectItem>
+                    <SelectItem value="kiosk">🖥 Solo Kiosk</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">Define desde dónde pueden fichar los empleados.</p>
+              </SectionCard>
 
-          {/* ── QR Attendance ── */}
-          <SectionCard icon={QrCode} title="Asistencia por QR">
-            <ShiftQRSection
-              shiftId={shift.id}
-              qrToken={qrToken}
-              qrAttendanceMode={qrAttendanceMode}
-              onUpdate={(updates) => {
-                if (updates.qr_attendance_mode !== undefined) setQrAttendanceMode(updates.qr_attendance_mode);
-                if (updates.qr_token !== undefined) setQrToken(updates.qr_token);
-              }}
-            />
-          </SectionCard>
+              {/* ── QR Attendance ── */}
+              <SectionCard icon={QrCode} title="Asistencia por QR">
+                <ShiftQRSection
+                  shiftId={shift.id}
+                  qrToken={qrToken}
+                  qrAttendanceMode={qrAttendanceMode}
+                  onUpdate={(updates) => {
+                    if (updates.qr_attendance_mode !== undefined) setQrAttendanceMode(updates.qr_attendance_mode);
+                    if (updates.qr_token !== undefined) setQrToken(updates.qr_token);
+                  }}
+                />
+              </SectionCard>
 
-          {/* ── Transportation ── */}
-          <SectionCard icon={Car} title="Transporte">
-            <div className="flex items-center gap-2">
-              <Checkbox checked={transportRequired} onCheckedChange={c => setTransportRequired(!!c)} id="edit-transport" />
-              <Label htmlFor="edit-transport" className="text-xs font-normal cursor-pointer">¿Este turno requiere transporte?</Label>
-            </div>
-            {transportRequired && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground font-medium">Capacidad por vehículo</Label>
-                    <Input type="number" min="1" value={carCapacity} onChange={e => setCarCapacity(e.target.value)} className="h-9 text-sm mt-1" />
-                  </div>
-                  <div className="flex flex-col justify-end">
-                    <p className="text-[11px] text-muted-foreground font-medium mb-1">Vehículos necesarios</p>
-                    <div className="h-9 flex items-center px-3 rounded-md border border-border/30 bg-muted/20 text-sm font-semibold">
-                      {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 4))}
-                    </div>
-                  </div>
+              {/* ── Transportation ── */}
+              <SectionCard icon={Car} title="Transporte">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={transportRequired} onCheckedChange={c => setTransportRequired(!!c)} id="edit-transport" />
+                  <Label htmlFor="edit-transport" className="text-xs font-normal cursor-pointer">¿Este turno requiere transporte?</Label>
                 </div>
+                {transportRequired && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground font-medium">Capacidad por vehículo</Label>
+                        <Input type="number" min="1" value={carCapacity} onChange={e => setCarCapacity(e.target.value)} className="h-9 text-sm mt-1" />
+                      </div>
+                      <div className="flex flex-col justify-end">
+                        <p className="text-[11px] text-muted-foreground font-medium mb-1">Vehículos necesarios</p>
+                        <div className="h-9 flex items-center px-3 rounded-md border border-border/30 bg-muted/20 text-sm font-semibold">
+                          {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 4))}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
+                      <Select value={driverEmployeeId || "none"} onValueChange={v => setDriverEmployeeId(v === "none" ? "" : v)}>
+                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
+                      <Input value={transportNotes} onChange={e => setTransportNotes(e.target.value)} placeholder="Ej: Recoger en oficina a las 7:30 AM" className="h-9 text-sm mt-1" />
+                    </div>
+                  </>
+                )}
+              </SectionCard>
+
+              {/* ── Details ── */}
+              <SectionCard icon={FileText} title="Detalles adicionales">
                 <div>
-                  <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
-                  <Select value={driverEmployeeId || "none"} onValueChange={v => setDriverEmployeeId(v === "none" ? "" : v)}>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Admin del turno</Label>
+                  <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
                     <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Sin asignar</SelectItem>
                       {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Puede confirmar asistencia del equipo.</p>
                 </div>
                 <div>
-                  <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
-                  <Input value={transportNotes} onChange={e => setTransportNotes(e.target.value)} placeholder="Ej: Recoger en oficina a las 7:30 AM" className="h-9 text-sm mt-1" />
+                  <Label className="text-[11px] text-muted-foreground font-medium">Notas</Label>
+                  <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" />
                 </div>
-              </>
-            )}
-          </SectionCard>
-
-          {/* ── Details ── */}
-          <SectionCard icon={FileText} title="Detalles adicionales">
-            <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Admin del turno</Label>
-              <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
-                <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin asignar</SelectItem>
-                  {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Puede confirmar asistencia del equipo.</p>
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Notas</Label>
-              <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" />
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-                <Compass className="h-3 w-3" /> Punto de encuentro
-              </Label>
-              <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm mt-1" />
-            </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Instrucciones especiales</Label>
-              <Textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} rows={2} placeholder="Ej: Llevar uniforme negro..." className="text-sm resize-none mt-1" />
-            </div>
-          </SectionCard>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+                    <Compass className="h-3 w-3" /> Punto de encuentro
+                  </Label>
+                  <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm mt-1" />
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Instrucciones especiales</Label>
+                  <Textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} rows={2} placeholder="Ej: Llevar uniforme negro..." className="text-sm resize-none mt-1" />
+                </div>
+              </SectionCard>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* Footer */}
