@@ -182,10 +182,13 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [loading, setLoading] = useState(false);
   const [truthLoaded, setTruthLoaded] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [truthSource, setTruthSource] = useState<{ type: "pre-staged" | "manual"; fileName: string; loadedAt: string } | null>(null);
+  const [truthSource, setTruthSource] = useState<{ type: "pre-staged" | "manual" | "persisted"; fileName: string; loadedAt: string } | null>(null);
+  const [persisted, setPersisted] = useState(false);
 
   const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
+
+  const storagePath = companyId && periodStatusId ? `${companyId}/${periodStatusId}/truth-file.xlsx` : null;
 
   const toggleRow = (name: string) => {
     setExpandedRows(prev => {
@@ -195,12 +198,62 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     });
   };
 
-  const applyParsedTruth = (parsed: PayrollTruthParseResult, source: { type: "pre-staged" | "manual"; fileName: string }) => {
+  const applyParsedTruth = (parsed: PayrollTruthParseResult, source: { type: "pre-staged" | "manual" | "persisted"; fileName: string }) => {
     setTruthParse(parsed);
     setTruthData(parsed.rows);
     setTruthLoaded(true);
     setTruthSource({ ...source, loadedAt: new Date().toLocaleTimeString() });
   };
+
+  // Persist uploaded file to storage
+  const persistToStorage = async (fileBytes: ArrayBuffer, fileName: string) => {
+    if (!storagePath) return;
+    try {
+      // Upload/overwrite truth file
+      await supabase.storage.from("payroll-truth-files").upload(storagePath, new Blob([fileBytes]), {
+        upsert: true,
+        contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      // Save metadata
+      const metaPath = `${storagePath}.meta.json`;
+      const meta = JSON.stringify({ fileName, uploadedAt: new Date().toISOString() });
+      await supabase.storage.from("payroll-truth-files").upload(metaPath, new Blob([meta], { type: "application/json" }), { upsert: true });
+      setPersisted(true);
+    } catch (err) {
+      console.error("Failed to persist truth file:", err);
+      setPersisted(false);
+    }
+  };
+
+  // Auto-load persisted truth file on mount
+  useEffect(() => {
+    if (!storagePath || truthLoaded) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        // Check if persisted file exists
+        const metaPath = `${storagePath}.meta.json`;
+        const { data: metaBlob } = await supabase.storage.from("payroll-truth-files").download(metaPath);
+        if (!metaBlob || cancelled) return;
+        const metaText = await metaBlob.text();
+        const meta = JSON.parse(metaText) as { fileName: string; uploadedAt: string };
+
+        const { data: fileBlob } = await supabase.storage.from("payroll-truth-files").download(storagePath);
+        if (!fileBlob || cancelled) return;
+
+        const buffer = await fileBlob.arrayBuffer();
+        const parsed = parsePayrollTruthWorkbook(buffer);
+        if (cancelled) return;
+        applyParsedTruth(parsed, { type: "persisted", fileName: meta.fileName });
+        setPersisted(true);
+      } catch {
+        // No persisted file — that's fine
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [storagePath]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTruthFile = async () => {
     setLoading(true);
@@ -208,11 +261,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     setTruthData([]);
     setTruthParse(null);
     setTruthSource(null);
+    setPersisted(false);
     try {
       const res = await fetch(`/temp-import/payroll_truth_2025-12-24_to_2025-12-30.xlsx?v=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) throw new Error(`No se pudo cargar (${res.status})`);
-      const parsed = parsePayrollTruthWorkbook(await res.arrayBuffer());
+      const buffer = await res.arrayBuffer();
+      const parsed = parsePayrollTruthWorkbook(buffer);
       applyParsedTruth(parsed, { type: "pre-staged", fileName: "payroll_truth_2025-12-24_to_2025-12-30.xlsx" });
+      await persistToStorage(buffer, "payroll_truth_2025-12-24_to_2025-12-30.xlsx");
     } catch (err: any) {
       console.error("Error loading truth file:", err);
     } finally {
@@ -228,9 +284,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     setTruthData([]);
     setTruthParse(null);
     setTruthSource(null);
+    setPersisted(false);
     try {
-      const parsed = parsePayrollTruthWorkbook(await file.arrayBuffer());
+      const buffer = await file.arrayBuffer();
+      const parsed = parsePayrollTruthWorkbook(buffer);
       applyParsedTruth(parsed, { type: "manual", fileName: file.name });
+      await persistToStorage(buffer, file.name);
     } catch (err: any) {
       console.error("Error parsing manual truth file:", err);
     } finally {
@@ -239,11 +298,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     }
   };
 
-  const clearTruth = () => {
+  const clearTruth = async () => {
     setTruthData([]);
     setTruthParse(null);
     setTruthLoaded(false);
     setTruthSource(null);
+    setPersisted(false);
+    // Remove persisted file
+    if (storagePath) {
+      await supabase.storage.from("payroll-truth-files").remove([storagePath, `${storagePath}.meta.json`]);
+    }
   };
 
   useEffect(() => {
