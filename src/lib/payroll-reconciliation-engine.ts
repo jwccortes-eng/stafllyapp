@@ -409,8 +409,9 @@ export function classifyRow(
     return { row_status: "MISSING_IN_SYSTEM", is_exact_match: false, has_component_mismatch: false, has_critical_mismatch: true, has_manual_adjustment: false };
   }
 
+  const isComponentOnlyRow = (truth.total_pay == null || truth.total_pay === 0) && ((truth.pay_per_day ?? 0) > 0 || (truth.ryde ?? 0) > 0 || (truth.tips ?? 0) > 0);
   const hasManualAdj = !!(truth.observaciones && truth.observaciones.trim().length > 0) ||
-    (truth.total_hours == null || truth.total_hours === 0) && ((truth.total ?? 0) > 0);
+    ((truth.total_hours == null || truth.total_hours === 0) && ((truth.total ?? 0) > 0) && !isComponentOnlyRow);
 
   const hoursOk = withinTolerance(variances.hours, tolerance.hours);
   const payOk = withinTolerance(variances.total_pay, tolerance.money);
@@ -443,7 +444,11 @@ export function detectAnomalies(truth: TruthRow, system: SystemEmployeeData | nu
     else if (norm.length > 0 && norm.length !== 9) flags.push("INVALID_SSN_EIN");
   }
 
-  if ((truth.total_hours == null || truth.total_hours === 0) && (truth.total ?? 0) > 0) flags.push("MISSING_HOURS_WITH_PAY");
+  // Only flag missing hours if pay comes from base pay (not tips/ryde/ppd-only rows)
+  const isTipOnly = (truth.total_pay == null || truth.total_pay === 0) && (truth.tips ?? 0) > 0 && (truth.pay_per_day ?? 0) === 0 && (truth.ryde ?? 0) === 0;
+  const isComponentOnly = (truth.total_pay == null || truth.total_pay === 0) && ((truth.pay_per_day ?? 0) > 0 || (truth.ryde ?? 0) > 0 || (truth.tips ?? 0) > 0);
+  if ((truth.total_hours == null || truth.total_hours === 0) && (truth.total ?? 0) > 0 && !isComponentOnly) flags.push("MISSING_HOURS_WITH_PAY");
+  if (isTipOnly) flags.push("TIP_ONLY_ROW");
   if ((truth.total ?? 0) < 0) flags.push("NEGATIVE_PAY");
   if ((truth.total_hours ?? 0) > 0 && (truth.total ?? 0) === 0) flags.push("ZERO_PAY_WITH_HOURS");
   if ((truth.tips ?? 0) > 500) flags.push("HIGH_TIPS_OUTLIER");
