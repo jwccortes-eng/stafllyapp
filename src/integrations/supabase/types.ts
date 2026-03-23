@@ -4816,6 +4816,7 @@ export type Database = {
           paid_at: string | null
           paid_by: string | null
           published_at: string | null
+          sequence_number: number | null
           start_date: string
           status: string
         }
@@ -4828,6 +4829,7 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           published_at?: string | null
+          sequence_number?: number | null
           start_date: string
           status?: string
         }
@@ -4840,6 +4842,7 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           published_at?: string | null
+          sequence_number?: number | null
           start_date?: string
           status?: string
         }

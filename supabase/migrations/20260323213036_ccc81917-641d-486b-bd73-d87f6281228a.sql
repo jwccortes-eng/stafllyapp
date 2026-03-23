@@ -1,0 +1,1 @@
+ALTER TABLE pay_periods ADD COLUMN IF NOT EXISTS sequence_number integer; CREATE INDEX IF NOT EXISTS idx_pay_periods_sequence ON pay_periods (company_id, sequence_number);
