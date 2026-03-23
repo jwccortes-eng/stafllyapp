@@ -7,6 +7,9 @@ import { parseTruthFile, type TruthParseResult } from "@/lib/truth-file-parser";
 import {
   runReconciliation,
   normalizeName,
+  generateExecutiveCSV,
+  generateMismatchCSV,
+  generateCriticalCSV,
   type TruthRow,
   type SystemEmployeeData,
   type ReconciliationRowResult,
@@ -31,7 +34,32 @@ export interface ReconciliationBatch {
   tolerance_hours: number;
   tolerance_money: number;
   tolerance_tips: number;
+  approved_at: string | null;
+  approved_by: string | null;
+  locked_at: string | null;
+  notes: string | null;
+  checklist_json: Record<string, boolean> | null;
+  health_score: number | null;
+  health_grade: string | null;
 }
+
+export interface ApprovalChecklist {
+  all_critical_reviewed: boolean;
+  all_unmatched_resolved: boolean;
+  low_confidence_confirmed: boolean;
+  variance_acknowledged: boolean;
+  identity_issues_reviewed: boolean;
+  manual_adjustments_checked: boolean;
+}
+
+export const DEFAULT_CHECKLIST: ApprovalChecklist = {
+  all_critical_reviewed: false,
+  all_unmatched_resolved: false,
+  low_confidence_confirmed: false,
+  variance_acknowledged: false,
+  identity_issues_reviewed: false,
+  manual_adjustments_checked: false,
+};
 
 export function usePayrollReconciliation() {
   const { user } = useAuth();
@@ -86,7 +114,6 @@ export function usePayrollReconciliation() {
       const result = parseTruthFile(new Uint8Array(buffer));
       setTruthParseResult(result);
 
-      // Save rows to DB
       const rowsToInsert = result.rows.map(r => ({
         batch_id: batchId,
         employer_identification: r.employer_identification || null,
@@ -110,15 +137,12 @@ export function usePayrollReconciliation() {
         match_status: "UNMATCHED",
       }));
 
-      // Delete existing rows for this batch first
       await supabase.from("reconciliation_employee_rows").delete().eq("batch_id", batchId);
 
-      // Insert in chunks of 50
       for (let i = 0; i < rowsToInsert.length; i += 50) {
         await supabase.from("reconciliation_employee_rows").insert(rowsToInsert.slice(i, i + 50) as any[]);
       }
 
-      // Update batch
       await supabase.from("reconciliation_batches").update({
         status: "TRUTH_UPLOADED",
         truth_source_file_name: file.name,
@@ -138,7 +162,7 @@ export function usePayrollReconciliation() {
     setProcessing(true);
 
     try {
-      // 1. Load truth rows from DB
+      // 1. Load truth rows
       const { data: dbRows } = await supabase
         .from("reconciliation_employee_rows")
         .select("*")
@@ -194,7 +218,49 @@ export function usePayrollReconciliation() {
         source_tags: [],
       }));
 
-      // 3. Load aliases
+      // 3. Enrich system data from reconciliation_final_records if available
+      const batch = activeBatch || batches.find(b => b.id === batchId);
+      if (batch?.payroll_period_start && batch?.payroll_period_end) {
+        // Try to pull from period-based data
+        const { data: periodPayroll } = await supabase
+          .from("payroll_rows")
+          .select("employee_id, total_hours, total_pay, pay_per_day, rides_total, tips_total, reimbursements_total, grand_total")
+          .eq("company_id", selectedCompanyId)
+          .gte("work_date", batch.payroll_period_start)
+          .lte("work_date", batch.payroll_period_end);
+
+        if (periodPayroll && periodPayroll.length > 0) {
+          const byEmployee = new Map<string, any>();
+          for (const row of periodPayroll as any[]) {
+            if (!row.employee_id) continue;
+            const existing = byEmployee.get(row.employee_id) || { hours: 0, pay: 0, ppd: 0, ryde: 0, tips: 0, reimb: 0, total: 0 };
+            existing.hours += row.total_hours || 0;
+            existing.pay += row.total_pay || 0;
+            existing.ppd += row.pay_per_day || 0;
+            existing.ryde += row.rides_total || 0;
+            existing.tips += row.tips_total || 0;
+            existing.reimb += row.reimbursements_total || 0;
+            existing.total += row.grand_total || 0;
+            byEmployee.set(row.employee_id, existing);
+          }
+
+          for (const sd of systemData) {
+            const enrichment = byEmployee.get(sd.employee_id);
+            if (enrichment) {
+              sd.total_hours = enrichment.hours;
+              sd.total_pay = enrichment.pay;
+              sd.pay_per_day = enrichment.ppd;
+              sd.ryde = enrichment.ryde;
+              sd.tips = enrichment.tips;
+              sd.reimbursements = enrichment.reimb;
+              sd.total = enrichment.total;
+              sd.source_tags.push("payroll_rows");
+            }
+          }
+        }
+      }
+
+      // 4. Load aliases
       const { data: aliasData } = await supabase
         .from("employee_aliases")
         .select("alias_name_normalized, real_employee_id, confidence")
@@ -206,7 +272,7 @@ export function usePayrollReconciliation() {
         confidence: a.confidence || 80,
       }));
 
-      // 4. Get tolerances from batch
+      // 5. Get tolerances
       const { data: batchData } = await supabase
         .from("reconciliation_batches")
         .select("tolerance_hours, tolerance_money, tolerance_tips")
@@ -219,13 +285,13 @@ export function usePayrollReconciliation() {
         tips: (batchData as any)?.tolerance_tips ?? 0.5,
       };
 
-      // 5. Run engine
+      // 6. Run engine
       const result = runReconciliation(truthRows, systemData, aliases, tolerance);
       setReconciliationRows(result.rows);
       setSystemOnlyEmployees(result.systemOnly);
       setBatchSummary(result.summary);
 
-      // 6. Update DB rows with results
+      // 7. Update DB rows
       for (const row of result.rows) {
         const dbRow = (dbRows as any[]).find(
           (d: any) => normalizeName(`${d.first_name} ${d.last_name}`) === normalizeName(`${row.truth.first_name} ${row.truth.last_name}`)
@@ -264,7 +330,7 @@ export function usePayrollReconciliation() {
         } as any).eq("id", dbRow.id);
       }
 
-      // 7. Update batch summary
+      // 8. Update batch summary
       await supabase.from("reconciliation_batches").update({
         status: result.summary.batch_status === "MATCHED" ? "RECONCILED" : result.summary.batch_status === "CRITICAL" ? "CRITICAL" : "NEEDS_REVIEW",
         matched_count: result.summary.matched,
@@ -279,34 +345,64 @@ export function usePayrollReconciliation() {
         totals_truth_json: result.summary.totals_truth as any,
         totals_system_json: result.summary.totals_system as any,
         totals_variance_json: result.summary.totals_variance as any,
+        health_score: result.summary.health.score,
+        health_grade: result.summary.health.grade,
       } as any).eq("id", batchId);
 
-      toast({ title: "Reconciliación completada", description: `${result.summary.exact_match} matches exactos, ${result.summary.critical_mismatch} críticos` });
+      toast({ title: "Reconciliación completada", description: `${result.summary.exact_match} exactos, ${result.summary.critical_mismatch} críticos, Health: ${result.summary.health.grade}` });
     } catch (err: any) {
       toast({ title: "Error en reconciliación", description: err.message, variant: "destructive" });
     }
     setProcessing(false);
-  }, [selectedCompanyId, toast]);
+  }, [selectedCompanyId, toast, activeBatch, batches]);
 
-  const approveBatch = useCallback(async (batchId: string) => {
+  const saveChecklist = useCallback(async (batchId: string, checklist: ApprovalChecklist) => {
+    await supabase.from("reconciliation_batches").update({
+      checklist_json: checklist as any,
+    } as any).eq("id", batchId);
+  }, []);
+
+  const approveBatch = useCallback(async (batchId: string, checklist: ApprovalChecklist) => {
     if (!user?.id) return;
+
+    // Log audit
+    await supabase.from("reconciliation_audit_log").insert({
+      batch_id: batchId,
+      action_type: "batch_approve",
+      new_value: JSON.stringify(checklist),
+      performed_by: user.id,
+      note: `Approved with checklist. Health: ${batchSummary?.health.grade || "N/A"}`,
+    } as any);
+
     await supabase.from("reconciliation_batches").update({
       status: "APPROVED",
       approved_by: user.id,
       approved_at: new Date().toISOString(),
+      checklist_json: checklist as any,
     } as any).eq("id", batchId);
+
     toast({ title: "Batch aprobado" });
     await loadBatches();
-  }, [user?.id, toast, loadBatches]);
+  }, [user?.id, toast, loadBatches, batchSummary]);
 
   const lockBatch = useCallback(async (batchId: string) => {
+    if (!user?.id) return;
+
+    await supabase.from("reconciliation_audit_log").insert({
+      batch_id: batchId,
+      action_type: "batch_lock",
+      performed_by: user.id,
+      note: "Batch locked — no further changes allowed",
+    } as any);
+
     await supabase.from("reconciliation_batches").update({
       status: "LOCKED",
       locked_at: new Date().toISOString(),
     } as any).eq("id", batchId);
+
     toast({ title: "Batch bloqueado" });
     await loadBatches();
-  }, [toast, loadBatches]);
+  }, [user?.id, toast, loadBatches]);
 
   const resolveMatch = useCallback(async (rowId: string, employeeId: string, batchId: string) => {
     if (!user?.id) return;
@@ -357,42 +453,37 @@ export function usePayrollReconciliation() {
       "Truth Tips", "System Tips", "Var Tips",
       "Truth Reimb", "System Reimb", "Var Reimb",
       "Truth Total", "System Total", "Var Total",
-      "Status", "Flags", "Observaciones",
+      "Status", "Exception", "Flags", "Observaciones",
     ];
 
     const dataRows = rows.map(r => [
       `${r.truth.first_name} ${r.truth.last_name}`,
-      r.match.match_status,
-      String(r.match.match_confidence),
-      r.match.matched_by,
-      String(r.truth.total_hours ?? ""),
-      String(r.system?.total_hours ?? ""),
-      String(r.variances.hours ?? ""),
-      String(r.truth.total_pay ?? ""),
-      String(r.system?.total_pay ?? ""),
-      String(r.variances.total_pay ?? ""),
-      String(r.truth.pay_per_day ?? ""),
-      String(r.system?.pay_per_day ?? ""),
-      String(r.variances.pay_per_day ?? ""),
-      String(r.truth.ryde ?? ""),
-      String(r.system?.ryde ?? ""),
-      String(r.variances.ryde ?? ""),
-      String(r.truth.tips ?? ""),
-      String(r.system?.tips ?? ""),
-      String(r.variances.tips ?? ""),
-      String(r.truth.reimbursements ?? ""),
-      String(r.system?.reimbursements ?? ""),
-      String(r.variances.reimbursements ?? ""),
-      String(r.truth.total ?? ""),
-      String(r.system?.total ?? ""),
-      String(r.variances.total ?? ""),
-      r.classification.row_status,
-      r.anomaly_flags.join("; "),
-      r.truth.observaciones || "",
+      r.match.match_status, String(r.match.match_confidence), r.match.matched_by,
+      String(r.truth.total_hours ?? ""), String(r.system?.total_hours ?? ""), String(r.variances.hours ?? ""),
+      String(r.truth.total_pay ?? ""), String(r.system?.total_pay ?? ""), String(r.variances.total_pay ?? ""),
+      String(r.truth.pay_per_day ?? ""), String(r.system?.pay_per_day ?? ""), String(r.variances.pay_per_day ?? ""),
+      String(r.truth.ryde ?? ""), String(r.system?.ryde ?? ""), String(r.variances.ryde ?? ""),
+      String(r.truth.tips ?? ""), String(r.system?.tips ?? ""), String(r.variances.tips ?? ""),
+      String(r.truth.reimbursements ?? ""), String(r.system?.reimbursements ?? ""), String(r.variances.reimbursements ?? ""),
+      String(r.truth.total ?? ""), String(r.system?.total ?? ""), String(r.variances.total ?? ""),
+      r.classification.row_status, r.exception_type || "", r.anomaly_flags.join("; "), r.truth.observaciones || "",
     ]);
 
     return [headers, ...dataRows];
   }, []);
+
+  const exportExecutive = useCallback(() => {
+    if (!batchSummary) return [];
+    return generateExecutiveCSV(reconciliationRows, batchSummary);
+  }, [reconciliationRows, batchSummary]);
+
+  const exportMismatches = useCallback(() => {
+    return generateMismatchCSV(reconciliationRows);
+  }, [reconciliationRows]);
+
+  const exportCritical = useCallback(() => {
+    return generateCriticalCSV(reconciliationRows);
+  }, [reconciliationRows]);
 
   return {
     batches, activeBatch, setActiveBatch,
@@ -400,6 +491,8 @@ export function usePayrollReconciliation() {
     loading, processing,
     loadBatches, createBatch, uploadTruth,
     runReconciliationForBatch, approveBatch, lockBatch,
-    resolveMatch, addReviewNote, exportCSV,
+    resolveMatch, addReviewNote,
+    exportCSV, exportExecutive, exportMismatches, exportCritical,
+    saveChecklist,
   };
 }
