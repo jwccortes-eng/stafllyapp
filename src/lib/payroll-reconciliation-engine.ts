@@ -290,8 +290,21 @@ export function matchEmployees(
       }
     }
 
-    // ── TIER 4: Email
-    const truthEmail = truth.raw?.["email"] || truth.raw?.["Email"];
+    // ── TIER 4: Phone (strongest real-world signal — promoted above email)
+    const truthPhone = truth.raw?.["Phone number"] || truth.raw?.["phone"] || truth.raw?.["Phone"] || truth.raw?.["phone_number"];
+    const normPhone = truthPhone ? normalizePhone(String(truthPhone)) : "";
+    if (normPhone.length >= 7) {
+      for (const c of candidates) {
+        if (usedCandidateIds.has(c.id)) continue;
+        if (normalizePhone(c.phone) === normPhone) {
+          usedCandidateIds.add(c.id);
+          return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 95, matched_by: "phone", match_notes: `Phone: ...${normPhone.slice(-4)}` };
+        }
+      }
+    }
+
+    // ── TIER 5: Email
+    const truthEmail = truth.raw?.["Email"] || truth.raw?.["email"];
     if (truthEmail && typeof truthEmail === "string") {
       const normEmail = truthEmail.toLowerCase().trim();
       for (const c of candidates) {
@@ -299,21 +312,6 @@ export function matchEmployees(
         if (c.email && c.email.toLowerCase().trim() === normEmail) {
           usedCandidateIds.add(c.id);
           return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 96, matched_by: "email", match_notes: `Email: ${normEmail}` };
-        }
-      }
-    }
-
-    // ── TIER 5: Phone
-    const truthPhone = truth.raw?.["phone"] || truth.raw?.["Phone"];
-    if (truthPhone && typeof truthPhone === "string") {
-      const normPhone = normalizePhone(truthPhone);
-      if (normPhone.length >= 7) {
-        for (const c of candidates) {
-          if (usedCandidateIds.has(c.id)) continue;
-          if (normalizePhone(c.phone) === normPhone) {
-            usedCandidateIds.add(c.id);
-            return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 95, matched_by: "phone", match_notes: `Phone: ...${normPhone.slice(-4)}` };
-          }
         }
       }
     }

@@ -5741,6 +5741,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          checklist_json: Json | null
           company_id: string
           component_mismatch_count: number | null
           created_at: string
@@ -5749,6 +5750,8 @@ export type Database = {
           employees_system_count: number | null
           employees_truth_count: number | null
           exact_match_count: number | null
+          health_grade: string | null
+          health_score: number | null
           id: string
           locked_at: string | null
           matched_count: number | null
@@ -5776,6 +5779,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          checklist_json?: Json | null
           company_id: string
           component_mismatch_count?: number | null
           created_at?: string
@@ -5784,6 +5788,8 @@ export type Database = {
           employees_system_count?: number | null
           employees_truth_count?: number | null
           exact_match_count?: number | null
+          health_grade?: string | null
+          health_score?: number | null
           id?: string
           locked_at?: string | null
           matched_count?: number | null
@@ -5811,6 +5817,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          checklist_json?: Json | null
           company_id?: string
           component_mismatch_count?: number | null
           created_at?: string
@@ -5819,6 +5826,8 @@ export type Database = {
           employees_system_count?: number | null
           employees_truth_count?: number | null
           exact_match_count?: number | null
+          health_grade?: string | null
+          health_score?: number | null
           id?: string
           locked_at?: string | null
           matched_count?: number | null

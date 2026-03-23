@@ -51,6 +51,8 @@ function isSummaryRow(firstName: string, lastName: string): boolean {
   if (!full) return true;
   if (full.startsWith("total") || full === "grand total" || full.startsWith("subtotal")) return true;
   if (/^total\s/i.test(firstName)) return true;
+  // Catch patterns like "TOTAL QUALITY" or company-name summary rows
+  if (/^total\b/i.test(full)) return true;
   return false;
 }
 
