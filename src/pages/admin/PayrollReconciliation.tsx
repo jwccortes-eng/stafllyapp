@@ -788,6 +788,16 @@ export default function PayrollReconciliationPage() {
         </CardContent>
       </Card>
 
+      {/* Debug Panel — visible to dev/admin/owner */}
+      {isDev && activeBatch && (
+        <DebugPanel
+          companyId={selectedCompanyId || ""}
+          batch={activeBatch}
+          batchSummary={batchSummary}
+          reconciliationRows={reconciliationRows}
+        />
+      )}
+
       {/* KPI strip */}
       {batchSummary && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
