@@ -265,6 +265,16 @@ export default function StagedReconciliation() {
     if (p) handleSelectPeriod(p);
   };
 
+  // ── Open exact truth period shortcut ──
+  const handleOpenTruthPeriod = () => {
+    const targetPP = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
+    if (!targetPP) {
+      toast({ title: "Periodo 2025-12-24 → 2025-12-30 no encontrado", variant: "destructive" });
+      return;
+    }
+    handleCreateFromPayPeriod(targetPP.id);
+  };
+
   // ── Reprocess period ──
   const handleReprocessPeriod = async () => {
     if (!activePeriod) return;
