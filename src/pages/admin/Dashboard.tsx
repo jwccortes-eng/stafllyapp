@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePayrollConfig, calculateOverdue, DAY_NAMES, type PeriodOverdueInfo } from "@/hooks/usePayrollConfig";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
 import { format, parseISO, formatDistanceToNow, startOfWeek, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -541,7 +541,7 @@ export default function AdminDashboard() {
           // Get reconciliation period statuses that link to these pay_periods
           const [rpsRes, chartMovRes] = await Promise.all([
             supabase.from("reconciliation_period_status").select("id, period_id").in("period_id", periodIds),
-            supabase.from("movements").select("period_id, total_value, concept_id, concepts(category)").in("period_id", periodIds),
+            supabase.from("movements").select("period_id, total_value, concept_id, concepts(category, name)").in("period_id", periodIds),
           ]);
 
           const rpsList = rpsRes.data ?? [];
@@ -577,20 +577,48 @@ export default function AdminDashboard() {
             });
           }
 
-          // Mark periods that have movements but no base as "pending"
+          // Classify extras into sub-buckets by concept name pattern
+          const classifyExtra = (name: string): string => {
+            const n = (name || "").toLowerCase();
+            if (n.includes("weekend") || n.includes("daily pay")) return "turnos";
+            if (n.includes("transporte") || n.includes("ryde") || n.includes("ride") || n.includes("especial ryde")) return "transporte";
+            if (n.includes("propina") || n.includes("tip")) return "propinas";
+            if (n.includes("reintegro") || n.includes("reimbursement")) return "reintegros";
+            if (n.includes("viaje") || n.includes("travel")) return "viaje";
+            return "otros";
+          };
+
           const mapped = chartPeriods.map(p => {
             const baseInfo = rfrByPeriod[p.id];
             const base = baseInfo ? Math.round(baseInfo.base) : 0;
-            const extras = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id && m.concepts?.category === "extra").reduce((s, m) => s + Number(m.total_value || 0), 0);
-            const deducciones = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id && m.concepts?.category === "deduction").reduce((s, m) => s + Math.abs(Number(m.total_value || 0)), 0);
-            const hasMov = extras > 0 || deducciones > 0;
-            const pending = base === 0 && hasMov; // has activity but no base = incomplete
+            const periodMovs = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id);
+            const extraBuckets: Record<string, number> = { turnos: 0, transporte: 0, propinas: 0, reintegros: 0, viaje: 0, otros: 0 };
+            let extrasTotal = 0;
+            let deducciones = 0;
+            for (const m of periodMovs) {
+              const val = Number(m.total_value || 0);
+              if (m.concepts?.category === "deduction") {
+                deducciones += Math.abs(val);
+              } else if (m.concepts?.category === "extra") {
+                extrasTotal += val;
+                const bucket = classifyExtra(m.concepts?.name || "");
+                extraBuckets[bucket] += val;
+              }
+            }
+            const hasMov = extrasTotal > 0 || deducciones > 0;
+            const pending = base === 0 && hasMov;
             return {
               label: format(parseISO(p.start_date), "dd MMM", { locale: es }),
               base: Math.round(base),
-              extras: Math.round(extras),
+              extras: Math.round(extrasTotal),
               deducciones: Math.round(deducciones),
               pending,
+              _turnos: Math.round(extraBuckets.turnos),
+              _transporte: Math.round(extraBuckets.transporte),
+              _propinas: Math.round(extraBuckets.propinas),
+              _reintegros: Math.round(extraBuckets.reintegros),
+              _viaje: Math.round(extraBuckets.viaje),
+              _otros: Math.round(extraBuckets.otros),
             };
           });
           setChartData(mapped);
@@ -839,10 +867,30 @@ export default function AdminDashboard() {
     chart: () => {
       if (chartData.length === 0) return null;
       const hasPendingPeriods = chartData.some((d: any) => d.pending);
-      const nameMap: Record<string, string> = {
-        base: "Nómina Base",
-        extras: "Novedades (+)",
-        deducciones: "Deducciones (−)",
+      const ChartTip = ({ active, payload, label }: any) => {
+        if (!active || !payload?.length) return null;
+        const item = chartData.find((d: any) => d.label === label);
+        return (
+          <div className="rounded-xl border border-border/50 bg-card px-3.5 py-2.5 text-xs shadow-xl min-w-[190px]">
+            <p className="font-semibold text-foreground mb-1.5">{label}{item?.pending ? " ⚠ Base pendiente" : ""}</p>
+            <div className="space-y-1">
+              <div className="flex justify-between gap-4"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--primary))"}}/>Nómina Base</span><span className="font-mono font-semibold">${(item?.base||0).toLocaleString()}</span></div>
+              {(item?.extras||0)>0&&(<>
+                <div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--earning))"}}/>Compensación Adicional</span><span className="font-mono font-semibold">${(item?.extras||0).toLocaleString()}</span></div>
+                <div className="pl-4 space-y-0.5 text-muted-foreground">
+                  {item?._turnos>0&&<div className="flex justify-between"><span>Turnos / Daily Pay</span><span className="font-mono">${item._turnos.toLocaleString()}</span></div>}
+                  {item?._transporte>0&&<div className="flex justify-between"><span>Transporte / Ryde</span><span className="font-mono">${item._transporte.toLocaleString()}</span></div>}
+                  {item?._propinas>0&&<div className="flex justify-between"><span>Propinas</span><span className="font-mono">${item._propinas.toLocaleString()}</span></div>}
+                  {item?._reintegros>0&&<div className="flex justify-between"><span>Reintegros</span><span className="font-mono">${item._reintegros.toLocaleString()}</span></div>}
+                  {item?._viaje>0&&<div className="flex justify-between"><span>Horas de viaje</span><span className="font-mono">${item._viaje.toLocaleString()}</span></div>}
+                  {item?._otros>0&&<div className="flex justify-between"><span>Otros ajustes</span><span className="font-mono">${item._otros.toLocaleString()}</span></div>}
+                </div>
+              </>)}
+              {(item?.deducciones||0)>0&&(<div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--destructive))"}}/>Deducciones</span><span className="font-mono font-semibold">−${(item?.deducciones||0).toLocaleString()}</span></div>)}
+              <div className="flex justify-between gap-4 pt-1.5 border-t border-border font-semibold text-foreground"><span>Total Neto</span><span className="font-mono">${((item?.base||0)+(item?.extras||0)-(item?.deducciones||0)).toLocaleString()}</span></div>
+            </div>
+          </div>
+        );
       };
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
@@ -868,24 +916,8 @@ export default function AdminDashboard() {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} className="fill-muted-foreground" axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} axisLine={false} tickLine={false} />
-                  <RechartsTooltip
-                    contentStyle={{
-                      borderRadius: "0.75rem",
-                      border: "1px solid hsl(var(--border))",
-                      backgroundColor: "hsl(var(--card))",
-                      fontSize: 11,
-                      boxShadow: "var(--shadow-md)",
-                      padding: "8px 12px",
-                    }}
-                    formatter={(value: number, name: string) => {
-                      return [`$${value.toLocaleString()}`, nameMap[name] || name];
-                    }}
-                    labelFormatter={(label) => {
-                      const item = chartData.find((d: any) => d.label === label);
-                      if (item?.pending) return `${label} ⚠ Base pendiente`;
-                      return label;
-                    }}
-                  />
+                  <RechartsTooltip content={<ChartTip />} />
+                  <Legend formatter={(value: string) => { const l: Record<string,string> = { base: "Nómina Base", extras: "Comp. Adicional", deducciones: "Deducciones" }; return <span className="text-[10px]">{l[value]||value}</span>; }} iconSize={8} wrapperStyle={{ fontSize: 10 }} />
                   <Bar dataKey="base" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} name="base" />
                   <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[6, 6, 0, 0]} name="extras" />
                   <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} name="deducciones" />
