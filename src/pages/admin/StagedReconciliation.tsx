@@ -532,7 +532,7 @@ export default function StagedReconciliation() {
             {activePeriod && (
               <div className="flex items-center gap-3 ml-auto text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{finalRecords.length} registros</span>
-                <span className="font-mono">{activePeriod.period_start} → {activePeriod.period_end}</span>
+                <span className="font-mono">{reconPeriodLabel(activePeriod)}</span>
                 {activePeriod.total_schedules > 0 && <Badge variant="secondary" className="text-[10px]">{activePeriod.total_schedules} turnos</Badge>}
                 {activePeriod.total_clocks > 0 && <Badge variant="secondary" className="text-[10px]">{activePeriod.total_clocks} fichajes</Badge>}
                 {activePeriod.total_payroll_rows > 0 && <Badge variant="secondary" className="text-[10px]">{activePeriod.total_payroll_rows} nómina</Badge>}
