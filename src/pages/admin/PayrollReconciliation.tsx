@@ -900,7 +900,7 @@ export default function PayrollReconciliationPage() {
         {batchSummary && (
           <PreApprovalSafetyPanel
             summary={batchSummary}
-            onApprove={async () => { await approveBatch(activeBatch.id); setShowApproveDialog(false); }}
+            onApprove={async () => { await approveBatch(activeBatch.id, {} as any); setShowApproveDialog(false); }}
             onCancel={() => setShowApproveDialog(false)}
           />
         )}
