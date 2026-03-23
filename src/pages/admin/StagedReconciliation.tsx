@@ -138,6 +138,7 @@ export default function StagedReconciliation() {
   const [employeeMap, setEmployeeMap] = useState<Map<string, string>>(new Map());
   const [payPeriods, setPayPeriods] = useState<PayPeriodOption[]>([]);
   const [reprocessing, setReprocessing] = useState(false);
+  const [showSecondaryTabs, setShowSecondaryTabs] = useState(false);
 
   // ── Load employees ──
   useEffect(() => {
