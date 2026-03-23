@@ -435,6 +435,27 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                           <span className="text-xs text-foreground font-semibold">💰 Propuesta calculada por el sistema</span>
                           <span className="text-sm font-bold font-mono text-primary">${sysTotal.toLocaleString()}</span>
                         </div>
+                        {/* Component breakdown in summary */}
+                        {(() => {
+                          const hp = Number((record as any).hourly_pay_total) || 0;
+                          const dp = Number((record as any).daily_pay_total) || 0;
+                          const wp = Number(record.weekend_amount) || 0;
+                          const rp = Number(record.ride_amount) || Number((record as any).ride_pay_total) || 0;
+                          const parts: string[] = [];
+                          if (hp > 0) parts.push(`Base/Hora: $${hp}`);
+                          if (dp > 0 || wp > 0) parts.push(`Diario: $${dp + wp}`);
+                          if (hasShiftCalc && hp === 0 && dp === 0 && wp === 0) parts.push(`Shift-calc: $${(record as any).shift_calculated_total}`);
+                          if (rp > 0) parts.push(`Ryde: $${rp}`);
+                          if (parts.length > 1) {
+                            return (
+                              <div className="flex items-center justify-between py-1 pl-4 border-b border-border/20">
+                                <span className="text-[10px] text-muted-foreground">↳ Componentes</span>
+                                <span className="text-[10px] font-mono text-muted-foreground">{parts.join(" + ")}</span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                         <div className={`flex items-center justify-between py-2 rounded-lg px-2 -mx-2 ${absVar > 10 ? "bg-destructive/[0.06]" : absVar > 0 ? "bg-warning/[0.06]" : "bg-earning/[0.06]"}`}>
                           <span className={`text-xs font-semibold ${absVar > 10 ? "text-destructive" : absVar > 0 ? "text-warning" : "text-earning"}`}>
                             {absVar <= 1 ? "✅" : absVar <= 10 ? "⚠️" : "🔴"} Diferencia vs referencia nómina
@@ -446,15 +467,6 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                             </span>
                           </span>
                         </div>
-                      </div>
-                      {hasShiftCalc && (
-                        <p className="text-[10px] text-muted-foreground mt-2">
-                          Cálculo basado en {(record as any).shift_full_day_count || 0} día(s) completo(s) × ${(record as any).shift_daily_rate_used || "?"}
-                          {((record as any).shift_half_day_count || 0) > 0 && ` + ${(record as any).shift_half_day_count} medio(s) día`}
-                          {(record.ride_amount > 0) && ` + $${record.ride_amount} transporte`}
-                          {(record.manual_amount > 0) && ` + $${record.manual_amount} ajuste manual`}
-                        </p>
-                      )}
                     </div>
 
                     {/* ═══ DETAIL SECTIONS — collapsible for power users ═══ */}
