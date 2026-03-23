@@ -915,8 +915,13 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     const truthIsLoaded = truthLoaded && truthData.length > 0;
     
     if (truthIsLoaded && systemHasData) {
+      const sourceLabel = truthSource?.type === "persisted"
+        ? "restaurado automáticamente"
+        : truthSource?.type === "manual"
+        ? "subido manualmente"
+        : "pre-cargado";
       return {
-        label: `Comparando: Truth File (${truthSource?.type === "manual" ? "subido manualmente" : "pre-cargado"}) vs. Datos del Sistema`,
+        label: `Comparando: Truth File (${sourceLabel}) vs. Datos del Sistema`,
         variant: "default" as const,
         icon: "✅",
         detail: `Truth: ${truthData.length} empleados desde ${truthSource?.fileName || "archivo"} | Sistema: ${reconData.length} empleados desde period_base_pay + movements`,
@@ -936,20 +941,42 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       icon: "📭",
       detail: "Selecciona un periodo y carga un archivo Truth para iniciar la validación.",
     };
-  }, [reconData, truthData, truthLoaded]);
+  }, [reconData, truthData, truthLoaded, truthSource]);
 
   return (
     <div className="space-y-4">
       {/* ── Data Source Transparency Banner ── */}
       <Alert className={`border-l-4 ${truthLoaded ? 'border-l-primary' : reconData.length > 0 ? 'border-l-accent' : 'border-l-muted-foreground'}`}>
         <AlertDescription className="space-y-1">
-          <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="flex items-center gap-2 text-sm font-medium flex-wrap">
             <span>{dataSourceInfo.icon}</span>
             <span>{dataSourceInfo.label}</span>
-            {truthLoaded && <Badge variant="default" className="text-[10px]">Truth cargado en esta sesión</Badge>}
+            {truthLoaded && persisted && (
+              <Badge variant="default" className="text-[10px] gap-1">
+                <CheckCircle2 className="h-2.5 w-2.5" />
+                Archivo manual persistido
+              </Badge>
+            )}
+            {truthLoaded && !persisted && (
+              <Badge variant="outline" className="text-[10px] gap-1 border-warning text-warning">
+                <AlertTriangle className="h-2.5 w-2.5" />
+                Archivo manual no persistido
+              </Badge>
+            )}
+            {truthLoaded && truthSource?.type === "persisted" && (
+              <Badge variant="secondary" className="text-[10px] gap-1">
+                <Upload className="h-2.5 w-2.5" />
+                Restaurado automáticamente
+              </Badge>
+            )}
             {!truthLoaded && reconData.length > 0 && <Badge variant="secondary" className="text-[10px]">Datos previos del sistema</Badge>}
           </div>
           <p className="text-xs text-muted-foreground">{dataSourceInfo.detail}</p>
+          {truthLoaded && !persisted && (
+            <p className="text-xs text-warning font-medium mt-1">
+              ⚠️ Debes volver a cargar el archivo si recargas la página
+            </p>
+          )}
         </AlertDescription>
       </Alert>
 
