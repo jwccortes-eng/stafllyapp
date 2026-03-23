@@ -852,10 +852,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     
     if (truthIsLoaded && systemHasData) {
       return {
-        label: "Comparando: Truth File (esta sesión) vs. Datos del Sistema",
+        label: `Comparando: Truth File (${truthSource?.type === "manual" ? "subido manualmente" : "pre-cargado"}) vs. Datos del Sistema`,
         variant: "default" as const,
         icon: "✅",
-        detail: `Truth: ${truthData.length} empleados desde archivo pre-cargado | Sistema: ${reconData.length} empleados desde period_base_pay + movements`,
+        detail: `Truth: ${truthData.length} empleados desde ${truthSource?.fileName || "archivo"} | Sistema: ${reconData.length} empleados desde period_base_pay + movements`,
       };
     }
     if (systemHasData && !truthIsLoaded) {
