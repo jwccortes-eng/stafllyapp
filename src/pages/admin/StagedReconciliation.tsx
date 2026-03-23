@@ -152,15 +152,31 @@ export default function StagedReconciliation() {
       });
   }, [selectedCompanyId]);
 
-  // ── Load pay periods for selector ──
+  // ── Load pay periods for selector (including exact truth target) ──
   useEffect(() => {
     if (!selectedCompanyId) return;
-    supabase.from("pay_periods")
-      .select("id, start_date, end_date, status")
-      .eq("company_id", selectedCompanyId)
-      .order("start_date", { ascending: false })
-      .limit(52)
-      .then(({ data }) => setPayPeriods((data || []) as PayPeriodOption[]));
+    Promise.all([
+      supabase.from("pay_periods")
+        .select("id, start_date, end_date, status")
+        .eq("company_id", selectedCompanyId)
+        .order("start_date", { ascending: false })
+        .limit(100),
+      supabase.from("pay_periods")
+        .select("id, start_date, end_date, status")
+        .eq("company_id", selectedCompanyId)
+        .eq("start_date", "2025-12-24")
+        .eq("end_date", "2025-12-30")
+        .limit(1),
+    ]).then(([listRes, exactRes]) => {
+      const list = (listRes.data || []) as PayPeriodOption[];
+      const exact = (exactRes.data || []) as PayPeriodOption[];
+      // Merge exact target if not already in list
+      const ids = new Set(list.map(p => p.id));
+      for (const e of exact) {
+        if (!ids.has(e.id)) list.push(e);
+      }
+      setPayPeriods(list);
+    });
   }, [selectedCompanyId]);
 
   // ── Auto-select latest active (non-locked) period on load ──
