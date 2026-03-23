@@ -114,3 +114,20 @@ export function localeSortBy<T>(
     localeSort(a[key] as unknown as string, b[key] as unknown as string, locale),
   );
 }
+
+/**
+ * Unified period label: "Periodo N · YYYY-MM-DD → YYYY-MM-DD"
+ * Falls back to date range when sequence_number is unavailable.
+ */
+export function formatPeriodLabel(
+  startDate: string,
+  endDate: string,
+  sequenceNumber?: number | null,
+  fallbackLabel?: string | null,
+): string {
+  const seq = sequenceNumber ? `Periodo ${sequenceNumber} · ` : "";
+  const range = `${startDate} → ${endDate}`;
+  if (seq) return `${seq}${range}`;
+  if (fallbackLabel && fallbackLabel !== range) return fallbackLabel;
+  return range;
+}
