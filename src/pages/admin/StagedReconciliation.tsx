@@ -633,7 +633,7 @@ export default function StagedReconciliation() {
         </ScrollArea>
 
         <TabsContent value="dashboard">
-          <ReconciliationDashboard periods={periods} onSelectPeriod={handleSelectPeriod} onCreatePeriod={() => setShowBatchDialog(true)} />
+          <ReconciliationDashboard periods={periods} onSelectPeriod={handleSelectPeriod} onCreatePeriod={() => setShowBatchDialog(true)} formatLabel={reconPeriodLabel} />
         </TabsContent>
 
         <TabsContent value="closedesk">
