@@ -103,6 +103,7 @@ const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliati
 const CompensationValidation = lazy(() => import("./pages/admin/CompensationValidation"));
 const PayrollPilotClose = lazy(() => import("./pages/admin/PayrollPilotClose"));
 const PayrollMappings = lazy(() => import("./pages/admin/PayrollMappings"));
+const PayrollReconciliation = lazy(() => import("./pages/admin/PayrollReconciliation"));
 
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
