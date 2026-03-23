@@ -530,8 +530,12 @@ export default function AdminDashboard() {
           });
         }
 
-        // ── Chart: Use reconciliation_final_records as the real base pay source ──
-        const chartPeriods = [...allPeriods].reverse().slice(-8);
+        // ── Chart: Show periods with actual payroll activity, not empty future periods ──
+        // allPeriods is DESC — filter to periods with status != 'open' OR that have base pay, then take last 8
+        const closedOrPaid = allPeriods.filter(p => ["closed", "paid", "published"].includes(p.status) || !!p.paid_at || !!p.published_at);
+        const chartPeriods = closedOrPaid.length > 0
+          ? [...closedOrPaid].reverse().slice(-8)
+          : [...allPeriods].reverse().slice(-8); // fallback if no closed periods
         if (chartPeriods.length > 0) {
           const periodIds = chartPeriods.map(p => p.id);
 
