@@ -35,14 +35,14 @@ const FILTER_OPTIONS: { value: FilterMode; label: string; icon: any }[] = [
 ];
 
 const VARIANCE_BADGE: Record<string, { label: string; variant: string; icon: any }> = {
-  exact_match: { label: "✓ Exact", variant: "default", icon: CheckCircle2 },
-  minor_variance: { label: "~ Menor", variant: "outline", icon: AlertTriangle },
-  major_variance: { label: "⚠ Mayor", variant: "destructive", icon: XCircle },
-  unresolved: { label: "✗ Sin resolver", variant: "destructive", icon: XCircle },
+  exact_match: { label: "Exacto", variant: "success", icon: CheckCircle2 },
+  minor_variance: { label: "Menor", variant: "warning", icon: AlertTriangle },
+  major_variance: { label: "Mayor", variant: "destructive", icon: XCircle },
+  unresolved: { label: "Sin resolver", variant: "destructive", icon: XCircle },
 };
 
 const PAY_ICONS: Record<string, any> = {
-  hourly: Clock, daily: Calendar, pay_ride: Car, weekend_job: Briefcase, manual_adjustment: PenTool, mixed: DollarSign, unknown: AlertTriangle,
+  hourly: Clock, daily: Calendar, pay_ride: Car, weekend_job: Briefcase, manual_adjustment: PenTool, mixed: DollarSign, unknown: Briefcase,
 };
 
 export default function EmployeeCloseCards({ finalRecords, variances, employeeMap, onNavigate, onApproveRecord, onBulkApprove, onClassifyRecords, onMarkReviewed }: Props) {
