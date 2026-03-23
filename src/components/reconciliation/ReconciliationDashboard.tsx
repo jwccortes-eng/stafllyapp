@@ -102,7 +102,7 @@ export default function ReconciliationDashboard({ periods, onSelectPeriod, onCre
             <BarChart3 className="h-5 w-5" /> Periodos de Reconciliación
           </CardTitle>
           <Button size="sm" onClick={onCreatePeriod}>
-            <Upload className="h-4 w-4 mr-1" /> Nuevo Periodo
+            <Upload className="h-4 w-4 mr-1" /> Nuevo Batch de Reconciliación
           </Button>
         </CardHeader>
         <CardContent>
