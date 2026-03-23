@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -811,8 +812,50 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     return parts.join(" ");
   };
 
+  // Data source transparency
+  const dataSourceInfo = useMemo(() => {
+    const systemHasData = reconData.length > 0;
+    const truthIsLoaded = truthLoaded && truthData.length > 0;
+    
+    if (truthIsLoaded && systemHasData) {
+      return {
+        label: "Comparando: Truth File (esta sesión) vs. Datos del Sistema",
+        variant: "default" as const,
+        icon: "✅",
+        detail: `Truth: ${truthData.length} empleados desde archivo pre-cargado | Sistema: ${reconData.length} empleados desde period_base_pay + movements`,
+      };
+    }
+    if (systemHasData && !truthIsLoaded) {
+      return {
+        label: "Solo datos del sistema — No se ha cargado archivo de nómina pagada",
+        variant: "secondary" as const,
+        icon: "⚠️",
+        detail: `${reconData.length} empleados cargados automáticamente desde: period_base_pay, movements, normalized_payroll_rows. Sin archivo Truth para comparar.`,
+      };
+    }
+    return {
+      label: "No hay datos cargados",
+      variant: "outline" as const,
+      icon: "📭",
+      detail: "Selecciona un periodo y carga un archivo Truth para iniciar la validación.",
+    };
+  }, [reconData, truthData, truthLoaded]);
+
   return (
     <div className="space-y-4">
+      {/* ── Data Source Transparency Banner ── */}
+      <Alert className={`border-l-4 ${truthLoaded ? 'border-l-primary' : reconData.length > 0 ? 'border-l-accent' : 'border-l-muted-foreground'}`}>
+        <AlertDescription className="space-y-1">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <span>{dataSourceInfo.icon}</span>
+            <span>{dataSourceInfo.label}</span>
+            {truthLoaded && <Badge variant="default" className="text-[10px]">Truth cargado en esta sesión</Badge>}
+            {!truthLoaded && reconData.length > 0 && <Badge variant="secondary" className="text-[10px]">Datos previos del sistema</Badge>}
+          </div>
+          <p className="text-xs text-muted-foreground">{dataSourceInfo.detail}</p>
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -824,6 +867,15 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           {!truthLoaded ? (
             <div className="text-center py-6 space-y-3">
               <p className="text-sm text-muted-foreground">Carga el archivo de nómina pagada para comparar.</p>
+              {reconData.length > 0 && (
+                <div className="rounded-lg border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-left max-w-md mx-auto">
+                  <p className="font-medium text-foreground">Datos del sistema ya disponibles</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {reconData.length} empleados con datos de period_base_pay y/o movements para este periodo.
+                    Estos datos se cargan automáticamente del sistema — no provienen de un archivo Truth.
+                  </p>
+                </div>
+              )}
               <Button onClick={loadTruthFile} disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
                 Cargar Payroll Truth Set
