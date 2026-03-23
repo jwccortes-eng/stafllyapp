@@ -119,8 +119,7 @@ interface PayPeriodOption {
 }
 
 function periodLabel(pp: PayPeriodOption): string {
-  const seq = pp.sequence_number ? `Periodo ${pp.sequence_number} · ` : "";
-  return `${seq}${pp.start_date} → ${pp.end_date}`;
+  return formatPeriodLabel(pp.start_date, pp.end_date, pp.sequence_number);
 }
 
 export default function StagedReconciliation() {
