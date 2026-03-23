@@ -391,136 +391,105 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                   </div>
                 </div>
 
-                {isExpanded && (
-                  <CardContent className="pt-0 pb-5 space-y-5">
+                {isExpanded && (() => {
+                  const sysTotal = (record as any).shift_calculated_total > 0
+                    ? (record.grand_total || record.final_total_pay)
+                    : record.final_total_pay;
+                  const payRef = record.total_payroll_amount || 0;
+                  const variance = sysTotal - payRef;
+                  const absVar = Math.abs(variance);
+                  const payrollRefHours = record.payroll_rows.reduce((s: number, p: any) => s + Number(p.hours || 0), 0);
+                  const hasShiftCalc = (record as any).shift_calculated_total > 0;
+
+                  return (
+                  <CardContent className="pt-0 pb-5 space-y-4">
                     <Separator />
 
-                    {/* ── COMPARISON SUMMARY — what matters most ── */}
-                    <div className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] p-4 space-y-3">
-                      <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-                        <DollarSign className="h-3.5 w-3.5" /> Resumen de Comparación
+                    {/* ═══ AT-A-GLANCE: Plain-language summary ═══ */}
+                    <div className="rounded-xl border bg-muted/30 p-4">
+                      <h4 className="text-[11px] font-bold text-foreground uppercase tracking-wider mb-3">
+                        Resumen del Periodo — Vista Rápida
                       </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {/* System Calculation */}
-                        <div className="bg-card rounded-lg border p-3 text-center">
-                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                            Cálculo del Sistema
-                          </div>
-                          <div className="text-xl font-bold font-mono text-primary">
-                            ${(record as any).shift_calculated_total > 0
-                              ? (record.grand_total || record.final_total_pay)
-                              : record.final_total_pay}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground mt-1">
-                            {(record as any).shift_calculated_total > 0
-                              ? `${(record as any).shift_full_day_count || 0} días × $${(record as any).shift_daily_rate_used || "?"}`
-                              : `${record.total_worked_hours}h trabajadas`
-                            }
-                            {(record.ride_amount > 0 || record.manual_amount > 0) && (
-                              <span> + extras</span>
-                            )}
-                          </div>
+                      <div className="space-y-1.5">
+                        {/* Each row: label → value */}
+                        <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                          <span className="text-xs text-muted-foreground">📅 Turnos programados en el periodo</span>
+                          <span className="text-sm font-semibold font-mono">{record.scheduled_shifts.length} turnos · {record.total_scheduled_hours}h</span>
                         </div>
-
-                        {/* Payroll Reference */}
-                        <div className="bg-card rounded-lg border p-3 text-center">
-                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                            Referencia Nómina
-                          </div>
-                          <div className="text-xl font-bold font-mono text-muted-foreground">
-                            ${record.total_payroll_amount || 0}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground mt-1">
-                            {record.payroll_rows.length} registro(s) importado(s)
-                          </div>
+                        <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                          <span className="text-xs text-muted-foreground">⏱ Total horas fichadas en el periodo</span>
+                          <span className="text-sm font-semibold font-mono">{record.total_worked_hours}h</span>
                         </div>
-
-                        {/* Variance */}
-                        {(() => {
-                          const sysTotal = (record as any).shift_calculated_total > 0
-                            ? (record.grand_total || record.final_total_pay)
-                            : record.final_total_pay;
-                          const payRef = record.total_payroll_amount || 0;
-                          const diff = sysTotal - payRef;
-                          const absDiff = Math.abs(diff);
-                          return (
-                            <div className={`bg-card rounded-lg border p-3 text-center ${absDiff > 10 ? "border-destructive/40" : absDiff > 0 ? "border-warning/40" : "border-earning/40"}`}>
-                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                                Varianza
-                              </div>
-                              <div className={`text-xl font-bold font-mono ${absDiff > 10 ? "text-destructive" : absDiff > 0 ? "text-warning" : "text-earning"}`}>
-                                {diff >= 0 ? "+" : ""}${diff.toFixed(0)}
-                              </div>
-                              <div className="text-[10px] text-muted-foreground mt-1">
-                                {absDiff <= 1 ? "✓ Match exacto" : absDiff <= 10 ? "≈ Dentro de tolerancia" : "⚠ Requiere revisión"}
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        {/* Compensation Validation */}
-                        {comp && (
-                          <div className={`bg-card rounded-lg border p-3 text-center ${
-                            comp.status === "match" ? "border-earning/40" :
-                            comp.status === "close_match" ? "border-warning/40" :
-                            comp.status === "mismatch" ? "border-destructive/40" : ""
-                          }`}>
-                            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                              Validación Tarifa
-                            </div>
-                            <div className="flex items-center justify-center gap-1">
-                              {compStatusIcon}
-                              <span className="text-sm font-semibold">
-                                {comp.status === "match" ? "OK" :
-                                 comp.status === "close_match" ? "Cercano" :
-                                 comp.status === "mismatch" ? "Error" : "Revisar"}
-                              </span>
-                            </div>
-                            <div className="text-[10px] text-muted-foreground mt-1">{comp.reason}</div>
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                          <span className="text-xs text-muted-foreground">📄 Referencia nómina importada (horas)</span>
+                          <span className="text-sm font-mono text-muted-foreground">
+                            {payrollRefHours > 0 ? `${payrollRefHours.toFixed(1)}h` : "—"}
+                            <span className="text-[10px] ml-1">(suma de {record.payroll_rows.length} fila{record.payroll_rows.length !== 1 ? "s" : ""})</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                          <span className="text-xs text-muted-foreground">📄 Referencia nómina importada (monto)</span>
+                          <span className="text-sm font-mono text-muted-foreground">${payRef.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1.5 border-b border-border/30">
+                          <span className="text-xs text-foreground font-semibold">💰 Propuesta calculada por el sistema</span>
+                          <span className="text-sm font-bold font-mono text-primary">${sysTotal.toLocaleString()}</span>
+                        </div>
+                        <div className={`flex items-center justify-between py-2 rounded-lg px-2 -mx-2 ${absVar > 10 ? "bg-destructive/[0.06]" : absVar > 0 ? "bg-warning/[0.06]" : "bg-earning/[0.06]"}`}>
+                          <span className={`text-xs font-semibold ${absVar > 10 ? "text-destructive" : absVar > 0 ? "text-warning" : "text-earning"}`}>
+                            {absVar <= 1 ? "✅" : absVar <= 10 ? "⚠️" : "🔴"} Diferencia vs referencia nómina
+                          </span>
+                          <span className={`text-sm font-bold font-mono ${absVar > 10 ? "text-destructive" : absVar > 0 ? "text-warning" : "text-earning"}`}>
+                            {variance >= 0 ? "+" : ""}${variance.toFixed(0)}
+                            <span className="text-[10px] font-normal ml-1">
+                              {absVar <= 1 ? "Match exacto" : absVar <= 10 ? "Tolerancia" : "Revisar"}
+                            </span>
+                          </span>
+                        </div>
                       </div>
+                      {hasShiftCalc && (
+                        <p className="text-[10px] text-muted-foreground mt-2">
+                          Cálculo basado en {(record as any).shift_full_day_count || 0} día(s) completo(s) × ${(record as any).shift_daily_rate_used || "?"}
+                          {((record as any).shift_half_day_count || 0) > 0 && ` + ${(record as any).shift_half_day_count} medio(s) día`}
+                          {(record.ride_amount > 0) && ` + $${record.ride_amount} transporte`}
+                          {(record.manual_amount > 0) && ` + $${record.manual_amount} ajuste manual`}
+                        </p>
+                      )}
                     </div>
 
-                    {/* ── SECTION 1: Scheduled Shifts ── */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5" /> Turnos Programados
-                        </h4>
-                        <Badge variant="secondary" className="text-[10px]">
-                          {record.scheduled_shifts.length} turno(s) · {record.total_scheduled_hours}h prog.
-                        </Badge>
-                      </div>
-                      {record.scheduled_shifts.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {/* ═══ DETAIL SECTIONS — collapsible for power users ═══ */}
+
+                    {/* Scheduled Shifts detail */}
+                    {record.scheduled_shifts.length > 0 && (
+                      <details className="group">
+                        <summary className="flex items-center justify-between cursor-pointer py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
+                          <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Detalle de Turnos Programados</span>
+                          <Badge variant="secondary" className="text-[10px]">{record.scheduled_shifts.length} turnos</Badge>
+                        </summary>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
                           {record.scheduled_shifts.map((s: any, i: number) => (
                             <div key={i} className="p-2.5 bg-muted/40 rounded-lg border border-border/30">
                               <div className="font-semibold text-xs">{s.date}</div>
                               <div className="text-[11px] text-muted-foreground">{s.title || "Sin título"}</div>
-                              <div className="text-[11px] text-muted-foreground font-mono">{s.hours}h programadas</div>
+                              <div className="text-[11px] text-muted-foreground font-mono">{s.hours}h este turno</div>
                             </div>
                           ))}
                         </div>
-                      ) : <p className="text-xs text-muted-foreground italic">Sin turnos programados en este periodo</p>}
-                    </div>
+                      </details>
+                    )}
 
-                    {/* ── SECTION 2: Clocked Time ── */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                          <Clock className="h-3.5 w-3.5" /> Horas Fichadas (Reloj)
-                        </h4>
-                        <Badge variant="secondary" className="text-[10px]">
-                          {record.worked_shifts.length} fichaje(s) · {record.total_worked_hours}h total
-                        </Badge>
-                      </div>
-                      {record.worked_shifts.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {/* Clock entries detail */}
+                    {record.worked_shifts.length > 0 && (
+                      <details className="group">
+                        <summary className="flex items-center justify-between cursor-pointer py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
+                          <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Detalle de Fichajes</span>
+                          <Badge variant="secondary" className="text-[10px]">{record.worked_shifts.length} fichaje(s) · {record.total_worked_hours}h total periodo</Badge>
+                        </summary>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
                           {record.worked_shifts.map((c: any, i: number) => (
                             <div key={i} className="p-2.5 bg-muted/40 rounded-lg border border-border/30">
                               <div className="font-semibold text-xs">{c.date}</div>
-                              <div className="text-[11px] font-mono font-medium">{c.hours}h fichadas</div>
+                              <div className="text-[11px] font-mono font-medium">{c.hours}h este fichaje</div>
                               {c.clock_in && (
                                 <div className="text-[10px] text-muted-foreground">
                                   {c.clock_in?.substring(11, 16)} → {c.clock_out?.substring(11, 16)}
@@ -529,27 +498,23 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                             </div>
                           ))}
                         </div>
-                      ) : <p className="text-xs text-muted-foreground italic">Sin fichajes en este periodo</p>}
-                    </div>
+                      </details>
+                    )}
 
-                    {/* ── SECTION 3: Imported Payroll Reference ── */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                          <FileText className="h-3.5 w-3.5" /> Nómina Importada (Referencia)
-                        </h4>
-                        <Badge variant="outline" className="text-[10px]">
-                          {record.payroll_rows.length} fila(s) · ${record.total_payroll_amount || 0} total
-                        </Badge>
-                      </div>
-                      {record.payroll_rows.length > 0 ? (
-                        <div className="rounded-lg border overflow-hidden">
+                    {/* Payroll reference detail */}
+                    {record.payroll_rows.length > 0 && (
+                      <details className="group">
+                        <summary className="flex items-center justify-between cursor-pointer py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
+                          <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Detalle de Nómina Importada</span>
+                          <Badge variant="outline" className="text-[10px]">{record.payroll_rows.length} fila(s) · ${payRef} total</Badge>
+                        </summary>
+                        <div className="mt-2 rounded-lg border overflow-hidden">
                           <Table>
                             <TableHeader>
                               <TableRow className="bg-muted/30">
                                 <TableHead className="text-[10px] font-semibold uppercase">Fecha</TableHead>
-                                <TableHead className="text-[10px] font-semibold uppercase">Horas (fila)</TableHead>
-                                <TableHead className="text-[10px] font-semibold uppercase">Monto (fila)</TableHead>
+                                <TableHead className="text-[10px] font-semibold uppercase">Horas (esta fila)</TableHead>
+                                <TableHead className="text-[10px] font-semibold uppercase">Monto (esta fila)</TableHead>
                                 <TableHead className="text-[10px] font-semibold uppercase">Tipo</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -565,87 +530,101 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                               {record.payroll_rows.length > 1 && (
                                 <TableRow className="bg-muted/20 font-semibold">
                                   <TableCell className="text-[10px] uppercase">Total Referencia</TableCell>
-                                  <TableCell className="font-mono">
-                                    {record.payroll_rows.reduce((s: number, p: any) => s + Number(p.hours || 0), 0).toFixed(1)}h
-                                  </TableCell>
-                                  <TableCell className="font-mono">${record.total_payroll_amount || 0}</TableCell>
+                                  <TableCell className="font-mono">{payrollRefHours.toFixed(1)}h</TableCell>
+                                  <TableCell className="font-mono">${payRef}</TableCell>
                                   <TableCell />
                                 </TableRow>
                               )}
                             </TableBody>
                           </Table>
+                          <p className="text-[10px] text-muted-foreground px-3 py-1.5 bg-muted/20">
+                            ⓘ Cada fila es un registro individual del archivo importado. Las horas y montos son por fila, no totales del periodo.
+                          </p>
                         </div>
-                      ) : <p className="text-xs text-muted-foreground italic">Sin datos de nómina importada</p>}
-                      <p className="text-[10px] text-muted-foreground">
-                        ⓘ Estos montos provienen del archivo importado y se usan solo como referencia de comparación. Las horas mostradas son por fila individual, no representan el total del periodo.
-                      </p>
-                    </div>
+                      </details>
+                    )}
 
-                    {/* ── SECTION 4: System Calculation Breakdown ── */}
-                    <div className="space-y-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <DollarSign className="h-3.5 w-3.5" /> Cálculo del Sistema (Fuente Primaria)
-                      </h4>
-                      {(record as any).shift_calculated_total > 0 ? (
-                        <div className="rounded-xl border-2 border-earning/20 bg-earning/[0.03] p-4">
-                          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                            <div className="text-center">
-                              <div className="text-[10px] text-muted-foreground uppercase">Días Completos</div>
-                              <div className="font-mono font-bold text-sm">{(record as any).shift_full_day_count || 0}</div>
-                              <div className="text-[10px] text-muted-foreground">× ${(record as any).shift_daily_rate_used || "?"}</div>
+                    {/* System calculation breakdown */}
+                    <details className="group" open>
+                      <summary className="flex items-center justify-between cursor-pointer py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
+                        <span className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Desglose del Cálculo del Sistema</span>
+                        <Badge variant="default" className="text-[10px]">${sysTotal.toLocaleString()}</Badge>
+                      </summary>
+                      <div className="mt-2">
+                        {hasShiftCalc ? (
+                          <div className="rounded-xl border-2 border-earning/20 bg-earning/[0.03] p-4">
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                              <div className="text-center">
+                                <div className="text-[10px] text-muted-foreground uppercase">Días Completos</div>
+                                <div className="font-mono font-bold text-sm">{(record as any).shift_full_day_count || 0}</div>
+                                <div className="text-[10px] text-muted-foreground">× ${(record as any).shift_daily_rate_used || "?"}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[10px] text-muted-foreground uppercase">Medios Días</div>
+                                <div className="font-mono font-bold text-sm">{(record as any).shift_half_day_count || 0}</div>
+                                <div className="text-[10px] text-muted-foreground">× ${(record as any).shift_half_day_rate_used || "?"}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[10px] text-muted-foreground uppercase">Transporte</div>
+                                <div className="font-mono font-bold text-sm">${record.ride_amount}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[10px] text-muted-foreground uppercase">Ajuste Manual</div>
+                                <div className="font-mono font-bold text-sm">${record.manual_amount}</div>
+                              </div>
+                              <div className="text-center bg-earning/10 rounded-lg p-2">
+                                <div className="text-[10px] text-earning font-bold uppercase">Total Calculado</div>
+                                <div className="font-mono font-bold text-lg text-earning">${sysTotal.toLocaleString()}</div>
+                              </div>
                             </div>
-                            <div className="text-center">
-                              <div className="text-[10px] text-muted-foreground uppercase">Medios Días</div>
-                              <div className="font-mono font-bold text-sm">{(record as any).shift_half_day_count || 0}</div>
-                              <div className="text-[10px] text-muted-foreground">× ${(record as any).shift_half_day_rate_used || "?"}</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-[10px] text-muted-foreground uppercase">Ride / Transporte</div>
-                              <div className="font-mono font-bold text-sm">${record.ride_amount}</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-[10px] text-muted-foreground uppercase">Ajuste Manual</div>
-                              <div className="font-mono font-bold text-sm">${record.manual_amount}</div>
-                            </div>
-                            <div className="text-center bg-earning/10 rounded-lg p-2">
-                              <div className="text-[10px] text-earning font-bold uppercase">Total Calculado</div>
-                              <div className="font-mono font-bold text-lg text-earning">${record.grand_total || record.final_total_pay}</div>
-                            </div>
-                          </div>
-                          <div className="mt-2 text-[10px] text-muted-foreground text-center">
-                            Fuente: {(record as any).shift_calculation_source || "shift_calc"} · Primaria: {(record as any).primary_source || "shift_calc"}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="rounded-xl border bg-muted/20 p-4">
-                          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                            <div className="text-center">
-                              <div className="text-[10px] text-muted-foreground uppercase">Pago Base</div>
-                              <div className="font-mono font-bold text-sm">${record.base_pay}</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-[10px] text-muted-foreground uppercase">Ride</div>
-                              <div className="font-mono font-bold text-sm">${record.ride_amount}</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-[10px] text-muted-foreground uppercase">Weekend</div>
-                              <div className="font-mono font-bold text-sm">${record.weekend_amount}</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-[10px] text-muted-foreground uppercase">Manual</div>
-                              <div className="font-mono font-bold text-sm">${record.manual_amount}</div>
-                            </div>
-                            <div className="text-center bg-primary/10 rounded-lg p-2">
-                              <div className="text-[10px] text-primary font-bold uppercase">Total</div>
-                              <div className="font-mono font-bold text-lg text-primary">${record.final_total_pay}</div>
+                            <div className="mt-2 text-[10px] text-muted-foreground text-center">
+                              Fuente primaria: cálculo por turnos (shift-calc)
                             </div>
                           </div>
-                          <div className="mt-2 text-[10px] text-muted-foreground text-center">
-                            Fuente: payroll (sin cálculo por turnos disponible)
+                        ) : (
+                          <div className="rounded-xl border bg-muted/20 p-4">
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                              <div className="text-center">
+                                <div className="text-[10px] text-muted-foreground uppercase">Pago Base</div>
+                                <div className="font-mono font-bold text-sm">${record.base_pay}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[10px] text-muted-foreground uppercase">Transporte</div>
+                                <div className="font-mono font-bold text-sm">${record.ride_amount}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[10px] text-muted-foreground uppercase">Weekend</div>
+                                <div className="font-mono font-bold text-sm">${record.weekend_amount}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[10px] text-muted-foreground uppercase">Manual</div>
+                                <div className="font-mono font-bold text-sm">${record.manual_amount}</div>
+                              </div>
+                              <div className="text-center bg-primary/10 rounded-lg p-2">
+                                <div className="text-[10px] text-primary font-bold uppercase">Total</div>
+                                <div className="font-mono font-bold text-lg text-primary">${sysTotal.toLocaleString()}</div>
+                              </div>
+                            </div>
+                            <div className="mt-2 text-[10px] text-muted-foreground text-center">
+                              Fuente: nómina importada (sin cálculo por turnos disponible)
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    </details>
+
+                    {/* Compensation validation inline */}
+                    {comp && (
+                      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
+                        comp.status === "match" ? "border-earning/30 bg-earning/[0.04]" :
+                        comp.status === "close_match" ? "border-warning/30 bg-warning/[0.04]" :
+                        comp.status === "mismatch" ? "border-destructive/30 bg-destructive/[0.04]" : "border-border"
+                      }`}>
+                        {compStatusIcon}
+                        <span className="font-semibold">Validación de tarifa:</span>
+                        <span className="text-muted-foreground">{comp.reason}</span>
+                      </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex gap-2 flex-wrap pt-1">
