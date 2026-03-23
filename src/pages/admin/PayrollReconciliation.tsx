@@ -702,7 +702,7 @@ export default function PayrollReconciliationPage() {
     supabase.from("pay_periods").select("id, start_date, end_date, status")
       .eq("company_id", selectedCompanyId)
       .order("start_date", { ascending: false })
-      .limit(20)
+      .limit(100)
       .then(({ data }) => {
         setPeriods((data as any[]) || []);
         // Auto-select current or most recent period
