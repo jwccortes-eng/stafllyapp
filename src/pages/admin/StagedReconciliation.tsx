@@ -68,18 +68,23 @@ interface TabDef {
   minStatus?: string | null;
 }
 
-const TABS: TabDef[] = [
+/* Primary operational tabs */
+const PRIMARY_TABS: TabDef[] = [
   { value: "dashboard", label: "Dashboard", icon: BarChart3, alwaysEnabled: true },
   { value: "closedesk", label: "Close Desk", icon: Shield, minStatus: null },
   { value: "import", label: "Importar", icon: Upload, minStatus: null },
   { value: "review", label: "Matching", icon: GitCompareArrows, minStatus: "importing" },
   { value: "exceptions", label: "Excepciones", icon: AlertTriangle, minStatus: "importing" },
   { value: "employees", label: "Empleados", icon: Users, minStatus: "matching" },
-  { value: "rules", label: "Reglas", icon: Settings2, alwaysEnabled: true },
   { value: "workbench", label: "Workbench", icon: Wrench, minStatus: "reviewing" },
-  { value: "approve", label: "Aprobar", icon: CheckCircle2, minStatus: "reviewing" },
   { value: "validate", label: "Validar", icon: ClipboardCheck, minStatus: "reviewing" },
+  { value: "approve", label: "Aprobar", icon: CheckCircle2, minStatus: "reviewing" },
   { value: "publish", label: "Publicar", icon: Shield, minStatus: "approved" },
+];
+
+/* Secondary / dev tabs — collapsed behind a toggle */
+const SECONDARY_TABS: TabDef[] = [
+  { value: "rules", label: "Reglas", icon: Settings2, alwaysEnabled: true },
   { value: "compare", label: "Comparar", icon: TrendingUp, alwaysEnabled: true },
   { value: "signoff", label: "Signoff", icon: PenTool, minStatus: "reviewing" },
   { value: "journal", label: "Diario", icon: BookOpen, minStatus: null },
@@ -94,6 +99,8 @@ const TABS: TabDef[] = [
   { value: "audit", label: "Auditoría", icon: ShieldAlert, alwaysEnabled: true },
   { value: "history", label: "Historial", icon: FileText, alwaysEnabled: true },
 ];
+
+const TABS: TabDef[] = [...PRIMARY_TABS, ...SECONDARY_TABS];
 
 function isTabEnabled(tab: TabDef, periodStatus: string | null): boolean {
   if (tab.alwaysEnabled) return true;
