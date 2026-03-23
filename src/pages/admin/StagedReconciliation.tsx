@@ -114,6 +114,12 @@ interface PayPeriodOption {
   start_date: string;
   end_date: string;
   status: string;
+  sequence_number: number | null;
+}
+
+function periodLabel(pp: PayPeriodOption): string {
+  const seq = pp.sequence_number ? `Periodo ${pp.sequence_number} · ` : "";
+  return `${seq}${pp.start_date} → ${pp.end_date}`;
 }
 
 export default function StagedReconciliation() {
@@ -160,12 +166,12 @@ export default function StagedReconciliation() {
     if (!selectedCompanyId) return;
     Promise.all([
       supabase.from("pay_periods")
-        .select("id, start_date, end_date, status")
+        .select("id, start_date, end_date, status, sequence_number")
         .eq("company_id", selectedCompanyId)
         .order("start_date", { ascending: false })
-        .limit(100),
+        .limit(200),
       supabase.from("pay_periods")
-        .select("id, start_date, end_date, status")
+        .select("id, start_date, end_date, status, sequence_number")
         .eq("company_id", selectedCompanyId)
         .eq("start_date", "2025-12-24")
         .eq("end_date", "2025-12-30")
@@ -240,7 +246,7 @@ export default function StagedReconciliation() {
       toast({ title: "Periodo existente seleccionado" });
       return;
     }
-    const label = `${pp.start_date} → ${pp.end_date}`;
+    const label = periodLabel(pp);
     const p = await createPeriod(label, pp.start_date, pp.end_date, ppId);
     if (p) {
       setActivePeriod(p);
@@ -291,7 +297,7 @@ export default function StagedReconciliation() {
       })
       .filter(pp => {
         if (!q) return true;
-        const label = `${pp.start_date} ${pp.end_date} ${pp.status} ${pp.start_date} → ${pp.end_date}`.toLowerCase();
+        const label = periodLabel(pp).toLowerCase();
         return label.includes(q);
       });
   }, [payPeriods, batchSearch]);
@@ -460,7 +466,7 @@ export default function StagedReconciliation() {
                 {(() => {
                   const unlinked = payPeriods
                     .filter(pp => !periods.some(p => p.period_id === pp.id))
-                    .filter(pp => !periodSearch || `${pp.start_date} ${pp.end_date}`.includes(periodSearch.toLowerCase()));
+                    .filter(pp => !periodSearch || periodLabel(pp).toLowerCase().includes(periodSearch.toLowerCase()));
                   // Sort: truth target first
                   const sorted = [...unlinked].sort((a, b) => {
                     const aTarget = a.start_date === "2025-12-24" && a.end_date === "2025-12-30" ? 1 : 0;
@@ -475,7 +481,7 @@ export default function StagedReconciliation() {
                         const isTruth = pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30";
                         return (
                           <SelectItem key={`pp:${pp.id}`} value={`pp:${pp.id}`}>
-                            {pp.start_date} → {pp.end_date} ({pp.status})
+                            {periodLabel(pp)} ({pp.status})
                             {isTruth && " ⭐ Truth target"}
                           </SelectItem>
                         );
@@ -494,7 +500,7 @@ export default function StagedReconciliation() {
               onClick={handleOpenTruthPeriod}
             >
               <Target className="h-3.5 w-3.5" />
-              Open exact period 2025-12-24 → 2025-12-30
+              Periodo 112 · 2025-12-24 → 2025-12-30
             </Button>
 
             <Badge variant="outline" className="text-[11px]">
@@ -892,7 +898,7 @@ export default function StagedReconciliation() {
                 }}
               >
                 <Target className="h-3.5 w-3.5" />
-                Open exact period 2025-12-24 → 2025-12-30
+                Periodo 112 · 2025-12-24 → 2025-12-30
               </Button>
             </div>
 
@@ -912,7 +918,7 @@ export default function StagedReconciliation() {
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">{pp.start_date} → {pp.end_date}</span>
+                        <span className="text-sm font-medium">{periodLabel(pp)}</span>
                         <div className="flex items-center gap-1.5">
                           {isTruth && <Badge variant="default" className="text-[10px]">Truth target</Badge>}
                           {linked && <Badge variant="secondary" className="text-[10px]">Batch existente</Badge>}
