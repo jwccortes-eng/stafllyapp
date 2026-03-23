@@ -307,7 +307,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                       {(r.ride_pay_total || r.ride_amount || 0) > 0 && <Badge variant="secondary">Ride: {fmt(r.ride_pay_total || r.ride_amount || 0)}</Badge>}
                       {(r.weekend_pay_total || r.weekend_amount || 0) > 0 && <Badge variant="secondary">Weekend: {fmt(r.weekend_pay_total || r.weekend_amount || 0)}</Badge>}
                       {(r.manual_adjustment_total || r.manual_amount || 0) > 0 && <Badge variant="secondary">Manual: {fmt(r.manual_adjustment_total || r.manual_amount || 0)}</Badge>}
-                      {excludedUnmappedAmount > 0 && <Badge variant="destructive">Otros (excluido): {fmt(excludedUnmappedAmount)}</Badge>}
+                      {excludedUnmappedAmount > 0 && <Badge variant="warning">Excluido: {fmt(excludedUnmappedAmount)}</Badge>}
                       {/* Payroll reference */}
                       {(r as any).shift_calculated_total > 0 && (
                         <Badge variant="outline" className="text-muted-foreground">
