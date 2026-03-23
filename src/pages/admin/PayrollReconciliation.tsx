@@ -37,6 +37,21 @@ const fmtVar = (v: number | null | undefined) => {
 };
 const fmtPct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
+const TARGET_TRUTH_PERIOD = {
+  start_date: "2025-12-24",
+  end_date: "2025-12-30",
+} as const;
+
+const isTargetTruthPeriod = (p: { start_date: string; end_date: string }) => (
+  p.start_date === TARGET_TRUTH_PERIOD.start_date && p.end_date === TARGET_TRUTH_PERIOD.end_date
+);
+
+const formatPeriodLabel = (startDate: string, endDate: string) => {
+  const start = new Date(`${startDate}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+  const end = new Date(`${endDate}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+  return `${start} → ${end}`;
+};
+
 // ─── Badge Helpers ───────────────────────────────────────────────────
 
 function statusBadge(status: string) {
@@ -693,25 +708,85 @@ export default function PayrollReconciliationPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [periods, setPeriods] = useState<{ id: string; start_date: string; end_date: string; status: string }[]>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState("");
+  const [periodSearch, setPeriodSearch] = useState("");
   const [debugInfo, setDebugInfo] = useState<{ basePay: number; movements: number; truthRows: number; periodId: string } | null>(null);
   const isDev = role === "developer" || role === "owner" || role === "admin";
 
   // Load periods for the create dialog
   useEffect(() => {
     if (!selectedCompanyId) return;
-    supabase.from("pay_periods").select("id, start_date, end_date, status")
-      .eq("company_id", selectedCompanyId)
-      .order("start_date", { ascending: false })
-      .limit(100)
-      .then(({ data }) => {
-        setPeriods((data as any[]) || []);
-        // Auto-select current or most recent period
-        const today = new Date().toISOString().slice(0, 10);
-        const current = (data || []).find((p: any) => p.start_date <= today && p.end_date >= today);
-        const fallback = (data || [])[0];
-        setSelectedPeriodId((current || fallback)?.id || "");
-      });
+    let mounted = true;
+
+    const loadPeriods = async () => {
+      const [periodsRes, exactRes] = await Promise.all([
+        supabase.from("pay_periods").select("id, start_date, end_date, status")
+          .eq("company_id", selectedCompanyId)
+          .order("start_date", { ascending: false })
+          .limit(100),
+        supabase.from("pay_periods").select("id, start_date, end_date, status")
+          .eq("company_id", selectedCompanyId)
+          .eq("start_date", TARGET_TRUTH_PERIOD.start_date)
+          .eq("end_date", TARGET_TRUTH_PERIOD.end_date)
+          .limit(1),
+      ]);
+
+      if (!mounted) return;
+
+      const merged = new Map<string, { id: string; start_date: string; end_date: string; status: string }>();
+      for (const p of [...((exactRes.data as any[]) || []), ...((periodsRes.data as any[]) || [])]) {
+        merged.set(p.id, p);
+      }
+
+      const mergedList = Array.from(merged.values()).sort((a, b) => b.start_date.localeCompare(a.start_date));
+      setPeriods(mergedList);
+
+      const exact = mergedList.find(isTargetTruthPeriod);
+      const today = new Date().toISOString().slice(0, 10);
+      const current = mergedList.find(p => p.start_date <= today && p.end_date >= today);
+      const fallback = mergedList[0];
+      setSelectedPeriodId((exact || current || fallback)?.id || "");
+    };
+
+    loadPeriods();
+
+    return () => {
+      mounted = false;
+    };
   }, [selectedCompanyId]);
+
+  const exactTargetPeriod = useMemo(
+    () => periods.find(isTargetTruthPeriod) || null,
+    [periods],
+  );
+
+  const selectedPeriod = useMemo(
+    () => periods.find(p => p.id === selectedPeriodId) || null,
+    [periods, selectedPeriodId],
+  );
+
+  const filteredPeriods = useMemo(() => {
+    const normalized = periodSearch.trim().toLowerCase();
+    const prioritized = [...periods].sort((a, b) => {
+      const aExact = isTargetTruthPeriod(a);
+      const bExact = isTargetTruthPeriod(b);
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+      return b.start_date.localeCompare(a.start_date);
+    });
+
+    if (!normalized) return prioritized;
+
+    return prioritized.filter((p) => {
+      const label = formatPeriodLabel(p.start_date, p.end_date).toLowerCase();
+      const searchable = `${p.start_date} ${p.end_date} ${p.status} ${label}`.toLowerCase();
+      return searchable.includes(normalized);
+    });
+  }, [periods, periodSearch]);
+
+  useEffect(() => {
+    if (!showCreateDialog || !exactTargetPeriod) return;
+    setSelectedPeriodId(exactTargetPeriod.id);
+  }, [showCreateDialog, exactTargetPeriod]);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
@@ -767,15 +842,34 @@ export default function PayrollReconciliationPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleOpenExactValidationPeriod = () => {
+    if (!exactTargetPeriod) return;
+    setSelectedPeriodId(exactTargetPeriod.id);
+    setPeriodSearch(`${TARGET_TRUTH_PERIOD.start_date} ${TARGET_TRUTH_PERIOD.end_date}`);
+    setShowCreateDialog(true);
+  };
+
   // ─── Batch list view ────────────────────────────────────────────
   if (!activeBatch) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <PageHeader title="Payroll Reconciliation" subtitle="Motor de auditoría y reconciliación de nómina" />
-          <Button onClick={() => setShowCreateDialog(true)} size="sm" className="rounded-xl gap-1.5">
-            <Plus className="h-4 w-4" />Nuevo Batch
-          </Button>
+          <div className="flex items-center gap-2">
+            {isDev && exactTargetPeriod && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl gap-1.5"
+                onClick={handleOpenExactValidationPeriod}
+              >
+                <Clock className="h-4 w-4" />Open exact period 2025-12-24 → 2025-12-30
+              </Button>
+            )}
+            <Button onClick={() => setShowCreateDialog(true)} size="sm" className="rounded-xl gap-1.5">
+              <Plus className="h-4 w-4" />Nuevo Batch
+            </Button>
+          </div>
         </div>
 
         {loading ? (
@@ -836,23 +930,83 @@ export default function PayrollReconciliationPage() {
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Periodo de nómina</label>
-                <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
-                  <SelectTrigger className="h-9 text-xs rounded-lg">
-                    <SelectValue placeholder="Seleccionar periodo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {periods.map(p => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.start_date} → {p.end_date} ({p.status})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      value={periodSearch}
+                      onChange={(e) => setPeriodSearch(e.target.value)}
+                      placeholder="Buscar por inicio, cierre o etiqueta (ej: 2025-12-24, Dec 30)"
+                      className="h-9 text-xs pl-8 rounded-lg"
+                    />
+                  </div>
+
+                  {isDev && exactTargetPeriod && (
+                    <Button
+                      type="button"
+                      variant={selectedPeriodId === exactTargetPeriod.id ? "default" : "outline"}
+                      size="sm"
+                      className="w-full justify-start text-xs rounded-lg"
+                      onClick={() => setSelectedPeriodId(exactTargetPeriod.id)}
+                    >
+                      <Clock className="h-3.5 w-3.5 mr-1.5" />
+                      Open exact period 2025-12-24 → 2025-12-30
+                    </Button>
+                  )}
+
+                  <div className="rounded-lg border border-border/50 bg-background overflow-hidden">
+                    <ScrollArea className="h-52">
+                      <div className="p-1.5 space-y-1">
+                        {filteredPeriods.length === 0 ? (
+                          <div className="px-2 py-3 text-xs text-muted-foreground">No hay periodos que coincidan con la búsqueda.</div>
+                        ) : (
+                          filteredPeriods.map((p) => {
+                            const isSelected = selectedPeriodId === p.id;
+                            const isExact = isTargetTruthPeriod(p);
+
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => setSelectedPeriodId(p.id)}
+                                className={`w-full text-left px-2.5 py-2 rounded-md border transition-colors ${
+                                  isSelected
+                                    ? "bg-primary/10 border-primary/30"
+                                    : "bg-background border-transparent hover:bg-muted/50"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-xs font-medium">
+                                    {p.start_date} → {p.end_date}
+                                  </p>
+                                  <div className="flex items-center gap-1">
+                                    {isExact && (
+                                      <Badge className="text-[9px] px-1.5 py-0 bg-info/15 text-info border-info/30">Truth target</Badge>
+                                    )}
+                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 uppercase">
+                                      {p.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  {formatPeriodLabel(p.start_date, p.end_date)}
+                                </p>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </div>
               </div>
               {selectedPeriodId && (
                 <div className="p-3 rounded-lg bg-muted/40 border border-border/40 text-xs space-y-1">
                   <p className="font-medium text-muted-foreground">El sistema comparará los datos de este periodo contra el truth file que cargues.</p>
                   <p className="text-muted-foreground/70">Fuentes: period_base_pay + movements del periodo seleccionado.</p>
+                  {selectedPeriod && (
+                    <p className="text-muted-foreground/70 font-mono text-[11px]">Periodo activo: {selectedPeriod.start_date} → {selectedPeriod.end_date}</p>
+                  )}
                 </div>
               )}
             </div>
