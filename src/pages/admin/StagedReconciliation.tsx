@@ -286,6 +286,19 @@ export default function StagedReconciliation() {
     handleCreateFromPayPeriod(targetPP.id);
   };
 
+  // ── Sequence number lookup for reconciliation periods ──
+  const seqMap = useMemo(() => {
+    const m = new Map<string, number>();
+    payPeriods.forEach(pp => { if (pp.sequence_number) m.set(pp.id, pp.sequence_number); });
+    return m;
+  }, [payPeriods]);
+
+  /** Get unified label for a reconciliation period */
+  const reconPeriodLabel = useCallback((p: PeriodStatus) => {
+    const seq = p.period_id ? seqMap.get(p.period_id) : null;
+    return formatPeriodLabel(p.period_start, p.period_end, seq, p.period_label);
+  }, [seqMap]);
+
   const batchCandidates = useMemo(() => {
     const q = batchSearch.trim().toLowerCase();
     return [...payPeriods]
