@@ -12,6 +12,7 @@ interface Props {
   periods: PeriodStatus[];
   onSelectPeriod: (p: PeriodStatus) => void;
   onCreatePeriod: () => void;
+  formatLabel?: (p: PeriodStatus) => string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
