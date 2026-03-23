@@ -348,7 +348,8 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                         </div>
                       )}
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               );
             })}
