@@ -648,24 +648,24 @@ export default function AdminDashboard() {
       </div>
     ) : (
       <>
-        {/* Hero KPI row — 3 large cards like reference */}
+        {/* Hero KPI row — 3 large cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <HeroKpiCard
-            label="Hours Worked"
+            label="Horas Trabajadas"
             value={animHours || animEmployees}
             icon={Clock}
             color="primary"
             onClick={() => navigate("/app/timeclock")}
           />
           <HeroKpiCard
-            label="Employees Scheduled"
+            label="Empleados Programados"
             value={`${animEmployees}`}
             icon={Users}
             color="earning"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="Payroll Total"
+            label="Total Nómina"
             value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
             icon={DollarSign}
             color="warning"
