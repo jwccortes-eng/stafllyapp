@@ -352,7 +352,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                       {r.warnings && r.warnings.length > 0 && (
                         <div className="mt-1.5 space-y-0.5">
                           {r.warnings.map((w: string, i: number) => (
-                            <div key={i} className="text-[10px] text-amber-600 flex items-center gap-1">
+                            <div key={i} className="text-[10px] text-warning flex items-center gap-1">
                               <AlertTriangle className="h-2.5 w-2.5" /> {w}
                             </div>
                           ))}
