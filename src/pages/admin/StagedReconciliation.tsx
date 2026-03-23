@@ -444,66 +444,125 @@ export default function StagedReconciliation() {
               <Calendar className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Periodo:</span>
             </div>
-            <Select
-              value={activePeriod?.id || ""}
-              onValueChange={handlePeriodSelectorChange}
-            >
-              <SelectTrigger className="w-full md:w-[340px]">
-                <SelectValue placeholder="Selecciona un periodo para operar" />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Search input */}
-                <div className="px-2 py-1.5">
-                  <Input
-                    placeholder="Buscar periodo... (ej: 2025-12-24)"
-                    value={periodSearch}
-                    onChange={e => setPeriodSearch(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <SelectItem value="__create__">➕ Crear nuevo periodo...</SelectItem>
-                {/* Reconciliation periods */}
-                {periods.filter(p => !periodSearch || reconPeriodLabel(p).toLowerCase().includes(periodSearch.toLowerCase())).length > 0 && (
-                  <>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Periodos de reconciliación</div>
-                    {periods
-                      .filter(p => !periodSearch || reconPeriodLabel(p).toLowerCase().includes(periodSearch.toLowerCase()))
-                      .map(p => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {reconPeriodLabel(p)} ({p.status})
+            {(() => {
+              // Build deduplicated, grouped options
+              const q = periodSearch.trim().toLowerCase();
+              const linkedPPIds = new Set(periods.map(p => p.period_id).filter(Boolean));
+
+              // Active period (current execution)
+              const activePeriodEntry = activePeriod;
+
+              // Other reconciliation periods (exclude active)
+              const otherRecon = periods
+                .filter(p => p.id !== activePeriod?.id)
+                .filter(p => !q || reconPeriodLabel(p).toLowerCase().includes(q));
+
+              // Unlinked pay periods (no recon yet), exclude any whose date range matches an existing recon period
+              const reconRanges = new Set(periods.map(p => `${p.period_start}|${p.period_end}`));
+              const unlinked = payPeriods
+                .filter(pp => !linkedPPIds.has(pp.id))
+                .filter(pp => !reconRanges.has(`${pp.start_date}|${pp.end_date}`))
+                .filter(pp => !q || periodLabel(pp).toLowerCase().includes(q))
+                .sort((a, b) => b.start_date.localeCompare(a.start_date));
+
+              // Split unlinked into recent (last 8 weeks) and historical
+              const eightWeeksAgo = new Date();
+              eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+              const cutoff = eightWeeksAgo.toISOString().slice(0, 10);
+              const recentUnlinked = unlinked.filter(pp => pp.start_date >= cutoff);
+              const historicalUnlinked = unlinked.filter(pp => pp.start_date < cutoff);
+
+              return (
+                <Select
+                  value={activePeriod?.id || ""}
+                  onValueChange={handlePeriodSelectorChange}
+                >
+                  <SelectTrigger className="w-full md:w-[380px]">
+                    <SelectValue placeholder="Selecciona un periodo para operar">
+                      {activePeriodEntry && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="inline-block w-2 h-2 rounded-full bg-primary shrink-0" />
+                          {reconPeriodLabel(activePeriodEntry)}
+                        </span>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[360px]">
+                    {/* Search */}
+                    <div className="px-2 py-1.5">
+                      <Input
+                        placeholder="Buscar por número o fecha..."
+                        value={periodSearch}
+                        onChange={e => setPeriodSearch(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+
+                    {/* ── Active execution period ── */}
+                    {activePeriodEntry && (!q || reconPeriodLabel(activePeriodEntry).toLowerCase().includes(q)) && (
+                      <>
+                        <div className="px-2 py-1.5 text-[11px] font-semibold text-primary flex items-center gap-1.5">
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+                          Periodo activo
+                        </div>
+                        <SelectItem value={activePeriodEntry.id} className="font-medium">
+                          {reconPeriodLabel(activePeriodEntry)}
                         </SelectItem>
-                      ))}
-                  </>
-                )}
-                {/* Pay periods not yet linked — filtered */}
-                {(() => {
-                  const unlinked = payPeriods
-                    .filter(pp => !periods.some(p => p.period_id === pp.id))
-                    .filter(pp => !periodSearch || periodLabel(pp).toLowerCase().includes(periodSearch.toLowerCase()));
-                  // Sort: truth target first
-                  const sorted = [...unlinked].sort((a, b) => {
-                    const aTarget = a.start_date === "2025-12-24" && a.end_date === "2025-12-30" ? 1 : 0;
-                    const bTarget = b.start_date === "2025-12-24" && b.end_date === "2025-12-30" ? 1 : 0;
-                    return bTarget - aTarget;
-                  });
-                  if (sorted.length === 0) return null;
-                  return (
-                    <>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Periodos de nómina (sin reconciliar)</div>
-                      {sorted.map(pp => {
-                        const isTruth = pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30";
-                        return (
-                          <SelectItem key={`pp:${pp.id}`} value={`pp:${pp.id}`}>
-                            {periodLabel(pp)} ({pp.status})
-                            {isTruth && " ⭐ Truth target"}
+                      </>
+                    )}
+
+                    {/* ── Other reconciliation periods ── */}
+                    {otherRecon.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-[11px] font-semibold text-muted-foreground">Otros periodos de reconciliación</div>
+                        {otherRecon.map(p => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {reconPeriodLabel(p)}
+                            <span className="ml-1.5 text-muted-foreground">· {p.status}</span>
                           </SelectItem>
-                        );
-                      })}
-                    </>
-                  );
-                })()}
-              </SelectContent>
-            </Select>
+                        ))}
+                      </>
+                    )}
+
+                    {/* ── Recent unlinked pay periods ── */}
+                    {recentUnlinked.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-[11px] font-semibold text-muted-foreground">Periodos sin reconciliar</div>
+                        {recentUnlinked.map(pp => (
+                          <SelectItem key={`pp:${pp.id}`} value={`pp:${pp.id}`} className="text-muted-foreground">
+                            {periodLabel(pp)}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+
+                    {/* ── Historical (collapsed) ── */}
+                    {historicalUnlinked.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-[11px] font-semibold text-muted-foreground/60">
+                          Históricos ({historicalUnlinked.length})
+                        </div>
+                        {historicalUnlinked.slice(0, 5).map(pp => (
+                          <SelectItem key={`pp:${pp.id}`} value={`pp:${pp.id}`} className="text-muted-foreground/60 text-xs">
+                            {periodLabel(pp)}
+                          </SelectItem>
+                        ))}
+                        {historicalUnlinked.length > 5 && (
+                          <div className="px-2 py-1 text-[10px] text-muted-foreground/40 italic">
+                            +{historicalUnlinked.length - 5} periodos anteriores (busca por fecha)
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Create new */}
+                    <SelectItem value="__create__" className="text-primary font-medium">
+                      ➕ Crear nuevo periodo...
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              );
+            })()}
 
             {/* Exact truth period shortcut */}
             <Button
