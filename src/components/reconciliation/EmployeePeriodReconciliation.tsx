@@ -544,72 +544,122 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                       </details>
                     )}
 
-                    {/* System calculation breakdown */}
+                    {/* System calculation breakdown — component-level for mixed compensation */}
                     <details className="group" open>
                       <summary className="flex items-center justify-between cursor-pointer py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
                         <span className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Desglose del Cálculo del Sistema</span>
                         <Badge variant="default" className="text-[10px]">${sysTotal.toLocaleString()}</Badge>
                       </summary>
                       <div className="mt-2">
-                        {hasShiftCalc ? (
-                          <div className="rounded-xl border-2 border-earning/20 bg-earning/[0.03] p-4">
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                              <div className="text-center">
-                                <div className="text-[10px] text-muted-foreground uppercase">Días Completos</div>
-                                <div className="font-mono font-bold text-sm">{(record as any).shift_full_day_count || 0}</div>
-                                <div className="text-[10px] text-muted-foreground">× ${(record as any).shift_daily_rate_used || "?"}</div>
+                        {(() => {
+                          const hourlyPay = Number((record as any).hourly_pay_total) || 0;
+                          const dailyPay = Number((record as any).daily_pay_total) || 0;
+                          const weekendPay = Number(record.weekend_amount) || 0;
+                          const ridePay = Number(record.ride_amount) || Number((record as any).ride_pay_total) || 0;
+                          const manualAdj = Number(record.manual_amount) || Number((record as any).manual_adjustment_total) || 0;
+                          const shiftCalcVal = Number((record as any).shift_calculated_total) || 0;
+                          const fullDays = (record as any).shift_full_day_count || 0;
+                          const halfDays = (record as any).shift_half_day_count || 0;
+                          const dailyRate = (record as any).shift_daily_rate_used;
+                          const halfRate = (record as any).shift_half_day_rate_used;
+                          const hourlyRate = (record as any).hourly_rate || 0;
+                          const workedHours = record.total_worked_hours || 0;
+
+                          // Determine if mixed: has hourly AND daily/shift components
+                          const isMixed = hourlyPay > 0 && (dailyPay > 0 || weekendPay > 0 || shiftCalcVal > 0);
+                          const hasHourly = hourlyPay > 0;
+                          const hasDaily = dailyPay > 0 || weekendPay > 0 || (shiftCalcVal > 0 && fullDays > 0);
+
+                          // Build component rows for display
+                          const components: { label: string; sublabel: string; value: number; highlight?: boolean }[] = [];
+
+                          if (hasHourly) {
+                            components.push({
+                              label: "Pago por Hora (Base)",
+                              sublabel: hourlyRate > 0 ? `${workedHours}h × $${hourlyRate}` : `${workedHours}h trabajadas`,
+                              value: hourlyPay,
+                            });
+                          }
+
+                          if (hasDaily || shiftCalcVal > 0) {
+                            if (fullDays > 0 && dailyRate) {
+                              components.push({
+                                label: "Pago por Día",
+                                sublabel: `${fullDays} día(s) × $${dailyRate}${halfDays > 0 ? ` + ${halfDays} medio(s) × $${halfRate || "?"}` : ""}`,
+                                value: shiftCalcVal > 0 && !hasHourly ? shiftCalcVal : dailyPay + weekendPay,
+                              });
+                            } else if (dailyPay > 0 || weekendPay > 0) {
+                              components.push({
+                                label: "Pago por Día / Weekend",
+                                sublabel: `Pagos diarios acumulados`,
+                                value: dailyPay + weekendPay,
+                              });
+                            }
+                          }
+
+                          if (!hasHourly && !hasDaily && shiftCalcVal > 0) {
+                            components.push({
+                              label: "Cálculo por Turnos",
+                              sublabel: `${fullDays} día(s) × $${dailyRate || "?"}`,
+                              value: shiftCalcVal,
+                            });
+                          }
+
+                          if (ridePay > 0) {
+                            components.push({ label: "Transporte (Ryde)", sublabel: "Componente de transporte", value: ridePay });
+                          }
+
+                          if (manualAdj > 0) {
+                            components.push({ label: "Ajuste Manual", sublabel: "Ajustes manuales aplicados", value: manualAdj });
+                          }
+
+                          // If no components were detected, show base_pay fallback
+                          if (components.length === 0) {
+                            components.push({
+                              label: "Pago Base",
+                              sublabel: "Sin desglose disponible",
+                              value: record.base_pay || record.final_total_pay || 0,
+                            });
+                          }
+
+                          const componentTotal = components.reduce((s, c) => s + c.value, 0);
+
+                          return (
+                            <div className={`rounded-xl border-2 p-4 ${isMixed ? "border-primary/20 bg-primary/[0.02]" : hasShiftCalc ? "border-earning/20 bg-earning/[0.03]" : "border-border bg-muted/20"}`}>
+                              {isMixed && (
+                                <div className="flex items-center gap-1.5 mb-3">
+                                  <Badge variant="secondary" className="text-[10px] gap-1">
+                                    <Info className="h-3 w-3" /> Compensación Mixta
+                                  </Badge>
+                                  <span className="text-[10px] text-muted-foreground">Este empleado tiene múltiples tipos de compensación</span>
+                                </div>
+                              )}
+                              <div className="space-y-2">
+                                {components.map((comp, i) => (
+                                  <div key={i} className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
+                                    <div>
+                                      <div className="text-xs font-semibold">{comp.label}</div>
+                                      <div className="text-[10px] text-muted-foreground">{comp.sublabel}</div>
+                                    </div>
+                                    <div className="font-mono font-bold text-sm">${comp.value.toLocaleString()}</div>
+                                  </div>
+                                ))}
                               </div>
-                              <div className="text-center">
-                                <div className="text-[10px] text-muted-foreground uppercase">Medios Días</div>
-                                <div className="font-mono font-bold text-sm">{(record as any).shift_half_day_count || 0}</div>
-                                <div className="text-[10px] text-muted-foreground">× ${(record as any).shift_half_day_rate_used || "?"}</div>
+                              <div className={`flex items-center justify-between mt-3 pt-3 border-t-2 ${isMixed ? "border-primary/20" : hasShiftCalc ? "border-earning/20" : "border-border"} rounded-lg px-3 py-2 ${isMixed ? "bg-primary/[0.06]" : hasShiftCalc ? "bg-earning/10" : "bg-primary/10"}`}>
+                                <div className="text-[10px] font-bold uppercase">Total Calculado</div>
+                                <div className={`font-mono font-bold text-lg ${isMixed ? "text-primary" : hasShiftCalc ? "text-earning" : "text-primary"}`}>${sysTotal.toLocaleString()}</div>
                               </div>
-                              <div className="text-center">
-                                <div className="text-[10px] text-muted-foreground uppercase">Transporte</div>
-                                <div className="font-mono font-bold text-sm">${record.ride_amount}</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-[10px] text-muted-foreground uppercase">Ajuste Manual</div>
-                                <div className="font-mono font-bold text-sm">${record.manual_amount}</div>
-                              </div>
-                              <div className="text-center bg-earning/10 rounded-lg p-2">
-                                <div className="text-[10px] text-earning font-bold uppercase">Total Calculado</div>
-                                <div className="font-mono font-bold text-lg text-earning">${sysTotal.toLocaleString()}</div>
+                              {Math.abs(componentTotal - sysTotal) > 1 && componentTotal > 0 && (
+                                <p className="text-[10px] text-warning mt-1.5">
+                                  ⚠ Suma de componentes (${componentTotal.toLocaleString()}) difiere del total registrado (${sysTotal.toLocaleString()})
+                                </p>
+                              )}
+                              <div className="mt-2 text-[10px] text-muted-foreground text-center">
+                                Fuente: {isMixed ? "compensación mixta (horaria + diaria)" : hasShiftCalc ? "cálculo por turnos (shift-calc)" : "nómina importada"}
                               </div>
                             </div>
-                            <div className="mt-2 text-[10px] text-muted-foreground text-center">
-                              Fuente primaria: cálculo por turnos (shift-calc)
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="rounded-xl border bg-muted/20 p-4">
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                              <div className="text-center">
-                                <div className="text-[10px] text-muted-foreground uppercase">Pago Base</div>
-                                <div className="font-mono font-bold text-sm">${record.base_pay}</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-[10px] text-muted-foreground uppercase">Transporte</div>
-                                <div className="font-mono font-bold text-sm">${record.ride_amount}</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-[10px] text-muted-foreground uppercase">Weekend</div>
-                                <div className="font-mono font-bold text-sm">${record.weekend_amount}</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-[10px] text-muted-foreground uppercase">Manual</div>
-                                <div className="font-mono font-bold text-sm">${record.manual_amount}</div>
-                              </div>
-                              <div className="text-center bg-primary/10 rounded-lg p-2">
-                                <div className="text-[10px] text-primary font-bold uppercase">Total</div>
-                                <div className="font-mono font-bold text-lg text-primary">${sysTotal.toLocaleString()}</div>
-                              </div>
-                            </div>
-                            <div className="mt-2 text-[10px] text-muted-foreground text-center">
-                              Fuente: nómina importada (sin cálculo por turnos disponible)
-                            </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     </details>
 
