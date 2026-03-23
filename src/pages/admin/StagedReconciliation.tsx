@@ -476,10 +476,10 @@ export default function StagedReconciliation() {
 
       {/* ── Warning bar for unresolved exceptions ── */}
       {activePeriod && activePeriod.total_exceptions > activePeriod.resolved_exceptions && (
-        <Alert variant="destructive" className="py-2">
-          <AlertTriangle className="h-4 w-4" />
+        <Alert className="py-2 border-warning bg-warning/5">
+          <AlertTriangle className="h-4 w-4 text-warning" />
           <AlertDescription className="text-xs flex items-center gap-2">
-            {activePeriod.total_exceptions - activePeriod.resolved_exceptions} excepción(es) sin resolver
+            {activePeriod.total_exceptions - activePeriod.resolved_exceptions} excepción(es) pendiente(s)
             <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setTab("exceptions")}>Ver excepciones</Button>
           </AlertDescription>
         </Alert>
