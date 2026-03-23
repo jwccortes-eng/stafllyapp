@@ -277,7 +277,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                           <span className="text-muted-foreground">Histórico total:</span> <strong className="font-mono">{fmt(grossHistorical)}</strong>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Excluido (unmapped):</span> <strong className={`font-mono ${excludedUnmappedAmount > 0 ? "text-destructive" : ""}`}>{fmt(excludedUnmappedAmount)}</strong>
+                          <span className="text-muted-foreground">Excluido (unmapped):</span> <strong className={`font-mono ${excludedUnmappedAmount > 0 ? "text-warning" : ""}`}>{fmt(excludedUnmappedAmount)}</strong>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Registros unmapped:</span> <strong>{unmappedCount}</strong>
