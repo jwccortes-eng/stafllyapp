@@ -98,7 +98,7 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
 
     const major = variances.filter(v => v.variance_status === "major_variance");
     if (major.length > 0) queues.push({
-      id: "major_variance", label: "Varianzas mayores (>$10)", count: major.length, severity: "critical", icon: AlertTriangle, tab: "workbench",
+      id: "major_variance", label: "Varianzas mayores (>$10)", count: major.length, severity: "warning", icon: AlertTriangle, tab: "workbench",
       items: major.slice(0, 5).map(v => ({ id: v.employee_id, name: v.employee_name, detail: `${fmt(v.variance_amount)}` })),
     });
 

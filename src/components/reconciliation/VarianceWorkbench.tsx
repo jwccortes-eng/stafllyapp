@@ -236,7 +236,7 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
                   <span className="text-muted-foreground">Payroll:</span>{" "}
                   <span className="font-semibold">{fmt(record.total_payroll_amount || 0)}</span>
                 </div>
-                <div className={`font-bold ${Math.abs(record.variance_amount || 0) > 10 ? "text-destructive" : "text-primary"}`}>
+                <div className={`font-bold ${Math.abs(record.variance_amount || 0) > 50 ? "text-destructive" : Math.abs(record.variance_amount || 0) > 10 ? "text-warning" : "text-muted-foreground"}`}>
                   Δ {fmt(record.variance_amount || 0)}
                 </div>
               </div>
