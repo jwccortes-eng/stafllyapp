@@ -35,14 +35,14 @@ const FILTER_OPTIONS: { value: FilterMode; label: string; icon: any }[] = [
 ];
 
 const VARIANCE_BADGE: Record<string, { label: string; variant: string; icon: any }> = {
-  exact_match: { label: "✓ Exact", variant: "default", icon: CheckCircle2 },
-  minor_variance: { label: "~ Menor", variant: "outline", icon: AlertTriangle },
-  major_variance: { label: "⚠ Mayor", variant: "destructive", icon: XCircle },
-  unresolved: { label: "✗ Sin resolver", variant: "destructive", icon: XCircle },
+  exact_match: { label: "Exacto", variant: "success", icon: CheckCircle2 },
+  minor_variance: { label: "Menor", variant: "warning", icon: AlertTriangle },
+  major_variance: { label: "Mayor", variant: "destructive", icon: XCircle },
+  unresolved: { label: "Sin resolver", variant: "destructive", icon: XCircle },
 };
 
 const PAY_ICONS: Record<string, any> = {
-  hourly: Clock, daily: Calendar, pay_ride: Car, weekend_job: Briefcase, manual_adjustment: PenTool, mixed: DollarSign, unknown: AlertTriangle,
+  hourly: Clock, daily: Calendar, pay_ride: Car, weekend_job: Briefcase, manual_adjustment: PenTool, mixed: DollarSign, unknown: Briefcase,
 };
 
 export default function EmployeeCloseCards({ finalRecords, variances, employeeMap, onNavigate, onApproveRecord, onBulkApprove, onClassifyRecords, onMarkReviewed }: Props) {
@@ -213,17 +213,17 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                           <StatusIcon className="h-2.5 w-2.5" /> {vBadge.label}
                         </Badge>
                         {r.pay_classification === "unknown" && !(r as any).shift_calculated_total && (
-                          <Badge variant="destructive" className="text-[10px] shrink-0">Sin clasificar</Badge>
+                          <Badge variant="warning" className="text-[10px] shrink-0">Sin clasificar</Badge>
                         )}
                         {(r as any).shift_calculated_total > 0 && (
-                          <Badge variant="secondary" className="text-[10px] shrink-0 bg-primary/10 text-primary border-primary/20">
-                            {(r as any).shift_full_day_count || 0}d shift-calc
+                          <Badge variant="info" className="text-[10px] shrink-0">
+                            {(r as any).shift_full_day_count || 0}d calc
                           </Badge>
                         )}
                         {Array.isArray(r.warnings) && r.warnings.some((w: any) => String(w).startsWith("CRITICAL_UNMAPPED_RATIO:")) && (
-                          <Badge variant="destructive" className="text-[10px] shrink-0">Crítico unmapped</Badge>
+                          <Badge variant="warning" className="text-[10px] shrink-0">Unmapped</Badge>
                         )}
-                        {isPending && <Badge variant="outline" className="text-[10px] shrink-0">Pendiente</Badge>}
+                        {isPending && <Badge variant="outline" className="text-[10px] shrink-0 text-muted-foreground">Pendiente</Badge>}
                       </div>
                     </div>
                     {/* Compact metrics */}
@@ -240,7 +240,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                         </div>
                       )}
                       {v && v.variance_amount !== 0 && (
-                        <div className={`text-[10px] font-mono ${Math.abs(v.variance_amount) > 10 ? "text-destructive" : "text-amber-600"}`}>
+                        <div className={`text-[10px] font-mono ${Math.abs(v.variance_amount) > 50 ? "text-destructive" : Math.abs(v.variance_amount) > 10 ? "text-warning" : "text-muted-foreground"}`}>
                           Δ {fmt(v.variance_amount)}
                         </div>
                       )}
@@ -277,7 +277,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                           <span className="text-muted-foreground">Histórico total:</span> <strong className="font-mono">{fmt(grossHistorical)}</strong>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Excluido (unmapped):</span> <strong className={`font-mono ${excludedUnmappedAmount > 0 ? "text-destructive" : ""}`}>{fmt(excludedUnmappedAmount)}</strong>
+                          <span className="text-muted-foreground">Excluido (unmapped):</span> <strong className={`font-mono ${excludedUnmappedAmount > 0 ? "text-warning" : ""}`}>{fmt(excludedUnmappedAmount)}</strong>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Registros unmapped:</span> <strong>{unmappedCount}</strong>
@@ -307,7 +307,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                       {(r.ride_pay_total || r.ride_amount || 0) > 0 && <Badge variant="secondary">Ride: {fmt(r.ride_pay_total || r.ride_amount || 0)}</Badge>}
                       {(r.weekend_pay_total || r.weekend_amount || 0) > 0 && <Badge variant="secondary">Weekend: {fmt(r.weekend_pay_total || r.weekend_amount || 0)}</Badge>}
                       {(r.manual_adjustment_total || r.manual_amount || 0) > 0 && <Badge variant="secondary">Manual: {fmt(r.manual_adjustment_total || r.manual_amount || 0)}</Badge>}
-                      {excludedUnmappedAmount > 0 && <Badge variant="destructive">Otros (excluido): {fmt(excludedUnmappedAmount)}</Badge>}
+                      {excludedUnmappedAmount > 0 && <Badge variant="warning">Excluido: {fmt(excludedUnmappedAmount)}</Badge>}
                       {/* Payroll reference */}
                       {(r as any).shift_calculated_total > 0 && (
                         <Badge variant="outline" className="text-muted-foreground">
@@ -352,7 +352,7 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                       {r.warnings && r.warnings.length > 0 && (
                         <div className="mt-1.5 space-y-0.5">
                           {r.warnings.map((w: string, i: number) => (
-                            <div key={i} className="text-[10px] text-amber-600 flex items-center gap-1">
+                            <div key={i} className="text-[10px] text-warning flex items-center gap-1">
                               <AlertTriangle className="h-2.5 w-2.5" /> {w}
                             </div>
                           ))}
