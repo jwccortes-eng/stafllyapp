@@ -484,7 +484,6 @@ export default function StagedReconciliation() {
                             {periodLabel(pp)} ({pp.status})
                             {isTruth && " ⭐ Truth target"}
                           </SelectItem>
-                          </SelectItem>
                         );
                       })}
                     </>
