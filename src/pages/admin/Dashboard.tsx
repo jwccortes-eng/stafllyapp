@@ -393,9 +393,23 @@ export default function AdminDashboard() {
         let periodTotal = 0;
         let hours = 0;
         if (periodRes.data) {
-          const { data: basePays } = await supabase.from("period_base_pay").select("base_total_pay, total_hours").eq("period_id", periodRes.data.id);
-          periodTotal = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.base_total_pay || 0), 0);
-          hours = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.total_hours || 0), 0);
+          // Try reconciliation_final_records first (real source of truth)
+          const { data: rpsData } = await supabase.from("reconciliation_period_status")
+            .select("id").eq("period_id", periodRes.data.id).limit(1).maybeSingle();
+          
+          if (rpsData) {
+            const { data: rfrData } = await supabase.from("reconciliation_final_records")
+              .select("grand_total, total_worked_hours").eq("period_status_id", rpsData.id);
+            periodTotal = (rfrData ?? []).reduce((s, r: any) => s + Number(r.grand_total || 0), 0);
+            hours = (rfrData ?? []).reduce((s, r: any) => s + Number(r.total_worked_hours || 0), 0);
+          }
+          
+          // Fallback to period_base_pay if no reconciliation data
+          if (periodTotal === 0) {
+            const { data: basePays } = await supabase.from("period_base_pay").select("base_total_pay, total_work_hours").eq("period_id", periodRes.data.id);
+            periodTotal = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.base_total_pay || 0), 0);
+            hours = (basePays ?? []).reduce((s, bp: any) => s + Number(bp.total_work_hours || 0), 0);
+          }
         }
         setTotalHoursWorked(Math.round(hours * 10) / 10);
 
@@ -516,18 +530,65 @@ export default function AdminDashboard() {
           });
         }
 
+        // ── Chart: Use reconciliation_final_records as the real base pay source ──
         const chartPeriods = [...allPeriods].reverse().slice(-8);
         if (chartPeriods.length > 0) {
           const periodIds = chartPeriods.map(p => p.id);
-          const [baseRes, chartMovRes] = await Promise.all([
-            supabase.from("period_base_pay").select("period_id, base_total_pay").in("period_id", periodIds),
+
+          // Get reconciliation period statuses that link to these pay_periods
+          const [rpsRes, chartMovRes] = await Promise.all([
+            supabase.from("reconciliation_period_status").select("id, period_id").in("period_id", periodIds),
             supabase.from("movements").select("period_id, total_value, concept_id, concepts(category)").in("period_id", periodIds),
           ]);
+
+          const rpsList = rpsRes.data ?? [];
+          let rfrByPeriod: Record<string, { base: number; pending: boolean }> = {};
+
+          if (rpsList.length > 0) {
+            const rpsIds = rpsList.map(r => r.id);
+            const { data: rfrData } = await supabase.from("reconciliation_final_records")
+              .select("period_status_id, grand_total")
+              .in("period_status_id", rpsIds);
+
+            // Map reconciliation_period_status.id -> pay_period.id
+            const rpsToPayPeriod: Record<string, string> = {};
+            rpsList.forEach(r => { rpsToPayPeriod[r.id] = r.period_id; });
+
+            (rfrData ?? []).forEach((rfr: any) => {
+              const ppId = rpsToPayPeriod[rfr.period_status_id];
+              if (!ppId) return;
+              if (!rfrByPeriod[ppId]) rfrByPeriod[ppId] = { base: 0, pending: false };
+              rfrByPeriod[ppId].base += Number(rfr.grand_total || 0);
+            });
+          }
+
+          // Fallback: also check period_base_pay for periods without reconciliation data
+          const periodsWithoutRecon = periodIds.filter(id => !rfrByPeriod[id]);
+          if (periodsWithoutRecon.length > 0) {
+            const { data: pbpData } = await supabase.from("period_base_pay")
+              .select("period_id, base_total_pay")
+              .in("period_id", periodsWithoutRecon);
+            (pbpData ?? []).forEach((bp: any) => {
+              if (!rfrByPeriod[bp.period_id]) rfrByPeriod[bp.period_id] = { base: 0, pending: false };
+              rfrByPeriod[bp.period_id].base += Number(bp.base_total_pay || 0);
+            });
+          }
+
+          // Mark periods that have movements but no base as "pending"
           const mapped = chartPeriods.map(p => {
-            const base = (baseRes.data ?? []).filter(bp => bp.period_id === p.id).reduce((s, bp) => s + Number(bp.base_total_pay || 0), 0);
+            const baseInfo = rfrByPeriod[p.id];
+            const base = baseInfo ? Math.round(baseInfo.base) : 0;
             const extras = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id && m.concepts?.category === "extra").reduce((s, m) => s + Number(m.total_value || 0), 0);
             const deducciones = (chartMovRes.data ?? []).filter((m: any) => m.period_id === p.id && m.concepts?.category === "deduction").reduce((s, m) => s + Math.abs(Number(m.total_value || 0)), 0);
-            return { label: format(parseISO(p.start_date), "dd MMM", { locale: es }), base: Math.round(base), extras: Math.round(extras), deducciones: Math.round(deducciones) };
+            const hasMov = extras > 0 || deducciones > 0;
+            const pending = base === 0 && hasMov; // has activity but no base = incomplete
+            return {
+              label: format(parseISO(p.start_date), "dd MMM", { locale: es }),
+              base: Math.round(base),
+              extras: Math.round(extras),
+              deducciones: Math.round(deducciones),
+              pending,
+            };
           });
           setChartData(mapped);
           setSparkPayments(mapped.map(d => d.base + d.extras));
@@ -772,43 +833,66 @@ export default function AdminDashboard() {
         </Card>
       );
     },
-    chart: () => chartData.length > 0 ? (
-      <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
-        <CardHeader className="pb-2 px-5 pt-5">
-          <div className="flex items-center gap-2">
-             <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
-               <TrendingUp className="h-3.5 w-3.5 text-primary" />
+    chart: () => {
+      if (chartData.length === 0) return null;
+      const hasPendingPeriods = chartData.some((d: any) => d.pending);
+      const nameMap: Record<string, string> = {
+        base: "Nómina Base",
+        extras: "Novedades (+)",
+        deducciones: "Deducciones (−)",
+      };
+      return (
+        <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
+          <CardHeader className="pb-2 px-5 pt-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <CardTitle className="text-sm font-semibold font-heading">Tendencia de pagos</CardTitle>
+              </div>
+              {hasPendingPeriods && (
+                <Badge variant="warning" className="text-[10px] gap-1">
+                  <AlertTriangle className="h-2.5 w-2.5" /> Periodos sin nómina base calculada
+                </Badge>
+              )}
             </div>
-            <CardTitle className="text-sm font-semibold font-heading">Tendencia de pagos</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="px-3 pb-4">
-          <div className="h-[240px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 5, right: 8, left: 8, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} className="fill-muted-foreground" axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} axisLine={false} tickLine={false} />
-                <RechartsTooltip
-                  contentStyle={{
-                    borderRadius: "0.75rem",
-                    border: "1px solid hsl(var(--border))",
-                    backgroundColor: "hsl(var(--card))",
-                    fontSize: 11,
-                    boxShadow: "var(--shadow-md)",
-                    padding: "8px 12px",
-                  }}
-                  formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === "base" ? "Base" : name === "extras" ? "Extras" : "Deducciones"]}
-                />
-                <Bar dataKey="base" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} name="base" />
-                <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[6, 6, 0, 0]} name="extras" />
-                <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} name="deducciones" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-    ) : null,
+          </CardHeader>
+          <CardContent className="px-3 pb-4">
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 8, left: 8, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} className="fill-muted-foreground" axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} axisLine={false} tickLine={false} />
+                  <RechartsTooltip
+                    contentStyle={{
+                      borderRadius: "0.75rem",
+                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "hsl(var(--card))",
+                      fontSize: 11,
+                      boxShadow: "var(--shadow-md)",
+                      padding: "8px 12px",
+                    }}
+                    formatter={(value: number, name: string) => {
+                      return [`$${value.toLocaleString()}`, nameMap[name] || name];
+                    }}
+                    labelFormatter={(label) => {
+                      const item = chartData.find((d: any) => d.label === label);
+                      if (item?.pending) return `${label} ⚠ Base pendiente`;
+                      return label;
+                    }}
+                  />
+                  <Bar dataKey="base" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} name="base" />
+                  <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[6, 6, 0, 0]} name="extras" />
+                  <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} name="deducciones" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    },
     announcements: () => (
       <div>
         <div className="flex items-center justify-between mb-3">
