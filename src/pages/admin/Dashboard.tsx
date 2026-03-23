@@ -419,15 +419,16 @@ export default function AdminDashboard() {
         }
         setTodaySummary({ shiftsToday: todayShiftIds.length, assignedToday: assignedCount, clockedIn: 0, openEntries: openEntriesRes.count ?? 0 });
 
+        const currentPeriod = recentPeriods[0] ?? null;
         setStats({
           totalEmployees: empRes.count ?? 0,
-          activePeriod: periodRes.data ? `${periodRes.data.start_date} → ${periodRes.data.end_date}` : null,
-          periodStatus: periodRes.data?.status ?? null,
+          activePeriod: currentPeriod ? `${currentPeriod.start_date} → ${currentPeriod.end_date}` : null,
+          periodStatus: currentPeriod?.status ?? null,
           totalImports: 0,
           totalMovements: 0,
           periodTotal: Math.round(periodTotal * 100) / 100,
-          periodStartDate: periodRes.data?.start_date ?? null,
-          periodEndDate: periodRes.data?.end_date ?? null,
+          periodStartDate: currentPeriod?.start_date ?? null,
+          periodEndDate: currentPeriod?.end_date ?? null,
           pendingTickets: ticketsRes.count ?? 0,
         });
 
