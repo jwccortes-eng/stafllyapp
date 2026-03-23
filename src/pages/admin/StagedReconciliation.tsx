@@ -463,14 +463,14 @@ export default function StagedReconciliation() {
                 </div>
                 <SelectItem value="__create__">➕ Crear nuevo periodo...</SelectItem>
                 {/* Reconciliation periods */}
-                {periods.filter(p => !periodSearch || p.period_label.toLowerCase().includes(periodSearch.toLowerCase())).length > 0 && (
+                {periods.filter(p => !periodSearch || reconPeriodLabel(p).toLowerCase().includes(periodSearch.toLowerCase())).length > 0 && (
                   <>
                     <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Periodos de reconciliación</div>
                     {periods
-                      .filter(p => !periodSearch || p.period_label.toLowerCase().includes(periodSearch.toLowerCase()))
+                      .filter(p => !periodSearch || reconPeriodLabel(p).toLowerCase().includes(periodSearch.toLowerCase()))
                       .map(p => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.period_label} ({p.status})
+                          {reconPeriodLabel(p)} ({p.status})
                         </SelectItem>
                       ))}
                   </>
