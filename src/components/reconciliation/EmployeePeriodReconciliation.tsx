@@ -660,7 +660,8 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                       </div>
                     )}
                   </CardContent>
-                )}
+                  );
+                })()}
               </Card>
             );
           })}
