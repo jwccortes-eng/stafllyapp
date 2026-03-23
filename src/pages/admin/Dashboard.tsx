@@ -819,43 +819,66 @@ export default function AdminDashboard() {
         </Card>
       );
     },
-    chart: () => chartData.length > 0 ? (
-      <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
-        <CardHeader className="pb-2 px-5 pt-5">
-          <div className="flex items-center gap-2">
-             <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
-               <TrendingUp className="h-3.5 w-3.5 text-primary" />
+    chart: () => {
+      if (chartData.length === 0) return null;
+      const hasPendingPeriods = chartData.some((d: any) => d.pending);
+      const nameMap: Record<string, string> = {
+        base: "Nómina Base",
+        extras: "Novedades (+)",
+        deducciones: "Deducciones (−)",
+      };
+      return (
+        <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
+          <CardHeader className="pb-2 px-5 pt-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <CardTitle className="text-sm font-semibold font-heading">Tendencia de pagos</CardTitle>
+              </div>
+              {hasPendingPeriods && (
+                <Badge variant="warning" className="text-[10px] gap-1">
+                  <AlertTriangle className="h-2.5 w-2.5" /> Periodos sin nómina base calculada
+                </Badge>
+              )}
             </div>
-            <CardTitle className="text-sm font-semibold font-heading">Tendencia de pagos</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="px-3 pb-4">
-          <div className="h-[240px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 5, right: 8, left: 8, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} className="fill-muted-foreground" axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} axisLine={false} tickLine={false} />
-                <RechartsTooltip
-                  contentStyle={{
-                    borderRadius: "0.75rem",
-                    border: "1px solid hsl(var(--border))",
-                    backgroundColor: "hsl(var(--card))",
-                    fontSize: 11,
-                    boxShadow: "var(--shadow-md)",
-                    padding: "8px 12px",
-                  }}
-                  formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === "base" ? "Base" : name === "extras" ? "Extras" : "Deducciones"]}
-                />
-                <Bar dataKey="base" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} name="base" />
-                <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[6, 6, 0, 0]} name="extras" />
-                <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} name="deducciones" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-    ) : null,
+          </CardHeader>
+          <CardContent className="px-3 pb-4">
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 8, left: 8, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} className="fill-muted-foreground" axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} axisLine={false} tickLine={false} />
+                  <RechartsTooltip
+                    contentStyle={{
+                      borderRadius: "0.75rem",
+                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "hsl(var(--card))",
+                      fontSize: 11,
+                      boxShadow: "var(--shadow-md)",
+                      padding: "8px 12px",
+                    }}
+                    formatter={(value: number, name: string) => {
+                      return [`$${value.toLocaleString()}`, nameMap[name] || name];
+                    }}
+                    labelFormatter={(label) => {
+                      const item = chartData.find((d: any) => d.label === label);
+                      if (item?.pending) return `${label} ⚠ Base pendiente`;
+                      return label;
+                    }}
+                  />
+                  <Bar dataKey="base" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} name="base" />
+                  <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[6, 6, 0, 0]} name="extras" />
+                  <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} name="deducciones" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    },
     announcements: () => (
       <div>
         <div className="flex items-center justify-between mb-3">
