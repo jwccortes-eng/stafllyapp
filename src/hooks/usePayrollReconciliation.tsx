@@ -218,45 +218,40 @@ export function usePayrollReconciliation() {
         source_tags: [],
       }));
 
-      // 3. Enrich system data from reconciliation_final_records if available
+      // 3. Enrich system data from normalized_schedule_rows or reconciliation data if available
       const batch = activeBatch || batches.find(b => b.id === batchId);
       if (batch?.payroll_period_start && batch?.payroll_period_end) {
-        // Try to pull from period-based data
-        const { data: periodPayroll } = await supabase
-          .from("payroll_rows")
-          .select("employee_id, total_hours, total_pay, pay_per_day, rides_total, tips_total, reimbursements_total, grand_total")
-          .eq("company_id", selectedCompanyId)
-          .gte("work_date", batch.payroll_period_start)
-          .lte("work_date", batch.payroll_period_end);
+        try {
+          const { data: periodPayroll } = await supabase
+            .from("normalized_schedule_rows" as any)
+            .select("employee_id, total_hours, total_pay")
+            .eq("company_id", selectedCompanyId)
+            .gte("work_date", batch.payroll_period_start)
+            .lte("work_date", batch.payroll_period_end);
 
-        if (periodPayroll && periodPayroll.length > 0) {
-          const byEmployee = new Map<string, any>();
-          for (const row of periodPayroll as any[]) {
-            if (!row.employee_id) continue;
-            const existing = byEmployee.get(row.employee_id) || { hours: 0, pay: 0, ppd: 0, ryde: 0, tips: 0, reimb: 0, total: 0 };
-            existing.hours += row.total_hours || 0;
-            existing.pay += row.total_pay || 0;
-            existing.ppd += row.pay_per_day || 0;
-            existing.ryde += row.rides_total || 0;
-            existing.tips += row.tips_total || 0;
-            existing.reimb += row.reimbursements_total || 0;
-            existing.total += row.grand_total || 0;
-            byEmployee.set(row.employee_id, existing);
-          }
+          if (periodPayroll && (periodPayroll as any[]).length > 0) {
+            const byEmployee = new Map<string, { hours: number; pay: number; total: number }>();
+            for (const row of periodPayroll as any[]) {
+              if (!row.employee_id) continue;
+              const existing = byEmployee.get(row.employee_id) || { hours: 0, pay: 0, total: 0 };
+              existing.hours += row.total_hours || 0;
+              existing.pay += row.total_pay || 0;
+              existing.total += row.total_pay || 0;
+              byEmployee.set(row.employee_id, existing);
+            }
 
-          for (const sd of systemData) {
-            const enrichment = byEmployee.get(sd.employee_id);
-            if (enrichment) {
-              sd.total_hours = enrichment.hours;
-              sd.total_pay = enrichment.pay;
-              sd.pay_per_day = enrichment.ppd;
-              sd.ryde = enrichment.ryde;
-              sd.tips = enrichment.tips;
-              sd.reimbursements = enrichment.reimb;
-              sd.total = enrichment.total;
-              sd.source_tags.push("payroll_rows");
+            for (const sd of systemData) {
+              const enrichment = byEmployee.get(sd.employee_id);
+              if (enrichment) {
+                sd.total_hours = enrichment.hours;
+                sd.total_pay = enrichment.pay;
+                sd.total = enrichment.total;
+                sd.source_tags.push("schedule_rows");
+              }
             }
           }
+        } catch {
+          // Table may not exist, continue with empty system data
         }
       }
 
