@@ -298,46 +298,98 @@ export function usePayrollReconciliation() {
           // Table may not exist yet, continue
         }
 
-        // Fallback: enrich from movements table for tips and other components not in final_records
+        // Enrich from movements table for ALL components (ryde, tips, pay-per-day, reimbursements)
+        // This is critical for mixed-compensation employees like Oliver Martinez
         try {
-          const { data: movements } = await supabase
+          const movQuery = supabase
             .from("movements")
-            .select("employee_id, total_value, concept_id, note, concepts(name, category)")
+            .select("employee_id, total_value, concept_id, note, period_id, concepts(name, category)")
             .eq("company_id", selectedCompanyId)
             .neq("approval_status", "rejected");
 
+          // Filter by period if batch has dates
+          if (batch?.payroll_period_start) {
+            // Try to find matching pay_period
+            const { data: periods } = await supabase
+              .from("pay_periods")
+              .select("id")
+              .eq("company_id", selectedCompanyId)
+              .lte("start_date", batch.payroll_period_end || batch.payroll_period_start)
+              .gte("end_date", batch.payroll_period_start);
+
+            if (periods && periods.length > 0) {
+              const periodIds = periods.map(p => p.id);
+              movQuery.in("period_id", periodIds);
+            }
+          }
+
+          const { data: movements } = await movQuery;
+
           if (movements && (movements as any[]).length > 0) {
-            const tipsByEmployee = new Map<string, number>();
-            const reimbByEmployee = new Map<string, number>();
+            // Accumulate by employee and component type
+            const compByEmployee = new Map<string, { tips: number; reimb: number; ryde: number; payPerDay: number; weekend: number }>();
 
             for (const mv of movements as any[]) {
               if (!mv.employee_id) continue;
               const conceptName = (mv.concepts?.name || mv.note || "").toLowerCase();
-              const category = (mv.concepts?.category || "").toLowerCase();
               const val = Number(mv.total_value) || 0;
+              if (val === 0) continue;
+
+              const existing = compByEmployee.get(mv.employee_id) || { tips: 0, reimb: 0, ryde: 0, payPerDay: 0, weekend: 0 };
 
               if (conceptName.includes("tip") || conceptName.includes("propina")) {
-                tipsByEmployee.set(mv.employee_id, (tipsByEmployee.get(mv.employee_id) || 0) + val);
-              } else if (category === "reimbursement" || conceptName.includes("reimburs") || conceptName.includes("reintegr")) {
-                reimbByEmployee.set(mv.employee_id, (reimbByEmployee.get(mv.employee_id) || 0) + val);
+                existing.tips += val;
+              } else if (conceptName.includes("transporte") || conceptName.includes("ryde") || conceptName.includes("ride") || conceptName.includes("transport")) {
+                existing.ryde += val;
+              } else if (conceptName.includes("weekend") || conceptName.includes("fin de semana")) {
+                existing.weekend += val;
+              } else if (conceptName.includes("daily pay") || conceptName.includes("pago diario")) {
+                existing.payPerDay += val;
+              } else if (conceptName.includes("reimburs") || conceptName.includes("reintegr")) {
+                existing.reimb += val;
               }
+
+              compByEmployee.set(mv.employee_id, existing);
             }
 
             for (const sd of systemData) {
-              const tips = tipsByEmployee.get(sd.employee_id);
-              if (tips && tips > 0) {
-                sd.tips = tips;
-                if (!sd.source_tags.includes("movements")) sd.source_tags.push("movements");
-              }
-              const reimb = reimbByEmployee.get(sd.employee_id);
-              if (reimb && reimb > 0 && sd.reimbursements === 0) {
-                sd.reimbursements = reimb;
-                if (!sd.source_tags.includes("movements")) sd.source_tags.push("movements");
+              const comp = compByEmployee.get(sd.employee_id);
+              if (!comp) continue;
+
+              let changed = false;
+
+              // Enrich ryde from movements if final_records had 0
+              if (comp.ryde > 0 && sd.ryde === 0) {
+                sd.ryde = comp.ryde;
+                changed = true;
               }
 
-              // Recalculate total if we added tips/reimbursements
-              if ((tips && tips > 0) || (reimb && reimb > 0)) {
+              // Enrich tips
+              if (comp.tips > 0 && sd.tips === 0) {
+                sd.tips = comp.tips;
+                changed = true;
+              }
+
+              // Enrich reimbursements
+              if (comp.reimb > 0 && sd.reimbursements === 0) {
+                sd.reimbursements = comp.reimb;
+                changed = true;
+              }
+
+              // Enrich pay_per_day from weekend + daily movements if not already populated
+              const movementDailyTotal = comp.payPerDay + comp.weekend;
+              if (movementDailyTotal > 0 && sd.pay_per_day === 0) {
+                sd.pay_per_day = movementDailyTotal;
+                changed = true;
+              }
+
+              if (changed) {
+                if (!sd.source_tags.includes("movements")) sd.source_tags.push("movements");
+                // Recalculate total with all components
                 sd.total = sd.total_pay + sd.pay_per_day + sd.ryde + sd.tips + sd.reimbursements;
+              }
+            }
+          }
               }
             }
           }
