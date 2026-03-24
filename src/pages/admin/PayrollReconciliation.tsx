@@ -37,14 +37,7 @@ const fmtVar = (v: number | null | undefined) => {
 };
 const fmtPct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
-const TARGET_TRUTH_PERIOD = {
-  start_date: "2025-12-24",
-  end_date: "2025-12-30",
-} as const;
-
-const isTargetTruthPeriod = (p: { start_date: string; end_date: string }) => (
-  p.start_date === TARGET_TRUTH_PERIOD.start_date && p.end_date === TARGET_TRUTH_PERIOD.end_date
-);
+/* Removed hardcoded TARGET_TRUTH_PERIOD — all period references are now dynamic */
 
 const formatPeriodLabel = (startDate: string, endDate: string) => {
   const start = new Date(`${startDate}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
@@ -718,33 +711,20 @@ export default function PayrollReconciliationPage() {
     let mounted = true;
 
     const loadPeriods = async () => {
-      const [periodsRes, exactRes] = await Promise.all([
-        supabase.from("pay_periods").select("id, start_date, end_date, status")
-          .eq("company_id", selectedCompanyId)
-          .order("start_date", { ascending: false })
-          .limit(100),
-        supabase.from("pay_periods").select("id, start_date, end_date, status")
-          .eq("company_id", selectedCompanyId)
-          .eq("start_date", TARGET_TRUTH_PERIOD.start_date)
-          .eq("end_date", TARGET_TRUTH_PERIOD.end_date)
-          .limit(1),
-      ]);
+      const { data } = await supabase.from("pay_periods").select("id, start_date, end_date, status")
+        .eq("company_id", selectedCompanyId)
+        .order("start_date", { ascending: false })
+        .limit(100);
 
       if (!mounted) return;
 
-      const merged = new Map<string, { id: string; start_date: string; end_date: string; status: string }>();
-      for (const p of [...((exactRes.data as any[]) || []), ...((periodsRes.data as any[]) || [])]) {
-        merged.set(p.id, p);
-      }
-
-      const mergedList = Array.from(merged.values()).sort((a, b) => b.start_date.localeCompare(a.start_date));
+      const mergedList = (data || []) as { id: string; start_date: string; end_date: string; status: string }[];
       setPeriods(mergedList);
 
-      const exact = mergedList.find(isTargetTruthPeriod);
       const today = new Date().toISOString().slice(0, 10);
       const current = mergedList.find(p => p.start_date <= today && p.end_date >= today);
       const fallback = mergedList[0];
-      setSelectedPeriodId((exact || current || fallback)?.id || "");
+      setSelectedPeriodId((current || fallback)?.id || "");
     };
 
     loadPeriods();
@@ -754,11 +734,6 @@ export default function PayrollReconciliationPage() {
     };
   }, [selectedCompanyId]);
 
-  const exactTargetPeriod = useMemo(
-    () => periods.find(isTargetTruthPeriod) || null,
-    [periods],
-  );
-
   const selectedPeriod = useMemo(
     () => periods.find(p => p.id === selectedPeriodId) || null,
     [periods, selectedPeriodId],
@@ -766,17 +741,10 @@ export default function PayrollReconciliationPage() {
 
   const filteredPeriods = useMemo(() => {
     const normalized = periodSearch.trim().toLowerCase();
-    const prioritized = [...periods].sort((a, b) => {
-      const aExact = isTargetTruthPeriod(a);
-      const bExact = isTargetTruthPeriod(b);
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
-      return b.start_date.localeCompare(a.start_date);
-    });
+    const sorted = [...periods].sort((a, b) => b.start_date.localeCompare(a.start_date));
+    if (!normalized) return sorted;
 
-    if (!normalized) return prioritized;
-
-    return prioritized.filter((p) => {
+    return sorted.filter((p) => {
       const label = formatPeriodLabel(p.start_date, p.end_date).toLowerCase();
       const searchable = `${p.start_date} ${p.end_date} ${p.status} ${label}`.toLowerCase();
       return searchable.includes(normalized);
@@ -784,9 +752,10 @@ export default function PayrollReconciliationPage() {
   }, [periods, periodSearch]);
 
   useEffect(() => {
-    if (!showCreateDialog || !exactTargetPeriod) return;
-    setSelectedPeriodId(exactTargetPeriod.id);
-  }, [showCreateDialog, exactTargetPeriod]);
+    if (!showCreateDialog) return;
+    if (selectedPeriodId) return;
+    if (periods.length > 0) setSelectedPeriodId(periods[0].id);
+  }, [showCreateDialog, periods, selectedPeriodId]);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
@@ -842,12 +811,7 @@ export default function PayrollReconciliationPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleOpenExactValidationPeriod = () => {
-    if (!exactTargetPeriod) return;
-    setSelectedPeriodId(exactTargetPeriod.id);
-    setPeriodSearch(`${TARGET_TRUTH_PERIOD.start_date} ${TARGET_TRUTH_PERIOD.end_date}`);
-    setShowCreateDialog(true);
-  };
+  /* Removed hardcoded exact period shortcut */
 
   // ─── Batch list view ────────────────────────────────────────────
   if (!activeBatch) {
@@ -856,14 +820,9 @@ export default function PayrollReconciliationPage() {
         <div className="flex items-center justify-between">
           <PageHeader title="Payroll Reconciliation" subtitle="Motor de auditoría y reconciliación de nómina" />
           <div className="flex items-center gap-2">
-            {isDev && exactTargetPeriod && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl gap-1.5"
-                onClick={handleOpenExactValidationPeriod}
-              >
-                <Clock className="h-4 w-4" />Open exact period 2025-12-24 → 2025-12-30
+            {false && (
+              <Button variant="outline" size="sm" className="rounded-xl gap-1.5">
+                <Clock className="h-4 w-4" />Placeholder
               </Button>
             )}
             <Button onClick={() => setShowCreateDialog(true)} size="sm" className="rounded-xl gap-1.5">
@@ -936,23 +895,11 @@ export default function PayrollReconciliationPage() {
                     <Input
                       value={periodSearch}
                       onChange={(e) => setPeriodSearch(e.target.value)}
-                      placeholder="Buscar por inicio, cierre o etiqueta (ej: 2025-12-24, Dec 30)"
+                      placeholder="Buscar por fecha o etiqueta"
                       className="h-9 text-xs pl-8 rounded-lg"
                     />
                   </div>
 
-                  {isDev && exactTargetPeriod && (
-                    <Button
-                      type="button"
-                      variant={selectedPeriodId === exactTargetPeriod.id ? "default" : "outline"}
-                      size="sm"
-                      className="w-full justify-start text-xs rounded-lg"
-                      onClick={() => setSelectedPeriodId(exactTargetPeriod.id)}
-                    >
-                      <Clock className="h-3.5 w-3.5 mr-1.5" />
-                      Open exact period 2025-12-24 → 2025-12-30
-                    </Button>
-                  )}
 
                   <div className="rounded-lg border border-border/50 bg-background overflow-hidden">
                     <ScrollArea className="h-52">
@@ -962,7 +909,7 @@ export default function PayrollReconciliationPage() {
                         ) : (
                           filteredPeriods.map((p) => {
                             const isSelected = selectedPeriodId === p.id;
-                            const isExact = isTargetTruthPeriod(p);
+                            const isExact = false;
 
                             return (
                               <button

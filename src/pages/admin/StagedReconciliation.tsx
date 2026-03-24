@@ -174,28 +174,14 @@ export default function StagedReconciliation() {
   // ── Load pay periods for selector (including exact truth target) ──
   useEffect(() => {
     if (!selectedCompanyId) return;
-    Promise.all([
-      supabase.from("pay_periods")
-        .select("id, start_date, end_date, status, sequence_number, calculation_mode")
-        .eq("company_id", selectedCompanyId)
-        .order("start_date", { ascending: false })
-        .limit(200),
-      supabase.from("pay_periods")
-        .select("id, start_date, end_date, status, sequence_number, calculation_mode")
-        .eq("company_id", selectedCompanyId)
-        .eq("start_date", "2025-12-24")
-        .eq("end_date", "2025-12-30")
-        .limit(1),
-    ]).then(([listRes, exactRes]) => {
-      const list = (listRes.data || []) as PayPeriodOption[];
-      const exact = (exactRes.data || []) as PayPeriodOption[];
-      // Merge exact target if not already in list
-      const ids = new Set(list.map(p => p.id));
-      for (const e of exact) {
-        if (!ids.has(e.id)) list.push(e);
-      }
-      setPayPeriods(list);
-    });
+    supabase.from("pay_periods")
+      .select("id, start_date, end_date, status, sequence_number, calculation_mode")
+      .eq("company_id", selectedCompanyId)
+      .order("start_date", { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        setPayPeriods((data || []) as PayPeriodOption[]);
+      });
   }, [selectedCompanyId]);
 
   // ── Auto-select latest active (non-locked) period on load ──
@@ -313,12 +299,7 @@ export default function StagedReconciliation() {
   const batchCandidates = useMemo(() => {
     const q = batchSearch.trim().toLowerCase();
     return [...payPeriods]
-      .sort((a, b) => {
-        const aTruth = a.start_date === "2025-12-24" && a.end_date === "2025-12-30" ? 1 : 0;
-        const bTruth = b.start_date === "2025-12-24" && b.end_date === "2025-12-30" ? 1 : 0;
-        if (aTruth !== bTruth) return bTruth - aTruth;
-        return b.start_date.localeCompare(a.start_date);
-      })
+      .sort((a, b) => b.start_date.localeCompare(a.start_date))
       .filter(pp => {
         if (!q) return true;
         const label = periodLabel(pp).toLowerCase();

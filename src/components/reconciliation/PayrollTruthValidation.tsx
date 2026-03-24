@@ -272,25 +272,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     return () => { cancelled = true; };
   }, [storagePath]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* Legacy pre-staged truth loader removed — use manual upload or storage-based auto-load instead */
   const loadTruthFile = async () => {
-    setLoading(true);
-    setTruthLoaded(false);
-    setTruthData([]);
-    setTruthParse(null);
-    setTruthSource(null);
-    setPersisted(false);
-    try {
-      const res = await fetch(`/temp-import/payroll_truth_2025-12-24_to_2025-12-30.xlsx?v=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) throw new Error(`No se pudo cargar (${res.status})`);
-      const buffer = await res.arrayBuffer();
-      const parsed = parsePayrollTruthWorkbook(buffer);
-      applyParsedTruth(parsed, { type: "pre-staged", fileName: "payroll_truth_2025-12-24_to_2025-12-30.xlsx" });
-      await persistToStorage(buffer, "payroll_truth_2025-12-24_to_2025-12-30.xlsx");
-    } catch (err: any) {
-      console.error("Error loading truth file:", err);
-    } finally {
-      setLoading(false);
-    }
+    console.info("Use the manual upload button to load a truth file for the active period.");
   };
 
   const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
