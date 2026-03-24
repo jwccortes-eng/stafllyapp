@@ -198,6 +198,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [truthData, setTruthData] = useState<PayrollTruthRow[]>([]);
   const [truthParse, setTruthParse] = useState<PayrollTruthParseResult | null>(null);
   const [reconData, setReconData] = useState<ReconBreakdown[]>([]);
+  const [truthMatches, setTruthMatches] = useState<Array<{ employeeId: string | null; matchedBy: string; confidence: number; status: "MATCHED" | "UNMATCHED" | "AMBIGUOUS" }>>([]);
   const [loading, setLoading] = useState(false);
   const [truthLoaded, setTruthLoaded] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
