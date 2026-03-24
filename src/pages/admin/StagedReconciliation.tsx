@@ -187,8 +187,7 @@ export default function StagedReconciliation() {
 
   // ── Auto-select latest active (non-locked) period on load ──
   useEffect(() => {
-    if (activePeriod || periods.length === 0) return;
-    const active = periods.find(p => !["locked"].includes(p.status)) || periods[0];
+    const active = periods.find(p => !["locked"].includes(p.status)) ?? getDefaultPayPeriod(periods) ?? periods[0];
     if (active) {
       setActivePeriod(active);
       loadFinalRecords(active.id);
