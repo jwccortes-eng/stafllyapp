@@ -141,6 +141,7 @@ export default function CompensationReconciliation() {
         .select("id")
         .eq("company_id", selectedCompanyId!)
         .eq("period_id", activePeriodId!)
+        .neq("status", "superseded")
         .limit(1);
       const statusId = (ps as any)?.[0]?.id;
       if (!statusId) return [];
