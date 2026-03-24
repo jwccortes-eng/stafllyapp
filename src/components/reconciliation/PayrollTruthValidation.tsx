@@ -1423,7 +1423,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
                           {isExpanded && (
                             <TableRow key={`${c.employee}-detail`} className="bg-muted/20 hover:bg-muted/20">
-                              <TableCell colSpan={16} className="p-3">
+                              <TableCell colSpan={14} className="p-3">
                                 <div className="space-y-3 text-xs">
                                   <div className="rounded bg-background border border-border p-2">
                                     <p className="font-medium text-foreground mb-1">Explicación de varianza:</p>
