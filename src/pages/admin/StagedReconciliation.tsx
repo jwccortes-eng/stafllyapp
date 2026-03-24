@@ -597,16 +597,13 @@ export default function StagedReconciliation() {
               );
             })()}
 
-            {/* Exact truth period shortcut */}
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5 shrink-0 border-primary/40 text-primary hover:bg-primary/10"
-              onClick={handleOpenTruthPeriod}
-            >
-              <Target className="h-3.5 w-3.5" />
-              Periodo 112 · 2025-12-24 → 2025-12-30
-            </Button>
+            {/* Active period indicator (dynamic) */}
+            {activePeriod && (
+              <Badge variant="outline" className="gap-1.5 shrink-0 border-primary/40 text-primary bg-primary/5 text-xs font-medium px-3 py-1">
+                <Target className="h-3.5 w-3.5" />
+                {reconPeriodLabel(activePeriod)}
+              </Badge>
+            )}
 
             <Badge variant="outline" className="text-[11px]">
               Reconciliation Batch Mode
