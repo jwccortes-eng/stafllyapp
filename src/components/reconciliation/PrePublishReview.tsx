@@ -134,10 +134,6 @@ export default function PrePublishReview({
       setTruthGenerationState(ok ? "success" : "error");
     } catch {
       setTruthGenerationState("error");
-    } finally {
-      if (truthGenerationState === "loading") {
-        // keep explicit loading status visible until promise settles
-      }
     }
   };
 
