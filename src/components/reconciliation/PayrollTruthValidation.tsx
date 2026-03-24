@@ -392,19 +392,19 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           truth_total_pay: c.truth.totalPay || 0,
           truth_pay_per_day: c.truth.payperDay || 0,
           truth_ryde: c.truth.ryde || 0,
-          truth_tips: 0,
-          truth_reimbursements: 0,
+          truth_tips: c.truth.tips || 0,
+          truth_reimbursements: c.truth.reimbursements || 0,
           truth_total: c.truth.total,
           system_total_pay: r?.hourly_pay ?? null,
           system_pay_per_day: r ? (r.daily_pay + r.weekend_pay) : null,
           system_ryde: r?.ride_pay ?? null,
-          system_tips: 0,
+          system_tips: r?.manual_adj ?? 0,
           system_reimbursements: 0,
           system_total: r?.total_final ?? null,
           variance_total_pay: r ? round2((r.hourly_pay || 0) - (c.truth.totalPay || 0)) : null,
           variance_pay_per_day: r ? round2((r.daily_pay + r.weekend_pay) - (c.truth.payperDay || 0)) : null,
           variance_ryde: r ? round2((r.ride_pay || 0) - (c.truth.ryde || 0)) : null,
-          variance_tips: 0,
+          variance_tips: r ? round2((r.manual_adj || 0) - (c.truth.tips || 0)) : null,
           variance_reimbursements: 0,
           variance_total: r ? round2(r.total_final - c.truth.total) : null,
           row_status: c.status === "match" ? "EXACT_MATCH" : c.status === "close" ? "WITHIN_TOLERANCE" : c.status === "mismatch" ? "MISMATCH" : "UNMATCHED",
@@ -432,9 +432,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   // ── CSV Export ──
   const exportDetailedCSV = useCallback((compRows: ComparisonRow[]) => {
     const headers = [
-      "Empleado", "Estado", "Truth Base", "Truth PayperDay", "Truth Ryde", "Truth TOTAL",
-      "System Hourly", "System Daily", "System Weekend", "System Ride", "System Manual", "System Otros", "System TOTAL",
-      "Varianza", "Fuente Autoritativa", "Schedules", "Clocks", "Flags",
+      "Empleado", "Estado", "Truth Pay", "Truth PPD", "Truth Ryde", "Truth Tips", "Truth Reimb",
+      "Truth TravelH", "Truth Otros", "Truth Discount", "Truth TOTAL", "Truth Observaciones",
+      "Recon TOTAL", "Varianza", "Fuente Autoritativa",
     ];
     const csvRows = compRows.map(c => {
       const r = c.recon;
@@ -444,19 +444,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         c.truth.totalPay?.toFixed(2) || "0.00",
         c.truth.payperDay?.toFixed(2) || "0.00",
         c.truth.ryde?.toFixed(2) || "0.00",
+        c.truth.tips?.toFixed(2) || "0.00",
+        c.truth.reimbursements?.toFixed(2) || "0.00",
+        c.truth.travelHours?.toFixed(2) || "0.00",
+        c.truth.otros?.toFixed(2) || "0.00",
+        c.truth.discount?.toFixed(2) || "0.00",
         c.truth.total.toFixed(2),
-        r?.hourly_pay?.toFixed(2) || "",
-        r?.daily_pay?.toFixed(2) || "",
-        r?.weekend_pay?.toFixed(2) || "",
-        r?.ride_pay?.toFixed(2) || "",
-        r?.manual_adj?.toFixed(2) || "",
-        r?.other_pay?.toFixed(2) || "",
+        `"${(c.truth.observaciones || "").replace(/"/g, '""')}"`,
         r?.total_final?.toFixed(2) || "",
         c.totalVariance.toFixed(2),
         r?.authoritative_source || "",
-        r?.schedule_count?.toString() || "",
-        r?.clock_count?.toString() || "",
-        r?.flags?.join("; ") || "",
       ].join(",");
     });
     const csv = [headers.join(","), ...csvRows].join("\n");
@@ -1366,19 +1363,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                       <TableHead className="w-8"></TableHead>
                       <TableHead>Empleado</TableHead>
                       <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Truth TOTAL</TableHead>
-                      <TableHead className="text-right">Recon Hourly</TableHead>
-                      <TableHead className="text-right">Recon Daily</TableHead>
-                      <TableHead className="text-right">Recon Ride</TableHead>
-                      <TableHead className="text-right">Recon Wknd</TableHead>
-                      <TableHead className="text-right">Recon Adj</TableHead>
-                      <TableHead className="text-right text-destructive">Otros</TableHead>
+                      <TableHead className="text-right">T.Pay</TableHead>
+                      <TableHead className="text-right">T.PPD</TableHead>
+                      <TableHead className="text-right">T.Ryde</TableHead>
+                      <TableHead className="text-right">T.Tips</TableHead>
+                      <TableHead className="text-right">T.Reimb</TableHead>
+                      <TableHead className="text-right">T.Otros</TableHead>
+                      <TableHead className="text-right">T.Disc</TableHead>
+                      <TableHead className="text-right font-bold">T.TOTAL</TableHead>
                       <TableHead className="text-right">Recon TOTAL</TableHead>
                       <TableHead className="text-right">Varianza</TableHead>
-                      <TableHead className="text-center">Sched</TableHead>
-                      <TableHead className="text-center">Clocks</TableHead>
-                      <TableHead className="text-center">Dups</TableHead>
-                      <TableHead className="text-center">Comp</TableHead>
+                      <TableHead className="text-center">Obs</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1403,13 +1398,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             </TableCell>
                             <TableCell className="font-medium text-sm">{c.employee}</TableCell>
                             <TableCell>{statusBadge(c.status)}</TableCell>
-                            <TableCell className="text-right font-mono text-sm font-medium">{fmt(c.truth.total)}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r ? fmt(r.hourly_pay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r && r.daily_pay > 0 ? fmt(r.daily_pay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r && r.ride_pay > 0 ? fmt(r.ride_pay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r && r.weekend_pay > 0 ? fmt(r.weekend_pay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r && r.manual_adj !== 0 ? fmt(r.manual_adj) : "—"}</TableCell>
-                            <TableCell className={`text-right font-mono text-sm ${r && r.other_pay > 0 ? "text-destructive font-medium" : ""}`}>{r && r.other_pay > 0 ? fmt(r.other_pay) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.totalPay ? fmt(c.truth.totalPay) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.payperDay ? fmt(c.truth.payperDay) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.ryde ? fmt(c.truth.ryde) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.tips ? fmt(c.truth.tips) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.reimbursements ? fmt(c.truth.reimbursements) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.otros ? fmt(c.truth.otros) : "—"}</TableCell>
+                            <TableCell className={`text-right font-mono text-xs ${c.truth.discount < 0 ? "text-destructive font-medium" : ""}`}>{c.truth.discount ? fmt(c.truth.discount) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-sm font-bold">{fmt(c.truth.total)}</TableCell>
                             <TableCell className="text-right font-mono text-sm font-medium">{r ? fmt(r.total_final) : "—"}</TableCell>
                             <TableCell className={`text-right font-mono text-sm font-medium ${
                               Math.abs(c.totalVariance) > 50 ? "text-destructive" :
@@ -1417,19 +1413,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             }`}>
                               {r ? fmtVar(c.totalVariance) : "N/A"}
                             </TableCell>
-                            <TableCell className="text-center font-mono text-xs text-muted-foreground">{r?.schedule_count ?? "—"}</TableCell>
-                            <TableCell className="text-center font-mono text-xs text-muted-foreground">{r?.clock_count ?? "—"}</TableCell>
-                            <TableCell className="text-center">
-                              {dupsCount > 0 && <Badge variant="destructive" className="text-xs">{dupsCount}</Badge>}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {c.compositionError && <Badge variant="destructive" className="text-xs">⚠</Badge>}
+                            <TableCell className="text-center text-xs" title={c.truth.observaciones || ""}>
+                              {c.truth.observaciones ? "📝" : ""}
                             </TableCell>
                           </TableRow>
 
                           {isExpanded && (
                             <TableRow key={`${c.employee}-detail`} className="bg-muted/20 hover:bg-muted/20">
-                              <TableCell colSpan={16} className="p-3">
+                              <TableCell colSpan={14} className="p-3">
                                 <div className="space-y-3 text-xs">
                                   <div className="rounded bg-background border border-border p-2">
                                     <p className="font-medium text-foreground mb-1">Explicación de varianza:</p>
@@ -1440,13 +1431,19 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                   </div>
 
                                   <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                      <p className="font-medium text-foreground mb-1">Truth breakdown (TOTAL autoritativo):</p>
+                                     <div>
+                                      <p className="font-medium text-foreground mb-1">Truth breakdown (componentes del archivo pagado):</p>
                                       <div className="space-y-0.5 text-muted-foreground font-mono">
                                         <p>Total Pay: {fmt(c.truth.totalPay)}</p>
                                         <p>PayperDay: {fmt(c.truth.payperDay)}</p>
                                         <p>Ryde: {fmt(c.truth.ryde)}</p>
+                                        {c.truth.tips !== 0 && <p>Tips: {fmt(c.truth.tips)}</p>}
+                                        {c.truth.reimbursements !== 0 && <p>Reimbursements: {fmt(c.truth.reimbursements)}</p>}
+                                        {c.truth.travelHours !== 0 && <p>Travel Hours: {fmt(c.truth.travelHours)}</p>}
+                                        {c.truth.otros !== 0 && <p>Otros: {fmt(c.truth.otros)}</p>}
+                                        {c.truth.discount !== 0 && <p className="text-destructive">Discount: {fmt(c.truth.discount)}</p>}
                                         <p className="font-medium text-foreground">TOTAL: {fmt(c.truth.total)}</p>
+                                        {c.truth.observaciones && <p className="text-xs italic mt-1">📝 {c.truth.observaciones}</p>}
                                       </div>
                                     </div>
                                     {r && (

@@ -8,8 +8,14 @@ export interface PayrollTruthRow {
   hourlyRate: number | null;
   payperDay: number;
   ryde: number;
+  tips: number;
+  reimbursements: number;
+  travelHours: number;
+  otros: number;
+  discount: number;
   total: number;
   shiftHours: number;
+  observaciones: string;
 }
 
 interface ColumnDetection {
@@ -43,9 +49,15 @@ export interface PayrollTruthParseResult {
     totalPay: ColumnDetection;
     payperDay: ColumnDetection;
     ryde: ColumnDetection;
+    tips: ColumnDetection;
+    reimbursements: ColumnDetection;
+    travelHours: ColumnDetection;
+    otros: ColumnDetection;
+    discount: ColumnDetection;
     total: ColumnDetection;
     hourlyRate: ColumnDetection;
     shiftHours: ColumnDetection;
+    observaciones: ColumnDetection;
   };
   rows: PayrollTruthRow[];
   debugRows: PayrollTruthDebugRow[];
@@ -174,6 +186,12 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
   const totalIndex = findTotalColumnIndex(headers);
   const hourlyRateIndex = findColumnIndex(headers, ["Hourly rate (USD)", "Hourly rate", "Hourly rate USD"]);
   const shiftHoursIndex = findColumnIndex(headers, ["Shift hours", "Total work hours"]);
+  const tipsIndex = findColumnIndex(headers, ["Tips", "Propinas", "Tip"]);
+  const reimbursementsIndex = findColumnIndex(headers, ["Reimbursements", "Reembolsos", "Reimbursement"]);
+  const travelHoursIndex = findColumnIndex(headers, ["Travel Hours", "Travel hours", "Horas de viaje"]);
+  const otrosIndex = findColumnIndex(headers, ["Otros", "Other", "Others", "Otros pagos"]);
+  const discountIndex = findColumnIndex(headers, ["Discount", "Descuento", "Descuentos"]);
+  const observacionesIndex = findColumnIndex(headers, ["Observaciones", "Observations", "Notes", "Notas"]);
 
   const byEmployee = new Map<string, PayrollTruthRow>();
   const debugRows: PayrollTruthDebugRow[] = [];
@@ -194,6 +212,12 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
     const rawTotal = totalIndex >= 0 ? row[totalIndex] : null;
     const rawHourlyRate = hourlyRateIndex >= 0 ? row[hourlyRateIndex] : null;
     const rawShiftHours = shiftHoursIndex >= 0 ? row[shiftHoursIndex] : null;
+    const rawTips = tipsIndex >= 0 ? row[tipsIndex] : null;
+    const rawReimbursements = reimbursementsIndex >= 0 ? row[reimbursementsIndex] : null;
+    const rawTravelHours = travelHoursIndex >= 0 ? row[travelHoursIndex] : null;
+    const rawOtros = otrosIndex >= 0 ? row[otrosIndex] : null;
+    const rawDiscount = discountIndex >= 0 ? row[discountIndex] : null;
+    const rawObservaciones = observacionesIndex >= 0 ? String(row[observacionesIndex] ?? "").trim() : "";
 
     const parsedTotalPay = parseLocalizedNumber(rawTotalPay);
     const parsedPayperDay = parseLocalizedNumber(rawPayperDay);
@@ -201,8 +225,13 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
     const parsedTotal = parseLocalizedNumber(rawTotal);
     const parsedHourlyRate = rawHourlyRate == null || rawHourlyRate === "" ? null : parseLocalizedNumber(rawHourlyRate);
     const parsedShiftHours = parseLocalizedNumber(rawShiftHours);
+    const parsedTips = parseLocalizedNumber(rawTips);
+    const parsedReimbursements = parseLocalizedNumber(rawReimbursements);
+    const parsedTravelHours = parseLocalizedNumber(rawTravelHours);
+    const parsedOtros = parseLocalizedNumber(rawOtros);
+    const parsedDiscount = parseLocalizedNumber(rawDiscount);
 
-    const computedTotal = totalIndex >= 0 ? parsedTotal : parsedTotalPay + parsedPayperDay + parsedRyde;
+    const computedTotal = totalIndex >= 0 ? parsedTotal : parsedTotalPay + parsedPayperDay + parsedRyde + parsedTips + parsedReimbursements + parsedTravelHours + parsedOtros + parsedDiscount;
 
     if (debugRows.length < 5) {
       debugRows.push({
@@ -228,10 +257,18 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
       existing.totalPay += parsedTotalPay;
       existing.payperDay += parsedPayperDay;
       existing.ryde += parsedRyde;
+      existing.tips += parsedTips;
+      existing.reimbursements += parsedReimbursements;
+      existing.travelHours += parsedTravelHours;
+      existing.otros += parsedOtros;
+      existing.discount += parsedDiscount;
       existing.total = Math.max(existing.total, computedTotal);
       existing.shiftHours += parsedShiftHours;
       if (parsedHourlyRate != null && existing.hourlyRate == null) {
         existing.hourlyRate = parsedHourlyRate;
+      }
+      if (rawObservaciones && !existing.observaciones.includes(rawObservaciones)) {
+        existing.observaciones = existing.observaciones ? `${existing.observaciones}; ${rawObservaciones}` : rawObservaciones;
       }
     } else {
       byEmployee.set(key, {
@@ -242,8 +279,14 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
         hourlyRate: parsedHourlyRate,
         payperDay: parsedPayperDay,
         ryde: parsedRyde,
+        tips: parsedTips,
+        reimbursements: parsedReimbursements,
+        travelHours: parsedTravelHours,
+        otros: parsedOtros,
+        discount: parsedDiscount,
         total: computedTotal,
         shiftHours: parsedShiftHours,
+        observaciones: rawObservaciones,
       });
     }
   }
@@ -259,9 +302,15 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
       totalPay: getColumnDetection(headers, totalPayIndex),
       payperDay: getColumnDetection(headers, payperDayIndex),
       ryde: getColumnDetection(headers, rydeIndex),
+      tips: getColumnDetection(headers, tipsIndex),
+      reimbursements: getColumnDetection(headers, reimbursementsIndex),
+      travelHours: getColumnDetection(headers, travelHoursIndex),
+      otros: getColumnDetection(headers, otrosIndex),
+      discount: getColumnDetection(headers, discountIndex),
       total: getColumnDetection(headers, totalIndex),
       hourlyRate: getColumnDetection(headers, hourlyRateIndex),
       shiftHours: getColumnDetection(headers, shiftHoursIndex),
+      observaciones: getColumnDetection(headers, observacionesIndex),
     },
     rows: Array.from(byEmployee.values()),
     debugRows,
