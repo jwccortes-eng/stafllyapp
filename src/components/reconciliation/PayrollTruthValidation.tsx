@@ -149,6 +149,8 @@ function addCategoryAmount(row: ReconBreakdown, category: LedgerCategory, value:
   else if (category === "ride") row.ride_pay += value;
   else if (category === "weekend") row.weekend_pay += value;
   else if (category === "manual") row.manual_adj += value;
+  else if (category === "deduction") row.manual_adj += value; // negative value preserved
+  else if (category === "reimbursement") row.manual_adj += value;
   else row.other_pay += value;
 }
 
