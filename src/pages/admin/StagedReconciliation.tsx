@@ -49,7 +49,7 @@ import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 import { formatPeriodLabel } from "@/lib/format-helpers";
 
 /* ── Status → workflow step mapping ── */
-const WORKFLOW_STEPS = [
+const WORKFLOW_STEPS_MATCHING = [
   { key: "importing", label: "Importar", tab: "import", icon: Upload },
   { key: "matching", label: "Match", tab: "review", icon: GitCompareArrows },
   { key: "reviewing", label: "Revisar", tab: "employees", icon: Users },
@@ -58,7 +58,16 @@ const WORKFLOW_STEPS = [
   { key: "locked", label: "Cerrado", tab: "publish", icon: Lock },
 ] as const;
 
+const WORKFLOW_STEPS_TRUTH = [
+  { key: "importing", label: "Truth File", tab: "payroll-truth", icon: DollarSign },
+  { key: "reviewing", label: "Reconciliar", tab: "payroll-truth", icon: ClipboardCheck },
+  { key: "approved", label: "Aprobar", tab: "approve", icon: CheckCircle2 },
+  { key: "posted", label: "Publicar", tab: "publish", icon: Shield },
+  { key: "locked", label: "Cerrado", tab: "publish", icon: Lock },
+] as const;
+
 const STATUS_ORDER = ["importing", "normalizing", "matching", "reviewing", "approved", "posted", "locked"];
+const STATUS_ORDER_TRUTH = ["importing", "reviewing", "approved", "posted", "locked"];
 
 /* Tab definitions with status-gating */
 interface TabDef {
