@@ -49,7 +49,7 @@ import type { PeriodStatus } from "@/hooks/useReconciliationPeriod";
 import { formatPeriodLabel } from "@/lib/format-helpers";
 
 /* ── Status → workflow step mapping ── */
-const WORKFLOW_STEPS = [
+const WORKFLOW_STEPS_MATCHING = [
   { key: "importing", label: "Importar", tab: "import", icon: Upload },
   { key: "matching", label: "Match", tab: "review", icon: GitCompareArrows },
   { key: "reviewing", label: "Revisar", tab: "employees", icon: Users },
@@ -58,7 +58,16 @@ const WORKFLOW_STEPS = [
   { key: "locked", label: "Cerrado", tab: "publish", icon: Lock },
 ] as const;
 
+const WORKFLOW_STEPS_TRUTH = [
+  { key: "importing", label: "Truth File", tab: "payroll-truth", icon: DollarSign },
+  { key: "reviewing", label: "Reconciliar", tab: "payroll-truth", icon: ClipboardCheck },
+  { key: "approved", label: "Aprobar", tab: "approve", icon: CheckCircle2 },
+  { key: "posted", label: "Publicar", tab: "publish", icon: Shield },
+  { key: "locked", label: "Cerrado", tab: "publish", icon: Lock },
+] as const;
+
 const STATUS_ORDER = ["importing", "normalizing", "matching", "reviewing", "approved", "posted", "locked"];
+const STATUS_ORDER_TRUTH = ["importing", "reviewing", "approved", "posted", "locked"];
 
 /* Tab definitions with status-gating */
 interface TabDef {
@@ -410,12 +419,23 @@ export default function StagedReconciliation() {
   const variances = useMemo(() => analyzeVariances(finalRecords, employeeMap), [finalRecords, employeeMap, analyzeVariances]);
 
   const isLocked = activePeriod && ["posted", "locked"].includes(activePeriod.status);
-  const currentStepIdx = activePeriod ? STATUS_ORDER.indexOf(activePeriod.status) : -1;
+  const isTruthBased = activePeriod && (activePeriod.closure_method === "truth_validation" || activePeriod.total_clocks === 0);
+  const workflowSteps = isTruthBased ? WORKFLOW_STEPS_TRUTH : WORKFLOW_STEPS_MATCHING;
+  const statusOrder = isTruthBased ? STATUS_ORDER_TRUTH : STATUS_ORDER;
+  const currentStepIdx = activePeriod ? statusOrder.indexOf(activePeriod.status) : -1;
 
   // ── Next action guidance ──
   const nextAction = useMemo(() => {
     if (!activePeriod) return null;
     const s = activePeriod.status;
+    if (isTruthBased) {
+      if (s === "importing" || s === "normalizing") return { label: "Cargar Truth File", tab: "payroll-truth", icon: DollarSign };
+      if (s === "matching" || s === "reviewing") return { label: "Reconciliar vía Truth", tab: "payroll-truth", icon: ClipboardCheck };
+      if (s === "approved") return { label: "Publicar periodo", tab: "publish", icon: Shield };
+      if (s === "posted") return { label: "Cerrar periodo", tab: "publish", icon: Lock };
+      if (s === "locked") return { label: "Periodo cerrado ✓", tab: "publish", icon: CheckCircle2 };
+      return { label: "Cargar Truth File", tab: "payroll-truth", icon: DollarSign };
+    }
     if (s === "importing" || s === "normalizing") return { label: "Importar archivos", tab: "import", icon: Upload };
     if (s === "matching") return { label: "Revisar matches", tab: "review", icon: GitCompareArrows };
     if (s === "reviewing") return { label: "Generar y revisar empleados", tab: "employees", icon: Users };
@@ -423,7 +443,7 @@ export default function StagedReconciliation() {
     if (s === "posted") return { label: "Cerrar periodo", tab: "publish", icon: Lock };
     if (s === "locked") return { label: "Periodo cerrado ✓", tab: "publish", icon: CheckCircle2 };
     return null;
-  }, [activePeriod]);
+  }, [activePeriod, isTruthBased]);
 
   const NoPeriodPlaceholder = ({ icon: Icon, text }: { icon: any; text?: string }) => (
     <div className="text-center py-12 text-muted-foreground">
@@ -619,37 +639,54 @@ export default function StagedReconciliation() {
 
       {/* ── Active Period Workflow Bar ── */}
       {activePeriod && (
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-muted/40 border">
-          <div className="flex items-center gap-1 flex-1 min-w-0">
-            {WORKFLOW_STEPS.map((step, i) => {
-              const stepIdx = STATUS_ORDER.indexOf(step.key);
-              const done = currentStepIdx >= stepIdx;
-              const current = activePeriod.status === step.key;
-              const Icon = step.icon;
-              return (
-                <div key={step.key} className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => { const t = TABS.find(tb => tb.value === step.tab); if (t && isTabEnabled(t, activePeriod.status)) setTab(step.tab); }}
-                    className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors
-                      ${current ? "bg-primary text-primary-foreground" : done ? "bg-primary/15 text-primary" : "text-muted-foreground"}`}
-                  >
-                    <Icon className="h-3 w-3" />
-                    <span className="hidden md:inline">{step.label}</span>
-                  </button>
-                  {i < WORKFLOW_STEPS.length - 1 && <ChevronRight className="h-3 w-3 text-muted-foreground/50" />}
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className="text-[11px] font-mono">{reconPeriodLabel(activePeriod)}</Badge>
-            {activePeriod.reopen_count > 0 && <Badge variant="warning" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
-          </div>
-          {nextAction && activePeriod.status !== "locked" && (
-            <Button size="sm" variant="default" className="gap-1 text-xs shrink-0" onClick={() => setTab(nextAction.tab)}>
-              <Zap className="h-3 w-3" /> {nextAction.label}
-            </Button>
+        <div className="flex flex-col gap-2">
+          {/* Truth-based closure banner */}
+          {isTruthBased && (
+            <Alert className="py-2 border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+              <FileText className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-xs">
+                <strong>Truth-based closure</strong> — Clock data unavailable for this period; closure based on paid payroll truth file.
+                El flujo es: <span className="font-medium">Cargar Truth → Reconciliar → Aprobar → Publicar</span>
+              </AlertDescription>
+            </Alert>
           )}
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-muted/40 border">
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              {workflowSteps.map((step, i) => {
+                const stepIdx = statusOrder.indexOf(step.key);
+                const done = currentStepIdx >= stepIdx;
+                const current = activePeriod.status === step.key;
+                const Icon = step.icon;
+                return (
+                  <div key={step.key} className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => { const t = TABS.find(tb => tb.value === step.tab); if (t && isTabEnabled(t, activePeriod.status)) setTab(step.tab); }}
+                      className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors
+                        ${current ? "bg-primary text-primary-foreground" : done ? "bg-primary/15 text-primary" : "text-muted-foreground"}`}
+                    >
+                      <Icon className="h-3 w-3" />
+                      <span className="hidden md:inline">{step.label}</span>
+                    </button>
+                    {i < workflowSteps.length - 1 && <ChevronRight className="h-3 w-3 text-muted-foreground/50" />}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isTruthBased && (
+                <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400">
+                  📋 Truth-based closure
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-[11px] font-mono">{reconPeriodLabel(activePeriod)}</Badge>
+              {activePeriod.reopen_count > 0 && <Badge variant="warning" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
+            </div>
+            {nextAction && activePeriod.status !== "locked" && (
+              <Button size="sm" variant="default" className="gap-1 text-xs shrink-0" onClick={() => setTab(nextAction.tab)}>
+                <Zap className="h-3 w-3" /> {nextAction.label}
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -766,19 +803,40 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="review">
-          <ReconciliationReviewPanel
-            companyId={selectedCompanyId}
-            onRefresh={refresh}
-            key={refreshKey}
-            periodScope={activePeriod ? {
-              schedule_batch_id: activePeriod.schedule_batch_id,
-              clock_batch_id: activePeriod.clock_batch_id,
-              payroll_batch_id: activePeriod.payroll_batch_id,
-              period_start: activePeriod.period_start,
-              period_end: activePeriod.period_end,
-              period_label: activePeriod.period_label,
-            } : null}
-          />
+          {isTruthBased ? (
+            <div className="space-y-4">
+              <Alert className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+                <FileText className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-sm">
+                  <strong>Matching no disponible para este periodo.</strong><br />
+                  Clock data unavailable for {activePeriod?.period_start} → {activePeriod?.period_end}.
+                  Usa <strong>Payroll Truth</strong> como método de cierre.
+                </AlertDescription>
+              </Alert>
+              <div className="flex gap-2">
+                <Button size="sm" variant="default" className="gap-1.5" onClick={() => setTab("payroll-truth")}>
+                  <DollarSign className="h-4 w-4" /> Ir a Payroll Truth
+                </Button>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTab("approve")}>
+                  <CheckCircle2 className="h-4 w-4" /> Ir a Aprobar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <ReconciliationReviewPanel
+              companyId={selectedCompanyId}
+              onRefresh={refresh}
+              key={refreshKey}
+              periodScope={activePeriod ? {
+                schedule_batch_id: activePeriod.schedule_batch_id,
+                clock_batch_id: activePeriod.clock_batch_id,
+                payroll_batch_id: activePeriod.payroll_batch_id,
+                period_start: activePeriod.period_start,
+                period_end: activePeriod.period_end,
+                period_label: activePeriod.period_label,
+              } : null}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="exceptions">
@@ -829,7 +887,7 @@ export default function StagedReconciliation() {
 
         <TabsContent value="approve">
           {activePeriod ? (
-            <ApproveTab period={activePeriod} onUpdateStatus={updatePeriodStatus} onApprove={handleApprovePeriod} onGoToPublish={() => setTab("publish")} />
+            <ApproveTab period={activePeriod} onUpdateStatus={updatePeriodStatus} onApprove={handleApprovePeriod} onGoToPublish={() => setTab("publish")} isTruthBased={!!isTruthBased} />
           ) : (
             <NoPeriodPlaceholder icon={CheckCircle2} />
           )}
@@ -1091,28 +1149,53 @@ function ActivePeriodBar({ period, isLocked }: { period: PeriodStatus; isLocked:
 }
 
 /* ── Extracted: Approve Tab ── */
-function ApproveTab({ period, onUpdateStatus, onApprove, onGoToPublish }: {
+function ApproveTab({ period, onUpdateStatus, onApprove, onGoToPublish, isTruthBased }: {
   period: PeriodStatus;
   onUpdateStatus: (id: string, status: string) => Promise<void>;
   onApprove: () => Promise<void>;
   onGoToPublish: () => void;
+  isTruthBased?: boolean;
 }) {
-  const steps = [
+  const truthSteps = [
+    { step: "reviewing", label: "Truth Reconciliado", icon: ClipboardCheck, action: () => onUpdateStatus(period.id, "reviewing") },
+    { step: "approved", label: "Aprobado", icon: CheckCircle2, action: onApprove },
+    { step: "posted", label: "Publicado", icon: FileText, action: onGoToPublish },
+    { step: "locked", label: "Cerrado", icon: Lock, action: onGoToPublish },
+  ];
+
+  const matchingSteps = [
     { step: "reviewing", label: "En Revisión", icon: Eye, action: () => onUpdateStatus(period.id, "reviewing") },
     { step: "approved", label: "Aprobado", icon: CheckCircle2, action: onApprove },
     { step: "posted", label: "Publicado", icon: FileText, action: onGoToPublish },
     { step: "locked", label: "Cerrado", icon: Lock, action: onGoToPublish },
   ];
 
-  const stepsOrder = ["importing", "normalizing", "matching", "reviewing", "approved", "posted", "locked"];
+  const steps = isTruthBased ? truthSteps : matchingSteps;
+  const stepsOrder = isTruthBased
+    ? ["importing", "reviewing", "approved", "posted", "locked"]
+    : ["importing", "normalizing", "matching", "reviewing", "approved", "posted", "locked"];
   const currentIdx = stepsOrder.indexOf(period.status);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <span className="text-sm">Periodo:</span>
         <Badge variant="secondary" className="text-xs">{period.period_label} — {period.status}</Badge>
+        {isTruthBased && (
+          <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400">
+            📋 Truth-based closure
+          </Badge>
+        )}
       </div>
+      {isTruthBased && (
+        <Alert className="py-2 border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+          <FileText className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-xs">
+            Clock data unavailable for this period. Approval is based on <strong>Payroll Truth validation</strong> results.
+            No se requiere matching schedule↔clock para aprobar.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid grid-cols-4 gap-4">
         {steps.map(({ step, label, icon: Icon, action }) => {
           const stepIdx = stepsOrder.indexOf(step);
@@ -1134,16 +1217,16 @@ function ApproveTab({ period, onUpdateStatus, onApprove, onGoToPublish }: {
           <div className="text-xs text-muted-foreground">Empleados</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold">{period.total_matches}</div>
-          <div className="text-xs text-muted-foreground">Matches</div>
+          <div className="text-2xl font-bold">{isTruthBased ? "N/A" : period.total_matches}</div>
+          <div className="text-xs text-muted-foreground">{isTruthBased ? "Matches (N/A)" : "Matches"}</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold">{period.total_exceptions - period.resolved_exceptions}</div>
           <div className="text-xs text-muted-foreground">Excepciones</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold">{period.approved_matches}/{period.total_matches}</div>
-          <div className="text-xs text-muted-foreground">Aprobados</div>
+          <div className="text-2xl font-bold">{isTruthBased ? "Truth" : `${period.approved_matches}/${period.total_matches}`}</div>
+          <div className="text-xs text-muted-foreground">{isTruthBased ? "Método de cierre" : "Aprobados"}</div>
         </div>
       </div>
     </div>
