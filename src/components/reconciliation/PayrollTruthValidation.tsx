@@ -13,6 +13,7 @@ import {
   type PayrollTruthParseResult,
   type PayrollTruthRow,
 } from "@/lib/payroll-truth-parser";
+import { matchEmployees } from "@/lib/payroll-reconciliation-engine";
 
 type LedgerCategory = "hourly" | "daily" | "ride" | "weekend" | "manual" | "deduction" | "reimbursement" | "other";
 type CompositionRole = "authoritative" | "informational_only" | "inferred" | "excluded_from_total";
@@ -79,6 +80,9 @@ interface ComparisonRow {
   employee: string;
   truth: PayrollTruthRow;
   recon: ReconBreakdown | null;
+  matchEmployeeId?: string | null;
+  matchedBy?: string;
+  matchConfidence?: number;
   totalVariance: number;
   status: "match" | "close" | "mismatch" | "missing";
   compositionError: boolean;
@@ -194,6 +198,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [truthData, setTruthData] = useState<PayrollTruthRow[]>([]);
   const [truthParse, setTruthParse] = useState<PayrollTruthParseResult | null>(null);
   const [reconData, setReconData] = useState<ReconBreakdown[]>([]);
+  const [truthMatches, setTruthMatches] = useState<Array<{ employeeId: string | null; matchedBy: string; confidence: number; status: "MATCHED" | "UNMATCHED" | "AMBIGUOUS" }>>([]);
   const [loading, setLoading] = useState(false);
   const [truthLoaded, setTruthLoaded] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -311,6 +316,80 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     }
   };
 
+  // ── Build identity matches for truth rows (independent of system totals availability) ──
+  useEffect(() => {
+    if (!companyId || truthData.length === 0) {
+      setTruthMatches([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const [employeesRes, aliasesRes] = await Promise.all([
+        supabase
+          .from("employees")
+          .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, employer_identification, verification_ssn_ein")
+          .eq("company_id", companyId)
+          .eq("is_active", true),
+        supabase
+          .from("employee_aliases")
+          .select("alias_name_normalized, employee_id")
+          .eq("company_id", companyId),
+      ]);
+
+      if (cancelled) return;
+
+      const candidates = (employeesRes.data || []).map((e: any) => ({
+        id: e.id,
+        first_name: e.first_name || "",
+        last_name: e.last_name || "",
+        phone: e.phone_number || undefined,
+        email: e.email || undefined,
+        external_id: e.connecteam_employee_id || undefined,
+        employer_identification: e.employer_identification || undefined,
+        verification_ssn_ein: e.verification_ssn_ein || undefined,
+        full_name_normalized: `${e.first_name || ""} ${e.last_name || ""}`.toLowerCase(),
+      }));
+
+      const aliases = (aliasesRes.data || []).map((a: any) => ({
+        alias_normalized: a.alias_name_normalized,
+        employee_id: a.employee_id,
+        confidence: 85,
+      }));
+
+      const truthRows = truthData.map((t) => ({
+        employer_identification: (t as any).employerIdentification || "",
+        verification_ssn_ein: (t as any).verificationSsnEin || "",
+        first_name: t.firstName || "",
+        last_name: t.lastName || "",
+        total_hours: null,
+        total_pay: t.totalPay || 0,
+        pay_per_day: t.payperDay || 0,
+        ryde: t.ryde || 0,
+        tips: t.tips || 0,
+        reimbursements: t.reimbursements || 0,
+        total: t.total || 0,
+        observaciones: t.observaciones || "",
+        raw: {},
+      }));
+
+      const matches = matchEmployees(truthRows as any, candidates as any, aliases as any);
+      if (cancelled) return;
+
+      setTruthMatches(matches.map((m) => ({
+        employeeId: m.system_employee_id,
+        matchedBy: m.matched_by,
+        confidence: m.match_confidence,
+        status: m.match_status,
+      })));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, truthData]);
+
   // ── Persist reconciliation results to DB ──
   const persistResultsToDb = useCallback(async (compRows: ComparisonRow[], statsData: { matched: number; close: number; mismatch: number; missing: number; totalTruth: number; totalRecon: number; variance: number }) => {
     if (!companyId || !user?.id || compRows.length === 0) return;
@@ -326,17 +405,21 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       const periodInfo = ps as any;
       if (!periodInfo) { setPersistingToDb(false); return; }
 
+      const identityMatchedCount = compRows.filter(r => !!r.matchEmployeeId).length;
+      const identityUnmatchedCount = compRows.length - identityMatchedCount;
+
       // Upsert batch
       const batchPayload = {
         company_id: companyId,
         payroll_period_start: periodInfo.period_start,
         payroll_period_end: periodInfo.period_end,
-        status: statsData.mismatch === 0 && statsData.missing === 0 ? "RECONCILED" : "NEEDS_REVIEW",
+        status: identityUnmatchedCount === 0 ? "RECONCILED" : "NEEDS_REVIEW",
         truth_source_file_name: truthSource?.fileName || null,
         truth_source_uploaded_at: new Date().toISOString(),
-        employees_truth_count: statsData.matched + statsData.close + statsData.mismatch + statsData.missing,
+        employees_truth_count: compRows.length,
         employees_system_count: reconData.length,
-        matched_count: statsData.matched + statsData.close,
+        matched_count: identityMatchedCount,
+        unmatched_truth_count: identityUnmatchedCount,
         exact_match_count: statsData.matched,
         mismatch_count: statsData.mismatch,
         critical_mismatch_count: statsData.mismatch,
@@ -369,20 +452,30 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       await supabase.from("reconciliation_employee_rows").delete().eq("batch_id", batchId);
 
       // Insert employee rows in batches
+      const reconByEmployeeId = new Map(reconData.map((r) => [r.employee_id, r]));
       const rows = compRows.map(c => {
         const nameParts = c.employee.trim().split(/\s+/);
         const firstName = nameParts[0] || "";
         const lastName = nameParts.slice(1).join(" ") || "";
-        const r = c.recon;
+        const matchedEmployeeId = c.matchEmployeeId || c.recon?.employee_id || null;
+        const r = matchedEmployeeId ? (reconByEmployeeId.get(matchedEmployeeId) || c.recon) : c.recon;
+        const rowStatus = !matchedEmployeeId
+          ? "UNMATCHED"
+          : c.status === "match"
+            ? "EXACT_MATCH"
+            : c.status === "close"
+              ? "WITHIN_TOLERANCE"
+              : "MISMATCH";
+
         return {
           batch_id: batchId,
           first_name: firstName,
           last_name: lastName,
           full_name_normalized: c.employee.toLowerCase(),
-          matched_system_employee_id: r?.employee_id || null,
-          match_status: c.status === "missing" ? "UNMATCHED" : "MATCHED",
-          match_confidence: c.status === "match" ? 100 : c.status === "close" ? 80 : c.status === "mismatch" ? 50 : 0,
-          matched_by: "truth_validation",
+          matched_system_employee_id: matchedEmployeeId,
+          match_status: matchedEmployeeId ? "MATCHED" : "UNMATCHED",
+          match_confidence: c.matchConfidence ?? (c.status === "match" ? 100 : c.status === "close" ? 80 : c.status === "mismatch" ? 50 : 0),
+          matched_by: matchedEmployeeId ? (c.matchedBy || "truth_validation") : "truth_validation",
           truth_total_pay: c.truth.totalPay || 0,
           truth_pay_per_day: c.truth.payperDay || 0,
           truth_ryde: c.truth.ryde || 0,
@@ -401,10 +494,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           variance_tips: r ? round2((r.manual_adj || 0) - (c.truth.tips || 0)) : null,
           variance_reimbursements: 0,
           variance_total: r ? round2(r.total_final - c.truth.total) : null,
-          row_status: c.status === "match" ? "EXACT_MATCH" : c.status === "close" ? "WITHIN_TOLERANCE" : c.status === "mismatch" ? "MISMATCH" : "UNMATCHED",
+          row_status: rowStatus,
           is_exact_match: c.status === "match",
-          has_component_mismatch: c.status === "mismatch" || c.status === "close",
-          has_critical_mismatch: c.status === "mismatch",
+          has_component_mismatch: !!matchedEmployeeId && (c.status === "mismatch" || c.status === "close"),
+          has_critical_mismatch: !!matchedEmployeeId && c.status === "mismatch",
           anomaly_flags_json: r?.flags || [],
           shift_count: r?.schedule_count ?? 0,
           clock_count: r?.clock_count ?? 0,
@@ -946,18 +1039,42 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const comparison = useMemo<ComparisonRow[]>(() => {
     if (truthData.length === 0) return [];
 
+    const reconByEmployeeId = new Map(reconData.map((r) => [r.employee_id, r]));
+
     return truthData
-      .map(t => {
-        const recon = reconData.find(r => normalizeName(r.employee_name) === normalizeName(t.employee));
+      .map((t, idx) => {
+        const match = truthMatches[idx];
+        const reconByIdentity = match?.employeeId ? reconByEmployeeId.get(match.employeeId) || null : null;
+        const reconByName = reconData.find(r => normalizeName(r.employee_name) === normalizeName(t.employee));
+        const recon = reconByIdentity || reconByName || null;
+
         if (!recon) {
+          if (!match?.employeeId) {
+            return {
+              employee: t.employee,
+              truth: t,
+              recon: null,
+              matchEmployeeId: null,
+              matchedBy: match?.matchedBy || "none",
+              matchConfidence: match?.confidence || 0,
+              totalVariance: t.total,
+              status: "missing" as const,
+              compositionError: false,
+              compositionReason: null,
+            };
+          }
+
           return {
             employee: t.employee,
             truth: t,
             recon: null,
-            totalVariance: t.total,
-            status: "missing" as const,
+            matchEmployeeId: match.employeeId,
+            matchedBy: match.matchedBy,
+            matchConfidence: match.confidence,
+            totalVariance: -Math.abs(t.total || 0),
+            status: "mismatch" as const,
             compositionError: false,
-            compositionReason: null,
+            compositionReason: "Empleado mapeado, pero sin base operativa para este periodo (period_base_pay/movements).",
           };
         }
 
@@ -978,6 +1095,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           employee: t.employee,
           truth: t,
           recon,
+          matchEmployeeId: match?.employeeId || recon.employee_id,
+          matchedBy: match?.matchedBy || "name_exact",
+          matchConfidence: match?.confidence || 90,
           totalVariance,
           status,
           compositionError,
@@ -985,12 +1105,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         };
       })
       .sort((a, b) => {
+        if (a.matchEmployeeId && !b.matchEmployeeId) return -1;
+        if (!a.matchEmployeeId && b.matchEmployeeId) return 1;
         if (a.recon && !b.recon) return -1;
         if (!a.recon && b.recon) return 1;
         if (b.totalVariance !== a.totalVariance) return b.totalVariance - a.totalVariance;
         return Math.abs(b.totalVariance) - Math.abs(a.totalVariance);
       });
-  }, [truthData, reconData]);
+  }, [truthData, reconData, truthMatches]);
 
   const stats = useMemo(() => {
     const matched = comparison.filter(c => c.status === "match").length;
