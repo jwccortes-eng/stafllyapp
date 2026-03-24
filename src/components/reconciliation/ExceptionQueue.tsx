@@ -14,6 +14,7 @@ import { AlertTriangle, CheckCircle2, Eye, XCircle } from "lucide-react";
 
 interface Props {
   companyId: string | null;
+  periodStatusId?: string | null;
   onRefresh: () => void;
 }
 
