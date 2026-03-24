@@ -904,7 +904,23 @@ export default function StagedReconciliation() {
 
         <TabsContent value="publish">
           {activePeriod ? (
-            <PrePublishReview period={activePeriod} finalRecords={finalRecords} closingReceipt={closingReceipt} employees={employeeMap} validation={validation} variances={variances} onPublish={handlePostPeriod} onLock={handleLockPeriod} onReopen={handleReopen} publishing={publishing} isPilotMode={true} />
+            <PrePublishReview
+              period={activePeriod}
+              finalRecords={finalRecords}
+              closingReceipt={closingReceipt}
+              employees={employeeMap}
+              validation={validation}
+              variances={variances}
+              onGenerateTruthRecords={async () => {
+                await generateFinalRecordsFromTruth(activePeriod.id);
+                await logJournal("truth_materialize", "Registros finales generados desde Truth Validation (Publish)");
+              }}
+              onPublish={handlePostPeriod}
+              onLock={handleLockPeriod}
+              onReopen={handleReopen}
+              publishing={publishing}
+              isPilotMode={true}
+            />
           ) : (
             <NoPeriodPlaceholder icon={Shield} />
           )}

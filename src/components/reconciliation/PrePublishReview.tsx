@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   CheckCircle2, AlertTriangle, XCircle, Shield, User, DollarSign,
-  Clock, Calendar, FileText, RotateCcw, Lock, Rocket, Eye,
+  Clock, Calendar, FileText, RotateCcw, Lock, Rocket, Eye, Database, Loader2,
 } from "lucide-react";
 import PostPublishVerification from "./PostPublishVerification";
 import type { EmployeeFinalRecord, EmployeeVariance, PeriodStatus, ClosingReceipt } from "@/hooks/useReconciliationPeriod";
@@ -24,6 +24,7 @@ interface Props {
   validation: { canPublish: boolean; errors: string[]; warnings: string[] };
   variances?: EmployeeVariance[];
   onPublish: () => Promise<boolean | void>;
+  onGenerateTruthRecords?: () => Promise<void>;
   onLock: () => void;
   onReopen: (reason: string) => void;
   publishing?: boolean;
@@ -32,7 +33,7 @@ interface Props {
 
 export default function PrePublishReview({
   period, finalRecords, closingReceipt, employees, validation, variances,
-  onPublish, onLock, onReopen, publishing, isPilotMode = true,
+  onPublish, onGenerateTruthRecords, onLock, onReopen, publishing, isPilotMode = true,
 }: Props) {
   const [showReopenDialog, setShowReopenDialog] = useState(false);
   const [reopenReason, setReopenReason] = useState("");
@@ -40,6 +41,7 @@ export default function PrePublishReview({
   const [publishNote, setPublishNote] = useState("");
   const [acknowledgeWarnings, setAcknowledgeWarnings] = useState(false);
   const [supervisedConfirm, setSupervisedConfirm] = useState(false);
+  const [generatingTruthRecords, setGeneratingTruthRecords] = useState(false);
 
   const stats = useMemo(() => {
     const approved = finalRecords.filter(r => ["resolved", "approved"].includes(r.reconciliation_status));
@@ -107,6 +109,7 @@ export default function PrePublishReview({
   const isPosted = ["posted", "locked"].includes(period.status);
   const isLocked = period.status === "locked";
   const canPublish = period.status === "approved" && enhancedChecks.canPublish;
+  const isTruthBasedPeriod = period.closure_method === "truth_validation" || period.total_clocks === 0;
 
   // Pilot mode: first 3 periods require supervised confirm
   const isFirstPeriods = (period.reopen_count || 0) === 0 && isPilotMode;
@@ -117,6 +120,16 @@ export default function PrePublishReview({
     setAcknowledgeWarnings(false);
     setSupervisedConfirm(false);
     await onPublish();
+  };
+
+  const handleGenerateTruthRecords = async () => {
+    if (!onGenerateTruthRecords) return;
+    setGeneratingTruthRecords(true);
+    try {
+      await onGenerateTruthRecords();
+    } finally {
+      setGeneratingTruthRecords(false);
+    }
   };
 
   const handleReopen = () => {
@@ -274,6 +287,26 @@ export default function PrePublishReview({
             </ul>
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Truth handoff CTA (guaranteed visible for truth-based periods) */}
+      {isTruthBasedPeriod && onGenerateTruthRecords && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Database className="h-4 w-4 text-primary" /> Truth-based closure handoff
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Genera los registros finales publicables desde la reconciliación Truth Validation.
+            </p>
+            <Button size="sm" className="gap-1.5" onClick={handleGenerateTruthRecords} disabled={generatingTruthRecords || isLocked}>
+              {generatingTruthRecords ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+              {finalRecords.length > 0 ? "Regenerar Registros desde Truth" : "Generar Registros desde Truth"}
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Summary KPIs */}
