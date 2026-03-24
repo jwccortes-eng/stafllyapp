@@ -200,6 +200,7 @@ export function useReconciliationPeriod(companyId: string | null) {
       .from("reconciliation_period_status" as any)
       .select("*")
       .eq("company_id", companyId)
+      .neq("status", "superseded")
       .order("period_start", { ascending: false })
       .limit(50);
     const loaded = (data || []) as any[];
