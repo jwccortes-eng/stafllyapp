@@ -912,8 +912,11 @@ export default function StagedReconciliation() {
               validation={validation}
               variances={variances}
               onGenerateTruthRecords={async () => {
-                await generateFinalRecordsFromTruth(activePeriod.id);
-                await logJournal("truth_materialize", "Registros finales generados desde Truth Validation (Publish)");
+                const ok = await generateFinalRecordsFromTruth(activePeriod.id);
+                if (ok) {
+                  await logJournal("truth_materialize", "Registros finales generados desde Truth Validation (Publish)");
+                }
+                return ok;
               }}
               onPublish={handlePostPeriod}
               onLock={handleLockPeriod}
@@ -1009,8 +1012,10 @@ export default function StagedReconciliation() {
             periodStatusId={activePeriod?.id}
             finalRecords={finalRecords}
             onGenerateFinalRecords={activePeriod ? async () => {
-              await generateFinalRecordsFromTruth(activePeriod.id);
-              await logJournal("truth_materialize", "Registros finales generados desde Truth Validation");
+              const ok = await generateFinalRecordsFromTruth(activePeriod.id);
+              if (ok) {
+                await logJournal("truth_materialize", "Registros finales generados desde Truth Validation");
+              }
             } : undefined}
           />
         </TabsContent>
