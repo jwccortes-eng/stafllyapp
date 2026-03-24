@@ -1250,9 +1250,20 @@ export function useReconciliationPeriod(companyId: string | null) {
         return false;
       }
 
+      // Delete ALL previous final records for this period before inserting truth-based ones
+      // This prevents contamination from older native-engine records
+      const { error: deleteError } = await supabase
+        .from("reconciliation_final_records" as any)
+        .delete()
+        .eq("period_status_id", periodStatusId);
+
+      if (deleteError) {
+        console.error("Error clearing old records:", deleteError);
+      }
+
       const { error: upsertError } = await supabase
         .from("reconciliation_final_records" as any)
-        .upsert(records as any[], { onConflict: "period_status_id,employee_id" });
+        .insert(records as any[]);
 
       if (upsertError) {
         toast({ title: "Error al generar registros", description: upsertError.message, variant: "destructive" });
