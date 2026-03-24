@@ -1057,17 +1057,15 @@ export default function StagedReconciliation() {
                 variant="outline"
                 className="gap-1.5 border-primary/40 text-primary"
                 onClick={() => {
-                  const target = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
-                  if (!target) {
-                    toast({ title: "Periodo 2025-12-24 → 2025-12-30 no encontrado", variant: "destructive" });
-                    return;
+                  const first = payPeriods[0];
+                  if (first) {
+                    setSelectedBatchPayPeriodId(first.id);
+                    setBatchSearch("");
                   }
-                  setSelectedBatchPayPeriodId(target.id);
-                  setBatchSearch("2025-12-24 2025-12-30");
                 }}
               >
                 <Target className="h-3.5 w-3.5" />
-                Periodo 112 · 2025-12-24 → 2025-12-30
+                Seleccionar más reciente
               </Button>
             </div>
 
