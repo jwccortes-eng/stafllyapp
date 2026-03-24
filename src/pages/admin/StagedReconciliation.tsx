@@ -176,7 +176,7 @@ export default function StagedReconciliation() {
     if (!selectedCompanyId) return;
     Promise.all([
       supabase.from("pay_periods")
-        .select("id, start_date, end_date, status, sequence_number")
+        .select("id, start_date, end_date, status, sequence_number, calculation_mode")
         .eq("company_id", selectedCompanyId)
         .order("start_date", { ascending: false })
         .limit(200),
