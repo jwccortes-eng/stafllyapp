@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
+import { getDefaultPayPeriod, sortPeriodsDesc } from "@/lib/pay-period-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { usePayrollReconciliation, type ReconciliationBatch } from "@/hooks/usePayrollReconciliation";
 import type { ReconciliationRowResult, BatchSummary, TopIssue, MatchBreakdown } from "@/lib/payroll-reconciliation-engine";
