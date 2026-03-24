@@ -316,12 +316,52 @@ export function matchEmployees(
       }
     }
 
-    // ── TIER 6: Exact normalized full name
-    for (const c of candidates) {
-      if (usedCandidateIds.has(c.id)) continue;
-      if (c.full_name_normalized === truthName && truthName.length > 3) {
-        usedCandidateIds.add(c.id);
-        return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 90, matched_by: "full_name_exact", match_notes: "" };
+    // ── TIER 6: Exact normalized full name (skip if ambiguous — multiple candidates share the name)
+    const exactNameMatches = candidates.filter(c => !usedCandidateIds.has(c.id) && c.full_name_normalized === truthName && truthName.length > 3);
+    if (exactNameMatches.length === 1) {
+      usedCandidateIds.add(exactNameMatches[0].id);
+      return { truth_index: idx, system_employee_id: exactNameMatches[0].id, match_status: "MATCHED" as const, match_confidence: 90, matched_by: "full_name_exact", match_notes: "" };
+    }
+    // If multiple exact matches exist, prefer the one with employer_identification
+    if (exactNameMatches.length > 1) {
+      const withIdentity = exactNameMatches.find(c => c.employer_identification || c.verification_ssn_ein);
+      if (withIdentity) {
+        usedCandidateIds.add(withIdentity.id);
+        return { truth_index: idx, system_employee_id: withIdentity.id, match_status: "MATCHED" as const, match_confidence: 88, matched_by: "full_name_disambiguated", match_notes: `Disambiguated from ${exactNameMatches.length} candidates using identity fields` };
+      }
+      // Fall through to alias/fuzzy tiers for resolution
+    }
+
+    // ── TIER 6b: Split-name / substring matching (handles "marcy lorena moreno" vs "marcy moreno", "tabarez" vs "tabares")
+    const truthParts = truthName.split(/\s+/).filter(Boolean);
+    if (truthParts.length >= 2) {
+      const truthFirst = truthParts[0];
+      const truthLast = truthParts[truthParts.length - 1];
+      for (const c of candidates) {
+        if (usedCandidateIds.has(c.id)) continue;
+        const cParts = c.full_name_normalized.split(/\s+/).filter(Boolean);
+        if (cParts.length < 2) continue;
+        const cFirst = cParts[0];
+        const cLast = cParts[cParts.length - 1];
+        // First name exact + last name within edit distance 1 (tabarez/tabares)
+        if (cFirst === truthFirst && cLast.length >= 3 && truthLast.length >= 3) {
+          const lastDist = levenshtein(truthLast, cLast);
+          if (lastDist <= 1) {
+            // For split-name (extra middle names), also check first name subset match
+            const isSubsetName = truthParts.length !== cParts.length && 
+              (truthParts.includes(cFirst) && truthParts.includes(cLast));
+            if (lastDist === 0 && truthParts.length > cParts.length) {
+              // e.g., "marcy lorena moreno" matches "marcy moreno" — extra middle name
+              usedCandidateIds.add(c.id);
+              return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 87, matched_by: "split_name", match_notes: `Split-name: "${truthName}" → "${c.first_name} ${c.last_name}"` };
+            }
+            if (lastDist === 1) {
+              // Surname spelling variant (tabarez/tabares)
+              usedCandidateIds.add(c.id);
+              return { truth_index: idx, system_employee_id: c.id, match_status: "MATCHED" as const, match_confidence: 85, matched_by: "surname_variant", match_notes: `Surname variant: "${truthLast}" ≈ "${cLast}"` };
+            }
+          }
+        }
       }
     }
 
