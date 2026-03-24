@@ -420,7 +420,12 @@ export default function StagedReconciliation() {
   const variances = useMemo(() => analyzeVariances(finalRecords, employeeMap), [finalRecords, employeeMap, analyzeVariances]);
 
   const isLocked = activePeriod && ["posted", "locked"].includes(activePeriod.status);
-  const isTruthBased = activePeriod && (activePeriod.closure_method === "truth_validation" || activePeriod.total_clocks === 0);
+  const isTruthBased = activePeriod && (
+    activePeriod.closure_method === "truth_validation" || 
+    activePeriod.total_clocks === 0 || 
+    (activePeriod.calculation_mode === "historical_import" && activePeriod.total_clocks === 0)
+  );
+  const isHistoricalPeriod = activePeriod?.calculation_mode === "historical_import";
   const workflowSteps = isTruthBased ? WORKFLOW_STEPS_TRUTH : WORKFLOW_STEPS_MATCHING;
   const statusOrder = isTruthBased ? STATUS_ORDER_TRUTH : STATUS_ORDER;
   const currentStepIdx = activePeriod ? statusOrder.indexOf(activePeriod.status) : -1;
