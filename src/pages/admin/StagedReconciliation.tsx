@@ -341,9 +341,15 @@ export default function StagedReconciliation() {
 
   const handleApprovePeriod = async () => {
     if (!activePeriod) return;
+    // Determine closure method: if no clocks, mark as truth_validation
+    const closureMethod = activePeriod.total_clocks === 0 ? "truth_validation" : "matching";
     await updatePeriodStatus(activePeriod.id, "approved");
-    await logJournal("approval", "Periodo aprobado");
-    toast({ title: "Periodo aprobado" });
+    // Set closure_method on the period
+    await supabase.from("reconciliation_period_status" as any)
+      .update({ closure_method: closureMethod } as any)
+      .eq("id", activePeriod.id);
+    await logJournal("approval", `Periodo aprobado (${closureMethod === "truth_validation" ? "cierre vía truth" : "cierre vía matching"})`);
+    toast({ title: "Periodo aprobado", description: closureMethod === "truth_validation" ? "Cerrado mediante validación de Payroll Truth" : undefined });
   };
 
   const handlePostPeriod = async () => {
