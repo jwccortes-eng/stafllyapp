@@ -1,0 +1,1 @@
+ALTER TABLE reconciliation_period_status ADD COLUMN IF NOT EXISTS closure_method text DEFAULT 'matching';

@@ -6933,6 +6933,7 @@ export type Database = {
           closed_at: string | null
           closed_by: string | null
           closed_note: string | null
+          closure_method: string | null
           company_id: string
           created_at: string
           golive_checklist: Json | null
@@ -6981,6 +6982,7 @@ export type Database = {
           closed_at?: string | null
           closed_by?: string | null
           closed_note?: string | null
+          closure_method?: string | null
           company_id: string
           created_at?: string
           golive_checklist?: Json | null
@@ -7029,6 +7031,7 @@ export type Database = {
           closed_at?: string | null
           closed_by?: string | null
           closed_note?: string | null
+          closure_method?: string | null
           company_id?: string
           created_at?: string
           golive_checklist?: Json | null
