@@ -1072,7 +1072,7 @@ export default function StagedReconciliation() {
             <ScrollArea className="h-64 rounded-md border">
               <div className="space-y-1 p-2">
                 {batchCandidates.map(pp => {
-                  const isTruth = pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30";
+                  const isTruth = false; // no hardcoded period preference
                   const linked = periods.find(p => p.period_id === pp.id);
                   const isSelected = selectedBatchPayPeriodId === pp.id;
                   return (
