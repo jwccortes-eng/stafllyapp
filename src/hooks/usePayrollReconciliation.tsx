@@ -195,7 +195,7 @@ export function usePayrollReconciliation() {
       // 2. Load system employees
       const { data: employees } = await supabase
         .from("employees")
-        .select("id, first_name, last_name, phone_number, email, connecteam_employee_id")
+        .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, employer_identification, verification_ssn_ein")
         .eq("company_id", selectedCompanyId)
         .eq("is_active", true);
 
@@ -206,6 +206,8 @@ export function usePayrollReconciliation() {
         phone: e.phone_number,
         email: e.email,
         external_id: e.connecteam_employee_id,
+        employer_identification: e.employer_identification || undefined,
+        verification_ssn_ein: e.verification_ssn_ein || undefined,
         total_hours: 0,
         total_pay: 0,
         pay_per_day: 0,
