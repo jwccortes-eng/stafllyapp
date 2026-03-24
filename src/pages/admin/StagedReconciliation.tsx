@@ -341,9 +341,15 @@ export default function StagedReconciliation() {
 
   const handleApprovePeriod = async () => {
     if (!activePeriod) return;
+    // Determine closure method: if no clocks, mark as truth_validation
+    const closureMethod = activePeriod.total_clocks === 0 ? "truth_validation" : "matching";
     await updatePeriodStatus(activePeriod.id, "approved");
-    await logJournal("approval", "Periodo aprobado");
-    toast({ title: "Periodo aprobado" });
+    // Set closure_method on the period
+    await supabase.from("reconciliation_period_status" as any)
+      .update({ closure_method: closureMethod } as any)
+      .eq("id", activePeriod.id);
+    await logJournal("approval", `Periodo aprobado (${closureMethod === "truth_validation" ? "cierre vía truth" : "cierre vía matching"})`);
+    toast({ title: "Periodo aprobado", description: closureMethod === "truth_validation" ? "Cerrado mediante validación de Payroll Truth" : undefined });
   };
 
   const handlePostPeriod = async () => {
@@ -1066,13 +1072,19 @@ export default function StagedReconciliation() {
 
 /* ── Extracted: Active Period Info Bar ── */
 function ActivePeriodBar({ period, isLocked }: { period: PeriodStatus; isLocked: boolean }) {
+  const closureMethod = period.closure_method;
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
       <span>Periodo activo:</span>
       <Badge variant="secondary" className="text-xs">
         {period.period_label} — {period.status}
         {period.reopen_count > 0 && ` (↻${period.reopen_count})`}
       </Badge>
+      {closureMethod === "truth_validation" && (
+        <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 bg-amber-50">
+          📋 Cierre vía Truth · Sin fichajes
+        </Badge>
+      )}
       {isLocked && <Badge variant="destructive" className="text-xs gap-1"><Lock className="h-3 w-3" /> Bloqueado</Badge>}
     </div>
   );

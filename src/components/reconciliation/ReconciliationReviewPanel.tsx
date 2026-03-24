@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -364,6 +365,21 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
 
   return (
     <div className="space-y-4">
+      {/* No-clock warning / truth-based closure banner */}
+      {preflightCounts && !preflightCounts.loading && preflightCounts.clocks === 0 && (
+        <Alert className="border-amber-500/50 bg-amber-500/10">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-sm">
+            <p className="font-semibold">⚠️ Matching no disponible — 0 fichajes (clocks) para este periodo</p>
+            <p className="text-muted-foreground mt-1">
+              No hay datos de fichaje válidos para {periodScope?.period_start} → {periodScope?.period_end}. 
+              El matching requiere datos de clock-in/clock-out. Usa la pestaña <strong>Payroll Truth</strong> para cerrar este periodo mediante validación contra la nómina pagada.
+            </p>
+            <Badge className="mt-2 bg-amber-600/90 text-white text-xs">Cierre vía Truth · Sin fichajes</Badge>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Scope debug banner */}
       <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-2 text-xs space-y-1">
         <p className="font-medium text-sm">🔍 Scope del Matching</p>
@@ -393,9 +409,15 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
                 <Badge variant="secondary" className="text-[10px]">
                   ⏱ {preflightCounts.clocks} clocks en periodo
                 </Badge>
-                <Badge variant="default" className="text-[10px] bg-primary/80">
-                  ✅ Scoped — solo datos del periodo activo
-                </Badge>
+                {preflightCounts.clocks > 0 ? (
+                  <Badge variant="default" className="text-[10px] bg-primary/80">
+                    ✅ Scoped — solo datos del periodo activo
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive" className="text-[10px]">
+                    🚫 Sin clocks — usar Payroll Truth
+                  </Badge>
+                )}
               </div>
             )}
             {preflightCounts?.loading && (
@@ -433,7 +455,12 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
             <SelectItem value="linked">Vinculados</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" onClick={runMatching} disabled={runningMatch}>
+        <Button 
+          variant="outline" 
+          onClick={runMatching} 
+          disabled={runningMatch || (preflightCounts != null && !preflightCounts.loading && preflightCounts.clocks === 0)}
+          title={preflightCounts?.clocks === 0 ? "No hay fichajes disponibles — usa Payroll Truth" : undefined}
+        >
           {runningMatch ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <GitCompareArrows className="h-4 w-4 mr-1" />}
           Ejecutar Matching
         </Button>

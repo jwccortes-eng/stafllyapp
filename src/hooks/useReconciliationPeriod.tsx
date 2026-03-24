@@ -36,6 +36,7 @@ export interface PeriodStatus {
   reopen_count: number;
   publish_idempotency_key: string | null;
   notes: string | null;
+  closure_method: string | null;
   created_at: string;
 }
 
