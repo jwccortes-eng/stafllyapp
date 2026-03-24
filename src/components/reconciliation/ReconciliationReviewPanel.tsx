@@ -156,10 +156,12 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
         fetchAllByBatch("normalized_clock_rows", companyId, clockBatch, pStart, pEnd),
       ]) as [NormalizedScheduleRow[], NormalizedClockRow[]];
 
-      setScopeDebug({ schedules: schedules.length, clocks: clocks.length, scheduleBatch: schedBatch, clockBatch: clockBatch });
+      const scopeMethod = schedBatch ? "batch_id" : (pStart && pEnd ? "date_range" : "global");
+      setScopeDebug({ schedules: schedules.length, clocks: clocks.length, scheduleBatch: schedBatch, clockBatch: clockBatch, scopeMethod });
       console.log("[Matching] Scoped rows — schedules:", schedules.length, "clocks:", clocks.length,
-        schedBatch ? `(batch: ${schedBatch})` : "(ALL company — no batch scope!)",
-        clockBatch ? `(batch: ${clockBatch})` : "(ALL company — no batch scope!)");
+        `(scope: ${scopeMethod})`,
+        schedBatch ? `(batch: ${schedBatch})` : `(date: ${pStart} → ${pEnd})`,
+        clockBatch ? `(batch: ${clockBatch})` : `(date: ${pStart} → ${pEnd})`);
 
       if (schedules.length === 0 && clocks.length === 0) {
         toast({ title: "Sin datos", description: "Importa turnos y fichajes primero desde la pestaña Importar.", variant: "destructive" });
