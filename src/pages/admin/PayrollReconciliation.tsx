@@ -741,15 +741,8 @@ export default function PayrollReconciliationPage() {
 
   const filteredPeriods = useMemo(() => {
     const normalized = periodSearch.trim().toLowerCase();
-    const prioritized = [...periods].sort((a, b) => {
-      const aExact = isTargetTruthPeriod(a);
-      const bExact = isTargetTruthPeriod(b);
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
-      return b.start_date.localeCompare(a.start_date);
-    });
-
-    if (!normalized) return prioritized;
+    const sorted = [...periods].sort((a, b) => b.start_date.localeCompare(a.start_date));
+    if (!normalized) return sorted;
 
     return prioritized.filter((p) => {
       const label = formatPeriodLabel(p.start_date, p.end_date).toLowerCase();
