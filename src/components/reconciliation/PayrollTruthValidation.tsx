@@ -1226,10 +1226,42 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 <KpiCard label="Otros / Sin clasificar" value={fmt(stats.totalOther)} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.totalOther > 0 ? "deduction" : "muted"} />
               </div>
 
+              {/* Approval readiness banner */}
+              {stats.mismatch === 0 && stats.missing === 0 && comparison.length > 0 && (
+                <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-primary">
+                      ✅ Periodo listo para aprobar
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {stats.matched} de {comparison.length} empleados reconciliados exactamente
+                      {stats.close > 0 && <> · {stats.close} dentro de tolerancia</>}
+                      {Math.abs(stats.variance) > 0 && Math.abs(stats.variance) < 5 && (
+                        <> · Varianza neta de {fmtVar(stats.variance)} = redondeo</>
+                      )}
+                      {" · "}Cierre vía Truth Validation
+                    </p>
+                  </div>
+                  <Badge variant="default" className="text-[10px] shrink-0">📋 Truth-based closure</Badge>
+                </div>
+              )}
+
+              {/* Rounding tolerance note */}
+              {Math.abs(stats.variance) > 0 && Math.abs(stats.variance) < 5 && comparison.length > 0 && stats.mismatch === 0 && (
+                <div className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-xs text-muted-foreground flex items-center gap-2">
+                  <span>ℹ️</span>
+                  <span>
+                    La varianza neta de <span className="font-mono font-medium text-foreground">{fmtVar(stats.variance)}</span> se
+                    distribuye como diferencias de redondeo (&lt;$1 por empleado). No requiere acción adicional.
+                  </span>
+                </div>
+              )}
+
               {/* Safety threshold warning for "Otros" */}
               {stats.totalOther > 0 && stats.totalRecon > 0 && (stats.totalOther / stats.totalRecon) > 0.20 && (
                 <div className="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm">
-                  <p className="font-semibold text-destructive">⚠️ ALERTA CRÍTICA: "Otros / Sin clasificar" representa {((stats.totalOther / stats.totalRecon) * 100).toFixed(1)}% del total reconciliado</p>
+                  <p className="font-semibold text-destructive">⚠️ ALERTA CRÍTICA: &quot;Otros / Sin clasificar&quot; representa {((stats.totalOther / stats.totalRecon) * 100).toFixed(1)}% del total reconciliado</p>
                   <p className="text-muted-foreground mt-1">Esto indica que hay registros de nómina que no están siendo clasificados correctamente. Revisa los registros crudos para identificar los conceptos no mapeados.</p>
                 </div>
               )}
