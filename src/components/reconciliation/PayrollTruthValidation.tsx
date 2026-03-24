@@ -121,12 +121,16 @@ function classifyPayrollType(payType: string | null | undefined, notes: string |
   if (t === "daily" || t === "daily pay" || t === "diario") return "daily";
   if (t === "pay_ride" || t === "ride" || t === "ryde" || t === "transporte") return "ride";
   if (t === "weekend_job" || t === "weekend" || t === "doble" || t === "double" || t === "paga doble") return "weekend";
-  if (t === "manual_adjustment" || t === "manual" || t === "adjustment" || t === "bonus" || t === "reintegro" || t === "correction") return "manual";
+  if (t === "discount" || t === "descuento" || t === "descuentos") return "deduction";
+  if (t === "reimbursement" || t === "reembolso" || t === "reintegro") return "reimbursement";
+  if (t === "manual_adjustment" || t === "manual" || t === "adjustment" || t === "bonus" || t === "correction") return "manual";
 
   const n = (notes || "").toLowerCase();
+  if (n.includes("descuento") || n.includes("discount")) return "deduction";
   if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend";
   if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "ride";
-  if (n.includes("manual") || n.includes("adjust") || n.includes("reintegro") || n.includes("bonus")) return "manual";
+  if (n.includes("reintegro") || n.includes("reimburs") || n.includes("reembolso")) return "reimbursement";
+  if (n.includes("manual") || n.includes("adjust") || n.includes("bonus")) return "manual";
   if (n.includes("daily") || n.includes("diario")) return "daily";
   if (n.includes("hourly") || n.includes("regular") || n.includes("hora")) return "hourly";
 
