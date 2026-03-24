@@ -811,12 +811,7 @@ export default function PayrollReconciliationPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleOpenExactValidationPeriod = () => {
-    if (!exactTargetPeriod) return;
-    setSelectedPeriodId(exactTargetPeriod.id);
-    setPeriodSearch(`${TARGET_TRUTH_PERIOD.start_date} ${TARGET_TRUTH_PERIOD.end_date}`);
-    setShowCreateDialog(true);
-  };
+  /* Removed hardcoded exact period shortcut */
 
   // ─── Batch list view ────────────────────────────────────────────
   if (!activeBatch) {
