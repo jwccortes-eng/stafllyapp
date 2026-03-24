@@ -738,7 +738,7 @@ export default function PayrollReconciliationPage() {
 
   const filteredPeriods = useMemo(() => {
     const normalized = periodSearch.trim().toLowerCase();
-    const sorted = [...periods].sort((a, b) => b.start_date.localeCompare(a.start_date));
+    const sorted = sortPeriodsDesc(periods);
     if (!normalized) return sorted;
 
     return sorted.filter((p) => {
