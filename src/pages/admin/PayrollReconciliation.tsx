@@ -711,33 +711,20 @@ export default function PayrollReconciliationPage() {
     let mounted = true;
 
     const loadPeriods = async () => {
-      const [periodsRes, exactRes] = await Promise.all([
-        supabase.from("pay_periods").select("id, start_date, end_date, status")
-          .eq("company_id", selectedCompanyId)
-          .order("start_date", { ascending: false })
-          .limit(100),
-        supabase.from("pay_periods").select("id, start_date, end_date, status")
-          .eq("company_id", selectedCompanyId)
-          .eq("start_date", TARGET_TRUTH_PERIOD.start_date)
-          .eq("end_date", TARGET_TRUTH_PERIOD.end_date)
-          .limit(1),
-      ]);
+      const { data } = await supabase.from("pay_periods").select("id, start_date, end_date, status")
+        .eq("company_id", selectedCompanyId)
+        .order("start_date", { ascending: false })
+        .limit(100);
 
       if (!mounted) return;
 
-      const merged = new Map<string, { id: string; start_date: string; end_date: string; status: string }>();
-      for (const p of [...((exactRes.data as any[]) || []), ...((periodsRes.data as any[]) || [])]) {
-        merged.set(p.id, p);
-      }
-
-      const mergedList = Array.from(merged.values()).sort((a, b) => b.start_date.localeCompare(a.start_date));
+      const mergedList = (data || []) as { id: string; start_date: string; end_date: string; status: string }[];
       setPeriods(mergedList);
 
-      const exact = mergedList.find(isTargetTruthPeriod);
       const today = new Date().toISOString().slice(0, 10);
       const current = mergedList.find(p => p.start_date <= today && p.end_date >= today);
       const fallback = mergedList[0];
-      setSelectedPeriodId((exact || current || fallback)?.id || "");
+      setSelectedPeriodId((current || fallback)?.id || "");
     };
 
     loadPeriods();
@@ -746,11 +733,6 @@ export default function PayrollReconciliationPage() {
       mounted = false;
     };
   }, [selectedCompanyId]);
-
-  const exactTargetPeriod = useMemo(
-    () => periods.find(isTargetTruthPeriod) || null,
-    [periods],
-  );
 
   const selectedPeriod = useMemo(
     () => periods.find(p => p.id === selectedPeriodId) || null,
