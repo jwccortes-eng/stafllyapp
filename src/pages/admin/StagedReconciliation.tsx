@@ -125,6 +125,7 @@ interface PayPeriodOption {
   end_date: string;
   status: string;
   sequence_number: number | null;
+  calculation_mode?: string;
 }
 
 function periodLabel(pp: PayPeriodOption): string {
@@ -175,12 +176,12 @@ export default function StagedReconciliation() {
     if (!selectedCompanyId) return;
     Promise.all([
       supabase.from("pay_periods")
-        .select("id, start_date, end_date, status, sequence_number")
+        .select("id, start_date, end_date, status, sequence_number, calculation_mode")
         .eq("company_id", selectedCompanyId)
         .order("start_date", { ascending: false })
         .limit(200),
       supabase.from("pay_periods")
-        .select("id, start_date, end_date, status, sequence_number")
+        .select("id, start_date, end_date, status, sequence_number, calculation_mode")
         .eq("company_id", selectedCompanyId)
         .eq("start_date", "2025-12-24")
         .eq("end_date", "2025-12-30")
@@ -419,7 +420,12 @@ export default function StagedReconciliation() {
   const variances = useMemo(() => analyzeVariances(finalRecords, employeeMap), [finalRecords, employeeMap, analyzeVariances]);
 
   const isLocked = activePeriod && ["posted", "locked"].includes(activePeriod.status);
-  const isTruthBased = activePeriod && (activePeriod.closure_method === "truth_validation" || activePeriod.total_clocks === 0);
+  const isTruthBased = activePeriod && (
+    activePeriod.closure_method === "truth_validation" || 
+    activePeriod.total_clocks === 0 || 
+    (activePeriod.calculation_mode === "historical_import" && activePeriod.total_clocks === 0)
+  );
+  const isHistoricalPeriod = activePeriod?.calculation_mode === "historical_import";
   const workflowSteps = isTruthBased ? WORKFLOW_STEPS_TRUTH : WORKFLOW_STEPS_MATCHING;
   const statusOrder = isTruthBased ? STATUS_ORDER_TRUTH : STATUS_ORDER;
   const currentStepIdx = activePeriod ? statusOrder.indexOf(activePeriod.status) : -1;
@@ -1161,12 +1167,23 @@ export default function StagedReconciliation() {
 /* ── Extracted: Active Period Info Bar ── */
 function ActivePeriodBar({ period, isLocked }: { period: PeriodStatus; isLocked: boolean }) {
   const closureMethod = period.closure_method;
+  const calcMode = period.calculation_mode || "historical_import";
+
+  const modeLabel = calcMode === "native_stafly"
+    ? { text: "🟢 Periodo Nativo Stafly", className: "border-emerald-500/50 text-emerald-700 bg-emerald-50" }
+    : calcMode === "hybrid"
+    ? { text: "🔶 Periodo Híbrido", className: "border-orange-500/50 text-orange-700 bg-orange-50" }
+    : { text: "📦 Periodo Histórico Importado", className: "border-blue-500/50 text-blue-700 bg-blue-50" };
+
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
       <span>Periodo activo:</span>
       <Badge variant="secondary" className="text-xs">
         {period.period_label} — {period.status}
         {period.reopen_count > 0 && ` (↻${period.reopen_count})`}
+      </Badge>
+      <Badge variant="outline" className={`text-[10px] ${modeLabel.className}`}>
+        {modeLabel.text}
       </Badge>
       {closureMethod === "truth_validation" && (
         <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 bg-amber-50">

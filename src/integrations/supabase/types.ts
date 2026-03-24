@@ -696,6 +696,41 @@ export type Database = {
           },
         ]
       }
+      company_cutover_dates: {
+        Row: {
+          company_id: string
+          cutover_date: string
+          id: string
+          notes: string | null
+          set_at: string
+          set_by: string | null
+        }
+        Insert: {
+          company_id: string
+          cutover_date: string
+          id?: string
+          notes?: string | null
+          set_at?: string
+          set_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          cutover_date?: string
+          id?: string
+          notes?: string | null
+          set_at?: string
+          set_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_cutover_dates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_financial_policies: {
         Row: {
           advances_enabled: boolean
@@ -4808,6 +4843,9 @@ export type Database = {
       }
       pay_periods: {
         Row: {
+          calculation_mode: string
+          calculation_mode_changed_at: string | null
+          calculation_mode_changed_by: string | null
           closed_at: string | null
           company_id: string
           created_at: string
@@ -4821,6 +4859,9 @@ export type Database = {
           status: string
         }
         Insert: {
+          calculation_mode?: string
+          calculation_mode_changed_at?: string | null
+          calculation_mode_changed_by?: string | null
           closed_at?: string | null
           company_id?: string
           created_at?: string
@@ -4834,6 +4875,9 @@ export type Database = {
           status?: string
         }
         Update: {
+          calculation_mode?: string
+          calculation_mode_changed_at?: string | null
+          calculation_mode_changed_by?: string | null
           closed_at?: string | null
           company_id?: string
           created_at?: string
@@ -6929,6 +6973,7 @@ export type Database = {
           approved_by: string | null
           approved_matches: number | null
           approved_note: string | null
+          calculation_mode: string | null
           clock_batch_id: string | null
           closed_at: string | null
           closed_by: string | null
@@ -6978,6 +7023,7 @@ export type Database = {
           approved_by?: string | null
           approved_matches?: number | null
           approved_note?: string | null
+          calculation_mode?: string | null
           clock_batch_id?: string | null
           closed_at?: string | null
           closed_by?: string | null
@@ -7027,6 +7073,7 @@ export type Database = {
           approved_by?: string | null
           approved_matches?: number | null
           approved_note?: string | null
+          calculation_mode?: string | null
           clock_batch_id?: string | null
           closed_at?: string | null
           closed_by?: string | null

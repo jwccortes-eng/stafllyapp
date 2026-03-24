@@ -110,6 +110,7 @@ export default function PrePublishReview({
   const isLocked = period.status === "locked";
   const canPublish = period.status === "approved" && enhancedChecks.canPublish;
   const isTruthBasedPeriod = period.closure_method === "truth_validation" || period.total_clocks === 0;
+  const isHistorical = period.calculation_mode === "historical_import" || period.calculation_mode === "hybrid";
 
   useEffect(() => {
     setTruthGenerationState("idle");
@@ -290,6 +291,15 @@ export default function PrePublishReview({
             <ul className="list-disc pl-4 mt-1 space-y-1">
               {enhancedChecks.warnings.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Historical period mode banner */}
+      {isHistorical && (
+        <Alert className="border-blue-300 bg-blue-50">
+          <AlertDescription className="text-blue-800 text-sm flex items-center gap-2">
+            📦 <strong>Periodo Histórico Importado</strong> — La fuente autoritativa es el archivo de nómina pagada (Truth File). Los cálculos nativos de Stafly son solo diagnósticos para este periodo.
           </AlertDescription>
         </Alert>
       )}
