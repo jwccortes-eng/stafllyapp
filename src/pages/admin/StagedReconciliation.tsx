@@ -185,24 +185,20 @@ export default function StagedReconciliation() {
       });
   }, [selectedCompanyId]);
 
-  // ── Auto-select best period on load / revalidate stale activePeriod ──
+  // ── Always converge to the deterministic best period ──
   useEffect(() => {
     if (periods.length === 0) return;
 
-    // If activePeriod is set, verify it still exists in the loaded periods
-    if (activePeriod) {
-      const stillExists = periods.find(p => p.id === activePeriod.id);
-      if (stillExists) return; // Valid — keep it
-      // Stale (e.g. from a different company or deleted) — clear and re-select
-    }
-
-    // Select the best period using centralized helper
     const best = getDefaultPayPeriod(periods);
-    if (best) {
-      setActivePeriod(best);
-      loadFinalRecords(best.id);
-      loadClosingReceipt(best.id);
-    }
+    if (!best) return;
+
+    // Already showing the correct period — nothing to do
+    if (activePeriod?.id === best.id) return;
+
+    // Switch to the deterministic best period
+    setActivePeriod(best);
+    loadFinalRecords(best.id);
+    loadClosingReceipt(best.id);
   }, [periods, activePeriod, setActivePeriod, loadFinalRecords, loadClosingReceipt]);
 
   const refresh = useCallback(() => {
