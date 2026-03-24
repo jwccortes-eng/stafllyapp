@@ -212,6 +212,13 @@ export function useReconciliationPeriod(companyId: string | null) {
     setLoading(false);
   }, [companyId, activePeriod?.id]);
 
+  // Reset active period when company changes
+  useEffect(() => {
+    setActivePeriod(null);
+    setFinalRecords([]);
+    setClosingReceipt(null);
+  }, [companyId]);
+
   useEffect(() => { loadPeriods(); }, [loadPeriods]);
 
   const createPeriod = useCallback(async (label: string, start: string, end: string, periodId?: string) => {
