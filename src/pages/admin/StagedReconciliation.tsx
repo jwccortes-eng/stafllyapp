@@ -299,8 +299,7 @@ export default function StagedReconciliation() {
 
   const batchCandidates = useMemo(() => {
     const q = batchSearch.trim().toLowerCase();
-    return [...payPeriods]
-      .sort((a, b) => b.start_date.localeCompare(a.start_date))
+    return sortPeriodsDesc(payPeriods)
       .filter(pp => {
         if (!q) return true;
         const label = periodLabel(pp).toLowerCase();
