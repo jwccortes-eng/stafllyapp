@@ -1112,7 +1112,137 @@ export function useReconciliationPeriod(companyId: string | null) {
     toast({ title: "Registros generados", description: `${records.length} empleados procesados.` });
   }, [companyId, user?.id, periods, toast, loadFinalRecords, loadPeriods]);
 
-  // ── CORE: Idempotent post final records to production ──
+  // ── Generate final records from Truth Validation results ──
+  const generateFinalRecordsFromTruth = useCallback(async (periodStatusId: string) => {
+    if (!companyId || !user?.id) return;
+
+    const period = periods.find(p => p.id === periodStatusId);
+    if (!period) {
+      toast({ title: "Error", description: "Periodo no encontrado", variant: "destructive" });
+      return;
+    }
+
+    // Read reconciliation_employee_rows for this period
+    const { data: periodInfo } = await supabase
+      .from("reconciliation_period_status" as any)
+      .select("period_start, period_end")
+      .eq("id", periodStatusId)
+      .maybeSingle();
+    if (!periodInfo) {
+      toast({ title: "Error", description: "No se encontró info del periodo", variant: "destructive" });
+      return;
+    }
+    const pi = periodInfo as any;
+
+    // Find the batch for this period
+    const { data: batch } = await supabase
+      .from("reconciliation_batches" as any)
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("payroll_period_start", pi.period_start)
+      .eq("payroll_period_end", pi.period_end)
+      .maybeSingle();
+
+    if (!batch) {
+      toast({ title: "Sin resultados de Truth", description: "Primero debes reconciliar y guardar los resultados en BD desde Payroll Truth.", variant: "destructive" });
+      return;
+    }
+
+    const batchId = (batch as any).id;
+    const { data: rows } = await supabase
+      .from("reconciliation_employee_rows" as any)
+      .select("*")
+      .eq("batch_id", batchId);
+
+    const truthRows = (rows || []) as any[];
+    if (truthRows.length === 0) {
+      toast({ title: "Sin registros", description: "No hay registros de empleados en la reconciliación de Truth.", variant: "destructive" });
+      return;
+    }
+
+    // Convert truth rows into reconciliation_final_records
+    const records: any[] = [];
+    for (const tr of truthRows) {
+      const empId = tr.matched_system_employee_id;
+      if (!empId) continue;
+
+      const truthTotal = Number(tr.truth_total) || 0;
+      const systemTotal = Number(tr.system_total) || 0;
+      const variance = Number(tr.variance_total) || 0;
+      const isExact = tr.row_status === "EXACT_MATCH" || tr.row_status === "WITHIN_TOLERANCE";
+
+      records.push({
+        period_status_id: periodStatusId,
+        company_id: companyId,
+        employee_id: empId,
+        employee_name: `${tr.first_name || ""} ${tr.last_name || ""}`.trim(),
+        scheduled_shifts: [],
+        worked_shifts: [],
+        payroll_rows: [],
+        total_scheduled_hours: 0,
+        total_worked_hours: 0,
+        total_payroll_hours: 0,
+        total_payroll_amount: truthTotal,
+        pay_classification: "truth_validated",
+        hourly_rate: null,
+        daily_rate: null,
+        regular_hours: 0,
+        overtime_hours: 0,
+        hourly_pay_total: Number(tr.system_total_pay) || 0,
+        daily_pay_total: Number(tr.system_pay_per_day) || 0,
+        ride_pay_total: Number(tr.system_ryde) || 0,
+        weekend_pay_total: 0,
+        manual_adjustment_total: Number(tr.system_tips) || 0,
+        grand_total: systemTotal,
+        ride_amount: Number(tr.system_ryde) || 0,
+        weekend_amount: 0,
+        manual_amount: Number(tr.system_tips) || 0,
+        base_pay: Number(tr.system_total_pay) || 0,
+        final_total_pay: systemTotal,
+        source_payroll_total: truthTotal,
+        variance_amount: variance,
+        variance_status: isExact ? "exact_match" : Math.abs(variance) < 10 ? "minor_variance" : "major_variance",
+        variance_reasons: isExact ? [] : [`Truth variance: ${variance}`],
+        shift_full_day_count: 0,
+        shift_half_day_count: 0,
+        shift_calculated_total: 0,
+        shift_daily_rate_used: null,
+        shift_half_day_rate_used: null,
+        shift_calculation_source: "truth_validation",
+        primary_source: "truth",
+        payroll_reference_total: truthTotal,
+        shift_vs_payroll_diff: 0,
+        reconciliation_status: isExact ? "approved" : "partial",
+        conflict_count: isExact ? 0 : 1,
+        warnings: [],
+        schedule_batch_id: null,
+        clock_batch_id: null,
+        payroll_batch_id: null,
+        match_ids: [],
+      });
+    }
+
+    // Upsert final records
+    for (const rec of records) {
+      await supabase.from("reconciliation_final_records" as any).upsert(rec as any, { onConflict: "period_status_id,employee_id" });
+    }
+
+    // Update period stats
+    await supabase.from("reconciliation_period_status" as any).update({
+      total_employees: records.length,
+      total_exceptions: records.filter(r => r.conflict_count > 0).length,
+      resolved_exceptions: records.filter(r => r.reconciliation_status === "approved").length,
+      status: period.status === "importing" || period.status === "normalizing" || period.status === "matching" ? "reviewing" : period.status,
+      closure_method: "truth_validation",
+      updated_at: new Date().toISOString(),
+    } as any).eq("id", periodStatusId);
+
+    await loadFinalRecords(periodStatusId);
+    await loadPeriods();
+    toast({ title: "Registros generados desde Truth", description: `${records.length} empleados materializados para publicación.` });
+  }, [companyId, user?.id, periods, toast, loadFinalRecords, loadPeriods]);
+
+
   const postFinalRecords = useCallback(async (periodStatusId: string) => {
     if (!companyId || !user?.id) return false;
 
