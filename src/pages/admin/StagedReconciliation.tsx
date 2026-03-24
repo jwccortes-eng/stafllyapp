@@ -19,7 +19,7 @@ import {
   Upload, GitCompareArrows, AlertTriangle, CheckCircle2, FileText, BarChart3,
   Users, ArrowRight, Lock, Eye, Shield, ClipboardCheck, Settings2, Wrench, Rocket,
   ChevronRight, Zap, BookOpen, TrendingUp, Award, PenTool, Bug,
-  StickyNote, ListChecks, Target, DollarSign, RefreshCw, Calendar, Hash, ShieldAlert,
+  StickyNote, ListChecks, Target, DollarSign, RefreshCw, Calendar, Hash, ShieldAlert, Database,
 } from "lucide-react";
 import StagedImportWizard from "@/components/reconciliation/StagedImportWizard";
 import ReconciliationReviewPanel from "@/components/reconciliation/ReconciliationReviewPanel";
@@ -138,7 +138,7 @@ export default function StagedReconciliation() {
   const {
     periods, loading, activePeriod, setActivePeriod,
     finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
-    loadFinalRecords, generateFinalRecords, postFinalRecords,
+    loadFinalRecords, generateFinalRecords, generateFinalRecordsFromTruth, postFinalRecords,
     saveMappingCorrection, reopenPeriod, loadClosingReceipt,
     validateBeforePublish, analyzeVariances, runValidation,
   } = useReconciliationPeriod(selectedCompanyId);
@@ -430,7 +430,8 @@ export default function StagedReconciliation() {
     const s = activePeriod.status;
     if (isTruthBased) {
       if (s === "importing" || s === "normalizing") return { label: "Cargar Truth File", tab: "payroll-truth", icon: DollarSign };
-      if (s === "matching" || s === "reviewing") return { label: "Reconciliar vía Truth", tab: "payroll-truth", icon: ClipboardCheck };
+      if ((s === "matching" || s === "reviewing") && finalRecords.length === 0) return { label: "Reconciliar y generar registros", tab: "payroll-truth", icon: Database };
+      if ((s === "matching" || s === "reviewing") && finalRecords.length > 0) return { label: "Aprobar periodo", tab: "approve", icon: CheckCircle2 };
       if (s === "approved") return { label: "Publicar periodo", tab: "publish", icon: Shield };
       if (s === "posted") return { label: "Cerrar periodo", tab: "publish", icon: Lock };
       if (s === "locked") return { label: "Periodo cerrado ✓", tab: "publish", icon: CheckCircle2 };
@@ -987,7 +988,32 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="payroll-truth">
-          <PayrollTruthValidation companyId={selectedCompanyId} periodStatusId={activePeriod?.id} finalRecords={finalRecords} />
+          <div className="space-y-4">
+            <PayrollTruthValidation companyId={selectedCompanyId} periodStatusId={activePeriod?.id} finalRecords={finalRecords} />
+            {isTruthBased && activePeriod && (
+              <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 flex items-center gap-3">
+                <Database className="h-5 w-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">Materializar registros para publicación</p>
+                  <p className="text-xs text-muted-foreground">
+                    {finalRecords.length > 0
+                      ? `${finalRecords.length} registros ya generados — puedes regenerar si actualizaste la reconciliación.`
+                      : "Genera registros finales desde los resultados de Truth Validation para habilitar la aprobación y publicación."}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  onClick={async () => {
+                    await generateFinalRecordsFromTruth(activePeriod.id);
+                    await logJournal("truth_materialize", "Registros finales generados desde Truth Validation");
+                  }}
+                >
+                  <Database className="h-3.5 w-3.5" /> Generar Registros desde Truth
+                </Button>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="history">
