@@ -909,7 +909,7 @@ export default function PayrollReconciliationPage() {
                         ) : (
                           filteredPeriods.map((p) => {
                             const isSelected = selectedPeriodId === p.id;
-                            const isExact = isTargetTruthPeriod(p);
+                            const isExact = false;
 
                             return (
                               <button

@@ -274,7 +274,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
   /* Legacy pre-staged truth loader removed — use manual upload or storage-based auto-load instead */
   const loadTruthFile = async () => {
-    toast({ title: "Use el botón 'Cargar archivo' para subir el truth file del periodo activo." });
+    console.info("Use the manual upload button to load a truth file for the active period.");
   };
 
   const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
