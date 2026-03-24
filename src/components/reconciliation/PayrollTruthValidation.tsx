@@ -1039,18 +1039,42 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const comparison = useMemo<ComparisonRow[]>(() => {
     if (truthData.length === 0) return [];
 
+    const reconByEmployeeId = new Map(reconData.map((r) => [r.employee_id, r]));
+
     return truthData
-      .map(t => {
-        const recon = reconData.find(r => normalizeName(r.employee_name) === normalizeName(t.employee));
+      .map((t, idx) => {
+        const match = truthMatches[idx];
+        const reconByIdentity = match?.employeeId ? reconByEmployeeId.get(match.employeeId) || null : null;
+        const reconByName = reconData.find(r => normalizeName(r.employee_name) === normalizeName(t.employee));
+        const recon = reconByIdentity || reconByName || null;
+
         if (!recon) {
+          if (!match?.employeeId) {
+            return {
+              employee: t.employee,
+              truth: t,
+              recon: null,
+              matchEmployeeId: null,
+              matchedBy: match?.matchedBy || "none",
+              matchConfidence: match?.confidence || 0,
+              totalVariance: t.total,
+              status: "missing" as const,
+              compositionError: false,
+              compositionReason: null,
+            };
+          }
+
           return {
             employee: t.employee,
             truth: t,
             recon: null,
-            totalVariance: t.total,
-            status: "missing" as const,
+            matchEmployeeId: match.employeeId,
+            matchedBy: match.matchedBy,
+            matchConfidence: match.confidence,
+            totalVariance: -Math.abs(t.total || 0),
+            status: "mismatch" as const,
             compositionError: false,
-            compositionReason: null,
+            compositionReason: "Empleado mapeado, pero sin base operativa para este periodo (period_base_pay/movements).",
           };
         }
 
@@ -1071,6 +1095,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           employee: t.employee,
           truth: t,
           recon,
+          matchEmployeeId: match?.employeeId || recon.employee_id,
+          matchedBy: match?.matchedBy || "name_exact",
+          matchConfidence: match?.confidence || 90,
           totalVariance,
           status,
           compositionError,
@@ -1078,12 +1105,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         };
       })
       .sort((a, b) => {
+        if (a.matchEmployeeId && !b.matchEmployeeId) return -1;
+        if (!a.matchEmployeeId && b.matchEmployeeId) return 1;
         if (a.recon && !b.recon) return -1;
         if (!a.recon && b.recon) return 1;
         if (b.totalVariance !== a.totalVariance) return b.totalVariance - a.totalVariance;
         return Math.abs(b.totalVariance) - Math.abs(a.totalVariance);
       });
-  }, [truthData, reconData]);
+  }, [truthData, reconData, truthMatches]);
 
   const stats = useMemo(() => {
     const matched = comparison.filter(c => c.status === "match").length;
