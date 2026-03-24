@@ -84,7 +84,7 @@ interface ComparisonRow {
   matchedBy?: string;
   matchConfidence?: number;
   totalVariance: number;
-  status: "match" | "close" | "mismatch" | "missing";
+  status: "match" | "close" | "mismatch" | "missing" | "identity_only";
   compositionError: boolean;
   compositionReason: string | null;
 }
@@ -359,8 +359,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       }));
 
       const truthRows = truthData.map((t) => ({
-        employer_identification: (t as any).employerIdentification || "",
-        verification_ssn_ein: (t as any).verificationSsnEin || "",
+        employer_identification: t.employerIdentification || "",
+        verification_ssn_ein: t.verificationSsnEin || "",
         first_name: t.firstName || "",
         last_name: t.lastName || "",
         total_hours: null,
@@ -371,7 +371,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         reimbursements: t.reimbursements || 0,
         total: t.total || 0,
         observaciones: t.observaciones || "",
-        raw: {},
+        raw: {
+          "Phone number": t.phoneNumber || "",
+          Email: t.email || "",
+        },
       }));
 
       const matches = matchEmployees(truthRows as any, candidates as any, aliases as any);
@@ -454,13 +457,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       // Insert employee rows in batches
       const reconByEmployeeId = new Map(reconData.map((r) => [r.employee_id, r]));
       const rows = compRows.map(c => {
-        const nameParts = c.employee.trim().split(/\s+/);
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(" ") || "";
+        const fallbackNameParts = c.employee.trim().split(/\s+/);
+        const firstName = (c.truth.firstName || fallbackNameParts[0] || "").trim();
+        const lastName = (c.truth.lastName || fallbackNameParts.slice(1).join(" ") || "").trim();
         const matchedEmployeeId = c.matchEmployeeId || c.recon?.employee_id || null;
         const r = matchedEmployeeId ? (reconByEmployeeId.get(matchedEmployeeId) || c.recon) : c.recon;
+        const normalizedEmployerId = (c.truth.employerIdentification || "").trim();
+        const normalizedSsnEin = (c.truth.verificationSsnEin || "").replace(/[^0-9]/g, "");
         const rowStatus = !matchedEmployeeId
           ? "UNMATCHED"
+          : c.status === "identity_only"
+            ? "IDENTITY_MATCH_NO_SYSTEM_DATA"
           : c.status === "match"
             ? "EXACT_MATCH"
             : c.status === "close"
@@ -472,6 +479,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           first_name: firstName,
           last_name: lastName,
           full_name_normalized: c.employee.toLowerCase(),
+          employer_identification: normalizedEmployerId || null,
+          verification_ssn_ein: (c.truth.verificationSsnEin || "").trim() || null,
+          employer_identification_normalized: normalizedEmployerId ? normalizeName(normalizedEmployerId) : null,
+          verification_ssn_ein_normalized: normalizedSsnEin || null,
           matched_system_employee_id: matchedEmployeeId,
           match_status: matchedEmployeeId ? "MATCHED" : "UNMATCHED",
           match_confidence: c.matchConfidence ?? (c.status === "match" ? 100 : c.status === "close" ? 80 : c.status === "mismatch" ? 50 : 0),
@@ -527,7 +538,15 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       const r = c.recon;
       return [
         c.employee,
-        c.status === "match" ? "EXACTO" : c.status === "close" ? "CERCANO" : c.status === "mismatch" ? "DIFERENTE" : "NO ENCONTRADO",
+        c.status === "match"
+          ? "EXACTO"
+          : c.status === "close"
+            ? "CERCANO"
+            : c.status === "mismatch"
+              ? "DIFERENTE"
+              : c.status === "identity_only"
+                ? "IDENTIDAD_OK_SIN_BASE"
+                : "NO ENCONTRADO",
         c.truth.totalPay?.toFixed(2) || "0.00",
         c.truth.payperDay?.toFixed(2) || "0.00",
         c.truth.ryde?.toFixed(2) || "0.00",
@@ -1072,7 +1091,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
             matchedBy: match.matchedBy,
             matchConfidence: match.confidence,
             totalVariance: -Math.abs(t.total || 0),
-            status: "mismatch" as const,
+            status: "identity_only" as const,
             compositionError: false,
             compositionReason: "Empleado mapeado, pero sin base operativa para este periodo (period_base_pay/movements).",
           };
@@ -1118,6 +1137,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     const matched = comparison.filter(c => c.status === "match").length;
     const close = comparison.filter(c => c.status === "close").length;
     const mismatch = comparison.filter(c => c.status === "mismatch").length;
+    const identityOnly = comparison.filter(c => c.status === "identity_only").length;
     const missing = comparison.filter(c => c.status === "missing").length;
     const compositionErrors = comparison.filter(c => c.compositionError).length;
     const totalTruth = truthData.reduce((sum, row) => sum + row.total, 0);
@@ -1128,6 +1148,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       matched,
       close,
       mismatch,
+      identityOnly,
       missing,
       compositionErrors,
       totalTruth,
@@ -1148,13 +1169,19 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         return <Badge variant="secondary" className="text-xs">≈ Cercano</Badge>;
       case "mismatch":
         return <Badge variant="destructive" className="text-xs">✗ Diferente</Badge>;
+      case "identity_only":
+        return <Badge variant="secondary" className="text-xs">◎ Identidad OK / sin base</Badge>;
       case "missing":
         return <Badge variant="outline" className="text-xs">? No encontrado</Badge>;
     }
   };
 
   const explainVariance = (c: ComparisonRow): string => {
-    if (!c.recon) return "Empleado no encontrado en reconciliación";
+    if (!c.recon) {
+      return c.matchEmployeeId
+        ? "Identidad del empleado encontrada, pero no hay datos operativos del periodo para comparar."
+        : "Empleado no encontrado por identidad en la validación.";
+    }
 
     const parts: string[] = [];
     const r = c.recon;
@@ -1323,11 +1350,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 </div>
               </details>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-10 gap-3">
                 <KpiCard label="Empleados (Truth)" value={truthData.length} icon={<DollarSign className="h-4 w-4" />} />
                 <KpiCard label="Exactos" value={stats.matched} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" />
                 <KpiCard label="Cercanos" value={stats.close} icon={<AlertTriangle className="h-4 w-4" />} accent="warning" />
                 <KpiCard label="Diferentes" value={stats.mismatch} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
+                <KpiCard label="Match sin base" value={stats.identityOnly} icon={<AlertTriangle className="h-4 w-4" />} accent="warning" />
                 <KpiCard label="No encontrados" value={stats.missing} icon={<AlertTriangle className="h-4 w-4" />} accent="muted" />
                 <KpiCard label="Comp. Error" value={stats.compositionErrors} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
                 <KpiCard label="Total Truth" value={fmt(stats.totalTruth)} icon={<DollarSign className="h-4 w-4" />} />
@@ -1342,7 +1370,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               </div>
 
               {/* Approval readiness banner */}
-              {stats.mismatch === 0 && stats.missing === 0 && comparison.length > 0 && (
+              {stats.mismatch === 0 && stats.identityOnly === 0 && stats.missing === 0 && comparison.length > 0 && (
                 <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -1504,6 +1532,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             key={c.employee}
                             className={`cursor-pointer ${
                               c.status === "mismatch" ? "bg-destructive/5" :
+                              c.status === "identity_only" ? "bg-warning/5" :
                               c.status === "missing" ? "bg-warning/10" :
                               c.status === "match" ? "bg-primary/5" : ""
                             }`}
