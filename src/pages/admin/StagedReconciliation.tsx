@@ -419,12 +419,23 @@ export default function StagedReconciliation() {
   const variances = useMemo(() => analyzeVariances(finalRecords, employeeMap), [finalRecords, employeeMap, analyzeVariances]);
 
   const isLocked = activePeriod && ["posted", "locked"].includes(activePeriod.status);
-  const currentStepIdx = activePeriod ? STATUS_ORDER.indexOf(activePeriod.status) : -1;
+  const isTruthBased = activePeriod && (activePeriod.closure_method === "truth_validation" || activePeriod.total_clocks === 0);
+  const workflowSteps = isTruthBased ? WORKFLOW_STEPS_TRUTH : WORKFLOW_STEPS_MATCHING;
+  const statusOrder = isTruthBased ? STATUS_ORDER_TRUTH : STATUS_ORDER;
+  const currentStepIdx = activePeriod ? statusOrder.indexOf(activePeriod.status) : -1;
 
   // ── Next action guidance ──
   const nextAction = useMemo(() => {
     if (!activePeriod) return null;
     const s = activePeriod.status;
+    if (isTruthBased) {
+      if (s === "importing" || s === "normalizing") return { label: "Cargar Truth File", tab: "payroll-truth", icon: DollarSign };
+      if (s === "matching" || s === "reviewing") return { label: "Reconciliar vía Truth", tab: "payroll-truth", icon: ClipboardCheck };
+      if (s === "approved") return { label: "Publicar periodo", tab: "publish", icon: Shield };
+      if (s === "posted") return { label: "Cerrar periodo", tab: "publish", icon: Lock };
+      if (s === "locked") return { label: "Periodo cerrado ✓", tab: "publish", icon: CheckCircle2 };
+      return { label: "Cargar Truth File", tab: "payroll-truth", icon: DollarSign };
+    }
     if (s === "importing" || s === "normalizing") return { label: "Importar archivos", tab: "import", icon: Upload };
     if (s === "matching") return { label: "Revisar matches", tab: "review", icon: GitCompareArrows };
     if (s === "reviewing") return { label: "Generar y revisar empleados", tab: "employees", icon: Users };
@@ -432,7 +443,7 @@ export default function StagedReconciliation() {
     if (s === "posted") return { label: "Cerrar periodo", tab: "publish", icon: Lock };
     if (s === "locked") return { label: "Periodo cerrado ✓", tab: "publish", icon: CheckCircle2 };
     return null;
-  }, [activePeriod]);
+  }, [activePeriod, isTruthBased]);
 
   const NoPeriodPlaceholder = ({ icon: Icon, text }: { icon: any; text?: string }) => (
     <div className="text-center py-12 text-muted-foreground">
