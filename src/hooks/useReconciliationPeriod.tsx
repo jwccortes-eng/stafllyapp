@@ -1589,7 +1589,7 @@ export function useReconciliationPeriod(companyId: string | null) {
   return {
     periods, loading, activePeriod, setActivePeriod,
     finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
-    loadFinalRecords, generateFinalRecords, postFinalRecords,
+    loadFinalRecords, generateFinalRecords, generateFinalRecordsFromTruth, postFinalRecords,
     saveMappingCorrection, reopenPeriod, loadClosingReceipt,
     validateBeforePublish, analyzeVariances, runValidation,
   };
