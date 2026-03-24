@@ -14,7 +14,7 @@ import {
   type PayrollTruthRow,
 } from "@/lib/payroll-truth-parser";
 
-type LedgerCategory = "hourly" | "daily" | "ride" | "weekend" | "manual" | "other";
+type LedgerCategory = "hourly" | "daily" | "ride" | "weekend" | "manual" | "deduction" | "reimbursement" | "other";
 type CompositionRole = "authoritative" | "informational_only" | "inferred" | "excluded_from_total";
 type LedgerSourceType = "payroll_row" | "period_base_pay" | "movement";
 
