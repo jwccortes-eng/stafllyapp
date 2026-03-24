@@ -1038,7 +1038,7 @@ export default function StagedReconciliation() {
                 variant="outline"
                 className="gap-1.5 border-primary/40 text-primary"
                 onClick={() => {
-                  const first = payPeriods[0];
+                  const first = getDefaultPayPeriod(payPeriods);
                   if (first) {
                     setSelectedBatchPayPeriodId(first.id);
                     setBatchSearch("");
