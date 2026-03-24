@@ -8,8 +8,14 @@ export interface PayrollTruthRow {
   hourlyRate: number | null;
   payperDay: number;
   ryde: number;
+  tips: number;
+  reimbursements: number;
+  travelHours: number;
+  otros: number;
+  discount: number;
   total: number;
   shiftHours: number;
+  observaciones: string;
 }
 
 interface ColumnDetection {
