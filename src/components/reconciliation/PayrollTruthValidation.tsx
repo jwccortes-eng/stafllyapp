@@ -89,6 +89,7 @@ interface Props {
   companyId: string | null;
   periodStatusId?: string;
   finalRecords?: any[];
+  onGenerateFinalRecords?: () => Promise<void>;
 }
 
 function normalizeName(s: string): string {
