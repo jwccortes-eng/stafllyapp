@@ -40,21 +40,21 @@ export function getDefaultPayPeriod<T extends PayPeriodLike>(
   // 1. Active/open period that contains today
   const active = periods.find(
     (p) =>
-      p.start_date <= ref &&
-      p.end_date >= ref &&
+      getStart(p) <= ref &&
+      getEnd(p) >= ref &&
       (!p.status || p.status === "open"),
   );
   if (active) return active;
 
   // Also accept any period containing today regardless of status
   const containing = periods.find(
-    (p) => p.start_date <= ref && p.end_date >= ref,
+    (p) => getStart(p) <= ref && getEnd(p) >= ref,
   );
   if (containing) return containing;
 
   // 2. Most recent by start_date
   return [...periods].sort((a, b) =>
-    b.start_date.localeCompare(a.start_date),
+    getStart(b).localeCompare(getStart(a)),
   )[0];
 }
 
