@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { getDefaultPayPeriod, sortPeriodsDesc } from "@/lib/pay-period-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { useReconciliationPeriod } from "@/hooks/useReconciliationPeriod";
 import { useAuth } from "@/hooks/useAuth";
@@ -275,7 +276,7 @@ export default function StagedReconciliation() {
   // ── Open exact truth period shortcut (uses currently selected period) ──
   const handleOpenTruthPeriod = () => {
     if (activePeriod) return; // already has an active period
-    const firstPP = payPeriods[0];
+    const firstPP = getDefaultPayPeriod(payPeriods);
     if (!firstPP) {
       toast({ title: "No hay periodos disponibles", variant: "destructive" });
       return;
@@ -310,7 +311,7 @@ export default function StagedReconciliation() {
   useEffect(() => {
     if (!showBatchDialog) return;
     if (selectedBatchPayPeriodId) return;
-    setSelectedBatchPayPeriodId(payPeriods[0]?.id || "");
+    setSelectedBatchPayPeriodId(getDefaultPayPeriod(payPeriods)?.id || "");
   }, [showBatchDialog, payPeriods, selectedBatchPayPeriodId]);
 
   // ── Reprocess period ──
@@ -1038,7 +1039,7 @@ export default function StagedReconciliation() {
                 variant="outline"
                 className="gap-1.5 border-primary/40 text-primary"
                 onClick={() => {
-                  const first = payPeriods[0];
+                  const first = getDefaultPayPeriod(payPeriods);
                   if (first) {
                     setSelectedBatchPayPeriodId(first.id);
                     setBatchSearch("");

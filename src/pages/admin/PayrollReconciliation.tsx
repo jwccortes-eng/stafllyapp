@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
+import { getDefaultPayPeriod, sortPeriodsDesc } from "@/lib/pay-period-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { usePayrollReconciliation, type ReconciliationBatch } from "@/hooks/usePayrollReconciliation";
 import type { ReconciliationRowResult, BatchSummary, TopIssue, MatchBreakdown } from "@/lib/payroll-reconciliation-engine";
@@ -718,13 +719,10 @@ export default function PayrollReconciliationPage() {
 
       if (!mounted) return;
 
-      const mergedList = (data || []) as { id: string; start_date: string; end_date: string; status: string }[];
-      setPeriods(mergedList);
-
-      const today = new Date().toISOString().slice(0, 10);
-      const current = mergedList.find(p => p.start_date <= today && p.end_date >= today);
-      const fallback = mergedList[0];
-      setSelectedPeriodId((current || fallback)?.id || "");
+      const list = (data || []) as { id: string; start_date: string; end_date: string; status: string }[];
+      const sorted = sortPeriodsDesc(list);
+      setPeriods(sorted);
+      setSelectedPeriodId(getDefaultPayPeriod(sorted)?.id || "");
     };
 
     loadPeriods();
@@ -741,7 +739,7 @@ export default function PayrollReconciliationPage() {
 
   const filteredPeriods = useMemo(() => {
     const normalized = periodSearch.trim().toLowerCase();
-    const sorted = [...periods].sort((a, b) => b.start_date.localeCompare(a.start_date));
+    const sorted = sortPeriodsDesc(periods);
     if (!normalized) return sorted;
 
     return sorted.filter((p) => {
@@ -754,7 +752,7 @@ export default function PayrollReconciliationPage() {
   useEffect(() => {
     if (!showCreateDialog) return;
     if (selectedPeriodId) return;
-    if (periods.length > 0) setSelectedPeriodId(periods[0].id);
+    if (periods.length > 0) setSelectedPeriodId(getDefaultPayPeriod(periods)?.id || "");
   }, [showCreateDialog, periods, selectedPeriodId]);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
