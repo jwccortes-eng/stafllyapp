@@ -316,6 +316,80 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     }
   };
 
+  // ── Build identity matches for truth rows (independent of system totals availability) ──
+  useEffect(() => {
+    if (!companyId || truthData.length === 0) {
+      setTruthMatches([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const [employeesRes, aliasesRes] = await Promise.all([
+        supabase
+          .from("employees")
+          .select("id, first_name, last_name, phone_number, email, connecteam_employee_id, employer_identification, verification_ssn_ein")
+          .eq("company_id", companyId)
+          .eq("is_active", true),
+        supabase
+          .from("employee_aliases")
+          .select("alias_name_normalized, employee_id")
+          .eq("company_id", companyId),
+      ]);
+
+      if (cancelled) return;
+
+      const candidates = (employeesRes.data || []).map((e: any) => ({
+        id: e.id,
+        first_name: e.first_name || "",
+        last_name: e.last_name || "",
+        phone: e.phone_number || undefined,
+        email: e.email || undefined,
+        external_id: e.connecteam_employee_id || undefined,
+        employer_identification: e.employer_identification || undefined,
+        verification_ssn_ein: e.verification_ssn_ein || undefined,
+        full_name_normalized: `${e.first_name || ""} ${e.last_name || ""}`.toLowerCase(),
+      }));
+
+      const aliases = (aliasesRes.data || []).map((a: any) => ({
+        alias_normalized: a.alias_name_normalized,
+        employee_id: a.employee_id,
+        confidence: 85,
+      }));
+
+      const truthRows = truthData.map((t) => ({
+        employer_identification: (t as any).employerIdentification || "",
+        verification_ssn_ein: (t as any).verificationSsnEin || "",
+        first_name: t.firstName || "",
+        last_name: t.lastName || "",
+        total_hours: null,
+        total_pay: t.totalPay || 0,
+        pay_per_day: t.payperDay || 0,
+        ryde: t.ryde || 0,
+        tips: t.tips || 0,
+        reimbursements: t.reimbursements || 0,
+        total: t.total || 0,
+        observaciones: t.observaciones || "",
+        raw: {},
+      }));
+
+      const matches = matchEmployees(truthRows as any, candidates as any, aliases as any);
+      if (cancelled) return;
+
+      setTruthMatches(matches.map((m) => ({
+        employeeId: m.system_employee_id,
+        matchedBy: m.matched_by,
+        confidence: m.match_confidence,
+        status: m.match_status,
+      })));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, truthData]);
+
   // ── Persist reconciliation results to DB ──
   const persistResultsToDb = useCallback(async (compRows: ComparisonRow[], statsData: { matched: number; close: number; mismatch: number; missing: number; totalTruth: number; totalRecon: number; variance: number }) => {
     if (!companyId || !user?.id || compRows.length === 0) return;
