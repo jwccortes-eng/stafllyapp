@@ -1128,28 +1128,53 @@ function ActivePeriodBar({ period, isLocked }: { period: PeriodStatus; isLocked:
 }
 
 /* ── Extracted: Approve Tab ── */
-function ApproveTab({ period, onUpdateStatus, onApprove, onGoToPublish }: {
+function ApproveTab({ period, onUpdateStatus, onApprove, onGoToPublish, isTruthBased }: {
   period: PeriodStatus;
   onUpdateStatus: (id: string, status: string) => Promise<void>;
   onApprove: () => Promise<void>;
   onGoToPublish: () => void;
+  isTruthBased?: boolean;
 }) {
-  const steps = [
+  const truthSteps = [
+    { step: "reviewing", label: "Truth Reconciliado", icon: ClipboardCheck, action: () => onUpdateStatus(period.id, "reviewing") },
+    { step: "approved", label: "Aprobado", icon: CheckCircle2, action: onApprove },
+    { step: "posted", label: "Publicado", icon: FileText, action: onGoToPublish },
+    { step: "locked", label: "Cerrado", icon: Lock, action: onGoToPublish },
+  ];
+
+  const matchingSteps = [
     { step: "reviewing", label: "En Revisión", icon: Eye, action: () => onUpdateStatus(period.id, "reviewing") },
     { step: "approved", label: "Aprobado", icon: CheckCircle2, action: onApprove },
     { step: "posted", label: "Publicado", icon: FileText, action: onGoToPublish },
     { step: "locked", label: "Cerrado", icon: Lock, action: onGoToPublish },
   ];
 
-  const stepsOrder = ["importing", "normalizing", "matching", "reviewing", "approved", "posted", "locked"];
+  const steps = isTruthBased ? truthSteps : matchingSteps;
+  const stepsOrder = isTruthBased
+    ? ["importing", "reviewing", "approved", "posted", "locked"]
+    : ["importing", "normalizing", "matching", "reviewing", "approved", "posted", "locked"];
   const currentIdx = stepsOrder.indexOf(period.status);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <span className="text-sm">Periodo:</span>
         <Badge variant="secondary" className="text-xs">{period.period_label} — {period.status}</Badge>
+        {isTruthBased && (
+          <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400">
+            📋 Truth-based closure
+          </Badge>
+        )}
       </div>
+      {isTruthBased && (
+        <Alert className="py-2 border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+          <FileText className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-xs">
+            Clock data unavailable for this period. Approval is based on <strong>Payroll Truth validation</strong> results.
+            No se requiere matching schedule↔clock para aprobar.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid grid-cols-4 gap-4">
         {steps.map(({ step, label, icon: Icon, action }) => {
           const stepIdx = stepsOrder.indexOf(step);
@@ -1171,16 +1196,16 @@ function ApproveTab({ period, onUpdateStatus, onApprove, onGoToPublish }: {
           <div className="text-xs text-muted-foreground">Empleados</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold">{period.total_matches}</div>
-          <div className="text-xs text-muted-foreground">Matches</div>
+          <div className="text-2xl font-bold">{isTruthBased ? "N/A" : period.total_matches}</div>
+          <div className="text-xs text-muted-foreground">{isTruthBased ? "Matches (N/A)" : "Matches"}</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold">{period.total_exceptions - period.resolved_exceptions}</div>
           <div className="text-xs text-muted-foreground">Excepciones</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold">{period.approved_matches}/{period.total_matches}</div>
-          <div className="text-xs text-muted-foreground">Aprobados</div>
+          <div className="text-2xl font-bold">{isTruthBased ? "Truth" : `${period.approved_matches}/${period.total_matches}`}</div>
+          <div className="text-xs text-muted-foreground">{isTruthBased ? "Método de cierre" : "Aprobados"}</div>
         </div>
       </div>
     </div>
