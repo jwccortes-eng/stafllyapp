@@ -752,9 +752,10 @@ export default function PayrollReconciliationPage() {
   }, [periods, periodSearch]);
 
   useEffect(() => {
-    if (!showCreateDialog || !exactTargetPeriod) return;
-    setSelectedPeriodId(exactTargetPeriod.id);
-  }, [showCreateDialog, exactTargetPeriod]);
+    if (!showCreateDialog) return;
+    if (selectedPeriodId) return;
+    if (periods.length > 0) setSelectedPeriodId(periods[0].id);
+  }, [showCreateDialog, periods, selectedPeriodId]);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
