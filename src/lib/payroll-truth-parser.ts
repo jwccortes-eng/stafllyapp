@@ -186,6 +186,12 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
   const totalIndex = findTotalColumnIndex(headers);
   const hourlyRateIndex = findColumnIndex(headers, ["Hourly rate (USD)", "Hourly rate", "Hourly rate USD"]);
   const shiftHoursIndex = findColumnIndex(headers, ["Shift hours", "Total work hours"]);
+  const tipsIndex = findColumnIndex(headers, ["Tips", "Propinas", "Tip"]);
+  const reimbursementsIndex = findColumnIndex(headers, ["Reimbursements", "Reembolsos", "Reimbursement"]);
+  const travelHoursIndex = findColumnIndex(headers, ["Travel Hours", "Travel hours", "Horas de viaje"]);
+  const otrosIndex = findColumnIndex(headers, ["Otros", "Other", "Others", "Otros pagos"]);
+  const discountIndex = findColumnIndex(headers, ["Discount", "Descuento", "Descuentos"]);
+  const observacionesIndex = findColumnIndex(headers, ["Observaciones", "Observations", "Notes", "Notas"]);
 
   const byEmployee = new Map<string, PayrollTruthRow>();
   const debugRows: PayrollTruthDebugRow[] = [];
