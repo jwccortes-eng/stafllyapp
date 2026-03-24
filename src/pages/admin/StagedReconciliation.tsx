@@ -286,14 +286,15 @@ export default function StagedReconciliation() {
     if (p) handleSelectPeriod(p);
   };
 
-  // ── Open exact truth period shortcut ──
+  // ── Open exact truth period shortcut (uses currently selected period) ──
   const handleOpenTruthPeriod = () => {
-    const targetPP = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
-    if (!targetPP) {
-      toast({ title: "Periodo 2025-12-24 → 2025-12-30 no encontrado", variant: "destructive" });
+    if (activePeriod) return; // already has an active period
+    const firstPP = payPeriods[0];
+    if (!firstPP) {
+      toast({ title: "No hay periodos disponibles", variant: "destructive" });
       return;
     }
-    handleCreateFromPayPeriod(targetPP.id);
+    handleCreateFromPayPeriod(firstPP.id);
   };
 
   // ── Sequence number lookup for reconciliation periods ──
