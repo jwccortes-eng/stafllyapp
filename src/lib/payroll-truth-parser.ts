@@ -49,9 +49,15 @@ export interface PayrollTruthParseResult {
     totalPay: ColumnDetection;
     payperDay: ColumnDetection;
     ryde: ColumnDetection;
+    tips: ColumnDetection;
+    reimbursements: ColumnDetection;
+    travelHours: ColumnDetection;
+    otros: ColumnDetection;
+    discount: ColumnDetection;
     total: ColumnDetection;
     hourlyRate: ColumnDetection;
     shiftHours: ColumnDetection;
+    observaciones: ColumnDetection;
   };
   rows: PayrollTruthRow[];
   debugRows: PayrollTruthDebugRow[];
