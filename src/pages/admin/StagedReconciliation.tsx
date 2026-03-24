@@ -174,28 +174,14 @@ export default function StagedReconciliation() {
   // ── Load pay periods for selector (including exact truth target) ──
   useEffect(() => {
     if (!selectedCompanyId) return;
-    Promise.all([
-      supabase.from("pay_periods")
-        .select("id, start_date, end_date, status, sequence_number, calculation_mode")
-        .eq("company_id", selectedCompanyId)
-        .order("start_date", { ascending: false })
-        .limit(200),
-      supabase.from("pay_periods")
-        .select("id, start_date, end_date, status, sequence_number, calculation_mode")
-        .eq("company_id", selectedCompanyId)
-        .eq("start_date", "2025-12-24")
-        .eq("end_date", "2025-12-30")
-        .limit(1),
-    ]).then(([listRes, exactRes]) => {
-      const list = (listRes.data || []) as PayPeriodOption[];
-      const exact = (exactRes.data || []) as PayPeriodOption[];
-      // Merge exact target if not already in list
-      const ids = new Set(list.map(p => p.id));
-      for (const e of exact) {
-        if (!ids.has(e.id)) list.push(e);
-      }
-      setPayPeriods(list);
-    });
+    supabase.from("pay_periods")
+      .select("id, start_date, end_date, status, sequence_number, calculation_mode")
+      .eq("company_id", selectedCompanyId)
+      .order("start_date", { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        setPayPeriods((data || []) as PayPeriodOption[]);
+      });
   }, [selectedCompanyId]);
 
   // ── Auto-select latest active (non-locked) period on load ──
