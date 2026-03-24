@@ -185,20 +185,20 @@ export default function StagedReconciliation() {
       });
   }, [selectedCompanyId]);
 
-  // ── Always converge to the deterministic best period ──
+  // ── Auto-select default period only when no valid selection exists ──
   useEffect(() => {
     if (periods.length === 0) return;
 
+    // If activePeriod is set AND still exists in the loaded list, keep it (manual selection)
+    if (activePeriod && periods.some(p => p.id === activePeriod.id)) return;
+
+    // No valid selection — pick the best default
     const best = getDefaultPayPeriod(periods);
-    if (!best) return;
-
-    // Already showing the correct period — nothing to do
-    if (activePeriod?.id === best.id) return;
-
-    // Switch to the deterministic best period
-    setActivePeriod(best);
-    loadFinalRecords(best.id);
-    loadClosingReceipt(best.id);
+    if (best) {
+      setActivePeriod(best);
+      loadFinalRecords(best.id);
+      loadClosingReceipt(best.id);
+    }
   }, [periods, activePeriod, setActivePeriod, loadFinalRecords, loadClosingReceipt]);
 
   const refresh = useCallback(() => {
