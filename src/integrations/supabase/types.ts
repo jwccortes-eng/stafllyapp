@@ -2507,6 +2507,7 @@ export type Database = {
           driver_licence: string | null
           email: string | null
           employee_role: string | null
+          employer_identification: string | null
           end_date: string | null
           english_level: string | null
           first_name: string
@@ -2530,6 +2531,7 @@ export type Database = {
           tags: string | null
           updated_at: string
           user_id: string | null
+          verification_ssn_ein: string | null
           years_experience: number | null
         }
         Insert: {
@@ -2553,6 +2555,7 @@ export type Database = {
           driver_licence?: string | null
           email?: string | null
           employee_role?: string | null
+          employer_identification?: string | null
           end_date?: string | null
           english_level?: string | null
           first_name: string
@@ -2576,6 +2579,7 @@ export type Database = {
           tags?: string | null
           updated_at?: string
           user_id?: string | null
+          verification_ssn_ein?: string | null
           years_experience?: number | null
         }
         Update: {
@@ -2599,6 +2603,7 @@ export type Database = {
           driver_licence?: string | null
           email?: string | null
           employee_role?: string | null
+          employer_identification?: string | null
           end_date?: string | null
           english_level?: string | null
           first_name?: string
@@ -2622,6 +2627,7 @@ export type Database = {
           tags?: string | null
           updated_at?: string
           user_id?: string | null
+          verification_ssn_ein?: string | null
           years_experience?: number | null
         }
         Relationships: [
