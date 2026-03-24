@@ -286,14 +286,15 @@ export default function StagedReconciliation() {
     if (p) handleSelectPeriod(p);
   };
 
-  // ── Open exact truth period shortcut ──
+  // ── Open exact truth period shortcut (uses currently selected period) ──
   const handleOpenTruthPeriod = () => {
-    const targetPP = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
-    if (!targetPP) {
-      toast({ title: "Periodo 2025-12-24 → 2025-12-30 no encontrado", variant: "destructive" });
+    if (activePeriod) return; // already has an active period
+    const firstPP = payPeriods[0];
+    if (!firstPP) {
+      toast({ title: "No hay periodos disponibles", variant: "destructive" });
       return;
     }
-    handleCreateFromPayPeriod(targetPP.id);
+    handleCreateFromPayPeriod(firstPP.id);
   };
 
   // ── Sequence number lookup for reconciliation periods ──
@@ -328,8 +329,7 @@ export default function StagedReconciliation() {
   useEffect(() => {
     if (!showBatchDialog) return;
     if (selectedBatchPayPeriodId) return;
-    const truthTarget = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
-    setSelectedBatchPayPeriodId(truthTarget?.id || payPeriods[0]?.id || "");
+    setSelectedBatchPayPeriodId(payPeriods[0]?.id || "");
   }, [showBatchDialog, payPeriods, selectedBatchPayPeriodId]);
 
   // ── Reprocess period ──
@@ -597,16 +597,13 @@ export default function StagedReconciliation() {
               );
             })()}
 
-            {/* Exact truth period shortcut */}
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5 shrink-0 border-primary/40 text-primary hover:bg-primary/10"
-              onClick={handleOpenTruthPeriod}
-            >
-              <Target className="h-3.5 w-3.5" />
-              Periodo 112 · 2025-12-24 → 2025-12-30
-            </Button>
+            {/* Active period indicator (dynamic) */}
+            {activePeriod && (
+              <Badge variant="outline" className="gap-1.5 shrink-0 border-primary/40 text-primary bg-primary/5 text-xs font-medium px-3 py-1">
+                <Target className="h-3.5 w-3.5" />
+                {reconPeriodLabel(activePeriod)}
+              </Badge>
+            )}
 
             <Badge variant="outline" className="text-[11px]">
               Reconciliation Batch Mode
@@ -1060,24 +1057,22 @@ export default function StagedReconciliation() {
                 variant="outline"
                 className="gap-1.5 border-primary/40 text-primary"
                 onClick={() => {
-                  const target = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
-                  if (!target) {
-                    toast({ title: "Periodo 2025-12-24 → 2025-12-30 no encontrado", variant: "destructive" });
-                    return;
+                  const first = payPeriods[0];
+                  if (first) {
+                    setSelectedBatchPayPeriodId(first.id);
+                    setBatchSearch("");
                   }
-                  setSelectedBatchPayPeriodId(target.id);
-                  setBatchSearch("2025-12-24 2025-12-30");
                 }}
               >
                 <Target className="h-3.5 w-3.5" />
-                Periodo 112 · 2025-12-24 → 2025-12-30
+                Seleccionar más reciente
               </Button>
             </div>
 
             <ScrollArea className="h-64 rounded-md border">
               <div className="space-y-1 p-2">
                 {batchCandidates.map(pp => {
-                  const isTruth = pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30";
+                  const isTruth = false; // no hardcoded period preference
                   const linked = periods.find(p => p.period_id === pp.id);
                   const isSelected = selectedBatchPayPeriodId === pp.id;
                   return (
