@@ -430,7 +430,8 @@ export default function StagedReconciliation() {
     const s = activePeriod.status;
     if (isTruthBased) {
       if (s === "importing" || s === "normalizing") return { label: "Cargar Truth File", tab: "payroll-truth", icon: DollarSign };
-      if (s === "matching" || s === "reviewing") return { label: "Reconciliar vía Truth", tab: "payroll-truth", icon: ClipboardCheck };
+      if ((s === "matching" || s === "reviewing") && finalRecords.length === 0) return { label: "Reconciliar y generar registros", tab: "payroll-truth", icon: Database };
+      if ((s === "matching" || s === "reviewing") && finalRecords.length > 0) return { label: "Aprobar periodo", tab: "approve", icon: CheckCircle2 };
       if (s === "approved") return { label: "Publicar periodo", tab: "publish", icon: Shield };
       if (s === "posted") return { label: "Cerrar periodo", tab: "publish", icon: Lock };
       if (s === "locked") return { label: "Periodo cerrado ✓", tab: "publish", icon: CheckCircle2 };
