@@ -684,8 +684,9 @@ export default function StagedReconciliation() {
             {nextAction && activePeriod.status !== "locked" && (
               <Button size="sm" variant="default" className="gap-1 text-xs shrink-0" onClick={() => setTab(nextAction.tab)}>
                 <Zap className="h-3 w-3" /> {nextAction.label}
-            </Button>
-          )}
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
