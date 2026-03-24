@@ -1401,13 +1401,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             </TableCell>
                             <TableCell className="font-medium text-sm">{c.employee}</TableCell>
                             <TableCell>{statusBadge(c.status)}</TableCell>
-                            <TableCell className="text-right font-mono text-sm font-medium">{fmt(c.truth.total)}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r ? fmt(r.hourly_pay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r && r.daily_pay > 0 ? fmt(r.daily_pay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r && r.ride_pay > 0 ? fmt(r.ride_pay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r && r.weekend_pay > 0 ? fmt(r.weekend_pay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{r && r.manual_adj !== 0 ? fmt(r.manual_adj) : "—"}</TableCell>
-                            <TableCell className={`text-right font-mono text-sm ${r && r.other_pay > 0 ? "text-destructive font-medium" : ""}`}>{r && r.other_pay > 0 ? fmt(r.other_pay) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.totalPay ? fmt(c.truth.totalPay) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.payperDay ? fmt(c.truth.payperDay) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.ryde ? fmt(c.truth.ryde) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.tips ? fmt(c.truth.tips) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.reimbursements ? fmt(c.truth.reimbursements) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.otros ? fmt(c.truth.otros) : "—"}</TableCell>
+                            <TableCell className={`text-right font-mono text-xs ${c.truth.discount < 0 ? "text-destructive font-medium" : ""}`}>{c.truth.discount ? fmt(c.truth.discount) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-sm font-bold">{fmt(c.truth.total)}</TableCell>
                             <TableCell className="text-right font-mono text-sm font-medium">{r ? fmt(r.total_final) : "—"}</TableCell>
                             <TableCell className={`text-right font-mono text-sm font-medium ${
                               Math.abs(c.totalVariance) > 50 ? "text-destructive" :
@@ -1415,13 +1416,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             }`}>
                               {r ? fmtVar(c.totalVariance) : "N/A"}
                             </TableCell>
-                            <TableCell className="text-center font-mono text-xs text-muted-foreground">{r?.schedule_count ?? "—"}</TableCell>
-                            <TableCell className="text-center font-mono text-xs text-muted-foreground">{r?.clock_count ?? "—"}</TableCell>
-                            <TableCell className="text-center">
-                              {dupsCount > 0 && <Badge variant="destructive" className="text-xs">{dupsCount}</Badge>}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {c.compositionError && <Badge variant="destructive" className="text-xs">⚠</Badge>}
+                            <TableCell className="text-center text-xs" title={c.truth.observaciones || ""}>
+                              {c.truth.observaciones ? "📝" : ""}
                             </TableCell>
                           </TableRow>
 
