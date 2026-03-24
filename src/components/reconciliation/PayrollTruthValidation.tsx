@@ -496,15 +496,15 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
     (async () => {
       try {
-        const { data: periodStatusData } = await supabase
+        const { data: periodStatusData, error: periodStatusError } = await supabase
           .from("reconciliation_period_status" as any)
           .select("period_start, period_end")
           .eq("id", periodStatusId)
           .eq("company_id", companyId)
           .maybeSingle();
 
-        const periodStatus = periodStatusData as { period_start: string; period_end: string } | null;
-        if (!periodStatus || cancelled) {
+        const periodStatus = periodStatusData as unknown as { period_start: string; period_end: string } | null;
+        if (periodStatusError || !periodStatus || cancelled) {
           if (!cancelled) {
             setPersistedComparison(null);
             setDbPersisted(false);
@@ -512,7 +512,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           return;
         }
 
-        const { data: latestBatchData } = await supabase
+        const { data: latestBatchData, error: latestBatchError } = await supabase
           .from("reconciliation_batches" as any)
           .select("id")
           .eq("company_id", companyId)
@@ -522,8 +522,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           .limit(1)
           .maybeSingle();
 
-        const latestBatch = latestBatchData as { id: string } | null;
-        if (!latestBatch || cancelled) {
+        const latestBatch = latestBatchData as unknown as { id: string } | null;
+        if (latestBatchError || !latestBatch || cancelled) {
           if (!cancelled) {
             setPersistedComparison(null);
             setDbPersisted(false);
