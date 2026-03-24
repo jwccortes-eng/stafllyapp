@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { normalizeText } from "@/lib/reconciliation-engine";
 
+export type CalculationMode = "historical_import" | "native_stafly" | "hybrid";
+
 export interface PeriodStatus {
   id: string;
   company_id: string;
@@ -37,6 +39,7 @@ export interface PeriodStatus {
   publish_idempotency_key: string | null;
   notes: string | null;
   closure_method: string | null;
+  calculation_mode: CalculationMode;
   created_at: string;
 }
 

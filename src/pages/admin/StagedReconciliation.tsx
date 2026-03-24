@@ -1162,12 +1162,23 @@ export default function StagedReconciliation() {
 /* ── Extracted: Active Period Info Bar ── */
 function ActivePeriodBar({ period, isLocked }: { period: PeriodStatus; isLocked: boolean }) {
   const closureMethod = period.closure_method;
+  const calcMode = period.calculation_mode || "historical_import";
+
+  const modeLabel = calcMode === "native_stafly"
+    ? { text: "🟢 Periodo Nativo Stafly", className: "border-emerald-500/50 text-emerald-700 bg-emerald-50" }
+    : calcMode === "hybrid"
+    ? { text: "🔶 Periodo Híbrido", className: "border-orange-500/50 text-orange-700 bg-orange-50" }
+    : { text: "📦 Periodo Histórico Importado", className: "border-blue-500/50 text-blue-700 bg-blue-50" };
+
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
       <span>Periodo activo:</span>
       <Badge variant="secondary" className="text-xs">
         {period.period_label} — {period.status}
         {period.reopen_count > 0 && ` (↻${period.reopen_count})`}
+      </Badge>
+      <Badge variant="outline" className={`text-[10px] ${modeLabel.className}`}>
+        {modeLabel.text}
       </Badge>
       {closureMethod === "truth_validation" && (
         <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 bg-amber-50">
