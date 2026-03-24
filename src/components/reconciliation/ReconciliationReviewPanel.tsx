@@ -84,7 +84,34 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
   const [runningMatch, setRunningMatch] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [scopeDebug, setScopeDebug] = useState<{ schedules: number; clocks: number; scheduleBatch: string | null; clockBatch: string | null } | null>(null);
+  const [scopeDebug, setScopeDebug] = useState<{ schedules: number; clocks: number; scheduleBatch: string | null; clockBatch: string | null; scopeMethod: string } | null>(null);
+  const [preflightCounts, setPreflightCounts] = useState<{ schedules: number; clocks: number; loading: boolean } | null>(null);
+
+  // Pre-flight: count rows that would be processed, scoped by date range
+  useEffect(() => {
+    if (!companyId || !periodScope) return;
+    const pStart = periodScope.period_start;
+    const pEnd = periodScope.period_end;
+    if (!pStart || !pEnd) return;
+
+    setPreflightCounts({ schedules: 0, clocks: 0, loading: true });
+
+    const countScoped = async (table: string, batchId: string | null) => {
+      let q = supabase.from(table as any).select("id", { count: "exact", head: true }).eq("company_id", companyId);
+      if (batchId) {
+        q = q.eq("batch_id", batchId);
+      } else {
+        q = q.gte("work_date", pStart).lte("work_date", pEnd);
+      }
+      const { count } = await q;
+      return count || 0;
+    };
+
+    Promise.all([
+      countScoped("normalized_schedule_rows", periodScope.schedule_batch_id),
+      countScoped("normalized_clock_rows", periodScope.clock_batch_id),
+    ]).then(([s, c]) => setPreflightCounts({ schedules: s, clocks: c, loading: false }));
+  }, [companyId, periodScope]);
 
   useEffect(() => {
     if (!companyId) return;
