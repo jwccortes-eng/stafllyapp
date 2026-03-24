@@ -841,7 +841,7 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="exceptions">
-          <ExceptionQueue companyId={selectedCompanyId} onRefresh={() => { refresh(); logJournal("exception_resolved", "Excepciones actualizadas"); }} key={refreshKey} />
+          <ExceptionQueue companyId={selectedCompanyId} periodStatusId={activePeriod?.id ?? null} onRefresh={() => { refresh(); logJournal("exception_resolved", "Excepciones actualizadas"); }} key={refreshKey} />
         </TabsContent>
 
         <TabsContent value="employees">
