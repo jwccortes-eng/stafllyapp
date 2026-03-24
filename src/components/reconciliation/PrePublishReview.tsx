@@ -295,6 +295,15 @@ export default function PrePublishReview({
         </Alert>
       )}
 
+      {/* Historical period mode banner */}
+      {isHistorical && (
+        <Alert className="border-blue-300 bg-blue-50">
+          <AlertDescription className="text-blue-800 text-sm flex items-center gap-2">
+            📦 <strong>Periodo Histórico Importado</strong> — La fuente autoritativa es el archivo de nómina pagada (Truth File). Los cálculos nativos de Stafly son solo diagnósticos para este periodo.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Truth handoff CTA (guaranteed visible for truth-based periods) */}
       {isTruthBasedPeriod && onGenerateTruthRecords && (
         <Card className="border-primary/30 bg-primary/5">
