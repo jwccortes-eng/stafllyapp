@@ -310,7 +310,7 @@ export default function StagedReconciliation() {
   useEffect(() => {
     if (!showBatchDialog) return;
     if (selectedBatchPayPeriodId) return;
-    setSelectedBatchPayPeriodId(payPeriods[0]?.id || "");
+    setSelectedBatchPayPeriodId(getDefaultPayPeriod(payPeriods)?.id || "");
   }, [showBatchDialog, payPeriods, selectedBatchPayPeriodId]);
 
   // ── Reprocess period ──
