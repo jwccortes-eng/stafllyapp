@@ -803,19 +803,40 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="review">
-          <ReconciliationReviewPanel
-            companyId={selectedCompanyId}
-            onRefresh={refresh}
-            key={refreshKey}
-            periodScope={activePeriod ? {
-              schedule_batch_id: activePeriod.schedule_batch_id,
-              clock_batch_id: activePeriod.clock_batch_id,
-              payroll_batch_id: activePeriod.payroll_batch_id,
-              period_start: activePeriod.period_start,
-              period_end: activePeriod.period_end,
-              period_label: activePeriod.period_label,
-            } : null}
-          />
+          {isTruthBased ? (
+            <div className="space-y-4">
+              <Alert className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+                <FileText className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-sm">
+                  <strong>Matching no disponible para este periodo.</strong><br />
+                  Clock data unavailable for {activePeriod?.period_start} → {activePeriod?.period_end}.
+                  Usa <strong>Payroll Truth</strong> como método de cierre.
+                </AlertDescription>
+              </Alert>
+              <div className="flex gap-2">
+                <Button size="sm" variant="default" className="gap-1.5" onClick={() => setTab("payroll-truth")}>
+                  <DollarSign className="h-4 w-4" /> Ir a Payroll Truth
+                </Button>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTab("approve")}>
+                  <CheckCircle2 className="h-4 w-4" /> Ir a Aprobar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <ReconciliationReviewPanel
+              companyId={selectedCompanyId}
+              onRefresh={refresh}
+              key={refreshKey}
+              periodScope={activePeriod ? {
+                schedule_batch_id: activePeriod.schedule_batch_id,
+                clock_batch_id: activePeriod.clock_batch_id,
+                payroll_batch_id: activePeriod.payroll_batch_id,
+                period_start: activePeriod.period_start,
+                period_end: activePeriod.period_end,
+                period_label: activePeriod.period_label,
+              } : null}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="exceptions">
