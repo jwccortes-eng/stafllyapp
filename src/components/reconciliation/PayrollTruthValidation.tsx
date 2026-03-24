@@ -432,9 +432,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   // ── CSV Export ──
   const exportDetailedCSV = useCallback((compRows: ComparisonRow[]) => {
     const headers = [
-      "Empleado", "Estado", "Truth Base", "Truth PayperDay", "Truth Ryde", "Truth TOTAL",
-      "System Hourly", "System Daily", "System Weekend", "System Ride", "System Manual", "System Otros", "System TOTAL",
-      "Varianza", "Fuente Autoritativa", "Schedules", "Clocks", "Flags",
+      "Empleado", "Estado", "Truth Pay", "Truth PPD", "Truth Ryde", "Truth Tips", "Truth Reimb",
+      "Truth TravelH", "Truth Otros", "Truth Discount", "Truth TOTAL", "Truth Observaciones",
+      "Recon TOTAL", "Varianza", "Fuente Autoritativa",
     ];
     const csvRows = compRows.map(c => {
       const r = c.recon;
@@ -444,19 +444,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         c.truth.totalPay?.toFixed(2) || "0.00",
         c.truth.payperDay?.toFixed(2) || "0.00",
         c.truth.ryde?.toFixed(2) || "0.00",
+        c.truth.tips?.toFixed(2) || "0.00",
+        c.truth.reimbursements?.toFixed(2) || "0.00",
+        c.truth.travelHours?.toFixed(2) || "0.00",
+        c.truth.otros?.toFixed(2) || "0.00",
+        c.truth.discount?.toFixed(2) || "0.00",
         c.truth.total.toFixed(2),
-        r?.hourly_pay?.toFixed(2) || "",
-        r?.daily_pay?.toFixed(2) || "",
-        r?.weekend_pay?.toFixed(2) || "",
-        r?.ride_pay?.toFixed(2) || "",
-        r?.manual_adj?.toFixed(2) || "",
-        r?.other_pay?.toFixed(2) || "",
+        `"${(c.truth.observaciones || "").replace(/"/g, '""')}"`,
         r?.total_final?.toFixed(2) || "",
         c.totalVariance.toFixed(2),
         r?.authoritative_source || "",
-        r?.schedule_count?.toString() || "",
-        r?.clock_count?.toString() || "",
-        r?.flags?.join("; ") || "",
       ].join(",");
     });
     const csv = [headers.join(","), ...csvRows].join("\n");
