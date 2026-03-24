@@ -14,7 +14,7 @@ import {
   type PayrollTruthRow,
 } from "@/lib/payroll-truth-parser";
 
-type LedgerCategory = "hourly" | "daily" | "ride" | "weekend" | "manual" | "other";
+type LedgerCategory = "hourly" | "daily" | "ride" | "weekend" | "manual" | "deduction" | "reimbursement" | "other";
 type CompositionRole = "authoritative" | "informational_only" | "inferred" | "excluded_from_total";
 type LedgerSourceType = "payroll_row" | "period_base_pay" | "movement";
 
@@ -102,12 +102,16 @@ function round2(n: number): number {
 
 function classifyMovement(conceptName: string): LedgerCategory {
   const n = conceptName.toLowerCase();
+  if (n.includes("descuento") || n.includes("discount")) return "deduction";
   if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "ride";
   if (n.includes("hourly") || n.includes("hora") || n.includes("regular") || n.includes("base pay")) return "hourly";
   if (n.includes("daily") || n.includes("diario")) return "daily";
   if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend";
   if (n.includes("tip") || n.includes("propina")) return "manual";
-  if (n.includes("adjust") || n.includes("manual") || n.includes("correction") || n.includes("reintegro") || n.includes("bonus")) return "manual";
+  if (n.includes("reintegro") || n.includes("reimburs") || n.includes("reembolso")) return "reimbursement";
+  if (n.includes("viaje") || n.includes("travel")) return "manual";
+  if (n.includes("otros") || n.includes("other pay")) return "manual";
+  if (n.includes("adjust") || n.includes("manual") || n.includes("correction") || n.includes("bonus")) return "manual";
   return "other";
 }
 
@@ -117,12 +121,16 @@ function classifyPayrollType(payType: string | null | undefined, notes: string |
   if (t === "daily" || t === "daily pay" || t === "diario") return "daily";
   if (t === "pay_ride" || t === "ride" || t === "ryde" || t === "transporte") return "ride";
   if (t === "weekend_job" || t === "weekend" || t === "doble" || t === "double" || t === "paga doble") return "weekend";
-  if (t === "manual_adjustment" || t === "manual" || t === "adjustment" || t === "bonus" || t === "reintegro" || t === "correction") return "manual";
+  if (t === "discount" || t === "descuento" || t === "descuentos") return "deduction";
+  if (t === "reimbursement" || t === "reembolso" || t === "reintegro") return "reimbursement";
+  if (t === "manual_adjustment" || t === "manual" || t === "adjustment" || t === "bonus" || t === "correction") return "manual";
 
   const n = (notes || "").toLowerCase();
+  if (n.includes("descuento") || n.includes("discount")) return "deduction";
   if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend";
   if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "ride";
-  if (n.includes("manual") || n.includes("adjust") || n.includes("reintegro") || n.includes("bonus")) return "manual";
+  if (n.includes("reintegro") || n.includes("reimburs") || n.includes("reembolso")) return "reimbursement";
+  if (n.includes("manual") || n.includes("adjust") || n.includes("bonus")) return "manual";
   if (n.includes("daily") || n.includes("diario")) return "daily";
   if (n.includes("hourly") || n.includes("regular") || n.includes("hora")) return "hourly";
 
@@ -145,6 +153,8 @@ function addCategoryAmount(row: ReconBreakdown, category: LedgerCategory, value:
   else if (category === "ride") row.ride_pay += value;
   else if (category === "weekend") row.weekend_pay += value;
   else if (category === "manual") row.manual_adj += value;
+  else if (category === "deduction") row.manual_adj += value; // negative value preserved
+  else if (category === "reimbursement") row.manual_adj += value;
   else row.other_pay += value;
 }
 
