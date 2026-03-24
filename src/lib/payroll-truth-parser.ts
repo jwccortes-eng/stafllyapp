@@ -257,10 +257,18 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
       existing.totalPay += parsedTotalPay;
       existing.payperDay += parsedPayperDay;
       existing.ryde += parsedRyde;
+      existing.tips += parsedTips;
+      existing.reimbursements += parsedReimbursements;
+      existing.travelHours += parsedTravelHours;
+      existing.otros += parsedOtros;
+      existing.discount += parsedDiscount;
       existing.total = Math.max(existing.total, computedTotal);
       existing.shiftHours += parsedShiftHours;
       if (parsedHourlyRate != null && existing.hourlyRate == null) {
         existing.hourlyRate = parsedHourlyRate;
+      }
+      if (rawObservaciones && !existing.observaciones.includes(rawObservaciones)) {
+        existing.observaciones = existing.observaciones ? `${existing.observaciones}; ${rawObservaciones}` : rawObservaciones;
       }
     } else {
       byEmployee.set(key, {
@@ -271,8 +279,14 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
         hourlyRate: parsedHourlyRate,
         payperDay: parsedPayperDay,
         ryde: parsedRyde,
+        tips: parsedTips,
+        reimbursements: parsedReimbursements,
+        travelHours: parsedTravelHours,
+        otros: parsedOtros,
+        discount: parsedDiscount,
         total: computedTotal,
         shiftHours: parsedShiftHours,
+        observaciones: rawObservaciones,
       });
     }
   }
