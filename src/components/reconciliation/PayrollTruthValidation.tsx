@@ -405,17 +405,21 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       const periodInfo = ps as any;
       if (!periodInfo) { setPersistingToDb(false); return; }
 
+      const identityMatchedCount = compRows.filter(r => !!r.matchEmployeeId).length;
+      const identityUnmatchedCount = compRows.length - identityMatchedCount;
+
       // Upsert batch
       const batchPayload = {
         company_id: companyId,
         payroll_period_start: periodInfo.period_start,
         payroll_period_end: periodInfo.period_end,
-        status: statsData.mismatch === 0 && statsData.missing === 0 ? "RECONCILED" : "NEEDS_REVIEW",
+        status: identityUnmatchedCount === 0 ? "RECONCILED" : "NEEDS_REVIEW",
         truth_source_file_name: truthSource?.fileName || null,
         truth_source_uploaded_at: new Date().toISOString(),
-        employees_truth_count: statsData.matched + statsData.close + statsData.mismatch + statsData.missing,
+        employees_truth_count: compRows.length,
         employees_system_count: reconData.length,
-        matched_count: statsData.matched + statsData.close,
+        matched_count: identityMatchedCount,
+        unmatched_truth_count: identityUnmatchedCount,
         exact_match_count: statsData.matched,
         mismatch_count: statsData.mismatch,
         critical_mismatch_count: statsData.mismatch,
