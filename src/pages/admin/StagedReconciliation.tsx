@@ -125,6 +125,7 @@ interface PayPeriodOption {
   end_date: string;
   status: string;
   sequence_number: number | null;
+  calculation_mode?: string;
 }
 
 function periodLabel(pp: PayPeriodOption): string {
