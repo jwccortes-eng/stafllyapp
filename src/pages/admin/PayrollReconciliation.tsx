@@ -895,7 +895,7 @@ export default function PayrollReconciliationPage() {
                     <Input
                       value={periodSearch}
                       onChange={(e) => setPeriodSearch(e.target.value)}
-                      placeholder="Buscar por inicio, cierre o etiqueta (ej: 2025-12-24, Dec 30)"
+                      placeholder="Buscar por fecha o etiqueta"
                       className="h-9 text-xs pl-8 rounded-lg"
                     />
                   </div>
