@@ -1366,19 +1366,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                       <TableHead className="w-8"></TableHead>
                       <TableHead>Empleado</TableHead>
                       <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Truth TOTAL</TableHead>
-                      <TableHead className="text-right">Recon Hourly</TableHead>
-                      <TableHead className="text-right">Recon Daily</TableHead>
-                      <TableHead className="text-right">Recon Ride</TableHead>
-                      <TableHead className="text-right">Recon Wknd</TableHead>
-                      <TableHead className="text-right">Recon Adj</TableHead>
-                      <TableHead className="text-right text-destructive">Otros</TableHead>
+                      <TableHead className="text-right">T.Pay</TableHead>
+                      <TableHead className="text-right">T.PPD</TableHead>
+                      <TableHead className="text-right">T.Ryde</TableHead>
+                      <TableHead className="text-right">T.Tips</TableHead>
+                      <TableHead className="text-right">T.Reimb</TableHead>
+                      <TableHead className="text-right">T.Otros</TableHead>
+                      <TableHead className="text-right">T.Disc</TableHead>
+                      <TableHead className="text-right font-bold">T.TOTAL</TableHead>
                       <TableHead className="text-right">Recon TOTAL</TableHead>
                       <TableHead className="text-right">Varianza</TableHead>
-                      <TableHead className="text-center">Sched</TableHead>
-                      <TableHead className="text-center">Clocks</TableHead>
-                      <TableHead className="text-center">Dups</TableHead>
-                      <TableHead className="text-center">Comp</TableHead>
+                      <TableHead className="text-center">Obs</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
