@@ -744,7 +744,7 @@ export default function PayrollReconciliationPage() {
     const sorted = [...periods].sort((a, b) => b.start_date.localeCompare(a.start_date));
     if (!normalized) return sorted;
 
-    return prioritized.filter((p) => {
+    return sorted.filter((p) => {
       const label = formatPeriodLabel(p.start_date, p.end_date).toLowerCase();
       const searchable = `${p.start_date} ${p.end_date} ${p.status} ${label}`.toLowerCase();
       return searchable.includes(normalized);
