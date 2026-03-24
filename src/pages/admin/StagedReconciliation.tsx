@@ -275,7 +275,7 @@ export default function StagedReconciliation() {
   // ── Open exact truth period shortcut (uses currently selected period) ──
   const handleOpenTruthPeriod = () => {
     if (activePeriod) return; // already has an active period
-    const firstPP = payPeriods[0];
+    const firstPP = getDefaultPayPeriod(payPeriods);
     if (!firstPP) {
       toast({ title: "No hay periodos disponibles", variant: "destructive" });
       return;
