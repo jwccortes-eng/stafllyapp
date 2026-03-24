@@ -820,14 +820,9 @@ export default function PayrollReconciliationPage() {
         <div className="flex items-center justify-between">
           <PageHeader title="Payroll Reconciliation" subtitle="Motor de auditoría y reconciliación de nómina" />
           <div className="flex items-center gap-2">
-            {isDev && exactTargetPeriod && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl gap-1.5"
-                onClick={handleOpenExactValidationPeriod}
-              >
-                <Clock className="h-4 w-4" />Open exact period 2025-12-24 → 2025-12-30
+            {false && (
+              <Button variant="outline" size="sm" className="rounded-xl gap-1.5">
+                <Clock className="h-4 w-4" />Placeholder
               </Button>
             )}
             <Button onClick={() => setShowCreateDialog(true)} size="sm" className="rounded-xl gap-1.5">
