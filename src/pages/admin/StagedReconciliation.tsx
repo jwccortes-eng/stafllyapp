@@ -866,7 +866,7 @@ export default function StagedReconciliation() {
 
         <TabsContent value="approve">
           {activePeriod ? (
-            <ApproveTab period={activePeriod} onUpdateStatus={updatePeriodStatus} onApprove={handleApprovePeriod} onGoToPublish={() => setTab("publish")} />
+            <ApproveTab period={activePeriod} onUpdateStatus={updatePeriodStatus} onApprove={handleApprovePeriod} onGoToPublish={() => setTab("publish")} isTruthBased={!!isTruthBased} />
           ) : (
             <NoPeriodPlaceholder icon={CheckCircle2} />
           )}
