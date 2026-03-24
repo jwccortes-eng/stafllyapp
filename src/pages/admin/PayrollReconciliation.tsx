@@ -900,18 +900,6 @@ export default function PayrollReconciliationPage() {
                     />
                   </div>
 
-                  {isDev && exactTargetPeriod && (
-                    <Button
-                      type="button"
-                      variant={selectedPeriodId === exactTargetPeriod.id ? "default" : "outline"}
-                      size="sm"
-                      className="w-full justify-start text-xs rounded-lg"
-                      onClick={() => setSelectedPeriodId(exactTargetPeriod.id)}
-                    >
-                      <Clock className="h-3.5 w-3.5 mr-1.5" />
-                      Open exact period 2025-12-24 → 2025-12-30
-                    </Button>
-                  )}
 
                   <div className="rounded-lg border border-border/50 bg-background overflow-hidden">
                     <ScrollArea className="h-52">
