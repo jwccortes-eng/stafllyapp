@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ interface Props {
   validation: { canPublish: boolean; errors: string[]; warnings: string[] };
   variances?: EmployeeVariance[];
   onPublish: () => Promise<boolean | void>;
-  onGenerateTruthRecords?: () => Promise<void>;
+  onGenerateTruthRecords?: () => Promise<boolean>;
   onLock: () => void;
   onReopen: (reason: string) => void;
   publishing?: boolean;
@@ -41,7 +41,7 @@ export default function PrePublishReview({
   const [publishNote, setPublishNote] = useState("");
   const [acknowledgeWarnings, setAcknowledgeWarnings] = useState(false);
   const [supervisedConfirm, setSupervisedConfirm] = useState(false);
-  const [generatingTruthRecords, setGeneratingTruthRecords] = useState(false);
+  const [truthGenerationState, setTruthGenerationState] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const stats = useMemo(() => {
     const approved = finalRecords.filter(r => ["resolved", "approved"].includes(r.reconciliation_status));
@@ -111,6 +111,10 @@ export default function PrePublishReview({
   const canPublish = period.status === "approved" && enhancedChecks.canPublish;
   const isTruthBasedPeriod = period.closure_method === "truth_validation" || period.total_clocks === 0;
 
+  useEffect(() => {
+    setTruthGenerationState("idle");
+  }, [period.id]);
+
   // Pilot mode: first 3 periods require supervised confirm
   const isFirstPeriods = (period.reopen_count || 0) === 0 && isPilotMode;
 
@@ -124,11 +128,16 @@ export default function PrePublishReview({
 
   const handleGenerateTruthRecords = async () => {
     if (!onGenerateTruthRecords) return;
-    setGeneratingTruthRecords(true);
+    setTruthGenerationState("loading");
     try {
-      await onGenerateTruthRecords();
+      const ok = await onGenerateTruthRecords();
+      setTruthGenerationState(ok ? "success" : "error");
+    } catch {
+      setTruthGenerationState("error");
     } finally {
-      setGeneratingTruthRecords(false);
+      if (truthGenerationState === "loading") {
+        // keep explicit loading status visible until promise settles
+      }
     }
   };
 
@@ -301,10 +310,27 @@ export default function PrePublishReview({
             <p className="text-sm text-muted-foreground">
               Genera los registros finales publicables desde la reconciliación Truth Validation.
             </p>
-            <Button size="sm" className="gap-1.5" onClick={handleGenerateTruthRecords} disabled={generatingTruthRecords || isLocked}>
-              {generatingTruthRecords ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
-              {finalRecords.length > 0 ? "Regenerar Registros desde Truth" : "Generar Registros desde Truth"}
-            </Button>
+            <div className="flex flex-col items-start gap-1 md:items-end">
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={handleGenerateTruthRecords}
+                disabled={truthGenerationState === "loading" || isLocked}
+              >
+                {truthGenerationState === "loading" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+                {truthGenerationState === "loading"
+                  ? "Generando..."
+                  : finalRecords.length > 0
+                    ? "Regenerar Registros desde Truth"
+                    : "Generar Registros desde Truth"}
+              </Button>
+              {truthGenerationState === "success" && (
+                <p className="text-xs font-medium text-primary">Registros generados</p>
+              )}
+              {truthGenerationState === "error" && (
+                <p className="text-xs font-medium text-destructive">Error al generar registros</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
