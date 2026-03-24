@@ -1434,13 +1434,19 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                   </div>
 
                                   <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                      <p className="font-medium text-foreground mb-1">Truth breakdown (TOTAL autoritativo):</p>
+                                     <div>
+                                      <p className="font-medium text-foreground mb-1">Truth breakdown (componentes del archivo pagado):</p>
                                       <div className="space-y-0.5 text-muted-foreground font-mono">
                                         <p>Total Pay: {fmt(c.truth.totalPay)}</p>
                                         <p>PayperDay: {fmt(c.truth.payperDay)}</p>
                                         <p>Ryde: {fmt(c.truth.ryde)}</p>
+                                        {c.truth.tips !== 0 && <p>Tips: {fmt(c.truth.tips)}</p>}
+                                        {c.truth.reimbursements !== 0 && <p>Reimbursements: {fmt(c.truth.reimbursements)}</p>}
+                                        {c.truth.travelHours !== 0 && <p>Travel Hours: {fmt(c.truth.travelHours)}</p>}
+                                        {c.truth.otros !== 0 && <p>Otros: {fmt(c.truth.otros)}</p>}
+                                        {c.truth.discount !== 0 && <p className="text-destructive">Discount: {fmt(c.truth.discount)}</p>}
                                         <p className="font-medium text-foreground">TOTAL: {fmt(c.truth.total)}</p>
+                                        {c.truth.observaciones && <p className="text-xs italic mt-1">📝 {c.truth.observaciones}</p>}
                                       </div>
                                     </div>
                                     {r && (
