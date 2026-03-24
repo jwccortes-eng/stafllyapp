@@ -988,32 +988,15 @@ export default function StagedReconciliation() {
         </TabsContent>
 
         <TabsContent value="payroll-truth">
-          <div className="space-y-4">
-            <PayrollTruthValidation companyId={selectedCompanyId} periodStatusId={activePeriod?.id} finalRecords={finalRecords} />
-            {isTruthBased && activePeriod && (
-              <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 flex items-center gap-3">
-                <Database className="h-5 w-5 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Materializar registros para publicación</p>
-                  <p className="text-xs text-muted-foreground">
-                    {finalRecords.length > 0
-                      ? `${finalRecords.length} registros ya generados — puedes regenerar si actualizaste la reconciliación.`
-                      : "Genera registros finales desde los resultados de Truth Validation para habilitar la aprobación y publicación."}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  className="gap-1.5 shrink-0"
-                  onClick={async () => {
-                    await generateFinalRecordsFromTruth(activePeriod.id);
-                    await logJournal("truth_materialize", "Registros finales generados desde Truth Validation");
-                  }}
-                >
-                  <Database className="h-3.5 w-3.5" /> Generar Registros desde Truth
-                </Button>
-              </div>
-            )}
-          </div>
+          <PayrollTruthValidation
+            companyId={selectedCompanyId}
+            periodStatusId={activePeriod?.id}
+            finalRecords={finalRecords}
+            onGenerateFinalRecords={activePeriod ? async () => {
+              await generateFinalRecordsFromTruth(activePeriod.id);
+              await logJournal("truth_materialize", "Registros finales generados desde Truth Validation");
+            } : undefined}
+          />
         </TabsContent>
 
         <TabsContent value="history">
