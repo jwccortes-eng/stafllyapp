@@ -105,6 +105,7 @@ function classifyMovement(conceptName: string): LedgerCategory {
   if (n.includes("daily") || n.includes("diario")) return "daily";
   if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "ride";
   if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend";
+  if (n.includes("tip") || n.includes("propina")) return "manual";
   if (n.includes("adjust") || n.includes("manual") || n.includes("correction") || n.includes("reintegro") || n.includes("bonus")) return "manual";
   return "other";
 }
