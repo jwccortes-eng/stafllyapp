@@ -329,8 +329,7 @@ export default function StagedReconciliation() {
   useEffect(() => {
     if (!showBatchDialog) return;
     if (selectedBatchPayPeriodId) return;
-    const truthTarget = payPeriods.find(pp => pp.start_date === "2025-12-24" && pp.end_date === "2025-12-30");
-    setSelectedBatchPayPeriodId(truthTarget?.id || payPeriods[0]?.id || "");
+    setSelectedBatchPayPeriodId(payPeriods[0]?.id || "");
   }, [showBatchDialog, payPeriods, selectedBatchPayPeriodId]);
 
   // ── Reprocess period ──
