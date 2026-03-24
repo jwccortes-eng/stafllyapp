@@ -37,14 +37,7 @@ const fmtVar = (v: number | null | undefined) => {
 };
 const fmtPct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
-const TARGET_TRUTH_PERIOD = {
-  start_date: "2025-12-24",
-  end_date: "2025-12-30",
-} as const;
-
-const isTargetTruthPeriod = (p: { start_date: string; end_date: string }) => (
-  p.start_date === TARGET_TRUTH_PERIOD.start_date && p.end_date === TARGET_TRUTH_PERIOD.end_date
-);
+/* Removed hardcoded TARGET_TRUTH_PERIOD — all period references are now dynamic */
 
 const formatPeriodLabel = (startDate: string, endDate: string) => {
   const start = new Date(`${startDate}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });

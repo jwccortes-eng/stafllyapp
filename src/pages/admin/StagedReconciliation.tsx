@@ -299,12 +299,7 @@ export default function StagedReconciliation() {
   const batchCandidates = useMemo(() => {
     const q = batchSearch.trim().toLowerCase();
     return [...payPeriods]
-      .sort((a, b) => {
-        const aTruth = a.start_date === "2025-12-24" && a.end_date === "2025-12-30" ? 1 : 0;
-        const bTruth = b.start_date === "2025-12-24" && b.end_date === "2025-12-30" ? 1 : 0;
-        if (aTruth !== bTruth) return bTruth - aTruth;
-        return b.start_date.localeCompare(a.start_date);
-      })
+      .sort((a, b) => b.start_date.localeCompare(a.start_date))
       .filter(pp => {
         if (!q) return true;
         const label = periodLabel(pp).toLowerCase();
