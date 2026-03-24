@@ -1066,13 +1066,19 @@ export default function StagedReconciliation() {
 
 /* ── Extracted: Active Period Info Bar ── */
 function ActivePeriodBar({ period, isLocked }: { period: PeriodStatus; isLocked: boolean }) {
+  const closureMethod = (period as any).closure_method as string | null;
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
       <span>Periodo activo:</span>
       <Badge variant="secondary" className="text-xs">
         {period.period_label} — {period.status}
         {period.reopen_count > 0 && ` (↻${period.reopen_count})`}
       </Badge>
+      {closureMethod === "truth_validation" && (
+        <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 bg-amber-50">
+          📋 Cierre vía Truth · Sin fichajes
+        </Badge>
+      )}
       {isLocked && <Badge variant="destructive" className="text-xs gap-1"><Lock className="h-3 w-3" /> Bloqueado</Badge>}
     </div>
   );
