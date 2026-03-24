@@ -237,7 +237,12 @@ export function useReconciliationPeriod(companyId: string | null) {
       .select("*")
       .single();
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const isDuplicate = error.message?.includes("uq_recon_period_company_dates") || error.code === "23505";
+      toast({ 
+        title: isDuplicate ? "Periodo duplicado" : "Error", 
+        description: isDuplicate ? "Ya existe un periodo activo para este rango de fechas." : error.message, 
+        variant: "destructive" 
+      });
       return null;
     }
     await loadPeriods();
