@@ -84,7 +84,34 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
   const [runningMatch, setRunningMatch] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [scopeDebug, setScopeDebug] = useState<{ schedules: number; clocks: number; scheduleBatch: string | null; clockBatch: string | null } | null>(null);
+  const [scopeDebug, setScopeDebug] = useState<{ schedules: number; clocks: number; scheduleBatch: string | null; clockBatch: string | null; scopeMethod: string } | null>(null);
+  const [preflightCounts, setPreflightCounts] = useState<{ schedules: number; clocks: number; loading: boolean } | null>(null);
+
+  // Pre-flight: count rows that would be processed, scoped by date range
+  useEffect(() => {
+    if (!companyId || !periodScope) return;
+    const pStart = periodScope.period_start;
+    const pEnd = periodScope.period_end;
+    if (!pStart || !pEnd) return;
+
+    setPreflightCounts({ schedules: 0, clocks: 0, loading: true });
+
+    const countScoped = async (table: string, batchId: string | null) => {
+      let q = supabase.from(table as any).select("id", { count: "exact", head: true }).eq("company_id", companyId);
+      if (batchId) {
+        q = q.eq("batch_id", batchId);
+      } else {
+        q = q.gte("work_date", pStart).lte("work_date", pEnd);
+      }
+      const { count } = await q;
+      return count || 0;
+    };
+
+    Promise.all([
+      countScoped("normalized_schedule_rows", periodScope.schedule_batch_id),
+      countScoped("normalized_clock_rows", periodScope.clock_batch_id),
+    ]).then(([s, c]) => setPreflightCounts({ schedules: s, clocks: c, loading: false }));
+  }, [companyId, periodScope]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -129,10 +156,12 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
         fetchAllByBatch("normalized_clock_rows", companyId, clockBatch, pStart, pEnd),
       ]) as [NormalizedScheduleRow[], NormalizedClockRow[]];
 
-      setScopeDebug({ schedules: schedules.length, clocks: clocks.length, scheduleBatch: schedBatch, clockBatch: clockBatch });
+      const scopeMethod = schedBatch ? "batch_id" : (pStart && pEnd ? "date_range" : "global");
+      setScopeDebug({ schedules: schedules.length, clocks: clocks.length, scheduleBatch: schedBatch, clockBatch: clockBatch, scopeMethod });
       console.log("[Matching] Scoped rows — schedules:", schedules.length, "clocks:", clocks.length,
-        schedBatch ? `(batch: ${schedBatch})` : "(ALL company — no batch scope!)",
-        clockBatch ? `(batch: ${clockBatch})` : "(ALL company — no batch scope!)");
+        `(scope: ${scopeMethod})`,
+        schedBatch ? `(batch: ${schedBatch})` : `(date: ${pStart} → ${pEnd})`,
+        clockBatch ? `(batch: ${clockBatch})` : `(date: ${pStart} → ${pEnd})`);
 
       if (schedules.length === 0 && clocks.length === 0) {
         toast({ title: "Sin datos", description: "Importa turnos y fichajes primero desde la pestaña Importar.", variant: "destructive" });
@@ -341,9 +370,37 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
         {periodScope ? (
           <>
             <p>Periodo: <span className="font-mono">{periodScope.period_label}</span> ({periodScope.period_start} → {periodScope.period_end})</p>
-            <p>Schedule batch: <span className="font-mono">{periodScope.schedule_batch_id || "⚠️ NO ASIGNADO — cargará TODOS los schedules"}</span></p>
-            <p>Clock batch: <span className="font-mono">{periodScope.clock_batch_id || "⚠️ NO ASIGNADO — cargará TODOS los clocks"}</span></p>
+            <p>Schedule batch: <span className="font-mono">
+              {periodScope.schedule_batch_id 
+                ? periodScope.schedule_batch_id 
+                : `Filtrado por fechas: ${periodScope.period_start} → ${periodScope.period_end}`}
+            </span>
+              {!periodScope.schedule_batch_id && <Badge variant="outline" className="ml-2 text-[10px]">date-range scope</Badge>}
+            </p>
+            <p>Clock batch: <span className="font-mono">
+              {periodScope.clock_batch_id 
+                ? periodScope.clock_batch_id 
+                : `Filtrado por fechas: ${periodScope.period_start} → ${periodScope.period_end}`}
+            </span>
+              {!periodScope.clock_batch_id && <Badge variant="outline" className="ml-2 text-[10px]">date-range scope</Badge>}
+            </p>
             <p>Payroll batch: <span className="font-mono">{periodScope.payroll_batch_id || "—"}</span></p>
+            {preflightCounts && !preflightCounts.loading && (
+              <div className="mt-1 flex items-center gap-3">
+                <Badge variant="secondary" className="text-[10px]">
+                  📋 {preflightCounts.schedules} schedules en periodo
+                </Badge>
+                <Badge variant="secondary" className="text-[10px]">
+                  ⏱ {preflightCounts.clocks} clocks en periodo
+                </Badge>
+                <Badge variant="default" className="text-[10px] bg-primary/80">
+                  ✅ Scoped — solo datos del periodo activo
+                </Badge>
+              </div>
+            )}
+            {preflightCounts?.loading && (
+              <p className="text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Contando filas del periodo…</p>
+            )}
           </>
         ) : (
           <p className="text-destructive font-medium">⚠️ Sin periodo activo — matching cargará TODOS los rows de la empresa (puede incluir datos históricos)</p>
@@ -351,7 +408,9 @@ export default function ReconciliationReviewPanel({ companyId, onRefresh, period
         {scopeDebug && (
           <p className="mt-1 text-muted-foreground">
             Último matching: <span className="font-mono">{scopeDebug.schedules}</span> schedules, <span className="font-mono">{scopeDebug.clocks}</span> clocks
-            {!scopeDebug.scheduleBatch && <span className="text-destructive ml-2">⚠️ Sin filtro de batch</span>}
+            {scopeDebug.scopeMethod === "date_range" && <Badge variant="outline" className="ml-2 text-[10px]">filtrado por fechas</Badge>}
+            {scopeDebug.scopeMethod === "batch_id" && <Badge variant="outline" className="ml-2 text-[10px]">filtrado por batch</Badge>}
+            {scopeDebug.scopeMethod === "global" && <span className="text-destructive ml-2">⚠️ Global — sin filtro</span>}
           </p>
         )}
       </div>
