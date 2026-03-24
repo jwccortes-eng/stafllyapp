@@ -62,5 +62,5 @@ export function getDefaultPayPeriod<T extends PayPeriodLike>(
  * Sort pay periods most-recent-first (descending by start_date).
  */
 export function sortPeriodsDesc<T extends PayPeriodLike>(periods: T[]): T[] {
-  return [...periods].sort((a, b) => b.start_date.localeCompare(a.start_date));
+  return [...periods].sort((a, b) => getStart(b).localeCompare(getStart(a)));
 }

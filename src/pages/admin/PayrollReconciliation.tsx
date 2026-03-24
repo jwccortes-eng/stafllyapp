@@ -719,7 +719,8 @@ export default function PayrollReconciliationPage() {
 
       if (!mounted) return;
 
-      const sorted = sortPeriodsDesc(mergedList);
+      const list = (data || []) as { id: string; start_date: string; end_date: string; status: string }[];
+      const sorted = sortPeriodsDesc(list);
       setPeriods(sorted);
       setSelectedPeriodId(getDefaultPayPeriod(sorted)?.id || "");
     };
