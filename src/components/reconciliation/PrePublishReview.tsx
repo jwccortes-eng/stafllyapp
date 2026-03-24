@@ -110,7 +110,7 @@ export default function PrePublishReview({
   const isLocked = period.status === "locked";
   const canPublish = period.status === "approved" && enhancedChecks.canPublish;
   const isTruthBasedPeriod = period.closure_method === "truth_validation" || period.total_clocks === 0;
-  const isHistorical = (period as any).calculation_mode === "historical_import" || (period as any).calculation_mode === "hybrid";
+  const isHistorical = period.calculation_mode === "historical_import" || period.calculation_mode === "hybrid";
 
   useEffect(() => {
     setTruthGenerationState("idle");
