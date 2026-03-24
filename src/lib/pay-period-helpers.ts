@@ -9,9 +9,19 @@
 
 interface PayPeriodLike {
   id: string;
-  start_date: string;
-  end_date: string;
+  start_date?: string;
+  end_date?: string;
+  period_start?: string;
+  period_end?: string;
   status?: string;
+}
+
+function getStart(p: PayPeriodLike): string {
+  return p.start_date || p.period_start || "";
+}
+
+function getEnd(p: PayPeriodLike): string {
+  return p.end_date || p.period_end || "";
 }
 
 /**
