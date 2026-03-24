@@ -1072,7 +1072,7 @@ export default function StagedReconciliation() {
 
 /* ── Extracted: Active Period Info Bar ── */
 function ActivePeriodBar({ period, isLocked }: { period: PeriodStatus; isLocked: boolean }) {
-  const closureMethod = (period as any).closure_method as string | null;
+  const closureMethod = period.closure_method;
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
       <span>Periodo activo:</span>
