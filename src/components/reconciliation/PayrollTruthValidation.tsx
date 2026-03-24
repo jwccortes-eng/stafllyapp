@@ -1297,6 +1297,33 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 )}
               </div>
 
+              {/* ── Truth-to-Publish handoff ── */}
+              {dbPersisted && onGenerateFinalRecords && (
+                <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 flex items-center gap-3">
+                  <Database className="h-5 w-5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">Materializar registros para publicación</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(externalFinalRecords?.length ?? 0) > 0
+                        ? `${externalFinalRecords!.length} registros ya generados — puedes regenerar si actualizaste la reconciliación.`
+                        : "Genera registros finales desde los resultados de Truth Validation para habilitar la aprobación y publicación."}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 shrink-0"
+                    disabled={generatingFinal}
+                    onClick={async () => {
+                      setGeneratingFinal(true);
+                      try { await onGenerateFinalRecords(); } finally { setGeneratingFinal(false); }
+                    }}
+                  >
+                    {generatingFinal ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+                    Generar Registros desde Truth
+                  </Button>
+                </div>
+              )}
+
               {showRawRecords && (
                 <div className="overflow-auto max-h-[400px] rounded border border-border bg-muted/30">
                   <Table>
