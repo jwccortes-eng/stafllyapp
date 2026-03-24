@@ -4,6 +4,10 @@ export interface PayrollTruthRow {
   employee: string;
   firstName: string;
   lastName: string;
+  employerIdentification: string;
+  verificationSsnEin: string;
+  phoneNumber: string;
+  email: string;
   totalPay: number;
   hourlyRate: number | null;
   payperDay: number;
@@ -44,8 +48,12 @@ export interface PayrollTruthParseResult {
   primaryComparisonField: "TOTAL" | "Total Pay + Payper Day + Ryde";
   rawColumnNames: string[];
   detectedColumns: {
+    employerIdentification: ColumnDetection;
+    verificationSsnEin: ColumnDetection;
     firstName: ColumnDetection;
     lastName: ColumnDetection;
+    phoneNumber: ColumnDetection;
+    email: ColumnDetection;
     totalPay: ColumnDetection;
     payperDay: ColumnDetection;
     ryde: ColumnDetection;
@@ -180,6 +188,10 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
 
   const firstNameIndex = findColumnIndex(headers, ["First name", "Firstname", "Employee first name"]);
   const lastNameIndex = findColumnIndex(headers, ["Last name", "Lastname", "Employee last name"]);
+  const employerIdentificationIndex = findColumnIndex(headers, ["Employer identification", "Employer ID", "Employee ID"]);
+  const verificationSsnEinIndex = findColumnIndex(headers, ["Verification SSN - EIN", "Verification SSN", "SSN", "SSN - EIN", "EIN"]);
+  const phoneNumberIndex = findColumnIndex(headers, ["Phone number", "Phone", "Mobile", "Cell phone"]);
+  const emailIndex = findColumnIndex(headers, ["Email", "E-mail"]);
   const totalPayIndex = findColumnIndex(headers, ["Total pay", "Total Pay", "Gross pay"]);
   const payperDayIndex = findColumnIndex(headers, ["Payper Day", "Pay per day", "Pay per Day"]);
   const rydeIndex = findColumnIndex(headers, ["Ryde", "Ride", "Rides"]);
@@ -202,6 +214,10 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
 
     const firstName = String(firstNameIndex >= 0 ? row[firstNameIndex] ?? "" : "").trim();
     const lastName = String(lastNameIndex >= 0 ? row[lastNameIndex] ?? "" : "").trim();
+    const employerIdentification = String(employerIdentificationIndex >= 0 ? row[employerIdentificationIndex] ?? "" : "").trim();
+    const verificationSsnEin = String(verificationSsnEinIndex >= 0 ? row[verificationSsnEinIndex] ?? "" : "").trim();
+    const phoneNumber = String(phoneNumberIndex >= 0 ? row[phoneNumberIndex] ?? "" : "").trim();
+    const email = String(emailIndex >= 0 ? row[emailIndex] ?? "" : "").trim();
     const employee = `${firstName} ${lastName}`.trim();
 
     if (!employee || isSummaryRow(employee)) continue;
@@ -254,6 +270,10 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
     const existing = byEmployee.get(key);
 
     if (existing) {
+      if (!existing.employerIdentification && employerIdentification) existing.employerIdentification = employerIdentification;
+      if (!existing.verificationSsnEin && verificationSsnEin) existing.verificationSsnEin = verificationSsnEin;
+      if (!existing.phoneNumber && phoneNumber) existing.phoneNumber = phoneNumber;
+      if (!existing.email && email) existing.email = email;
       existing.totalPay += parsedTotalPay;
       existing.payperDay += parsedPayperDay;
       existing.ryde += parsedRyde;
@@ -275,6 +295,10 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
         employee,
         firstName,
         lastName,
+        employerIdentification,
+        verificationSsnEin,
+        phoneNumber,
+        email,
         totalPay: parsedTotalPay,
         hourlyRate: parsedHourlyRate,
         payperDay: parsedPayperDay,
@@ -297,8 +321,12 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
     primaryComparisonField: totalIndex >= 0 ? "TOTAL" : "Total Pay + Payper Day + Ryde",
     rawColumnNames: headers,
     detectedColumns: {
+      employerIdentification: getColumnDetection(headers, employerIdentificationIndex),
+      verificationSsnEin: getColumnDetection(headers, verificationSsnEinIndex),
       firstName: getColumnDetection(headers, firstNameIndex),
       lastName: getColumnDetection(headers, lastNameIndex),
+      phoneNumber: getColumnDetection(headers, phoneNumberIndex),
+      email: getColumnDetection(headers, emailIndex),
       totalPay: getColumnDetection(headers, totalPayIndex),
       payperDay: getColumnDetection(headers, payperDayIndex),
       ryde: getColumnDetection(headers, rydeIndex),
