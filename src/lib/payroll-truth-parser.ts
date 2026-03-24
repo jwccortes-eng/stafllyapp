@@ -212,6 +212,12 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
     const rawTotal = totalIndex >= 0 ? row[totalIndex] : null;
     const rawHourlyRate = hourlyRateIndex >= 0 ? row[hourlyRateIndex] : null;
     const rawShiftHours = shiftHoursIndex >= 0 ? row[shiftHoursIndex] : null;
+    const rawTips = tipsIndex >= 0 ? row[tipsIndex] : null;
+    const rawReimbursements = reimbursementsIndex >= 0 ? row[reimbursementsIndex] : null;
+    const rawTravelHours = travelHoursIndex >= 0 ? row[travelHoursIndex] : null;
+    const rawOtros = otrosIndex >= 0 ? row[otrosIndex] : null;
+    const rawDiscount = discountIndex >= 0 ? row[discountIndex] : null;
+    const rawObservaciones = observacionesIndex >= 0 ? String(row[observacionesIndex] ?? "").trim() : "";
 
     const parsedTotalPay = parseLocalizedNumber(rawTotalPay);
     const parsedPayperDay = parseLocalizedNumber(rawPayperDay);
@@ -219,8 +225,13 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
     const parsedTotal = parseLocalizedNumber(rawTotal);
     const parsedHourlyRate = rawHourlyRate == null || rawHourlyRate === "" ? null : parseLocalizedNumber(rawHourlyRate);
     const parsedShiftHours = parseLocalizedNumber(rawShiftHours);
+    const parsedTips = parseLocalizedNumber(rawTips);
+    const parsedReimbursements = parseLocalizedNumber(rawReimbursements);
+    const parsedTravelHours = parseLocalizedNumber(rawTravelHours);
+    const parsedOtros = parseLocalizedNumber(rawOtros);
+    const parsedDiscount = parseLocalizedNumber(rawDiscount);
 
-    const computedTotal = totalIndex >= 0 ? parsedTotal : parsedTotalPay + parsedPayperDay + parsedRyde;
+    const computedTotal = totalIndex >= 0 ? parsedTotal : parsedTotalPay + parsedPayperDay + parsedRyde + parsedTips + parsedReimbursements + parsedTravelHours + parsedOtros + parsedDiscount;
 
     if (debugRows.length < 5) {
       debugRows.push({
