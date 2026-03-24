@@ -14,6 +14,7 @@ import { AlertTriangle, CheckCircle2, Eye, XCircle } from "lucide-react";
 
 interface Props {
   companyId: string | null;
+  periodStatusId?: string | null;
   onRefresh: () => void;
 }
 
@@ -38,7 +39,7 @@ const SEVERITY_COLOR: Record<string, string> = {
   low: "outline",
 };
 
-export default function ExceptionQueue({ companyId, onRefresh }: Props) {
+export default function ExceptionQueue({ companyId, periodStatusId, onRefresh }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [exceptions, setExceptions] = useState<Exception[]>([]);
@@ -57,12 +58,13 @@ export default function ExceptionQueue({ companyId, onRefresh }: Props) {
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
       .limit(200);
+    if (periodStatusId) q = q.eq("period_id", periodStatusId);
     if (filter !== "all") q = q.eq("status", filter);
     q.then(({ data }) => {
       setExceptions((data || []) as any);
       setLoading(false);
     });
-  }, [companyId, filter]);
+  }, [companyId, periodStatusId, filter]);
 
   const resolve = async () => {
     if (!resolving || !user?.id) return;
