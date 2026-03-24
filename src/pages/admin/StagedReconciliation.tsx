@@ -138,7 +138,7 @@ export default function StagedReconciliation() {
   const {
     periods, loading, activePeriod, setActivePeriod,
     finalRecords, closingReceipt, loadPeriods, createPeriod, updatePeriodStatus,
-    loadFinalRecords, generateFinalRecords, postFinalRecords,
+    loadFinalRecords, generateFinalRecords, generateFinalRecordsFromTruth, postFinalRecords,
     saveMappingCorrection, reopenPeriod, loadClosingReceipt,
     validateBeforePublish, analyzeVariances, runValidation,
   } = useReconciliationPeriod(selectedCompanyId);
