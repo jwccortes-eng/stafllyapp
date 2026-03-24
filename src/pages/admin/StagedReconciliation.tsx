@@ -299,8 +299,7 @@ export default function StagedReconciliation() {
 
   const batchCandidates = useMemo(() => {
     const q = batchSearch.trim().toLowerCase();
-    return [...payPeriods]
-      .sort((a, b) => b.start_date.localeCompare(a.start_date))
+    return sortPeriodsDesc(payPeriods)
       .filter(pp => {
         if (!q) return true;
         const label = periodLabel(pp).toLowerCase();
@@ -478,7 +477,7 @@ export default function StagedReconciliation() {
                 .filter(pp => !linkedPPIds.has(pp.id))
                 .filter(pp => !reconRanges.has(`${pp.start_date}|${pp.end_date}`))
                 .filter(pp => !q || periodLabel(pp).toLowerCase().includes(q))
-                .sort((a, b) => b.start_date.localeCompare(a.start_date));
+                .sort((a, b) => (b.start_date || "").localeCompare(a.start_date || ""));
 
               // Split unlinked into recent (last 8 weeks) and historical
               const eightWeeksAgo = new Date();
