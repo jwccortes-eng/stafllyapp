@@ -192,6 +192,86 @@ function findSourcePayrollRowId(
   return payrollRows[0].id;
 }
 
+function mapPersistedRowStatus(rowStatus: string | null | undefined): ComparisonRow["status"] {
+  if (rowStatus === "EXACT_MATCH") return "match";
+  if (rowStatus === "WITHIN_TOLERANCE") return "close";
+  if (rowStatus === "MISMATCH") return "mismatch";
+  if (rowStatus === "IDENTITY_MATCH_NO_SYSTEM_DATA") return "identity_only";
+  return "missing";
+}
+
+function buildTruthFromPersistedRow(row: any): PayrollTruthRow {
+  const raw = (row?.truth_raw_json || {}) as Record<string, any>;
+  const firstName = String(row?.first_name || "").trim();
+  const lastName = String(row?.last_name || "").trim();
+  const employee = `${firstName} ${lastName}`.trim() || String(raw.employee || "").trim() || "Empleado";
+
+  return {
+    employee,
+    firstName,
+    lastName,
+    employerIdentification: String(row?.employer_identification || ""),
+    verificationSsnEin: String(row?.verification_ssn_ein || ""),
+    phoneNumber: String(row?.phone || raw["Phone number"] || ""),
+    email: String(row?.email || raw.Email || ""),
+    totalPay: Number(row?.truth_total_pay) || 0,
+    hourlyRate: null,
+    payperDay: Number(row?.truth_pay_per_day) || 0,
+    ryde: Number(row?.truth_ryde) || 0,
+    tips: Number(row?.truth_tips) || 0,
+    reimbursements: Number(row?.truth_reimbursements) || 0,
+    travelHours: Number(raw.travel_hours) || 0,
+    otros: Number(raw.otros) || 0,
+    discount: Number(raw.discount) || 0,
+    total: Number(row?.truth_total) || 0,
+    shiftHours: 0,
+    observaciones: String(row?.truth_observaciones || ""),
+  };
+}
+
+function buildReconFromPersistedRow(row: any, employeeName: string): ReconBreakdown | null {
+  const hasSystemData =
+    row?.system_total != null ||
+    row?.system_total_pay != null ||
+    row?.system_pay_per_day != null ||
+    row?.system_ryde != null ||
+    row?.system_tips != null;
+
+  if (!hasSystemData) return null;
+
+  return {
+    employee_id: String(row?.matched_system_employee_id || ""),
+    employee_name: employeeName,
+    hourly_pay: Number(row?.system_total_pay) || 0,
+    daily_pay: Number(row?.system_pay_per_day) || 0,
+    ride_pay: Number(row?.system_ryde) || 0,
+    weekend_pay: 0,
+    manual_adj: Number(row?.system_tips) || 0,
+    other_pay: 0,
+    unmapped_count: 0,
+    unmapped_excluded_total: 0,
+    total_final: Number(row?.system_total) || 0,
+    authoritative_total: Number(row?.system_total) || 0,
+    authoritative_source: "persisted_truth_validation",
+    primary_source: "payroll",
+    shift_calc_total: 0,
+    shift_full_day_count: 0,
+    shift_half_day_count: 0,
+    inferred_total: 0,
+    movement_unique_total: 0,
+    naive_total: Number(row?.system_total) || 0,
+    total_raw: 0,
+    total_suppressed: 0,
+    overlap_excluded_total: 0,
+    base_pay: Number(row?.system_total_pay) || 0,
+    schedule_count: Number(row?.shift_count) || 0,
+    clock_count: Number(row?.clock_count) || 0,
+    payroll_row_count: 0,
+    ledger: [],
+    flags: [],
+  };
+}
+
 export default function PayrollTruthValidation({ companyId, periodStatusId, finalRecords: externalFinalRecords, onGenerateFinalRecords }: Props) {
   const [generatingFinal, setGeneratingFinal] = useState(false);
   const { user } = useAuth();
@@ -206,6 +286,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [persisted, setPersisted] = useState(false);
   const [dbPersisted, setDbPersisted] = useState(false);
   const [persistingToDb, setPersistingToDb] = useState(false);
+  const [persistedComparison, setPersistedComparison] = useState<ComparisonRow[] | null>(null);
 
   const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
@@ -291,6 +372,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     setTruthParse(null);
     setTruthSource(null);
     setPersisted(false);
+    setDbPersisted(false);
+    setPersistedComparison(null);
     try {
       const buffer = await file.arrayBuffer();
       const parsed = parsePayrollTruthWorkbook(buffer);
@@ -310,6 +393,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     setTruthLoaded(false);
     setTruthSource(null);
     setPersisted(false);
+    setDbPersisted(false);
+    setPersistedComparison(null);
     // Remove persisted file
     if (storagePath) {
       await supabase.storage.from("payroll-truth-files").remove([storagePath, `${storagePath}.meta.json`]);
@@ -392,6 +477,126 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       cancelled = true;
     };
   }, [companyId, truthData]);
+
+  // ── Hydrate persisted reconciliation rows to avoid stale in-memory counters ──
+  useEffect(() => {
+    if (!companyId || !periodStatusId || !truthLoaded) {
+      setPersistedComparison(null);
+      return;
+    }
+
+    // For a new manual upload, show live computed comparison until user saves.
+    if (truthSource?.type === "manual") {
+      setPersistedComparison(null);
+      setDbPersisted(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { data: periodStatusData } = await supabase
+          .from("reconciliation_period_status" as any)
+          .select("period_start, period_end")
+          .eq("id", periodStatusId)
+          .eq("company_id", companyId)
+          .maybeSingle();
+
+        const periodStatus = periodStatusData as { period_start: string; period_end: string } | null;
+        if (!periodStatus || cancelled) {
+          if (!cancelled) {
+            setPersistedComparison(null);
+            setDbPersisted(false);
+          }
+          return;
+        }
+
+        const { data: latestBatchData } = await supabase
+          .from("reconciliation_batches" as any)
+          .select("id")
+          .eq("company_id", companyId)
+          .eq("payroll_period_start", periodStatus.period_start)
+          .eq("payroll_period_end", periodStatus.period_end)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const latestBatch = latestBatchData as { id: string } | null;
+        if (!latestBatch || cancelled) {
+          if (!cancelled) {
+            setPersistedComparison(null);
+            setDbPersisted(false);
+          }
+          return;
+        }
+
+        const { data: persistedRowsData } = await supabase
+          .from("reconciliation_employee_rows" as any)
+          .select("*")
+          .eq("batch_id", latestBatch.id);
+
+        if (cancelled) return;
+
+        const persistedRows = (persistedRowsData || []) as any[];
+        if (persistedRows.length === 0) {
+          setPersistedComparison(null);
+          setDbPersisted(false);
+          return;
+        }
+
+        const hydrated = persistedRows
+          .map((row) => {
+            const truth = buildTruthFromPersistedRow(row);
+            const status = mapPersistedRowStatus(row?.row_status);
+            const recon = buildReconFromPersistedRow(row, truth.employee);
+            const rowVariance = Number(row?.variance_total);
+            const totalVariance = Number.isFinite(rowVariance)
+              ? rowVariance
+              : recon
+                ? round2(recon.total_final - truth.total)
+                : status === "identity_only"
+                  ? -Math.abs(truth.total || 0)
+                  : truth.total || 0;
+
+            return {
+              employee: truth.employee,
+              truth,
+              recon,
+              matchEmployeeId: row?.matched_system_employee_id || null,
+              matchedBy: row?.matched_by || "truth_validation",
+              matchConfidence: Number(row?.match_confidence) || 0,
+              totalVariance,
+              status,
+              compositionError: false,
+              compositionReason:
+                status === "identity_only"
+                  ? "Empleado mapeado, pero sin base operativa para este periodo (period_base_pay/movements)."
+                  : status === "missing"
+                    ? "Empleado no encontrado por identidad en la validación."
+                    : null,
+            } as ComparisonRow;
+          })
+          .sort((a, b) => {
+            if (a.matchEmployeeId && !b.matchEmployeeId) return -1;
+            if (!a.matchEmployeeId && b.matchEmployeeId) return 1;
+            if (a.recon && !b.recon) return -1;
+            if (!a.recon && b.recon) return 1;
+            if (b.totalVariance !== a.totalVariance) return b.totalVariance - a.totalVariance;
+            return Math.abs(b.totalVariance) - Math.abs(a.totalVariance);
+          });
+
+        setPersistedComparison(hydrated);
+        setDbPersisted(true);
+      } catch (error) {
+        console.error("Failed to hydrate persisted truth comparison:", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, periodStatusId, truthLoaded, truthSource?.type]);
 
   // ── Persist reconciliation results to DB ──
   const persistResultsToDb = useCallback(async (compRows: ComparisonRow[], statsData: { matched: number; close: number; mismatch: number; missing: number; totalTruth: number; totalRecon: number; variance: number }) => {
@@ -520,6 +725,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         await supabase.from("reconciliation_employee_rows").insert(rows.slice(i, i + 50) as any[]);
       }
 
+      setPersistedComparison(compRows);
       setDbPersisted(true);
     } catch (err) {
       console.error("Failed to persist reconciliation to DB:", err);
@@ -1055,7 +1261,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     })();
   }, [companyId, periodStatusId]);
 
-  const comparison = useMemo<ComparisonRow[]>(() => {
+  const computedComparison = useMemo<ComparisonRow[]>(() => {
     if (truthData.length === 0) return [];
 
     const reconByEmployeeId = new Map(reconData.map((r) => [r.employee_id, r]));
@@ -1133,6 +1339,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       });
   }, [truthData, reconData, truthMatches]);
 
+  const comparison = useMemo<ComparisonRow[]>(() => persistedComparison ?? computedComparison, [persistedComparison, computedComparison]);
+
   const stats = useMemo(() => {
     const matched = comparison.filter(c => c.status === "match").length;
     const close = comparison.filter(c => c.status === "close").length;
@@ -1140,7 +1348,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     const identityOnly = comparison.filter(c => c.status === "identity_only").length;
     const missing = comparison.filter(c => c.status === "missing").length;
     const compositionErrors = comparison.filter(c => c.compositionError).length;
-    const totalTruth = truthData.reduce((sum, row) => sum + row.total, 0);
+    const totalTruth = comparison.reduce((sum, row) => sum + (row.truth.total || 0), 0);
     const totalRecon = comparison.reduce((sum, row) => sum + (row.recon?.total_final || 0), 0);
     const totalSuppressed = comparison.reduce((sum, row) => sum + (row.recon?.total_suppressed || 0), 0);
     const totalOther = reconData.reduce((sum, row) => sum + (row.other_pay || 0), 0);
@@ -1157,7 +1365,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       totalSuppressed,
       totalOther,
     };
-  }, [comparison, truthData, reconData]);
+  }, [comparison, reconData]);
 
   const [showRawRecords, setShowRawRecords] = useState(false);
 
@@ -1300,8 +1508,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           </div>
           {truthLoaded && truthSource && (
             <p className="text-xs text-muted-foreground mt-1">
-              Archivo: <span className="font-medium text-foreground">{truthSource.fileName}</span>
-              {" · "}{truthData.length} empleados · Periodo vinculado: {periodStatusId ? "Sí" : "No"}
+               Archivo: <span className="font-medium text-foreground">{truthSource.fileName}</span>
+              {" · "}{comparison.length} empleados · Periodo vinculado: {periodStatusId ? "Sí" : "No"}
             </p>
           )}
         </CardHeader>
@@ -1351,7 +1559,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               </details>
 
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-10 gap-3">
-                <KpiCard label="Empleados (Truth)" value={truthData.length} icon={<DollarSign className="h-4 w-4" />} />
+                <KpiCard label="Empleados (Truth)" value={comparison.length} icon={<DollarSign className="h-4 w-4" />} />
                 <KpiCard label="Exactos" value={stats.matched} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" />
                 <KpiCard label="Cercanos" value={stats.close} icon={<AlertTriangle className="h-4 w-4" />} accent="warning" />
                 <KpiCard label="Diferentes" value={stats.mismatch} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
