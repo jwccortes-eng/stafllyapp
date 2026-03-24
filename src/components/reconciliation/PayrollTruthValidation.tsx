@@ -178,7 +178,8 @@ function findSourcePayrollRowId(
   return payrollRows[0].id;
 }
 
-export default function PayrollTruthValidation({ companyId, periodStatusId, finalRecords: externalFinalRecords }: Props) {
+export default function PayrollTruthValidation({ companyId, periodStatusId, finalRecords: externalFinalRecords, onGenerateFinalRecords }: Props) {
+  const [generatingFinal, setGeneratingFinal] = useState(false);
   const { user } = useAuth();
   const [truthData, setTruthData] = useState<PayrollTruthRow[]>([]);
   const [truthParse, setTruthParse] = useState<PayrollTruthParseResult | null>(null);
