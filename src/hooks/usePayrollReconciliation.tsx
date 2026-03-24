@@ -311,13 +311,13 @@ export function usePayrollReconciliation() {
       // 4. Load aliases
       const { data: aliasData } = await supabase
         .from("employee_aliases")
-        .select("alias_name_normalized, real_employee_id, confidence")
+        .select("alias_name_normalized, employee_id")
         .eq("company_id", selectedCompanyId);
 
       const aliases = (aliasData || []).map((a: any) => ({
         alias_normalized: a.alias_name_normalized,
-        employee_id: a.real_employee_id,
-        confidence: a.confidence || 80,
+        employee_id: a.employee_id,
+        confidence: 85,
       }));
 
       // 5. Get tolerances
