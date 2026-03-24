@@ -80,6 +80,9 @@ interface ComparisonRow {
   employee: string;
   truth: PayrollTruthRow;
   recon: ReconBreakdown | null;
+  matchEmployeeId?: string | null;
+  matchedBy?: string;
+  matchConfidence?: number;
   totalVariance: number;
   status: "match" | "close" | "mismatch" | "missing";
   compositionError: boolean;
