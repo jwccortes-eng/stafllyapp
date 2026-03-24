@@ -639,35 +639,51 @@ export default function StagedReconciliation() {
 
       {/* ── Active Period Workflow Bar ── */}
       {activePeriod && (
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-muted/40 border">
-          <div className="flex items-center gap-1 flex-1 min-w-0">
-            {WORKFLOW_STEPS.map((step, i) => {
-              const stepIdx = STATUS_ORDER.indexOf(step.key);
-              const done = currentStepIdx >= stepIdx;
-              const current = activePeriod.status === step.key;
-              const Icon = step.icon;
-              return (
-                <div key={step.key} className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => { const t = TABS.find(tb => tb.value === step.tab); if (t && isTabEnabled(t, activePeriod.status)) setTab(step.tab); }}
-                    className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors
-                      ${current ? "bg-primary text-primary-foreground" : done ? "bg-primary/15 text-primary" : "text-muted-foreground"}`}
-                  >
-                    <Icon className="h-3 w-3" />
-                    <span className="hidden md:inline">{step.label}</span>
-                  </button>
-                  {i < WORKFLOW_STEPS.length - 1 && <ChevronRight className="h-3 w-3 text-muted-foreground/50" />}
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className="text-[11px] font-mono">{reconPeriodLabel(activePeriod)}</Badge>
-            {activePeriod.reopen_count > 0 && <Badge variant="warning" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
-          </div>
-          {nextAction && activePeriod.status !== "locked" && (
-            <Button size="sm" variant="default" className="gap-1 text-xs shrink-0" onClick={() => setTab(nextAction.tab)}>
-              <Zap className="h-3 w-3" /> {nextAction.label}
+        <div className="flex flex-col gap-2">
+          {/* Truth-based closure banner */}
+          {isTruthBased && (
+            <Alert className="py-2 border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+              <FileText className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-xs">
+                <strong>Truth-based closure</strong> — Clock data unavailable for this period; closure based on paid payroll truth file.
+                El flujo es: <span className="font-medium">Cargar Truth → Reconciliar → Aprobar → Publicar</span>
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-muted/40 border">
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              {workflowSteps.map((step, i) => {
+                const stepIdx = statusOrder.indexOf(step.key);
+                const done = currentStepIdx >= stepIdx;
+                const current = activePeriod.status === step.key;
+                const Icon = step.icon;
+                return (
+                  <div key={step.key} className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => { const t = TABS.find(tb => tb.value === step.tab); if (t && isTabEnabled(t, activePeriod.status)) setTab(step.tab); }}
+                      className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors
+                        ${current ? "bg-primary text-primary-foreground" : done ? "bg-primary/15 text-primary" : "text-muted-foreground"}`}
+                    >
+                      <Icon className="h-3 w-3" />
+                      <span className="hidden md:inline">{step.label}</span>
+                    </button>
+                    {i < workflowSteps.length - 1 && <ChevronRight className="h-3 w-3 text-muted-foreground/50" />}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isTruthBased && (
+                <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400">
+                  📋 Truth-based closure
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-[11px] font-mono">{reconPeriodLabel(activePeriod)}</Badge>
+              {activePeriod.reopen_count > 0 && <Badge variant="warning" className="text-[10px]">↻{activePeriod.reopen_count}</Badge>}
+            </div>
+            {nextAction && activePeriod.status !== "locked" && (
+              <Button size="sm" variant="default" className="gap-1 text-xs shrink-0" onClick={() => setTab(nextAction.tab)}>
+                <Zap className="h-3 w-3" /> {nextAction.label}
             </Button>
           )}
         </div>
