@@ -452,20 +452,30 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       await supabase.from("reconciliation_employee_rows").delete().eq("batch_id", batchId);
 
       // Insert employee rows in batches
+      const reconByEmployeeId = new Map(reconData.map((r) => [r.employee_id, r]));
       const rows = compRows.map(c => {
         const nameParts = c.employee.trim().split(/\s+/);
         const firstName = nameParts[0] || "";
         const lastName = nameParts.slice(1).join(" ") || "";
-        const r = c.recon;
+        const matchedEmployeeId = c.matchEmployeeId || c.recon?.employee_id || null;
+        const r = matchedEmployeeId ? (reconByEmployeeId.get(matchedEmployeeId) || c.recon) : c.recon;
+        const rowStatus = !matchedEmployeeId
+          ? "UNMATCHED"
+          : c.status === "match"
+            ? "EXACT_MATCH"
+            : c.status === "close"
+              ? "WITHIN_TOLERANCE"
+              : "MISMATCH";
+
         return {
           batch_id: batchId,
           first_name: firstName,
           last_name: lastName,
           full_name_normalized: c.employee.toLowerCase(),
-          matched_system_employee_id: r?.employee_id || null,
-          match_status: c.status === "missing" ? "UNMATCHED" : "MATCHED",
-          match_confidence: c.status === "match" ? 100 : c.status === "close" ? 80 : c.status === "mismatch" ? 50 : 0,
-          matched_by: "truth_validation",
+          matched_system_employee_id: matchedEmployeeId,
+          match_status: matchedEmployeeId ? "MATCHED" : "UNMATCHED",
+          match_confidence: c.matchConfidence ?? (c.status === "match" ? 100 : c.status === "close" ? 80 : c.status === "mismatch" ? 50 : 0),
+          matched_by: matchedEmployeeId ? (c.matchedBy || "truth_validation") : "truth_validation",
           truth_total_pay: c.truth.totalPay || 0,
           truth_pay_per_day: c.truth.payperDay || 0,
           truth_ryde: c.truth.ryde || 0,
@@ -484,10 +494,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           variance_tips: r ? round2((r.manual_adj || 0) - (c.truth.tips || 0)) : null,
           variance_reimbursements: 0,
           variance_total: r ? round2(r.total_final - c.truth.total) : null,
-          row_status: c.status === "match" ? "EXACT_MATCH" : c.status === "close" ? "WITHIN_TOLERANCE" : c.status === "mismatch" ? "MISMATCH" : "UNMATCHED",
+          row_status: rowStatus,
           is_exact_match: c.status === "match",
-          has_component_mismatch: c.status === "mismatch" || c.status === "close",
-          has_critical_mismatch: c.status === "mismatch",
+          has_component_mismatch: !!matchedEmployeeId && (c.status === "mismatch" || c.status === "close"),
+          has_critical_mismatch: !!matchedEmployeeId && c.status === "mismatch",
           anomaly_flags_json: r?.flags || [],
           shift_count: r?.schedule_count ?? 0,
           clock_count: r?.clock_count ?? 0,
