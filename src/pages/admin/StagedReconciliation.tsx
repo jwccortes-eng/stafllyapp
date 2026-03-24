@@ -185,14 +185,16 @@ export default function StagedReconciliation() {
       });
   }, [selectedCompanyId]);
 
-  // ── Auto-select latest active (non-locked) period on load ──
+  // ── Auto-select best period on load ──
   useEffect(() => {
     if (activePeriod || periods.length === 0) return;
-    const active = periods.find(p => !["locked"].includes(p.status)) || periods[0];
-    if (active) {
-      setActivePeriod(active);
-      loadFinalRecords(active.id);
-      loadClosingReceipt(active.id);
+    // Prefer non-locked, then fall back to helper (which checks today + most recent)
+    const nonLocked = periods.find(p => !["locked"].includes(p.status));
+    const best = nonLocked ?? getDefaultPayPeriod(periods);
+    if (best) {
+      setActivePeriod(best);
+      loadFinalRecords(best.id);
+      loadClosingReceipt(best.id);
     }
   }, [periods, activePeriod, setActivePeriod, loadFinalRecords, loadClosingReceipt]);
 
