@@ -101,9 +101,9 @@ function round2(n: number): number {
 
 function classifyMovement(conceptName: string): LedgerCategory {
   const n = conceptName.toLowerCase();
+  if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "ride";
   if (n.includes("hourly") || n.includes("hora") || n.includes("regular") || n.includes("base pay")) return "hourly";
   if (n.includes("daily") || n.includes("diario")) return "daily";
-  if (n.includes("ride") || n.includes("ryde") || n.includes("transporte")) return "ride";
   if (n.includes("weekend") || n.includes("doble") || n.includes("double")) return "weekend";
   if (n.includes("tip") || n.includes("propina")) return "manual";
   if (n.includes("adjust") || n.includes("manual") || n.includes("correction") || n.includes("reintegro") || n.includes("bonus")) return "manual";
