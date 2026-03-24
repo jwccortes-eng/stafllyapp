@@ -719,13 +719,9 @@ export default function PayrollReconciliationPage() {
 
       if (!mounted) return;
 
-      const mergedList = (data || []) as { id: string; start_date: string; end_date: string; status: string }[];
-      setPeriods(mergedList);
-
-      const today = new Date().toISOString().slice(0, 10);
-      const current = mergedList.find(p => p.start_date <= today && p.end_date >= today);
-      const fallback = mergedList[0];
-      setSelectedPeriodId((current || fallback)?.id || "");
+      const sorted = sortPeriodsDesc(mergedList);
+      setPeriods(sorted);
+      setSelectedPeriodId(getDefaultPayPeriod(sorted)?.id || "");
     };
 
     loadPeriods();
