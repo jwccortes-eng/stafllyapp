@@ -1131,68 +1131,61 @@ export default function PayrollReconciliationPage() {
               <TableHeader className="sticky top-0 z-30">
                 <TableRow>
                   <TableHead className="sticky left-0 z-40 bg-surface-2 min-w-[170px] py-2.5">Empleado</TableHead>
-                  <TableHead className="py-2.5">Status</TableHead>
-                  <TableHead className="py-2.5">Match</TableHead>
-                  <TableHead className="text-right py-2.5">T.Hrs</TableHead>
-                  <TableHead className="text-right py-2.5">S.Hrs</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5">T.Pay</TableHead>
-                  <TableHead className="text-right py-2.5">S.Pay</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5">T.PPD</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5">T.Ryde</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5">T.Tips</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5 !font-bold">T.Total</TableHead>
-                  <TableHead className="text-right py-2.5 !font-bold">S.Total</TableHead>
-                  <TableHead className="text-right py-2.5 !font-bold">Δ Total</TableHead>
+                  <TableHead className="py-2.5">Estado</TableHead>
+                  <TableHead className="text-right py-2.5">Hrs</TableHead>
+                  <TableHead className="text-right py-2.5">Tarifa</TableHead>
+                  <TableHead className="text-right py-2.5 border-l border-border/30">A. Base</TableHead>
+                  <TableHead className="text-right py-2.5 text-earning">+ Adic.</TableHead>
+                  <TableHead className="text-right py-2.5 text-destructive">− Desc.</TableHead>
+                  <TableHead className="text-right py-2.5 !font-bold border-l border-border/30">= Total</TableHead>
+                  <TableHead className="py-2.5 min-w-[200px]">Composición</TableHead>
                   <TableHead className="py-2.5 w-8"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredRows.map((row, i) => {
-                  const isCritical = row.classification.has_critical_mismatch;
-                  const isExact = row.classification.is_exact_match;
+                  const hrs = row.truth.total_hours;
+                  const basePay = row.truth.total_pay || 0;
+                  const rate = hrs && hrs > 0 && basePay > 0 ? Math.round((basePay / hrs) * 100) / 100 : null;
+                  const ppd = row.truth.pay_per_day || 0;
+                  const ryde = row.truth.ryde || 0;
+                  const tips = row.truth.tips || 0;
+                  const reimb = row.truth.reimbursements || 0;
+                  const disc = (row.truth as any).discount ?? row.truth.raw?.discount ?? 0;
+                  const adicionales = ppd + ryde + tips + reimb;
+                  const total = row.truth.total;
+
+                  // Composition formula
+                  const parts: string[] = [];
+                  if (basePay > 0) parts.push(`$${basePay.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+                  if (adicionales > 0) parts.push(`+ $${adicionales.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+                  if (disc > 0) parts.push(`- $${disc.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+                  const formula = parts.length > 1
+                    ? `${parts.join(" ")} = ${fmt(total)}`
+                    : total != null ? fmt(total) : "—";
+
                   return (
                     <TableRow
                       key={i}
-                      className={`text-xs cursor-pointer transition-colors ${isCritical ? "bg-destructive/[0.04] hover:bg-destructive/[0.08]" : isExact ? "hover:bg-earning/[0.04]" : "hover:bg-accent/40"}`}
+                      className="text-xs cursor-pointer transition-colors hover:bg-accent/40"
                       onClick={() => setSelectedRow(row)}
                     >
                       <TableCell className="sticky left-0 bg-card z-10 py-2">
                         <div className="flex items-center gap-1.5">
-                          {isExact && <div className="h-1.5 w-1.5 rounded-full bg-earning shrink-0" />}
-                          {isCritical && <div className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />}
+                          <div className="h-1.5 w-1.5 rounded-full bg-earning shrink-0" />
                           <span className="font-medium truncate max-w-[130px]">{row.truth.first_name} {row.truth.last_name}</span>
-                          {row.anomaly_flags.length > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-destructive/15 text-destructive text-[8px] font-bold">{row.anomaly_flags.length}</span>
-                              </TooltipTrigger>
-                              <TooltipContent className="text-[10px] max-w-xs">{row.anomaly_flags.join(", ")}</TooltipContent>
-                            </Tooltip>
-                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="py-2">{statusBadge(row.classification.row_status)}</TableCell>
-                      <TableCell className="py-2">{matchBadge(row.match.match_confidence, row.match.matched_by)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmtH(row.truth.total_hours)}</TableCell>
-                      <TableCell className="text-right font-mono py-2 text-muted-foreground">{fmtH(row.system?.total_hours)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.hours, tolerance.hours)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.total_pay)}</TableCell>
-                      <TableCell className="text-right font-mono py-2 text-muted-foreground">{fmt(row.system?.total_pay)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.total_pay, tolerance.money)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.pay_per_day)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.pay_per_day, tolerance.money)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.ryde)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.ryde, tolerance.money)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.tips)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.tips, tolerance.tips)}</TableCell>
-                      <TableCell className="text-right font-mono font-semibold py-2">{fmt(row.truth.total)}</TableCell>
-                      <TableCell className="text-right font-mono font-semibold py-2 text-muted-foreground">{fmt(row.system?.total)}</TableCell>
-                      <TableCell className="text-right font-semibold py-2">{varianceCell(row.variances.total, tolerance.money)}</TableCell>
+                      <TableCell className="py-2">{statusBadge(row.classification.row_status, row)}</TableCell>
+                      <TableCell className="text-right font-mono py-2">{hrs != null ? hrs.toFixed(2) : "—"}</TableCell>
+                      <TableCell className="text-right font-mono py-2 text-muted-foreground">{rate != null ? `$${rate.toFixed(2)}` : "—"}</TableCell>
+                      <TableCell className="text-right font-mono py-2 border-l border-border/20">{basePay > 0 ? fmt(basePay) : "—"}</TableCell>
+                      <TableCell className="text-right font-mono py-2 text-earning font-medium">{adicionales > 0 ? fmt(adicionales) : "—"}</TableCell>
+                      <TableCell className="text-right font-mono py-2 text-destructive font-medium">{disc > 0 ? fmt(disc) : "—"}</TableCell>
+                      <TableCell className="text-right font-mono font-bold py-2 border-l border-border/20">{fmt(total)}</TableCell>
+                      <TableCell className="py-2">
+                        <span className="text-[10px] font-mono text-muted-foreground">{formula}</span>
+                      </TableCell>
                       <TableCell className="py-2">
                         <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary" />
                       </TableCell>
