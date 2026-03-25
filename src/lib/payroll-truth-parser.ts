@@ -296,6 +296,8 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
       existing.discount += parsedDiscount;
       existing.total = Math.max(existing.total, computedTotal);
       existing.shiftHours += parsedShiftHours;
+      // For totalPaidHours, take MAX (weekly total, not sum of daily rows)
+      if (parsedTotalPaidHours > 0) existing.totalPaidHours = Math.max(existing.totalPaidHours, parsedTotalPaidHours);
       if (parsedHourlyRate != null && existing.hourlyRate == null) {
         existing.hourlyRate = parsedHourlyRate;
       }
