@@ -325,8 +325,8 @@ export default function VarianceWorkbench({ companyId, periodStatusId, finalReco
                 {/* Context cards */}
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <div className="p-2 bg-muted/30 rounded">
-                    <div className="text-muted-foreground mb-1">Turnos programados</div>
-                    <div className="font-semibold">{(record.scheduled_shifts || []).length} turnos — {record.total_scheduled_hours?.toFixed(1)}h</div>
+                    <div className="text-muted-foreground mb-1">Turnos programados <span className="text-[10px] text-warning">(estimado)</span></div>
+                    <div className="font-semibold text-muted-foreground">{(record.scheduled_shifts || []).length} turnos — {record.total_scheduled_hours?.toFixed(1)}h</div>
                   </div>
                   <div className="p-2 bg-muted/30 rounded">
                     <div className="text-muted-foreground mb-1">Fichajes trabajados</div>

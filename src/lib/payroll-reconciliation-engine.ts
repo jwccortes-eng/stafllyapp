@@ -1,6 +1,14 @@
 /**
  * Payroll Reconciliation Engine
  * Component-level truth vs system comparison with anomaly detection
+ *
+ * ⚠️ HARD PAYROLL RULE — NEVER USE SCHEDULED HOURS FOR PAYROLL AMOUNTS.
+ * Scheduled hours are ESTIMATED / OPERATIONAL only. They must never be used
+ * as the real basis for employee payment, reconciliation, or closure totals.
+ * Only these sources are authoritative for pay:
+ *   1. Real clocked hours (clock in / clock out from time_entries)
+ *   2. Validated payroll truth file amounts
+ *   3. Approved manual payroll adjustments (explicitly recorded)
  */
 
 // ─── Types ───────────────────────────────────────────────────────────

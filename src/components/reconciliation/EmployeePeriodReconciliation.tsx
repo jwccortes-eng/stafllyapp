@@ -413,8 +413,8 @@ export default function EmployeePeriodReconciliation({ companyId, periodStatusId
                       <div className="space-y-1.5">
                         {/* Each row: label → value */}
                         <div className="flex items-center justify-between py-1.5 border-b border-border/30">
-                          <span className="text-xs text-muted-foreground">📅 Turnos programados en el periodo</span>
-                          <span className="text-sm font-semibold font-mono">{record.scheduled_shifts.length} turnos · {record.total_scheduled_hours}h</span>
+                          <span className="text-xs text-muted-foreground">📅 Turnos programados <span className="text-[10px] text-warning">(estimado — no usar para pago)</span></span>
+                          <span className="text-sm font-semibold font-mono text-muted-foreground">{record.scheduled_shifts.length} turnos · {record.total_scheduled_hours}h</span>
                         </div>
                         <div className="flex items-center justify-between py-1.5 border-b border-border/30">
                           <span className="text-xs text-muted-foreground">⏱ Total horas fichadas en el periodo</span>

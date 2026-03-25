@@ -275,10 +275,10 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                     <div className="px-3 pb-2 pt-0 border-t border-dashed">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 py-2 text-[11px]">
                         <div>
-                          <span className="text-muted-foreground">Programados:</span> <strong>{(r.scheduled_shifts || []).length}</strong> ({r.total_scheduled_hours?.toFixed(1)}h)
+                          <span className="text-muted-foreground">Programados <Badge variant="outline" className="text-[9px] ml-0.5 py-0 px-1">estimado</Badge>:</span> <strong>{(r.scheduled_shifts || []).length}</strong> ({r.total_scheduled_hours?.toFixed(1)}h)
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Trabajados:</span> <strong>{(r.worked_shifts || []).length}</strong> ({r.total_worked_hours?.toFixed(1)}h)
+                          <span className="text-muted-foreground">Fichajes reales:</span> <strong>{(r.worked_shifts || []).length}</strong> ({r.total_worked_hours?.toFixed(1)}h)
                         </div>
                         <div>
                           <span className="text-muted-foreground">Nómina:</span> <strong>{(r.payroll_rows || []).length}</strong> filas ({r.total_payroll_hours?.toFixed(1)}h)
