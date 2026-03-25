@@ -787,12 +787,13 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     ];
     const csvRows = compRows.map(c => {
       const r = c.recon;
+      const hasEvidence = r && (r.schedule_count > 0 || r.clock_count > 0 || r.payroll_row_count > 0);
       return [
         c.employee,
         c.status === "match"
-          ? "EXACTO"
+          ? (hasEvidence ? "EXACTO" : "TRUTH_VALIDADO")
           : c.status === "close"
-            ? "CERCANO"
+            ? (hasEvidence ? "CERCANO" : "TRUTH_CERCANO")
             : c.status === "mismatch"
               ? "DIFERENTE"
               : c.status === "identity_only"
