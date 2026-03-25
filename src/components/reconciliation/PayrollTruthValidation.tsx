@@ -2227,6 +2227,23 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           )}
         </CardContent>
       </Card>
+
+      {/* Unmatched Resolution Dialog */}
+      {resolutionRow && (
+        <UnmatchedResolutionDialog
+          open={!!resolutionRow}
+          onOpenChange={(open) => { if (!open) setResolutionRow(null); }}
+          truthRow={resolutionRow}
+          companyId={companyId!}
+          periodStatusId={periodStatusId || ""}
+          userId={user?.id || ""}
+          onResolved={(result) => {
+            setResolutionRow(null);
+            // Trigger re-matching by incrementing trigger
+            setResolutionTrigger(prev => prev + 1);
+          }}
+        />
+      )}
     </div>
   );
 }
