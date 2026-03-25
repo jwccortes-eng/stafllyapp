@@ -964,7 +964,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
       const clocksQuery = supabase
         .from("time_entries" as any)
-        .select("employee_id")
+        .select("employee_id, total_hours")
         .eq("company_id", companyId)
         .gte("clock_in", `${periodStatus.period_start}T00:00:00`)
         .lte("clock_in", `${periodStatus.period_end}T23:59:59`)
