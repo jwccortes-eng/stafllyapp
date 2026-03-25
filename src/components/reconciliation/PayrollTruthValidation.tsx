@@ -2193,22 +2193,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                        <TableHead className="w-8"></TableHead>
                        <TableHead>Empleado</TableHead>
                        <TableHead>Estado</TableHead>
-                       <TableHead>Grupo</TableHead>
-                       <TableHead className="text-right">T.Hrs</TableHead>
-                       <TableHead className="text-right">Clock.Hrs</TableHead>
-                       <TableHead className="text-right">Sched.Hrs</TableHead>
-                       <TableHead className="text-center">Hrs Fuente</TableHead>
-                       <TableHead className="text-right">T.Pay</TableHead>
-                       <TableHead className="text-right">T.PPD</TableHead>
-                       <TableHead className="text-right">T.Ryde</TableHead>
-                       <TableHead className="text-right">T.Tips</TableHead>
-                       <TableHead className="text-right">T.Reimb</TableHead>
-                       <TableHead className="text-right">T.Otros</TableHead>
-                       <TableHead className="text-right">T.Disc</TableHead>
-                       <TableHead className="text-right font-bold">T.TOTAL</TableHead>
-                       <TableHead className="text-right font-bold">Sistema (interno)</TableHead>
-                       <TableHead className="text-right font-bold">Cierre final</TableHead>
-                       <TableHead className="text-right font-bold">Δ Sys-Truth</TableHead>
+                       <TableHead className="text-center">Fuente</TableHead>
+                       <TableHead className="text-right">Hrs</TableHead>
+                       <TableHead className="text-right">Tarifa</TableHead>
+                       <TableHead className="text-right border-l border-border/30 bg-primary/5">A. Base</TableHead>
+                       <TableHead className="text-right bg-primary/5">+ Adic.</TableHead>
+                       <TableHead className="text-right bg-primary/5">− Desc.</TableHead>
+                       <TableHead className="text-right border-l border-border/30 font-bold">= Total</TableHead>
+                       <TableHead className="text-right font-bold">Cierre</TableHead>
+                       <TableHead className="text-right">Δ</TableHead>
+                       <TableHead className="text-center">Composición</TableHead>
                        <TableHead className="text-center">Obs</TableHead>
                      </TableRow>
                   </TableHeader>
