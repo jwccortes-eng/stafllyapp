@@ -409,6 +409,30 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [resolutionRow, setResolutionRow] = useState<PayrollTruthRow | null>(null);
   const [resolutionTrigger, setResolutionTrigger] = useState(0);
 
+  // Resolution decisions loaded from truth_resolution_log
+  type ResolutionRecord = { truth_employee_name: string; resolution_mode: string; resolved_employee_id: string | null; resolved_by: string; resolved_at: string };
+  const [resolutionMap, setResolutionMap] = useState<Map<string, ResolutionRecord>>(new Map());
+
+  // Load resolution decisions from DB
+  useEffect(() => {
+    if (!companyId || !periodStatusId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("truth_resolution_log" as any)
+        .select("truth_employee_name, resolution_mode, resolved_employee_id, resolved_by, resolved_at")
+        .eq("company_id", companyId)
+        .eq("period_status_id", periodStatusId);
+      if (cancelled) return;
+      const map = new Map<string, ResolutionRecord>();
+      for (const row of (data || []) as any[]) {
+        map.set(normalizeName(row.truth_employee_name), row as ResolutionRecord);
+      }
+      setResolutionMap(map);
+    })();
+    return () => { cancelled = true; };
+  }, [companyId, periodStatusId, resolutionTrigger]);
+
   const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
 
