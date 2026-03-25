@@ -1152,7 +1152,7 @@ export default function PayrollReconciliationPage() {
 
       {/* Validation Report */}
       {batchSummary && (
-        <ValidationReportPanel summary={batchSummary} parseResult={truthParseResult} />
+        <ValidationReportPanel summary={batchSummary} parseResult={truthParseResult} truthCounts={truthCounts} />
       )}
 
       {/* Filters + Search */}
