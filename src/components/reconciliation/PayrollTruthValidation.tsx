@@ -1367,6 +1367,25 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     };
   }, [comparison, reconData]);
 
+  const [statusFilter, setStatusFilter] = useState<ComparisonRow["status"] | "all">("all");
+  const [sortByVariance, setSortByVariance] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredComparison = useMemo(() => {
+    let rows = comparison;
+    if (statusFilter !== "all") {
+      rows = rows.filter(c => c.status === statusFilter);
+    }
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      rows = rows.filter(c => c.employee.toLowerCase().includes(q));
+    }
+    if (sortByVariance) {
+      rows = [...rows].sort((a, b) => Math.abs(b.totalVariance) - Math.abs(a.totalVariance));
+    }
+    return rows;
+  }, [comparison, statusFilter, sortByVariance, searchTerm]);
+
   const [showRawRecords, setShowRawRecords] = useState(false);
 
   const statusBadge = (s: ComparisonRow["status"]) => {
