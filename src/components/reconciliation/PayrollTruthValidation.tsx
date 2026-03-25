@@ -1574,6 +1574,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
   const explainVariance = (c: ComparisonRow): string => {
     if (!c.recon) {
+      const closureAlignedToTruth = truthAuthoritativeMode && Math.abs(round2(c.closureAmount - (c.truth.total || 0))) < 1 && (c.truth.total || 0) > 0;
+      if (closureAlignedToTruth) {
+        return c.matchEmployeeId
+          ? "Identidad encontrada. Sin datos operativos del sistema para este periodo, pero el cierre se basa en el Truth pagado (autoritativo). El monto de cierre es correcto."
+          : "Identidad no encontrada en el sistema, pero en modo Truth-autoritativo el cierre se basa directamente en el archivo de nómina pagada. Monto de cierre correcto.";
+      }
       return c.matchEmployeeId
         ? "Identidad del empleado encontrada, pero no hay datos operativos del periodo para comparar."
         : "Empleado no encontrado por identidad en la validación.";
