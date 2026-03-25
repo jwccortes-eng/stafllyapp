@@ -687,7 +687,7 @@ function DebugPanel({ companyId, batch, batchSummary, reconciliationRows }: {
             </div>
             <div className="p-2 rounded-md bg-background border border-border/40">
               <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Batch status</p>
-              <p className="font-mono text-[10px] mt-0.5">{deriveTruthStatus(batch.status, truthCounts)} <span className="text-muted-foreground">({batch.status})</span></p>
+              <p className="font-mono text-[10px] mt-0.5">{deriveTruthStatus(batch.status, info.truthRows > 0 ? { validated: info.truthRows, pending: 0, total: info.truthRows } : undefined)} <span className="text-muted-foreground">({batch.status})</span></p>
             </div>
           </div>
           <div className="grid grid-cols-4 gap-3 mt-2 text-[11px]">
