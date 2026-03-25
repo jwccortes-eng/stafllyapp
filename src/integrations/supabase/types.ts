@@ -2564,6 +2564,7 @@ export type Database = {
           country_code: string | null
           county: string | null
           created_at: string
+          created_from_reconciliation: boolean | null
           date_added: string | null
           direct_manager: string | null
           driver_licence: string | null
@@ -2612,6 +2613,7 @@ export type Database = {
           country_code?: string | null
           county?: string | null
           created_at?: string
+          created_from_reconciliation?: boolean | null
           date_added?: string | null
           direct_manager?: string | null
           driver_licence?: string | null
@@ -2660,6 +2662,7 @@ export type Database = {
           country_code?: string | null
           county?: string | null
           created_at?: string
+          created_from_reconciliation?: boolean | null
           date_added?: string | null
           direct_manager?: string | null
           driver_licence?: string | null
