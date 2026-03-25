@@ -1041,9 +1041,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         const value = round2(Number(bp.base_total_pay) || 0);
         const hours = Number(bp.total_work_hours) || 0;
 
+        // ⚠️ HARD PAYROLL RULE: In truth-based closure mode, auto-calculated
+        // period_base_pay (import_id IS NULL) must NEVER be authoritative.
+        // It may come from a bogus time_entry (e.g. 23.5h phantom clock)
+        // while the truth file says 5.47h / $82. Truth always wins.
+        const isAutoCalculated = !bp.import_id;
+        const isTruthMode = truthAuthoritativeMode;
+        const forceInformational = isTruthMode && isAutoCalculated;
+
         row.base_pay = value;
 
-        if (row.authoritative_total <= 0) {
+        if (row.authoritative_total <= 0 && !forceInformational) {
           row.authoritative_total = value;
           row.authoritative_source = "period_base_pay";
           addCategoryAmount(row, "hourly", value);
@@ -1066,16 +1074,21 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
             id: `base-info-${bp.id || row.employee_id}`,
             sourceType: "period_base_pay",
             sourcePayrollRowId: null,
-            movementLabel: "Base Pay",
-            concept: "Base Pay (period_base_pay)",
+            movementLabel: isAutoCalculated ? "Base Pay (auto-calculado)" : "Base Pay",
+            concept: isAutoCalculated
+              ? "Base Pay auto-calculado (NO usar para cierre — puede derivar de fichajes erróneos)"
+              : "Base Pay (period_base_pay)",
             qty: hours,
             rate: hours > 0 ? round2(value / hours) : value,
             value,
             included: false,
-            compositionRole: "informational_only",
-            reason: "Informational only: payroll rows are authoritative for this employee/period.",
+            compositionRole: forceInformational ? "inferred" : "informational_only",
+            reason: forceInformational
+              ? `Auto-calculated from clock data (${hours}h × $${hours > 0 ? round2(value / hours) : '?'}/hr). In truth-based mode, the truth file amount is authoritative — this is diagnostic only.`
+              : "Informational only: payroll rows are authoritative for this employee/period.",
             category: "hourly",
           });
+          if (forceInformational) row.flags.push("auto_base_pay_suppressed_by_truth");
         }
 
         if (bp.import_id) row.flags.push("imported_base");
