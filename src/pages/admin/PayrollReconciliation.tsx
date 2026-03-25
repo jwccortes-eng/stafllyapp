@@ -123,10 +123,19 @@ function matchBadge(confidence: number, method: string) {
   );
 }
 
-function batchStatusBadge(status: string) {
+function deriveTruthStatus(dbStatus: string, tc?: { validated: number; pending: number; total: number }): string {
+  // If we have truth counts and all rows are validated, override engine status
+  if (tc && tc.total > 0 && tc.pending === 0) return "TRUTH_VALIDATED";
+  if (tc && tc.total > 0 && tc.pending > 0) return "NEEDS_REVIEW";
+  return dbStatus;
+}
+
+function batchStatusBadge(status: string, tc?: { validated: number; pending: number; total: number }) {
+  const effective = deriveTruthStatus(status, tc);
   const map: Record<string, { icon: any; label: string; className: string }> = {
     DRAFT: { icon: FileText, label: "Borrador", className: "bg-muted text-muted-foreground border-border" },
     TRUTH_UPLOADED: { icon: Upload, label: "Truth cargado", className: "bg-info/15 text-info border-info/30" },
+    TRUTH_VALIDATED: { icon: CheckCircle2, label: "Truth-validado", className: "bg-earning/15 text-earning border-earning/30" },
     RECONCILED: { icon: CheckCircle2, label: "Reconciliado", className: "bg-earning/15 text-earning border-earning/30" },
     NEEDS_REVIEW: { icon: AlertTriangle, label: "Revisión", className: "bg-warning/15 text-warning border-warning/30" },
     CRITICAL: { icon: AlertOctagon, label: "Crítico", className: "bg-destructive/15 text-destructive border-destructive/30" },
@@ -134,7 +143,7 @@ function batchStatusBadge(status: string) {
     LOCKED: { icon: Lock, label: "Bloqueado", className: "bg-muted text-muted-foreground border-border" },
     MISMATCHED: { icon: AlertTriangle, label: "Discrepancias", className: "bg-warning/15 text-warning border-warning/30" },
   };
-  const s = map[status] || { icon: Info, label: status, className: "bg-muted text-muted-foreground border-border" };
+  const s = map[effective] || { icon: Info, label: effective, className: "bg-muted text-muted-foreground border-border" };
   const Icon = s.icon;
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${s.className}`}>
