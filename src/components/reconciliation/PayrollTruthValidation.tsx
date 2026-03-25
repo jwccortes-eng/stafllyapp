@@ -1091,6 +1091,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         const row = getOrCreate(bp.employee_id);
         const value = round2(Number(bp.base_total_pay) || 0);
         const hours = Number(bp.total_work_hours) || 0;
+        row.base_pay_hours = round2(hours);
 
         // ⚠️ HARD PAYROLL RULE: In truth-based closure mode, auto-calculated
         // period_base_pay (import_id IS NULL) must NEVER be authoritative.
