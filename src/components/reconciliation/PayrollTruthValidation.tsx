@@ -122,18 +122,40 @@ function isSystemInferredOnly(recon: ReconBreakdown | null): boolean {
   return recon.schedule_count === 0 && recon.clock_count === 0 && recon.payroll_row_count === 0 && recon.total_final > 0;
 }
 
+function deriveOperationalStatus(
+  status: ComparisonRow["status"],
+  truthTotal: number,
+  closureAmount: number,
+  truthAuthoritativeMode: boolean
+): ComparisonRow["status"] {
+  if (!truthAuthoritativeMode) return status;
+  if (status === "identity_only" || status === "missing") return status;
+
+  const closureVariance = Math.abs(round2(closureAmount - truthTotal));
+  if (closureVariance < 1) return "match";
+  if (closureVariance < 50) return "close";
+  return "mismatch";
+}
+
 function deriveReviewGroup(
   status: ComparisonRow["status"],
   recon: ReconBreakdown | null,
   truthTotal: number,
   totalVariance: number,
-  truthAuthoritativeMode: boolean
+  truthAuthoritativeMode: boolean,
+  closureAmount: number
 ): ReviewGroup {
   if (status === "identity_only" || status === "missing") return "missing_system_data";
   if (!recon) return "standard";
 
   const inferredOnly = isSystemInferredOnly(recon);
   const systemExceedsTruth = round2(recon.total_final - truthTotal) > 1;
+  const closureAlignedToTruth = Math.abs(round2(closureAmount - truthTotal)) < 1;
+
+  if (truthAuthoritativeMode && closureAlignedToTruth) {
+    if (inferredOnly && systemExceedsTruth) return "truth_override_candidate";
+    return "standard";
+  }
 
   if (truthAuthoritativeMode && inferredOnly && systemExceedsTruth) return "truth_override_candidate";
   if (inferredOnly && systemExceedsTruth) return "system_inferred_exceeds_truth";
@@ -598,8 +620,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                   ? -Math.abs(truth.total || 0)
                   : truth.total || 0;
             const systemInferredOnly = isSystemInferredOnly(recon);
-            const reviewGroup = deriveReviewGroup(status, recon, truth.total || 0, totalVariance, truthAuthoritativeMode);
             const closureAmount = truthAuthoritativeMode ? (truth.total || 0) : (recon?.total_final ?? (truth.total || 0));
+            const operationalStatus = deriveOperationalStatus(status, truth.total || 0, closureAmount, truthAuthoritativeMode);
+            const reviewGroup = deriveReviewGroup(operationalStatus, recon, truth.total || 0, totalVariance, truthAuthoritativeMode, closureAmount);
 
             return {
               employee: truth.employee,
@@ -609,7 +632,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               matchedBy: row?.matched_by || "truth_validation",
               matchConfidence: Number(row?.match_confidence) || 0,
               totalVariance,
-              status,
+              status: operationalStatus,
               reviewGroup,
               closureAmount,
               systemInferredOnly,
@@ -641,7 +664,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     return () => {
       cancelled = true;
     };
-  }, [companyId, periodStatusId, truthLoaded, truthSource?.type]);
+  }, [companyId, periodStatusId, truthAuthoritativeMode, truthLoaded, truthSource?.type]);
 
   // ── Persist reconciliation results to DB ──
   const persistResultsToDb = useCallback(async (compRows: ComparisonRow[], statsData: { matched: number; close: number; mismatch: number; missing: number; totalTruth: number; totalRecon: number; variance: number }) => {
@@ -1372,7 +1395,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
         const totalVariance = round2(recon.total_final - t.total);
         const absTotal = Math.abs(totalVariance);
-        const status = (absTotal < 1 ? "match" : absTotal < 50 ? "close" : "mismatch") as ComparisonRow["status"];
+        const diagnosticStatus = (absTotal < 1 ? "match" : absTotal < 50 ? "close" : "mismatch") as ComparisonRow["status"];
 
         const compositionError =
           recon.naive_total - t.total > 50 &&
@@ -1383,8 +1406,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           ? `Naive additive total ${fmt(recon.naive_total)} would overstate truth by ${fmtVar(round2(recon.naive_total - t.total))}; overlap guardrail excluded ${fmt(recon.overlap_excluded_total)}.`
           : null;
         const systemInferredOnly = isSystemInferredOnly(recon);
-        const reviewGroup = deriveReviewGroup(status, recon, t.total || 0, totalVariance, truthAuthoritativeMode);
         const closureAmount = truthAuthoritativeMode ? (t.total || 0) : (recon.total_final || 0);
+        const status = deriveOperationalStatus(diagnosticStatus, t.total || 0, closureAmount, truthAuthoritativeMode);
+        const reviewGroup = deriveReviewGroup(status, recon, t.total || 0, totalVariance, truthAuthoritativeMode, closureAmount);
 
         return {
           employee: t.employee,
@@ -1481,6 +1505,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [showRawRecords, setShowRawRecords] = useState(false);
 
   const statusBadge = (row: ComparisonRow) => {
+    const hasEvidence = row.recon && (row.recon.schedule_count > 0 || row.recon.clock_count > 0 || row.recon.payroll_row_count > 0);
+    const closureAlignedToTruth = truthAuthoritativeMode && Math.abs(round2(row.closureAmount - (row.truth.total || 0))) < 1;
+
     if (row.reviewGroup === "truth_override_candidate") {
       return <Badge variant="info" className="text-xs">↺ Override por Truth</Badge>;
     }
@@ -1488,9 +1515,13 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       return <Badge variant="warning" className="text-xs">↕ Pay-model mismatch</Badge>;
     }
 
-    // Evidence-aware: don't label "Exacto" if no linked operational evidence
-    const hasEvidence = row.recon && (row.recon.schedule_count > 0 || row.recon.clock_count > 0 || row.recon.payroll_row_count > 0);
+    if (closureAlignedToTruth && row.status !== "identity_only" && row.status !== "missing") {
+      return hasEvidence
+        ? <Badge variant="secondary" className="text-xs">✓ Cerrado por Truth</Badge>
+        : <Badge variant="secondary" className="text-xs">✓ Truth-validado</Badge>;
+    }
 
+    // Evidence-aware: don't label "Exacto" if no linked operational evidence
     switch (row.status) {
       case "match":
         return hasEvidence
