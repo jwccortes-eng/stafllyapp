@@ -2198,11 +2198,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                   )}
 
                                   {r && (
-                                    <div className="flex gap-4 text-muted-foreground">
+                                    <div className="flex gap-4 text-muted-foreground flex-wrap">
                                       <span>Schedules: {r.schedule_count}</span>
                                       <span>Clocks: {r.clock_count}</span>
                                       <span>Payroll rows: {r.payroll_row_count}</span>
                                       <span>Flags: {r.flags.length}</span>
+                                      <span className="border-l border-border pl-4">Truth Hrs: <span className="font-mono">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}</span></span>
+                                      <span>Clock Hrs: <span className="font-mono">{r.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</span></span>
+                                      <span>Sched Hrs: <span className="font-mono text-muted-foreground italic">{r.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</span> (estimado)</span>
+                                      <span>Base Pay Hrs: <span className="font-mono">{r.base_pay_hours ? r.base_pay_hours.toFixed(1) : "—"}</span></span>
+                                      <span className="font-medium">Fuente: {truthAuthoritativeMode ? "Truth" : r.hours_source_used}</span>
                                     </div>
                                   )}
                                 </div>
