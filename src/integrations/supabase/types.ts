@@ -6150,6 +6150,8 @@ export type Database = {
           anomaly_flags_json: Json | null
           batch_id: string
           clock_count: number | null
+          closure_hours_used: number | null
+          closure_source: string | null
           created_at: string
           email: string | null
           employee_external_id: string | null
@@ -6187,7 +6189,11 @@ export type Database = {
           system_total_pay: number | null
           truth_corte: string | null
           truth_date: string | null
+          truth_hourly_rate: number | null
+          truth_hourly_rate_derived: number | null
+          truth_hours: number | null
           truth_observaciones: string | null
+          truth_paid_hours: number | null
           truth_pay_per_day: number | null
           truth_raw_json: Json | null
           truth_reimbursements: number | null
@@ -6211,6 +6217,8 @@ export type Database = {
           anomaly_flags_json?: Json | null
           batch_id: string
           clock_count?: number | null
+          closure_hours_used?: number | null
+          closure_source?: string | null
           created_at?: string
           email?: string | null
           employee_external_id?: string | null
@@ -6248,7 +6256,11 @@ export type Database = {
           system_total_pay?: number | null
           truth_corte?: string | null
           truth_date?: string | null
+          truth_hourly_rate?: number | null
+          truth_hourly_rate_derived?: number | null
+          truth_hours?: number | null
           truth_observaciones?: string | null
+          truth_paid_hours?: number | null
           truth_pay_per_day?: number | null
           truth_raw_json?: Json | null
           truth_reimbursements?: number | null
@@ -6272,6 +6284,8 @@ export type Database = {
           anomaly_flags_json?: Json | null
           batch_id?: string
           clock_count?: number | null
+          closure_hours_used?: number | null
+          closure_source?: string | null
           created_at?: string
           email?: string | null
           employee_external_id?: string | null
@@ -6309,7 +6323,11 @@ export type Database = {
           system_total_pay?: number | null
           truth_corte?: string | null
           truth_date?: string | null
+          truth_hourly_rate?: number | null
+          truth_hourly_rate_derived?: number | null
+          truth_hours?: number | null
           truth_observaciones?: string | null
+          truth_paid_hours?: number | null
           truth_pay_per_day?: number | null
           truth_raw_json?: Json | null
           truth_reimbursements?: number | null
