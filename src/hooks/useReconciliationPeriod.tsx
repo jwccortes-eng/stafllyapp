@@ -1228,8 +1228,9 @@ export function useReconciliationPeriod(companyId: string | null) {
           final_total_pay: truthTotal,
           source_payroll_total: truthTotal,
           variance_amount: variance,
-          variance_status: isExact ? "exact_match" : Math.abs(variance) < 10 ? "minor_variance" : "major_variance",
-          variance_reasons: isExact ? [] : [`Truth: $${truthTotal}, System: $${systemTotal}, Δ${variance}`],
+          // ⚠️ Truth-validated: variance is diagnostic, never "major" — closure IS truth
+          variance_status: isExact ? "exact_match" : "minor_variance",
+          variance_reasons: isExact ? [] : [`Diagnóstico — Truth: $${truthTotal}, Sistema: $${systemTotal}, Δ${variance}`],
           shift_full_day_count: 0,
           shift_half_day_count: 0,
           shift_calculated_total: 0,
