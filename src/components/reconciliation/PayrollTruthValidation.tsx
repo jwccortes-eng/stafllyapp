@@ -297,7 +297,7 @@ function buildTruthFromPersistedRow(row: any): PayrollTruthRow {
     phoneNumber: String(row?.phone || raw["Phone number"] || ""),
     email: String(row?.email || raw.Email || ""),
     totalPay: Number(row?.truth_total_pay) || 0,
-    hourlyRate: null,
+    hourlyRate: Number(row?.truth_hourly_rate) || Number(row?.truth_hourly_rate_derived) || null,
     payperDay: Number(row?.truth_pay_per_day) || 0,
     ryde: Number(row?.truth_ryde) || 0,
     tips: Number(row?.truth_tips) || 0,
@@ -306,7 +306,7 @@ function buildTruthFromPersistedRow(row: any): PayrollTruthRow {
     otros: Number(raw.otros) || 0,
     discount: Number(raw.discount) || 0,
     total: Number(row?.truth_total) || 0,
-    shiftHours: 0,
+    shiftHours: Number(row?.truth_hours) || Number(row?.truth_paid_hours) || 0,
     observaciones: String(row?.truth_observaciones || ""),
   };
 }
@@ -793,6 +793,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           truth_tips: c.truth.tips || 0,
           truth_reimbursements: c.truth.reimbursements || 0,
           truth_total: c.truth.total,
+          truth_hours: c.truth.shiftHours || null,
+          truth_paid_hours: c.truth.shiftHours || null,
+          truth_hourly_rate: c.truth.hourlyRate || null,
+          truth_hourly_rate_derived: c.truth.shiftHours > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / c.truth.shiftHours) : null,
+          closure_hours_used: truthAuthoritativeMode ? (c.truth.shiftHours || null) : (r?.clocked_hours || r?.base_pay_hours || null),
+          closure_source: truthAuthoritativeMode ? "truth" : (r?.hours_source_used || "none"),
           system_total_pay: r?.hourly_pay ?? null,
           system_pay_per_day: r ? (r.daily_pay + r.weekend_pay) : null,
           system_ryde: r?.ride_pay ?? null,
@@ -2074,7 +2080,13 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             <TableCell className="font-medium text-sm">{c.employee}</TableCell>
                             <TableCell>{statusBadge(c)}</TableCell>
                             <TableCell>{reviewGroupBadge(c.reviewGroup)}</TableCell>
-                            <TableCell className="text-right font-mono text-xs">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}
+                              {c.truth.shiftHours > 0 && c.truth.totalPay > 0 && (
+                                <span className="text-[9px] text-muted-foreground ml-0.5" title={`${c.truth.shiftHours.toFixed(1)} × $${(c.truth.hourlyRate || round2(c.truth.totalPay / c.truth.shiftHours)).toFixed(2)} = $${c.truth.totalPay.toFixed(2)}`}>
+                                  @${(c.truth.hourlyRate || round2(c.truth.totalPay / c.truth.shiftHours)).toFixed(0)}
+                                </span>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right font-mono text-xs">{r?.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-xs text-muted-foreground">{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</TableCell>
                             <TableCell className="text-center">
@@ -2153,55 +2165,91 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                   </div>
 
                                   {/* ── HOURS TRACEABILITY (4 sections) ── */}
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                    {/* A. Truth Section */}
-                                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 space-y-1">
-                                      <p className="font-semibold text-primary text-[11px]">A. Truth (Nómina Pagada)</p>
-                                      <div className="space-y-0.5 font-mono text-muted-foreground">
-                                        <p>Horas: <span className="text-foreground font-medium">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}</span></p>
-                                        <p>Tasa/hr: <span className="text-foreground">{c.truth.hourlyRate ? fmt(c.truth.hourlyRate) : "—"}</span></p>
-                                        <p>Pay: <span className="text-foreground font-bold">{fmt(c.truth.totalPay)}</span></p>
-                                        <p className="font-bold text-primary">Total: {fmt(c.truth.total)}</p>
-                                      </div>
-                                    </div>
+                                  {(() => {
+                                    const truthHrs = c.truth.shiftHours || 0;
+                                    const truthPay = c.truth.totalPay || 0;
+                                    const explicitRate = c.truth.hourlyRate;
+                                    const derivedRate = truthHrs > 0 && truthPay > 0 ? round2(truthPay / truthHrs) : null;
+                                    const effectiveRate = explicitRate || derivedRate;
+                                    const closureHrs = truthAuthoritativeMode
+                                      ? truthHrs
+                                      : (r?.clocked_hours || r?.base_pay_hours || 0);
+                                    const closureSrc = truthAuthoritativeMode ? "Truth" : r?.hours_source_used === "clocked" ? "Reloj" : r?.primary_source === "shift_calc" ? "Daily" : "Manual";
 
-                                    {/* B. System Real Section */}
-                                    <div className="rounded-lg border border-border p-2.5 space-y-1">
-                                      <p className="font-semibold text-foreground text-[11px]">B. Sistema Real (Fichajes)</p>
-                                      <div className="space-y-0.5 font-mono text-muted-foreground">
-                                        <p>Horas reloj: <span className="text-foreground font-medium">{r?.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</span></p>
-                                        <p>Tasa sistema: <span className="text-foreground">{r && r.clocked_hours > 0 && r.hourly_pay > 0 ? fmt(r.hourly_pay / r.clocked_hours) : "—"}</span></p>
-                                        <p>Pay real: <span className="text-foreground font-bold">{r ? fmt(r.total_final) : "—"}</span></p>
-                                        <p>Fichajes: <span className="text-foreground">{r?.clock_count || 0}</span></p>
-                                      </div>
-                                    </div>
+                                    return (
+                                      <>
+                                        {/* TRUTH PAY RELATIONSHIP */}
+                                        {truthHrs > 0 && effectiveRate && (
+                                          <div className="rounded-lg border-2 border-primary/40 bg-primary/10 p-3">
+                                            <p className="font-semibold text-primary text-xs mb-1.5">📐 TRUTH PAY RELATIONSHIP</p>
+                                            <div className="font-mono text-sm flex items-center gap-2 flex-wrap">
+                                              <span className="text-foreground font-bold">{truthHrs.toFixed(1)}h</span>
+                                              <span className="text-muted-foreground">×</span>
+                                              <span className="text-foreground font-bold">${effectiveRate.toFixed(2)}/h</span>
+                                              <span className="text-muted-foreground">=</span>
+                                              <span className="text-primary font-bold text-base">${(truthHrs * effectiveRate).toFixed(2)}</span>
+                                              {!explicitRate && derivedRate && (
+                                                <Badge variant="outline" className="text-[9px] ml-1">tasa derivada</Badge>
+                                              )}
+                                            </div>
+                                            {Math.abs((truthHrs * (effectiveRate || 0)) - truthPay) > 0.02 && (
+                                              <p className="text-[10px] text-muted-foreground mt-1">
+                                                Nota: Diferencia de redondeo vs Truth Pay ({fmt(truthPay)})
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
 
-                                    {/* C. Schedule Section (estimated) */}
-                                    <div className="rounded-lg border border-dashed border-muted-foreground/30 p-2.5 space-y-1">
-                                      <p className="font-semibold text-muted-foreground text-[11px]">C. Programado <Badge variant="outline" className="text-[8px] ml-1 py-0 px-1">Estimado / no usado para pago</Badge></p>
-                                      <div className="space-y-0.5 font-mono text-muted-foreground italic">
-                                        <p>Horas prog.: <span>{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</span></p>
-                                        <p>Turnos: <span>{r?.schedule_count || 0}</span></p>
-                                      </div>
-                                      <p className="text-[9px] text-muted-foreground mt-1">⚠️ Las horas programadas nunca se usan para nómina. Solo horas reales (reloj) o Truth pagado.</p>
-                                    </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                          {/* A. Truth Section */}
+                                          <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 space-y-1">
+                                            <p className="font-semibold text-primary text-[11px]">A. Truth (Nómina Pagada)</p>
+                                            <div className="space-y-0.5 font-mono text-muted-foreground">
+                                              <p>Horas: <span className="text-foreground font-medium">{truthHrs ? truthHrs.toFixed(1) : "—"}</span></p>
+                                              <p>Tasa/hr: <span className="text-foreground">{effectiveRate ? `$${effectiveRate.toFixed(2)}` : "—"}</span>
+                                                {!explicitRate && derivedRate && <span className="text-[9px] ml-1 text-muted-foreground">(derivada)</span>}
+                                              </p>
+                                              <p>Pay: <span className="text-foreground font-bold">{fmt(truthPay)}</span></p>
+                                              <p className="font-bold text-primary">Total: {fmt(c.truth.total)}</p>
+                                            </div>
+                                          </div>
 
-                                    {/* D. Closure Section */}
-                                    <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-2.5 space-y-1">
-                                      <p className="font-semibold text-primary text-[11px]">D. Cierre Final</p>
-                                      <div className="space-y-0.5 font-mono">
-                                        <p className="text-muted-foreground">Fuente: <span className="text-foreground font-medium">
-                                          {truthAuthoritativeMode ? "Truth" : r?.hours_source_used === "clocked" ? "Reloj" : r?.primary_source === "shift_calc" ? "Daily" : "Manual"}
-                                        </span></p>
-                                        <p className="text-muted-foreground">Horas usadas: <span className="text-foreground font-medium">
-                                          {truthAuthoritativeMode
-                                            ? (c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "N/A (monto directo)")
-                                            : r?.clocked_hours ? r.clocked_hours.toFixed(1) : r?.base_pay_hours ? r.base_pay_hours.toFixed(1) : "—"}
-                                        </span></p>
-                                        <p className="text-primary font-bold text-sm">Monto: {fmt(c.closureAmount)}</p>
-                                      </div>
-                                    </div>
-                                  </div>
+                                          {/* B. System Real Section */}
+                                          <div className="rounded-lg border border-border p-2.5 space-y-1">
+                                            <p className="font-semibold text-foreground text-[11px]">B. Sistema Real (Fichajes)</p>
+                                            <div className="space-y-0.5 font-mono text-muted-foreground">
+                                              <p>Horas reloj: <span className="text-foreground font-medium">{r?.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</span></p>
+                                              <p>Tasa sistema: <span className="text-foreground">{r && r.clocked_hours > 0 && r.hourly_pay > 0 ? fmt(r.hourly_pay / r.clocked_hours) : "—"}</span></p>
+                                              <p>Pay real: <span className="text-foreground font-bold">{r ? fmt(r.total_final) : "—"}</span></p>
+                                              <p>Fichajes: <span className="text-foreground">{r?.clock_count || 0}</span></p>
+                                            </div>
+                                          </div>
+
+                                          {/* C. Schedule Section (estimated) */}
+                                          <div className="rounded-lg border border-dashed border-muted-foreground/30 p-2.5 space-y-1">
+                                            <p className="font-semibold text-muted-foreground text-[11px]">C. Programado <Badge variant="outline" className="text-[8px] ml-1 py-0 px-1">Estimado / no usado para pago</Badge></p>
+                                            <div className="space-y-0.5 font-mono text-muted-foreground italic">
+                                              <p>Horas prog.: <span>{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</span></p>
+                                              <p>Turnos: <span>{r?.schedule_count || 0}</span></p>
+                                            </div>
+                                            <p className="text-[9px] text-muted-foreground mt-1">⚠️ Las horas programadas nunca se usan para nómina. Solo horas reales (reloj) o Truth pagado.</p>
+                                          </div>
+
+                                          {/* D. Closure Section */}
+                                          <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-2.5 space-y-1">
+                                            <p className="font-semibold text-primary text-[11px]">D. Cierre Final</p>
+                                            <div className="space-y-0.5 font-mono">
+                                              <p className="text-muted-foreground">Fuente: <span className="text-foreground font-medium">{closureSrc}</span></p>
+                                              <p className="text-muted-foreground">Horas usadas: <span className="text-foreground font-medium">
+                                                {closureHrs > 0 ? closureHrs.toFixed(1) : "N/A (monto directo)"}
+                                              </span></p>
+                                              <p className="text-primary font-bold text-sm">Monto: {fmt(c.closureAmount)}</p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
 
                                   {/* Hard business rule reminder */}
                                   <div className="rounded-md bg-muted/50 border border-border px-3 py-1.5 text-[10px] text-muted-foreground flex items-center gap-2">
