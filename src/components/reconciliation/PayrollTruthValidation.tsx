@@ -338,6 +338,7 @@ function buildTruthFromPersistedRow(row: any, truthFallback?: PayrollTruthRow): 
     discount,
     total,
     shiftHours,
+    totalPaidHours: totalPaidHours > 0 ? totalPaidHours : shiftHours,
     observaciones: String(row?.truth_observaciones || truthFallback?.observaciones || ""),
   };
 }

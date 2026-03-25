@@ -67,6 +67,7 @@ export interface PayrollTruthParseResult {
     total: ColumnDetection;
     hourlyRate: ColumnDetection;
     shiftHours: ColumnDetection;
+    totalPaidHours: ColumnDetection;
     observaciones: ColumnDetection;
   };
   rows: PayrollTruthRow[];
