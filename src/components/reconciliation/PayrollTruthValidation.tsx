@@ -597,6 +597,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 : status === "identity_only"
                   ? -Math.abs(truth.total || 0)
                   : truth.total || 0;
+            const systemInferredOnly = isSystemInferredOnly(recon);
+            const reviewGroup = deriveReviewGroup(status, recon, truth.total || 0, totalVariance, truthAuthoritativeMode);
+            const closureAmount = truthAuthoritativeMode ? (truth.total || 0) : (recon?.total_final ?? (truth.total || 0));
 
             return {
               employee: truth.employee,
@@ -607,6 +610,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               matchConfidence: Number(row?.match_confidence) || 0,
               totalVariance,
               status,
+              reviewGroup,
+              closureAmount,
+              systemInferredOnly,
               compositionError: false,
               compositionReason:
                 status === "identity_only"
@@ -1314,6 +1320,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
         if (!recon) {
           if (!match?.employeeId) {
+            const closureAmount = truthAuthoritativeMode ? (t.total || 0) : (t.total || 0);
             return {
               employee: t.employee,
               truth: t,
@@ -1323,11 +1330,15 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               matchConfidence: match?.confidence || 0,
               totalVariance: t.total,
               status: "missing" as const,
+              reviewGroup: "missing_system_data" as const,
+              closureAmount,
+              systemInferredOnly: false,
               compositionError: false,
               compositionReason: null,
             };
           }
 
+          const closureAmount = truthAuthoritativeMode ? (t.total || 0) : (t.total || 0);
           return {
             employee: t.employee,
             truth: t,
@@ -1337,6 +1348,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
             matchConfidence: match.confidence,
             totalVariance: -Math.abs(t.total || 0),
             status: "identity_only" as const,
+            reviewGroup: "missing_system_data" as const,
+            closureAmount,
+            systemInferredOnly: false,
             compositionError: false,
             compositionReason: "Empleado mapeado, pero sin base operativa para este periodo (period_base_pay/movements).",
           };
@@ -1354,6 +1368,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         const compositionReason = compositionError
           ? `Naive additive total ${fmt(recon.naive_total)} would overstate truth by ${fmtVar(round2(recon.naive_total - t.total))}; overlap guardrail excluded ${fmt(recon.overlap_excluded_total)}.`
           : null;
+        const systemInferredOnly = isSystemInferredOnly(recon);
+        const reviewGroup = deriveReviewGroup(status, recon, t.total || 0, totalVariance, truthAuthoritativeMode);
+        const closureAmount = truthAuthoritativeMode ? (t.total || 0) : (recon.total_final || 0);
 
         return {
           employee: t.employee,
@@ -1364,6 +1381,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           matchConfidence: match?.confidence || 90,
           totalVariance,
           status,
+          reviewGroup,
+          closureAmount,
+          systemInferredOnly,
           compositionError,
           compositionReason,
         };
@@ -1376,7 +1396,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         if (b.totalVariance !== a.totalVariance) return b.totalVariance - a.totalVariance;
         return Math.abs(b.totalVariance) - Math.abs(a.totalVariance);
       });
-  }, [truthData, reconData, truthMatches]);
+  }, [truthData, reconData, truthMatches, truthAuthoritativeMode]);
 
   const comparison = useMemo<ComparisonRow[]>(() => persistedComparison ?? computedComparison, [persistedComparison, computedComparison]);
 
