@@ -73,6 +73,11 @@ interface ReconBreakdown {
   schedule_count: number;
   clock_count: number;
   payroll_row_count: number;
+  // Hours tracking
+  clocked_hours: number;
+  scheduled_hours: number;
+  base_pay_hours: number;
+  hours_source_used: "clocked" | "truth" | "scheduled" | "none";
   ledger: LedgerEntry[];
   flags: string[];
 }
@@ -126,12 +131,21 @@ function deriveOperationalStatus(
   status: ComparisonRow["status"],
   truthTotal: number,
   closureAmount: number,
-  truthAuthoritativeMode: boolean
+  truthAuthoritativeMode: boolean,
+  hasMatchedIdentity?: boolean
 ): ComparisonRow["status"] {
   if (!truthAuthoritativeMode) return status;
-  if (status === "identity_only" || status === "missing") return status;
 
+  // In truth-authoritative mode, if closure aligns with truth, the row is resolved
+  // regardless of whether system-side operational data exists.
   const closureVariance = Math.abs(round2(closureAmount - truthTotal));
+
+  if (status === "identity_only" || status === "missing") {
+    // If closure == truth in truth-authoritative mode, this is a truth-validated match
+    if (closureVariance < 1 && truthTotal > 0) return "match";
+    return status;
+  }
+
   if (closureVariance < 1) return "match";
   if (closureVariance < 50) return "close";
   return "mismatch";
@@ -145,17 +159,23 @@ function deriveReviewGroup(
   truthAuthoritativeMode: boolean,
   closureAmount: number
 ): ReviewGroup {
+  const closureAlignedToTruth = Math.abs(round2(closureAmount - truthTotal)) < 1;
+
+  // In truth-authoritative mode, if closure == truth, the row is standard/resolved
+  // even if there's no system-side data (identity_only / missing with closure).
+  if (truthAuthoritativeMode && closureAlignedToTruth && truthTotal > 0) {
+    if (!recon) return "standard"; // truth-validated, no system data needed
+    const inferredOnly = isSystemInferredOnly(recon);
+    const systemExceedsTruth = round2(recon.total_final - truthTotal) > 1;
+    if (inferredOnly && systemExceedsTruth) return "truth_override_candidate";
+    return "standard";
+  }
+
   if (status === "identity_only" || status === "missing") return "missing_system_data";
   if (!recon) return "standard";
 
   const inferredOnly = isSystemInferredOnly(recon);
   const systemExceedsTruth = round2(recon.total_final - truthTotal) > 1;
-  const closureAlignedToTruth = Math.abs(round2(closureAmount - truthTotal)) < 1;
-
-  if (truthAuthoritativeMode && closureAlignedToTruth) {
-    if (inferredOnly && systemExceedsTruth) return "truth_override_candidate";
-    return "standard";
-  }
 
   if (truthAuthoritativeMode && inferredOnly && systemExceedsTruth) return "truth_override_candidate";
   if (inferredOnly && systemExceedsTruth) return "system_inferred_exceeds_truth";
@@ -328,6 +348,10 @@ function buildReconFromPersistedRow(row: any, employeeName: string): ReconBreakd
     schedule_count: Number(row?.shift_count) || 0,
     clock_count: Number(row?.clock_count) || 0,
     payroll_row_count: 0,
+    clocked_hours: 0,
+    scheduled_hours: 0,
+    base_pay_hours: 0,
+    hours_source_used: "none",
     ledger: [],
     flags: [],
   };
@@ -926,7 +950,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
       let schedulesQuery = supabase
         .from("shifts" as any)
-        .select("employee_id")
+        .select("employee_id, scheduled_hours")
         .eq("company_id", companyId)
         .limit(2000);
 
@@ -940,7 +964,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
       const clocksQuery = supabase
         .from("time_entries" as any)
-        .select("employee_id")
+        .select("employee_id, total_hours")
         .eq("company_id", companyId)
         .gte("clock_in", `${periodStatus.period_start}T00:00:00`)
         .lte("clock_in", `${periodStatus.period_end}T23:59:59`)
@@ -1014,6 +1038,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
             schedule_count: 0,
             clock_count: 0,
             payroll_row_count: 0,
+            clocked_hours: 0,
+            scheduled_hours: 0,
+            base_pay_hours: 0,
+            hours_source_used: "none",
             ledger: [],
             flags: [],
           });
@@ -1063,6 +1091,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         const row = getOrCreate(bp.employee_id);
         const value = round2(Number(bp.base_total_pay) || 0);
         const hours = Number(bp.total_work_hours) || 0;
+        row.base_pay_hours = round2(hours);
 
         // ⚠️ HARD PAYROLL RULE: In truth-based closure mode, auto-calculated
         // period_base_pay (import_id IS NULL) must NEVER be authoritative.
@@ -1219,21 +1248,29 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       });
 
       const scheduleCounts = new Map<string, number>();
+      const scheduleHoursMap = new Map<string, number>();
       for (const s of schedules) {
         if (!s.employee_id) continue;
         scheduleCounts.set(s.employee_id, (scheduleCounts.get(s.employee_id) || 0) + 1);
+        scheduleHoursMap.set(s.employee_id, (scheduleHoursMap.get(s.employee_id) || 0) + (Number(s.scheduled_hours) || 0));
       }
       scheduleCounts.forEach((count, empId) => {
-        getOrCreate(empId).schedule_count = count;
+        const row = getOrCreate(empId);
+        row.schedule_count = count;
+        row.scheduled_hours = round2(scheduleHoursMap.get(empId) || 0);
       });
 
       const clockCounts = new Map<string, number>();
+      const clockHoursMap = new Map<string, number>();
       for (const c of clocks) {
         if (!c.employee_id) continue;
         clockCounts.set(c.employee_id, (clockCounts.get(c.employee_id) || 0) + 1);
+        clockHoursMap.set(c.employee_id, (clockHoursMap.get(c.employee_id) || 0) + (Number(c.total_hours) || 0));
       }
       clockCounts.forEach((count, empId) => {
-        getOrCreate(empId).clock_count = count;
+        const row = getOrCreate(empId);
+        row.clock_count = count;
+        row.clocked_hours = round2(clockHoursMap.get(empId) || 0);
       });
 
       // === SHIFT-CALC PRIORITY OVERRIDE ===
@@ -1311,6 +1348,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           .reduce((s, l) => s + l.value, 0);
         row.total_final = round2(includedTotal > 0 ? includedTotal : (row.authoritative_total + row.inferred_total));
         row.naive_total = round2(row.authoritative_total + row.movement_unique_total + (row.authoritative_source === "payroll_rows_total" ? row.base_pay : 0));
+
+        // Determine hours source used for closure
+        if (row.clocked_hours > 0) row.hours_source_used = "clocked";
+        else if (row.base_pay_hours > 0) row.hours_source_used = "clocked"; // base_pay derives from clocks
+        else if (row.scheduled_hours > 0) row.hours_source_used = "scheduled";
+        else row.hours_source_used = "none";
 
         if (row.schedule_count === 0 && row.clock_count === 0 && row.payroll_row_count <= 1 && row.movement_unique_total > 0) {
           row.flags.push("no_work_evidence_guardrail_active");
@@ -1559,6 +1602,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
   const explainVariance = (c: ComparisonRow): string => {
     if (!c.recon) {
+      const closureAlignedToTruth = truthAuthoritativeMode && Math.abs(round2(c.closureAmount - (c.truth.total || 0))) < 1 && (c.truth.total || 0) > 0;
+      if (closureAlignedToTruth) {
+        return c.matchEmployeeId
+          ? "Identidad encontrada. Sin datos operativos del sistema para este periodo, pero el cierre se basa en el Truth pagado (autoritativo). El monto de cierre es correcto."
+          : "Identidad no encontrada en el sistema, pero en modo Truth-autoritativo el cierre se basa directamente en el archivo de nómina pagada. Monto de cierre correcto.";
+      }
       return c.matchEmployeeId
         ? "Identidad del empleado encontrada, pero no hay datos operativos del periodo para comparar."
         : "Empleado no encontrado por identidad en la validación.";
@@ -1973,24 +2022,28 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               <div className="overflow-auto max-h-[600px]">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-8"></TableHead>
-                      <TableHead>Empleado</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Grupo</TableHead>
-                      <TableHead className="text-right">T.Pay</TableHead>
-                      <TableHead className="text-right">T.PPD</TableHead>
-                      <TableHead className="text-right">T.Ryde</TableHead>
-                      <TableHead className="text-right">T.Tips</TableHead>
-                      <TableHead className="text-right">T.Reimb</TableHead>
-                      <TableHead className="text-right">T.Otros</TableHead>
-                      <TableHead className="text-right">T.Disc</TableHead>
-                      <TableHead className="text-right font-bold">T.TOTAL</TableHead>
-                      <TableHead className="text-right font-bold">Sistema (interno)</TableHead>
-                      <TableHead className="text-right font-bold">Cierre final</TableHead>
-                      <TableHead className="text-right font-bold">Δ Sys-Truth</TableHead>
-                      <TableHead className="text-center">Obs</TableHead>
-                    </TableRow>
+                     <TableRow>
+                       <TableHead className="w-8"></TableHead>
+                       <TableHead>Empleado</TableHead>
+                       <TableHead>Estado</TableHead>
+                       <TableHead>Grupo</TableHead>
+                       <TableHead className="text-right">T.Hrs</TableHead>
+                       <TableHead className="text-right">Clock.Hrs</TableHead>
+                       <TableHead className="text-right">Sched.Hrs</TableHead>
+                       <TableHead className="text-center">Hrs Fuente</TableHead>
+                       <TableHead className="text-right">T.Pay</TableHead>
+                       <TableHead className="text-right">T.PPD</TableHead>
+                       <TableHead className="text-right">T.Ryde</TableHead>
+                       <TableHead className="text-right">T.Tips</TableHead>
+                       <TableHead className="text-right">T.Reimb</TableHead>
+                       <TableHead className="text-right">T.Otros</TableHead>
+                       <TableHead className="text-right">T.Disc</TableHead>
+                       <TableHead className="text-right font-bold">T.TOTAL</TableHead>
+                       <TableHead className="text-right font-bold">Sistema (interno)</TableHead>
+                       <TableHead className="text-right font-bold">Cierre final</TableHead>
+                       <TableHead className="text-right font-bold">Δ Sys-Truth</TableHead>
+                       <TableHead className="text-center">Obs</TableHead>
+                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredComparison.map(c => {
@@ -2018,6 +2071,22 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             <TableCell className="font-medium text-sm">{c.employee}</TableCell>
                             <TableCell>{statusBadge(c)}</TableCell>
                             <TableCell>{reviewGroupBadge(c.reviewGroup)}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{r?.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs text-muted-foreground">{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</TableCell>
+                            <TableCell className="text-center">
+                              {(() => {
+                                const src = truthAuthoritativeMode ? "truth" : (r?.hours_source_used || "none");
+                                const labels: Record<string, { text: string; cls: string }> = {
+                                  truth: { text: "Truth", cls: "text-primary font-medium" },
+                                  clocked: { text: "Reloj", cls: "text-foreground" },
+                                  scheduled: { text: "Prog.", cls: "text-muted-foreground italic" },
+                                  none: { text: "—", cls: "text-muted-foreground" },
+                                };
+                                const l = labels[src] || labels.none;
+                                return <span className={`text-xs ${l.cls}`}>{l.text}</span>;
+                              })()}
+                            </TableCell>
                             <TableCell className="text-right font-mono text-xs">{c.truth.totalPay ? fmt(c.truth.totalPay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-xs">{c.truth.payperDay ? fmt(c.truth.payperDay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-xs">{c.truth.ryde ? fmt(c.truth.ryde) : "—"}</TableCell>
@@ -2041,7 +2110,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
                           {isExpanded && (
                             <TableRow key={`${c.employee}-detail`} className="bg-muted/20 hover:bg-muted/20">
-                              <TableCell colSpan={16} className="p-3">
+                              <TableCell colSpan={20} className="p-3">
                                 <div className="space-y-3 text-xs">
                                   <div className="rounded bg-background border border-border p-2">
                                     <p className="font-medium text-foreground mb-1">Explicación de varianza:</p>
@@ -2129,11 +2198,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                   )}
 
                                   {r && (
-                                    <div className="flex gap-4 text-muted-foreground">
+                                    <div className="flex gap-4 text-muted-foreground flex-wrap">
                                       <span>Schedules: {r.schedule_count}</span>
                                       <span>Clocks: {r.clock_count}</span>
                                       <span>Payroll rows: {r.payroll_row_count}</span>
                                       <span>Flags: {r.flags.length}</span>
+                                      <span className="border-l border-border pl-4">Truth Hrs: <span className="font-mono">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}</span></span>
+                                      <span>Clock Hrs: <span className="font-mono">{r.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</span></span>
+                                      <span>Sched Hrs: <span className="font-mono text-muted-foreground italic">{r.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</span> (estimado)</span>
+                                      <span>Base Pay Hrs: <span className="font-mono">{r.base_pay_hours ? r.base_pay_hours.toFixed(1) : "—"}</span></span>
+                                      <span className="font-medium">Fuente: {truthAuthoritativeMode ? "Truth" : r.hours_source_used}</span>
                                     </div>
                                   )}
                                 </div>
