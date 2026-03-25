@@ -787,12 +787,13 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     ];
     const csvRows = compRows.map(c => {
       const r = c.recon;
+      const hasEvidence = r && (r.schedule_count > 0 || r.clock_count > 0 || r.payroll_row_count > 0);
       return [
         c.employee,
         c.status === "match"
-          ? "EXACTO"
+          ? (hasEvidence ? "EXACTO" : "TRUTH_VALIDADO")
           : c.status === "close"
-            ? "CERCANO"
+            ? (hasEvidence ? "CERCANO" : "TRUTH_CERCANO")
             : c.status === "mismatch"
               ? "DIFERENTE"
               : c.status === "identity_only"
@@ -1401,8 +1402,11 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const comparison = useMemo<ComparisonRow[]>(() => persistedComparison ?? computedComparison, [persistedComparison, computedComparison]);
 
   const stats = useMemo(() => {
-    const matched = comparison.filter(c => c.status === "match").length;
-    const close = comparison.filter(c => c.status === "close").length;
+    const hasEvidence = (c: ComparisonRow) => c.recon && (c.recon.schedule_count > 0 || c.recon.clock_count > 0 || c.recon.payroll_row_count > 0);
+    const matchedWithEvidence = comparison.filter(c => c.status === "match" && hasEvidence(c)).length;
+    const truthValidated = comparison.filter(c => (c.status === "match" || c.status === "close") && !hasEvidence(c)).length;
+    const matched = matchedWithEvidence;
+    const close = comparison.filter(c => c.status === "close" && hasEvidence(c)).length;
     const mismatch = comparison.filter(c => c.status === "mismatch").length;
     const identityOnly = comparison.filter(c => c.status === "identity_only").length;
     const missing = comparison.filter(c => c.status === "missing").length;
@@ -1419,6 +1423,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     return {
       matched,
       close,
+      truthValidated,
       mismatch,
       identityOnly,
       missing,
@@ -1470,11 +1475,18 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       return <Badge variant="warning" className="text-xs">↕ Pay-model mismatch</Badge>;
     }
 
+    // Evidence-aware: don't label "Exacto" if no linked operational evidence
+    const hasEvidence = row.recon && (row.recon.schedule_count > 0 || row.recon.clock_count > 0 || row.recon.payroll_row_count > 0);
+
     switch (row.status) {
       case "match":
-        return <Badge variant="default" className="text-xs">✓ Exacto</Badge>;
+        return hasEvidence
+          ? <Badge variant="default" className="text-xs">✓ Exacto</Badge>
+          : <Badge variant="secondary" className="text-xs">✓ Truth-validado</Badge>;
       case "close":
-        return <Badge variant="secondary" className="text-xs">≈ Cercano</Badge>;
+        return hasEvidence
+          ? <Badge variant="secondary" className="text-xs">≈ Cercano</Badge>
+          : <Badge variant="secondary" className="text-xs">≈ Truth-cercano</Badge>;
       case "mismatch":
         return <Badge variant="destructive" className="text-xs">✗ Diferente</Badge>;
       case "identity_only":
@@ -1701,9 +1713,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               </div>
 
               {/* ── Count KPIs (secondary row) ── */}
-              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-8 gap-2">
                 <KpiCard label="Empleados" value={comparison.length} icon={<DollarSign className="h-3.5 w-3.5" />} size="sm" />
                 <KpiCard label="Exactos" value={stats.matched} icon={<CheckCircle2 className="h-3.5 w-3.5" />} accent="primary" size="sm" />
+                <KpiCard label="Truth-validado" value={stats.truthValidated} icon={<Database className="h-3.5 w-3.5" />} accent="muted" size="sm" />
                 <KpiCard label="Cercanos" value={stats.close} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="warning" size="sm" />
                 <KpiCard label="Diferentes" value={stats.mismatch} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="deduction" size="sm" />
                 <KpiCard label="ID sin base" value={stats.identityOnly} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="warning" size="sm" />
