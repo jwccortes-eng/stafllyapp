@@ -238,7 +238,7 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
     const rawTotal = totalIndex >= 0 ? row[totalIndex] : null;
     const rawHourlyRate = hourlyRateIndex >= 0 ? row[hourlyRateIndex] : null;
     const rawShiftHours = shiftHoursIndex >= 0 ? row[shiftHoursIndex] : null;
-    const rawTips = tipsIndex >= 0 ? row[tipsIndex] : null;
+    const rawTotalPaidHours = totalPaidHoursIndex >= 0 ? row[totalPaidHoursIndex] : null;
     const rawReimbursements = reimbursementsIndex >= 0 ? row[reimbursementsIndex] : null;
     const rawTravelHours = travelHoursIndex >= 0 ? row[travelHoursIndex] : null;
     const rawOtros = otrosIndex >= 0 ? row[otrosIndex] : null;
