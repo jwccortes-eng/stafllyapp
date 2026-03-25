@@ -138,7 +138,12 @@ export function usePayrollReconciliation() {
         truth_observaciones: r.observaciones || null,
         truth_date: r.date || null,
         truth_corte: r.corte || null,
-        truth_raw_json: r.raw,
+        truth_raw_json: {
+          ...r.raw,
+          discount: r.discount || 0,
+          travel_hours: r.travel_hours || 0,
+          otros: r.otros || 0,
+        },
         match_status: "UNMATCHED",
       }));
 
