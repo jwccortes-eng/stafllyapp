@@ -1349,6 +1349,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         row.total_final = round2(includedTotal > 0 ? includedTotal : (row.authoritative_total + row.inferred_total));
         row.naive_total = round2(row.authoritative_total + row.movement_unique_total + (row.authoritative_source === "payroll_rows_total" ? row.base_pay : 0));
 
+        // Determine hours source used for closure
+        if (row.clocked_hours > 0) row.hours_source_used = "clocked";
+        else if (row.base_pay_hours > 0) row.hours_source_used = "clocked"; // base_pay derives from clocks
+        else if (row.scheduled_hours > 0) row.hours_source_used = "scheduled";
+        else row.hours_source_used = "none";
+
         if (row.schedule_count === 0 && row.clock_count === 0 && row.payroll_row_count <= 1 && row.movement_unique_total > 0) {
           row.flags.push("no_work_evidence_guardrail_active");
         }
