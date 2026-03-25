@@ -306,7 +306,7 @@ function buildTruthFromPersistedRow(row: any): PayrollTruthRow {
     otros: Number(raw.otros) || 0,
     discount: Number(raw.discount) || 0,
     total: Number(row?.truth_total) || 0,
-    shiftHours: 0,
+    shiftHours: Number(row?.truth_hours) || Number(row?.truth_paid_hours) || 0,
     observaciones: String(row?.truth_observaciones || ""),
   };
 }
