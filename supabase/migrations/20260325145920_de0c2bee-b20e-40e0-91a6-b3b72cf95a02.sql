@@ -1,0 +1,1 @@
+UPDATE pay_periods SET status = 'open' WHERE id = '82a2d429-3ccd-49d8-8211-d5586995109b' AND company_id = '00000000-0000-0000-0000-000000000001';
