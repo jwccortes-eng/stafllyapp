@@ -252,6 +252,11 @@ export function isClockExemptCategory(cat: ShiftCategory): boolean {
 }
 
 // ─── Shift Matching ───
+// ⚠️ HARD PAYROLL RULE: Scheduled hours are ESTIMATES ONLY.
+// They MUST NEVER be used as the basis for payroll amounts, reconciliation totals,
+// or closure decisions. Only real clocked hours (clock in/out), validated truth file
+// amounts, or approved manual adjustments may be used for real payroll.
+// Schedule data is operational/planning data only.
 export interface NormalizedScheduleRow {
   id: string;
   matched_employee_id: string | null;
