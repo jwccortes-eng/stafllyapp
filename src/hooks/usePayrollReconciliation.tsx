@@ -410,7 +410,13 @@ export function usePayrollReconciliation() {
         health_grade: result.summary.health.grade,
       } as any).eq("id", batchId);
 
-      toast({ title: "Reconciliación completada", description: `${result.summary.exact_match} exactos, ${result.summary.critical_mismatch} críticos, Health: ${result.summary.health.grade}` });
+      const validated = result.rows.filter(r => r.truth.total != null).length;
+      const withComposition = result.rows.filter(r => {
+        const disc = Number((r.truth as any).discount ?? r.truth.raw?.discount ?? 0);
+        const adic = (r.truth.pay_per_day || 0) + (r.truth.ryde || 0) + (r.truth.tips || 0) + (r.truth.reimbursements || 0);
+        return adic > 0 || disc > 0;
+      }).length;
+      toast({ title: "Reconciliación completada", description: `${validated} validados, ${withComposition} con composición, Health: ${result.summary.health.grade}` });
     } catch (err: any) {
       toast({ title: "Error en reconciliación", description: err.message, variant: "destructive" });
     }
