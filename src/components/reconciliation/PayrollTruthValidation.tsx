@@ -1734,6 +1734,47 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 </div>
               )}
 
+              {/* ── Filters & Sort Toolbar ── */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <DataTableToolbar
+                  search={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  searchPlaceholder="Buscar empleado..."
+                  className="flex-1 py-0"
+                >
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {([
+                      { key: 'all' as const, label: 'Todos', count: comparison.length },
+                      { key: 'match' as const, label: 'Exacto', count: stats.matched },
+                      { key: 'close' as const, label: 'Cercano', count: stats.close },
+                      { key: 'mismatch' as const, label: 'Diferente', count: stats.mismatch },
+                      { key: 'identity_only' as const, label: 'ID sin base', count: stats.identityOnly },
+                      { key: 'missing' as const, label: 'No encontrado', count: stats.missing },
+                    ]).map(f => (
+                      <Button
+                        key={f.key}
+                        size="sm"
+                        variant={statusFilter === f.key ? 'default' : 'outline'}
+                        className="h-7 text-xs gap-1 px-2"
+                        onClick={() => setStatusFilter(f.key)}
+                      >
+                        {f.label}
+                        <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">{f.count}</Badge>
+                      </Button>
+                    ))}
+                  </div>
+                </DataTableToolbar>
+                <Button
+                  size="sm"
+                  variant={sortByVariance ? 'default' : 'outline'}
+                  className="h-7 text-xs gap-1 shrink-0"
+                  onClick={() => setSortByVariance(!sortByVariance)}
+                >
+                  <ArrowUpDown className="h-3 w-3" />
+                  {sortByVariance ? 'Por |varianza|' : 'Ordenar por varianza'}
+                </Button>
+              </div>
+
               <div className="overflow-auto max-h-[600px]">
                 <Table>
                   <TableHeader>
@@ -1749,13 +1790,13 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                       <TableHead className="text-right">T.Otros</TableHead>
                       <TableHead className="text-right">T.Disc</TableHead>
                       <TableHead className="text-right font-bold">T.TOTAL</TableHead>
-                      <TableHead className="text-right">Recon TOTAL</TableHead>
-                      <TableHead className="text-right">Varianza</TableHead>
+                      <TableHead className="text-right font-bold">Recon</TableHead>
+                      <TableHead className="text-right font-bold">Varianza</TableHead>
                       <TableHead className="text-center">Obs</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {comparison.map(c => {
+                    {filteredComparison.map(c => {
                       const isExpanded = expandedRows.has(c.employee);
                       const r = c.recon;
                       const dupsCount = r ? r.ledger.filter(l => l.compositionRole === "excluded_from_total").length : 0;
