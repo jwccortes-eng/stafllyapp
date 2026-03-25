@@ -809,13 +809,43 @@ export default function PayrollReconciliationPage() {
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
+  // ─── Truth-authoritative reclassification ─────────────────────────
+  // Rows with a valid truth.total are considered "validated" regardless of engine classification
+  const truthCounts = useMemo(() => {
+    let validated = 0;
+    let compositionOk = 0;
+    let baseOk = 0;
+    let pending = 0;
+
+    for (const row of reconciliationRows) {
+      if (row.truth.total != null) {
+        validated++;
+        const disc = Number((row.truth as any).discount ?? row.truth.raw?.discount ?? 0);
+        const adic = (row.truth.pay_per_day || 0) + (row.truth.ryde || 0) + (row.truth.tips || 0) + (row.truth.reimbursements || 0);
+        if (adic > 0 || disc > 0) compositionOk++;
+        else if (row.truth.total_hours != null && row.truth.total_hours > 0) baseOk++;
+      } else {
+        pending++;
+      }
+    }
+    return { validated, compositionOk, baseOk, pending, total: reconciliationRows.length };
+  }, [reconciliationRows]);
+
+  // Truth-authoritative filter helper
+  const isTruthValidated = (row: ReconciliationRowResult) => row.truth.total != null;
+  const hasComposition = (row: ReconciliationRowResult) => {
+    const disc = Number((row.truth as any).discount ?? row.truth.raw?.discount ?? 0);
+    const adic = (row.truth.pay_per_day || 0) + (row.truth.ryde || 0) + (row.truth.tips || 0) + (row.truth.reimbursements || 0);
+    return adic > 0 || disc > 0;
+  };
+
   const filteredRows = useMemo(() => {
     let rows = reconciliationRows;
-    if (filter === "exact") rows = rows.filter(r => r.classification.is_exact_match);
-    if (filter === "mismatch") rows = rows.filter(r => r.classification.has_component_mismatch && !r.classification.has_critical_mismatch);
-    if (filter === "critical") rows = rows.filter(r => r.classification.has_critical_mismatch);
+    if (filter === "validated") rows = rows.filter(r => isTruthValidated(r));
+    if (filter === "composition") rows = rows.filter(r => hasComposition(r));
+    if (filter === "base_only") rows = rows.filter(r => isTruthValidated(r) && !hasComposition(r) && (r.truth.total_hours || 0) > 0);
+    if (filter === "pending") rows = rows.filter(r => !isTruthValidated(r));
     if (filter === "missing_system") rows = rows.filter(r => r.classification.row_status === "MISSING_IN_SYSTEM");
-    if (filter === "unmatched") rows = rows.filter(r => r.match.match_status === "UNMATCHED");
     if (filter === "manual") rows = rows.filter(r => r.classification.has_manual_adjustment);
     if (filter === "low_confidence") rows = rows.filter(r => r.match.match_confidence > 0 && r.match.match_confidence < 80);
     if (filter === "flags") rows = rows.filter(r => r.anomaly_flags.length > 0);
