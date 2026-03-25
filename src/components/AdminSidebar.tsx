@@ -52,7 +52,7 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/compensation-validation", icon: Receipt, label: "Compensación", module: null, section: "Nómina" },
   { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
   { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Nómina" },
-  { to: "/app/staged-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Nómina" },
+  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Nómina" },
   { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes", module: "summary", section: "Nómina" },
 
   // MÁS — communication, monitoring & config
