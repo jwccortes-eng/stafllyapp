@@ -1406,9 +1406,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     const mismatch = comparison.filter(c => c.status === "mismatch").length;
     const identityOnly = comparison.filter(c => c.status === "identity_only").length;
     const missing = comparison.filter(c => c.status === "missing").length;
+    const truthOverrideCandidates = comparison.filter(c => c.reviewGroup === "truth_override_candidate").length;
+    const payModelMismatches = comparison.filter(c => c.reviewGroup === "pay_model_mismatch").length;
+    const trueBusinessMismatches = comparison.filter(c => c.reviewGroup === "true_business_mismatch").length;
+    const missingSystemData = comparison.filter(c => c.reviewGroup === "missing_system_data").length;
     const compositionErrors = comparison.filter(c => c.compositionError).length;
     const totalTruth = comparison.reduce((sum, row) => sum + (row.truth.total || 0), 0);
     const totalRecon = comparison.reduce((sum, row) => sum + (row.recon?.total_final || 0), 0);
+    const totalClosure = comparison.reduce((sum, row) => sum + (row.closureAmount || 0), 0);
     const totalSuppressed = comparison.reduce((sum, row) => sum + (row.recon?.total_suppressed || 0), 0);
     const totalOther = reconData.reduce((sum, row) => sum + (row.other_pay || 0), 0);
     return {
@@ -1417,16 +1422,23 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       mismatch,
       identityOnly,
       missing,
+      truthOverrideCandidates,
+      payModelMismatches,
+      trueBusinessMismatches,
+      missingSystemData,
       compositionErrors,
       totalTruth,
       totalRecon,
+      totalClosure,
       variance: totalRecon - totalTruth,
+      closureVariance: totalClosure - totalTruth,
       totalSuppressed,
       totalOther,
     };
   }, [comparison, reconData]);
 
   const [statusFilter, setStatusFilter] = useState<ComparisonRow["status"] | "all">("all");
+  const [reviewGroupFilter, setReviewGroupFilter] = useState<ReviewGroup | "all">("all");
   const [sortByVariance, setSortByVariance] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -1439,16 +1451,26 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       const q = searchTerm.toLowerCase();
       rows = rows.filter(c => c.employee.toLowerCase().includes(q));
     }
+    if (reviewGroupFilter !== "all") {
+      rows = rows.filter(c => c.reviewGroup === reviewGroupFilter);
+    }
     if (sortByVariance) {
       rows = [...rows].sort((a, b) => Math.abs(b.totalVariance) - Math.abs(a.totalVariance));
     }
     return rows;
-  }, [comparison, statusFilter, sortByVariance, searchTerm]);
+  }, [comparison, statusFilter, reviewGroupFilter, sortByVariance, searchTerm]);
 
   const [showRawRecords, setShowRawRecords] = useState(false);
 
-  const statusBadge = (s: ComparisonRow["status"]) => {
-    switch (s) {
+  const statusBadge = (row: ComparisonRow) => {
+    if (row.reviewGroup === "truth_override_candidate") {
+      return <Badge variant="info" className="text-xs">↺ Override por Truth</Badge>;
+    }
+    if (row.reviewGroup === "pay_model_mismatch") {
+      return <Badge variant="warning" className="text-xs">↕ Pay-model mismatch</Badge>;
+    }
+
+    switch (row.status) {
       case "match":
         return <Badge variant="default" className="text-xs">✓ Exacto</Badge>;
       case "close":
@@ -1459,6 +1481,23 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         return <Badge variant="secondary" className="text-xs">◎ Identidad OK / sin base</Badge>;
       case "missing":
         return <Badge variant="outline" className="text-xs">? No encontrado</Badge>;
+    }
+  };
+
+  const reviewGroupBadge = (group: ReviewGroup) => {
+    switch (group) {
+      case "truth_override_candidate":
+        return <Badge variant="info" className="text-xs">truth-authoritative override candidate</Badge>;
+      case "system_inferred_exceeds_truth":
+        return <Badge variant="warning" className="text-xs">system inferred exceeds paid truth</Badge>;
+      case "pay_model_mismatch":
+        return <Badge variant="warning" className="text-xs">pay-model mismatch</Badge>;
+      case "missing_system_data":
+        return <Badge variant="secondary" className="text-xs">missing system-side data</Badge>;
+      case "true_business_mismatch":
+        return <Badge variant="destructive" className="text-xs">true business mismatch</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">normal review</Badge>;
     }
   };
 
