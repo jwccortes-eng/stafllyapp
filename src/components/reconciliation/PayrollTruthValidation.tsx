@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
-import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database, ArrowUpDown, Wrench } from "lucide-react";
+import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database, ArrowUpDown, Wrench, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   parsePayrollTruthWorkbook,
