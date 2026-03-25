@@ -862,6 +862,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           truth_tips: c.truth.tips || 0,
           truth_reimbursements: c.truth.reimbursements || 0,
           truth_total: c.truth.total,
+          truth_raw_json: {
+            discount: c.truth.discount || 0,
+            otros: c.truth.otros || 0,
+            travel_hours: c.truth.travelHours || 0,
+            observaciones: c.truth.observaciones || "",
+          },
           // Use totalPaidHours (weekly) as authoritative, fall back to shiftHours (daily)
           truth_hours: c.truth.shiftHours || null,
           truth_paid_hours: c.truth.totalPaidHours || c.truth.shiftHours || null,
