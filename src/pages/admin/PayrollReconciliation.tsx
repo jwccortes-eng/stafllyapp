@@ -48,7 +48,28 @@ const formatPeriodLabel = (startDate: string, endDate: string) => {
 
 // ─── Badge Helpers ───────────────────────────────────────────────────
 
-function statusBadge(status: string) {
+function truthAuthoritativeStatus(row: ReconciliationRowResult): { label: string; variant: any; className: string } {
+  // In truth-authoritative mode, if truth.total exists, the closure IS the truth
+  if (row.truth.total != null) {
+    const disc = (row.truth as any).discount ?? row.truth.raw?.discount ?? 0;
+    const adic = (row.truth.pay_per_day || 0) + (row.truth.ryde || 0) + (row.truth.tips || 0) + (row.truth.reimbursements || 0);
+    const hasComposition = adic > 0 || disc > 0;
+    if (hasComposition) {
+      return { label: "✓ Composición OK", variant: "default", className: "bg-earning/15 text-earning border-earning/30" };
+    }
+    if (row.truth.total_hours != null && row.truth.total_pay != null && row.truth.total_hours > 0) {
+      return { label: "✓ Base OK", variant: "default", className: "bg-earning/15 text-earning border-earning/30" };
+    }
+    return { label: "✓ Truth-validado", variant: "default", className: "bg-primary/15 text-primary border-primary/30" };
+  }
+  return { label: row.classification.row_status.replace(/_/g, " "), variant: "outline", className: "" };
+}
+
+function statusBadge(status: string, row?: ReconciliationRowResult) {
+  if (row) {
+    const ta = truthAuthoritativeStatus(row);
+    return <Badge variant={ta.variant as any} className={`text-[10px] px-1.5 py-0 font-medium ${ta.className}`}>{ta.label}</Badge>;
+  }
   const map: Record<string, { variant: any; label: string; className?: string }> = {
     EXACT_MATCH: { variant: "default", label: "Exacto", className: "bg-earning/15 text-earning border-earning/30 hover:bg-earning/20" },
     COMPONENT_MISMATCH: { variant: "default", label: "Parcial", className: "bg-warning/15 text-warning border-warning/30 hover:bg-warning/20" },
