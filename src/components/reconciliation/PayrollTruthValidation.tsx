@@ -154,17 +154,23 @@ function deriveReviewGroup(
   truthAuthoritativeMode: boolean,
   closureAmount: number
 ): ReviewGroup {
+  const closureAlignedToTruth = Math.abs(round2(closureAmount - truthTotal)) < 1;
+
+  // In truth-authoritative mode, if closure == truth, the row is standard/resolved
+  // even if there's no system-side data (identity_only / missing with closure).
+  if (truthAuthoritativeMode && closureAlignedToTruth && truthTotal > 0) {
+    if (!recon) return "standard"; // truth-validated, no system data needed
+    const inferredOnly = isSystemInferredOnly(recon);
+    const systemExceedsTruth = round2(recon.total_final - truthTotal) > 1;
+    if (inferredOnly && systemExceedsTruth) return "truth_override_candidate";
+    return "standard";
+  }
+
   if (status === "identity_only" || status === "missing") return "missing_system_data";
   if (!recon) return "standard";
 
   const inferredOnly = isSystemInferredOnly(recon);
   const systemExceedsTruth = round2(recon.total_final - truthTotal) > 1;
-  const closureAlignedToTruth = Math.abs(round2(closureAmount - truthTotal)) < 1;
-
-  if (truthAuthoritativeMode && closureAlignedToTruth) {
-    if (inferredOnly && systemExceedsTruth) return "truth_override_candidate";
-    return "standard";
-  }
 
   if (truthAuthoritativeMode && inferredOnly && systemExceedsTruth) return "truth_override_candidate";
   if (inferredOnly && systemExceedsTruth) return "system_inferred_exceeds_truth";
