@@ -12,6 +12,7 @@ import {
 import type { PeriodStatus, EmployeeFinalRecord, EmployeeVariance } from "@/hooks/useReconciliationPeriod";
 import type { ClassifyAction } from "./QuickClassifyBar";
 import EmployeeCloseCards from "./EmployeeCloseCards";
+import ClosureQualityScorecard from "./ClosureQualityScorecard";
 import FinancialAccuracyPanel from "./FinancialAccuracyPanel";
 import AutoApprovalPanel from "./AutoApprovalPanel";
 
