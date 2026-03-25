@@ -2193,22 +2193,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                        <TableHead className="w-8"></TableHead>
                        <TableHead>Empleado</TableHead>
                        <TableHead>Estado</TableHead>
-                       <TableHead>Grupo</TableHead>
-                       <TableHead className="text-right">T.Hrs</TableHead>
-                       <TableHead className="text-right">Clock.Hrs</TableHead>
-                       <TableHead className="text-right">Sched.Hrs</TableHead>
-                       <TableHead className="text-center">Hrs Fuente</TableHead>
-                       <TableHead className="text-right">T.Pay</TableHead>
-                       <TableHead className="text-right">T.PPD</TableHead>
-                       <TableHead className="text-right">T.Ryde</TableHead>
-                       <TableHead className="text-right">T.Tips</TableHead>
-                       <TableHead className="text-right">T.Reimb</TableHead>
-                       <TableHead className="text-right">T.Otros</TableHead>
-                       <TableHead className="text-right">T.Disc</TableHead>
-                       <TableHead className="text-right font-bold">T.TOTAL</TableHead>
-                       <TableHead className="text-right font-bold">Sistema (interno)</TableHead>
-                       <TableHead className="text-right font-bold">Cierre final</TableHead>
-                       <TableHead className="text-right font-bold">Δ Sys-Truth</TableHead>
+                       <TableHead className="text-center">Fuente</TableHead>
+                       <TableHead className="text-right">Hrs</TableHead>
+                       <TableHead className="text-right">Tarifa</TableHead>
+                       <TableHead className="text-right border-l border-border/30 bg-primary/5">A. Base</TableHead>
+                       <TableHead className="text-right bg-primary/5">+ Adic.</TableHead>
+                       <TableHead className="text-right bg-primary/5">− Desc.</TableHead>
+                       <TableHead className="text-right border-l border-border/30 font-bold">= Total</TableHead>
+                       <TableHead className="text-right font-bold">Cierre</TableHead>
+                       <TableHead className="text-right">Δ</TableHead>
+                       <TableHead className="text-center">Composición</TableHead>
                        <TableHead className="text-center">Obs</TableHead>
                      </TableRow>
                   </TableHeader>
@@ -2237,53 +2231,77 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             </TableCell>
                             <TableCell className="font-medium text-sm">{c.employee}</TableCell>
                             <TableCell>{statusBadge(c)}</TableCell>
-                            <TableCell>{reviewGroupBadge(c.reviewGroup)}</TableCell>
-                            <TableCell className="text-right font-mono text-xs">
-                              {(() => {
-                                const authHrs = c.truth.totalPaidHours || c.truth.shiftHours || 0;
-                                if (!authHrs) return "—";
-                                const rate = c.truth.hourlyRate || (authHrs > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / authHrs) : 0);
-                                return <>
-                                  {authHrs.toFixed(1)}
-                                  {rate > 0 && (
-                                    <span className="text-[9px] text-muted-foreground ml-0.5" title={`Base: ${authHrs.toFixed(1)} × $${rate.toFixed(2)} = ${fmt(c.truth.totalPay)}`}>
-                                      @${rate.toFixed(0)}
-                                    </span>
-                                  )}
-                                </>;
-                              })()}
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-xs">{r?.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-xs text-muted-foreground">{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</TableCell>
+                            {/* Fuente */}
                             <TableCell className="text-center">
-                              {(() => {
-                                const src = truthAuthoritativeMode ? "truth" : (r?.hours_source_used || "none");
-                                const labels: Record<string, { text: string; cls: string }> = {
-                                  truth: { text: "Truth", cls: "text-primary font-medium" },
-                                  clocked: { text: "Reloj", cls: "text-foreground" },
-                                  scheduled: { text: "Prog.", cls: "text-muted-foreground italic" },
-                                  none: { text: "—", cls: "text-muted-foreground" },
-                                };
-                                const l = labels[src] || labels.none;
-                                return <span className={`text-xs ${l.cls}`}>{l.text}</span>;
-                              })()}
+                              <span className={`text-xs ${truthAuthoritativeMode ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                                {truthAuthoritativeMode ? "Truth" : (r?.hours_source_used === "clocked" ? "Reloj" : r?.hours_source_used === "scheduled" ? "Prog." : "—")}
+                              </span>
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs">{c.truth.totalPay ? fmt(c.truth.totalPay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-xs">{c.truth.payperDay ? fmt(c.truth.payperDay) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-xs">{c.truth.ryde ? fmt(c.truth.ryde) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-xs">{c.truth.tips ? fmt(c.truth.tips) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-xs">{c.truth.reimbursements ? fmt(c.truth.reimbursements) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-xs">{c.truth.otros ? fmt(c.truth.otros) : "—"}</TableCell>
-                            <TableCell className={`text-right font-mono text-xs ${c.truth.discount < 0 ? "text-destructive font-medium" : ""}`}>{c.truth.discount ? fmt(c.truth.discount) : "—"}</TableCell>
-                            <TableCell className="text-right font-mono text-sm font-bold">{fmt(c.truth.total)}</TableCell>
-                            <TableCell className={`text-right font-mono text-sm font-medium ${c.systemInferredOnly ? "text-warning" : ""}`}>{r ? fmt(r.total_final) : "—"}</TableCell>
+                            {/* Hrs */}
+                            {(() => {
+                              const authHrs = c.truth.totalPaidHours || c.truth.shiftHours || 0;
+                              const rate = c.truth.hourlyRate || (authHrs > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / authHrs) : 0);
+                              const basePay = c.truth.totalPay || 0;
+                              const adicionales = (c.truth.payperDay || 0) + (c.truth.ryde || 0) + (c.truth.tips || 0) + (c.truth.reimbursements || 0) + (c.truth.otros || 0) + (c.truth.travelHours || 0);
+                              const descuento = c.truth.discount || 0;
+                              const adicionalesDetail = [
+                                c.truth.payperDay ? `PPD:${fmt(c.truth.payperDay)}` : null,
+                                c.truth.ryde ? `Ryde:${fmt(c.truth.ryde)}` : null,
+                                c.truth.tips ? `Tips:${fmt(c.truth.tips)}` : null,
+                                c.truth.reimbursements ? `Reimb:${fmt(c.truth.reimbursements)}` : null,
+                                c.truth.otros ? `Otros:${fmt(c.truth.otros)}` : null,
+                              ].filter(Boolean).join(" + ");
+
+                              return <>
+                                <TableCell className="text-right font-mono text-xs">
+                                  {authHrs ? authHrs.toFixed(1) : "—"}
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                  {rate > 0 ? `$${rate.toFixed(0)}` : "—"}
+                                </TableCell>
+                                {/* A. Base */}
+                                <TableCell className="text-right font-mono text-xs border-l border-border/30" title={authHrs && rate ? `${authHrs.toFixed(2)}h × $${rate.toFixed(2)} = ${fmt(basePay)}` : ""}>
+                                  {basePay ? fmt(basePay) : "—"}
+                                </TableCell>
+                                {/* + Adic */}
+                                <TableCell className="text-right font-mono text-xs" title={adicionalesDetail || "Sin adicionales"}>
+                                  {adicionales > 0 ? <span className="text-primary">+{fmt(adicionales)}</span> : "—"}
+                                </TableCell>
+                                {/* - Desc */}
+                                <TableCell className={`text-right font-mono text-xs ${descuento < 0 ? "text-destructive font-medium" : ""}`}>
+                                  {descuento ? fmt(descuento) : "—"}
+                                </TableCell>
+                              </>;
+                            })()}
+                            {/* = Total */}
+                            <TableCell className="text-right font-mono text-sm font-bold border-l border-border/30">{fmt(c.truth.total)}</TableCell>
+                            {/* Cierre */}
                             <TableCell className="text-right font-mono text-sm font-bold text-primary">{fmt(c.closureAmount)}</TableCell>
-                            <TableCell className={`text-right font-mono text-sm font-medium ${
+                            {/* Δ */}
+                            <TableCell className={`text-right font-mono text-xs font-medium ${
                               Math.abs(c.totalVariance) > 50 ? "text-destructive" :
                               Math.abs(c.totalVariance) < 1 ? "text-primary" : "text-warning"
                             }`}>
-                              {r ? fmtVar(c.totalVariance) : "N/A"}
+                              {r ? fmtVar(c.totalVariance) : (Math.abs(c.closureAmount - c.truth.total) < 1 ? "✓" : "N/A")}
                             </TableCell>
+                            {/* Composición formula inline */}
+                            <TableCell className="text-center">
+                              {(() => {
+                                const authHrs = c.truth.totalPaidHours || c.truth.shiftHours || 0;
+                                const rate = c.truth.hourlyRate || (authHrs > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / authHrs) : 0);
+                                const basePay = c.truth.totalPay || 0;
+                                const adicionales = (c.truth.payperDay || 0) + (c.truth.ryde || 0) + (c.truth.tips || 0) + (c.truth.reimbursements || 0) + (c.truth.otros || 0);
+                                const descuento = c.truth.discount || 0;
+                                const parts: string[] = [];
+                                if (basePay > 0 && authHrs > 0) parts.push(`${fmt(basePay)}`);
+                                else if (basePay > 0) parts.push(fmt(basePay));
+                                if (adicionales > 0) parts.push(`+${fmt(adicionales)}`);
+                                if (descuento < 0) parts.push(fmt(descuento));
+                                if (parts.length <= 1) return <span className="text-[9px] text-muted-foreground">Solo base</span>;
+                                return <span className="text-[9px] font-mono text-muted-foreground whitespace-nowrap">{parts.join(" ")}={fmt(c.truth.total)}</span>;
+                              })()}
+                            </TableCell>
+                            {/* Obs */}
                             <TableCell className="text-center text-xs" title={c.truth.observaciones || ""}>
                               {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) ? (
                                 getResolution(c) ? (
@@ -2314,7 +2332,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
                           {isExpanded && (
                             <TableRow key={`${c.employee}-detail`} className="bg-muted/20 hover:bg-muted/20">
-                              <TableCell colSpan={20} className="p-3">
+                              <TableCell colSpan={14} className="p-3">
                                 <div className="space-y-3 text-xs">
                                   {/* ── Resolver action for unmatched rows ── */}
                                   {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) && (() => {
