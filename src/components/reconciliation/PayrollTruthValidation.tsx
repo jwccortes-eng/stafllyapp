@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { KpiCard } from "@/components/ui/kpi-card";
-import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database } from "lucide-react";
+import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
+import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   parsePayrollTruthWorkbook,
@@ -76,6 +77,14 @@ interface ReconBreakdown {
   flags: string[];
 }
 
+type ReviewGroup =
+  | "standard"
+  | "missing_system_data"
+  | "system_inferred_exceeds_truth"
+  | "truth_override_candidate"
+  | "pay_model_mismatch"
+  | "true_business_mismatch";
+
 interface ComparisonRow {
   employee: string;
   truth: PayrollTruthRow;
@@ -85,6 +94,9 @@ interface ComparisonRow {
   matchConfidence?: number;
   totalVariance: number;
   status: "match" | "close" | "mismatch" | "missing" | "identity_only";
+  reviewGroup: ReviewGroup;
+  closureAmount: number;
+  systemInferredOnly: boolean;
   compositionError: boolean;
   compositionReason: string | null;
 }
@@ -94,6 +106,7 @@ interface Props {
   periodStatusId?: string;
   finalRecords?: any[];
   onGenerateFinalRecords?: () => Promise<void>;
+  truthAuthoritativeMode?: boolean;
 }
 
 function normalizeName(s: string): string {
@@ -102,6 +115,32 @@ function normalizeName(s: string): string {
 
 function round2(n: number): number {
   return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+function isSystemInferredOnly(recon: ReconBreakdown | null): boolean {
+  if (!recon) return false;
+  return recon.schedule_count === 0 && recon.clock_count === 0 && recon.payroll_row_count === 0 && recon.total_final > 0;
+}
+
+function deriveReviewGroup(
+  status: ComparisonRow["status"],
+  recon: ReconBreakdown | null,
+  truthTotal: number,
+  totalVariance: number,
+  truthAuthoritativeMode: boolean
+): ReviewGroup {
+  if (status === "identity_only" || status === "missing") return "missing_system_data";
+  if (!recon) return "standard";
+
+  const inferredOnly = isSystemInferredOnly(recon);
+  const systemExceedsTruth = round2(recon.total_final - truthTotal) > 1;
+
+  if (truthAuthoritativeMode && inferredOnly && systemExceedsTruth) return "truth_override_candidate";
+  if (inferredOnly && systemExceedsTruth) return "system_inferred_exceeds_truth";
+  if (truthAuthoritativeMode && status === "mismatch" && totalVariance > 50 && recon.authoritative_source === "period_base_pay") return "pay_model_mismatch";
+  if (status === "mismatch") return "true_business_mismatch";
+
+  return "standard";
 }
 
 function classifyMovement(conceptName: string): LedgerCategory {
@@ -272,7 +311,7 @@ function buildReconFromPersistedRow(row: any, employeeName: string): ReconBreakd
   };
 }
 
-export default function PayrollTruthValidation({ companyId, periodStatusId, finalRecords: externalFinalRecords, onGenerateFinalRecords }: Props) {
+export default function PayrollTruthValidation({ companyId, periodStatusId, finalRecords: externalFinalRecords, onGenerateFinalRecords, truthAuthoritativeMode = false }: Props) {
   const [generatingFinal, setGeneratingFinal] = useState(false);
   const { user } = useAuth();
   const [truthData, setTruthData] = useState<PayrollTruthRow[]>([]);
@@ -558,6 +597,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 : status === "identity_only"
                   ? -Math.abs(truth.total || 0)
                   : truth.total || 0;
+            const systemInferredOnly = isSystemInferredOnly(recon);
+            const reviewGroup = deriveReviewGroup(status, recon, truth.total || 0, totalVariance, truthAuthoritativeMode);
+            const closureAmount = truthAuthoritativeMode ? (truth.total || 0) : (recon?.total_final ?? (truth.total || 0));
 
             return {
               employee: truth.employee,
@@ -568,6 +610,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               matchConfidence: Number(row?.match_confidence) || 0,
               totalVariance,
               status,
+              reviewGroup,
+              closureAmount,
+              systemInferredOnly,
               compositionError: false,
               compositionReason:
                 status === "identity_only"
@@ -1275,6 +1320,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
         if (!recon) {
           if (!match?.employeeId) {
+            const closureAmount = truthAuthoritativeMode ? (t.total || 0) : (t.total || 0);
             return {
               employee: t.employee,
               truth: t,
@@ -1284,11 +1330,15 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               matchConfidence: match?.confidence || 0,
               totalVariance: t.total,
               status: "missing" as const,
+              reviewGroup: "missing_system_data" as const,
+              closureAmount,
+              systemInferredOnly: false,
               compositionError: false,
               compositionReason: null,
             };
           }
 
+          const closureAmount = truthAuthoritativeMode ? (t.total || 0) : (t.total || 0);
           return {
             employee: t.employee,
             truth: t,
@@ -1298,6 +1348,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
             matchConfidence: match.confidence,
             totalVariance: -Math.abs(t.total || 0),
             status: "identity_only" as const,
+            reviewGroup: "missing_system_data" as const,
+            closureAmount,
+            systemInferredOnly: false,
             compositionError: false,
             compositionReason: "Empleado mapeado, pero sin base operativa para este periodo (period_base_pay/movements).",
           };
@@ -1315,6 +1368,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         const compositionReason = compositionError
           ? `Naive additive total ${fmt(recon.naive_total)} would overstate truth by ${fmtVar(round2(recon.naive_total - t.total))}; overlap guardrail excluded ${fmt(recon.overlap_excluded_total)}.`
           : null;
+        const systemInferredOnly = isSystemInferredOnly(recon);
+        const reviewGroup = deriveReviewGroup(status, recon, t.total || 0, totalVariance, truthAuthoritativeMode);
+        const closureAmount = truthAuthoritativeMode ? (t.total || 0) : (recon.total_final || 0);
 
         return {
           employee: t.employee,
@@ -1325,6 +1381,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           matchConfidence: match?.confidence || 90,
           totalVariance,
           status,
+          reviewGroup,
+          closureAmount,
+          systemInferredOnly,
           compositionError,
           compositionReason,
         };
@@ -1337,7 +1396,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         if (b.totalVariance !== a.totalVariance) return b.totalVariance - a.totalVariance;
         return Math.abs(b.totalVariance) - Math.abs(a.totalVariance);
       });
-  }, [truthData, reconData, truthMatches]);
+  }, [truthData, reconData, truthMatches, truthAuthoritativeMode]);
 
   const comparison = useMemo<ComparisonRow[]>(() => persistedComparison ?? computedComparison, [persistedComparison, computedComparison]);
 
@@ -1347,9 +1406,14 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     const mismatch = comparison.filter(c => c.status === "mismatch").length;
     const identityOnly = comparison.filter(c => c.status === "identity_only").length;
     const missing = comparison.filter(c => c.status === "missing").length;
+    const truthOverrideCandidates = comparison.filter(c => c.reviewGroup === "truth_override_candidate").length;
+    const payModelMismatches = comparison.filter(c => c.reviewGroup === "pay_model_mismatch").length;
+    const trueBusinessMismatches = comparison.filter(c => c.reviewGroup === "true_business_mismatch").length;
+    const missingSystemData = comparison.filter(c => c.reviewGroup === "missing_system_data").length;
     const compositionErrors = comparison.filter(c => c.compositionError).length;
     const totalTruth = comparison.reduce((sum, row) => sum + (row.truth.total || 0), 0);
     const totalRecon = comparison.reduce((sum, row) => sum + (row.recon?.total_final || 0), 0);
+    const totalClosure = comparison.reduce((sum, row) => sum + (row.closureAmount || 0), 0);
     const totalSuppressed = comparison.reduce((sum, row) => sum + (row.recon?.total_suppressed || 0), 0);
     const totalOther = reconData.reduce((sum, row) => sum + (row.other_pay || 0), 0);
     return {
@@ -1358,16 +1422,23 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       mismatch,
       identityOnly,
       missing,
+      truthOverrideCandidates,
+      payModelMismatches,
+      trueBusinessMismatches,
+      missingSystemData,
       compositionErrors,
       totalTruth,
       totalRecon,
+      totalClosure,
       variance: totalRecon - totalTruth,
+      closureVariance: totalClosure - totalTruth,
       totalSuppressed,
       totalOther,
     };
   }, [comparison, reconData]);
 
   const [statusFilter, setStatusFilter] = useState<ComparisonRow["status"] | "all">("all");
+  const [reviewGroupFilter, setReviewGroupFilter] = useState<ReviewGroup | "all">("all");
   const [sortByVariance, setSortByVariance] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -1380,16 +1451,26 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       const q = searchTerm.toLowerCase();
       rows = rows.filter(c => c.employee.toLowerCase().includes(q));
     }
+    if (reviewGroupFilter !== "all") {
+      rows = rows.filter(c => c.reviewGroup === reviewGroupFilter);
+    }
     if (sortByVariance) {
       rows = [...rows].sort((a, b) => Math.abs(b.totalVariance) - Math.abs(a.totalVariance));
     }
     return rows;
-  }, [comparison, statusFilter, sortByVariance, searchTerm]);
+  }, [comparison, statusFilter, reviewGroupFilter, sortByVariance, searchTerm]);
 
   const [showRawRecords, setShowRawRecords] = useState(false);
 
-  const statusBadge = (s: ComparisonRow["status"]) => {
-    switch (s) {
+  const statusBadge = (row: ComparisonRow) => {
+    if (row.reviewGroup === "truth_override_candidate") {
+      return <Badge variant="info" className="text-xs">↺ Override por Truth</Badge>;
+    }
+    if (row.reviewGroup === "pay_model_mismatch") {
+      return <Badge variant="warning" className="text-xs">↕ Pay-model mismatch</Badge>;
+    }
+
+    switch (row.status) {
       case "match":
         return <Badge variant="default" className="text-xs">✓ Exacto</Badge>;
       case "close":
@@ -1400,6 +1481,23 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         return <Badge variant="secondary" className="text-xs">◎ Identidad OK / sin base</Badge>;
       case "missing":
         return <Badge variant="outline" className="text-xs">? No encontrado</Badge>;
+    }
+  };
+
+  const reviewGroupBadge = (group: ReviewGroup) => {
+    switch (group) {
+      case "truth_override_candidate":
+        return <Badge variant="info" className="text-xs">truth-authoritative override candidate</Badge>;
+      case "system_inferred_exceeds_truth":
+        return <Badge variant="warning" className="text-xs">system inferred exceeds paid truth</Badge>;
+      case "pay_model_mismatch":
+        return <Badge variant="warning" className="text-xs">pay-model mismatch</Badge>;
+      case "missing_system_data":
+        return <Badge variant="secondary" className="text-xs">missing system-side data</Badge>;
+      case "true_business_mismatch":
+        return <Badge variant="destructive" className="text-xs">true business mismatch</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">normal review</Badge>;
     }
   };
 
@@ -1414,7 +1512,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     const r = c.recon;
     const t = c.truth;
 
-    parts.push(`Truth TOTAL is authoritative: ${fmt(t.total)}.`);
+    parts.push(`Truth pagado (autoritativo): ${fmt(t.total)}.`);
+    parts.push(`Sistema interno ${c.systemInferredOnly ? "(inferido/sugerido)" : "(operativo)"}: ${fmt(r.total_final)}.`);
+    parts.push(`Cierre final: ${fmt(c.closureAmount)}.`);
 
     if (r.authoritative_source === "payroll_rows_total") {
       parts.push(`Recon uses payroll-row TOTAL as authoritative: ${fmt(r.authoritative_total)}.`);
@@ -1430,6 +1530,13 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
     const variance = round2(r.total_final - t.total);
     parts.push(`Final variance: ${fmtVar(variance)}.`);
+
+    if (c.reviewGroup === "truth_override_candidate") {
+      parts.push("Pattern detected: system inferred amount exceeds paid truth. This row is a truth-authoritative override candidate.");
+    }
+    if (c.reviewGroup === "pay_model_mismatch") {
+      parts.push("Pattern detected: pay-model mismatch between internal weekly/base model and paid truth evidence.");
+    }
 
     if (c.compositionReason) parts.push(c.compositionReason);
 
@@ -1578,11 +1685,12 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               </details>
 
               {/* ── Financial KPIs (hero row) ── */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <KpiCard label="Total Truth" value={fmt(stats.totalTruth)} icon={<DollarSign className="h-4 w-4" />} size="lg" mono />
-                <KpiCard label="Total Reconciliado" value={fmt(stats.totalRecon)} icon={<DollarSign className="h-4 w-4" />} size="lg" mono />
+                <KpiCard label="Sistema interno" value={fmt(stats.totalRecon)} icon={<DollarSign className="h-4 w-4" />} size="lg" mono subtitle={truthAuthoritativeMode ? "Inferido / diagnóstico" : "Operativo"} />
+                <KpiCard label="Cierre final" value={fmt(stats.totalClosure)} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" size="lg" mono subtitle={truthAuthoritativeMode ? "Autoridad: Truth pagado" : "Autoridad: Sistema"} />
                 <KpiCard
-                  label="Varianza Neta"
+                  label="Δ Sistema vs Truth"
                   value={fmtVar(stats.variance)}
                   icon={<DollarSign className="h-4 w-4" />}
                   accent={Math.abs(stats.variance) > 100 ? "deduction" : "primary"}
@@ -1603,8 +1711,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 <KpiCard label="Dups Suprimidos" value={fmt(stats.totalSuppressed)} accent="deduction" size="sm" mono />
               </div>
 
+              {(stats.truthOverrideCandidates > 0 || stats.payModelMismatches > 0) && (
+                <Alert className="border-primary/30 bg-primary/5">
+                  <AlertDescription className="text-xs text-foreground">
+                    Patrones agrupados: <strong>{stats.truthOverrideCandidates}</strong> truth-authoritative override candidate(s),{" "}
+                    <strong>{stats.payModelMismatches}</strong> pay-model mismatch.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Approval readiness banner */}
-              {stats.mismatch === 0 && stats.identityOnly === 0 && stats.missing === 0 && comparison.length > 0 && (
+              {(truthAuthoritativeMode ? stats.trueBusinessMismatches : stats.mismatch) === 0 && stats.identityOnly === 0 && stats.missing === 0 && comparison.length > 0 && (
                 <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -1763,6 +1880,27 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                       </Button>
                     ))}
                   </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {([
+                      { key: "all" as const, label: "Todos patrones", count: comparison.length },
+                      { key: "truth_override_candidate" as const, label: "Override Truth", count: stats.truthOverrideCandidates },
+                      { key: "pay_model_mismatch" as const, label: "Pay-model", count: stats.payModelMismatches },
+                      { key: "missing_system_data" as const, label: "Sin data", count: stats.missingSystemData },
+                      { key: "true_business_mismatch" as const, label: "Mismatch real", count: stats.trueBusinessMismatches },
+                    ]).map(g => (
+                      <Button
+                        key={g.key}
+                        size="sm"
+                        variant={reviewGroupFilter === g.key ? "default" : "outline"}
+                        className="h-7 text-xs gap-1 px-2"
+                        onClick={() => setReviewGroupFilter(g.key)}
+                      >
+                        {g.label}
+                        <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">{g.count}</Badge>
+                      </Button>
+                    ))}
+                  </div>
                 </DataTableToolbar>
                 <Button
                   size="sm"
@@ -1782,6 +1920,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                       <TableHead className="w-8"></TableHead>
                       <TableHead>Empleado</TableHead>
                       <TableHead>Estado</TableHead>
+                      <TableHead>Grupo</TableHead>
                       <TableHead className="text-right">T.Pay</TableHead>
                       <TableHead className="text-right">T.PPD</TableHead>
                       <TableHead className="text-right">T.Ryde</TableHead>
@@ -1790,8 +1929,9 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                       <TableHead className="text-right">T.Otros</TableHead>
                       <TableHead className="text-right">T.Disc</TableHead>
                       <TableHead className="text-right font-bold">T.TOTAL</TableHead>
-                      <TableHead className="text-right font-bold">Recon</TableHead>
-                      <TableHead className="text-right font-bold">Varianza</TableHead>
+                      <TableHead className="text-right font-bold">Sistema (interno)</TableHead>
+                      <TableHead className="text-right font-bold">Cierre final</TableHead>
+                      <TableHead className="text-right font-bold">Δ Sys-Truth</TableHead>
                       <TableHead className="text-center">Obs</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1806,6 +1946,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                           <TableRow
                             key={c.employee}
                             className={`cursor-pointer ${
+                              c.reviewGroup === "truth_override_candidate" ? "bg-primary/5" :
+                              c.reviewGroup === "pay_model_mismatch" ? "bg-warning/10" :
                               c.status === "mismatch" ? "bg-destructive/5" :
                               c.status === "identity_only" ? "bg-warning/5" :
                               c.status === "missing" ? "bg-warning/10" :
@@ -1817,7 +1959,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                               {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
                             </TableCell>
                             <TableCell className="font-medium text-sm">{c.employee}</TableCell>
-                            <TableCell>{statusBadge(c.status)}</TableCell>
+                            <TableCell>{statusBadge(c)}</TableCell>
+                            <TableCell>{reviewGroupBadge(c.reviewGroup)}</TableCell>
                             <TableCell className="text-right font-mono text-xs">{c.truth.totalPay ? fmt(c.truth.totalPay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-xs">{c.truth.payperDay ? fmt(c.truth.payperDay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-xs">{c.truth.ryde ? fmt(c.truth.ryde) : "—"}</TableCell>
@@ -1826,7 +1969,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             <TableCell className="text-right font-mono text-xs">{c.truth.otros ? fmt(c.truth.otros) : "—"}</TableCell>
                             <TableCell className={`text-right font-mono text-xs ${c.truth.discount < 0 ? "text-destructive font-medium" : ""}`}>{c.truth.discount ? fmt(c.truth.discount) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-sm font-bold">{fmt(c.truth.total)}</TableCell>
-                            <TableCell className="text-right font-mono text-sm font-medium">{r ? fmt(r.total_final) : "—"}</TableCell>
+                            <TableCell className={`text-right font-mono text-sm font-medium ${c.systemInferredOnly ? "text-warning" : ""}`}>{r ? fmt(r.total_final) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-sm font-bold text-primary">{fmt(c.closureAmount)}</TableCell>
                             <TableCell className={`text-right font-mono text-sm font-medium ${
                               Math.abs(c.totalVariance) > 50 ? "text-destructive" :
                               Math.abs(c.totalVariance) < 1 ? "text-primary" : "text-warning"
@@ -1840,7 +1984,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
                           {isExpanded && (
                             <TableRow key={`${c.employee}-detail`} className="bg-muted/20 hover:bg-muted/20">
-                              <TableCell colSpan={14} className="p-3">
+                              <TableCell colSpan={16} className="p-3">
                                 <div className="space-y-3 text-xs">
                                   <div className="rounded bg-background border border-border p-2">
                                     <p className="font-medium text-foreground mb-1">Explicación de varianza:</p>

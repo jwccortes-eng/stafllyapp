@@ -999,6 +999,11 @@ export default function StagedReconciliation() {
           <PayrollTruthValidation
             companyId={selectedCompanyId}
             periodStatusId={activePeriod?.id}
+            truthAuthoritativeMode={Boolean(activePeriod && (
+              activePeriod.closure_method === "truth_validation" ||
+              activePeriod.calculation_mode === "historical_import" ||
+              activePeriod.total_clocks === 0
+            ))}
             finalRecords={finalRecords}
             onGenerateFinalRecords={activePeriod ? async () => {
               const ok = await generateFinalRecordsFromTruth(activePeriod.id);
