@@ -19,6 +19,8 @@ export interface PayrollTruthRow {
   discount: number;
   total: number;
   shiftHours: number;
+  /** Weekly total hours — "Total paid hours" / "Total work hours". Authoritative over shiftHours for closure. */
+  totalPaidHours: number;
   observaciones: string;
 }
 
