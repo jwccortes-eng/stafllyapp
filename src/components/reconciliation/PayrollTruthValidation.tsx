@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { KpiCard } from "@/components/ui/kpi-card";
-import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database } from "lucide-react";
+import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
+import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   parsePayrollTruthWorkbook,
@@ -76,6 +77,14 @@ interface ReconBreakdown {
   flags: string[];
 }
 
+type ReviewGroup =
+  | "standard"
+  | "missing_system_data"
+  | "system_inferred_exceeds_truth"
+  | "truth_override_candidate"
+  | "pay_model_mismatch"
+  | "true_business_mismatch";
+
 interface ComparisonRow {
   employee: string;
   truth: PayrollTruthRow;
@@ -85,6 +94,9 @@ interface ComparisonRow {
   matchConfidence?: number;
   totalVariance: number;
   status: "match" | "close" | "mismatch" | "missing" | "identity_only";
+  reviewGroup: ReviewGroup;
+  closureAmount: number;
+  systemInferredOnly: boolean;
   compositionError: boolean;
   compositionReason: string | null;
 }
@@ -94,6 +106,7 @@ interface Props {
   periodStatusId?: string;
   finalRecords?: any[];
   onGenerateFinalRecords?: () => Promise<void>;
+  truthAuthoritativeMode?: boolean;
 }
 
 function normalizeName(s: string): string {
@@ -102,6 +115,32 @@ function normalizeName(s: string): string {
 
 function round2(n: number): number {
   return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+function isSystemInferredOnly(recon: ReconBreakdown | null): boolean {
+  if (!recon) return false;
+  return recon.schedule_count === 0 && recon.clock_count === 0 && recon.payroll_row_count === 0 && recon.total_final > 0;
+}
+
+function deriveReviewGroup(
+  status: ComparisonRow["status"],
+  recon: ReconBreakdown | null,
+  truthTotal: number,
+  totalVariance: number,
+  truthAuthoritativeMode: boolean
+): ReviewGroup {
+  if (status === "identity_only" || status === "missing") return "missing_system_data";
+  if (!recon) return "standard";
+
+  const inferredOnly = isSystemInferredOnly(recon);
+  const systemExceedsTruth = round2(recon.total_final - truthTotal) > 1;
+
+  if (truthAuthoritativeMode && inferredOnly && systemExceedsTruth) return "truth_override_candidate";
+  if (inferredOnly && systemExceedsTruth) return "system_inferred_exceeds_truth";
+  if (truthAuthoritativeMode && status === "mismatch" && totalVariance > 50 && recon.authoritative_source === "period_base_pay") return "pay_model_mismatch";
+  if (status === "mismatch") return "true_business_mismatch";
+
+  return "standard";
 }
 
 function classifyMovement(conceptName: string): LedgerCategory {
@@ -272,7 +311,7 @@ function buildReconFromPersistedRow(row: any, employeeName: string): ReconBreakd
   };
 }
 
-export default function PayrollTruthValidation({ companyId, periodStatusId, finalRecords: externalFinalRecords, onGenerateFinalRecords }: Props) {
+export default function PayrollTruthValidation({ companyId, periodStatusId, finalRecords: externalFinalRecords, onGenerateFinalRecords, truthAuthoritativeMode = false }: Props) {
   const [generatingFinal, setGeneratingFinal] = useState(false);
   const { user } = useAuth();
   const [truthData, setTruthData] = useState<PayrollTruthRow[]>([]);
