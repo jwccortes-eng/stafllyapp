@@ -2297,24 +2297,67 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                               <TableCell colSpan={20} className="p-3">
                                 <div className="space-y-3 text-xs">
                                   {/* ── Resolver action for unmatched rows ── */}
-                                  {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) && (
-                                    <div className="rounded-lg border-2 border-warning/40 bg-warning/5 p-3 flex items-center gap-3">
-                                      <Wrench className="h-4 w-4 text-warning shrink-0" />
-                                      <div className="flex-1">
-                                        <p className="text-sm font-medium">Empleado no vinculado al sistema</p>
-                                        <p className="text-muted-foreground">Resuelve esta fila creando un empleado, vinculando a uno existente, o marcando solo-Truth.</p>
+                                  {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) && (() => {
+                                    const res = getResolution(c);
+                                    if (res) {
+                                      // Show resolution decision details
+                                      return (
+                                        <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                                            <p className="text-sm font-medium text-primary">Fila resuelta</p>
+                                            {resolutionBadge(c)}
+                                          </div>
+                                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                                            <div>
+                                              <span className="text-muted-foreground">Decisión:</span>{" "}
+                                              <span className="font-medium">
+                                                {res.resolution_mode === "create" ? "Empleado creado" : res.resolution_mode === "link" ? "Vinculado a existente" : "Solo Truth"}
+                                              </span>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Cuándo:</span>{" "}
+                                              <span className="font-mono">{new Date(res.resolved_at).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Por:</span>{" "}
+                                              <span className="font-mono text-[10px]">{res.resolved_by?.slice(0, 8)}…</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Estado:</span>{" "}
+                                              <Badge variant="default" className="text-[10px]">Resuelto</Badge>
+                                            </div>
+                                          </div>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 text-[10px] gap-1 px-2"
+                                            onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                          >
+                                            <Wrench className="h-2.5 w-2.5" /> Cambiar resolución
+                                          </Button>
+                                        </div>
+                                      );
+                                    }
+                                    return (
+                                      <div className="rounded-lg border-2 border-warning/40 bg-warning/5 p-3 flex items-center gap-3">
+                                        <Wrench className="h-4 w-4 text-warning shrink-0" />
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium">Empleado no vinculado al sistema</p>
+                                          <p className="text-muted-foreground">Resuelve esta fila creando un empleado, vinculando a uno existente, o marcando solo-Truth.</p>
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          variant="default"
+                                          className="gap-1.5 shrink-0"
+                                          onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                        >
+                                          <Wrench className="h-3.5 w-3.5" />
+                                          Resolver
+                                        </Button>
                                       </div>
-                                      <Button
-                                        size="sm"
-                                        variant="default"
-                                        className="gap-1.5 shrink-0"
-                                        onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
-                                      >
-                                        <Wrench className="h-3.5 w-3.5" />
-                                        Resolver
-                                      </Button>
-                                    </div>
-                                  )}
+                                    );
+                                  })()}
 
                                   <div className="rounded bg-background border border-border p-2">
                                     <p className="font-medium text-foreground mb-1">Explicación de varianza:</p>
