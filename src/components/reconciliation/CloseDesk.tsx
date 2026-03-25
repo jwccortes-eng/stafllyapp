@@ -280,6 +280,7 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
           finalRecords={finalRecords}
           variances={variances}
           employeeMap={employeeMap}
+          period={period}
           onNavigate={onNavigate}
           onApproveRecord={onApproveRecord}
           onBulkApprove={onBulkApprove}
