@@ -348,6 +348,10 @@ function buildReconFromPersistedRow(row: any, employeeName: string): ReconBreakd
     schedule_count: Number(row?.shift_count) || 0,
     clock_count: Number(row?.clock_count) || 0,
     payroll_row_count: 0,
+    clocked_hours: 0,
+    scheduled_hours: 0,
+    base_pay_hours: 0,
+    hours_source_used: "none",
     ledger: [],
     flags: [],
   };
