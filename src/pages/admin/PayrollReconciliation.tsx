@@ -555,11 +555,6 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
             </p>
           </div>
         </div>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
 
         {/* Anomaly flags */}
         {row.anomaly_flags.length > 0 && (
