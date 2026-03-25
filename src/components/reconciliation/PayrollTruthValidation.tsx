@@ -2071,6 +2071,22 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             <TableCell className="font-medium text-sm">{c.employee}</TableCell>
                             <TableCell>{statusBadge(c)}</TableCell>
                             <TableCell>{reviewGroupBadge(c.reviewGroup)}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">{r?.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</TableCell>
+                            <TableCell className="text-right font-mono text-xs text-muted-foreground">{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</TableCell>
+                            <TableCell className="text-center">
+                              {(() => {
+                                const src = truthAuthoritativeMode ? "truth" : (r?.hours_source_used || "none");
+                                const labels: Record<string, { text: string; cls: string }> = {
+                                  truth: { text: "Truth", cls: "text-primary font-medium" },
+                                  clocked: { text: "Reloj", cls: "text-foreground" },
+                                  scheduled: { text: "Prog.", cls: "text-muted-foreground italic" },
+                                  none: { text: "—", cls: "text-muted-foreground" },
+                                };
+                                const l = labels[src] || labels.none;
+                                return <span className={`text-xs ${l.cls}`}>{l.text}</span>;
+                              })()}
+                            </TableCell>
                             <TableCell className="text-right font-mono text-xs">{c.truth.totalPay ? fmt(c.truth.totalPay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-xs">{c.truth.payperDay ? fmt(c.truth.payperDay) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-xs">{c.truth.ryde ? fmt(c.truth.ryde) : "—"}</TableCell>
