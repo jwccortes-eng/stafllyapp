@@ -48,7 +48,28 @@ const formatPeriodLabel = (startDate: string, endDate: string) => {
 
 // ─── Badge Helpers ───────────────────────────────────────────────────
 
-function statusBadge(status: string) {
+function truthAuthoritativeStatus(row: ReconciliationRowResult): { label: string; variant: any; className: string } {
+  // In truth-authoritative mode, if truth.total exists, the closure IS the truth
+  if (row.truth.total != null) {
+    const disc = (row.truth as any).discount ?? row.truth.raw?.discount ?? 0;
+    const adic = (row.truth.pay_per_day || 0) + (row.truth.ryde || 0) + (row.truth.tips || 0) + (row.truth.reimbursements || 0);
+    const hasComposition = adic > 0 || disc > 0;
+    if (hasComposition) {
+      return { label: "✓ Composición OK", variant: "default", className: "bg-earning/15 text-earning border-earning/30" };
+    }
+    if (row.truth.total_hours != null && row.truth.total_pay != null && row.truth.total_hours > 0) {
+      return { label: "✓ Base OK", variant: "default", className: "bg-earning/15 text-earning border-earning/30" };
+    }
+    return { label: "✓ Truth-validado", variant: "default", className: "bg-primary/15 text-primary border-primary/30" };
+  }
+  return { label: row.classification.row_status.replace(/_/g, " "), variant: "outline", className: "" };
+}
+
+function statusBadge(status: string, row?: ReconciliationRowResult) {
+  if (row) {
+    const ta = truthAuthoritativeStatus(row);
+    return <Badge variant={ta.variant as any} className={`text-[10px] px-1.5 py-0 font-medium ${ta.className}`}>{ta.label}</Badge>;
+  }
   const map: Record<string, { variant: any; label: string; className?: string }> = {
     EXACT_MATCH: { variant: "default", label: "Exacto", className: "bg-earning/15 text-earning border-earning/30 hover:bg-earning/20" },
     COMPONENT_MISMATCH: { variant: "default", label: "Parcial", className: "bg-warning/15 text-warning border-warning/30 hover:bg-warning/20" },
@@ -426,15 +447,19 @@ function PreApprovalSafetyPanel({ summary, onApprove, onCancel }: { summary: Bat
 
 function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClose: () => void }) {
   const name = `${row.truth.first_name} ${row.truth.last_name}`;
-  const components = [
-    { label: "Hours", truth: row.truth.total_hours, system: row.system?.total_hours ?? null, variance: row.variances.hours, isHours: true, icon: Clock },
-    { label: "Total Pay", truth: row.truth.total_pay, system: row.system?.total_pay ?? null, variance: row.variances.total_pay, icon: DollarSign },
-    { label: "Pay Per Day", truth: row.truth.pay_per_day, system: row.system?.pay_per_day ?? null, variance: row.variances.pay_per_day, icon: DollarSign },
-    { label: "Ryde", truth: row.truth.ryde, system: row.system?.ryde ?? null, variance: row.variances.ryde, icon: Car },
-    { label: "Tips", truth: row.truth.tips, system: row.system?.tips ?? null, variance: row.variances.tips, icon: UtensilsCrossed },
-    { label: "Reimbursements", truth: row.truth.reimbursements, system: row.system?.reimbursements ?? null, variance: row.variances.reimbursements, icon: Receipt },
-    { label: "TOTAL", truth: row.truth.total, system: row.system?.total ?? null, variance: row.variances.total, icon: DollarSign },
-  ];
+
+  const hrs = row.truth.total_hours;
+  const basePay = row.truth.total_pay || 0;
+  const rate = hrs && hrs > 0 && basePay > 0 ? Math.round((basePay / hrs) * 100) / 100 : null;
+  const ppd = row.truth.pay_per_day || 0;
+  const ryde = row.truth.ryde || 0;
+  const tips = row.truth.tips || 0;
+  const reimb = row.truth.reimbursements || 0;
+  const disc = Number((row.truth as any).discount ?? row.truth.raw?.discount ?? 0);
+  const travelHrs = Number(row.truth.raw?.travel_hours ?? 0);
+  const otros = Number(row.truth.raw?.otros ?? 0);
+  const adicionales = ppd + ryde + tips + reimb + travelHrs + otros;
+  const total = row.truth.total;
 
   return (
     <DialogContent className="max-w-2xl max-h-[85vh] overflow-auto p-0">
@@ -445,7 +470,7 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
             <DialogTitle className="text-lg font-heading">{name}</DialogTitle>
           </div>
           <DialogDescription className="flex items-center gap-2 flex-wrap">
-            {statusBadge(row.classification.row_status)}
+            {statusBadge(row.classification.row_status, row)}
             {matchBadge(row.match.match_confidence, row.match.matched_by)}
             {row.match.match_notes && <span className="text-[10px] text-muted-foreground/70 italic">{row.match.match_notes}</span>}
           </DialogDescription>
@@ -471,37 +496,64 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
           </div>
         )}
 
-        {/* Component comparison */}
-        <div className="rounded-xl border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="text-[10px] py-2.5 pl-4">Componente</TableHead>
-                <TableHead className="text-[10px] py-2.5 text-right">Truth</TableHead>
-                <TableHead className="text-[10px] py-2.5 text-right">System</TableHead>
-                <TableHead className="text-[10px] py-2.5 text-right pr-4">Δ Varianza</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {components.map(c => {
-                const hasIssue = c.variance != null && Math.abs(c.variance) > (c.isHours ? 0.1 : 1);
-                const isTotal = c.label === "TOTAL";
-                return (
-                  <TableRow key={c.label} className={`${isTotal ? "bg-muted/20 font-semibold border-t-2 border-border/50" : hasIssue ? "bg-destructive/[0.03]" : ""}`}>
-                    <TableCell className="py-2 pl-4 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <c.icon className="h-3 w-3 text-muted-foreground/50" />
-                        {c.label}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-2 text-right font-mono text-xs">{c.isHours ? fmtH(c.truth) : fmt(c.truth)}</TableCell>
-                    <TableCell className="py-2 text-right font-mono text-xs">{c.isHours ? fmtH(c.system) : fmt(c.system)}</TableCell>
-                    <TableCell className="py-2 text-right text-xs pr-4">{varianceCell(c.variance, c.isHours ? 0.1 : 1)}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+        {/* 4-Block Composition */}
+        <div className="space-y-3">
+          {/* A. Base por horas */}
+          <div className="rounded-lg border border-border/50 p-4">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-3">A. Base por horas</p>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-[10px] text-muted-foreground">Horas</p>
+                <p className="font-mono text-lg font-bold">{hrs != null ? hrs.toFixed(2) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">Tarifa/h</p>
+                <p className="font-mono text-lg font-bold">{rate != null ? `$${rate.toFixed(2)}` : "—"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">= Pago Base</p>
+                <p className="font-mono text-lg font-bold">{fmt(basePay)}</p>
+              </div>
+            </div>
+            {hrs != null && rate != null && (
+              <p className="text-[10px] text-muted-foreground mt-2 font-mono">{hrs.toFixed(2)}h × ${rate.toFixed(2)}/h = {fmt(basePay)}</p>
+            )}
+          </div>
+
+          {/* B. Adicionales */}
+          {adicionales > 0 && (
+            <div className="rounded-lg border border-earning/30 bg-earning/[0.03] p-4">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-earning mb-3">B. Adicionales (+${adicionales.toFixed(2)})</p>
+              <div className="grid grid-cols-3 gap-3">
+                {ppd > 0 && <div><p className="text-[10px] text-muted-foreground">Pay Per Day</p><p className="font-mono font-semibold">{fmt(ppd)}</p></div>}
+                {ryde > 0 && <div><p className="text-[10px] text-muted-foreground">Ryde</p><p className="font-mono font-semibold">{fmt(ryde)}</p></div>}
+                {tips > 0 && <div><p className="text-[10px] text-muted-foreground">Tips</p><p className="font-mono font-semibold">{fmt(tips)}</p></div>}
+                {reimb > 0 && <div><p className="text-[10px] text-muted-foreground">Reimbursements</p><p className="font-mono font-semibold">{fmt(reimb)}</p></div>}
+                {travelHrs > 0 && <div><p className="text-[10px] text-muted-foreground">Travel Hours</p><p className="font-mono font-semibold">{fmt(travelHrs)}</p></div>}
+                {otros > 0 && <div><p className="text-[10px] text-muted-foreground">Otros</p><p className="font-mono font-semibold">{fmt(otros)}</p></div>}
+              </div>
+            </div>
+          )}
+
+          {/* C. Descuentos */}
+          {disc > 0 && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/[0.03] p-4">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-destructive mb-2">C. Descuentos (−${disc.toFixed(2)})</p>
+              <p className="font-mono text-lg font-bold text-destructive">−{fmt(disc)}</p>
+            </div>
+          )}
+
+          {/* D. Total final */}
+          <div className="rounded-lg border-2 border-primary/40 bg-primary/[0.04] p-4">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-primary mb-2">D. Total Final</p>
+            <p className="font-mono text-2xl font-black">{fmt(total)}</p>
+            <p className="text-xs text-muted-foreground mt-1 font-mono">
+              {basePay > 0 ? fmt(basePay) : "$0"}
+              {adicionales > 0 ? ` + $${adicionales.toFixed(2)}` : ""}
+              {disc > 0 ? ` − $${disc.toFixed(2)}` : ""}
+              {" = "}{fmt(total)}
+            </p>
+          </div>
         </div>
 
         {/* Anomaly flags */}
@@ -1110,68 +1162,61 @@ export default function PayrollReconciliationPage() {
               <TableHeader className="sticky top-0 z-30">
                 <TableRow>
                   <TableHead className="sticky left-0 z-40 bg-surface-2 min-w-[170px] py-2.5">Empleado</TableHead>
-                  <TableHead className="py-2.5">Status</TableHead>
-                  <TableHead className="py-2.5">Match</TableHead>
-                  <TableHead className="text-right py-2.5">T.Hrs</TableHead>
-                  <TableHead className="text-right py-2.5">S.Hrs</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5">T.Pay</TableHead>
-                  <TableHead className="text-right py-2.5">S.Pay</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5">T.PPD</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5">T.Ryde</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5">T.Tips</TableHead>
-                  <TableHead className="text-right py-2.5">Δ</TableHead>
-                  <TableHead className="text-right py-2.5 !font-bold">T.Total</TableHead>
-                  <TableHead className="text-right py-2.5 !font-bold">S.Total</TableHead>
-                  <TableHead className="text-right py-2.5 !font-bold">Δ Total</TableHead>
+                  <TableHead className="py-2.5">Estado</TableHead>
+                  <TableHead className="text-right py-2.5">Hrs</TableHead>
+                  <TableHead className="text-right py-2.5">Tarifa</TableHead>
+                  <TableHead className="text-right py-2.5 border-l border-border/30">A. Base</TableHead>
+                  <TableHead className="text-right py-2.5 text-earning">+ Adic.</TableHead>
+                  <TableHead className="text-right py-2.5 text-destructive">− Desc.</TableHead>
+                  <TableHead className="text-right py-2.5 !font-bold border-l border-border/30">= Total</TableHead>
+                  <TableHead className="py-2.5 min-w-[200px]">Composición</TableHead>
                   <TableHead className="py-2.5 w-8"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredRows.map((row, i) => {
-                  const isCritical = row.classification.has_critical_mismatch;
-                  const isExact = row.classification.is_exact_match;
+                  const hrs = row.truth.total_hours;
+                  const basePay = row.truth.total_pay || 0;
+                  const rate = hrs && hrs > 0 && basePay > 0 ? Math.round((basePay / hrs) * 100) / 100 : null;
+                  const ppd = row.truth.pay_per_day || 0;
+                  const ryde = row.truth.ryde || 0;
+                  const tips = row.truth.tips || 0;
+                  const reimb = row.truth.reimbursements || 0;
+                  const disc = (row.truth as any).discount ?? row.truth.raw?.discount ?? 0;
+                  const adicionales = ppd + ryde + tips + reimb;
+                  const total = row.truth.total;
+
+                  // Composition formula
+                  const parts: string[] = [];
+                  if (basePay > 0) parts.push(`$${basePay.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+                  if (adicionales > 0) parts.push(`+ $${adicionales.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+                  if (disc > 0) parts.push(`- $${disc.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+                  const formula = parts.length > 1
+                    ? `${parts.join(" ")} = ${fmt(total)}`
+                    : total != null ? fmt(total) : "—";
+
                   return (
                     <TableRow
                       key={i}
-                      className={`text-xs cursor-pointer transition-colors ${isCritical ? "bg-destructive/[0.04] hover:bg-destructive/[0.08]" : isExact ? "hover:bg-earning/[0.04]" : "hover:bg-accent/40"}`}
+                      className="text-xs cursor-pointer transition-colors hover:bg-accent/40"
                       onClick={() => setSelectedRow(row)}
                     >
                       <TableCell className="sticky left-0 bg-card z-10 py-2">
                         <div className="flex items-center gap-1.5">
-                          {isExact && <div className="h-1.5 w-1.5 rounded-full bg-earning shrink-0" />}
-                          {isCritical && <div className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />}
+                          <div className="h-1.5 w-1.5 rounded-full bg-earning shrink-0" />
                           <span className="font-medium truncate max-w-[130px]">{row.truth.first_name} {row.truth.last_name}</span>
-                          {row.anomaly_flags.length > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-destructive/15 text-destructive text-[8px] font-bold">{row.anomaly_flags.length}</span>
-                              </TooltipTrigger>
-                              <TooltipContent className="text-[10px] max-w-xs">{row.anomaly_flags.join(", ")}</TooltipContent>
-                            </Tooltip>
-                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="py-2">{statusBadge(row.classification.row_status)}</TableCell>
-                      <TableCell className="py-2">{matchBadge(row.match.match_confidence, row.match.matched_by)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmtH(row.truth.total_hours)}</TableCell>
-                      <TableCell className="text-right font-mono py-2 text-muted-foreground">{fmtH(row.system?.total_hours)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.hours, tolerance.hours)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.total_pay)}</TableCell>
-                      <TableCell className="text-right font-mono py-2 text-muted-foreground">{fmt(row.system?.total_pay)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.total_pay, tolerance.money)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.pay_per_day)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.pay_per_day, tolerance.money)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.ryde)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.ryde, tolerance.money)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{fmt(row.truth.tips)}</TableCell>
-                      <TableCell className="text-right py-2">{varianceCell(row.variances.tips, tolerance.tips)}</TableCell>
-                      <TableCell className="text-right font-mono font-semibold py-2">{fmt(row.truth.total)}</TableCell>
-                      <TableCell className="text-right font-mono font-semibold py-2 text-muted-foreground">{fmt(row.system?.total)}</TableCell>
-                      <TableCell className="text-right font-semibold py-2">{varianceCell(row.variances.total, tolerance.money)}</TableCell>
+                      <TableCell className="py-2">{statusBadge(row.classification.row_status, row)}</TableCell>
+                      <TableCell className="text-right font-mono py-2">{hrs != null ? hrs.toFixed(2) : "—"}</TableCell>
+                      <TableCell className="text-right font-mono py-2 text-muted-foreground">{rate != null ? `$${rate.toFixed(2)}` : "—"}</TableCell>
+                      <TableCell className="text-right font-mono py-2 border-l border-border/20">{basePay > 0 ? fmt(basePay) : "—"}</TableCell>
+                      <TableCell className="text-right font-mono py-2 text-earning font-medium">{adicionales > 0 ? fmt(adicionales) : "—"}</TableCell>
+                      <TableCell className="text-right font-mono py-2 text-destructive font-medium">{disc > 0 ? fmt(disc) : "—"}</TableCell>
+                      <TableCell className="text-right font-mono font-bold py-2 border-l border-border/20">{fmt(total)}</TableCell>
+                      <TableCell className="py-2">
+                        <span className="text-[10px] font-mono text-muted-foreground">{formula}</span>
+                      </TableCell>
                       <TableCell className="py-2">
                         <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary" />
                       </TableCell>
