@@ -126,12 +126,21 @@ function deriveOperationalStatus(
   status: ComparisonRow["status"],
   truthTotal: number,
   closureAmount: number,
-  truthAuthoritativeMode: boolean
+  truthAuthoritativeMode: boolean,
+  hasMatchedIdentity?: boolean
 ): ComparisonRow["status"] {
   if (!truthAuthoritativeMode) return status;
-  if (status === "identity_only" || status === "missing") return status;
 
+  // In truth-authoritative mode, if closure aligns with truth, the row is resolved
+  // regardless of whether system-side operational data exists.
   const closureVariance = Math.abs(round2(closureAmount - truthTotal));
+
+  if (status === "identity_only" || status === "missing") {
+    // If closure == truth in truth-authoritative mode, this is a truth-validated match
+    if (closureVariance < 1 && truthTotal > 0) return "match";
+    return status;
+  }
+
   if (closureVariance < 1) return "match";
   if (closureVariance < 50) return "close";
   return "mismatch";
