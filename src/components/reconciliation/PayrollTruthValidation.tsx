@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
-import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database, ArrowUpDown, Wrench } from "lucide-react";
+import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database, ArrowUpDown, Wrench, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   parsePayrollTruthWorkbook,
@@ -15,7 +15,8 @@ import {
   type PayrollTruthRow,
 } from "@/lib/payroll-truth-parser";
 import { matchEmployees } from "@/lib/payroll-reconciliation-engine";
-import UnmatchedResolutionDialog from "./UnmatchedResolutionDialog";
+import UnmatchedResolutionDialog, { type ResolutionMode, type ResolutionResult } from "./UnmatchedResolutionDialog";
+import { UserPlus, Link2 } from "lucide-react";
 
 type LedgerCategory = "hourly" | "daily" | "ride" | "weekend" | "manual" | "deduction" | "reimbursement" | "other";
 type CompositionRole = "authoritative" | "informational_only" | "inferred" | "excluded_from_total";
@@ -407,6 +408,30 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [persistedComparison, setPersistedComparison] = useState<ComparisonRow[] | null>(null);
   const [resolutionRow, setResolutionRow] = useState<PayrollTruthRow | null>(null);
   const [resolutionTrigger, setResolutionTrigger] = useState(0);
+
+  // Resolution decisions loaded from truth_resolution_log
+  type ResolutionRecord = { truth_employee_name: string; resolution_mode: string; resolved_employee_id: string | null; resolved_by: string; resolved_at: string };
+  const [resolutionMap, setResolutionMap] = useState<Map<string, ResolutionRecord>>(new Map());
+
+  // Load resolution decisions from DB
+  useEffect(() => {
+    if (!companyId || !periodStatusId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("truth_resolution_log" as any)
+        .select("truth_employee_name, resolution_mode, resolved_employee_id, resolved_by, resolved_at")
+        .eq("company_id", companyId)
+        .eq("period_status_id", periodStatusId);
+      if (cancelled) return;
+      const map = new Map<string, ResolutionRecord>();
+      for (const row of (data || []) as any[]) {
+        map.set(normalizeName(row.truth_employee_name), row as ResolutionRecord);
+      }
+      setResolutionMap(map);
+    })();
+    return () => { cancelled = true; };
+  }, [companyId, periodStatusId, resolutionTrigger]);
 
   const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
@@ -1583,8 +1608,25 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
   const [statusFilter, setStatusFilter] = useState<ComparisonRow["status"] | "all">("all");
   const [reviewGroupFilter, setReviewGroupFilter] = useState<ReviewGroup | "all">("all");
+  const [resolutionFilter, setResolutionFilter] = useState<"all" | "pending" | "create" | "link" | "truth_only">("all");
   const [sortByVariance, setSortByVariance] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  /** Helper: get resolution for a row */
+  const getResolution = useCallback((c: ComparisonRow) => {
+    return resolutionMap.get(normalizeName(c.employee)) || null;
+  }, [resolutionMap]);
+
+  /** Resolution stats */
+  const resolutionStats = useMemo(() => {
+    const unresolvedRows = comparison.filter(c => c.status === "missing" || (c.status === "identity_only" && !c.recon));
+    const resolved = unresolvedRows.filter(c => getResolution(c) !== null);
+    const pending = unresolvedRows.length - resolved.length;
+    const created = unresolvedRows.filter(c => getResolution(c)?.resolution_mode === "create").length;
+    const linked = unresolvedRows.filter(c => getResolution(c)?.resolution_mode === "link").length;
+    const truthOnly = unresolvedRows.filter(c => getResolution(c)?.resolution_mode === "truth_only").length;
+    return { total: unresolvedRows.length, resolved: resolved.length, pending, created, linked, truthOnly };
+  }, [comparison, getResolution]);
 
   const filteredComparison = useMemo(() => {
     let rows = comparison;
@@ -1598,13 +1640,33 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     if (reviewGroupFilter !== "all") {
       rows = rows.filter(c => c.reviewGroup === reviewGroupFilter);
     }
+    if (resolutionFilter !== "all") {
+      rows = rows.filter(c => {
+        const isUnresolved = c.status === "missing" || (c.status === "identity_only" && !c.recon);
+        if (!isUnresolved) return false;
+        const res = getResolution(c);
+        if (resolutionFilter === "pending") return !res;
+        return res?.resolution_mode === resolutionFilter;
+      });
+    }
     if (sortByVariance) {
       rows = [...rows].sort((a, b) => Math.abs(b.totalVariance) - Math.abs(a.totalVariance));
     }
     return rows;
-  }, [comparison, statusFilter, reviewGroupFilter, sortByVariance, searchTerm]);
+  }, [comparison, statusFilter, reviewGroupFilter, resolutionFilter, sortByVariance, searchTerm, getResolution]);
 
   const [showRawRecords, setShowRawRecords] = useState(false);
+
+  const resolutionBadge = (row: ComparisonRow) => {
+    const res = getResolution(row);
+    if (!res) return null;
+    switch (res.resolution_mode) {
+      case "create": return <Badge variant="info" className="text-[10px] gap-0.5"><UserPlus className="h-2.5 w-2.5" />Nuevo</Badge>;
+      case "link": return <Badge variant="default" className="text-[10px] gap-0.5"><Link2 className="h-2.5 w-2.5" />Vinculado</Badge>;
+      case "truth_only": return <Badge variant="secondary" className="text-[10px] gap-0.5"><FileText className="h-2.5 w-2.5" />Solo Truth</Badge>;
+      default: return null;
+    }
+  };
 
   const statusBadge = (row: ComparisonRow) => {
     const hasEvidence = row.recon && (row.recon.schedule_count > 0 || row.recon.clock_count > 0 || row.recon.payroll_row_count > 0);
@@ -1617,13 +1679,18 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       return <Badge variant="warning" className="text-xs">↕ Pay-model mismatch</Badge>;
     }
 
+    // Show resolution badge for unresolved/missing rows that have been resolved
+    const res = getResolution(row);
+    if ((row.status === "missing" || (row.status === "identity_only" && !row.recon)) && res) {
+      return resolutionBadge(row);
+    }
+
     if (closureAlignedToTruth && row.status !== "identity_only" && row.status !== "missing") {
       return hasEvidence
         ? <Badge variant="secondary" className="text-xs">✓ Cerrado por Truth</Badge>
         : <Badge variant="secondary" className="text-xs">✓ Truth-validado</Badge>;
     }
 
-    // Evidence-aware: don't label "Exacto" if no linked operational evidence
     switch (row.status) {
       case "match":
         return hasEvidence
@@ -1876,6 +1943,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 <KpiCard label="Dups Suprimidos" value={fmt(stats.totalSuppressed)} accent="deduction" size="sm" mono />
               </div>
 
+              {/* ── Resolution counters (only if unresolved rows exist) ── */}
+              {resolutionStats.total > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <KpiCard label="Sin resolver" value={resolutionStats.total} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="warning" size="sm" />
+                  <KpiCard label="Pendientes" value={resolutionStats.pending} icon={<Wrench className="h-3.5 w-3.5" />} accent={resolutionStats.pending > 0 ? "deduction" : "muted"} size="sm" />
+                  <KpiCard label="Nuevos" value={resolutionStats.created} icon={<UserPlus className="h-3.5 w-3.5" />} accent="primary" size="sm" />
+                  <KpiCard label="Vinculados" value={resolutionStats.linked} icon={<Link2 className="h-3.5 w-3.5" />} accent="primary" size="sm" />
+                  <KpiCard label="Solo Truth" value={resolutionStats.truthOnly} icon={<FileText className="h-3.5 w-3.5" />} accent="muted" size="sm" />
+                </div>
+              )}
+
               {(stats.truthOverrideCandidates > 0 || stats.payModelMismatches > 0) && (
                 <Alert className="border-primary/30 bg-primary/5">
                   <AlertDescription className="text-xs text-foreground">
@@ -2066,6 +2144,30 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                       </Button>
                     ))}
                   </div>
+
+                  {/* Resolution filter */}
+                  {resolutionStats.total > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {([
+                        { key: "all" as const, label: "Todas resoluciones", count: resolutionStats.total },
+                        { key: "pending" as const, label: "Pendientes", count: resolutionStats.pending },
+                        { key: "create" as const, label: "Nuevos", count: resolutionStats.created },
+                        { key: "link" as const, label: "Vinculados", count: resolutionStats.linked },
+                        { key: "truth_only" as const, label: "Solo Truth", count: resolutionStats.truthOnly },
+                      ]).map(r => (
+                        <Button
+                          key={r.key}
+                          size="sm"
+                          variant={resolutionFilter === r.key ? "default" : "outline"}
+                          className="h-7 text-xs gap-1 px-2"
+                          onClick={() => setResolutionFilter(r.key)}
+                        >
+                          {r.label}
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">{r.count}</Badge>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </DataTableToolbar>
                 <Button
                   size="sm"
@@ -2178,14 +2280,28 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             </TableCell>
                             <TableCell className="text-center text-xs" title={c.truth.observaciones || ""}>
                               {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 text-[10px] gap-1 px-2"
-                                  onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
-                                >
-                                  <Wrench className="h-2.5 w-2.5" /> Resolver
-                                </Button>
+                                getResolution(c) ? (
+                                  <div className="flex items-center gap-1 justify-center">
+                                    {resolutionBadge(c)}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-5 text-[9px] px-1"
+                                      onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                    >
+                                      ✏️
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 text-[10px] gap-1 px-2"
+                                    onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                  >
+                                    <Wrench className="h-2.5 w-2.5" /> Resolver
+                                  </Button>
+                                )
                               ) : c.truth.observaciones ? "📝" : ""}
                             </TableCell>
                           </TableRow>
@@ -2195,24 +2311,67 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                               <TableCell colSpan={20} className="p-3">
                                 <div className="space-y-3 text-xs">
                                   {/* ── Resolver action for unmatched rows ── */}
-                                  {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) && (
-                                    <div className="rounded-lg border-2 border-warning/40 bg-warning/5 p-3 flex items-center gap-3">
-                                      <Wrench className="h-4 w-4 text-warning shrink-0" />
-                                      <div className="flex-1">
-                                        <p className="text-sm font-medium">Empleado no vinculado al sistema</p>
-                                        <p className="text-muted-foreground">Resuelve esta fila creando un empleado, vinculando a uno existente, o marcando solo-Truth.</p>
+                                  {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) && (() => {
+                                    const res = getResolution(c);
+                                    if (res) {
+                                      // Show resolution decision details
+                                      return (
+                                        <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                                            <p className="text-sm font-medium text-primary">Fila resuelta</p>
+                                            {resolutionBadge(c)}
+                                          </div>
+                                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                                            <div>
+                                              <span className="text-muted-foreground">Decisión:</span>{" "}
+                                              <span className="font-medium">
+                                                {res.resolution_mode === "create" ? "Empleado creado" : res.resolution_mode === "link" ? "Vinculado a existente" : "Solo Truth"}
+                                              </span>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Cuándo:</span>{" "}
+                                              <span className="font-mono">{new Date(res.resolved_at).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Por:</span>{" "}
+                                              <span className="font-mono text-[10px]">{res.resolved_by?.slice(0, 8)}…</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Estado:</span>{" "}
+                                              <Badge variant="default" className="text-[10px]">Resuelto</Badge>
+                                            </div>
+                                          </div>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 text-[10px] gap-1 px-2"
+                                            onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                          >
+                                            <Wrench className="h-2.5 w-2.5" /> Cambiar resolución
+                                          </Button>
+                                        </div>
+                                      );
+                                    }
+                                    return (
+                                      <div className="rounded-lg border-2 border-warning/40 bg-warning/5 p-3 flex items-center gap-3">
+                                        <Wrench className="h-4 w-4 text-warning shrink-0" />
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium">Empleado no vinculado al sistema</p>
+                                          <p className="text-muted-foreground">Resuelve esta fila creando un empleado, vinculando a uno existente, o marcando solo-Truth.</p>
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          variant="default"
+                                          className="gap-1.5 shrink-0"
+                                          onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                        >
+                                          <Wrench className="h-3.5 w-3.5" />
+                                          Resolver
+                                        </Button>
                                       </div>
-                                      <Button
-                                        size="sm"
-                                        variant="default"
-                                        className="gap-1.5 shrink-0"
-                                        onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
-                                      >
-                                        <Wrench className="h-3.5 w-3.5" />
-                                        Resolver
-                                      </Button>
-                                    </div>
-                                  )}
+                                    );
+                                  })()}
 
                                   <div className="rounded bg-background border border-border p-2">
                                     <p className="font-medium text-foreground mb-1">Explicación de varianza:</p>

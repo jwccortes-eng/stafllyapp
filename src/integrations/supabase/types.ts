@@ -9880,6 +9880,62 @@ export type Database = {
           },
         ]
       }
+      truth_resolution_log: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          period_status_id: string
+          resolution_mode: string
+          resolved_at: string
+          resolved_by: string
+          resolved_employee_id: string | null
+          truth_employee_name: string
+          truth_hours: number | null
+          truth_raw_json: Json | null
+          truth_total: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_status_id: string
+          resolution_mode: string
+          resolved_at?: string
+          resolved_by: string
+          resolved_employee_id?: string | null
+          truth_employee_name: string
+          truth_hours?: number | null
+          truth_raw_json?: Json | null
+          truth_total?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_status_id?: string
+          resolution_mode?: string
+          resolved_at?: string
+          resolved_by?: string
+          resolved_employee_id?: string | null
+          truth_employee_name?: string
+          truth_hours?: number | null
+          truth_raw_json?: Json | null
+          truth_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truth_resolution_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
