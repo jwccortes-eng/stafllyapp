@@ -1510,8 +1510,14 @@ export function useReconciliationPeriod(companyId: string | null) {
       }
 
       let status: EmployeeVariance["variance_status"];
-      if (["pending", "partial", "blocked"].includes(r.reconciliation_status) || Boolean(unmappedWarning)) status = "unresolved";
-      else if (absVariance <= 0.01) status = "exact_match";
+      // ⚠️ HARD RULE: truth_validated records are settled — never show as mismatch/unresolved
+      const isTruthValidated = r.pay_classification === "truth_validated";
+      if (isTruthValidated) {
+        // Truth IS the closure authority; variance is diagnostic only
+        status = absVariance <= 0.01 ? "exact_match" : "minor_variance";
+      } else if (["pending", "partial", "blocked"].includes(r.reconciliation_status) || Boolean(unmappedWarning)) {
+        status = "unresolved";
+      } else if (absVariance <= 0.01) status = "exact_match";
       else if (absVariance <= 10) status = "minor_variance";
       else status = "major_variance";
 
