@@ -2168,6 +2168,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                       ))}
                     </div>
                   )}
+                </DataTableToolbar>
                 <Button
                   size="sm"
                   variant={sortByVariance ? 'default' : 'outline'}
