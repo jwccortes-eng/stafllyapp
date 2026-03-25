@@ -123,10 +123,19 @@ function matchBadge(confidence: number, method: string) {
   );
 }
 
-function batchStatusBadge(status: string) {
+function deriveTruthStatus(dbStatus: string, tc?: { validated: number; pending: number; total: number }): string {
+  // If we have truth counts and all rows are validated, override engine status
+  if (tc && tc.total > 0 && tc.pending === 0) return "TRUTH_VALIDATED";
+  if (tc && tc.total > 0 && tc.pending > 0) return "NEEDS_REVIEW";
+  return dbStatus;
+}
+
+function batchStatusBadge(status: string, tc?: { validated: number; pending: number; total: number }) {
+  const effective = deriveTruthStatus(status, tc);
   const map: Record<string, { icon: any; label: string; className: string }> = {
     DRAFT: { icon: FileText, label: "Borrador", className: "bg-muted text-muted-foreground border-border" },
     TRUTH_UPLOADED: { icon: Upload, label: "Truth cargado", className: "bg-info/15 text-info border-info/30" },
+    TRUTH_VALIDATED: { icon: CheckCircle2, label: "Truth-validado", className: "bg-earning/15 text-earning border-earning/30" },
     RECONCILED: { icon: CheckCircle2, label: "Reconciliado", className: "bg-earning/15 text-earning border-earning/30" },
     NEEDS_REVIEW: { icon: AlertTriangle, label: "Revisión", className: "bg-warning/15 text-warning border-warning/30" },
     CRITICAL: { icon: AlertOctagon, label: "Crítico", className: "bg-destructive/15 text-destructive border-destructive/30" },
@@ -134,7 +143,7 @@ function batchStatusBadge(status: string) {
     LOCKED: { icon: Lock, label: "Bloqueado", className: "bg-muted text-muted-foreground border-border" },
     MISMATCHED: { icon: AlertTriangle, label: "Discrepancias", className: "bg-warning/15 text-warning border-warning/30" },
   };
-  const s = map[status] || { icon: Info, label: status, className: "bg-muted text-muted-foreground border-border" };
+  const s = map[effective] || { icon: Info, label: effective, className: "bg-muted text-muted-foreground border-border" };
   const Icon = s.icon;
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${s.className}`}>
@@ -678,7 +687,7 @@ function DebugPanel({ companyId, batch, batchSummary, reconciliationRows }: {
             </div>
             <div className="p-2 rounded-md bg-background border border-border/40">
               <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-semibold">Batch status</p>
-              <p className="font-mono text-[10px] mt-0.5">{batch.status}</p>
+              <p className="font-mono text-[10px] mt-0.5">{deriveTruthStatus(batch.status, info.truthRows > 0 ? { validated: info.truthRows, pending: 0, total: info.truthRows } : undefined)} <span className="text-muted-foreground">({batch.status})</span></p>
             </div>
           </div>
           <div className="grid grid-cols-4 gap-3 mt-2 text-[11px]">
@@ -934,7 +943,7 @@ export default function PayrollReconciliationPage() {
               <Card key={b.id} className="cursor-pointer hover:border-primary/30 hover:shadow-md transition-all shadow-none group" onClick={() => setActiveBatch(b)}>
                 <CardContent className="py-3.5 px-5 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    {batchStatusBadge(b.status)}
+                    {batchStatusBadge(b.status, b.employees_truth_count > 0 ? { validated: b.employees_truth_count, pending: b.critical_mismatch_count || 0, total: b.employees_truth_count } : undefined)}
                     <div>
                       <p className="font-medium text-sm group-hover:text-primary transition-colors">
                         {b.truth_source_file_name || "Sin archivo"}
@@ -1064,7 +1073,7 @@ export default function PayrollReconciliationPage() {
           </button>
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold font-heading">Reconciliación</h1>
-            {batchStatusBadge(activeBatch.status)}
+            {batchStatusBadge(activeBatch.status, truthCounts)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {activeBatch.truth_source_file_name || "Sin archivo de verdad"}
