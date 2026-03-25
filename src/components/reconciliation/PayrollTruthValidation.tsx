@@ -73,6 +73,11 @@ interface ReconBreakdown {
   schedule_count: number;
   clock_count: number;
   payroll_row_count: number;
+  // Hours tracking
+  clocked_hours: number;
+  scheduled_hours: number;
+  base_pay_hours: number;
+  hours_source_used: "clocked" | "truth" | "scheduled" | "none";
   ledger: LedgerEntry[];
   flags: string[];
 }
