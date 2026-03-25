@@ -2280,14 +2280,28 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             </TableCell>
                             <TableCell className="text-center text-xs" title={c.truth.observaciones || ""}>
                               {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 text-[10px] gap-1 px-2"
-                                  onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
-                                >
-                                  <Wrench className="h-2.5 w-2.5" /> Resolver
-                                </Button>
+                                getResolution(c) ? (
+                                  <div className="flex items-center gap-1 justify-center">
+                                    {resolutionBadge(c)}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-5 text-[9px] px-1"
+                                      onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                    >
+                                      ✏️
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 text-[10px] gap-1 px-2"
+                                    onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                  >
+                                    <Wrench className="h-2.5 w-2.5" /> Resolver
+                                  </Button>
+                                )
                               ) : c.truth.observaciones ? "📝" : ""}
                             </TableCell>
                           </TableRow>
