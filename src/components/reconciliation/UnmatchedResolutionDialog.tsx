@@ -4,14 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, UserPlus, Link2, FileText, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PayrollTruthRow } from "@/lib/payroll-truth-parser";
 
-type ResolutionMode = "create" | "link" | "truth_only";
+export type ResolutionMode = "create" | "link" | "truth_only";
+
+export interface ResolutionResult {
+  mode: ResolutionMode;
+  employeeId?: string;
+  resolvedAt: string;
+  resolvedBy: string;
+}
 
 interface Props {
   open: boolean;
@@ -20,7 +26,7 @@ interface Props {
   companyId: string;
   periodStatusId: string;
   userId: string;
-  onResolved: (result: { mode: ResolutionMode; employeeId?: string }) => void;
+  onResolved: (result: ResolutionResult) => void;
 }
 
 interface ExistingEmployee {
@@ -87,6 +93,31 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
     return name.includes(q) || (c.phone_number || "").includes(q) || (c.email || "").toLowerCase().includes(q);
   });
 
+  /** Persist a resolution decision to truth_resolution_log */
+  const persistResolution = async (resolvedMode: ResolutionMode, resolvedEmployeeId?: string) => {
+    try {
+      await supabase.from("truth_resolution_log" as any).insert({
+        company_id: companyId,
+        period_status_id: periodStatusId,
+        truth_employee_name: truthRow.employee,
+        truth_total: truthRow.total || 0,
+        truth_hours: truthRow.totalPaidHours || truthRow.shiftHours || null,
+        resolution_mode: resolvedMode,
+        resolved_employee_id: resolvedEmployeeId || null,
+        resolved_by: userId,
+        truth_raw_json: {
+          firstName: truthRow.firstName,
+          lastName: truthRow.lastName,
+          totalPay: truthRow.totalPay,
+          hourlyRate: truthRow.hourlyRate,
+          total: truthRow.total,
+        },
+      } as any);
+    } catch (err) {
+      console.error("Failed to persist resolution log:", err);
+    }
+  };
+
   const handleCreate = async () => {
     if (!firstName.trim()) { toast.error("El nombre es requerido"); return; }
     setSaving(true);
@@ -102,7 +133,7 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
           employer_identification: employerId.trim() || null,
           verification_ssn_ein: ssnEin.trim() || null,
           employee_role: "general",
-          is_active: true,
+          is_active: false, // inactive by default — requires human activation
           created_from_reconciliation: true,
         } as any)
         .select("id")
@@ -120,17 +151,23 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
         entity_id: newId,
         details: {
           source: "reconciliation_truth_creation",
+          created_from: "payroll_truth_reconciliation",
           period_status_id: periodStatusId,
           truth_employee_name: truthRow.employee,
           truth_total: truthRow.total,
+          truth_hours: truthRow.totalPaidHours || truthRow.shiftHours || null,
+          truth_file_name: "payroll_truth",
         },
       });
 
-      toast.success(`Empleada ${firstName} ${lastName} creada desde Truth`);
-      onResolved({ mode: "create", employeeId: newId });
+      // Persist resolution
+      await persistResolution("create", newId);
+
+      toast.success(`Empleado ${firstName} ${lastName} creado desde Truth (inactivo por defecto)`);
+      onResolved({ mode: "create", employeeId: newId, resolvedAt: new Date().toISOString(), resolvedBy: userId });
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(`Error creando empleada: ${err.message}`);
+      toast.error(`Error creando empleado: ${err.message}`);
     }
     setSaving(false);
   };
@@ -175,9 +212,12 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
         },
       });
 
+      // Persist resolution
+      await persistResolution("link", selectedLinkId);
+
       const linked = candidates.find(c => c.id === selectedLinkId);
       toast.success(`Vinculado: ${truthRow.employee} → ${linked?.first_name} ${linked?.last_name}`);
-      onResolved({ mode: "link", employeeId: selectedLinkId });
+      onResolved({ mode: "link", employeeId: selectedLinkId, resolvedAt: new Date().toISOString(), resolvedBy: userId });
       onOpenChange(false);
     } catch (err: any) {
       toast.error(`Error vinculando: ${err.message}`);
@@ -185,10 +225,35 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
     setSaving(false);
   };
 
-  const handleTruthOnly = () => {
-    toast.info(`${truthRow.employee} marcado como solo-Truth para este cierre`);
-    onResolved({ mode: "truth_only" });
-    onOpenChange(false);
+  const handleTruthOnly = async () => {
+    setSaving(true);
+    try {
+      // Audit
+      await supabase.from("activity_log").insert({
+        user_id: userId,
+        company_id: companyId,
+        action: "truth_only_closure",
+        entity_type: "reconciliation",
+        entity_id: periodStatusId,
+        details: {
+          source: "reconciliation_truth_only",
+          period_status_id: periodStatusId,
+          truth_employee_name: truthRow.employee,
+          truth_total: truthRow.total,
+          truth_only_closure: true,
+        },
+      });
+
+      // Persist resolution
+      await persistResolution("truth_only");
+
+      toast.info(`${truthRow.employee} marcado como solo-Truth para este cierre`);
+      onResolved({ mode: "truth_only", resolvedAt: new Date().toISOString(), resolvedBy: userId });
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error(`Error registrando decisión: ${err.message}`);
+    }
+    setSaving(false);
   };
 
   return (
@@ -209,6 +274,12 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
             <span className="text-muted-foreground">Truth Total:</span>
             <span className="font-mono font-bold">${truthRow.total?.toFixed(2)}</span>
           </div>
+          {(truthRow.totalPaidHours || truthRow.shiftHours) ? (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Truth Hours:</span>
+              <span className="font-mono">{(truthRow.totalPaidHours || truthRow.shiftHours || 0).toFixed(1)}h</span>
+            </div>
+          ) : null}
           {truthRow.employerIdentification && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Employer ID:</span>
@@ -229,22 +300,22 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
             <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => setMode("create")}>
               <UserPlus className="h-4 w-4 text-primary shrink-0" />
               <div className="text-left">
-                <div className="font-medium text-sm">Crear empleada desde Truth</div>
-                <div className="text-xs text-muted-foreground">Crea un nuevo registro con los datos del archivo de nómina</div>
+                <div className="font-medium text-sm">Crear empleado desde Truth</div>
+                <div className="text-xs text-muted-foreground">Crea un nuevo registro (inactivo) con los datos del archivo de nómina</div>
               </div>
             </Button>
             <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => setMode("link")}>
               <Link2 className="h-4 w-4 text-primary shrink-0" />
               <div className="text-left">
-                <div className="font-medium text-sm">Vincular a empleada existente</div>
-                <div className="text-xs text-muted-foreground">Asocia esta fila de Truth a un empleado ya registrado</div>
+                <div className="font-medium text-sm">Vincular a empleado existente</div>
+                <div className="text-xs text-muted-foreground">Asocia esta fila de Truth a un empleado ya registrado y crea alias para futuros cierres</div>
               </div>
             </Button>
             <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => setMode("truth_only")}>
               <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
               <div className="text-left">
-                <div className="font-medium text-sm">Dejar solo en Truth para este cierre</div>
-                <div className="text-xs text-muted-foreground">No crear ni vincular — usar el monto de Truth directamente</div>
+                <div className="font-medium text-sm">Marcar solo-Truth para este cierre</div>
+                <div className="text-xs text-muted-foreground">No crear ni vincular — usar el monto de Truth directamente sin bloquear cierre</div>
               </div>
             </Button>
           </div>
@@ -280,7 +351,10 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
                 <Input value={ssnEin} onChange={e => setSsnEin(e.target.value)} placeholder="SSN/EIN" className="h-8 text-sm" />
               </div>
             </div>
-            <Badge variant="secondary" className="text-[10px]">Fuente: reconciliation_truth_creation</Badge>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary" className="text-[10px]">Fuente: payroll_truth_reconciliation</Badge>
+              <Badge variant="outline" className="text-[10px]">Status: inactivo por defecto</Badge>
+            </div>
           </div>
         )}
 
@@ -335,6 +409,7 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => setMode(null)}>← Volver</Button>
             <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
               El monto de <strong className="text-foreground">${truthRow.total?.toFixed(2)}</strong> se usará directamente para el cierre sin crear ni vincular un registro de empleado en el sistema.
+              <p className="mt-2 text-[10px]">Esta decisión queda registrada con auditoría completa (quién, cuándo, para qué periodo).</p>
             </div>
           </div>
         )}
@@ -343,7 +418,7 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
           {mode === "create" && (
             <Button onClick={handleCreate} disabled={saving || !firstName.trim()} className="gap-1.5">
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
-              Crear empleada
+              Crear empleado
             </Button>
           )}
           {mode === "link" && (
@@ -353,8 +428,8 @@ export default function UnmatchedResolutionDialog({ open, onOpenChange, truthRow
             </Button>
           )}
           {mode === "truth_only" && (
-            <Button onClick={handleTruthOnly} variant="secondary" className="gap-1.5">
-              <FileText className="h-3.5 w-3.5" />
+            <Button onClick={handleTruthOnly} disabled={saving} variant="secondary" className="gap-1.5">
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
               Confirmar solo Truth
             </Button>
           )}
