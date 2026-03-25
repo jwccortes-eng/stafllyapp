@@ -297,7 +297,7 @@ function buildTruthFromPersistedRow(row: any): PayrollTruthRow {
     phoneNumber: String(row?.phone || raw["Phone number"] || ""),
     email: String(row?.email || raw.Email || ""),
     totalPay: Number(row?.truth_total_pay) || 0,
-    hourlyRate: null,
+    hourlyRate: Number(row?.truth_hourly_rate) || Number(row?.truth_hourly_rate_derived) || null,
     payperDay: Number(row?.truth_pay_per_day) || 0,
     ryde: Number(row?.truth_ryde) || 0,
     tips: Number(row?.truth_tips) || 0,
