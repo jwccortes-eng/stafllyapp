@@ -353,6 +353,7 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
       total: getColumnDetection(headers, totalIndex),
       hourlyRate: getColumnDetection(headers, hourlyRateIndex),
       shiftHours: getColumnDetection(headers, shiftHoursIndex),
+      totalPaidHours: getColumnDetection(headers, totalPaidHoursIndex),
       observaciones: getColumnDetection(headers, observacionesIndex),
     },
     rows: Array.from(byEmployee.values()),
