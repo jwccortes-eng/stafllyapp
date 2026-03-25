@@ -98,6 +98,8 @@ interface ComparisonRow {
   matchEmployeeId?: string | null;
   matchedBy?: string;
   matchConfidence?: number;
+  closureSource?: string | null;
+  closureHoursUsed?: number | null;
   totalVariance: number;
   status: "match" | "close" | "mismatch" | "missing" | "identity_only";
   reviewGroup: ReviewGroup;
@@ -282,32 +284,57 @@ function mapPersistedRowStatus(rowStatus: string | null | undefined): Comparison
   return "missing";
 }
 
-function buildTruthFromPersistedRow(row: any): PayrollTruthRow {
+function buildTruthFromPersistedRow(row: any, truthFallback?: PayrollTruthRow): PayrollTruthRow {
   const raw = (row?.truth_raw_json || {}) as Record<string, any>;
   const firstName = String(row?.first_name || "").trim();
   const lastName = String(row?.last_name || "").trim();
-  const employee = `${firstName} ${lastName}`.trim() || String(raw.employee || "").trim() || "Empleado";
+  const fallbackEmployee = truthFallback?.employee || "";
+  const employee = `${firstName} ${lastName}`.trim() || fallbackEmployee || String(raw.employee || "").trim() || "Empleado";
+
+  const truthHoursValue = row?.truth_hours ?? row?.truth_paid_hours ?? row?.truth_total_hours ?? null;
+  const shiftHours = truthHoursValue != null && truthHoursValue !== ""
+    ? Number(truthHoursValue) || 0
+    : Number(truthFallback?.shiftHours) || 0;
+
+  const totalPayValue = row?.truth_total_pay;
+  const totalPay = totalPayValue != null && totalPayValue !== ""
+    ? Number(totalPayValue) || 0
+    : Number(truthFallback?.totalPay) || 0;
+
+  const explicitRateValue = row?.truth_hourly_rate ?? row?.truth_hourly_rate_derived ?? truthFallback?.hourlyRate ?? null;
+  const explicitRate = explicitRateValue != null && explicitRateValue !== "" ? Number(explicitRateValue) : null;
+  const derivedRate = shiftHours > 0 && totalPay > 0 ? round2(totalPay / shiftHours) : null;
+  const hourlyRate = explicitRate && explicitRate > 0 ? explicitRate : derivedRate;
+
+  const payperDay = row?.truth_pay_per_day != null ? Number(row?.truth_pay_per_day) || 0 : (truthFallback?.payperDay || 0);
+  const ryde = row?.truth_ryde != null ? Number(row?.truth_ryde) || 0 : (truthFallback?.ryde || 0);
+  const tips = row?.truth_tips != null ? Number(row?.truth_tips) || 0 : (truthFallback?.tips || 0);
+  const reimbursements = row?.truth_reimbursements != null ? Number(row?.truth_reimbursements) || 0 : (truthFallback?.reimbursements || 0);
+  const discount = Number(raw.discount) || truthFallback?.discount || 0;
+  const persistedTotal = row?.truth_total != null ? Number(row?.truth_total) || 0 : null;
+  const fallbackTotal = truthFallback?.total ?? null;
+  const total = persistedTotal ?? fallbackTotal ?? round2(totalPay + payperDay + ryde + tips + reimbursements + discount);
 
   return {
     employee,
-    firstName,
-    lastName,
-    employerIdentification: String(row?.employer_identification || ""),
-    verificationSsnEin: String(row?.verification_ssn_ein || ""),
-    phoneNumber: String(row?.phone || raw["Phone number"] || ""),
-    email: String(row?.email || raw.Email || ""),
-    totalPay: Number(row?.truth_total_pay) || 0,
-    hourlyRate: Number(row?.truth_hourly_rate) || Number(row?.truth_hourly_rate_derived) || null,
-    payperDay: Number(row?.truth_pay_per_day) || 0,
-    ryde: Number(row?.truth_ryde) || 0,
-    tips: Number(row?.truth_tips) || 0,
-    reimbursements: Number(row?.truth_reimbursements) || 0,
-    travelHours: Number(raw.travel_hours) || 0,
+    firstName: firstName || truthFallback?.firstName || "",
+    lastName: lastName || truthFallback?.lastName || "",
+    employerIdentification: String(row?.employer_identification || truthFallback?.employerIdentification || ""),
+    verificationSsnEin: String(row?.verification_ssn_ein || truthFallback?.verificationSsnEin || ""),
+    phoneNumber: String(row?.phone || raw["Phone number"] || truthFallback?.phoneNumber || ""),
+    email: String(row?.email || raw.Email || truthFallback?.email || ""),
+    totalPay,
+    hourlyRate,
+    payperDay,
+    ryde,
+    tips,
+    reimbursements,
+    travelHours: Number(raw.travel_hours) || truthFallback?.travelHours || 0,
     otros: Number(raw.otros) || 0,
-    discount: Number(raw.discount) || 0,
-    total: Number(row?.truth_total) || 0,
-    shiftHours: Number(row?.truth_hours) || Number(row?.truth_paid_hours) || 0,
-    observaciones: String(row?.truth_observaciones || ""),
+    discount,
+    total,
+    shiftHours,
+    observaciones: String(row?.truth_observaciones || truthFallback?.observaciones || ""),
   };
 }
 
@@ -633,9 +660,19 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           return;
         }
 
+        const truthByNormalizedName = new Map<string, PayrollTruthRow>();
+        for (const truthRow of truthData) {
+          truthByNormalizedName.set(normalizeName(truthRow.employee), truthRow);
+          const firstLast = `${truthRow.firstName || ""} ${truthRow.lastName || ""}`.trim();
+          if (firstLast) truthByNormalizedName.set(normalizeName(firstLast), truthRow);
+        }
+
         const hydrated = persistedRows
           .map((row) => {
-            const truth = buildTruthFromPersistedRow(row);
+            const rowName = `${String(row?.first_name || "").trim()} ${String(row?.last_name || "").trim()}`.trim();
+            const rowNameNormalized = normalizeName(rowName || String(row?.full_name_normalized || ""));
+            const truthFallback = truthByNormalizedName.get(rowNameNormalized);
+            const truth = buildTruthFromPersistedRow(row, truthFallback);
             const status = mapPersistedRowStatus(row?.row_status);
             const recon = buildReconFromPersistedRow(row, truth.employee);
             const rowVariance = Number(row?.variance_total);
@@ -658,6 +695,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               matchEmployeeId: row?.matched_system_employee_id || null,
               matchedBy: row?.matched_by || "truth_validation",
               matchConfidence: Number(row?.match_confidence) || 0,
+              closureSource: row?.closure_source || null,
+              closureHoursUsed: row?.closure_hours_used != null ? Number(row?.closure_hours_used) : null,
               totalVariance,
               status: operationalStatus,
               reviewGroup,
@@ -691,7 +730,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     return () => {
       cancelled = true;
     };
-  }, [companyId, periodStatusId, truthAuthoritativeMode, truthLoaded, truthSource?.type]);
+  }, [companyId, periodStatusId, truthAuthoritativeMode, truthLoaded, truthSource?.type, truthData]);
 
   // ── Persist reconciliation results to DB ──
   const persistResultsToDb = useCallback(async (compRows: ComparisonRow[], statsData: { matched: number; close: number; mismatch: number; missing: number; totalTruth: number; totalRecon: number; variance: number }) => {
@@ -1469,6 +1508,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           matchEmployeeId: match?.employeeId || recon.employee_id,
           matchedBy: match?.matchedBy || "name_exact",
           matchConfidence: match?.confidence || 90,
+          closureSource: truthAuthoritativeMode ? "truth" : (recon.hours_source_used || "none"),
+          closureHoursUsed: truthAuthoritativeMode ? (t.shiftHours || null) : (recon.clocked_hours || recon.base_pay_hours || null),
           totalVariance,
           status,
           reviewGroup,
@@ -2171,10 +2212,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                     const explicitRate = c.truth.hourlyRate;
                                     const derivedRate = truthHrs > 0 && truthPay > 0 ? round2(truthPay / truthHrs) : null;
                                     const effectiveRate = explicitRate || derivedRate;
-                                    const closureHrs = truthAuthoritativeMode
+                                    const closureHrs = c.closureHoursUsed ?? (truthAuthoritativeMode
                                       ? truthHrs
-                                      : (r?.clocked_hours || r?.base_pay_hours || 0);
-                                    const closureSrc = truthAuthoritativeMode ? "Truth" : r?.hours_source_used === "clocked" ? "Reloj" : r?.primary_source === "shift_calc" ? "Daily" : "Manual";
+                                      : (r?.clocked_hours || r?.base_pay_hours || 0));
+                                    const closureSourceRaw = (c.closureSource || "").toLowerCase();
+                                    const closureSrc = closureSourceRaw === "truth" || (truthAuthoritativeMode && !closureSourceRaw)
+                                      ? "Truth"
+                                      : closureSourceRaw === "clocked" || r?.hours_source_used === "clocked"
+                                        ? "Reloj"
+                                        : (closureSourceRaw === "scheduled" || r?.primary_source === "shift_calc")
+                                          ? "Daily"
+                                          : "Manual";
 
                                     return (
                                       <>
@@ -2232,7 +2280,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                               <p>Horas prog.: <span>{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</span></p>
                                               <p>Turnos: <span>{r?.schedule_count || 0}</span></p>
                                             </div>
-                                            <p className="text-[9px] text-muted-foreground mt-1">⚠️ Las horas programadas nunca se usan para nómina. Solo horas reales (reloj) o Truth pagado.</p>
+                                            <p className="text-[9px] text-muted-foreground mt-1">⚠️ Scheduled hours are estimated only and never used for payroll. Solo horas reales (reloj) o Truth pagado.</p>
                                           </div>
 
                                           {/* D. Closure Section */}
@@ -2254,7 +2302,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                   {/* Hard business rule reminder */}
                                   <div className="rounded-md bg-muted/50 border border-border px-3 py-1.5 text-[10px] text-muted-foreground flex items-center gap-2">
                                     <AlertTriangle className="h-3 w-3 shrink-0" />
-                                    <span><strong>Regla de nómina:</strong> Las horas programadas (scheduled) nunca se usan para el pago. Solo se aceptan horas reales de fichaje (clocked) o el archivo de nómina pagada (Truth).</span>
+                                    <span><strong>Regla de nómina:</strong> Scheduled hours are estimated only and never used for payroll. Solo se aceptan horas reales de fichaje (clocked) o el archivo de nómina pagada (Truth).</span>
                                   </div>
 
                                   <div className="grid grid-cols-2 gap-4">
