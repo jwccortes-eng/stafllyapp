@@ -2240,7 +2240,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                 return <>
                                   {authHrs.toFixed(1)}
                                   {rate > 0 && (
-                                    <span className="text-[9px] text-muted-foreground ml-0.5" title={`${authHrs.toFixed(1)} × $${rate.toFixed(2)} = $${c.truth.totalPay.toFixed(2)}`}>
+                                    <span className="text-[9px] text-muted-foreground ml-0.5" title={`Base: ${authHrs.toFixed(1)} × $${rate.toFixed(2)} = ${fmt(c.truth.totalPay)}`}>
                                       @${rate.toFixed(0)}
                                     </span>
                                   )}
