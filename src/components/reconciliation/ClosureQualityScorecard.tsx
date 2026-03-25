@@ -72,7 +72,7 @@ export default function ClosureQualityScorecard({ finalRecords, variances, perio
         <CardTitle className="text-sm flex items-center gap-2">
           <Brain className="h-4 w-4" /> Calidad de Cierre
           <Badge variant="outline" className="text-[10px] ml-auto">
-            {period.start_date} → {period.end_date}
+            {period.period_start} → {period.period_end}
           </Badge>
         </CardTitle>
       </CardHeader>
