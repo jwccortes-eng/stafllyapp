@@ -199,11 +199,11 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
   const rydeIndex = findColumnIndex(headers, ["Ryde", "Ride", "Rides"]);
   const totalIndex = findTotalColumnIndex(headers);
   const hourlyRateIndex = findColumnIndex(headers, ["Hourly rate (USD)", "Hourly rate", "Hourly rate USD"]);
-  const shiftHoursIndex = findColumnIndex(headers, [
-    "Shift hours",
+  const shiftHoursIndex = findColumnIndex(headers, ["Shift hours"]);
+  const totalPaidHoursIndex = findColumnIndex(headers, [
+    "Total paid hours",
     "Total work hours",
     "Total hours",
-    "Total paid hours",
     "Paid hours",
     "Horas totales",
     "Horas pagadas",
