@@ -15,7 +15,8 @@ import {
   type PayrollTruthRow,
 } from "@/lib/payroll-truth-parser";
 import { matchEmployees } from "@/lib/payroll-reconciliation-engine";
-import UnmatchedResolutionDialog from "./UnmatchedResolutionDialog";
+import UnmatchedResolutionDialog, { type ResolutionMode, type ResolutionResult } from "./UnmatchedResolutionDialog";
+import { UserPlus, Link2 } from "lucide-react";
 
 type LedgerCategory = "hourly" | "daily" | "ride" | "weekend" | "manual" | "deduction" | "reimbursement" | "other";
 type CompositionRole = "authoritative" | "informational_only" | "inferred" | "excluded_from_total";
