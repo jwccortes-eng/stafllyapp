@@ -1073,7 +1073,7 @@ export default function PayrollReconciliationPage() {
           </button>
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold font-heading">Reconciliación</h1>
-            {batchStatusBadge(activeBatch.status)}
+            {batchStatusBadge(activeBatch.status, truthCounts)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {activeBatch.truth_source_file_name || "Sin archivo de verdad"}
