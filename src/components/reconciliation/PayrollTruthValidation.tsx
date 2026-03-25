@@ -373,6 +373,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [dbPersisted, setDbPersisted] = useState(false);
   const [persistingToDb, setPersistingToDb] = useState(false);
   const [persistedComparison, setPersistedComparison] = useState<ComparisonRow[] | null>(null);
+  const [resolutionRow, setResolutionRow] = useState<PayrollTruthRow | null>(null);
+  const [resolutionTrigger, setResolutionTrigger] = useState(0);
 
   const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
