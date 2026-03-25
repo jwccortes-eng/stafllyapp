@@ -1247,21 +1247,29 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       });
 
       const scheduleCounts = new Map<string, number>();
+      const scheduleHoursMap = new Map<string, number>();
       for (const s of schedules) {
         if (!s.employee_id) continue;
         scheduleCounts.set(s.employee_id, (scheduleCounts.get(s.employee_id) || 0) + 1);
+        scheduleHoursMap.set(s.employee_id, (scheduleHoursMap.get(s.employee_id) || 0) + (Number(s.scheduled_hours) || 0));
       }
       scheduleCounts.forEach((count, empId) => {
-        getOrCreate(empId).schedule_count = count;
+        const row = getOrCreate(empId);
+        row.schedule_count = count;
+        row.scheduled_hours = round2(scheduleHoursMap.get(empId) || 0);
       });
 
       const clockCounts = new Map<string, number>();
+      const clockHoursMap = new Map<string, number>();
       for (const c of clocks) {
         if (!c.employee_id) continue;
         clockCounts.set(c.employee_id, (clockCounts.get(c.employee_id) || 0) + 1);
+        clockHoursMap.set(c.employee_id, (clockHoursMap.get(c.employee_id) || 0) + (Number(c.total_hours) || 0));
       }
       clockCounts.forEach((count, empId) => {
-        getOrCreate(empId).clock_count = count;
+        const row = getOrCreate(empId);
+        row.clock_count = count;
+        row.clocked_hours = round2(clockHoursMap.get(empId) || 0);
       });
 
       // === SHIFT-CALC PRIORITY OVERRIDE ===
