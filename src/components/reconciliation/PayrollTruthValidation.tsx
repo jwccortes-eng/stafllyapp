@@ -837,11 +837,15 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           truth_tips: c.truth.tips || 0,
           truth_reimbursements: c.truth.reimbursements || 0,
           truth_total: c.truth.total,
+          // Use totalPaidHours (weekly) as authoritative, fall back to shiftHours (daily)
           truth_hours: c.truth.shiftHours || null,
-          truth_paid_hours: c.truth.shiftHours || null,
+          truth_paid_hours: c.truth.totalPaidHours || c.truth.shiftHours || null,
           truth_hourly_rate: c.truth.hourlyRate || null,
-          truth_hourly_rate_derived: c.truth.shiftHours > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / c.truth.shiftHours) : null,
-          closure_hours_used: truthAuthoritativeMode ? (c.truth.shiftHours || null) : (r?.clocked_hours || r?.base_pay_hours || null),
+          truth_hourly_rate_derived: (() => {
+            const hrs = c.truth.totalPaidHours || c.truth.shiftHours || 0;
+            return hrs > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / hrs) : null;
+          })(),
+          closure_hours_used: truthAuthoritativeMode ? (c.truth.totalPaidHours || c.truth.shiftHours || null) : (r?.clocked_hours || r?.base_pay_hours || null),
           closure_source: truthAuthoritativeMode ? "truth" : (r?.hours_source_used || "none"),
           system_total_pay: r?.hourly_pay ?? null,
           system_pay_per_day: r ? (r.daily_pay + r.weekend_pay) : null,
