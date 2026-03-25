@@ -214,10 +214,10 @@ function SummaryCard({ label, truth, system, variance, tolerance, icon: Icon }: 
 
 // ─── Validation Report ───────────────────────────────────────────────
 
-function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary; parseResult?: { skipped_summary_rows: number; duplicate_names: string[]; parse_warnings: string[] } | null }) {
+function ValidationReportPanel({ summary, parseResult, truthCounts }: { summary: BatchSummary; parseResult?: { skipped_summary_rows: number; duplicate_names: string[]; parse_warnings: string[] } | null; truthCounts?: { validated: number; compositionOk: number; baseOk: number; pending: number; total: number } }) {
   const [expanded, setExpanded] = useState(false);
-  const matchRate = summary.truth_count > 0 ? summary.matched / summary.truth_count : 0;
-  const exactRate = summary.truth_count > 0 ? summary.exact_match / summary.truth_count : 0;
+  const tc = truthCounts || { validated: summary.exact_match, compositionOk: 0, baseOk: summary.exact_match, pending: summary.critical_mismatch, total: summary.truth_count };
+  const validatedRate = tc.total > 0 ? tc.validated / tc.total : 0;
 
   const mb = summary.match_breakdown;
   const matchMethods = [
@@ -245,14 +245,14 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
           <div>
             <p className="text-sm font-semibold font-heading">Reporte de Validación</p>
             <p className="text-[10px] text-muted-foreground">
-              {summary.matched}/{summary.truth_count} matched • {summary.exact_match} exactos • {summary.critical_mismatch} críticos
+              {tc.validated}/{tc.total} validados • {tc.compositionOk} composición • {tc.baseOk} base • {tc.pending} pendientes
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2">
-            <Progress value={matchRate * 100} className="h-1.5 w-20" />
-            <span className="text-xs font-semibold text-muted-foreground">{fmtPct(matchRate)}</span>
+            <Progress value={validatedRate * 100} className="h-1.5 w-20" />
+            <span className="text-xs font-semibold text-muted-foreground">{fmtPct(validatedRate)}</span>
           </div>
           {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </div>
@@ -264,28 +264,27 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
           <div className="grid grid-cols-2 gap-6 pt-4">
             <div>
               <div className="flex justify-between text-[11px] mb-1.5">
-                <span className="text-muted-foreground font-medium">Tasa de match</span>
-                <span className="font-bold">{fmtPct(matchRate)}</span>
+                <span className="text-muted-foreground font-medium">Truth Validados</span>
+                <span className="font-bold">{fmtPct(validatedRate)}</span>
               </div>
-              <Progress value={matchRate * 100} className="h-2" />
+              <Progress value={validatedRate * 100} className="h-2" />
             </div>
             <div>
               <div className="flex justify-between text-[11px] mb-1.5">
-                <span className="text-muted-foreground font-medium">Match exacto</span>
-                <span className="font-bold">{fmtPct(exactRate)}</span>
+                <span className="text-muted-foreground font-medium">Con composición</span>
+                <span className="font-bold">{fmtPct(tc.total > 0 ? tc.compositionOk / tc.total : 0)}</span>
               </div>
-              <Progress value={exactRate * 100} className="h-2" />
+              <Progress value={tc.total > 0 ? (tc.compositionOk / tc.total) * 100 : 0} className="h-2" />
             </div>
           </div>
 
           {/* Stats grid */}
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-            <StatMini label="Truth rows" value={summary.truth_count} />
-            <StatMini label="System rows" value={summary.system_count} />
-            <StatMini label="Matched" value={summary.matched} accent="success" />
-            <StatMini label="Exact match" value={summary.exact_match} accent="success" />
-            <StatMini label="Mismatch" value={summary.component_mismatch} accent="warning" />
-            <StatMini label="Críticos" value={summary.critical_mismatch} accent="destructive" />
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+            <StatMini label="Total empleados" value={tc.total} />
+            <StatMini label="✓ Validados" value={tc.validated} accent="success" />
+            <StatMini label="Composición OK" value={tc.compositionOk} accent="success" />
+            <StatMini label="Base OK" value={tc.baseOk} accent="success" />
+            <StatMini label="Pendientes" value={tc.pending} accent={tc.pending > 0 ? "warning" : "success"} />
           </div>
 
           <Separator className="bg-border/50" />
@@ -809,13 +808,43 @@ export default function PayrollReconciliationPage() {
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
+  // ─── Truth-authoritative reclassification ─────────────────────────
+  // Rows with a valid truth.total are considered "validated" regardless of engine classification
+  const truthCounts = useMemo(() => {
+    let validated = 0;
+    let compositionOk = 0;
+    let baseOk = 0;
+    let pending = 0;
+
+    for (const row of reconciliationRows) {
+      if (row.truth.total != null) {
+        validated++;
+        const disc = Number((row.truth as any).discount ?? row.truth.raw?.discount ?? 0);
+        const adic = (row.truth.pay_per_day || 0) + (row.truth.ryde || 0) + (row.truth.tips || 0) + (row.truth.reimbursements || 0);
+        if (adic > 0 || disc > 0) compositionOk++;
+        else if (row.truth.total_hours != null && row.truth.total_hours > 0) baseOk++;
+      } else {
+        pending++;
+      }
+    }
+    return { validated, compositionOk, baseOk, pending, total: reconciliationRows.length };
+  }, [reconciliationRows]);
+
+  // Truth-authoritative filter helper
+  const isTruthValidated = (row: ReconciliationRowResult) => row.truth.total != null;
+  const hasComposition = (row: ReconciliationRowResult) => {
+    const disc = Number((row.truth as any).discount ?? row.truth.raw?.discount ?? 0);
+    const adic = (row.truth.pay_per_day || 0) + (row.truth.ryde || 0) + (row.truth.tips || 0) + (row.truth.reimbursements || 0);
+    return adic > 0 || disc > 0;
+  };
+
   const filteredRows = useMemo(() => {
     let rows = reconciliationRows;
-    if (filter === "exact") rows = rows.filter(r => r.classification.is_exact_match);
-    if (filter === "mismatch") rows = rows.filter(r => r.classification.has_component_mismatch && !r.classification.has_critical_mismatch);
-    if (filter === "critical") rows = rows.filter(r => r.classification.has_critical_mismatch);
+    if (filter === "validated") rows = rows.filter(r => isTruthValidated(r));
+    if (filter === "composition") rows = rows.filter(r => hasComposition(r));
+    if (filter === "base_only") rows = rows.filter(r => isTruthValidated(r) && !hasComposition(r) && (r.truth.total_hours || 0) > 0);
+    if (filter === "pending") rows = rows.filter(r => !isTruthValidated(r));
     if (filter === "missing_system") rows = rows.filter(r => r.classification.row_status === "MISSING_IN_SYSTEM");
-    if (filter === "unmatched") rows = rows.filter(r => r.match.match_status === "UNMATCHED");
     if (filter === "manual") rows = rows.filter(r => r.classification.has_manual_adjustment);
     if (filter === "low_confidence") rows = rows.filter(r => r.match.match_confidence > 0 && r.match.match_confidence < 80);
     if (filter === "flags") rows = rows.filter(r => r.anomaly_flags.length > 0);
@@ -913,7 +942,7 @@ export default function PayrollReconciliationPage() {
                         {!b.payroll_period_start && <span className="ml-1.5 text-[10px] text-destructive">⚠ sin periodo</span>}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        {b.employees_truth_count} empleados • {b.matched_count} matched • {b.critical_mismatch_count} críticos
+                        {b.employees_truth_count} empleados • {b.matched_count} matched • Health: {b.health_grade || "—"}
                       </p>
                     </div>
                   </div>
@@ -1099,12 +1128,12 @@ export default function PayrollReconciliationPage() {
       {/* KPI strip */}
       {batchSummary && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <KpiCard label="Empleados Truth" value={batchSummary.truth_count} icon={Users} />
-          <KpiCard label="Matched" value={batchSummary.matched} subtitle={fmtPct(batchSummary.truth_count > 0 ? batchSummary.matched / batchSummary.truth_count : 0)} icon={UserCheck} accent="success" />
-          <KpiCard label="Match exacto" value={batchSummary.exact_match} icon={CheckCircle2} accent="success" />
-          <KpiCard label="Componente" value={batchSummary.component_mismatch} icon={AlertTriangle} accent={batchSummary.component_mismatch > 0 ? "warning" : "muted"} />
-          <KpiCard label="Críticos" value={batchSummary.critical_mismatch} icon={AlertOctagon} accent={batchSummary.critical_mismatch > 0 ? "destructive" : "muted"} />
-          <KpiCard label="Varianza Total" value={fmt(batchSummary.total_variance)} icon={TrendingUp} accent={batchSummary.total_variance > 10 ? "destructive" : batchSummary.total_variance > 1 ? "warning" : "success"} />
+          <KpiCard label="Empleados Truth" value={truthCounts.total} icon={Users} />
+          <KpiCard label="✓ Validados" value={truthCounts.validated} subtitle={fmtPct(truthCounts.total > 0 ? truthCounts.validated / truthCounts.total : 0)} icon={CheckCircle2} accent="success" />
+          <KpiCard label="Composición OK" value={truthCounts.compositionOk} icon={CheckCircle2} accent="success" />
+          <KpiCard label="Base OK" value={truthCounts.baseOk} icon={CheckCircle2} accent={truthCounts.baseOk > 0 ? "success" : "muted"} />
+          <KpiCard label="Pendientes" value={truthCounts.pending} icon={AlertOctagon} accent={truthCounts.pending > 0 ? "warning" : "muted"} />
+          <KpiCard label="Grand Total" value={fmt(batchSummary.totals_truth.grand_total)} icon={DollarSign} accent="success" />
         </div>
       )}
 
@@ -1123,7 +1152,7 @@ export default function PayrollReconciliationPage() {
 
       {/* Validation Report */}
       {batchSummary && (
-        <ValidationReportPanel summary={batchSummary} parseResult={truthParseResult} />
+        <ValidationReportPanel summary={batchSummary} parseResult={truthParseResult} truthCounts={truthCounts} />
       )}
 
       {/* Filters + Search */}
@@ -1140,13 +1169,13 @@ export default function PayrollReconciliationPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos ({reconciliationRows.length})</SelectItem>
-                <SelectItem value="exact">✓ Match exacto ({reconciliationRows.filter(r => r.classification.is_exact_match).length})</SelectItem>
-                <SelectItem value="mismatch">⚠ Parcial ({reconciliationRows.filter(r => r.classification.has_component_mismatch && !r.classification.has_critical_mismatch).length})</SelectItem>
-                <SelectItem value="critical">✕ Críticos ({reconciliationRows.filter(r => r.classification.has_critical_mismatch).length})</SelectItem>
+                <SelectItem value="validated">✓ Validados ({truthCounts.validated})</SelectItem>
+                <SelectItem value="composition">✓ Composición ({truthCounts.compositionOk})</SelectItem>
+                <SelectItem value="base_only">✓ Base OK ({truthCounts.baseOk})</SelectItem>
+                <SelectItem value="pending">⚠ Pendientes ({truthCounts.pending})</SelectItem>
                 <SelectItem value="missing_system">⊘ Sin sistema ({reconciliationRows.filter(r => r.classification.row_status === "MISSING_IN_SYSTEM").length})</SelectItem>
                 <SelectItem value="manual">◉ Ajuste manual ({reconciliationRows.filter(r => r.classification.has_manual_adjustment).length})</SelectItem>
                 <SelectItem value="low_confidence">◎ Baja confianza ({reconciliationRows.filter(r => r.match.match_confidence > 0 && r.match.match_confidence < 80).length})</SelectItem>
-                <SelectItem value="flags">⚑ Anomalías ({reconciliationRows.filter(r => r.anomaly_flags.length > 0).length})</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-[10px] text-muted-foreground ml-auto tabular-nums font-medium">{filteredRows.length} de {reconciliationRows.length} filas</p>
