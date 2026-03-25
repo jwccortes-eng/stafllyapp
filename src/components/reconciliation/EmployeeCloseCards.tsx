@@ -189,14 +189,20 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
         <ScrollArea className="max-h-[600px]">
           <div className="space-y-1.5">
             {filtered.map(({ record: r, name, variance: v }) => {
-              const vBadge = VARIANCE_BADGE[v?.variance_status || "exact_match"] || VARIANCE_BADGE.exact_match;
               const isSelected = selectedIds.has(r.id);
               const isExpanded = expanded.has(r.id);
               const isPending = !["approved", "resolved", "posted"].includes(r.reconciliation_status);
-              const StatusIcon = vBadge.icon;
               const truthPaidTotal = v?.source_payroll_total ?? r.source_payroll_total ?? 0;
               const systemInternalTotal = r.grand_total || r.final_total_pay || 0;
               const hasOperationalEvidence = ((r.scheduled_shifts || []).length + (r.worked_shifts || []).length + (r.payroll_rows || []).length) > 0;
+
+              // Evidence-aware badge: don't say "Exacto" if there's no linked evidence
+              const rawVarianceStatus = v?.variance_status || "exact_match";
+              const effectiveBadgeKey = (
+                !hasOperationalEvidence && isTruthAuthoritativeMode && (rawVarianceStatus === "exact_match" || rawVarianceStatus === "minor_variance")
+              ) ? "truth_validated" : rawVarianceStatus;
+              const vBadge = VARIANCE_BADGE[effectiveBadgeKey] || VARIANCE_BADGE.exact_match;
+              const StatusIcon = vBadge.icon;
               const inferredWithoutOperationalRecords = !hasOperationalEvidence && systemInternalTotal > 0;
               const systemVsTruthVariance = systemInternalTotal - truthPaidTotal;
               const truthOverrideCandidate = isTruthAuthoritativeMode && inferredWithoutOperationalRecords && truthPaidTotal > 0 && systemVsTruthVariance > 1;
