@@ -1608,6 +1608,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
   const [statusFilter, setStatusFilter] = useState<ComparisonRow["status"] | "all">("all");
   const [reviewGroupFilter, setReviewGroupFilter] = useState<ReviewGroup | "all">("all");
+  const [resolutionFilter, setResolutionFilter] = useState<"all" | "pending" | "create" | "link" | "truth_only">("all");
   const [sortByVariance, setSortByVariance] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
