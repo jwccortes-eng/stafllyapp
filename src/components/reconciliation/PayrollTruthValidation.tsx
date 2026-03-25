@@ -1470,11 +1470,18 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       return <Badge variant="warning" className="text-xs">↕ Pay-model mismatch</Badge>;
     }
 
+    // Evidence-aware: don't label "Exacto" if no linked operational evidence
+    const hasEvidence = row.recon && (row.recon.schedule_count > 0 || row.recon.clock_count > 0 || row.recon.payroll_row_count > 0);
+
     switch (row.status) {
       case "match":
-        return <Badge variant="default" className="text-xs">✓ Exacto</Badge>;
+        return hasEvidence
+          ? <Badge variant="default" className="text-xs">✓ Exacto</Badge>
+          : <Badge variant="secondary" className="text-xs">✓ Truth-validado</Badge>;
       case "close":
-        return <Badge variant="secondary" className="text-xs">≈ Cercano</Badge>;
+        return hasEvidence
+          ? <Badge variant="secondary" className="text-xs">≈ Cercano</Badge>
+          : <Badge variant="secondary" className="text-xs">≈ Truth-cercano</Badge>;
       case "mismatch":
         return <Badge variant="destructive" className="text-xs">✗ Diferente</Badge>;
       case "identity_only":
