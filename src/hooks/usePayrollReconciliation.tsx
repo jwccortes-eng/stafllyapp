@@ -130,6 +130,11 @@ export function usePayrollReconciliation() {
         truth_tips: r.tips,
         truth_reimbursements: r.reimbursements,
         truth_total: r.total,
+        truth_hours: r.total_hours || null,
+        truth_paid_hours: r.total_hours || null,
+        truth_hourly_rate_derived: r.total_hours && r.total_pay && r.total_hours > 0
+          ? Math.round((r.total_pay / r.total_hours) * 100) / 100
+          : null,
         truth_observaciones: r.observaciones || null,
         truth_date: r.date || null,
         truth_corte: r.corte || null,
