@@ -1170,13 +1170,13 @@ export default function PayrollReconciliationPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos ({reconciliationRows.length})</SelectItem>
-                <SelectItem value="exact">✓ Match exacto ({reconciliationRows.filter(r => r.classification.is_exact_match).length})</SelectItem>
-                <SelectItem value="mismatch">⚠ Parcial ({reconciliationRows.filter(r => r.classification.has_component_mismatch && !r.classification.has_critical_mismatch).length})</SelectItem>
-                <SelectItem value="critical">✕ Críticos ({reconciliationRows.filter(r => r.classification.has_critical_mismatch).length})</SelectItem>
+                <SelectItem value="validated">✓ Validados ({truthCounts.validated})</SelectItem>
+                <SelectItem value="composition">✓ Composición ({truthCounts.compositionOk})</SelectItem>
+                <SelectItem value="base_only">✓ Base OK ({truthCounts.baseOk})</SelectItem>
+                <SelectItem value="pending">⚠ Pendientes ({truthCounts.pending})</SelectItem>
                 <SelectItem value="missing_system">⊘ Sin sistema ({reconciliationRows.filter(r => r.classification.row_status === "MISSING_IN_SYSTEM").length})</SelectItem>
                 <SelectItem value="manual">◉ Ajuste manual ({reconciliationRows.filter(r => r.classification.has_manual_adjustment).length})</SelectItem>
                 <SelectItem value="low_confidence">◎ Baja confianza ({reconciliationRows.filter(r => r.match.match_confidence > 0 && r.match.match_confidence < 80).length})</SelectItem>
-                <SelectItem value="flags">⚑ Anomalías ({reconciliationRows.filter(r => r.anomaly_flags.length > 0).length})</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-[10px] text-muted-foreground ml-auto tabular-nums font-medium">{filteredRows.length} de {reconciliationRows.length} filas</p>
