@@ -2130,12 +2130,20 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             <TableCell className="font-medium text-sm">{c.employee}</TableCell>
                             <TableCell>{statusBadge(c)}</TableCell>
                             <TableCell>{reviewGroupBadge(c.reviewGroup)}</TableCell>
-                            <TableCell className="text-right font-mono text-xs">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}
-                              {c.truth.shiftHours > 0 && c.truth.totalPay > 0 && (
-                                <span className="text-[9px] text-muted-foreground ml-0.5" title={`${c.truth.shiftHours.toFixed(1)} × $${(c.truth.hourlyRate || round2(c.truth.totalPay / c.truth.shiftHours)).toFixed(2)} = $${c.truth.totalPay.toFixed(2)}`}>
-                                  @${(c.truth.hourlyRate || round2(c.truth.totalPay / c.truth.shiftHours)).toFixed(0)}
-                                </span>
-                              )}
+                            <TableCell className="text-right font-mono text-xs">
+                              {(() => {
+                                const authHrs = c.truth.totalPaidHours || c.truth.shiftHours || 0;
+                                if (!authHrs) return "—";
+                                const rate = c.truth.hourlyRate || (authHrs > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / authHrs) : 0);
+                                return <>
+                                  {authHrs.toFixed(1)}
+                                  {rate > 0 && (
+                                    <span className="text-[9px] text-muted-foreground ml-0.5" title={`${authHrs.toFixed(1)} × $${rate.toFixed(2)} = $${c.truth.totalPay.toFixed(2)}`}>
+                                      @${rate.toFixed(0)}
+                                    </span>
+                                  )}
+                                </>;
+                              })()}
                             </TableCell>
                             <TableCell className="text-right font-mono text-xs">{r?.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-xs text-muted-foreground">{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</TableCell>
