@@ -942,7 +942,7 @@ export default function PayrollReconciliationPage() {
                         {!b.payroll_period_start && <span className="ml-1.5 text-[10px] text-destructive">⚠ sin periodo</span>}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        {b.employees_truth_count} empleados • {b.matched_count} matched • {b.critical_mismatch_count} críticos
+                        {b.employees_truth_count} empleados • {b.matched_count} matched • Health: {b.health_grade || "—"}
                       </p>
                     </div>
                   </div>
