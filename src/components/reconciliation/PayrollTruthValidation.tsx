@@ -2144,7 +2144,30 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                       </Button>
                     ))}
                   </div>
-                </DataTableToolbar>
+
+                  {/* Resolution filter */}
+                  {resolutionStats.total > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {([
+                        { key: "all" as const, label: "Todas resoluciones", count: resolutionStats.total },
+                        { key: "pending" as const, label: "Pendientes", count: resolutionStats.pending },
+                        { key: "create" as const, label: "Nuevos", count: resolutionStats.created },
+                        { key: "link" as const, label: "Vinculados", count: resolutionStats.linked },
+                        { key: "truth_only" as const, label: "Solo Truth", count: resolutionStats.truthOnly },
+                      ]).map(r => (
+                        <Button
+                          key={r.key}
+                          size="sm"
+                          variant={resolutionFilter === r.key ? "default" : "outline"}
+                          className="h-7 text-xs gap-1 px-2"
+                          onClick={() => setResolutionFilter(r.key)}
+                        >
+                          {r.label}
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">{r.count}</Badge>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 <Button
                   size="sm"
                   variant={sortByVariance ? 'default' : 'outline'}
