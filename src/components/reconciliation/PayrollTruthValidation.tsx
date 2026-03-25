@@ -1612,6 +1612,22 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [sortByVariance, setSortByVariance] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
+  /** Helper: get resolution for a row */
+  const getResolution = useCallback((c: ComparisonRow) => {
+    return resolutionMap.get(normalizeName(c.employee)) || null;
+  }, [resolutionMap]);
+
+  /** Resolution stats */
+  const resolutionStats = useMemo(() => {
+    const unresolvedRows = comparison.filter(c => c.status === "missing" || (c.status === "identity_only" && !c.recon));
+    const resolved = unresolvedRows.filter(c => getResolution(c) !== null);
+    const pending = unresolvedRows.length - resolved.length;
+    const created = unresolvedRows.filter(c => getResolution(c)?.resolution_mode === "create").length;
+    const linked = unresolvedRows.filter(c => getResolution(c)?.resolution_mode === "link").length;
+    const truthOnly = unresolvedRows.filter(c => getResolution(c)?.resolution_mode === "truth_only").length;
+    return { total: unresolvedRows.length, resolved: resolved.length, pending, created, linked, truthOnly };
+  }, [comparison, getResolution]);
+
   const filteredComparison = useMemo(() => {
     let rows = comparison;
     if (statusFilter !== "all") {
@@ -1624,11 +1640,20 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     if (reviewGroupFilter !== "all") {
       rows = rows.filter(c => c.reviewGroup === reviewGroupFilter);
     }
+    if (resolutionFilter !== "all") {
+      rows = rows.filter(c => {
+        const isUnresolved = c.status === "missing" || (c.status === "identity_only" && !c.recon);
+        if (!isUnresolved) return false;
+        const res = getResolution(c);
+        if (resolutionFilter === "pending") return !res;
+        return res?.resolution_mode === resolutionFilter;
+      });
+    }
     if (sortByVariance) {
       rows = [...rows].sort((a, b) => Math.abs(b.totalVariance) - Math.abs(a.totalVariance));
     }
     return rows;
-  }, [comparison, statusFilter, reviewGroupFilter, sortByVariance, searchTerm]);
+  }, [comparison, statusFilter, reviewGroupFilter, resolutionFilter, sortByVariance, searchTerm, getResolution]);
 
   const [showRawRecords, setShowRawRecords] = useState(false);
 
