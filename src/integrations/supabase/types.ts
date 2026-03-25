@@ -578,6 +578,68 @@ export type Database = {
           },
         ]
       }
+      closure_quality_log: {
+        Row: {
+          anomalous_clocks_suppressed: number
+          auto_approved: number
+          closed_at: string
+          closure_confidence_pct: number | null
+          company_id: string
+          created_by: string | null
+          id: string
+          known_pattern_resolved: number
+          manual_review: number
+          new_patterns_detected: number
+          notes: string | null
+          period_id: string
+          period_status_id: string | null
+          total_employees: number
+          truth_validated: number
+        }
+        Insert: {
+          anomalous_clocks_suppressed?: number
+          auto_approved?: number
+          closed_at?: string
+          closure_confidence_pct?: number | null
+          company_id: string
+          created_by?: string | null
+          id?: string
+          known_pattern_resolved?: number
+          manual_review?: number
+          new_patterns_detected?: number
+          notes?: string | null
+          period_id: string
+          period_status_id?: string | null
+          total_employees?: number
+          truth_validated?: number
+        }
+        Update: {
+          anomalous_clocks_suppressed?: number
+          auto_approved?: number
+          closed_at?: string
+          closure_confidence_pct?: number | null
+          company_id?: string
+          created_by?: string | null
+          id?: string
+          known_pattern_resolved?: number
+          manual_review?: number
+          new_patterns_detected?: number
+          notes?: string | null
+          period_id?: string
+          period_status_id?: string | null
+          total_employees?: number
+          truth_validated?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "closure_quality_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           brand_color: string | null
@@ -5260,12 +5322,14 @@ export type Database = {
       }
       period_base_pay: {
         Row: {
+          anomaly_flags: Json | null
           base_total_pay: number
           company_id: string
           created_at: string
           employee_id: string
           id: string
           import_id: string | null
+          is_anomalous: boolean | null
           period_id: string
           total_overtime: number | null
           total_paid_hours: number | null
@@ -5274,12 +5338,14 @@ export type Database = {
           weekly_total_hours: number | null
         }
         Insert: {
+          anomaly_flags?: Json | null
           base_total_pay?: number
           company_id?: string
           created_at?: string
           employee_id: string
           id?: string
           import_id?: string | null
+          is_anomalous?: boolean | null
           period_id: string
           total_overtime?: number | null
           total_paid_hours?: number | null
@@ -5288,12 +5354,14 @@ export type Database = {
           weekly_total_hours?: number | null
         }
         Update: {
+          anomaly_flags?: Json | null
           base_total_pay?: number
           company_id?: string
           created_at?: string
           employee_id?: string
           id?: string
           import_id?: string | null
+          is_anomalous?: boolean | null
           period_id?: string
           total_overtime?: number | null
           total_paid_hours?: number | null
@@ -6574,6 +6642,59 @@ export type Database = {
             columns: ["period_status_id"]
             isOneToOne: false
             referencedRelation: "reconciliation_period_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_known_patterns: {
+        Row: {
+          auto_resolution: string | null
+          company_id: string
+          created_by: string | null
+          description: string | null
+          first_seen_at: string
+          id: string
+          is_active: boolean
+          last_seen_at: string
+          match_criteria: Json
+          pattern_key: string
+          pattern_label: string
+          times_seen: number
+        }
+        Insert: {
+          auto_resolution?: string | null
+          company_id: string
+          created_by?: string | null
+          description?: string | null
+          first_seen_at?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          match_criteria?: Json
+          pattern_key: string
+          pattern_label: string
+          times_seen?: number
+        }
+        Update: {
+          auto_resolution?: string | null
+          company_id?: string
+          created_by?: string | null
+          description?: string | null
+          first_seen_at?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          match_criteria?: Json
+          pattern_key?: string
+          pattern_label?: string
+          times_seen?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_known_patterns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]

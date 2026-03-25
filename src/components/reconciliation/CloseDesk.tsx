@@ -12,6 +12,7 @@ import {
 import type { PeriodStatus, EmployeeFinalRecord, EmployeeVariance } from "@/hooks/useReconciliationPeriod";
 import type { ClassifyAction } from "./QuickClassifyBar";
 import EmployeeCloseCards from "./EmployeeCloseCards";
+import ClosureQualityScorecard from "./ClosureQualityScorecard";
 import FinancialAccuracyPanel from "./FinancialAccuracyPanel";
 import AutoApprovalPanel from "./AutoApprovalPanel";
 
@@ -272,6 +273,15 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
             </Button>
           </div>
         </Card>
+      )}
+
+      {/* CLOSURE QUALITY SCORECARD */}
+      {finalRecords.length > 0 && (
+        <ClosureQualityScorecard
+          finalRecords={finalRecords}
+          variances={variances}
+          period={period}
+        />
       )}
 
       {/* EMPLOYEE CLOSE CARDS */}

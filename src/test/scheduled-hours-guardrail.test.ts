@@ -61,3 +61,84 @@ describe("Hard Payroll Rule: Scheduled hours are never pay authority", () => {
     expect(result.confidence).toBeLessThan(50);
   });
 });
+
+describe("Known Pattern Detector: system learns from each close", () => {
+  // Import dynamically to keep test file self-contained
+  let detectKnownPatterns: typeof import("@/lib/known-pattern-detector").detectKnownPatterns;
+
+  beforeAll(async () => {
+    const mod = await import("@/lib/known-pattern-detector");
+    detectKnownPatterns = mod.detectKnownPatterns;
+  });
+
+  it("detects system-inflated-no-evidence pattern (Jonathan Lopez pattern)", () => {
+    const records = [
+      {
+        employee_id: "emp-1",
+        grand_total: 352.50,
+        source_payroll_total: 82,
+        base_pay: 352.50,
+        total_scheduled_hours: 5.5,
+        total_worked_hours: 0,
+        shift_calculation_source: "truth_validation",
+        reconciliation_status: "partial",
+        warnings: [],
+        scheduled_shifts: [],
+        worked_shifts: [],
+        payroll_rows: [],
+      },
+    ];
+    const patterns = detectKnownPatterns(records);
+    const inflated = patterns.find(p => p.patternKey === "system_inflated_no_evidence");
+    expect(inflated).toBeDefined();
+    expect(inflated!.affectedEmployeeIds).toContain("emp-1");
+    expect(inflated!.suggestedResolution).toBe("approve");
+  });
+
+  it("detects identity-only-no-data pattern", () => {
+    const records = [
+      {
+        employee_id: "emp-2",
+        grand_total: 0,
+        source_payroll_total: 0,
+        base_pay: 0,
+        total_scheduled_hours: 0,
+        total_worked_hours: 0,
+        shift_calculation_source: "truth_validation",
+        reconciliation_status: "partial",
+        warnings: [],
+        scheduled_shifts: [],
+        worked_shifts: [],
+        payroll_rows: [],
+      },
+    ];
+    const patterns = detectKnownPatterns(records);
+    const identity = patterns.find(p => p.patternKey === "identity_only_no_data");
+    expect(identity).toBeDefined();
+    expect(identity!.suggestedResolution).toBe("suppress");
+  });
+
+  it("detects exact-match-with-evidence as auto-approvable", () => {
+    const records = [
+      {
+        employee_id: "emp-3",
+        grand_total: 500,
+        source_payroll_total: 500,
+        base_pay: 500,
+        total_scheduled_hours: 30,
+        total_worked_hours: 30,
+        shift_calculation_source: "native",
+        reconciliation_status: "partial",
+        warnings: [],
+        scheduled_shifts: [{}],
+        worked_shifts: [{}],
+        payroll_rows: [{}],
+      },
+    ];
+    const patterns = detectKnownPatterns(records);
+    const exact = patterns.find(p => p.patternKey === "exact_match_with_evidence");
+    expect(exact).toBeDefined();
+    expect(exact!.suggestedResolution).toBe("approve");
+    expect(exact!.confidence).toBeGreaterThanOrEqual(95);
+  });
+});
