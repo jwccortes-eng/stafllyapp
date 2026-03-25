@@ -1657,6 +1657,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
   const [showRawRecords, setShowRawRecords] = useState(false);
 
+  const resolutionBadge = (row: ComparisonRow) => {
+    const res = getResolution(row);
+    if (!res) return null;
+    switch (res.resolution_mode) {
+      case "create": return <Badge variant="info" className="text-[10px] gap-0.5"><UserPlus className="h-2.5 w-2.5" />Nuevo</Badge>;
+      case "link": return <Badge variant="default" className="text-[10px] gap-0.5"><Link2 className="h-2.5 w-2.5" />Vinculado</Badge>;
+      case "truth_only": return <Badge variant="secondary" className="text-[10px] gap-0.5"><FileText className="h-2.5 w-2.5" />Solo Truth</Badge>;
+      default: return null;
+    }
+  };
+
   const statusBadge = (row: ComparisonRow) => {
     const hasEvidence = row.recon && (row.recon.schedule_count > 0 || row.recon.clock_count > 0 || row.recon.payroll_row_count > 0);
     const closureAlignedToTruth = truthAuthoritativeMode && Math.abs(round2(row.closureAmount - (row.truth.total || 0))) < 1;
@@ -1668,13 +1679,18 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
       return <Badge variant="warning" className="text-xs">↕ Pay-model mismatch</Badge>;
     }
 
+    // Show resolution badge for unresolved/missing rows that have been resolved
+    const res = getResolution(row);
+    if ((row.status === "missing" || (row.status === "identity_only" && !row.recon)) && res) {
+      return resolutionBadge(row);
+    }
+
     if (closureAlignedToTruth && row.status !== "identity_only" && row.status !== "missing") {
       return hasEvidence
         ? <Badge variant="secondary" className="text-xs">✓ Cerrado por Truth</Badge>
         : <Badge variant="secondary" className="text-xs">✓ Truth-validado</Badge>;
     }
 
-    // Evidence-aware: don't label "Exacto" if no linked operational evidence
     switch (row.status) {
       case "match":
         return hasEvidence
