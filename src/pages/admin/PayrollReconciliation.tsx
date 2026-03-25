@@ -447,15 +447,19 @@ function PreApprovalSafetyPanel({ summary, onApprove, onCancel }: { summary: Bat
 
 function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClose: () => void }) {
   const name = `${row.truth.first_name} ${row.truth.last_name}`;
-  const components = [
-    { label: "Hours", truth: row.truth.total_hours, system: row.system?.total_hours ?? null, variance: row.variances.hours, isHours: true, icon: Clock },
-    { label: "Total Pay", truth: row.truth.total_pay, system: row.system?.total_pay ?? null, variance: row.variances.total_pay, icon: DollarSign },
-    { label: "Pay Per Day", truth: row.truth.pay_per_day, system: row.system?.pay_per_day ?? null, variance: row.variances.pay_per_day, icon: DollarSign },
-    { label: "Ryde", truth: row.truth.ryde, system: row.system?.ryde ?? null, variance: row.variances.ryde, icon: Car },
-    { label: "Tips", truth: row.truth.tips, system: row.system?.tips ?? null, variance: row.variances.tips, icon: UtensilsCrossed },
-    { label: "Reimbursements", truth: row.truth.reimbursements, system: row.system?.reimbursements ?? null, variance: row.variances.reimbursements, icon: Receipt },
-    { label: "TOTAL", truth: row.truth.total, system: row.system?.total ?? null, variance: row.variances.total, icon: DollarSign },
-  ];
+
+  const hrs = row.truth.total_hours;
+  const basePay = row.truth.total_pay || 0;
+  const rate = hrs && hrs > 0 && basePay > 0 ? Math.round((basePay / hrs) * 100) / 100 : null;
+  const ppd = row.truth.pay_per_day || 0;
+  const ryde = row.truth.ryde || 0;
+  const tips = row.truth.tips || 0;
+  const reimb = row.truth.reimbursements || 0;
+  const disc = Number((row.truth as any).discount ?? row.truth.raw?.discount ?? 0);
+  const travelHrs = Number(row.truth.raw?.travel_hours ?? 0);
+  const otros = Number(row.truth.raw?.otros ?? 0);
+  const adicionales = ppd + ryde + tips + reimb + travelHrs + otros;
+  const total = row.truth.total;
 
   return (
     <DialogContent className="max-w-2xl max-h-[85vh] overflow-auto p-0">
@@ -466,7 +470,7 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
             <DialogTitle className="text-lg font-heading">{name}</DialogTitle>
           </div>
           <DialogDescription className="flex items-center gap-2 flex-wrap">
-            {statusBadge(row.classification.row_status)}
+            {statusBadge(row.classification.row_status, row)}
             {matchBadge(row.match.match_confidence, row.match.matched_by)}
             {row.match.match_notes && <span className="text-[10px] text-muted-foreground/70 italic">{row.match.match_notes}</span>}
           </DialogDescription>
@@ -492,33 +496,65 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
           </div>
         )}
 
-        {/* Component comparison */}
-        <div className="rounded-xl border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="text-[10px] py-2.5 pl-4">Componente</TableHead>
-                <TableHead className="text-[10px] py-2.5 text-right">Truth</TableHead>
-                <TableHead className="text-[10px] py-2.5 text-right">System</TableHead>
-                <TableHead className="text-[10px] py-2.5 text-right pr-4">Δ Varianza</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {components.map(c => {
-                const hasIssue = c.variance != null && Math.abs(c.variance) > (c.isHours ? 0.1 : 1);
-                const isTotal = c.label === "TOTAL";
-                return (
-                  <TableRow key={c.label} className={`${isTotal ? "bg-muted/20 font-semibold border-t-2 border-border/50" : hasIssue ? "bg-destructive/[0.03]" : ""}`}>
-                    <TableCell className="py-2 pl-4 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <c.icon className="h-3 w-3 text-muted-foreground/50" />
-                        {c.label}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-2 text-right font-mono text-xs">{c.isHours ? fmtH(c.truth) : fmt(c.truth)}</TableCell>
-                    <TableCell className="py-2 text-right font-mono text-xs">{c.isHours ? fmtH(c.system) : fmt(c.system)}</TableCell>
-                    <TableCell className="py-2 text-right text-xs pr-4">{varianceCell(c.variance, c.isHours ? 0.1 : 1)}</TableCell>
-                  </TableRow>
+        {/* 4-Block Composition */}
+        <div className="space-y-3">
+          {/* A. Base por horas */}
+          <div className="rounded-lg border border-border/50 p-4">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-3">A. Base por horas</p>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-[10px] text-muted-foreground">Horas</p>
+                <p className="font-mono text-lg font-bold">{hrs != null ? hrs.toFixed(2) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">Tarifa/h</p>
+                <p className="font-mono text-lg font-bold">{rate != null ? `$${rate.toFixed(2)}` : "—"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">= Pago Base</p>
+                <p className="font-mono text-lg font-bold">{fmt(basePay)}</p>
+              </div>
+            </div>
+            {hrs != null && rate != null && (
+              <p className="text-[10px] text-muted-foreground mt-2 font-mono">{hrs.toFixed(2)}h × ${rate.toFixed(2)}/h = {fmt(basePay)}</p>
+            )}
+          </div>
+
+          {/* B. Adicionales */}
+          {adicionales > 0 && (
+            <div className="rounded-lg border border-earning/30 bg-earning/[0.03] p-4">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-earning mb-3">B. Adicionales (+${adicionales.toFixed(2)})</p>
+              <div className="grid grid-cols-3 gap-3">
+                {ppd > 0 && <div><p className="text-[10px] text-muted-foreground">Pay Per Day</p><p className="font-mono font-semibold">{fmt(ppd)}</p></div>}
+                {ryde > 0 && <div><p className="text-[10px] text-muted-foreground">Ryde</p><p className="font-mono font-semibold">{fmt(ryde)}</p></div>}
+                {tips > 0 && <div><p className="text-[10px] text-muted-foreground">Tips</p><p className="font-mono font-semibold">{fmt(tips)}</p></div>}
+                {reimb > 0 && <div><p className="text-[10px] text-muted-foreground">Reimbursements</p><p className="font-mono font-semibold">{fmt(reimb)}</p></div>}
+                {travelHrs > 0 && <div><p className="text-[10px] text-muted-foreground">Travel Hours</p><p className="font-mono font-semibold">{fmt(travelHrs)}</p></div>}
+                {otros > 0 && <div><p className="text-[10px] text-muted-foreground">Otros</p><p className="font-mono font-semibold">{fmt(otros)}</p></div>}
+              </div>
+            </div>
+          )}
+
+          {/* C. Descuentos */}
+          {disc > 0 && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/[0.03] p-4">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-destructive mb-2">C. Descuentos (−${disc.toFixed(2)})</p>
+              <p className="font-mono text-lg font-bold text-destructive">−{fmt(disc)}</p>
+            </div>
+          )}
+
+          {/* D. Total final */}
+          <div className="rounded-lg border-2 border-primary/40 bg-primary/[0.04] p-4">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-primary mb-2">D. Total Final</p>
+            <p className="font-mono text-2xl font-black">{fmt(total)}</p>
+            <p className="text-xs text-muted-foreground mt-1 font-mono">
+              {basePay > 0 ? fmt(basePay) : "$0"}
+              {adicionales > 0 ? ` + $${adicionales.toFixed(2)}` : ""}
+              {disc > 0 ? ` − $${disc.toFixed(2)}` : ""}
+              {" = "}{fmt(total)}
+            </p>
+          </div>
+        </div>
                 );
               })}
             </TableBody>
