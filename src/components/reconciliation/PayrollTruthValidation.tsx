@@ -2332,7 +2332,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
                           {isExpanded && (
                             <TableRow key={`${c.employee}-detail`} className="bg-muted/20 hover:bg-muted/20">
-                              <TableCell colSpan={20} className="p-3">
+                              <TableCell colSpan={14} className="p-3">
                                 <div className="space-y-3 text-xs">
                                   {/* ── Resolver action for unmatched rows ── */}
                                   {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) && (() => {
