@@ -11,12 +11,13 @@ import {
   ChevronsRight, Filter, Car, Calendar, PenTool, Briefcase,
 } from "lucide-react";
 import QuickClassifyBar, { type ClassifyAction } from "./QuickClassifyBar";
-import type { EmployeeFinalRecord, EmployeeVariance } from "@/hooks/useReconciliationPeriod";
+import type { EmployeeFinalRecord, EmployeeVariance, PeriodStatus } from "@/hooks/useReconciliationPeriod";
 
 interface Props {
   finalRecords: EmployeeFinalRecord[];
   variances: EmployeeVariance[];
   employeeMap: Map<string, string>;
+  period: PeriodStatus;
   onNavigate: (tab: string) => void;
   onApproveRecord?: (recordId: string) => void;
   onBulkApprove?: (recordIds: string[]) => void;
@@ -45,7 +46,7 @@ const PAY_ICONS: Record<string, any> = {
   hourly: Clock, daily: Calendar, pay_ride: Car, weekend_job: Briefcase, manual_adjustment: PenTool, mixed: DollarSign, unknown: Briefcase,
 };
 
-export default function EmployeeCloseCards({ finalRecords, variances, employeeMap, onNavigate, onApproveRecord, onBulkApprove, onClassifyRecords, onMarkReviewed }: Props) {
+export default function EmployeeCloseCards({ finalRecords, variances, employeeMap, period, onNavigate, onApproveRecord, onBulkApprove, onClassifyRecords, onMarkReviewed }: Props) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterMode>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -56,6 +57,12 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
     variances.forEach(v => map.set(v.employee_id, v));
     return map;
   }, [variances]);
+
+  const isTruthAuthoritativeMode = useMemo(() => (
+    period.closure_method === "truth_validation" ||
+    period.calculation_mode === "historical_import" ||
+    period.total_clocks === 0
+  ), [period]);
 
   const filtered = useMemo(() => {
     let items = finalRecords.map(r => ({
@@ -186,8 +193,15 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
               const isExpanded = expanded.has(r.id);
               const isPending = !["approved", "resolved", "posted"].includes(r.reconciliation_status);
               const StatusIcon = vBadge.icon;
-              const displayTotal = r.grand_total || r.final_total_pay || 0;
-              const varianceAbs = Math.abs(v?.variance_amount || 0);
+              const truthPaidTotal = v?.source_payroll_total ?? r.source_payroll_total ?? 0;
+              const systemInternalTotal = r.grand_total || r.final_total_pay || 0;
+              const hasOperationalEvidence = ((r.scheduled_shifts || []).length + (r.worked_shifts || []).length + (r.payroll_rows || []).length) > 0;
+              const inferredWithoutOperationalRecords = !hasOperationalEvidence && systemInternalTotal > 0;
+              const systemVsTruthVariance = systemInternalTotal - truthPaidTotal;
+              const truthOverrideCandidate = isTruthAuthoritativeMode && inferredWithoutOperationalRecords && truthPaidTotal > 0 && systemVsTruthVariance > 1;
+              const payModelMismatch = isTruthAuthoritativeMode && !inferredWithoutOperationalRecords && truthPaidTotal > 0 && systemVsTruthVariance > 50;
+              const finalClosureTotal = isTruthAuthoritativeMode && truthPaidTotal > 0 ? truthPaidTotal : systemInternalTotal;
+              const varianceAbs = Math.abs(systemVsTruthVariance);
               const varianceClass = varianceAbs > 50 ? "text-destructive" : varianceAbs > 10 ? "text-warning" : "text-muted-foreground";
 
               return (
@@ -206,13 +220,30 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                           <StatusIcon className="h-2.5 w-2.5" /> {vBadge.label}
                         </Badge>
                         {isPending && <Badge variant="outline" className="text-[10px] shrink-0 text-muted-foreground">Pendiente</Badge>}
+                        {truthOverrideCandidate && (
+                          <Badge variant="info" className="text-[10px] shrink-0">Override por Truth</Badge>
+                        )}
+                        {!truthOverrideCandidate && payModelMismatch && (
+                          <Badge variant="warning" className="text-[10px] shrink-0">Pay-model mismatch</Badge>
+                        )}
+                        {isTruthAuthoritativeMode && inferredWithoutOperationalRecords && !truthOverrideCandidate && (
+                          <Badge variant="secondary" className="text-[10px] shrink-0">Sistema inferido</Badge>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right shrink-0 min-w-[80px]">
-                      <div className="text-xs font-mono font-bold">{fmt(displayTotal)}</div>
-                      {v && v.variance_amount !== 0 && (
+                    <div className="text-right shrink-0 min-w-[164px] space-y-0.5">
+                      <div className="text-xs font-mono font-bold tabular-nums">{fmt(finalClosureTotal)}</div>
+                      {isTruthAuthoritativeMode && truthPaidTotal > 0 && (
+                        <div className="text-[10px] text-muted-foreground">Cierre final (Truth)</div>
+                      )}
+                      {isTruthAuthoritativeMode && Math.abs(systemInternalTotal - finalClosureTotal) > 0.01 && (
+                        <div className="text-[10px] font-mono tabular-nums text-warning">
+                          Sistema {inferredWithoutOperationalRecords ? "inferido" : "interno"}: {fmt(systemInternalTotal)}
+                        </div>
+                      )}
+                      {Math.abs(systemVsTruthVariance) > 0.01 && (
                         <div className={`text-[10px] font-mono ${varianceClass}`}>
-                          Δ {fmt(v.variance_amount)}
+                          Δ Sistema vs Truth: {fmt(systemVsTruthVariance)}
                         </div>
                       )}
                     </div>
@@ -258,6 +289,35 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                           <span className="text-muted-foreground">Registros unmapped:</span> <strong>{unmappedCount}</strong>
                         </div>
                       </div>
+
+                      {isTruthAuthoritativeMode && (
+                        <div className="rounded-md border border-primary/25 bg-primary/5 p-2 mb-2 space-y-1.5">
+                          <div className="text-[10px] font-medium text-primary">Modo cierre por Truth (autoritativo)</div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+                            <div>
+                              <span className="text-muted-foreground">Truth pagado:</span>{" "}
+                              <strong className="font-mono tabular-nums">{fmt(truthPaidTotal)}</strong>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Sistema interno:</span>{" "}
+                              <strong className={`font-mono tabular-nums ${inferredWithoutOperationalRecords ? "text-warning" : ""}`}>
+                                {fmt(systemInternalTotal)}
+                              </strong>
+                              {inferredWithoutOperationalRecords && <span className="text-muted-foreground"> (inferido)</span>}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Cierre final:</span>{" "}
+                              <strong className="font-mono tabular-nums text-primary">{fmt(finalClosureTotal)}</strong>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {truthOverrideCandidate && <Badge variant="info" className="text-[10px]">truth-authoritative override candidate</Badge>}
+                            {!truthOverrideCandidate && payModelMismatch && <Badge variant="warning" className="text-[10px]">pay-model mismatch</Badge>}
+                            {inferredWithoutOperationalRecords && <Badge variant="secondary" className="text-[10px]">system inferred/internal amount</Badge>}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Payment breakdown */}
                       <div className="flex flex-wrap gap-2 text-[10px]">
                       {/* Shift-calc breakdown (if available) */}
@@ -314,8 +374,13 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
                         <div className="mt-1.5 p-2 rounded bg-muted/30 space-y-0.5">
                           <div className="text-[10px] font-medium text-muted-foreground">¿Por qué hay varianza?</div>
                           <div className="text-[11px] font-mono">
-                            Histórico limpio: {fmt(v.source_payroll_total)} → Reconciliado: {fmt(v.reconciled_total)} = Δ {fmt(v.variance_amount)}
+                            Truth pagado: {fmt(truthPaidTotal)} · Sistema interno: {fmt(systemInternalTotal)} · Cierre final: {fmt(finalClosureTotal)}
                           </div>
+                          {truthOverrideCandidate && (
+                            <div className="text-[10px] text-primary flex items-center gap-1">
+                              <Eye className="h-2.5 w-2.5" /> Patrón repetido: system inferred amount exceeds paid truth → aplicar override por Truth.
+                            </div>
+                          )}
                           {v.variance_reasons && v.variance_reasons.length > 0 && v.variance_reasons.map((reason, i) => (
                             <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
                               <Eye className="h-2.5 w-2.5" /> {reason}
