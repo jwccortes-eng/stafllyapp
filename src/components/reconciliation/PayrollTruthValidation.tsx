@@ -1577,23 +1577,30 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 </div>
               </details>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-10 gap-3">
-                <KpiCard label="Empleados (Truth)" value={comparison.length} icon={<DollarSign className="h-4 w-4" />} />
-                <KpiCard label="Exactos" value={stats.matched} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" />
-                <KpiCard label="Cercanos" value={stats.close} icon={<AlertTriangle className="h-4 w-4" />} accent="warning" />
-                <KpiCard label="Diferentes" value={stats.mismatch} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
-                <KpiCard label="Match sin base" value={stats.identityOnly} icon={<AlertTriangle className="h-4 w-4" />} accent="warning" />
-                <KpiCard label="No encontrados" value={stats.missing} icon={<AlertTriangle className="h-4 w-4" />} accent="muted" />
-                <KpiCard label="Comp. Error" value={stats.compositionErrors} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
-                <KpiCard label="Total Truth" value={fmt(stats.totalTruth)} icon={<DollarSign className="h-4 w-4" />} />
+              {/* ── Financial KPIs (hero row) ── */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <KpiCard label="Total Truth" value={fmt(stats.totalTruth)} icon={<DollarSign className="h-4 w-4" />} size="lg" mono />
+                <KpiCard label="Total Reconciliado" value={fmt(stats.totalRecon)} icon={<DollarSign className="h-4 w-4" />} size="lg" mono />
                 <KpiCard
                   label="Varianza Neta"
                   value={fmtVar(stats.variance)}
                   icon={<DollarSign className="h-4 w-4" />}
                   accent={Math.abs(stats.variance) > 100 ? "deduction" : "primary"}
+                  size="lg"
+                  mono
                 />
-                <KpiCard label="Dups Suprimidos" value={fmt(stats.totalSuppressed)} icon={<AlertTriangle className="h-4 w-4" />} accent="deduction" />
-                <KpiCard label="Otros / Sin clasificar" value={fmt(stats.totalOther)} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.totalOther > 0 ? "deduction" : "muted"} />
+                <KpiCard label="Otros / Sin clasificar" value={fmt(stats.totalOther)} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.totalOther > 0 ? "deduction" : "muted"} size="lg" mono />
+              </div>
+
+              {/* ── Count KPIs (secondary row) ── */}
+              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+                <KpiCard label="Empleados" value={comparison.length} icon={<DollarSign className="h-3.5 w-3.5" />} size="sm" />
+                <KpiCard label="Exactos" value={stats.matched} icon={<CheckCircle2 className="h-3.5 w-3.5" />} accent="primary" size="sm" />
+                <KpiCard label="Cercanos" value={stats.close} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="warning" size="sm" />
+                <KpiCard label="Diferentes" value={stats.mismatch} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="deduction" size="sm" />
+                <KpiCard label="ID sin base" value={stats.identityOnly} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="warning" size="sm" />
+                <KpiCard label="No encontrados" value={stats.missing} accent="muted" size="sm" />
+                <KpiCard label="Dups Suprimidos" value={fmt(stats.totalSuppressed)} accent="deduction" size="sm" mono />
               </div>
 
               {/* Approval readiness banner */}
