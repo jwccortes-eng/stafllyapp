@@ -1401,8 +1401,11 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const comparison = useMemo<ComparisonRow[]>(() => persistedComparison ?? computedComparison, [persistedComparison, computedComparison]);
 
   const stats = useMemo(() => {
-    const matched = comparison.filter(c => c.status === "match").length;
-    const close = comparison.filter(c => c.status === "close").length;
+    const hasEvidence = (c: ComparisonRow) => c.recon && (c.recon.schedule_count > 0 || c.recon.clock_count > 0 || c.recon.payroll_row_count > 0);
+    const matchedWithEvidence = comparison.filter(c => c.status === "match" && hasEvidence(c)).length;
+    const truthValidated = comparison.filter(c => (c.status === "match" || c.status === "close") && !hasEvidence(c)).length;
+    const matched = matchedWithEvidence;
+    const close = comparison.filter(c => c.status === "close" && hasEvidence(c)).length;
     const mismatch = comparison.filter(c => c.status === "mismatch").length;
     const identityOnly = comparison.filter(c => c.status === "identity_only").length;
     const missing = comparison.filter(c => c.status === "missing").length;
@@ -1419,6 +1422,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     return {
       matched,
       close,
+      truthValidated,
       mismatch,
       identityOnly,
       missing,
