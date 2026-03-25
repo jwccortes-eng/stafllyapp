@@ -950,7 +950,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
       let schedulesQuery = supabase
         .from("shifts" as any)
-        .select("employee_id")
+        .select("employee_id, scheduled_hours")
         .eq("company_id", companyId)
         .limit(2000);
 
