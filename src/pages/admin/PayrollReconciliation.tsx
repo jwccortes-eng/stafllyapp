@@ -214,10 +214,10 @@ function SummaryCard({ label, truth, system, variance, tolerance, icon: Icon }: 
 
 // ─── Validation Report ───────────────────────────────────────────────
 
-function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary; parseResult?: { skipped_summary_rows: number; duplicate_names: string[]; parse_warnings: string[] } | null }) {
+function ValidationReportPanel({ summary, parseResult, truthCounts }: { summary: BatchSummary; parseResult?: { skipped_summary_rows: number; duplicate_names: string[]; parse_warnings: string[] } | null; truthCounts?: { validated: number; compositionOk: number; baseOk: number; pending: number; total: number } }) {
   const [expanded, setExpanded] = useState(false);
-  const matchRate = summary.truth_count > 0 ? summary.matched / summary.truth_count : 0;
-  const exactRate = summary.truth_count > 0 ? summary.exact_match / summary.truth_count : 0;
+  const tc = truthCounts || { validated: summary.exact_match, compositionOk: 0, baseOk: summary.exact_match, pending: summary.critical_mismatch, total: summary.truth_count };
+  const validatedRate = tc.total > 0 ? tc.validated / tc.total : 0;
 
   const mb = summary.match_breakdown;
   const matchMethods = [
@@ -245,14 +245,14 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
           <div>
             <p className="text-sm font-semibold font-heading">Reporte de Validación</p>
             <p className="text-[10px] text-muted-foreground">
-              {summary.matched}/{summary.truth_count} matched • {summary.exact_match} exactos • {summary.critical_mismatch} críticos
+              {tc.validated}/{tc.total} validados • {tc.compositionOk} composición • {tc.baseOk} base • {tc.pending} pendientes
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2">
-            <Progress value={matchRate * 100} className="h-1.5 w-20" />
-            <span className="text-xs font-semibold text-muted-foreground">{fmtPct(matchRate)}</span>
+            <Progress value={validatedRate * 100} className="h-1.5 w-20" />
+            <span className="text-xs font-semibold text-muted-foreground">{fmtPct(validatedRate)}</span>
           </div>
           {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </div>
@@ -264,28 +264,27 @@ function ValidationReportPanel({ summary, parseResult }: { summary: BatchSummary
           <div className="grid grid-cols-2 gap-6 pt-4">
             <div>
               <div className="flex justify-between text-[11px] mb-1.5">
-                <span className="text-muted-foreground font-medium">Tasa de match</span>
-                <span className="font-bold">{fmtPct(matchRate)}</span>
+                <span className="text-muted-foreground font-medium">Truth Validados</span>
+                <span className="font-bold">{fmtPct(validatedRate)}</span>
               </div>
-              <Progress value={matchRate * 100} className="h-2" />
+              <Progress value={validatedRate * 100} className="h-2" />
             </div>
             <div>
               <div className="flex justify-between text-[11px] mb-1.5">
-                <span className="text-muted-foreground font-medium">Match exacto</span>
-                <span className="font-bold">{fmtPct(exactRate)}</span>
+                <span className="text-muted-foreground font-medium">Con composición</span>
+                <span className="font-bold">{fmtPct(tc.total > 0 ? tc.compositionOk / tc.total : 0)}</span>
               </div>
-              <Progress value={exactRate * 100} className="h-2" />
+              <Progress value={tc.total > 0 ? (tc.compositionOk / tc.total) * 100 : 0} className="h-2" />
             </div>
           </div>
 
           {/* Stats grid */}
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-            <StatMini label="Truth rows" value={summary.truth_count} />
-            <StatMini label="System rows" value={summary.system_count} />
-            <StatMini label="Matched" value={summary.matched} accent="success" />
-            <StatMini label="Exact match" value={summary.exact_match} accent="success" />
-            <StatMini label="Mismatch" value={summary.component_mismatch} accent="warning" />
-            <StatMini label="Críticos" value={summary.critical_mismatch} accent="destructive" />
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+            <StatMini label="Total empleados" value={tc.total} />
+            <StatMini label="✓ Validados" value={tc.validated} accent="success" />
+            <StatMini label="Composición OK" value={tc.compositionOk} accent="success" />
+            <StatMini label="Base OK" value={tc.baseOk} accent="success" />
+            <StatMini label="Pendientes" value={tc.pending} accent={tc.pending > 0 ? "warning" : "success"} />
           </div>
 
           <Separator className="bg-border/50" />
