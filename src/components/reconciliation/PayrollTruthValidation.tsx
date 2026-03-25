@@ -291,10 +291,14 @@ function buildTruthFromPersistedRow(row: any, truthFallback?: PayrollTruthRow): 
   const fallbackEmployee = truthFallback?.employee || "";
   const employee = `${firstName} ${lastName}`.trim() || fallbackEmployee || String(raw.employee || "").trim() || "Empleado";
 
-  const truthHoursValue = row?.truth_hours ?? row?.truth_paid_hours ?? row?.truth_total_hours ?? null;
+  // Priority: totalPaidHours (weekly) > truth_hours persisted > shiftHours (daily)
+  const truthHoursValue = row?.truth_paid_hours ?? row?.truth_hours ?? row?.truth_total_hours ?? null;
+  const totalPaidHours = Number(truthFallback?.totalPaidHours) || 0;
+  const rawShiftHours = Number(truthFallback?.shiftHours) || 0;
+  // Use weekly total paid hours if available, otherwise fall back to daily shift hours
   const shiftHours = truthHoursValue != null && truthHoursValue !== ""
     ? Number(truthHoursValue) || 0
-    : Number(truthFallback?.shiftHours) || 0;
+    : (totalPaidHours > 0 ? totalPaidHours : rawShiftHours);
 
   const totalPayValue = row?.truth_total_pay;
   const totalPay = totalPayValue != null && totalPayValue !== ""
@@ -334,6 +338,7 @@ function buildTruthFromPersistedRow(row: any, truthFallback?: PayrollTruthRow): 
     discount,
     total,
     shiftHours,
+    totalPaidHours: totalPaidHours > 0 ? totalPaidHours : shiftHours,
     observaciones: String(row?.truth_observaciones || truthFallback?.observaciones || ""),
   };
 }
@@ -832,11 +837,15 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           truth_tips: c.truth.tips || 0,
           truth_reimbursements: c.truth.reimbursements || 0,
           truth_total: c.truth.total,
+          // Use totalPaidHours (weekly) as authoritative, fall back to shiftHours (daily)
           truth_hours: c.truth.shiftHours || null,
-          truth_paid_hours: c.truth.shiftHours || null,
+          truth_paid_hours: c.truth.totalPaidHours || c.truth.shiftHours || null,
           truth_hourly_rate: c.truth.hourlyRate || null,
-          truth_hourly_rate_derived: c.truth.shiftHours > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / c.truth.shiftHours) : null,
-          closure_hours_used: truthAuthoritativeMode ? (c.truth.shiftHours || null) : (r?.clocked_hours || r?.base_pay_hours || null),
+          truth_hourly_rate_derived: (() => {
+            const hrs = c.truth.totalPaidHours || c.truth.shiftHours || 0;
+            return hrs > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / hrs) : null;
+          })(),
+          closure_hours_used: truthAuthoritativeMode ? (c.truth.totalPaidHours || c.truth.shiftHours || null) : (r?.clocked_hours || r?.base_pay_hours || null),
           closure_source: truthAuthoritativeMode ? "truth" : (r?.hours_source_used || "none"),
           system_total_pay: r?.hourly_pay ?? null,
           system_pay_per_day: r ? (r.daily_pay + r.weekend_pay) : null,
@@ -2121,12 +2130,20 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             <TableCell className="font-medium text-sm">{c.employee}</TableCell>
                             <TableCell>{statusBadge(c)}</TableCell>
                             <TableCell>{reviewGroupBadge(c.reviewGroup)}</TableCell>
-                            <TableCell className="text-right font-mono text-xs">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}
-                              {c.truth.shiftHours > 0 && c.truth.totalPay > 0 && (
-                                <span className="text-[9px] text-muted-foreground ml-0.5" title={`${c.truth.shiftHours.toFixed(1)} × $${(c.truth.hourlyRate || round2(c.truth.totalPay / c.truth.shiftHours)).toFixed(2)} = $${c.truth.totalPay.toFixed(2)}`}>
-                                  @${(c.truth.hourlyRate || round2(c.truth.totalPay / c.truth.shiftHours)).toFixed(0)}
-                                </span>
-                              )}
+                            <TableCell className="text-right font-mono text-xs">
+                              {(() => {
+                                const authHrs = c.truth.totalPaidHours || c.truth.shiftHours || 0;
+                                if (!authHrs) return "—";
+                                const rate = c.truth.hourlyRate || (authHrs > 0 && c.truth.totalPay > 0 ? round2(c.truth.totalPay / authHrs) : 0);
+                                return <>
+                                  {authHrs.toFixed(1)}
+                                  {rate > 0 && (
+                                    <span className="text-[9px] text-muted-foreground ml-0.5" title={`${authHrs.toFixed(1)} × $${rate.toFixed(2)} = $${c.truth.totalPay.toFixed(2)}`}>
+                                      @${rate.toFixed(0)}
+                                    </span>
+                                  )}
+                                </>;
+                              })()}
                             </TableCell>
                             <TableCell className="text-right font-mono text-xs">{r?.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</TableCell>
                             <TableCell className="text-right font-mono text-xs text-muted-foreground">{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</TableCell>
@@ -2207,7 +2224,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
                                   {/* ── HOURS TRACEABILITY (4 sections) ── */}
                                   {(() => {
-                                    const truthHrs = c.truth.shiftHours || 0;
+                                    // Use totalPaidHours (weekly) as authoritative, fall back to shiftHours (daily)
+                                    const truthHrs = c.truth.totalPaidHours || c.truth.shiftHours || 0;
                                     const truthPay = c.truth.totalPay || 0;
                                     const explicitRate = c.truth.hourlyRate;
                                     const derivedRate = truthHrs > 0 && truthPay > 0 ? round2(truthPay / truthHrs) : null;

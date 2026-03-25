@@ -19,6 +19,8 @@ export interface PayrollTruthRow {
   discount: number;
   total: number;
   shiftHours: number;
+  /** Weekly total hours — "Total paid hours" / "Total work hours". Authoritative over shiftHours for closure. */
+  totalPaidHours: number;
   observaciones: string;
 }
 
@@ -65,6 +67,7 @@ export interface PayrollTruthParseResult {
     total: ColumnDetection;
     hourlyRate: ColumnDetection;
     shiftHours: ColumnDetection;
+    totalPaidHours: ColumnDetection;
     observaciones: ColumnDetection;
   };
   rows: PayrollTruthRow[];
@@ -197,11 +200,11 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
   const rydeIndex = findColumnIndex(headers, ["Ryde", "Ride", "Rides"]);
   const totalIndex = findTotalColumnIndex(headers);
   const hourlyRateIndex = findColumnIndex(headers, ["Hourly rate (USD)", "Hourly rate", "Hourly rate USD"]);
-  const shiftHoursIndex = findColumnIndex(headers, [
-    "Shift hours",
+  const shiftHoursIndex = findColumnIndex(headers, ["Shift hours"]);
+  const totalPaidHoursIndex = findColumnIndex(headers, [
+    "Total paid hours",
     "Total work hours",
     "Total hours",
-    "Total paid hours",
     "Paid hours",
     "Horas totales",
     "Horas pagadas",
@@ -236,6 +239,7 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
     const rawTotal = totalIndex >= 0 ? row[totalIndex] : null;
     const rawHourlyRate = hourlyRateIndex >= 0 ? row[hourlyRateIndex] : null;
     const rawShiftHours = shiftHoursIndex >= 0 ? row[shiftHoursIndex] : null;
+    const rawTotalPaidHours = totalPaidHoursIndex >= 0 ? row[totalPaidHoursIndex] : null;
     const rawTips = tipsIndex >= 0 ? row[tipsIndex] : null;
     const rawReimbursements = reimbursementsIndex >= 0 ? row[reimbursementsIndex] : null;
     const rawTravelHours = travelHoursIndex >= 0 ? row[travelHoursIndex] : null;
@@ -249,6 +253,7 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
     const parsedTotal = parseLocalizedNumber(rawTotal);
     const parsedHourlyRate = rawHourlyRate == null || rawHourlyRate === "" ? null : parseLocalizedNumber(rawHourlyRate);
     const parsedShiftHours = parseLocalizedNumber(rawShiftHours);
+    const parsedTotalPaidHours = parseLocalizedNumber(rawTotalPaidHours);
     const parsedTips = parseLocalizedNumber(rawTips);
     const parsedReimbursements = parseLocalizedNumber(rawReimbursements);
     const parsedTravelHours = parseLocalizedNumber(rawTravelHours);
@@ -292,6 +297,8 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
       existing.discount += parsedDiscount;
       existing.total = Math.max(existing.total, computedTotal);
       existing.shiftHours += parsedShiftHours;
+      // For totalPaidHours, take MAX (weekly total, not sum of daily rows)
+      if (parsedTotalPaidHours > 0) existing.totalPaidHours = Math.max(existing.totalPaidHours, parsedTotalPaidHours);
       if (parsedHourlyRate != null && existing.hourlyRate == null) {
         existing.hourlyRate = parsedHourlyRate;
       }
@@ -318,6 +325,7 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
         discount: parsedDiscount,
         total: computedTotal,
         shiftHours: parsedShiftHours,
+        totalPaidHours: parsedTotalPaidHours,
         observaciones: rawObservaciones,
       });
     }
@@ -346,6 +354,7 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
       total: getColumnDetection(headers, totalIndex),
       hourlyRate: getColumnDetection(headers, hourlyRateIndex),
       shiftHours: getColumnDetection(headers, shiftHoursIndex),
+      totalPaidHours: getColumnDetection(headers, totalPaidHoursIndex),
       observaciones: getColumnDetection(headers, observacionesIndex),
     },
     rows: Array.from(byEmployee.values()),
