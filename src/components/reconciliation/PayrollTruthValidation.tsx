@@ -2022,24 +2022,28 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               <div className="overflow-auto max-h-[600px]">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-8"></TableHead>
-                      <TableHead>Empleado</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Grupo</TableHead>
-                      <TableHead className="text-right">T.Pay</TableHead>
-                      <TableHead className="text-right">T.PPD</TableHead>
-                      <TableHead className="text-right">T.Ryde</TableHead>
-                      <TableHead className="text-right">T.Tips</TableHead>
-                      <TableHead className="text-right">T.Reimb</TableHead>
-                      <TableHead className="text-right">T.Otros</TableHead>
-                      <TableHead className="text-right">T.Disc</TableHead>
-                      <TableHead className="text-right font-bold">T.TOTAL</TableHead>
-                      <TableHead className="text-right font-bold">Sistema (interno)</TableHead>
-                      <TableHead className="text-right font-bold">Cierre final</TableHead>
-                      <TableHead className="text-right font-bold">Δ Sys-Truth</TableHead>
-                      <TableHead className="text-center">Obs</TableHead>
-                    </TableRow>
+                     <TableRow>
+                       <TableHead className="w-8"></TableHead>
+                       <TableHead>Empleado</TableHead>
+                       <TableHead>Estado</TableHead>
+                       <TableHead>Grupo</TableHead>
+                       <TableHead className="text-right">T.Hrs</TableHead>
+                       <TableHead className="text-right">Clock.Hrs</TableHead>
+                       <TableHead className="text-right">Sched.Hrs</TableHead>
+                       <TableHead className="text-center">Hrs Fuente</TableHead>
+                       <TableHead className="text-right">T.Pay</TableHead>
+                       <TableHead className="text-right">T.PPD</TableHead>
+                       <TableHead className="text-right">T.Ryde</TableHead>
+                       <TableHead className="text-right">T.Tips</TableHead>
+                       <TableHead className="text-right">T.Reimb</TableHead>
+                       <TableHead className="text-right">T.Otros</TableHead>
+                       <TableHead className="text-right">T.Disc</TableHead>
+                       <TableHead className="text-right font-bold">T.TOTAL</TableHead>
+                       <TableHead className="text-right font-bold">Sistema (interno)</TableHead>
+                       <TableHead className="text-right font-bold">Cierre final</TableHead>
+                       <TableHead className="text-right font-bold">Δ Sys-Truth</TableHead>
+                       <TableHead className="text-center">Obs</TableHead>
+                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredComparison.map(c => {
