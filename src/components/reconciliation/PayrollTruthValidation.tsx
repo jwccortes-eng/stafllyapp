@@ -2224,7 +2224,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
 
                                   {/* ── HOURS TRACEABILITY (4 sections) ── */}
                                   {(() => {
-                                    const truthHrs = c.truth.shiftHours || 0;
+                                    // Use totalPaidHours (weekly) as authoritative, fall back to shiftHours (daily)
+                                    const truthHrs = c.truth.totalPaidHours || c.truth.shiftHours || 0;
                                     const truthPay = c.truth.totalPay || 0;
                                     const explicitRate = c.truth.hourlyRate;
                                     const derivedRate = truthHrs > 0 && truthPay > 0 ? round2(truthPay / truthHrs) : null;
