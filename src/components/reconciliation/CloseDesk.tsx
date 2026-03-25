@@ -275,6 +275,15 @@ export default function CloseDesk({ period, finalRecords, variances, employeeMap
         </Card>
       )}
 
+      {/* CLOSURE QUALITY SCORECARD */}
+      {finalRecords.length > 0 && (
+        <ClosureQualityScorecard
+          finalRecords={finalRecords}
+          variances={variances}
+          period={period}
+        />
+      )}
+
       {/* EMPLOYEE CLOSE CARDS */}
       {finalRecords.length > 0 && (
         <EmployeeCloseCards
