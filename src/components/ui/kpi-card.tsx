@@ -9,6 +9,10 @@ interface KpiCardProps {
   subtitle?: string;
   onClick?: () => void;
   className?: string;
+  /** Right-align value and use monospace font — ideal for currency */
+  mono?: boolean;
+  /** Visual size: sm (count chips), md (default), lg (hero financials) */
+  size?: "sm" | "md" | "lg";
 }
 
 const accentStyles = {
@@ -27,11 +31,19 @@ const valueColors = {
   muted: "text-foreground",
 };
 
-export function KpiCard({ value, label, icon, accent = "muted", subtitle, onClick, className }: KpiCardProps) {
+const sizeStyles = {
+  sm: { card: "p-2.5", value: "text-lg", label: "text-[10px]" },
+  md: { card: "p-4", value: "text-2xl", label: "text-xs" },
+  lg: { card: "p-4", value: "text-xl sm:text-2xl", label: "text-xs" },
+};
+
+export function KpiCard({ value, label, icon, accent = "muted", subtitle, onClick, className, mono, size = "md" }: KpiCardProps) {
+  const s = sizeStyles[size];
   return (
     <div
       className={cn(
-        "rounded-2xl border p-4 transition-all duration-200",
+        "rounded-2xl border transition-all duration-200 min-w-0",
+        s.card,
         accentStyles[accent],
         onClick && "cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-[0.98]",
         className
@@ -39,13 +51,22 @@ export function KpiCard({ value, label, icon, accent = "muted", subtitle, onClic
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className={cn("text-2xl font-bold font-heading tabular-nums", valueColors[accent])}>
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "font-bold font-heading tabular-nums leading-tight",
+              s.value,
+              valueColors[accent],
+              mono && "font-mono text-right",
+              size === "lg" && "break-all"
+            )}
+            title={String(value)}
+          >
             {value}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5 truncate">{label}</p>
+          <p className={cn("text-muted-foreground mt-0.5 truncate", s.label, mono && "text-right")}>{label}</p>
           {subtitle && (
-            <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">{subtitle}</p>
+            <p className={cn("text-[10px] text-muted-foreground/70 mt-0.5 truncate", mono && "text-right")}>{subtitle}</p>
           )}
         </div>
         {icon && (
