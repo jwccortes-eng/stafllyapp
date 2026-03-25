@@ -1129,12 +1129,12 @@ export default function PayrollReconciliationPage() {
       {/* KPI strip */}
       {batchSummary && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <KpiCard label="Empleados Truth" value={batchSummary.truth_count} icon={Users} />
-          <KpiCard label="Matched" value={batchSummary.matched} subtitle={fmtPct(batchSummary.truth_count > 0 ? batchSummary.matched / batchSummary.truth_count : 0)} icon={UserCheck} accent="success" />
-          <KpiCard label="Match exacto" value={batchSummary.exact_match} icon={CheckCircle2} accent="success" />
-          <KpiCard label="Componente" value={batchSummary.component_mismatch} icon={AlertTriangle} accent={batchSummary.component_mismatch > 0 ? "warning" : "muted"} />
-          <KpiCard label="Críticos" value={batchSummary.critical_mismatch} icon={AlertOctagon} accent={batchSummary.critical_mismatch > 0 ? "destructive" : "muted"} />
-          <KpiCard label="Varianza Total" value={fmt(batchSummary.total_variance)} icon={TrendingUp} accent={batchSummary.total_variance > 10 ? "destructive" : batchSummary.total_variance > 1 ? "warning" : "success"} />
+          <KpiCard label="Empleados Truth" value={truthCounts.total} icon={Users} />
+          <KpiCard label="✓ Validados" value={truthCounts.validated} subtitle={fmtPct(truthCounts.total > 0 ? truthCounts.validated / truthCounts.total : 0)} icon={CheckCircle2} accent="success" />
+          <KpiCard label="Composición OK" value={truthCounts.compositionOk} icon={CheckCircle2} accent="success" />
+          <KpiCard label="Base OK" value={truthCounts.baseOk} icon={CheckCircle2} accent={truthCounts.baseOk > 0 ? "success" : "muted"} />
+          <KpiCard label="Pendientes" value={truthCounts.pending} icon={AlertOctagon} accent={truthCounts.pending > 0 ? "warning" : "muted"} />
+          <KpiCard label="Grand Total" value={fmt(batchSummary.totals_truth.grand_total)} icon={DollarSign} accent="success" />
         </div>
       )}
 
