@@ -1712,9 +1712,10 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               </div>
 
               {/* ── Count KPIs (secondary row) ── */}
-              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-8 gap-2">
                 <KpiCard label="Empleados" value={comparison.length} icon={<DollarSign className="h-3.5 w-3.5" />} size="sm" />
                 <KpiCard label="Exactos" value={stats.matched} icon={<CheckCircle2 className="h-3.5 w-3.5" />} accent="primary" size="sm" />
+                <KpiCard label="Truth-validado" value={stats.truthValidated} icon={<Database className="h-3.5 w-3.5" />} accent="muted" size="sm" />
                 <KpiCard label="Cercanos" value={stats.close} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="warning" size="sm" />
                 <KpiCard label="Diferentes" value={stats.mismatch} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="deduction" size="sm" />
                 <KpiCard label="ID sin base" value={stats.identityOnly} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="warning" size="sm" />
