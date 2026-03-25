@@ -76,14 +76,17 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
     setCompanies(list);
 
-    // Auto-select first company if none selected
-    if (!selectedCompanyId && list.length > 0) {
+    // Ensure selected company is always valid for the current list
+    const hasValidSelection = !!selectedCompanyId && list.some(c => c.id === selectedCompanyId);
+    if (!hasValidSelection && list.length > 0) {
       const stored = localStorage.getItem("selectedCompanyId");
-      if (stored && list.find(c => c.id === stored)) {
+      if (stored && list.some(c => c.id === stored)) {
         setSelectedCompanyId(stored);
       } else {
         setSelectedCompanyId(list[0].id);
       }
+    } else if (list.length === 0 && selectedCompanyId) {
+      setSelectedCompanyId(null);
     }
 
     setLoading(false);

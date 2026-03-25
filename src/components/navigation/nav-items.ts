@@ -52,7 +52,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "kiosk-devices", to: "/app/kiosk-devices", icon: Monitor, label: "Kiosk", module: null, section: "Operaciones" },
   { id: "attendance", to: "/app/attendance", icon: ScanEye, label: "Asistencia", module: null, section: "Operaciones" },
   { id: "migration", to: "/app/migration", icon: ArrowLeftRight, label: "Migración", module: null, section: "Administración", roles: ["owner"] },
-  { id: "staged-recon", to: "/app/staged-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
+  { id: "staged-recon", to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
   { id: "advances-loans", to: "/app/advances-loans", icon: Banknote, label: "Anticipos", module: null, section: "Nómina" },
   { id: "comp-validation", to: "/app/compensation-validation", icon: DollarSign, label: "Compensación", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
   { id: "pilot-close", to: "/app/payroll-pilot-close", icon: ShieldCheck, label: "Cierre Piloto", module: null, section: "Nómina", roles: ["developer", "owner", "company_owner", "admin"] },
