@@ -324,6 +324,7 @@ export function parsePayrollTruthWorkbook(data: ArrayBuffer | Uint8Array): Payro
         discount: parsedDiscount,
         total: computedTotal,
         shiftHours: parsedShiftHours,
+        totalPaidHours: parsedTotalPaidHours,
         observaciones: rawObservaciones,
       });
     }
