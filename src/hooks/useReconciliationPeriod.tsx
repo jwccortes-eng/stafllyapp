@@ -1228,8 +1228,9 @@ export function useReconciliationPeriod(companyId: string | null) {
           final_total_pay: truthTotal,
           source_payroll_total: truthTotal,
           variance_amount: variance,
-          variance_status: isExact ? "exact_match" : Math.abs(variance) < 10 ? "minor_variance" : "major_variance",
-          variance_reasons: isExact ? [] : [`Truth: $${truthTotal}, System: $${systemTotal}, Δ${variance}`],
+          // ⚠️ Truth-validated: variance is diagnostic, never "major" — closure IS truth
+          variance_status: isExact ? "exact_match" : "minor_variance",
+          variance_reasons: isExact ? [] : [`Diagnóstico — Truth: $${truthTotal}, Sistema: $${systemTotal}, Δ${variance}`],
           shift_full_day_count: 0,
           shift_half_day_count: 0,
           shift_calculated_total: 0,
@@ -1510,8 +1511,14 @@ export function useReconciliationPeriod(companyId: string | null) {
       }
 
       let status: EmployeeVariance["variance_status"];
-      if (["pending", "partial", "blocked"].includes(r.reconciliation_status) || Boolean(unmappedWarning)) status = "unresolved";
-      else if (absVariance <= 0.01) status = "exact_match";
+      // ⚠️ HARD RULE: truth_validated records are settled — never show as mismatch/unresolved
+      const isTruthValidated = r.pay_classification === "truth_validated";
+      if (isTruthValidated) {
+        // Truth IS the closure authority; variance is diagnostic only
+        status = absVariance <= 0.01 ? "exact_match" : "minor_variance";
+      } else if (["pending", "partial", "blocked"].includes(r.reconciliation_status) || Boolean(unmappedWarning)) {
+        status = "unresolved";
+      } else if (absVariance <= 0.01) status = "exact_match";
       else if (absVariance <= 10) status = "minor_variance";
       else status = "major_variance";
 

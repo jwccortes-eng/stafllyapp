@@ -196,10 +196,11 @@ export default function EmployeeCloseCards({ finalRecords, variances, employeeMa
               const systemInternalTotal = r.grand_total || r.final_total_pay || 0;
               const hasOperationalEvidence = ((r.scheduled_shifts || []).length + (r.worked_shifts || []).length + (r.payroll_rows || []).length) > 0;
 
-              // Evidence-aware badge: don't say "Exacto" if there's no linked evidence
+              // ⚠️ HARD RULE: truth_validated records always show truth badge, not mismatch
+              const isTruthValidatedRecord = r.pay_classification === "truth_validated";
               const rawVarianceStatus = v?.variance_status || "exact_match";
               const effectiveBadgeKey = (
-                !hasOperationalEvidence && isTruthAuthoritativeMode && (rawVarianceStatus === "exact_match" || rawVarianceStatus === "minor_variance")
+                isTruthValidatedRecord || (!hasOperationalEvidence && isTruthAuthoritativeMode && (rawVarianceStatus === "exact_match" || rawVarianceStatus === "minor_variance"))
               ) ? "truth_validated" : rawVarianceStatus;
               const vBadge = VARIANCE_BADGE[effectiveBadgeKey] || VARIANCE_BADGE.exact_match;
               const StatusIcon = vBadge.icon;
