@@ -1943,6 +1943,17 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 <KpiCard label="Dups Suprimidos" value={fmt(stats.totalSuppressed)} accent="deduction" size="sm" mono />
               </div>
 
+              {/* ── Resolution counters (only if unresolved rows exist) ── */}
+              {resolutionStats.total > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <KpiCard label="Sin resolver" value={resolutionStats.total} icon={<AlertTriangle className="h-3.5 w-3.5" />} accent="warning" size="sm" />
+                  <KpiCard label="Pendientes" value={resolutionStats.pending} icon={<Wrench className="h-3.5 w-3.5" />} accent={resolutionStats.pending > 0 ? "deduction" : "muted"} size="sm" />
+                  <KpiCard label="Nuevos" value={resolutionStats.created} icon={<UserPlus className="h-3.5 w-3.5" />} accent="primary" size="sm" />
+                  <KpiCard label="Vinculados" value={resolutionStats.linked} icon={<Link2 className="h-3.5 w-3.5" />} accent="primary" size="sm" />
+                  <KpiCard label="Solo Truth" value={resolutionStats.truthOnly} icon={<FileText className="h-3.5 w-3.5" />} accent="muted" size="sm" />
+                </div>
+              )}
+
               {(stats.truthOverrideCandidates > 0 || stats.payModelMismatches > 0) && (
                 <Alert className="border-primary/30 bg-primary/5">
                   <AlertDescription className="text-xs text-foreground">
