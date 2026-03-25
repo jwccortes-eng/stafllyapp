@@ -24,6 +24,9 @@ export interface TruthRow {
   ryde: number | null;
   tips: number | null;
   reimbursements: number | null;
+  travel_hours: number | null;
+  otros: number | null;
+  discount: number | null;
   total: number | null;
   observaciones?: string;
   date?: string;

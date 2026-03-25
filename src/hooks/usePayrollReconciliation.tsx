@@ -138,7 +138,12 @@ export function usePayrollReconciliation() {
         truth_observaciones: r.observaciones || null,
         truth_date: r.date || null,
         truth_corte: r.corte || null,
-        truth_raw_json: r.raw,
+        truth_raw_json: {
+          ...r.raw,
+          discount: r.discount || 0,
+          travel_hours: r.travel_hours || 0,
+          otros: r.otros || 0,
+        },
         match_status: "UNMATCHED",
       }));
 
@@ -190,6 +195,9 @@ export function usePayrollReconciliation() {
         ryde: r.truth_ryde,
         tips: r.truth_tips,
         reimbursements: r.truth_reimbursements,
+        travel_hours: r.truth_raw_json?.travel_hours ?? null,
+        otros: r.truth_raw_json?.otros ?? null,
+        discount: r.truth_raw_json?.discount ?? null,
         total: r.truth_total,
         observaciones: r.truth_observaciones,
         date: r.truth_date,
