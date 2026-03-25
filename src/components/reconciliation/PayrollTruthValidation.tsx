@@ -564,7 +564,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     return () => {
       cancelled = true;
     };
-  }, [companyId, truthData]);
+  }, [companyId, truthData, resolutionTrigger]);
 
   // ── Hydrate persisted reconciliation rows to avoid stale in-memory counters ──
   useEffect(() => {
