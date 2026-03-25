@@ -291,10 +291,14 @@ function buildTruthFromPersistedRow(row: any, truthFallback?: PayrollTruthRow): 
   const fallbackEmployee = truthFallback?.employee || "";
   const employee = `${firstName} ${lastName}`.trim() || fallbackEmployee || String(raw.employee || "").trim() || "Empleado";
 
-  const truthHoursValue = row?.truth_hours ?? row?.truth_paid_hours ?? row?.truth_total_hours ?? null;
+  // Priority: totalPaidHours (weekly) > truth_hours persisted > shiftHours (daily)
+  const truthHoursValue = row?.truth_paid_hours ?? row?.truth_hours ?? row?.truth_total_hours ?? null;
+  const totalPaidHours = Number(truthFallback?.totalPaidHours) || 0;
+  const rawShiftHours = Number(truthFallback?.shiftHours) || 0;
+  // Use weekly total paid hours if available, otherwise fall back to daily shift hours
   const shiftHours = truthHoursValue != null && truthHoursValue !== ""
     ? Number(truthHoursValue) || 0
-    : Number(truthFallback?.shiftHours) || 0;
+    : (totalPaidHours > 0 ? totalPaidHours : rawShiftHours);
 
   const totalPayValue = row?.truth_total_pay;
   const totalPay = totalPayValue != null && totalPayValue !== ""
