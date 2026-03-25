@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
-import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database, ArrowUpDown } from "lucide-react";
+import { DollarSign, CheckCircle2, AlertTriangle, Upload, Loader2, ChevronDown, ChevronRight, Download, Database, ArrowUpDown, Wrench } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   parsePayrollTruthWorkbook,
@@ -15,6 +15,7 @@ import {
   type PayrollTruthRow,
 } from "@/lib/payroll-truth-parser";
 import { matchEmployees } from "@/lib/payroll-reconciliation-engine";
+import UnmatchedResolutionDialog from "./UnmatchedResolutionDialog";
 
 type LedgerCategory = "hourly" | "daily" | "ride" | "weekend" | "manual" | "deduction" | "reimbursement" | "other";
 type CompositionRole = "authoritative" | "informational_only" | "inferred" | "excluded_from_total";
@@ -372,6 +373,8 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   const [dbPersisted, setDbPersisted] = useState(false);
   const [persistingToDb, setPersistingToDb] = useState(false);
   const [persistedComparison, setPersistedComparison] = useState<ComparisonRow[] | null>(null);
+  const [resolutionRow, setResolutionRow] = useState<PayrollTruthRow | null>(null);
+  const [resolutionTrigger, setResolutionTrigger] = useState(0);
 
   const fmt = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtVar = (v: number) => `${v >= 0 ? "+" : ""}${fmt(v)}`;
@@ -561,7 +564,7 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
     return () => {
       cancelled = true;
     };
-  }, [companyId, truthData]);
+  }, [companyId, truthData, resolutionTrigger]);
 
   // ── Hydrate persisted reconciliation rows to avoid stale in-memory counters ──
   useEffect(() => {
@@ -2104,7 +2107,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                               {r ? fmtVar(c.totalVariance) : "N/A"}
                             </TableCell>
                             <TableCell className="text-center text-xs" title={c.truth.observaciones || ""}>
-                              {c.truth.observaciones ? "📝" : ""}
+                              {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 text-[10px] gap-1 px-2"
+                                  onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                >
+                                  <Wrench className="h-2.5 w-2.5" /> Resolver
+                                </Button>
+                              ) : c.truth.observaciones ? "📝" : ""}
                             </TableCell>
                           </TableRow>
 
@@ -2112,12 +2124,89 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                             <TableRow key={`${c.employee}-detail`} className="bg-muted/20 hover:bg-muted/20">
                               <TableCell colSpan={20} className="p-3">
                                 <div className="space-y-3 text-xs">
+                                  {/* ── Resolver action for unmatched rows ── */}
+                                  {(c.status === "missing" || (c.status === "identity_only" && !c.recon)) && (
+                                    <div className="rounded-lg border-2 border-warning/40 bg-warning/5 p-3 flex items-center gap-3">
+                                      <Wrench className="h-4 w-4 text-warning shrink-0" />
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium">Empleado no vinculado al sistema</p>
+                                        <p className="text-muted-foreground">Resuelve esta fila creando un empleado, vinculando a uno existente, o marcando solo-Truth.</p>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="gap-1.5 shrink-0"
+                                        onClick={(e) => { e.stopPropagation(); setResolutionRow(c.truth); }}
+                                      >
+                                        <Wrench className="h-3.5 w-3.5" />
+                                        Resolver
+                                      </Button>
+                                    </div>
+                                  )}
+
                                   <div className="rounded bg-background border border-border p-2">
                                     <p className="font-medium text-foreground mb-1">Explicación de varianza:</p>
                                     <p className="text-muted-foreground">{explainVariance(c)}</p>
                                     {c.compositionReason && (
                                       <p className="mt-2 text-destructive font-medium">Composition Error: {c.compositionReason}</p>
                                     )}
+                                  </div>
+
+                                  {/* ── HOURS TRACEABILITY (4 sections) ── */}
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                    {/* A. Truth Section */}
+                                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 space-y-1">
+                                      <p className="font-semibold text-primary text-[11px]">A. Truth (Nómina Pagada)</p>
+                                      <div className="space-y-0.5 font-mono text-muted-foreground">
+                                        <p>Horas: <span className="text-foreground font-medium">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}</span></p>
+                                        <p>Tasa/hr: <span className="text-foreground">{c.truth.hourlyRate ? fmt(c.truth.hourlyRate) : "—"}</span></p>
+                                        <p>Pay: <span className="text-foreground font-bold">{fmt(c.truth.totalPay)}</span></p>
+                                        <p className="font-bold text-primary">Total: {fmt(c.truth.total)}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* B. System Real Section */}
+                                    <div className="rounded-lg border border-border p-2.5 space-y-1">
+                                      <p className="font-semibold text-foreground text-[11px]">B. Sistema Real (Fichajes)</p>
+                                      <div className="space-y-0.5 font-mono text-muted-foreground">
+                                        <p>Horas reloj: <span className="text-foreground font-medium">{r?.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</span></p>
+                                        <p>Tasa sistema: <span className="text-foreground">{r && r.clocked_hours > 0 && r.hourly_pay > 0 ? fmt(r.hourly_pay / r.clocked_hours) : "—"}</span></p>
+                                        <p>Pay real: <span className="text-foreground font-bold">{r ? fmt(r.total_final) : "—"}</span></p>
+                                        <p>Fichajes: <span className="text-foreground">{r?.clock_count || 0}</span></p>
+                                      </div>
+                                    </div>
+
+                                    {/* C. Schedule Section (estimated) */}
+                                    <div className="rounded-lg border border-dashed border-muted-foreground/30 p-2.5 space-y-1">
+                                      <p className="font-semibold text-muted-foreground text-[11px]">C. Programado <Badge variant="outline" className="text-[8px] ml-1 py-0 px-1">Estimado / no usado para pago</Badge></p>
+                                      <div className="space-y-0.5 font-mono text-muted-foreground italic">
+                                        <p>Horas prog.: <span>{r?.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</span></p>
+                                        <p>Turnos: <span>{r?.schedule_count || 0}</span></p>
+                                      </div>
+                                      <p className="text-[9px] text-muted-foreground mt-1">⚠️ Las horas programadas nunca se usan para nómina. Solo horas reales (reloj) o Truth pagado.</p>
+                                    </div>
+
+                                    {/* D. Closure Section */}
+                                    <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-2.5 space-y-1">
+                                      <p className="font-semibold text-primary text-[11px]">D. Cierre Final</p>
+                                      <div className="space-y-0.5 font-mono">
+                                        <p className="text-muted-foreground">Fuente: <span className="text-foreground font-medium">
+                                          {truthAuthoritativeMode ? "Truth" : r?.hours_source_used === "clocked" ? "Reloj" : r?.primary_source === "shift_calc" ? "Daily" : "Manual"}
+                                        </span></p>
+                                        <p className="text-muted-foreground">Horas usadas: <span className="text-foreground font-medium">
+                                          {truthAuthoritativeMode
+                                            ? (c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "N/A (monto directo)")
+                                            : r?.clocked_hours ? r.clocked_hours.toFixed(1) : r?.base_pay_hours ? r.base_pay_hours.toFixed(1) : "—"}
+                                        </span></p>
+                                        <p className="text-primary font-bold text-sm">Monto: {fmt(c.closureAmount)}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Hard business rule reminder */}
+                                  <div className="rounded-md bg-muted/50 border border-border px-3 py-1.5 text-[10px] text-muted-foreground flex items-center gap-2">
+                                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                                    <span><strong>Regla de nómina:</strong> Las horas programadas (scheduled) nunca se usan para el pago. Solo se aceptan horas reales de fichaje (clocked) o el archivo de nómina pagada (Truth).</span>
                                   </div>
 
                                   <div className="grid grid-cols-2 gap-4">
@@ -2203,11 +2292,6 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                                       <span>Clocks: {r.clock_count}</span>
                                       <span>Payroll rows: {r.payroll_row_count}</span>
                                       <span>Flags: {r.flags.length}</span>
-                                      <span className="border-l border-border pl-4">Truth Hrs: <span className="font-mono">{c.truth.shiftHours ? c.truth.shiftHours.toFixed(1) : "—"}</span></span>
-                                      <span>Clock Hrs: <span className="font-mono">{r.clocked_hours ? r.clocked_hours.toFixed(1) : "—"}</span></span>
-                                      <span>Sched Hrs: <span className="font-mono text-muted-foreground italic">{r.scheduled_hours ? r.scheduled_hours.toFixed(1) : "—"}</span> (estimado)</span>
-                                      <span>Base Pay Hrs: <span className="font-mono">{r.base_pay_hours ? r.base_pay_hours.toFixed(1) : "—"}</span></span>
-                                      <span className="font-medium">Fuente: {truthAuthoritativeMode ? "Truth" : r.hours_source_used}</span>
                                     </div>
                                   )}
                                 </div>
@@ -2224,6 +2308,23 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
           )}
         </CardContent>
       </Card>
+
+      {/* Unmatched Resolution Dialog */}
+      {resolutionRow && (
+        <UnmatchedResolutionDialog
+          open={!!resolutionRow}
+          onOpenChange={(open) => { if (!open) setResolutionRow(null); }}
+          truthRow={resolutionRow}
+          companyId={companyId!}
+          periodStatusId={periodStatusId || ""}
+          userId={user?.id || ""}
+          onResolved={(result) => {
+            setResolutionRow(null);
+            // Trigger re-matching by incrementing trigger
+            setResolutionTrigger(prev => prev + 1);
+          }}
+        />
+      )}
     </div>
   );
 }

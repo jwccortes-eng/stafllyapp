@@ -1,0 +1,1 @@
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS created_from_reconciliation boolean DEFAULT false;
