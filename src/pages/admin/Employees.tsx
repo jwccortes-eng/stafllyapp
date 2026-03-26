@@ -1091,108 +1091,78 @@ export default function Employees() {
           })}
         </div>
       ) : (
-        /* ─── List View (Table) ─── */
-        <div className="rounded-2xl border border-border/40 bg-card overflow-hidden shadow-xs">
+        /* ─── List View (Table) — Dense ─── */
+        <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="w-12"></TableHead>
+              <TableRow className="bg-muted/30 h-9">
+                <TableHead className="w-10 pl-3"></TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Nombre</TableHead>
-                <TableHead className="hidden md:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Contacto</TableHead>
-                <TableHead className="hidden lg:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Rol</TableHead>
-                <TableHead className="hidden lg:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Grupo</TableHead>
-                <TableHead className="hidden xl:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Inicio</TableHead>
+                <TableHead className="hidden md:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Teléfono</TableHead>
+                <TableHead className="hidden lg:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Email</TableHead>
+                <TableHead className="hidden md:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Rol</TableHead>
+                <TableHead className="hidden xl:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Grupo</TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Estado</TableHead>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((e) => (
-                <TableRow key={e.id} className={`${!e.is_active ? "opacity-40" : ""} group hover:bg-accent/50 transition-colors cursor-pointer`} onClick={() => openDetailSheet(e)}>
-                  <TableCell className="py-3">
-                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="md" />
+                <TableRow
+                  key={e.id}
+                  className={cn(
+                    "group hover:bg-accent/40 transition-colors cursor-pointer h-12",
+                    !e.is_active && "opacity-40"
+                  )}
+                  onClick={() => openDetailSheet(e)}
+                >
+                  <TableCell className="py-2 pl-3">
+                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
                   </TableCell>
-                  <TableCell className="py-3">
-                    <div className="text-left">
-                      <span className="text-sm font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                      <div className="md:hidden mt-1 space-y-0.5">
-                        {e.employee_role && (
-                          <span className="block text-[11px] text-muted-foreground">{formatDisplayText(e.employee_role, "label")}</span>
-                        )}
-                        {e.email && (
-                          <span className="block text-[11px] text-muted-foreground truncate max-w-[200px]">{e.email}</span>
-                        )}
-                        {e.phone_number && (
-                          <span className="block text-[11px] text-muted-foreground">{e.phone_number}</span>
-                        )}
-                      </div>
-                    </div>
+                  <TableCell className="py-2">
+                    <span className="text-sm font-semibold leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
+                    {e.employee_role && (
+                      <span className="md:hidden block text-[11px] text-muted-foreground">{formatDisplayText(e.employee_role, "label")}</span>
+                    )}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell py-3">
-                    <div className="space-y-1">
-                      {e.email ? (
-                        <a href={`mailto:${e.email}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
-                          <Mail className="h-3 w-3 shrink-0" /><span className="truncate max-w-[180px]">{e.email}</span>
-                        </a>
-                      ) : null}
-                      {e.phone_number ? (
-                        <a href={`tel:${e.phone_number}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
-                          <Phone className="h-3 w-3 shrink-0" />{e.phone_number}
-                        </a>
-                      ) : null}
-                      {!e.email && !e.phone_number && (
-                        <span className="text-xs text-muted-foreground/40">—</span>
-                      )}
-                    </div>
+                  <TableCell className="hidden md:table-cell py-2">
+                    {e.phone_number ? (
+                      <a href={`tel:${e.phone_number}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                        <Phone className="h-3 w-3 shrink-0" />{e.phone_number}
+                      </a>
+                    ) : <span className="text-xs text-muted-foreground/30">—</span>}
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell py-3">
+                  <TableCell className="hidden lg:table-cell py-2">
+                    {e.email ? (
+                      <a href={`mailto:${e.email}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary transition-colors truncate max-w-[180px] block">
+                        {e.email}
+                      </a>
+                    ) : <span className="text-xs text-muted-foreground/30">—</span>}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell py-2">
                     {e.employee_role ? (
-                      <Badge variant="secondary" className="text-[11px] font-normal">
+                      <Badge variant="secondary" className="text-[10px] font-normal py-0">
                         {formatDisplayText(e.employee_role, "label")}
                       </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/40">—</span>
-                    )}
+                    ) : <span className="text-xs text-muted-foreground/30">—</span>}
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell py-3">
+                  <TableCell className="hidden xl:table-cell py-2">
                     {e.groups ? (
-                      <div className="flex flex-wrap gap-1">
-                        {e.groups.split(",").slice(0, 2).map((g: string) => (
-                          <Badge key={g.trim()} variant="outline" className="text-[10px] font-normal px-1.5 py-0">
-                            {g.trim()}
-                          </Badge>
-                        ))}
-                        {e.groups.split(",").length > 2 && (
-                          <Badge variant="outline" className="text-[10px] font-normal px-1.5 py-0 text-muted-foreground">
-                            +{e.groups.split(",").length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/40">—</span>
-                    )}
+                      <span className="text-xs text-muted-foreground truncate max-w-[120px] block">{e.groups.split(",")[0].trim()}</span>
+                    ) : <span className="text-xs text-muted-foreground/30">—</span>}
                   </TableCell>
-                  <TableCell className="hidden xl:table-cell py-3">
-                    {e.start_date ? (
-                      <span className="text-xs text-muted-foreground">{e.start_date}</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/40">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-3">
+                  <TableCell className="py-2">
                     <span className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium",
-                      e.is_active
-                        ? "bg-earning/10 text-earning"
-                        : "bg-muted text-muted-foreground"
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
+                      e.is_active ? "bg-[hsl(var(--earning)/0.1)] text-[hsl(var(--earning))]" : "bg-muted text-muted-foreground"
                     )}>
-                      {e.is_active ? "Activo" : "Inactivo"}
+                      {e.is_active ? (e.user_id ? "Activo" : "Pendiente") : "Inactivo"}
                     </span>
                   </TableCell>
-                  <TableCell className="py-3" onClick={ev => ev.stopPropagation()}>
+                  <TableCell className="py-2 pr-3" onClick={ev => ev.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
