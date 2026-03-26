@@ -743,8 +743,11 @@ export function runReconciliation(
   truthRows: TruthRow[],
   systemData: SystemEmployeeData[],
   aliases: AliasEntry[],
-  tolerance: ToleranceConfig
+  tolerance: ToleranceConfig,
+  options?: { isHistorical?: boolean }
 ): { rows: ReconciliationRowResult[]; systemOnly: SystemEmployeeData[]; summary: BatchSummary } {
+  const isHistorical = options?.isHistorical ?? false;
+
   const candidates = systemData.map(s => ({
     id: s.employee_id,
     first_name: s.first_name,
@@ -768,11 +771,26 @@ export function runReconciliation(
   const matchedSystemIds = new Set<string>();
   const rows: ReconciliationRowResult[] = matches.map((match, i) => {
     const truth = truthRows[i];
-    const system = match.system_employee_id
+    let system = match.system_employee_id
       ? systemData.find(s => s.employee_id === match.system_employee_id) ?? null
       : null;
 
     if (system) matchedSystemIds.add(system.employee_id);
+
+    // ── Historical Mode: mirror truth → system so variances = 0 ──
+    if (isHistorical && system) {
+      system = {
+        ...system,
+        total_hours: truth.total_hours ?? 0,
+        total_pay: truth.total_pay ?? 0,
+        pay_per_day: truth.pay_per_day ?? 0,
+        ryde: truth.ryde ?? 0,
+        tips: truth.tips ?? 0,
+        reimbursements: truth.reimbursements ?? 0,
+        total: truth.total ?? 0,
+        source_tags: ["historical_mirror"],
+      };
+    }
 
     const variances = computeRowVariances(truth, system);
     const classification = classifyRow(truth, system, variances, match.match_status, tolerance);
@@ -783,7 +801,7 @@ export function runReconciliation(
     return { ...baseRow, exception_type };
   });
 
-  const systemOnly = systemData.filter(s => !matchedSystemIds.has(s.employee_id));
+  const systemOnly = isHistorical ? [] : systemData.filter(s => !matchedSystemIds.has(s.employee_id));
   const summary = computeBatchSummary(rows, systemOnly);
 
   return { rows, systemOnly, summary };

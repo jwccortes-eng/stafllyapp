@@ -21,6 +21,7 @@ export interface ReconciliationBatch {
   id: string;
   company_id: string;
   status: string;
+  reconciliation_mode: string;
   truth_source_file_name: string | null;
   employees_truth_count: number;
   matched_count: number;
@@ -87,8 +88,24 @@ export function usePayrollReconciliation() {
     setLoading(false);
   }, [selectedCompanyId]);
 
-  const createBatch = useCallback(async (periodStart?: string, periodEnd?: string) => {
+  const createBatch = useCallback(async (periodStart?: string, periodEnd?: string, mode?: string) => {
     if (!selectedCompanyId || !user?.id) return null;
+
+    // Auto-detect historical mode from cutover date if not explicitly set
+    let reconciliationMode = mode || "standard";
+    if (!mode && periodEnd) {
+      try {
+        const { data: cutover } = await supabase
+          .from("company_cutover_dates")
+          .select("cutover_date")
+          .eq("company_id", selectedCompanyId)
+          .single();
+        if (cutover?.cutover_date && periodEnd < cutover.cutover_date) {
+          reconciliationMode = "historical_truth_authoritative";
+        }
+      } catch { /* no cutover date — default to standard */ }
+    }
+
     const { data, error } = await supabase
       .from("reconciliation_batches")
       .insert({
@@ -97,6 +114,7 @@ export function usePayrollReconciliation() {
         payroll_period_start: periodStart || null,
         payroll_period_end: periodEnd || null,
         status: "DRAFT",
+        reconciliation_mode: reconciliationMode,
       } as any)
       .select()
       .single();
@@ -333,10 +351,10 @@ export function usePayrollReconciliation() {
         confidence: 85,
       }));
 
-      // 5. Get tolerances
+      // 5. Get tolerances and mode
       const { data: batchData } = await supabase
         .from("reconciliation_batches")
-        .select("tolerance_hours, tolerance_money, tolerance_tips")
+        .select("tolerance_hours, tolerance_money, tolerance_tips, reconciliation_mode")
         .eq("id", batchId)
         .single();
 
@@ -346,8 +364,10 @@ export function usePayrollReconciliation() {
         tips: (batchData as any)?.tolerance_tips ?? 0.5,
       };
 
+      const isHistorical = (batchData as any)?.reconciliation_mode === "historical_truth_authoritative";
+
       // 6. Run engine
-      const result = runReconciliation(truthRows, systemData, aliases, tolerance);
+      const result = runReconciliation(truthRows, systemData, aliases, tolerance, { isHistorical });
       setReconciliationRows(result.rows);
       setSystemOnlyEmployees(result.systemOnly);
       setBatchSummary(result.summary);
