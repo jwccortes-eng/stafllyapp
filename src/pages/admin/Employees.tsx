@@ -107,9 +107,10 @@ interface UpdateDiff {
 }
 
 /* ── Status badge component ── */
-function StatusBadge({ employee }: { employee: EmployeeRecord }) {
+function EmpStatusBadge({ employee }: { employee: EmployeeRecord }) {
   const isActive = employee.is_active !== false;
   const hasAccess = !!employee.user_id;
+  const hasPin = !!(employee.access_pin ?? "").toString().trim();
 
   if (!isActive) {
     return (
@@ -121,10 +122,22 @@ function StatusBadge({ employee }: { employee: EmployeeRecord }) {
   }
   if (!hasAccess) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-warning/10 text-warning">
-        <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
-        Pendiente
-      </span>
+      <div className="flex items-center gap-1">
+        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-warning/10 text-warning">
+          <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
+          Pendiente
+        </span>
+        {!hasPin && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-destructive/10 text-destructive">
+                <KeyRound className="h-2.5 w-2.5" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">Sin PIN asignado</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
     );
   }
   return (
