@@ -107,9 +107,10 @@ interface UpdateDiff {
 }
 
 /* ── Status badge component ── */
-function StatusBadge({ employee }: { employee: EmployeeRecord }) {
+function EmpStatusBadge({ employee }: { employee: EmployeeRecord }) {
   const isActive = employee.is_active !== false;
   const hasAccess = !!employee.user_id;
+  const hasPin = !!(employee.access_pin ?? "").toString().trim();
 
   if (!isActive) {
     return (
@@ -121,10 +122,22 @@ function StatusBadge({ employee }: { employee: EmployeeRecord }) {
   }
   if (!hasAccess) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-warning/10 text-warning">
-        <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
-        Pendiente
-      </span>
+      <div className="flex items-center gap-1">
+        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-warning/10 text-warning">
+          <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
+          Pendiente
+        </span>
+        {!hasPin && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-destructive/10 text-destructive">
+                <KeyRound className="h-2.5 w-2.5" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">Sin PIN asignado</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
     );
   }
   return (
@@ -726,7 +739,7 @@ export default function Employees() {
                   </div>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <StatusBadge employee={e} />
+                  <EmpStatusBadge employee={e} />
                   {e.access_pin && <span className="text-[9px] text-muted-foreground/50 font-mono">PIN: {e.access_pin}</span>}
                 </div>
               </div>
@@ -788,7 +801,7 @@ export default function Employees() {
                     {e.groups ? <span className="text-[10px] text-muted-foreground truncate max-w-[100px] block">{e.groups.split(",")[0].trim()}</span> : <span className="text-[10px] text-muted-foreground/25">—</span>}
                   </TableCell>
                   <TableCell className="py-1">
-                    <StatusBadge employee={e} />
+                    <EmpStatusBadge employee={e} />
                   </TableCell>
                   <TableCell className="hidden lg:table-cell py-1">
                     {e.last_login ? (
@@ -831,7 +844,7 @@ export default function Employees() {
                 <SheetTitle className="text-base font-bold leading-tight">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[10px] py-0">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
-                  {viewEmployee && <StatusBadge employee={viewEmployee} />}
+                  {viewEmployee && <EmpStatusBadge employee={viewEmployee} />}
                 </div>
                 <SheetDescription className="mt-1 text-[11px] text-muted-foreground/70 flex items-center gap-3 flex-wrap">
                   {viewEmployee?.phone_number && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{viewEmployee.phone_number}</span>}
