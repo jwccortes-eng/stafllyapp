@@ -388,7 +388,7 @@ function BatchCard({ batch, selected, onSelect }: { batch: BatchOption; selected
           <FileText className={cn("h-4 w-4 shrink-0", selected ? "text-primary" : "text-muted-foreground")} />
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">
-              {batch.truth_file_name ?? "Sin archivo"}
+              {batch.truth_source_file_name ?? "Sin archivo"}
             </p>
             <p className="text-xs text-muted-foreground">
               {batch.payroll_period_start ?? "?"} → {batch.payroll_period_end ?? "?"}
