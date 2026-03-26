@@ -3,18 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
-import {
-  Send, MessageCircle, Phone, Copy, Check, Mail, QrCode, Link2, Smartphone,
-} from "lucide-react";
+import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 interface Props {
   open: boolean;
@@ -32,13 +28,13 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
   const [emailSent, setEmailSent] = useState(false);
 
   const company = companies.find(c => c.id === selectedCompanyId);
-  const slug = company?.slug ?? "";
   const companyName = company?.name ?? "la empresa";
 
   const portalUrl = `${PRODUCTION_URL}/auth`;
-  const pin = typeof employee.access_pin === "string" && employee.access_pin.trim()
-    ? employee.access_pin.trim()
-    : "—";
+  const pin = typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : "—";
+  const hasPin = pin !== "—";
+  const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
+  const hasEmail = !!employee.email;
 
   const message = `Hola ${employee.first_name}!\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\nEnlace: ${portalUrl}\nTu PIN: ${pin}\n\nIngresa con tu número de teléfono y PIN. Selecciona "Acceso empleado" al entrar.`;
 
@@ -77,17 +73,11 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
                 <p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0 0 8px;">📱 <strong>Enlace:</strong> <a href="${portalUrl}" style="color: hsl(222, 100%, 59%);">${portalUrl}</a></p>
                 <p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0;">🔑 <strong>Tu PIN:</strong> ${pin}</p>
               </div>
-              <p style="font-size: 13px; color: hsl(220, 15%, 46%); line-height: 1.6;">
-                Ingresa con tu número de teléfono y tu PIN de 4 dígitos.
-              </p>
+              <p style="font-size: 13px; color: hsl(220, 15%, 46%); line-height: 1.6;">Ingresa con tu número de teléfono y tu PIN de 4 dígitos.</p>
               <div style="margin: 24px 0;">
-                <a href="${portalUrl}" style="display: inline-block; background: hsl(222, 100%, 59%); color: #ffffff; font-size: 14px; font-weight: 600; border-radius: 16px; padding: 12px 28px; text-decoration: none;">
-                  Ir al portal
-                </a>
+                <a href="${portalUrl}" style="display: inline-block; background: hsl(222, 100%, 59%); color: #ffffff; font-size: 14px; font-weight: 600; border-radius: 16px; padding: 12px 28px; text-decoration: none;">Ir al portal</a>
               </div>
-              <p style="font-size: 12px; color: hsl(220, 15%, 46%); margin: 30px 0 0;">
-                Si no esperabas esta invitación, puedes ignorar este correo.
-              </p>
+              <p style="font-size: 12px; color: hsl(220, 15%, 46%); margin: 30px 0 0;">Si no esperabas esta invitación, ignora este correo.</p>
             </div>
           `,
         },
@@ -95,7 +85,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setEmailSent(true);
-      toast({ title: "Email enviado", description: `Invitación enviada a ${employee.email}` });
+      toast({ title: "Email enviado ✅", description: `Invitación enviada a ${employee.email}` });
     } catch (err: any) {
       toast({ title: "Error al enviar", description: err.message ?? "Intenta de nuevo", variant: "destructive" });
     } finally {
@@ -103,140 +93,112 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
     }
   };
 
+  // Readiness checks
+  const readyChecks = [
+    { label: "Teléfono", ok: hasPhone, detail: employee.phone_number || "No registrado" },
+    { label: "PIN", ok: hasPin, detail: hasPin ? pin : "No asignado" },
+    { label: "Email", ok: hasEmail, detail: employee.email || "No registrado" },
+  ];
+  const isReady = hasPhone && hasPin;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Send className="h-4 w-4 text-primary" />
-            Invitar a {employee.first_name}
-          </DialogTitle>
-          <DialogDescription>
-            Envía las credenciales de acceso al portal del empleado
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Credentials summary */}
-        <div className="bg-muted/50 rounded-xl p-4 space-y-2 border border-border/40">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Portal</span>
-            <a href={portalUrl} target="_blank" rel="noopener" className="text-primary font-medium text-xs hover:underline truncate max-w-[240px]">
-              {portalUrl}
-            </a>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Teléfono</span>
-            <span className="font-medium text-xs">{employee.phone_number || "—"}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">PIN</span>
-            <Badge variant="outline" className="font-mono text-xs tracking-widest">{pin}</Badge>
+      <DialogContent className="max-w-md p-0 overflow-hidden">
+        {/* Header with employee identity */}
+        <div className="bg-gradient-to-br from-primary/[0.04] to-transparent border-b px-5 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <EmployeeAvatar firstName={employee.first_name ?? ""} lastName={employee.last_name ?? ""} avatarUrl={employee.avatar_url} gender={employee.gender} size="lg" className="ring-2 ring-background shadow" />
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-base font-bold">Invitar a {employee.first_name}</DialogTitle>
+              <DialogDescription className="text-[11px] mt-0.5">Envía las credenciales de acceso al portal</DialogDescription>
+            </div>
+            <Send className="h-5 w-5 text-primary/30" />
           </div>
         </div>
 
-        <Tabs defaultValue="link" className="w-full">
-          <TabsList className="w-full grid grid-cols-2 h-9 bg-muted/40 rounded-xl">
-            <TabsTrigger value="link" className="text-xs data-[state=active]:bg-card rounded-lg gap-1.5">
-              <Link2 className="h-3.5 w-3.5" />
-              Link / Mensaje
-            </TabsTrigger>
-            <TabsTrigger value="email" className="text-xs data-[state=active]:bg-card rounded-lg gap-1.5">
-              <Mail className="h-3.5 w-3.5" />
-              Email
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="link" className="mt-3 space-y-3">
-            {/* Message preview */}
-            <div className="bg-background rounded-lg border border-border/40 p-3">
-              <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{message}</p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-col h-auto py-3 gap-1.5 border-[#25D366]/30 hover:bg-[#25D366]/10 hover:border-[#25D366]/50"
-                asChild
-                disabled={!phoneDigits}
-              >
-                <a href={waLink} target="_blank" rel="noopener">
-                  <MessageCircle className="h-5 w-5 text-[#25D366]" />
-                  <span className="text-[10px]">WhatsApp</span>
-                </a>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-col h-auto py-3 gap-1.5 border-primary/30 hover:bg-primary/10"
-                asChild
-                disabled={!phoneDigits}
-              >
-                <a href={smsLink}>
-                  <Smartphone className="h-5 w-5 text-primary" />
-                  <span className="text-[10px]">SMS</span>
-                </a>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "flex-col h-auto py-3 gap-1.5",
-                  copied && "border-earning/50 bg-earning/10"
-                )}
-                onClick={copyLink}
-              >
-                {copied ? <Check className="h-5 w-5 text-earning" /> : <Copy className="h-5 w-5 text-muted-foreground" />}
-                <span className="text-[10px]">{copied ? "Copiado" : "Copiar"}</span>
-              </Button>
-            </div>
-
-            {!phoneDigits && (
-              <p className="text-[10px] text-warning text-center">
-                ⚠️ Este empleado no tiene teléfono registrado. WhatsApp y SMS no están disponibles.
-              </p>
-            )}
-          </TabsContent>
-
-          <TabsContent value="email" className="mt-3 space-y-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Email del empleado</Label>
-              <Input
-                value={employee.email ?? ""}
-                disabled
-                className="h-9 text-sm bg-muted/30"
-              />
-            </div>
-
-            {emailSent ? (
-              <div className="flex items-center gap-2 justify-center py-4 text-earning">
-                <Check className="h-5 w-5" />
-                <span className="text-sm font-medium">Invitación enviada exitosamente</span>
+        <div className="px-5 pb-5 space-y-4">
+          {/* Readiness checklist */}
+          <div className="rounded-lg border border-border/40 p-3 space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1">Verificación</p>
+            {readyChecks.map(c => (
+              <div key={c.label} className="flex items-center gap-2 text-[11px]">
+                {c.ok ? <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--earning))]" /> : <AlertTriangle className="h-3.5 w-3.5 text-warning" />}
+                <span className="text-muted-foreground w-16">{c.label}</span>
+                <span className={cn("font-medium", c.ok ? "text-foreground" : "text-warning")}>{c.detail}</span>
               </div>
-            ) : (
-              <Button
-                className="w-full"
-                onClick={sendEmail}
-                disabled={!employee.email || sending}
-              >
-                {sending ? "Enviando..." : (
-                  <>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Enviar invitación por email
-                  </>
-                )}
-              </Button>
-            )}
-
-            {!employee.email && (
-              <p className="text-[10px] text-warning text-center">
-                ⚠️ Este empleado no tiene email registrado.
+            ))}
+            {!isReady && (
+              <p className="text-[10px] text-warning mt-1.5 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" /> Completa teléfono y PIN antes de invitar
               </p>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+
+          {/* Credentials */}
+          <div className="bg-muted/40 rounded-lg p-3 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground">Portal</span>
+              <a href={portalUrl} target="_blank" rel="noopener" className="text-primary font-medium text-[10px] hover:underline truncate max-w-[220px]">{portalUrl}</a>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground">Teléfono</span>
+              <span className="font-medium text-[10px]">{employee.phone_number || "—"}</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground">PIN</span>
+              <Badge variant="outline" className="font-mono text-[10px] tracking-widest">{pin}</Badge>
+            </div>
+          </div>
+
+          {/* Send channels */}
+          <Tabs defaultValue="link" className="w-full">
+            <TabsList className="w-full grid grid-cols-2 h-8 bg-muted/30 rounded-lg">
+              <TabsTrigger value="link" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1">
+                <MessageCircle className="h-3 w-3" /> Mensaje
+              </TabsTrigger>
+              <TabsTrigger value="email" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1">
+                <Mail className="h-3 w-3" /> Email
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="link" className="mt-2.5 space-y-2.5">
+              <div className="bg-background rounded-lg border border-border/30 p-2.5">
+                <p className="text-[10px] text-muted-foreground whitespace-pre-line leading-relaxed">{message}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-[#25D366]/30 hover:bg-[#25D366]/10 hover:border-[#25D366]/50 text-[9px]" asChild disabled={!hasPhone}>
+                  <a href={waLink} target="_blank" rel="noopener"><MessageCircle className="h-4 w-4 text-[#25D366]" />WhatsApp</a>
+                </Button>
+                <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-primary/30 hover:bg-primary/10 text-[9px]" asChild disabled={!hasPhone}>
+                  <a href={smsLink}><Smartphone className="h-4 w-4 text-primary" />SMS</a>
+                </Button>
+                <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyLink}>
+                  {copied ? <Check className="h-4 w-4 text-[hsl(var(--earning))]" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+                  {copied ? "Copiado" : "Copiar"}
+                </Button>
+              </div>
+              {!hasPhone && <p className="text-[9px] text-warning text-center">⚠️ Sin teléfono registrado</p>}
+            </TabsContent>
+
+            <TabsContent value="email" className="mt-2.5 space-y-2.5">
+              <div className="space-y-1.5">
+                <Label className="text-[10px]">Email del empleado</Label>
+                <Input value={employee.email ?? ""} disabled className="h-8 text-xs bg-muted/30" />
+              </div>
+              {emailSent ? (
+                <div className="flex items-center gap-2 justify-center py-3 text-[hsl(var(--earning))]">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="text-xs font-medium">Invitación enviada ✅</span>
+                </div>
+              ) : (
+                <Button className="w-full h-8 text-xs" onClick={sendEmail} disabled={!hasEmail || sending}>
+                  {sending ? "Enviando..." : <><Mail className="h-3.5 w-3.5 mr-1.5" />Enviar invitación por email</>}
+                </Button>
+              )}
+              {!hasEmail && <p className="text-[9px] text-warning text-center">⚠️ Sin email registrado</p>}
+            </TabsContent>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );
