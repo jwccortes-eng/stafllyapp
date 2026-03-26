@@ -733,7 +733,7 @@ export function usePayrollReconciliation() {
     truthParseResult, reconciliationRows, systemOnlyEmployees, batchSummary,
     loading, processing,
     loadBatches, createBatch, uploadTruth,
-    runReconciliationForBatch, approveBatch, lockBatch,
+    runReconciliationForBatch, rehydrateBatch, approveBatch, lockBatch,
     resolveMatch, addReviewNote,
     exportCSV, exportExecutive, exportMismatches, exportCritical,
     saveChecklist,
