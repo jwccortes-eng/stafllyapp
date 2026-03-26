@@ -6,17 +6,34 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import {
   Search, Clock, DollarSign, Users, Download, ArrowUpDown,
-  CheckCircle2, AlertTriangle, FileText, Timer
+  AlertTriangle, FileText, Timer, Filter, EyeOff
 } from "lucide-react";
 
+/* ── Formatting helpers ── */
 const fmt = (v: number | null | undefined) =>
   v != null ? `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
 
 const fmtH = (v: number | null | undefined) =>
   v != null ? v.toFixed(2) : "—";
 
+/* ── Non-payroll exclusion patterns ── */
+const EXCLUDED_NAME_PATTERNS = [
+  /^SYSTEM\s*\d*/i,
+  /CONECTEAM/i,
+  /GENERAL\s*ADMIN/i,
+  /BOOKKEEPING/i,
+  /NUMERIC/i,
+];
+
+function isNonPayrollEmployee(firstName: string, lastName: string): boolean {
+  const full = `${firstName} ${lastName}`.trim();
+  return EXCLUDED_NAME_PATTERNS.some(rx => rx.test(full));
+}
+
+/* ── Types ── */
 interface BasePayRow {
   name: string;
   hours: number | null;
@@ -26,6 +43,7 @@ interface BasePayRow {
   observation: string;
   sourceDetail: string;
   row: ReconciliationRowResult;
+  excluded: boolean;
 }
 
 function deriveSource(row: ReconciliationRowResult): { source: BasePayRow["source"]; detail: string } {
@@ -54,6 +72,7 @@ export default function BasePayReport({ rows, isHistorical, periodLabel }: BaseP
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "hours" | "basePay">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [showExcluded, setShowExcluded] = useState(false);
 
   const baseRows = useMemo<BasePayRow[]>(() => {
     return rows.map(row => {
@@ -64,9 +83,11 @@ export default function BasePayReport({ rows, isHistorical, periodLabel }: BaseP
         : null;
       const { source, detail } = deriveSource(row);
       const obs = row.truth.observaciones || "";
+      const firstName = row.truth.first_name || "";
+      const lastName = row.truth.last_name || "";
 
       return {
-        name: `${row.truth.first_name} ${row.truth.last_name}`,
+        name: `${firstName} ${lastName}`.trim(),
         hours,
         rate,
         basePay,
@@ -74,12 +95,15 @@ export default function BasePayReport({ rows, isHistorical, periodLabel }: BaseP
         observation: obs,
         sourceDetail: detail,
         row,
+        excluded: isNonPayrollEmployee(firstName, lastName),
       };
     });
   }, [rows]);
 
+  const excludedCount = useMemo(() => baseRows.filter(r => r.excluded).length, [baseRows]);
+
   const filtered = useMemo(() => {
-    let result = baseRows;
+    let result = showExcluded ? baseRows : baseRows.filter(r => !r.excluded);
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(r => r.name.toLowerCase().includes(q));
@@ -92,16 +116,20 @@ export default function BasePayReport({ rows, isHistorical, periodLabel }: BaseP
       return sortDir === "desc" ? -cmp : cmp;
     });
     return result;
-  }, [baseRows, search, sortBy, sortDir]);
+  }, [baseRows, search, sortBy, sortDir, showExcluded]);
 
-  // Summary
   const summary = useMemo(() => {
-    const totalHours = baseRows.reduce((s, r) => s + (r.hours ?? 0), 0);
-    const totalBasePay = baseRows.reduce((s, r) => s + r.basePay, 0);
+    const payable = baseRows.filter(r => !r.excluded);
+    const totalHours = payable.reduce((s, r) => s + (r.hours ?? 0), 0);
+    const totalBasePay = payable.reduce((s, r) => s + r.basePay, 0);
     const bySrc = { clocked: 0, truth_historical: 0, manual_override: 0, inferred: 0 };
-    baseRows.forEach(r => bySrc[r.source]++);
-    return { totalHours, totalBasePay, count: baseRows.length, bySrc };
-  }, [baseRows]);
+    payable.forEach(r => bySrc[r.source]++);
+
+    const exclHours = baseRows.filter(r => r.excluded).reduce((s, r) => s + (r.hours ?? 0), 0);
+    const exclPay = baseRows.filter(r => r.excluded).reduce((s, r) => s + r.basePay, 0);
+
+    return { totalHours, totalBasePay, count: payable.length, bySrc, excludedCount, exclHours, exclPay };
+  }, [baseRows, excludedCount]);
 
   const toggleSort = (col: "name" | "hours" | "basePay") => {
     if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -109,10 +137,11 @@ export default function BasePayReport({ rows, isHistorical, periodLabel }: BaseP
   };
 
   const handleExportCSV = () => {
-    const headers = ["Empleado", "Horas", "Tarifa", "Base Pay", "Fuente", "Observación"];
-    const csvRows = filtered.map(r => [
+    const payable = showExcluded ? filtered : filtered.filter(r => !r.excluded);
+    const headers = ["Empleado", "Horas", "Tarifa", "Base Pay", "Fuente", "Excluido", "Observación"];
+    const csvRows = payable.map(r => [
       r.name, fmtH(r.hours), r.rate != null ? `$${r.rate.toFixed(2)}` : "",
-      fmt(r.basePay), r.source, r.observation,
+      fmt(r.basePay), r.source, r.excluded ? "Sí" : "No", r.observation,
     ]);
     const csv = [headers, ...csvRows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -124,15 +153,37 @@ export default function BasePayReport({ rows, isHistorical, periodLabel }: BaseP
 
   return (
     <div className="space-y-4">
-      {/* Summary KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      {/* Summary KPIs — payable only */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <SummaryKpi icon={Users} label="Empleados" value={String(summary.count)} />
         <SummaryKpi icon={Clock} label="Total Horas" value={fmtH(summary.totalHours)} />
         <SummaryKpi icon={DollarSign} label="Total Base Pay" value={fmt(summary.totalBasePay)} accent="earning" />
         <SummaryKpi icon={Timer} label="Clocked" value={String(summary.bySrc.clocked)} />
         <SummaryKpi icon={FileText} label="Truth" value={String(summary.bySrc.truth_historical)} />
         <SummaryKpi icon={AlertTriangle} label="Manual / Inferido" value={String(summary.bySrc.manual_override + summary.bySrc.inferred)} />
+        {excludedCount > 0 && (
+          <SummaryKpi icon={EyeOff} label="Excluidos" value={`${excludedCount} (${fmtH(summary.exclHours)}h)`} accent="muted" />
+        )}
       </div>
+
+      {/* Exclusion banner */}
+      {excludedCount > 0 && (
+        <Card className="shadow-none border-warning/30 bg-warning/[0.04]">
+          <CardContent className="py-2 px-4 flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-warning">
+              <Filter className="h-3.5 w-3.5" />
+              <span className="font-medium">
+                {excludedCount} empleado{excludedCount > 1 ? "s" : ""} no-nómina excluido{excludedCount > 1 ? "s" : ""} (SYSTEM, Admin, etc.)
+                — {fmtH(summary.exclHours)}h / {fmt(summary.exclPay)} removidos del total
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-muted-foreground text-[10px]">Mostrar</span>
+              <Switch checked={showExcluded} onCheckedChange={setShowExcluded} className="scale-75" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {isHistorical && (
         <Card className="shadow-none border-info/30 bg-info/[0.04]">
@@ -192,11 +243,23 @@ export default function BasePayReport({ rows, isHistorical, periodLabel }: BaseP
                   : r.basePay > 0 ? fmt(r.basePay) : "—";
 
                 return (
-                  <TableRow key={i} className="text-xs hover:bg-accent/40 transition-colors">
+                  <TableRow
+                    key={i}
+                    className={`text-xs transition-colors ${r.excluded ? "opacity-50 bg-muted/20" : "hover:bg-accent/40"}`}
+                  >
                     <TableCell className="sticky left-0 bg-card z-10 py-2">
                       <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-1.5 rounded-full bg-earning shrink-0" />
+                        {r.excluded ? (
+                          <EyeOff className="h-3 w-3 text-muted-foreground shrink-0" />
+                        ) : (
+                          <div className="h-1.5 w-1.5 rounded-full bg-earning shrink-0" />
+                        )}
                         <span className="font-medium truncate max-w-[150px]">{r.name}</span>
+                        {r.excluded && (
+                          <Badge variant="outline" className="text-[8px] px-1 py-0 border-muted-foreground/30 text-muted-foreground ml-1">
+                            No-nómina
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-mono py-2 tabular-nums">
@@ -250,7 +313,7 @@ function SummaryKpi({ icon: Icon, label, value, accent }: { icon: any; label: st
   return (
     <Card className="shadow-none border-border/40">
       <CardContent className="py-3 px-4 flex items-center gap-3">
-        <div className={`p-2 rounded-xl ${accent === "earning" ? "bg-earning/12" : "bg-muted/60"}`}>
+        <div className={`p-2 rounded-xl ${accent === "earning" ? "bg-earning/12" : accent === "muted" ? "bg-muted/60" : "bg-muted/60"}`}>
           <Icon className={`h-4 w-4 ${accent === "earning" ? "text-earning" : "text-muted-foreground"}`} />
         </div>
         <div>
