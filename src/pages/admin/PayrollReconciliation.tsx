@@ -1238,10 +1238,11 @@ export default function PayrollReconciliationPage() {
                   } else if (adicionales > 0) {
                     formula = `$0 + ${fmtC(adicionales)} = ${fmt(total)}`;
                   } else if (basePay > 0) {
-                    formula = `Base: ${fmtC(basePay)}`;
+                    formula = `${fmtC(basePay)} = ${fmt(total)}`;
                   } else {
                     formula = total != null ? fmt(total) : "—";
                   }
+                  const obs = row.truth.observaciones || "";
 
                   return (
                     <TableRow
