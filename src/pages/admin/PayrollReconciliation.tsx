@@ -39,6 +39,12 @@ const fmtVar = (v: number | null | undefined) => {
 const fmtPct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
 const toAbsMoney = (value: unknown): number => {
+  if (typeof value === "number") return Number.isFinite(value) ? Math.abs(value) : 0;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/[^0-9.-]/g, "");
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? Math.abs(n) : 0;
+  }
   const n = Number(value);
   return Number.isFinite(n) ? Math.abs(n) : 0;
 };
@@ -58,7 +64,9 @@ const truthObservation = (row: ReconciliationRowResult): string => {
   const raw = (row.truth.raw || {}) as Record<string, unknown>;
   const rawObs = raw.observaciones
     ?? raw.Observaciones
+    ?? raw.OBSERVACIONES
     ?? raw.observation
+    ?? raw.observacion
     ?? raw.observations;
   const obs = row.truth.observaciones ?? (typeof rawObs === "string" ? rawObs : "");
   return typeof obs === "string" ? obs.trim() : "";
