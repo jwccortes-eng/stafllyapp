@@ -185,6 +185,129 @@ export function usePayrollReconciliation() {
     setProcessing(false);
   }, [toast]);
 
+  // ─── Rehydrate persisted results from DB (no re-run) ───────────────
+  const rehydrateBatch = useCallback(async (batchId: string) => {
+    setLoading(true);
+    try {
+      const { data: dbRows } = await supabase
+        .from("reconciliation_employee_rows")
+        .select("*")
+        .eq("batch_id", batchId);
+
+      if (!dbRows || dbRows.length === 0) {
+        setLoading(false);
+        return false; // nothing to rehydrate
+      }
+
+      // Reconstruct ReconciliationRowResult[] from persisted columns
+      const rows: ReconciliationRowResult[] = (dbRows as any[]).map((r: any) => ({
+        truth: {
+          employer_identification: r.employer_identification,
+          verification_ssn_ein: r.verification_ssn_ein,
+          first_name: r.first_name || "",
+          last_name: r.last_name || "",
+          total_hours: r.truth_total_hours,
+          total_pay: r.truth_total_pay,
+          pay_per_day: r.truth_pay_per_day,
+          ryde: r.truth_ryde,
+          tips: r.truth_tips,
+          reimbursements: r.truth_reimbursements,
+          travel_hours: r.truth_raw_json?.travel_hours ?? null,
+          otros: r.truth_raw_json?.otros ?? null,
+          discount: r.truth_raw_json?.discount ?? null,
+          total: r.truth_total,
+          observaciones: r.truth_observaciones,
+          date: r.truth_date,
+          corte: r.truth_corte,
+          raw: (r.truth_raw_json as any) || {},
+        },
+        system: r.matched_system_employee_id ? {
+          employee_id: r.matched_system_employee_id,
+          first_name: "",
+          last_name: "",
+          total_hours: r.system_total_hours ?? 0,
+          total_pay: r.system_total_pay ?? 0,
+          pay_per_day: r.system_pay_per_day ?? 0,
+          ryde: r.system_ryde ?? 0,
+          tips: r.system_tips ?? 0,
+          reimbursements: r.system_reimbursements ?? 0,
+          total: r.system_total ?? 0,
+          shift_count: r.shift_count ?? 0,
+          clock_count: r.clock_count ?? 0,
+          source_tags: r.source_tags ?? [],
+        } : null,
+        match: {
+          truth_index: 0,
+          system_employee_id: r.matched_system_employee_id,
+          match_status: r.match_status || "UNMATCHED",
+          match_confidence: r.match_confidence ?? 0,
+          matched_by: r.matched_by || "none",
+          match_notes: r.match_notes || "",
+        },
+        variances: {
+          hours: r.variance_hours ?? null,
+          total_pay: r.variance_total_pay ?? null,
+          pay_per_day: r.variance_pay_per_day ?? null,
+          ryde: r.variance_ryde ?? null,
+          tips: r.variance_tips ?? null,
+          reimbursements: r.variance_reimbursements ?? null,
+          total: r.variance_total ?? null,
+        },
+        classification: {
+          row_status: r.row_status || "PENDING",
+          is_exact_match: r.is_exact_match ?? false,
+          has_component_mismatch: r.has_component_mismatch ?? false,
+          has_critical_mismatch: r.has_critical_mismatch ?? false,
+          has_manual_adjustment: r.has_manual_adjustment ?? false,
+        },
+        anomaly_flags: r.anomaly_flags_json ?? [],
+        exception_type: null,
+      }));
+
+      setReconciliationRows(rows);
+
+      // Reconstruct summary from batch record
+      const { data: batchData } = await supabase
+        .from("reconciliation_batches")
+        .select("*")
+        .eq("id", batchId)
+        .single();
+
+      if (batchData) {
+        const b = batchData as any;
+        const summary: BatchSummary = {
+          truth_count: b.employees_truth_count ?? rows.length,
+          system_count: b.employees_system_count ?? 0,
+          matched: b.matched_count ?? 0,
+          unmatched_truth: b.unmatched_truth_count ?? 0,
+          unmatched_system: b.unmatched_system_count ?? 0,
+          exact_match: b.exact_match_count ?? 0,
+          mismatch: b.mismatch_count ?? 0,
+          component_mismatch: b.component_mismatch_count ?? 0,
+          critical_mismatch: b.critical_mismatch_count ?? 0,
+          total_variance: b.total_variance_amount ?? 0,
+          totals_truth: b.totals_truth_json ?? { hours: 0, total_pay: 0, pay_per_day: 0, ryde: 0, tips: 0, reimbursements: 0, total: 0 },
+          totals_system: b.totals_system_json ?? { hours: 0, total_pay: 0, pay_per_day: 0, ryde: 0, tips: 0, reimbursements: 0, total: 0 },
+          totals_variance: b.totals_variance_json ?? { hours: 0, total_pay: 0, pay_per_day: 0, ryde: 0, tips: 0, reimbursements: 0, total: 0 },
+          batch_status: b.status,
+          match_breakdown: { by_employer_id: 0, by_ssn: 0, by_email: 0, by_phone: 0, by_external_id: 0, by_full_name: 0, by_alias: 0, by_fuzzy: 0, unmatched: 0 },
+          anomaly_summary: {},
+          top_issues: [],
+          health: { score: b.health_score ?? 0, grade: b.health_grade || "N/A", factors: [], ready_to_close: true, blockers: [] },
+          exceptions: { total: 0, by_type: {} as any, items: [] },
+        };
+        setBatchSummary(summary);
+      }
+
+      setLoading(false);
+      return true;
+    } catch (err) {
+      console.error("Rehydration error:", err);
+      setLoading(false);
+      return false;
+    }
+  }, []);
+
   const runReconciliationForBatch = useCallback(async (batchId: string) => {
     if (!selectedCompanyId) return;
     setProcessing(true);
