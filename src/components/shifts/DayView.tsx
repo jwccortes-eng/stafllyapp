@@ -178,19 +178,32 @@ export function DayView({ currentDay, shifts, assignments, locations, clients, e
                     </div>
                   )}
 
-                  {/* Assigned workers pills */}
-                  {names.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {names.slice(0, 3).map((name, i) => (
-                        <span key={i} className="pastel-pill pastel-pill-sky text-[9px] px-2 py-0.5 cursor-default">
-                          {name}
-                        </span>
-                      ))}
-                      {names.length > 3 && (
-                        <span className="text-[9px] text-muted-foreground/40 font-medium self-center ml-0.5">+{names.length - 3}</span>
-                      )}
-                    </div>
-                  )}
+                  {/* Assigned workers — avatar stack */}
+                  {(() => {
+                    const empAvatars = getAssignedEmployees(shift.id);
+                    return empAvatars.length > 0 ? (
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <div className="flex -space-x-1.5">
+                          {empAvatars.slice(0, 4).map((emp, i) => (
+                            <EmployeeAvatar key={i} firstName={emp.firstName} lastName={emp.lastName} avatarUrl={emp.avatarUrl} gender={emp.gender} size="sm" className="h-5 w-5 ring-1 ring-background" />
+                          ))}
+                          {empAvatars.length > 4 && (
+                            <span className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[7px] font-bold text-muted-foreground ring-1 ring-background">+{empAvatars.length - 4}</span>
+                          )}
+                        </div>
+                        {empAvatars.length <= 3 && (
+                          <span className="text-[9px] text-muted-foreground/50 truncate">{empAvatars.map(e => e.firstName).join(", ")}</span>
+                        )}
+                      </div>
+                    ) : names.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {names.slice(0, 3).map((name, i) => (
+                          <span key={i} className="pastel-pill pastel-pill-sky text-[9px] px-2 py-0.5 cursor-default">{name}</span>
+                        ))}
+                        {names.length > 3 && <span className="text-[9px] text-muted-foreground/40 font-medium self-center ml-0.5">+{names.length - 3}</span>}
+                      </div>
+                    ) : null;
+                  })()}
 
                   {/* Capacity bar */}
                   <div className="flex items-center gap-2">
