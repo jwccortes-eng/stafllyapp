@@ -30,7 +30,7 @@ export interface BatchOption {
   payroll_period_end: string | null;
   status: string;
   reconciliation_mode: string | null;
-  truth_file_name: string | null;
+  truth_source_file_name: string | null;
   created_at: string;
 }
 
