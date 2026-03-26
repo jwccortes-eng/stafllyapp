@@ -819,7 +819,7 @@ export function runReconciliation(
   });
 
   const systemOnly = isHistorical ? [] : systemData.filter(s => !matchedSystemIds.has(s.employee_id));
-  const summary = computeBatchSummary(rows, systemOnly);
+  const summary = computeBatchSummary(rows, systemOnly, { isHistorical });
 
   return { rows, systemOnly, summary };
 }
