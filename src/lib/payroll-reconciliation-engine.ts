@@ -633,7 +633,8 @@ function computeHealthScore(rows: ReconciliationRowResult[], systemOnly: SystemE
 
 export function computeBatchSummary(
   rows: ReconciliationRowResult[],
-  systemOnlyEmployees: SystemEmployeeData[]
+  systemOnlyEmployees: SystemEmployeeData[],
+  options?: { isHistorical?: boolean }
 ): BatchSummary {
   const truthCount = rows.length;
   const systemCount = new Set([
