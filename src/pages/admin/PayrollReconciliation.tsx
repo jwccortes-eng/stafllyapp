@@ -1450,7 +1450,7 @@ export default function PayrollReconciliationPage() {
       </Dialog>
 
       {/* Empty state */}
-      {reconciliationRows.length === 0 && !processing && activeBatch.status !== "DRAFT" && (
+      {reconciliationRows.length === 0 && !processing && !loading && activeBatch.status !== "DRAFT" && (
         <Card className="border-dashed border-2 shadow-none">
           <CardContent className="py-16 flex flex-col items-center text-center">
             <div className="p-4 rounded-2xl bg-muted/50 mb-4">
