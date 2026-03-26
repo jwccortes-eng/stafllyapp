@@ -290,7 +290,7 @@ export function usePayrollReconciliation() {
           totals_system: b.totals_system_json ?? { hours: 0, total_pay: 0, pay_per_day: 0, ryde: 0, tips: 0, reimbursements: 0, total: 0 },
           totals_variance: b.totals_variance_json ?? { hours: 0, total_pay: 0, pay_per_day: 0, ryde: 0, tips: 0, reimbursements: 0, total: 0 },
           batch_status: b.status,
-          match_breakdown: { by_employer_id: 0, by_ssn: 0, by_email: 0, by_phone: 0, by_external_id: 0, by_full_name: 0, by_alias: 0, by_fuzzy: 0, unmatched: 0 },
+          match_breakdown: { by_employer_id: 0, by_ssn: 0, by_email: 0, by_phone: 0, by_external_id: 0, by_full_name_exact: 0, by_alias: 0, by_fuzzy_name: 0, unmatched: 0 },
           anomaly_summary: {},
           top_issues: [],
           health: { score: b.health_score ?? 0, grade: b.health_grade || "N/A", factors: [], ready_to_close: true, blockers: [] },
