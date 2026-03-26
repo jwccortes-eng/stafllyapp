@@ -44,6 +44,16 @@ export function DayView({ currentDay, shifts, assignments, locations, clients, e
         return emp ? emp.first_name : "—";
       });
 
+  const getAssignedEmployees = (shiftId: string): AssignedEmployee[] =>
+    assignments
+      .filter(a => a.shift_id === shiftId)
+      .map(a => {
+        const emp = employees.find(e => e.id === a.employee_id);
+        if (!emp) return null;
+        return { firstName: emp.first_name, lastName: emp.last_name, avatarUrl: (emp as any).avatar_url ?? null, gender: (emp as any).gender ?? null };
+      })
+      .filter(Boolean) as AssignedEmployee[];
+
   const getLocationName = (id: string | null) => locations.find(l => l.id === id)?.name;
   const getClientName = (id: string | null) => clients.find(c => c.id === id)?.name;
   const clientIds = clients.map(c => c.id);
