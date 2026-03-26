@@ -1941,18 +1941,41 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
                 </div>
               </details>
 
+              {/* ── Historical Mode Banner ── */}
+              {truthAuthoritativeMode && (
+                <div className="rounded-xl border-2 border-warning/40 bg-warning/5 px-4 py-3 flex items-start gap-3">
+                  <Database className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-warning">
+                      Modo Histórico — Truth Autoritativo
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Periodo migrado/pre-cutover. Este cierre usa el archivo Truth como fuente autoritativa. Los valores del sistema son copiados desde Truth para preservar la fidelidad del registro original.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* ── Financial KPIs (hero row) ── */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <KpiCard label="Total Truth" value={fmt(stats.totalTruth)} icon={<DollarSign className="h-4 w-4" />} size="lg" mono />
-                <KpiCard label="Sistema interno" value={fmt(stats.totalRecon)} icon={<DollarSign className="h-4 w-4" />} size="lg" mono subtitle={truthAuthoritativeMode ? "Inferido / diagnóstico" : "Operativo"} />
-                <KpiCard label="Cierre final" value={fmt(stats.totalClosure)} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" size="lg" mono subtitle={truthAuthoritativeMode ? "Autoridad: Truth pagado" : "Autoridad: Sistema"} />
                 <KpiCard
-                  label="Δ Sistema vs Truth"
-                  value={fmtVar(stats.variance)}
+                  label={truthAuthoritativeMode ? "Sistema histórico" : "Sistema interno"}
+                  value={fmt(stats.totalRecon)}
                   icon={<DollarSign className="h-4 w-4" />}
-                  accent={Math.abs(stats.variance) > 100 ? "deduction" : "primary"}
                   size="lg"
                   mono
+                  subtitle={truthAuthoritativeMode ? "Copiado desde Truth" : "Operativo"}
+                />
+                <KpiCard label="Cierre final" value={fmt(stats.totalClosure)} icon={<CheckCircle2 className="h-4 w-4" />} accent="primary" size="lg" mono subtitle={truthAuthoritativeMode ? "Autoridad: Truth pagado" : "Autoridad: Sistema"} />
+                <KpiCard
+                  label="Δ Varianza"
+                  value={fmtVar(truthAuthoritativeMode ? stats.closureVariance : stats.variance)}
+                  icon={<DollarSign className="h-4 w-4" />}
+                  accent={Math.abs(truthAuthoritativeMode ? stats.closureVariance : stats.variance) > 100 ? "deduction" : "primary"}
+                  size="lg"
+                  mono
+                  subtitle={truthAuthoritativeMode ? "Esperado: $0.00" : undefined}
                 />
                 <KpiCard label="Otros / Sin clasificar" value={fmt(stats.totalOther)} icon={<AlertTriangle className="h-4 w-4" />} accent={stats.totalOther > 0 ? "deduction" : "muted"} size="lg" mono />
               </div>
