@@ -5885,6 +5885,7 @@ export type Database = {
           payroll_date: string | null
           payroll_period_end: string | null
           payroll_period_start: string | null
+          reconciliation_mode: string
           status: string
           tolerance_hours: number | null
           tolerance_money: number | null
@@ -5923,6 +5924,7 @@ export type Database = {
           payroll_date?: string | null
           payroll_period_end?: string | null
           payroll_period_start?: string | null
+          reconciliation_mode?: string
           status?: string
           tolerance_hours?: number | null
           tolerance_money?: number | null
@@ -5961,6 +5963,7 @@ export type Database = {
           payroll_date?: string | null
           payroll_period_end?: string | null
           payroll_period_start?: string | null
+          reconciliation_mode?: string
           status?: string
           tolerance_hours?: number | null
           tolerance_money?: number | null
