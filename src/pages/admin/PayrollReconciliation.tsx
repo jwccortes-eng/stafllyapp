@@ -1102,6 +1102,7 @@ export default function PayrollReconciliationPage() {
   // ─── Active batch view ───────────────────────────────────────────
   const isLocked = activeBatch.status === "LOCKED" || activeBatch.status === "APPROVED";
   const tolerance = { hours: activeBatch.tolerance_hours, money: activeBatch.tolerance_money, tips: activeBatch.tolerance_tips };
+  const isHistorical = (activeBatch as any).reconciliation_mode === "historical_truth_authoritative";
 
   return (
     <div className="space-y-5">
