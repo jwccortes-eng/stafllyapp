@@ -1268,6 +1268,20 @@ export default function PayrollReconciliationPage() {
                         <span className="text-[10px] font-mono text-muted-foreground">{formula}</span>
                       </TableCell>
                       <TableCell className="py-2">
+                        {obs ? (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-info/10 text-info border border-info/20">
+                                <FileText className="h-3 w-3" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-xs text-xs">{obs}</TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span className="text-muted-foreground/30">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="py-2">
                         <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary" />
                       </TableCell>
                     </TableRow>
