@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 
 export type ConfidenceLevel = "high" | "medium" | "review";
 export type AdoptionDecision = "accept" | "edit" | "skip" | null;
@@ -40,6 +39,12 @@ function classifyConfidence(
   return "review";
 }
 
+interface BatchInfo {
+  id: string;
+  payroll_period_start: string | null;
+  payroll_period_end: string | null;
+}
+
 export function useCompensationAdoption() {
   const { user } = useAuth();
   const { selectedCompanyId } = useCompany();
@@ -47,15 +52,13 @@ export function useCompensationAdoption() {
   const [proposals, setProposals] = useState<AdoptionProposal[]>([]);
   const [generated, setGenerated] = useState(false);
 
-  // Fetch last closed batch rows as baseline
-  const { data: batchRows, isLoading: loadingBatch } = useQuery({
+  const { data: batchData, isLoading: loadingBatch } = useQuery({
     queryKey: ["adoption-batch-rows", selectedCompanyId],
     enabled: !!selectedCompanyId,
     queryFn: async () => {
-      // Get the latest approved/reconciled batch
       const { data: batch } = await supabase
         .from("reconciliation_batches")
-        .select("id, period_start, period_end")
+        .select("id, payroll_period_start, payroll_period_end")
         .eq("company_id", selectedCompanyId!)
         .in("status", ["approved", "reconciled"])
         .order("created_at", { ascending: false })
@@ -68,11 +71,10 @@ export function useCompensationAdoption() {
         .select("*")
         .eq("batch_id", batch.id);
 
-      return { batch, rows: rows ?? [] };
+      return { batch: batch as BatchInfo, rows: rows ?? [] };
     },
   });
 
-  // Fetch current compensation profiles
   const { data: currentProfiles, isLoading: loadingProfiles } = useQuery({
     queryKey: ["adoption-current-profiles", selectedCompanyId],
     enabled: !!selectedCompanyId,
@@ -86,49 +88,33 @@ export function useCompensationAdoption() {
     },
   });
 
-  // Fetch employees
-  const { data: employees, isLoading: loadingEmps } = useQuery({
-    queryKey: ["adoption-employees", selectedCompanyId],
-    enabled: !!selectedCompanyId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("employees")
-        .select("id, first_name, last_name, employee_role, is_active")
-        .eq("company_id", selectedCompanyId!)
-        .eq("is_active", true);
-      return data ?? [];
-    },
-  });
-
-  const loading = loadingBatch || loadingProfiles || loadingEmps;
+  const loading = loadingBatch || loadingProfiles;
+  const batchInfo = batchData?.batch ?? null;
 
   const generateProposals = useCallback(() => {
-    if (!batchRows?.rows || !employees) return;
+    if (!batchData?.rows) return;
 
     const profileMap = new Map(
       (currentProfiles ?? []).map((p) => [p.employee_id, p])
     );
 
-    const empMap = new Map(employees.map((e) => [e.id, e]));
-
     const newProposals: AdoptionProposal[] = [];
 
-    for (const row of batchRows.rows) {
-      const emp = empMap.get(row.employee_id);
-      if (!emp) continue;
+    for (const row of batchData.rows) {
+      const empId = row.matched_system_employee_id;
+      if (!empId) continue;
 
-      const profile = profileMap.get(row.employee_id);
+      const profile = profileMap.get(empId);
+      const empName = [row.first_name, row.last_name].filter(Boolean).join(" ") || empId;
 
-      const truthHours = (row as any).truth_hours ?? 0;
-      const truthBase = (row as any).truth_base_pay ?? 0;
-      const truthPPD = (row as any).truth_ppd ?? (row as any).truth_pay_per_day ?? 0;
+      const truthHours = row.truth_hours ?? 0;
+      const truthBase = row.truth_total_pay ?? 0;
+      const truthPPD = row.truth_pay_per_day ?? 0;
 
-      // Determine suggested mode
       let suggestedMode: SuggestedPaymentMode = "hourly";
       if (truthPPD > 0 && truthBase > 0) suggestedMode = "hybrid";
       else if (truthPPD > 0 && truthBase === 0) suggestedMode = "daily";
 
-      // Derive hourly rate from truth
       const suggestedHourly =
         truthHours > 0 && truthBase > 0
           ? Math.round((truthBase / truthHours) * 100) / 100
@@ -155,15 +141,15 @@ export function useCompensationAdoption() {
       }
 
       newProposals.push({
-        employeeId: row.employee_id,
-        employeeName: `${emp.first_name ?? ""} ${emp.last_name ?? ""}`.trim(),
+        employeeId: empId,
+        employeeName: empName,
         currentHourlyRate: profile?.default_hourly_rate ?? null,
         currentDailyRate: profile?.default_daily_rate ?? null,
         currentPaymentMode: profile?.payment_mode ?? null,
         suggestedHourlyRate: suggestedHourly,
         suggestedDailyRate: suggestedDaily,
         suggestedPaymentMode: suggestedMode,
-        source: `Payroll ${batchRows.batch.period_start} → ${batchRows.batch.period_end}`,
+        source: `Payroll ${batchData.batch.payroll_period_start ?? "?"} → ${batchData.batch.payroll_period_end ?? "?"}`,
         confidence,
         reason,
         decision: confidence === "high" ? "accept" : null,
@@ -171,13 +157,12 @@ export function useCompensationAdoption() {
       });
     }
 
-    // Sort: review first, then medium, then high
     const order: Record<ConfidenceLevel, number> = { review: 0, medium: 1, high: 2 };
     newProposals.sort((a, b) => order[a.confidence] - order[b.confidence]);
 
     setProposals(newProposals);
     setGenerated(true);
-  }, [batchRows, employees, currentProfiles]);
+  }, [batchData, currentProfiles]);
 
   const updateDecision = useCallback(
     (employeeId: string, decision: AdoptionDecision, editedRate?: number) => {
@@ -206,7 +191,6 @@ export function useCompensationAdoption() {
             ? p.editedRate
             : p.suggestedHourlyRate;
 
-        // Check if profile exists
         const { data: existing } = await supabase
           .from("compensation_profiles")
           .select("id")
@@ -215,10 +199,13 @@ export function useCompensationAdoption() {
           .eq("is_active", true)
           .maybeSingle();
 
+        const paymentMode: "hourly" | "daily" | "mixed" =
+          p.suggestedPaymentMode === "hybrid" ? "mixed" : p.suggestedPaymentMode;
+
         const profilePayload = {
           company_id: selectedCompanyId,
           employee_id: p.employeeId,
-          payment_mode: p.suggestedPaymentMode === "hybrid" ? "mixed" : p.suggestedPaymentMode,
+          payment_mode: paymentMode,
           default_hourly_rate: hourlyRate,
           default_daily_rate: p.suggestedDailyRate,
           rate_source: "imported" as const,
@@ -239,7 +226,6 @@ export function useCompensationAdoption() {
             .insert({ ...profilePayload, created_by: user.id });
         }
 
-        // Log the change
         await supabase.from("compensation_change_log").insert({
           company_id: selectedCompanyId,
           employee_id: p.employeeId,
@@ -280,7 +266,7 @@ export function useCompensationAdoption() {
     stats,
     loading,
     generated,
-    batchInfo: batchRows?.batch ?? null,
+    batchInfo,
     generateProposals,
     updateDecision,
     applyConfirmed,

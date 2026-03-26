@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -66,7 +66,10 @@ export default function CompensationAdoption() {
     <div className="space-y-6">
       <PageHeader
         title="Adopción de Compensación"
-        description="Revisión y confirmación manual de compensaciones derivadas del último payroll cerrado"
+        subtitle="Revisión y confirmación manual de compensaciones derivadas del último payroll cerrado"
+        icon={Zap}
+        variant="4"
+        eyebrow="Compensación"
       />
 
       {/* Source info */}
@@ -76,7 +79,7 @@ export default function CompensationAdoption() {
             <CircleDot className="h-4 w-4 text-primary" />
             <span className="text-muted-foreground">Fuente:</span>
             <span className="font-medium">
-              Payroll {batchInfo.period_start} → {batchInfo.period_end}
+              Payroll {batchInfo.payroll_period_start ?? "?"} → {batchInfo.payroll_period_end ?? "?"}
             </span>
           </CardContent>
         </Card>
@@ -254,7 +257,7 @@ export default function CompensationAdoption() {
                               <CheckCircle2 className="h-3.5 w-3.5" />
                             </Button>
                             <Button
-                              variant={p.decision === "edit" ? "warning" : "ghost"}
+                              variant={p.decision === "edit" ? "secondary" : "ghost"}
                               size="xs"
                               onClick={() => {
                                 if (p.decision === "edit") {
