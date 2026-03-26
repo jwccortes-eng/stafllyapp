@@ -1187,87 +1187,44 @@ export default function Employees() {
         </div>
       )}
 
-      {/* Detail + Edit Sheet */}
+      {/* Detail + Edit Sheet — Premium */}
       <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); } }}>
-        <SheetContent className="w-[400px] sm:w-[540px] p-0">
-          <SheetHeader className="p-6 pb-4 border-b">
-            <div className="flex items-center gap-4 pr-6">
-              <EmployeeAvatar
-                firstName={viewEmployee?.first_name ?? ""}
-                lastName={viewEmployee?.last_name ?? ""}
-                size="lg"
-              />
-              <div className="flex-1 min-w-0">
-                <SheetTitle className="text-lg">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
-                <SheetDescription className="flex items-center gap-2 mt-0.5">
-                  {formatDisplayText(viewEmployee?.employee_role, "label") || "Sin rol"}
-                  <span className={cn(
-                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-                    viewEmployee?.is_active ? "bg-earning/10 text-earning" : "bg-muted text-muted-foreground"
-                  )}>
-                    {viewEmployee?.is_active ? "Activo" : "Inactivo"}
-                  </span>
+        <SheetContent className="w-[440px] sm:w-[580px] p-0 flex flex-col">
+          <div className="bg-gradient-to-br from-primary/[0.04] to-transparent border-b px-6 py-5">
+            <div className="flex items-start gap-4 pr-6">
+              <EmployeeAvatar firstName={viewEmployee?.first_name ?? ""} lastName={viewEmployee?.last_name ?? ""} avatarUrl={viewEmployee?.avatar_url} gender={viewEmployee?.gender} size="xl" className="ring-2 ring-background shadow-lg" />
+              <div className="flex-1 min-w-0 pt-0.5">
+                <SheetTitle className="text-lg font-bold leading-tight">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[11px]">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
+                  <Badge variant="outline" className={cn("text-[10px] font-semibold", viewEmployee?.is_active ? "bg-[hsl(var(--earning)/0.1)] text-[hsl(var(--earning))] border-[hsl(var(--earning)/0.2)]" : "bg-muted text-muted-foreground")}>
+                    {viewEmployee?.is_active ? (viewEmployee?.user_id ? "✓ Activo" : "⏳ Pendiente") : "Inactivo"}
+                  </Badge>
+                </div>
+                <SheetDescription className="mt-1 text-xs text-muted-foreground/70">
+                  {[viewEmployee?.phone_number, viewEmployee?.email].filter(Boolean).join(" · ") || "Sin contacto"}
                 </SheetDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => setInviteOpen(true)}
-              >
-                <Send className="h-3 w-3 mr-1.5" />Invitar
-              </Button>
-              <Button
-                variant={isEditing ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  if (isEditing) { handleSaveFromSheet(); } else { setIsEditing(true); }
-                }}
-                disabled={loading}
-                className="shrink-0"
-              >
-                {isEditing ? (loading ? "Guardando..." : "Guardar") : <><Pencil className="h-3 w-3 mr-1.5" />Editar</>}
-              </Button>
             </div>
-          </SheetHeader>
-          <ScrollArea className="h-[calc(100vh-140px)]">
-            <div className="p-6 pt-4">
-              {isEditing && (
-                <div className="mb-3 flex justify-end">
-                  <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
-                    <X className="h-3 w-3 mr-1" />Cancelar
-                  </Button>
-                </div>
-              )}
-
-              <EmployeeProfileTabs
-                employee={viewEmployee!}
-                companyId={selectedCompanyId!}
-                isEditing={isEditing}
-                form={form}
-                setForm={setForm}
-                isPrivileged={isPrivileged}
-                onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)}
-              />
-
-              <div className="flex gap-2 pt-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}
-                >
-                  {viewEmployee?.is_active ? <><UserX className="h-3 w-3 mr-1.5" />Desactivar</> : <><UserCheck className="h-3 w-3 mr-1.5" />Activar</>}
+            <div className="flex items-center gap-2 mt-4">
+              <Button variant={isEditing ? "default" : "outline"} size="sm" onClick={() => { if (isEditing) { handleSaveFromSheet(); } else { setIsEditing(true); } }} disabled={loading}>
+                {isEditing ? (loading ? "Guardando..." : "✓ Guardar") : <><Pencil className="h-3 w-3 mr-1.5" />Editar</>}
+              </Button>
+              {isEditing && <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancelar</Button>}
+              <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}><Send className="h-3 w-3 mr-1.5" />Invitar</Button>
+              <div className="ml-auto flex items-center gap-1">
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
+                  {viewEmployee?.is_active ? <><UserX className="h-3 w-3 mr-1" />Desactivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                  onClick={() => { if (viewEmployee) { setDeleteTarget(viewEmployee); setPasswordOpen(true); setViewEmployee(null); } }}
-                >
-                  <Trash2 className="h-3 w-3 mr-1.5" />Eliminar
+                <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive" onClick={() => { if (viewEmployee) { setDeleteTarget(viewEmployee); setPasswordOpen(true); setViewEmployee(null); } }}>
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-5">
+              <EmployeeProfileTabs employee={viewEmployee!} companyId={selectedCompanyId!} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)} />
             </div>
           </ScrollArea>
         </SheetContent>
