@@ -1181,27 +1181,44 @@ export default function PayrollReconciliationPage() {
 
       {/* KPI strip */}
       {batchSummary && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <KpiCard label="Empleados Truth" value={truthCounts.total} icon={Users} />
-          <KpiCard label="✓ Validados" value={truthCounts.validated} subtitle={fmtPct(truthCounts.total > 0 ? truthCounts.validated / truthCounts.total : 0)} icon={CheckCircle2} accent="success" />
-          <KpiCard label="Composición OK" value={truthCounts.compositionOk} icon={CheckCircle2} accent="success" />
-          <KpiCard label="Base OK" value={truthCounts.baseOk} icon={CheckCircle2} accent={truthCounts.baseOk > 0 ? "success" : "muted"} />
-          <KpiCard label="Pendientes" value={truthCounts.pending} icon={AlertOctagon} accent={truthCounts.pending > 0 ? "warning" : "muted"} />
-          <KpiCard label="Grand Total" value={fmt(batchSummary.totals_truth.grand_total)} icon={DollarSign} accent="success" />
-        </div>
+        <>
+          {/* Historical mode banner */}
+          {isHistorical && (
+            <Card className="shadow-none border-info/30 bg-info/[0.06]">
+              <CardContent className="py-3 px-4 flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-info/12">
+                  <Clock className="h-4 w-4 text-info" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-info">Modo Histórico — Truth Autoritativo</p>
+                  <p className="text-[11px] text-muted-foreground">Periodo pre-cutover. System = mirror de Truth. Varianzas = $0. Solo se valida identidad y composición.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <KpiCard label="Empleados Truth" value={truthCounts.total} icon={Users} />
+            <KpiCard label="✓ Validados" value={truthCounts.validated} subtitle={fmtPct(truthCounts.total > 0 ? truthCounts.validated / truthCounts.total : 0)} icon={CheckCircle2} accent="success" />
+            <KpiCard label="Composición OK" value={truthCounts.compositionOk} icon={CheckCircle2} accent="success" />
+            <KpiCard label="Base OK" value={truthCounts.baseOk} icon={CheckCircle2} accent={truthCounts.baseOk > 0 ? "success" : "muted"} />
+            <KpiCard label="Pendientes" value={truthCounts.pending} icon={AlertOctagon} accent={truthCounts.pending > 0 ? "warning" : "muted"} />
+            <KpiCard label="Grand Total" value={fmt(batchSummary.totals_truth.grand_total)} icon={DollarSign} accent="success" />
+          </div>
+        </>
       )}
 
       {/* Component summary cards */}
       {batchSummary && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
-          <SummaryCard label="Hours" truth={batchSummary.totals_truth.hours} system={batchSummary.totals_system.hours} variance={batchSummary.totals_variance.hours} tolerance={tolerance.hours} icon={Clock} />
-          <SummaryCard label="Total Pay" truth={batchSummary.totals_truth.total_pay} system={batchSummary.totals_system.total_pay} variance={batchSummary.totals_variance.total_pay} tolerance={tolerance.money} icon={DollarSign} />
-          <SummaryCard label="Pay/Day" truth={batchSummary.totals_truth.pay_per_day} system={batchSummary.totals_system.pay_per_day} variance={batchSummary.totals_variance.pay_per_day} tolerance={tolerance.money} icon={DollarSign} />
-          <SummaryCard label="Ryde" truth={batchSummary.totals_truth.ryde} system={batchSummary.totals_system.ryde} variance={batchSummary.totals_variance.ryde} tolerance={tolerance.money} icon={Car} />
-          <SummaryCard label="Tips" truth={batchSummary.totals_truth.tips} system={batchSummary.totals_system.tips} variance={batchSummary.totals_variance.tips} tolerance={tolerance.tips} icon={UtensilsCrossed} />
-          <SummaryCard label="Reimb." truth={batchSummary.totals_truth.reimbursements} system={batchSummary.totals_system.reimbursements} variance={batchSummary.totals_variance.reimbursements} tolerance={tolerance.money} icon={Receipt} />
-          <SummaryCard label="Descuentos" truth={batchSummary.totals_truth.discount} system={batchSummary.totals_system.discount} variance={batchSummary.totals_variance.discount} tolerance={tolerance.money} icon={AlertTriangle} />
-          <SummaryCard label="TOTAL" truth={batchSummary.totals_truth.grand_total} system={batchSummary.totals_system.grand_total} variance={batchSummary.totals_variance.grand_total} tolerance={tolerance.money} icon={DollarSign} />
+          <SummaryCard label="Hours" truth={batchSummary.totals_truth.hours} system={batchSummary.totals_system.hours} variance={batchSummary.totals_variance.hours} tolerance={tolerance.hours} icon={Clock} isHistorical={isHistorical} />
+          <SummaryCard label="Total Pay" truth={batchSummary.totals_truth.total_pay} system={batchSummary.totals_system.total_pay} variance={batchSummary.totals_variance.total_pay} tolerance={tolerance.money} icon={DollarSign} isHistorical={isHistorical} />
+          <SummaryCard label="Pay/Day" truth={batchSummary.totals_truth.pay_per_day} system={batchSummary.totals_system.pay_per_day} variance={batchSummary.totals_variance.pay_per_day} tolerance={tolerance.money} icon={DollarSign} isHistorical={isHistorical} />
+          <SummaryCard label="Ryde" truth={batchSummary.totals_truth.ryde} system={batchSummary.totals_system.ryde} variance={batchSummary.totals_variance.ryde} tolerance={tolerance.money} icon={Car} isHistorical={isHistorical} />
+          <SummaryCard label="Tips" truth={batchSummary.totals_truth.tips} system={batchSummary.totals_system.tips} variance={batchSummary.totals_variance.tips} tolerance={tolerance.tips} icon={UtensilsCrossed} isHistorical={isHistorical} />
+          <SummaryCard label="Reimb." truth={batchSummary.totals_truth.reimbursements} system={batchSummary.totals_system.reimbursements} variance={batchSummary.totals_variance.reimbursements} tolerance={tolerance.money} icon={Receipt} isHistorical={isHistorical} />
+          <SummaryCard label="Descuentos" truth={batchSummary.totals_truth.discount} system={batchSummary.totals_system.discount} variance={batchSummary.totals_variance.discount} tolerance={tolerance.money} icon={AlertTriangle} isHistorical={isHistorical} />
+          <SummaryCard label="TOTAL" truth={batchSummary.totals_truth.grand_total} system={batchSummary.totals_system.grand_total} variance={batchSummary.totals_variance.grand_total} tolerance={tolerance.money} icon={DollarSign} isHistorical={isHistorical} />
         </div>
       )}
 
