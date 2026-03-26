@@ -1190,213 +1190,237 @@ export default function PayrollReconciliationPage() {
         </CardContent>
       </Card>
 
-      {/* Debug Panel — visible to dev/admin/owner */}
-      {isDev && activeBatch && (
-        <DebugPanel
-          companyId={selectedCompanyId || ""}
-          batch={activeBatch}
-          batchSummary={batchSummary}
-          reconciliationRows={reconciliationRows}
-        />
-      )}
+      {/* Tabs: Base Pay vs Full Payroll */}
+      <Tabs defaultValue="full_payroll" className="space-y-4">
+        <TabsList className="h-9">
+          <TabsTrigger value="base_pay" className="text-xs gap-1.5">
+            <Clock className="h-3.5 w-3.5" />Base Pay
+          </TabsTrigger>
+          <TabsTrigger value="full_payroll" className="text-xs gap-1.5">
+            <DollarSign className="h-3.5 w-3.5" />Full Payroll
+          </TabsTrigger>
+        </TabsList>
 
-      {/* KPI strip */}
-      {batchSummary && (
-        <>
-          {/* Historical mode banner */}
-          {isHistorical && (
-            <Card className="shadow-none border-info/30 bg-info/[0.06]">
-              <CardContent className="py-3 px-4 flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-info/12">
-                  <Clock className="h-4 w-4 text-info" />
+        <TabsContent value="base_pay" className="space-y-4 mt-0">
+          <BasePayReport
+            rows={reconciliationRows}
+            isHistorical={isHistorical}
+            periodLabel={activeBatch.payroll_period_start && activeBatch.payroll_period_end
+              ? `${activeBatch.payroll_period_start} → ${activeBatch.payroll_period_end}`
+              : undefined}
+          />
+        </TabsContent>
+
+        <TabsContent value="full_payroll" className="space-y-4 mt-0">
+          {/* Debug Panel — visible to dev/admin/owner */}
+          {isDev && activeBatch && (
+            <DebugPanel
+              companyId={selectedCompanyId || ""}
+              batch={activeBatch}
+              batchSummary={batchSummary}
+              reconciliationRows={reconciliationRows}
+            />
+          )}
+
+          {/* KPI strip */}
+          {batchSummary && (
+            <>
+              {/* Historical mode banner */}
+              {isHistorical && (
+                <Card className="shadow-none border-info/30 bg-info/[0.06]">
+                  <CardContent className="py-3 px-4 flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-info/12">
+                      <Clock className="h-4 w-4 text-info" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-info">Modo Histórico — Truth Autoritativo</p>
+                      <p className="text-[11px] text-muted-foreground">Periodo pre-cutover. System = mirror de Truth. Varianzas = $0. Solo se valida identidad y composición.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <KpiCard label="Empleados Truth" value={truthCounts.total} icon={Users} />
+                <KpiCard label="✓ Validados" value={truthCounts.validated} subtitle={fmtPct(truthCounts.total > 0 ? truthCounts.validated / truthCounts.total : 0)} icon={CheckCircle2} accent="success" />
+                <KpiCard label="Composición OK" value={truthCounts.compositionOk} icon={CheckCircle2} accent="success" />
+                <KpiCard label="Base OK" value={truthCounts.baseOk} icon={CheckCircle2} accent={truthCounts.baseOk > 0 ? "success" : "muted"} />
+                <KpiCard label="Pendientes" value={truthCounts.pending} icon={AlertOctagon} accent={truthCounts.pending > 0 ? "warning" : "muted"} />
+                <KpiCard label="Grand Total" value={fmt(batchSummary.totals_truth.grand_total)} icon={DollarSign} accent="success" />
+              </div>
+            </>
+          )}
+
+          {/* Component summary cards */}
+          {batchSummary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
+              <SummaryCard label="Hours" truth={batchSummary.totals_truth.hours} system={batchSummary.totals_system.hours} variance={batchSummary.totals_variance.hours} tolerance={tolerance.hours} icon={Clock} isHistorical={isHistorical} />
+              <SummaryCard label="Total Pay" truth={batchSummary.totals_truth.total_pay} system={batchSummary.totals_system.total_pay} variance={batchSummary.totals_variance.total_pay} tolerance={tolerance.money} icon={DollarSign} isHistorical={isHistorical} />
+              <SummaryCard label="Pay/Day" truth={batchSummary.totals_truth.pay_per_day} system={batchSummary.totals_system.pay_per_day} variance={batchSummary.totals_variance.pay_per_day} tolerance={tolerance.money} icon={DollarSign} isHistorical={isHistorical} />
+              <SummaryCard label="Ryde" truth={batchSummary.totals_truth.ryde} system={batchSummary.totals_system.ryde} variance={batchSummary.totals_variance.ryde} tolerance={tolerance.money} icon={Car} isHistorical={isHistorical} />
+              <SummaryCard label="Tips" truth={batchSummary.totals_truth.tips} system={batchSummary.totals_system.tips} variance={batchSummary.totals_variance.tips} tolerance={tolerance.tips} icon={UtensilsCrossed} isHistorical={isHistorical} />
+              <SummaryCard label="Reimb." truth={batchSummary.totals_truth.reimbursements} system={batchSummary.totals_system.reimbursements} variance={batchSummary.totals_variance.reimbursements} tolerance={tolerance.money} icon={Receipt} isHistorical={isHistorical} />
+              <SummaryCard label="Descuentos" truth={batchSummary.totals_truth.discount} system={batchSummary.totals_system.discount} variance={batchSummary.totals_variance.discount} tolerance={tolerance.money} icon={AlertTriangle} isHistorical={isHistorical} />
+              <SummaryCard label="TOTAL" truth={batchSummary.totals_truth.grand_total} system={batchSummary.totals_system.grand_total} variance={batchSummary.totals_variance.grand_total} tolerance={tolerance.money} icon={DollarSign} isHistorical={isHistorical} />
+            </div>
+          )}
+
+          {/* Validation Report */}
+          {batchSummary && (
+            <ValidationReportPanel summary={batchSummary} parseResult={truthParseResult} truthCounts={truthCounts} />
+          )}
+
+          {/* Filters + Search */}
+          {reconciliationRows.length > 0 && (
+            <Card className="shadow-none border-border/50">
+              <CardContent className="py-2.5 px-4 flex items-center gap-3 flex-wrap">
+                <div className="relative flex-1 max-w-xs">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input placeholder="Buscar empleado..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-xs rounded-lg" />
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-info">Modo Histórico — Truth Autoritativo</p>
-                  <p className="text-[11px] text-muted-foreground">Periodo pre-cutover. System = mirror de Truth. Varianzas = $0. Solo se valida identidad y composición.</p>
-                </div>
+                <Select value={filter} onValueChange={setFilter}>
+                  <SelectTrigger className="w-[200px] h-8 text-xs rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos ({reconciliationRows.length})</SelectItem>
+                    <SelectItem value="validated">✓ Validados ({truthCounts.validated})</SelectItem>
+                    <SelectItem value="composition">✓ Composición ({truthCounts.compositionOk})</SelectItem>
+                    <SelectItem value="base_only">✓ Base OK ({truthCounts.baseOk})</SelectItem>
+                    <SelectItem value="pending">⚠ Pendientes ({truthCounts.pending})</SelectItem>
+                    <SelectItem value="missing_system">⊘ Sin sistema ({reconciliationRows.filter(r => r.classification.row_status === "MISSING_IN_SYSTEM").length})</SelectItem>
+                    <SelectItem value="manual">◉ Ajuste manual ({reconciliationRows.filter(r => r.classification.has_manual_adjustment).length})</SelectItem>
+                    <SelectItem value="low_confidence">◎ Baja confianza ({reconciliationRows.filter(r => r.match.match_confidence > 0 && r.match.match_confidence < 80).length})</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground ml-auto tabular-nums font-medium">{filteredRows.length} de {reconciliationRows.length} filas</p>
               </CardContent>
             </Card>
           )}
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <KpiCard label="Empleados Truth" value={truthCounts.total} icon={Users} />
-            <KpiCard label="✓ Validados" value={truthCounts.validated} subtitle={fmtPct(truthCounts.total > 0 ? truthCounts.validated / truthCounts.total : 0)} icon={CheckCircle2} accent="success" />
-            <KpiCard label="Composición OK" value={truthCounts.compositionOk} icon={CheckCircle2} accent="success" />
-            <KpiCard label="Base OK" value={truthCounts.baseOk} icon={CheckCircle2} accent={truthCounts.baseOk > 0 ? "success" : "muted"} />
-            <KpiCard label="Pendientes" value={truthCounts.pending} icon={AlertOctagon} accent={truthCounts.pending > 0 ? "warning" : "muted"} />
-            <KpiCard label="Grand Total" value={fmt(batchSummary.totals_truth.grand_total)} icon={DollarSign} accent="success" />
-          </div>
-        </>
-      )}
-
-      {/* Component summary cards */}
-      {batchSummary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
-          <SummaryCard label="Hours" truth={batchSummary.totals_truth.hours} system={batchSummary.totals_system.hours} variance={batchSummary.totals_variance.hours} tolerance={tolerance.hours} icon={Clock} isHistorical={isHistorical} />
-          <SummaryCard label="Total Pay" truth={batchSummary.totals_truth.total_pay} system={batchSummary.totals_system.total_pay} variance={batchSummary.totals_variance.total_pay} tolerance={tolerance.money} icon={DollarSign} isHistorical={isHistorical} />
-          <SummaryCard label="Pay/Day" truth={batchSummary.totals_truth.pay_per_day} system={batchSummary.totals_system.pay_per_day} variance={batchSummary.totals_variance.pay_per_day} tolerance={tolerance.money} icon={DollarSign} isHistorical={isHistorical} />
-          <SummaryCard label="Ryde" truth={batchSummary.totals_truth.ryde} system={batchSummary.totals_system.ryde} variance={batchSummary.totals_variance.ryde} tolerance={tolerance.money} icon={Car} isHistorical={isHistorical} />
-          <SummaryCard label="Tips" truth={batchSummary.totals_truth.tips} system={batchSummary.totals_system.tips} variance={batchSummary.totals_variance.tips} tolerance={tolerance.tips} icon={UtensilsCrossed} isHistorical={isHistorical} />
-          <SummaryCard label="Reimb." truth={batchSummary.totals_truth.reimbursements} system={batchSummary.totals_system.reimbursements} variance={batchSummary.totals_variance.reimbursements} tolerance={tolerance.money} icon={Receipt} isHistorical={isHistorical} />
-          <SummaryCard label="Descuentos" truth={batchSummary.totals_truth.discount} system={batchSummary.totals_system.discount} variance={batchSummary.totals_variance.discount} tolerance={tolerance.money} icon={AlertTriangle} isHistorical={isHistorical} />
-          <SummaryCard label="TOTAL" truth={batchSummary.totals_truth.grand_total} system={batchSummary.totals_system.grand_total} variance={batchSummary.totals_variance.grand_total} tolerance={tolerance.money} icon={DollarSign} isHistorical={isHistorical} />
-        </div>
-      )}
-
-      {/* Validation Report */}
-      {batchSummary && (
-        <ValidationReportPanel summary={batchSummary} parseResult={truthParseResult} truthCounts={truthCounts} />
-      )}
-
-      {/* Filters + Search */}
-      {reconciliationRows.length > 0 && (
-        <Card className="shadow-none border-border/50">
-          <CardContent className="py-2.5 px-4 flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 max-w-xs">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder="Buscar empleado..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-xs rounded-lg" />
-            </div>
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="w-[200px] h-8 text-xs rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos ({reconciliationRows.length})</SelectItem>
-                <SelectItem value="validated">✓ Validados ({truthCounts.validated})</SelectItem>
-                <SelectItem value="composition">✓ Composición ({truthCounts.compositionOk})</SelectItem>
-                <SelectItem value="base_only">✓ Base OK ({truthCounts.baseOk})</SelectItem>
-                <SelectItem value="pending">⚠ Pendientes ({truthCounts.pending})</SelectItem>
-                <SelectItem value="missing_system">⊘ Sin sistema ({reconciliationRows.filter(r => r.classification.row_status === "MISSING_IN_SYSTEM").length})</SelectItem>
-                <SelectItem value="manual">◉ Ajuste manual ({reconciliationRows.filter(r => r.classification.has_manual_adjustment).length})</SelectItem>
-                <SelectItem value="low_confidence">◎ Baja confianza ({reconciliationRows.filter(r => r.match.match_confidence > 0 && r.match.match_confidence < 80).length})</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-muted-foreground ml-auto tabular-nums font-medium">{filteredRows.length} de {reconciliationRows.length} filas</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Main grid */}
-      {filteredRows.length > 0 && (
-        <Card className="shadow-none overflow-hidden">
-          <div className="overflow-auto max-h-[55vh]">
-            <Table>
-              <TableHeader className="sticky top-0 z-30">
-                <TableRow>
-                  <TableHead className="sticky left-0 z-40 bg-surface-2 min-w-[170px] py-2.5">Empleado</TableHead>
-                  <TableHead className="py-2.5">Estado</TableHead>
-                  <TableHead className="text-right py-2.5">Hrs</TableHead>
-                  <TableHead className="text-right py-2.5">Tarifa</TableHead>
-                  <TableHead className="text-right py-2.5 border-l border-border/30">A. Base</TableHead>
-                  <TableHead className="text-right py-2.5 text-earning">+ Adic.</TableHead>
-                  <TableHead className="text-right py-2.5 text-destructive">− Desc.</TableHead>
-                  <TableHead className="text-right py-2.5 !font-bold border-l border-border/30">= Total</TableHead>
-                  <TableHead className="py-2.5 min-w-[200px]">Composición</TableHead>
-                  <TableHead className="py-2.5 w-10">Obs</TableHead>
-                  <TableHead className="py-2.5 w-8"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRows.map((row, i) => {
-                  const hrs = row.truth.total_hours;
-                  const basePay = row.truth.total_pay || 0;
-                  const rate = hrs && hrs > 0 && basePay > 0 ? Math.round((basePay / hrs) * 100) / 100 : null;
-                  const ppd = row.truth.pay_per_day || 0;
-                  const ryde = row.truth.ryde || 0;
-                  const tips = row.truth.tips || 0;
-                  const reimb = row.truth.reimbursements || 0;
-                  const disc = truthDiscount(row);
-                  const adicionales = ppd + ryde + tips + reimb;
-                  const total = row.truth.total;
-
-                  // Composition formula — always show full breakdown
-                  const fmtC = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
-                  let formula: string;
-                  if (basePay > 0 && adicionales > 0 && disc > 0) {
-                    formula = `${fmtC(basePay)} + ${fmtC(adicionales)} − ${fmtC(disc)} = ${fmt(total)}`;
-                  } else if (basePay > 0 && adicionales > 0) {
-                    formula = `${fmtC(basePay)} + ${fmtC(adicionales)} = ${fmt(total)}`;
-                  } else if (basePay > 0 && disc > 0) {
-                    formula = `${fmtC(basePay)} − ${fmtC(disc)} = ${fmt(total)}`;
-                  } else if (adicionales > 0 && disc > 0) {
-                    formula = `$0 + ${fmtC(adicionales)} − ${fmtC(disc)} = ${fmt(total)}`;
-                  } else if (adicionales > 0) {
-                    formula = `$0 + ${fmtC(adicionales)} = ${fmt(total)}`;
-                  } else if (basePay > 0) {
-                    formula = `${fmtC(basePay)} = ${fmt(total)}`;
-                  } else {
-                    formula = total != null ? fmt(total) : "—";
-                  }
-                  const obs = truthObservation(row);
-
-                  return (
-                    <TableRow
-                      key={i}
-                      className="text-xs cursor-pointer transition-colors hover:bg-accent/40"
-                      onClick={() => setSelectedRow(row)}
-                    >
-                      <TableCell className="sticky left-0 bg-card z-10 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-1.5 w-1.5 rounded-full bg-earning shrink-0" />
-                          <span className="font-medium truncate max-w-[130px]">{row.truth.first_name} {row.truth.last_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-2">{statusBadge(row.classification.row_status, row)}</TableCell>
-                      <TableCell className="text-right font-mono py-2">{hrs != null ? hrs.toFixed(2) : "—"}</TableCell>
-                      <TableCell className="text-right font-mono py-2 text-muted-foreground">{rate != null ? `$${rate.toFixed(2)}` : "—"}</TableCell>
-                      <TableCell className="text-right font-mono py-2 border-l border-border/20">{basePay > 0 ? fmt(basePay) : "—"}</TableCell>
-                      <TableCell className="text-right font-mono py-2 text-earning font-medium">{adicionales > 0 ? fmt(adicionales) : "—"}</TableCell>
-                      <TableCell className="text-right font-mono py-2 text-destructive font-medium">{disc > 0 ? fmt(disc) : "—"}</TableCell>
-                      <TableCell className="text-right font-mono font-bold py-2 border-l border-border/20">{fmt(total)}</TableCell>
-                      <TableCell className="py-2">
-                        <span className="text-[10px] font-mono text-muted-foreground">{formula}</span>
-                      </TableCell>
-                      <TableCell className="py-2">
-                        {obs ? (
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-info/10 text-info border border-info/20">
-                                <FileText className="h-3 w-3" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="left" className="max-w-xs text-xs">{obs}</TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <span className="text-muted-foreground/30">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary" />
-                      </TableCell>
+          {/* Main grid */}
+          {filteredRows.length > 0 && (
+            <Card className="shadow-none overflow-hidden">
+              <div className="overflow-auto max-h-[55vh]">
+                <Table>
+                  <TableHeader className="sticky top-0 z-30">
+                    <TableRow>
+                      <TableHead className="sticky left-0 z-40 bg-surface-2 min-w-[170px] py-2.5">Empleado</TableHead>
+                      <TableHead className="py-2.5">Estado</TableHead>
+                      <TableHead className="text-right py-2.5">Hrs</TableHead>
+                      <TableHead className="text-right py-2.5">Tarifa</TableHead>
+                      <TableHead className="text-right py-2.5 border-l border-border/30">A. Base</TableHead>
+                      <TableHead className="text-right py-2.5 text-earning">+ Adic.</TableHead>
+                      <TableHead className="text-right py-2.5 text-destructive">− Desc.</TableHead>
+                      <TableHead className="text-right py-2.5 !font-bold border-l border-border/30">= Total</TableHead>
+                      <TableHead className="py-2.5 min-w-[200px]">Composición</TableHead>
+                      <TableHead className="py-2.5 w-10">Obs</TableHead>
+                      <TableHead className="py-2.5 w-8"></TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
-      )}
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRows.map((row, i) => {
+                      const hrs = row.truth.total_hours;
+                      const basePay = row.truth.total_pay || 0;
+                      const rate = hrs && hrs > 0 && basePay > 0 ? Math.round((basePay / hrs) * 100) / 100 : null;
+                      const ppd = row.truth.pay_per_day || 0;
+                      const ryde = row.truth.ryde || 0;
+                      const tips = row.truth.tips || 0;
+                      const reimb = row.truth.reimbursements || 0;
+                      const disc = truthDiscount(row);
+                      const adicionales = ppd + ryde + tips + reimb;
+                      const total = row.truth.total;
 
-      {/* System-only employees */}
-      {systemOnlyEmployees.length > 0 && (
-        <Card className="shadow-none border-warning/25 bg-warning/[0.03]">
-          <CardHeader className="py-3 px-4">
-            <CardTitle className="text-xs flex items-center gap-2 font-semibold">
-              <div className="p-1 rounded-md bg-warning/12">
-                <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                      // Composition formula — always show full breakdown
+                      const fmtC = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                      let formula: string;
+                      if (basePay > 0 && adicionales > 0 && disc > 0) {
+                        formula = `${fmtC(basePay)} + ${fmtC(adicionales)} − ${fmtC(disc)} = ${fmt(total)}`;
+                      } else if (basePay > 0 && adicionales > 0) {
+                        formula = `${fmtC(basePay)} + ${fmtC(adicionales)} = ${fmt(total)}`;
+                      } else if (basePay > 0 && disc > 0) {
+                        formula = `${fmtC(basePay)} − ${fmtC(disc)} = ${fmt(total)}`;
+                      } else if (adicionales > 0 && disc > 0) {
+                        formula = `$0 + ${fmtC(adicionales)} − ${fmtC(disc)} = ${fmt(total)}`;
+                      } else if (adicionales > 0) {
+                        formula = `$0 + ${fmtC(adicionales)} = ${fmt(total)}`;
+                      } else if (basePay > 0) {
+                        formula = `${fmtC(basePay)} = ${fmt(total)}`;
+                      } else {
+                        formula = total != null ? fmt(total) : "—";
+                      }
+                      const obs = truthObservation(row);
+
+                      return (
+                        <TableRow
+                          key={i}
+                          className="text-xs cursor-pointer transition-colors hover:bg-accent/40"
+                          onClick={() => setSelectedRow(row)}
+                        >
+                          <TableCell className="sticky left-0 bg-card z-10 py-2">
+                            <div className="flex items-center gap-1.5">
+                              <div className="h-1.5 w-1.5 rounded-full bg-earning shrink-0" />
+                              <span className="font-medium truncate max-w-[130px]">{row.truth.first_name} {row.truth.last_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2">{statusBadge(row.classification.row_status, row)}</TableCell>
+                          <TableCell className="text-right font-mono py-2">{hrs != null ? hrs.toFixed(2) : "—"}</TableCell>
+                          <TableCell className="text-right font-mono py-2 text-muted-foreground">{rate != null ? `$${rate.toFixed(2)}` : "—"}</TableCell>
+                          <TableCell className="text-right font-mono py-2 border-l border-border/20">{basePay > 0 ? fmt(basePay) : "—"}</TableCell>
+                          <TableCell className="text-right font-mono py-2 text-earning font-medium">{adicionales > 0 ? fmt(adicionales) : "—"}</TableCell>
+                          <TableCell className="text-right font-mono py-2 text-destructive font-medium">{disc > 0 ? fmt(disc) : "—"}</TableCell>
+                          <TableCell className="text-right font-mono font-bold py-2 border-l border-border/20">{fmt(total)}</TableCell>
+                          <TableCell className="py-2">
+                            <span className="text-[10px] font-mono text-muted-foreground">{formula}</span>
+                          </TableCell>
+                          <TableCell className="py-2">
+                            {obs ? (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-info/10 text-info border border-info/20">
+                                    <FileText className="h-3 w-3" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-xs text-xs">{obs}</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-muted-foreground/30">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary" />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
-              Solo en sistema — no en truth ({systemOnlyEmployees.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
-            <div className="flex flex-wrap gap-1.5">
-              {systemOnlyEmployees.map(e => (
-                <Badge key={e.employee_id} variant="outline" className="text-[10px] bg-card">{e.first_name} {e.last_name}</Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </Card>
+          )}
+
+          {/* System-only employees */}
+          {systemOnlyEmployees.length > 0 && (
+            <Card className="shadow-none border-warning/25 bg-warning/[0.03]">
+              <CardHeader className="py-3 px-4">
+                <CardTitle className="text-xs flex items-center gap-2 font-semibold">
+                  <div className="p-1 rounded-md bg-warning/12">
+                    <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                  </div>
+                  Solo en sistema — no en truth ({systemOnlyEmployees.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {systemOnlyEmployees.map(e => (
+                    <Badge key={e.employee_id} variant="outline" className="text-[10px] bg-card">{e.first_name} {e.last_name}</Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Detail dialog */}
       <Dialog open={!!selectedRow} onOpenChange={() => setSelectedRow(null)}>
