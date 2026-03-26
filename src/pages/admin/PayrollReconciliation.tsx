@@ -1148,6 +1148,25 @@ export default function PayrollReconciliationPage() {
 
           <Separator orientation="vertical" className="h-5 mx-1" />
 
+          {/* Historical mode toggle */}
+          {!isLocked && (
+            <Button
+              size="sm"
+              variant={isHistorical ? "default" : "outline"}
+              className={`h-8 text-xs rounded-lg gap-1.5 ${isHistorical ? "bg-info hover:bg-info/90 text-info-foreground" : ""}`}
+              onClick={async () => {
+                const newMode = isHistorical ? "standard" : "historical_truth_authoritative";
+                await supabase.from("reconciliation_batches").update({ reconciliation_mode: newMode } as any).eq("id", activeBatch.id);
+                setActiveBatch({ ...activeBatch, reconciliation_mode: newMode } as any);
+              }}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              {isHistorical ? "Modo Histórico ✓" : "Modo Histórico"}
+            </Button>
+          )}
+
+          <Separator orientation="vertical" className="h-5 mx-1" />
+
           {!isLocked && batchSummary && (
             <>
               <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1.5" onClick={() => setShowApproveDialog(true)}>
