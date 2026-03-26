@@ -105,8 +105,34 @@
 
 ---
 
+## Política de Datos Fiscales (TIN/SSN/EIN)
+
+> **Regla absoluta**: Nunca almacenar un TIN completo (SSN, EIN, ITIN) en la base de datos.
+
+| Regla | Detalle |
+|---|---|
+| **Solo `tin_last4`** | Únicamente los últimos 4 dígitos se persisten, suficiente para verificación visual |
+| **Truncar antes de guardar** | El truncamiento ocurre en el frontend/edge function antes del INSERT — nunca llega el TIN completo a la BD |
+| **No cifrar el TIN completo** | Almacenar un TIN cifrado sigue siendo un riesgo (la clave de descifrado puede filtrarse). Mejor no persistirlo |
+| **Excepción** | Solo si existe un requisito legal/compliance explícito (ej. IRS Form 1099 filing) se puede almacenar temporalmente con cifrado a nivel de columna + rotación de llaves, y eliminarlo post-filing |
+| **Columna `tin_encrypted`** | Fue eliminada de `contractor_w9` — confirmado que no contenía datos |
+
+---
+
+## Changelog de Seguridad
+
+### 2026-03-26
+- **`vite-plugin-pwa`**: Actualizado de `0.21.1` → `1.2.0`
+  - Corrige vulnerabilidad transitiva en `workbox-build` → `serialize-javascript` (RCE vía RegExp/Date)
+  - `npm audit` confirma 0 vulnerabilidades high/critical post-actualización
+  - Build compila sin errores
+- **Finding `w9_tin_encryption`**: Marcado como resuelto — columna `tin_encrypted` ya no existe en BD
+- **Security scan**: Re-ejecutado. Los 2 findings anteriores desaparecieron. Quedan 5 findings pre-existentes de scope RLS (documentados por separado)
+
+---
+
 ## Estado del Linter (Última ejecución: Marzo 2026)
 
 - **WARN residuales**: 1 — `demo_requests` INSERT `WITH CHECK (true)` → **intencional** (formulario público de landing)
 - **INFO residuales**: 0
-- **Vulnerabilidades npm**: 0 high/critical tras actualización de `vite-plugin-pwa`
+- **Vulnerabilidades npm**: 0 high/critical tras actualización de `vite-plugin-pwa` a v1.2.0
