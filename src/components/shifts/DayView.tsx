@@ -3,9 +3,11 @@ import { es } from "date-fns/locale";
 import { Plus, Sunrise, Sun, Moon, Clock, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { buildPastelMap, SHIFT_STATUS_CONFIG } from "./pastel-utils";
 import { getClientColor } from "./types";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
+import type { AssignedEmployee } from "./ShiftCard";
 
 interface DayViewProps {
   currentDay: Date;
