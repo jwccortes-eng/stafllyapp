@@ -42,6 +42,10 @@ export function EmployeeView({ employees, shifts, assignments, locations, client
       <ShiftCard
         shift={shift}
         assignmentCount={assignments.filter(a => a.shift_id === shift.id).length}
+        assignedEmployees={assignments.filter(a => a.shift_id === shift.id).map(a => {
+          const emp = employees.find(e => e.id === a.employee_id);
+          return emp ? { firstName: emp.first_name, lastName: emp.last_name, avatarUrl: (emp as any).avatar_url ?? null, gender: (emp as any).gender ?? null } : { firstName: "?", lastName: "" };
+        })}
         locationName={getLocationName(shift.location_id)}
         clientName={getClientName(shift.client_id)}
         clientIds={clientIds}
