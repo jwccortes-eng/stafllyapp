@@ -530,17 +530,27 @@ export default function Employees() {
   const uniqueRoles = [...new Set(employees.map(e => e.employee_role).filter(Boolean))];
   const uniqueGroups = [...new Set(employees.map(e => e.groups).filter(Boolean))];
 
-  const activeFilterCount = [filterStatus !== "all", filterRole !== "all", filterGroup !== "all"].filter(Boolean).length;
+  const activeFilterCount = [filterRole !== "all", filterGroup !== "all"].filter(Boolean).length;
 
   const clearFilters = () => {
-    setFilterStatus("all");
     setFilterRole("all");
     setFilterGroup("all");
   };
 
+  // Status counts
+  const statusCounts = {
+    active: employees.filter(e => e.is_active !== false).length,
+    inactive: employees.filter(e => e.is_active === false).length,
+    pending: employees.filter(e => e.is_active !== false && !e.user_id).length,
+    all: employees.length,
+  };
+
   const filtered = employees.filter((e) => {
     const matchesSearch = `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = filterStatus === "all" || (filterStatus === "active" ? e.is_active : !e.is_active);
+    const matchesStatus = statusTab === "all" ? true
+      : statusTab === "active" ? e.is_active !== false
+      : statusTab === "inactive" ? e.is_active === false
+      : e.is_active !== false && !e.user_id; // pending
     const matchesRole = filterRole === "all" || e.employee_role === filterRole;
     const matchesGroup = filterGroup === "all" || e.groups === filterGroup;
     return matchesSearch && matchesStatus && matchesRole && matchesGroup;
