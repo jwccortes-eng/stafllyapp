@@ -148,8 +148,34 @@ export function ShiftCard({
               </p>
             )}
 
-            {/* Assigned employees preview */}
-            {assignedNames.length > 0 && (
+            {/* Assigned employees preview — avatar stack */}
+            {assignedEmployees.length > 0 ? (
+              <div className="flex items-center gap-1.5">
+                <div className="flex -space-x-1.5">
+                  {assignedEmployees.slice(0, 4).map((emp, i) => (
+                    <EmployeeAvatar
+                      key={i}
+                      firstName={emp.firstName}
+                      lastName={emp.lastName}
+                      avatarUrl={emp.avatarUrl}
+                      gender={emp.gender}
+                      size="sm"
+                      className="h-5 w-5 ring-1 ring-background"
+                    />
+                  ))}
+                  {assignedEmployees.length > 4 && (
+                    <span className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[7px] font-bold text-muted-foreground ring-1 ring-background">
+                      +{assignedEmployees.length - 4}
+                    </span>
+                  )}
+                </div>
+                {assignedEmployees.length <= 2 && (
+                  <span className="text-[9px] text-muted-foreground/60 truncate">
+                    {assignedEmployees.map(e => e.firstName).join(", ")}
+                  </span>
+                )}
+              </div>
+            ) : assignedNames.length > 0 ? (
               <div className="space-y-px">
                 {assignedNames.slice(0, 2).map((name, i) => (
                   <div key={i} className="flex items-center gap-1 text-[9px] text-muted-foreground/60">
@@ -161,7 +187,7 @@ export function ShiftCard({
                   <span className="text-[9px] text-muted-foreground/40 ml-3.5">+{assignedNames.length - 2} más</span>
                 )}
               </div>
-            )}
+            ) : null}
 
             {/* Capacity bar + badges */}
             <div className="space-y-1 pt-0.5">
