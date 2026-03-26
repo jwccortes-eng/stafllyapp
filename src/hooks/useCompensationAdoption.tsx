@@ -24,6 +24,16 @@ export interface AdoptionProposal {
   editedRate: number | null;
 }
 
+export interface BatchOption {
+  id: string;
+  payroll_period_start: string | null;
+  payroll_period_end: string | null;
+  status: string;
+  reconciliation_mode: string | null;
+  truth_source_file_name: string | null;
+  created_at: string;
+}
+
 function classifyConfidence(
   currentRate: number | null,
   suggestedRate: number | null,
@@ -39,39 +49,43 @@ function classifyConfidence(
   return "review";
 }
 
-interface BatchInfo {
-  id: string;
-  payroll_period_start: string | null;
-  payroll_period_end: string | null;
-}
-
 export function useCompensationAdoption() {
   const { user } = useAuth();
   const { selectedCompanyId } = useCompany();
   const qc = useQueryClient();
   const [proposals, setProposals] = useState<AdoptionProposal[]>([]);
   const [generated, setGenerated] = useState(false);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [effectiveDate, setEffectiveDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
 
-  const { data: batchData, isLoading: loadingBatch } = useQuery({
-    queryKey: ["adoption-batch-rows", selectedCompanyId],
+  // Fetch available batches for selection
+  const { data: availableBatches, isLoading: loadingBatches } = useQuery({
+    queryKey: ["adoption-batches", selectedCompanyId],
     enabled: !!selectedCompanyId,
     queryFn: async () => {
-      const { data: batch } = await supabase
+      const { data } = await supabase
         .from("reconciliation_batches")
-        .select("id, payroll_period_start, payroll_period_end")
+        .select("id, payroll_period_start, payroll_period_end, status, reconciliation_mode, truth_source_file_name, created_at")
         .eq("company_id", selectedCompanyId!)
         .in("status", ["approved", "reconciled"])
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!batch) return null;
+        .limit(10);
+      return (data ?? []) as BatchOption[];
+    },
+  });
 
-      const { data: rows } = await supabase
+  // Fetch rows for selected batch
+  const { data: batchRows, isLoading: loadingRows } = useQuery({
+    queryKey: ["adoption-batch-rows", selectedBatchId],
+    enabled: !!selectedBatchId,
+    queryFn: async () => {
+      const { data } = await supabase
         .from("reconciliation_employee_rows")
         .select("*")
-        .eq("batch_id", batch.id);
-
-      return { batch: batch as BatchInfo, rows: rows ?? [] };
+        .eq("batch_id", selectedBatchId!);
+      return data ?? [];
     },
   });
 
@@ -88,11 +102,11 @@ export function useCompensationAdoption() {
     },
   });
 
-  const loading = loadingBatch || loadingProfiles;
-  const batchInfo = batchData?.batch ?? null;
+  const loading = loadingBatches || loadingRows || loadingProfiles;
+  const selectedBatch = availableBatches?.find((b) => b.id === selectedBatchId) ?? null;
 
   const generateProposals = useCallback(() => {
-    if (!batchData?.rows) return;
+    if (!batchRows || !selectedBatch) return;
 
     const profileMap = new Map(
       (currentProfiles ?? []).map((p) => [p.employee_id, p])
@@ -100,7 +114,7 @@ export function useCompensationAdoption() {
 
     const newProposals: AdoptionProposal[] = [];
 
-    for (const row of batchData.rows) {
+    for (const row of batchRows) {
       const empId = row.matched_system_employee_id;
       if (!empId) continue;
 
@@ -149,7 +163,7 @@ export function useCompensationAdoption() {
         suggestedHourlyRate: suggestedHourly,
         suggestedDailyRate: suggestedDaily,
         suggestedPaymentMode: suggestedMode,
-        source: `Payroll ${batchData.batch.payroll_period_start ?? "?"} → ${batchData.batch.payroll_period_end ?? "?"}`,
+        source: `Payroll ${selectedBatch.payroll_period_start ?? "?"} → ${selectedBatch.payroll_period_end ?? "?"}`,
         confidence,
         reason,
         decision: confidence === "high" ? "accept" : null,
@@ -162,7 +176,7 @@ export function useCompensationAdoption() {
 
     setProposals(newProposals);
     setGenerated(true);
-  }, [batchData, currentProfiles]);
+  }, [batchRows, selectedBatch, currentProfiles]);
 
   const updateDecision = useCallback(
     (employeeId: string, decision: AdoptionDecision, editedRate?: number) => {
@@ -202,7 +216,7 @@ export function useCompensationAdoption() {
         const paymentMode: "hourly" | "daily" | "mixed" =
           p.suggestedPaymentMode === "hybrid" ? "mixed" : p.suggestedPaymentMode;
 
-        const profilePayload = {
+        const newProfilePayload = {
           company_id: selectedCompanyId,
           employee_id: p.employeeId,
           payment_mode: paymentMode,
@@ -210,21 +224,28 @@ export function useCompensationAdoption() {
           default_daily_rate: p.suggestedDailyRate,
           rate_source: "imported" as const,
           is_active: true,
-          effective_from: new Date().toISOString().split("T")[0],
+          effective_from: effectiveDate,
+          created_by: user.id,
           updated_by: user.id,
           notes: `Adoption from payroll: ${p.source}`,
         };
 
+        // Archive existing profile — never overwrite
         if (existing) {
           await supabase
             .from("compensation_profiles")
-            .update(profilePayload)
+            .update({
+              is_active: false,
+              effective_to: effectiveDate,
+              updated_by: user.id,
+            })
             .eq("id", existing.id);
-        } else {
-          await supabase
-            .from("compensation_profiles")
-            .insert({ ...profilePayload, created_by: user.id });
         }
+
+        // Always create new profile record
+        await supabase
+          .from("compensation_profiles")
+          .insert(newProfilePayload);
 
         await supabase.from("compensation_change_log").insert({
           company_id: selectedCompanyId,
@@ -249,7 +270,7 @@ export function useCompensationAdoption() {
     qc.invalidateQueries({ queryKey: ["adoption-current-profiles"] });
 
     return { applied, errors };
-  }, [proposals, user, selectedCompanyId, qc]);
+  }, [proposals, user, selectedCompanyId, qc, effectiveDate]);
 
   const stats = useMemo(() => {
     const high = proposals.filter((p) => p.confidence === "high").length;
@@ -266,7 +287,12 @@ export function useCompensationAdoption() {
     stats,
     loading,
     generated,
-    batchInfo,
+    availableBatches: availableBatches ?? [],
+    selectedBatch,
+    selectedBatchId,
+    setSelectedBatchId,
+    effectiveDate,
+    setEffectiveDate,
     generateProposals,
     updateDecision,
     applyConfirmed,
