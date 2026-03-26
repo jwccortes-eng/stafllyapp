@@ -4,14 +4,24 @@ import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import type { Shift } from "./types";
 import { getClientColor, formatShiftCode } from "./types";
 import type { ShiftCoverageItem } from "@/hooks/useShiftCoverage";
+
+export interface AssignedEmployee {
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string | null;
+  gender?: string | null;
+}
 
 interface ShiftCardProps {
   shift: Shift;
   assignmentCount: number;
   assignedNames?: string[];
+  /** Rich avatar data for assigned employees */
+  assignedEmployees?: AssignedEmployee[];
   locationName?: string;
   clientName?: string;
   clientIds?: string[];
