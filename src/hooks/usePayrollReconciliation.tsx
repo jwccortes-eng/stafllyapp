@@ -21,6 +21,7 @@ export interface ReconciliationBatch {
   id: string;
   company_id: string;
   status: string;
+  reconciliation_mode: string;
   truth_source_file_name: string | null;
   employees_truth_count: number;
   matched_count: number;
