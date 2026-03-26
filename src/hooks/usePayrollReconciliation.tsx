@@ -520,21 +520,42 @@ export function usePayrollReconciliation() {
       "Truth Tips", "System Tips", "Var Tips",
       "Truth Reimb", "System Reimb", "Var Reimb",
       "Truth Total", "System Total", "Var Total",
+      "Base Pay", "Additionals", "Discount", "Composition Formula",
       "Status", "Exception", "Flags", "Observaciones",
     ];
 
-    const dataRows = rows.map(r => [
-      `${r.truth.first_name} ${r.truth.last_name}`,
-      r.match.match_status, String(r.match.match_confidence), r.match.matched_by,
-      String(r.truth.total_hours ?? ""), String(r.system?.total_hours ?? ""), String(r.variances.hours ?? ""),
-      String(r.truth.total_pay ?? ""), String(r.system?.total_pay ?? ""), String(r.variances.total_pay ?? ""),
-      String(r.truth.pay_per_day ?? ""), String(r.system?.pay_per_day ?? ""), String(r.variances.pay_per_day ?? ""),
-      String(r.truth.ryde ?? ""), String(r.system?.ryde ?? ""), String(r.variances.ryde ?? ""),
-      String(r.truth.tips ?? ""), String(r.system?.tips ?? ""), String(r.variances.tips ?? ""),
-      String(r.truth.reimbursements ?? ""), String(r.system?.reimbursements ?? ""), String(r.variances.reimbursements ?? ""),
-      String(r.truth.total ?? ""), String(r.system?.total ?? ""), String(r.variances.total ?? ""),
-      r.classification.row_status, r.exception_type || "", r.anomaly_flags.join("; "), r.truth.observaciones || "",
-    ]);
+    const dataRows = rows.map(r => {
+      const basePay = r.truth.total_pay || 0;
+      const ppd = r.truth.pay_per_day || 0;
+      const ryde = r.truth.ryde || 0;
+      const tips = r.truth.tips || 0;
+      const reimb = r.truth.reimbursements || 0;
+      const disc = Number((r.truth as any).discount ?? r.truth.raw?.discount ?? 0);
+      const adicionales = ppd + ryde + tips + reimb;
+      const total = r.truth.total;
+      const fmtC = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+      const fmtT = (v: number | null | undefined) => v != null ? `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "";
+      let formula = "";
+      if (basePay > 0 && adicionales > 0 && disc > 0) formula = `${fmtC(basePay)} + ${fmtC(adicionales)} - ${fmtC(disc)} = ${fmtT(total)}`;
+      else if (basePay > 0 && adicionales > 0) formula = `${fmtC(basePay)} + ${fmtC(adicionales)} = ${fmtT(total)}`;
+      else if (basePay > 0 && disc > 0) formula = `${fmtC(basePay)} - ${fmtC(disc)} = ${fmtT(total)}`;
+      else if (adicionales > 0) formula = `$0 + ${fmtC(adicionales)} = ${fmtT(total)}`;
+      else if (basePay > 0) formula = `${fmtC(basePay)} = ${fmtT(total)}`;
+
+      return [
+        `${r.truth.first_name} ${r.truth.last_name}`,
+        r.match.match_status, String(r.match.match_confidence), r.match.matched_by,
+        String(r.truth.total_hours ?? ""), String(r.system?.total_hours ?? ""), String(r.variances.hours ?? ""),
+        String(r.truth.total_pay ?? ""), String(r.system?.total_pay ?? ""), String(r.variances.total_pay ?? ""),
+        String(r.truth.pay_per_day ?? ""), String(r.system?.pay_per_day ?? ""), String(r.variances.pay_per_day ?? ""),
+        String(r.truth.ryde ?? ""), String(r.system?.ryde ?? ""), String(r.variances.ryde ?? ""),
+        String(r.truth.tips ?? ""), String(r.system?.tips ?? ""), String(r.variances.tips ?? ""),
+        String(r.truth.reimbursements ?? ""), String(r.system?.reimbursements ?? ""), String(r.variances.reimbursements ?? ""),
+        String(r.truth.total ?? ""), String(r.system?.total ?? ""), String(r.variances.total ?? ""),
+        String(basePay || ""), String(adicionales || ""), String(disc || ""), formula,
+        r.classification.row_status, r.exception_type || "", r.anomaly_flags.join("; "), r.truth.observaciones || "",
+      ];
+    });
 
     return [headers, ...dataRows];
   }, []);

@@ -1208,6 +1208,7 @@ export default function PayrollReconciliationPage() {
                   <TableHead className="text-right py-2.5 text-destructive">− Desc.</TableHead>
                   <TableHead className="text-right py-2.5 !font-bold border-l border-border/30">= Total</TableHead>
                   <TableHead className="py-2.5 min-w-[200px]">Composición</TableHead>
+                  <TableHead className="py-2.5 w-10">Obs</TableHead>
                   <TableHead className="py-2.5 w-8"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -1238,10 +1239,11 @@ export default function PayrollReconciliationPage() {
                   } else if (adicionales > 0) {
                     formula = `$0 + ${fmtC(adicionales)} = ${fmt(total)}`;
                   } else if (basePay > 0) {
-                    formula = `Base: ${fmtC(basePay)}`;
+                    formula = `${fmtC(basePay)} = ${fmt(total)}`;
                   } else {
                     formula = total != null ? fmt(total) : "—";
                   }
+                  const obs = row.truth.observaciones || "";
 
                   return (
                     <TableRow
@@ -1264,6 +1266,20 @@ export default function PayrollReconciliationPage() {
                       <TableCell className="text-right font-mono font-bold py-2 border-l border-border/20">{fmt(total)}</TableCell>
                       <TableCell className="py-2">
                         <span className="text-[10px] font-mono text-muted-foreground">{formula}</span>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        {obs ? (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-info/10 text-info border border-info/20">
+                                <FileText className="h-3 w-3" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-xs text-xs">{obs}</TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span className="text-muted-foreground/30">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="py-2">
                         <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary" />
