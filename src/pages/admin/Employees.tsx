@@ -739,7 +739,7 @@ export default function Employees() {
                   </div>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <StatusBadge employee={e} />
+                  <EmpStatusBadge employee={e} />
                   {e.access_pin && <span className="text-[9px] text-muted-foreground/50 font-mono">PIN: {e.access_pin}</span>}
                 </div>
               </div>
@@ -801,7 +801,7 @@ export default function Employees() {
                     {e.groups ? <span className="text-[10px] text-muted-foreground truncate max-w-[100px] block">{e.groups.split(",")[0].trim()}</span> : <span className="text-[10px] text-muted-foreground/25">—</span>}
                   </TableCell>
                   <TableCell className="py-1">
-                    <StatusBadge employee={e} />
+                    <EmpStatusBadge employee={e} />
                   </TableCell>
                   <TableCell className="hidden lg:table-cell py-1">
                     {e.last_login ? (
@@ -844,7 +844,7 @@ export default function Employees() {
                 <SheetTitle className="text-base font-bold leading-tight">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[10px] py-0">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
-                  {viewEmployee && <StatusBadge employee={viewEmployee} />}
+                  {viewEmployee && <EmpStatusBadge employee={viewEmployee} />}
                 </div>
                 <SheetDescription className="mt-1 text-[11px] text-muted-foreground/70 flex items-center gap-3 flex-wrap">
                   {viewEmployee?.phone_number && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{viewEmployee.phone_number}</span>}
