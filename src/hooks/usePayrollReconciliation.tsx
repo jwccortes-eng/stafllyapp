@@ -530,15 +530,17 @@ export function usePayrollReconciliation() {
       const ryde = r.truth.ryde || 0;
       const tips = r.truth.tips || 0;
       const reimb = r.truth.reimbursements || 0;
-      const disc = Number((r.truth as any).discount ?? r.truth.raw?.discount ?? 0);
+      const disc = Math.abs(Number((r.truth as any).discount ?? r.truth.raw?.discount ?? r.truth.raw?.Discount ?? 0) || 0);
       const adicionales = ppd + ryde + tips + reimb;
       const total = r.truth.total;
+      const obs = (r.truth.observaciones || (r.truth.raw as any)?.observaciones || (r.truth.raw as any)?.Observaciones || "") as string;
       const fmtC = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
       const fmtT = (v: number | null | undefined) => v != null ? `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "";
       let formula = "";
       if (basePay > 0 && adicionales > 0 && disc > 0) formula = `${fmtC(basePay)} + ${fmtC(adicionales)} - ${fmtC(disc)} = ${fmtT(total)}`;
       else if (basePay > 0 && adicionales > 0) formula = `${fmtC(basePay)} + ${fmtC(adicionales)} = ${fmtT(total)}`;
       else if (basePay > 0 && disc > 0) formula = `${fmtC(basePay)} - ${fmtC(disc)} = ${fmtT(total)}`;
+      else if (adicionales > 0 && disc > 0) formula = `$0 + ${fmtC(adicionales)} - ${fmtC(disc)} = ${fmtT(total)}`;
       else if (adicionales > 0) formula = `$0 + ${fmtC(adicionales)} = ${fmtT(total)}`;
       else if (basePay > 0) formula = `${fmtC(basePay)} = ${fmtT(total)}`;
 
@@ -553,7 +555,7 @@ export function usePayrollReconciliation() {
         String(r.truth.reimbursements ?? ""), String(r.system?.reimbursements ?? ""), String(r.variances.reimbursements ?? ""),
         String(r.truth.total ?? ""), String(r.system?.total ?? ""), String(r.variances.total ?? ""),
         String(basePay || ""), String(adicionales || ""), String(disc || ""), formula,
-        r.classification.row_status, r.exception_type || "", r.anomaly_flags.join("; "), r.truth.observaciones || "",
+        r.classification.row_status, r.exception_type || "", r.anomaly_flags.join("; "), obs,
       ];
     });
 
