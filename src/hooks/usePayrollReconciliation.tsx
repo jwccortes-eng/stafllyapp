@@ -525,15 +525,25 @@ export function usePayrollReconciliation() {
     ];
 
     const dataRows = rows.map(r => {
+      const parseDiscount = (v: unknown) => {
+        if (typeof v === "number") return Number.isFinite(v) ? Math.abs(v) : 0;
+        if (typeof v === "string") {
+          const cleaned = v.replace(/[^0-9.-]/g, "");
+          const n = Number(cleaned);
+          return Number.isFinite(n) ? Math.abs(n) : 0;
+        }
+        const n = Number(v);
+        return Number.isFinite(n) ? Math.abs(n) : 0;
+      };
       const basePay = r.truth.total_pay || 0;
       const ppd = r.truth.pay_per_day || 0;
       const ryde = r.truth.ryde || 0;
       const tips = r.truth.tips || 0;
       const reimb = r.truth.reimbursements || 0;
-      const disc = Math.abs(Number((r.truth as any).discount ?? r.truth.raw?.discount ?? r.truth.raw?.Discount ?? 0) || 0);
+      const disc = parseDiscount((r.truth as any).discount ?? r.truth.raw?.discount ?? r.truth.raw?.Discount ?? 0);
       const adicionales = ppd + ryde + tips + reimb;
       const total = r.truth.total;
-      const obs = (r.truth.observaciones || (r.truth.raw as any)?.observaciones || (r.truth.raw as any)?.Observaciones || "") as string;
+      const obs = (r.truth.observaciones || (r.truth.raw as any)?.observaciones || (r.truth.raw as any)?.Observaciones || (r.truth.raw as any)?.OBSERVACIONES || "") as string;
       const fmtC = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
       const fmtT = (v: number | null | undefined) => v != null ? `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "";
       let formula = "";
