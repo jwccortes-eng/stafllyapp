@@ -987,7 +987,7 @@ export default function PayrollReconciliationPage() {
               <Card key={b.id} className="cursor-pointer hover:border-primary/30 hover:shadow-md transition-all shadow-none group" onClick={() => setActiveBatch(b)}>
                 <CardContent className="py-3.5 px-5 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    {batchStatusBadge(b.status, b.employees_truth_count > 0 ? { validated: b.employees_truth_count, pending: b.critical_mismatch_count || 0, total: b.employees_truth_count } : undefined)}
+                    {batchStatusBadge(b.status, b.employees_truth_count > 0 ? { validated: b.employees_truth_count, pending: b.critical_mismatch_count || 0, total: b.employees_truth_count } : undefined, (b as any).reconciliation_mode)}
                     <div>
                       <p className="font-medium text-sm group-hover:text-primary transition-colors">
                         {b.truth_source_file_name || "Sin archivo"}
