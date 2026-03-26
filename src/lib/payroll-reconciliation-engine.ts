@@ -188,6 +188,7 @@ export interface ComponentTotals {
   ryde: number;
   tips: number;
   reimbursements: number;
+  discount: number;
   grand_total: number;
 }
 
@@ -656,6 +657,7 @@ export function computeBatchSummary(
     ryde: sum(rows.map(r => r.truth.ryde)),
     tips: sum(rows.map(r => r.truth.tips)),
     reimbursements: sum(rows.map(r => r.truth.reimbursements)),
+    discount: sum(rows.map(r => Math.abs(Number(r.truth.discount) || 0))),
     grand_total: sum(rows.map(r => r.truth.total)),
   };
 
@@ -667,6 +669,7 @@ export function computeBatchSummary(
     ryde: sum(matchedRows.map(r => r.system!.ryde)),
     tips: sum(matchedRows.map(r => r.system!.tips)),
     reimbursements: sum(matchedRows.map(r => r.system!.reimbursements)),
+    discount: 0,
     grand_total: sum(matchedRows.map(r => r.system!.total)),
   };
 
@@ -677,6 +680,7 @@ export function computeBatchSummary(
     ryde: totals_system.ryde - totals_truth.ryde,
     tips: totals_system.tips - totals_truth.tips,
     reimbursements: totals_system.reimbursements - totals_truth.reimbursements,
+    discount: totals_system.discount - totals_truth.discount,
     grand_total: totals_system.grand_total - totals_truth.grand_total,
   };
 
@@ -812,6 +816,7 @@ export function generateExecutiveCSV(rows: ReconciliationRowResult[], summary: B
     ["Ryde", String(summary.totals_truth.ryde), String(summary.totals_system.ryde), String(summary.totals_variance.ryde)],
     ["Tips", String(summary.totals_truth.tips), String(summary.totals_system.tips), String(summary.totals_variance.tips)],
     ["Reimbursements", String(summary.totals_truth.reimbursements), String(summary.totals_system.reimbursements), String(summary.totals_variance.reimbursements)],
+    ["Discount", String(summary.totals_truth.discount), String(summary.totals_system.discount), String(summary.totals_variance.discount)],
     ["GRAND TOTAL", String(summary.totals_truth.grand_total), String(summary.totals_system.grand_total), String(summary.totals_variance.grand_total)],
     [""],
     ["EXCEPTIONS"],
