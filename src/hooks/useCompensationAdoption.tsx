@@ -67,7 +67,7 @@ export function useCompensationAdoption() {
     queryFn: async () => {
       const { data } = await supabase
         .from("reconciliation_batches")
-        .select("id, payroll_period_start, payroll_period_end, status, reconciliation_mode, truth_file_name, created_at")
+        .select("id, payroll_period_start, payroll_period_end, status, reconciliation_mode, created_at")
         .eq("company_id", selectedCompanyId!)
         .in("status", ["approved", "reconciled"])
         .order("created_at", { ascending: false })
