@@ -88,8 +88,24 @@ export function usePayrollReconciliation() {
     setLoading(false);
   }, [selectedCompanyId]);
 
-  const createBatch = useCallback(async (periodStart?: string, periodEnd?: string) => {
+  const createBatch = useCallback(async (periodStart?: string, periodEnd?: string, mode?: string) => {
     if (!selectedCompanyId || !user?.id) return null;
+
+    // Auto-detect historical mode from cutover date if not explicitly set
+    let reconciliationMode = mode || "standard";
+    if (!mode && periodEnd) {
+      try {
+        const { data: cutover } = await supabase
+          .from("company_cutover_dates")
+          .select("cutover_date")
+          .eq("company_id", selectedCompanyId)
+          .single();
+        if (cutover?.cutover_date && periodEnd < cutover.cutover_date) {
+          reconciliationMode = "historical_truth_authoritative";
+        }
+      } catch { /* no cutover date — default to standard */ }
+    }
+
     const { data, error } = await supabase
       .from("reconciliation_batches")
       .insert({
@@ -98,6 +114,7 @@ export function usePayrollReconciliation() {
         payroll_period_start: periodStart || null,
         payroll_period_end: periodEnd || null,
         status: "DRAFT",
+        reconciliation_mode: reconciliationMode,
       } as any)
       .select()
       .single();
