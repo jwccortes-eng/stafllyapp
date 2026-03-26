@@ -796,9 +796,20 @@ export default function PayrollReconciliationPage() {
     truthParseResult, reconciliationRows, systemOnlyEmployees, batchSummary,
     loading, processing,
     loadBatches, createBatch, uploadTruth,
-    runReconciliationForBatch, approveBatch, lockBatch,
+    runReconciliationForBatch, rehydrateBatch, approveBatch, lockBatch,
     exportCSV,
   } = usePayrollReconciliation();
+
+  // Auto-rehydrate persisted results when selecting a batch that's already been executed
+  const rehydratedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeBatch) { rehydratedRef.current = null; return; }
+    if (activeBatch.status === "DRAFT") return;
+    if (reconciliationRows.length > 0) return; // already have data
+    if (rehydratedRef.current === activeBatch.id) return; // already tried
+    rehydratedRef.current = activeBatch.id;
+    rehydrateBatch(activeBatch.id);
+  }, [activeBatch, reconciliationRows.length, rehydrateBatch]);
 
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -1439,7 +1450,7 @@ export default function PayrollReconciliationPage() {
       </Dialog>
 
       {/* Empty state */}
-      {reconciliationRows.length === 0 && !processing && activeBatch.status !== "DRAFT" && (
+      {reconciliationRows.length === 0 && !processing && !loading && activeBatch.status !== "DRAFT" && (
         <Card className="border-dashed border-2 shadow-none">
           <CardContent className="py-16 flex flex-col items-center text-center">
             <div className="p-4 rounded-2xl bg-muted/50 mb-4">
