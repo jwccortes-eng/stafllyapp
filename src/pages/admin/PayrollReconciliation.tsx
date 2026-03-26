@@ -1224,14 +1224,24 @@ export default function PayrollReconciliationPage() {
                   const adicionales = ppd + ryde + tips + reimb;
                   const total = row.truth.total;
 
-                  // Composition formula
-                  const parts: string[] = [];
-                  if (basePay > 0) parts.push(`$${basePay.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
-                  if (adicionales > 0) parts.push(`+ $${adicionales.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
-                  if (disc > 0) parts.push(`- $${disc.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
-                  const formula = parts.length > 1
-                    ? `${parts.join(" ")} = ${fmt(total)}`
-                    : total != null ? fmt(total) : "—";
+                  // Composition formula — always show full breakdown
+                  const fmtC = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+                  let formula: string;
+                  if (basePay > 0 && adicionales > 0 && disc > 0) {
+                    formula = `${fmtC(basePay)} + ${fmtC(adicionales)} − ${fmtC(disc)} = ${fmt(total)}`;
+                  } else if (basePay > 0 && adicionales > 0) {
+                    formula = `${fmtC(basePay)} + ${fmtC(adicionales)} = ${fmt(total)}`;
+                  } else if (basePay > 0 && disc > 0) {
+                    formula = `${fmtC(basePay)} − ${fmtC(disc)} = ${fmt(total)}`;
+                  } else if (adicionales > 0 && disc > 0) {
+                    formula = `$0 + ${fmtC(adicionales)} − ${fmtC(disc)} = ${fmt(total)}`;
+                  } else if (adicionales > 0) {
+                    formula = `$0 + ${fmtC(adicionales)} = ${fmt(total)}`;
+                  } else if (basePay > 0) {
+                    formula = `Base: ${fmtC(basePay)}`;
+                  } else {
+                    formula = total != null ? fmt(total) : "—";
+                  }
 
                   return (
                     <TableRow
