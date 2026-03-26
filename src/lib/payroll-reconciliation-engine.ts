@@ -670,7 +670,9 @@ export function computeBatchSummary(
     ryde: sum(matchedRows.map(r => r.system!.ryde)),
     tips: sum(matchedRows.map(r => r.system!.tips)),
     reimbursements: sum(matchedRows.map(r => r.system!.reimbursements)),
-    discount: 0,
+    discount: options?.isHistorical
+      ? sum(rows.map(r => Math.abs(Number(r.truth.discount) || 0)))
+      : 0,
     grand_total: sum(matchedRows.map(r => r.system!.total)),
   };
 
