@@ -232,9 +232,9 @@ function KpiCard({ label, value, subtitle, icon: Icon, accent }: { label: string
 
 // ─── Component Summary Card ──────────────────────────────────────────
 
-function SummaryCard({ label, truth, system, variance, tolerance, icon: Icon }: { label: string; truth: number; system: number; variance: number; tolerance: number; icon?: any }) {
+function SummaryCard({ label, truth, system, variance, tolerance, icon: Icon, isHistorical }: { label: string; truth: number; system: number; variance: number; tolerance: number; icon?: any; isHistorical?: boolean }) {
   const abs = Math.abs(variance);
-  const ok = abs <= tolerance;
+  const ok = isHistorical || abs <= tolerance;
   const status = ok ? "earning" : abs > tolerance * 5 ? "destructive" : "warning";
   return (
     <Card className={`shadow-none border-${status}/20 hover:shadow-sm transition-shadow`}>
@@ -249,13 +249,15 @@ function SummaryCard({ label, truth, system, variance, tolerance, icon: Icon }: 
             <span className="font-mono font-semibold">{fmt(truth)}</span>
           </div>
           <div className="flex justify-between text-[11px]">
-            <span className="text-muted-foreground">System</span>
-            <span className="font-mono font-semibold">{fmt(system)}</span>
+            <span className="text-muted-foreground">{isHistorical ? "Mirror" : "System"}</span>
+            <span className="font-mono font-semibold">{isHistorical ? <span className="text-earning">= Truth</span> : fmt(system)}</span>
           </div>
         </div>
         <div className={`flex items-center justify-between pt-1.5 border-t border-${status}/15`}>
           <span className="text-[10px] font-semibold text-muted-foreground">Δ Varianza</span>
-          {varianceCell(variance, tolerance)}
+          {isHistorical ? (
+            <span className="text-[11px] font-semibold text-earning tabular-nums">$0.00</span>
+          ) : varianceCell(variance, tolerance)}
         </div>
       </CardContent>
     </Card>
