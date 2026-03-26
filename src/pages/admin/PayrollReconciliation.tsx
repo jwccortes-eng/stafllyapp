@@ -38,6 +38,32 @@ const fmtVar = (v: number | null | undefined) => {
 };
 const fmtPct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
+const toAbsMoney = (value: unknown): number => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.abs(n) : 0;
+};
+
+const truthDiscount = (row: ReconciliationRowResult): number => {
+  const raw = (row.truth.raw || {}) as Record<string, unknown>;
+  return toAbsMoney(
+    (row.truth as any).discount
+      ?? raw.discount
+      ?? raw.Discount
+      ?? raw.descuentos
+      ?? raw.Descuentos,
+  );
+};
+
+const truthObservation = (row: ReconciliationRowResult): string => {
+  const raw = (row.truth.raw || {}) as Record<string, unknown>;
+  const rawObs = raw.observaciones
+    ?? raw.Observaciones
+    ?? raw.observation
+    ?? raw.observations;
+  const obs = row.truth.observaciones ?? (typeof rawObs === "string" ? rawObs : "");
+  return typeof obs === "string" ? obs.trim() : "";
+};
+
 /* Removed hardcoded TARGET_TRUTH_PERIOD — all period references are now dynamic */
 
 const formatPeriodLabel = (startDate: string, endDate: string) => {
@@ -51,7 +77,7 @@ const formatPeriodLabel = (startDate: string, endDate: string) => {
 function truthAuthoritativeStatus(row: ReconciliationRowResult): { label: string; variant: any; className: string } {
   // In truth-authoritative mode, if truth.total exists, the closure IS the truth
   if (row.truth.total != null) {
-    const disc = (row.truth as any).discount ?? row.truth.raw?.discount ?? 0;
+    const disc = truthDiscount(row);
     const adic = (row.truth.pay_per_day || 0) + (row.truth.ryde || 0) + (row.truth.tips || 0) + (row.truth.reimbursements || 0);
     const hasComposition = adic > 0 || disc > 0;
     if (hasComposition) {
@@ -463,11 +489,12 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
   const ryde = row.truth.ryde || 0;
   const tips = row.truth.tips || 0;
   const reimb = row.truth.reimbursements || 0;
-  const disc = Number((row.truth as any).discount ?? row.truth.raw?.discount ?? 0);
+  const disc = truthDiscount(row);
   const travelHrs = Number(row.truth.raw?.travel_hours ?? 0);
   const otros = Number(row.truth.raw?.otros ?? 0);
   const adicionales = ppd + ryde + tips + reimb + travelHrs + otros;
   const total = row.truth.total;
+  const obs = truthObservation(row);
 
   return (
     <DialogContent className="max-w-2xl max-h-[85vh] overflow-auto p-0">
@@ -579,10 +606,10 @@ function RowDetailPanel({ row, onClose }: { row: ReconciliationRowResult; onClos
         )}
 
         {/* Observaciones */}
-        {row.truth.observaciones && (
+        {obs && (
           <div>
             <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">Observaciones</p>
-            <p className="text-xs bg-muted/40 p-3 rounded-lg border border-border/40 leading-relaxed">{row.truth.observaciones}</p>
+            <p className="text-xs bg-muted/40 p-3 rounded-lg border border-border/40 leading-relaxed">{obs}</p>
           </div>
         )}
 
@@ -828,7 +855,7 @@ export default function PayrollReconciliationPage() {
     for (const row of reconciliationRows) {
       if (row.truth.total != null) {
         validated++;
-        const disc = Number((row.truth as any).discount ?? row.truth.raw?.discount ?? 0);
+        const disc = truthDiscount(row);
         const adic = (row.truth.pay_per_day || 0) + (row.truth.ryde || 0) + (row.truth.tips || 0) + (row.truth.reimbursements || 0);
         if (adic > 0 || disc > 0) compositionOk++;
         else if (row.truth.total_hours != null && row.truth.total_hours > 0) baseOk++;
@@ -842,7 +869,7 @@ export default function PayrollReconciliationPage() {
   // Truth-authoritative filter helper
   const isTruthValidated = (row: ReconciliationRowResult) => row.truth.total != null;
   const hasComposition = (row: ReconciliationRowResult) => {
-    const disc = Number((row.truth as any).discount ?? row.truth.raw?.discount ?? 0);
+    const disc = truthDiscount(row);
     const adic = (row.truth.pay_per_day || 0) + (row.truth.ryde || 0) + (row.truth.tips || 0) + (row.truth.reimbursements || 0);
     return adic > 0 || disc > 0;
   };
@@ -1221,7 +1248,7 @@ export default function PayrollReconciliationPage() {
                   const ryde = row.truth.ryde || 0;
                   const tips = row.truth.tips || 0;
                   const reimb = row.truth.reimbursements || 0;
-                  const disc = (row.truth as any).discount ?? row.truth.raw?.discount ?? 0;
+                  const disc = truthDiscount(row);
                   const adicionales = ppd + ryde + tips + reimb;
                   const total = row.truth.total;
 
@@ -1243,7 +1270,7 @@ export default function PayrollReconciliationPage() {
                   } else {
                     formula = total != null ? fmt(total) : "—";
                   }
-                  const obs = row.truth.observaciones || "";
+                  const obs = truthObservation(row);
 
                   return (
                     <TableRow
