@@ -669,50 +669,27 @@ export function EmployeeProfileTabs({
   }
   return (
     <Tabs defaultValue="info" className="w-full">
-      <TabsList className="w-full grid grid-cols-11 h-9 mb-4 bg-muted/40 rounded-xl">
-        <TabsTrigger value="info" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <User className="h-3 w-3" />
-          <span className="hidden sm:inline">Info</span>
+      <TabsList className="w-full grid grid-cols-7 h-10 mb-4 bg-muted/40 rounded-xl">
+        <TabsTrigger value="info" className="text-xs data-[state=active]:bg-card rounded-lg gap-1.5 font-medium">
+          <User className="h-3.5 w-3.5" /> Resumen
         </TabsTrigger>
-        <TabsTrigger value="profile" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <Briefcase className="h-3 w-3" />
-          <span className="hidden sm:inline">Perfil</span>
+        <TabsTrigger value="profile" className="text-xs data-[state=active]:bg-card rounded-lg gap-1.5 font-medium">
+          <Briefcase className="h-3.5 w-3.5" /> Perfil
         </TabsTrigger>
-        <TabsTrigger value="reputation" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <TrendingUp className="h-3 w-3" />
-          <span className="hidden sm:inline">Score</span>
+        <TabsTrigger value="compensation" className="text-xs data-[state=active]:bg-card rounded-lg gap-1.5 font-medium">
+          <Wallet className="h-3.5 w-3.5" /> Comp
         </TabsTrigger>
-        <TabsTrigger value="pay" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <DollarSign className="h-3 w-3" />
-          <span className="hidden sm:inline">Pago</span>
+        <TabsTrigger value="access" className="text-xs data-[state=active]:bg-card rounded-lg gap-1.5 font-medium">
+          <KeyRound className="h-3.5 w-3.5" /> Acceso
         </TabsTrigger>
-        <TabsTrigger value="compensation" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <Wallet className="h-3 w-3" />
-          <span className="hidden sm:inline">Comp</span>
+        <TabsTrigger value="docs" className="text-xs data-[state=active]:bg-card rounded-lg gap-1.5 font-medium">
+          <FileText className="h-3.5 w-3.5" /> Docs
         </TabsTrigger>
-        <TabsTrigger value="advances" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <Banknote className="h-3 w-3" />
-          <span className="hidden sm:inline">Anticipos</span>
+        <TabsTrigger value="shifts" className="text-xs data-[state=active]:bg-card rounded-lg gap-1.5 font-medium">
+          <CalendarDays className="h-3.5 w-3.5" /> Turnos
         </TabsTrigger>
-        <TabsTrigger value="shifts" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <CalendarDays className="h-3 w-3" />
-          <span className="hidden sm:inline">Turnos</span>
-        </TabsTrigger>
-        <TabsTrigger value="time" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <Clock className="h-3 w-3" />
-          <span className="hidden sm:inline">Reloj</span>
-        </TabsTrigger>
-        <TabsTrigger value="access" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <KeyRound className="h-3 w-3" />
-          <span className="hidden sm:inline">Acceso</span>
-        </TabsTrigger>
-        <TabsTrigger value="docs" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <FileText className="h-3 w-3" />
-          <span className="hidden sm:inline">Docs</span>
-        </TabsTrigger>
-        <TabsTrigger value="activity" className="text-[10px] data-[state=active]:bg-card rounded-lg gap-1">
-          <Activity className="h-3 w-3" />
-          <span className="hidden sm:inline">Log</span>
+        <TabsTrigger value="activity" className="text-xs data-[state=active]:bg-card rounded-lg gap-1.5 font-medium">
+          <Activity className="h-3.5 w-3.5" /> Log
         </TabsTrigger>
       </TabsList>
 

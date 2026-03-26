@@ -118,7 +118,7 @@ export default function Employees() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+  const [statusTab, setStatusTab] = useState<"active" | "inactive" | "pending" | "all">("active");
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterGroup, setFilterGroup] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -530,17 +530,27 @@ export default function Employees() {
   const uniqueRoles = [...new Set(employees.map(e => e.employee_role).filter(Boolean))];
   const uniqueGroups = [...new Set(employees.map(e => e.groups).filter(Boolean))];
 
-  const activeFilterCount = [filterStatus !== "all", filterRole !== "all", filterGroup !== "all"].filter(Boolean).length;
+  const activeFilterCount = [filterRole !== "all", filterGroup !== "all"].filter(Boolean).length;
 
   const clearFilters = () => {
-    setFilterStatus("all");
     setFilterRole("all");
     setFilterGroup("all");
   };
 
+  // Status counts
+  const statusCounts = {
+    active: employees.filter(e => e.is_active !== false).length,
+    inactive: employees.filter(e => e.is_active === false).length,
+    pending: employees.filter(e => e.is_active !== false && !e.user_id).length,
+    all: employees.length,
+  };
+
   const filtered = employees.filter((e) => {
     const matchesSearch = `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = filterStatus === "all" || (filterStatus === "active" ? e.is_active : !e.is_active);
+    const matchesStatus = statusTab === "all" ? true
+      : statusTab === "active" ? e.is_active !== false
+      : statusTab === "inactive" ? e.is_active === false
+      : e.is_active !== false && !e.user_id; // pending
     const matchesRole = filterRole === "all" || e.employee_role === filterRole;
     const matchesGroup = filterGroup === "all" || e.groups === filterGroup;
     return matchesSearch && matchesStatus && matchesRole && matchesGroup;
@@ -620,27 +630,27 @@ export default function Employees() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         variant="1"
         icon={Users}
         title="Empleados"
-        subtitle={`${filtered.length} de ${employees.length} empleados`}
+        subtitle={`${employees.length} empleados registrados`}
         rightSlot={<div className="flex gap-2 flex-wrap">
           {isPrivileged && (
-            <Button variant="outline" onClick={handleBulkPortalInvite} disabled={bulkInviting}>
+            <Button variant="outline" size="sm" onClick={handleBulkPortalInvite} disabled={bulkInviting}>
               {bulkInviting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-              Enviar Invitaciones Portal
+              Invitaciones Portal
             </Button>
           )}
           <BulkRateAssignment />
-          <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
-            <Download className="h-4 w-4 mr-2" />Exportar Excel
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" />Exportar
           </Button>
           {/* Update Dialog (diff + full) */}
           <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
             <DialogTrigger asChild>
-              <Button variant="outline"><ArrowUpDown className="h-4 w-4 mr-2" />Actualizar datos</Button>
+              <Button variant="outline" size="sm"><ArrowUpDown className="h-4 w-4 mr-2" />Actualizar</Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
@@ -772,7 +782,7 @@ export default function Employees() {
           {/* Import Dialog */}
           <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImport(); }}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Importar nuevos</Button>
+              <Button variant="outline" size="sm"><Upload className="h-4 w-4 mr-2" />Importar</Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
@@ -811,9 +821,7 @@ export default function Employees() {
                           <TableHead className="text-xs">Nombre</TableHead>
                           <TableHead className="text-xs">Teléfono</TableHead>
                           <TableHead className="text-xs">Email</TableHead>
-                          
                           <TableHead className="text-xs">Rol</TableHead>
-                          <TableHead className="text-xs">Manager</TableHead>
                           <TableHead className="text-xs">Estado</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -823,9 +831,7 @@ export default function Employees() {
                             <TableCell className="text-xs font-medium">{r.first_name} {r.last_name}</TableCell>
                             <TableCell className="text-xs">{r.phone_number || "—"}</TableCell>
                             <TableCell className="text-xs">{r.email || "—"}</TableCell>
-                            
                             <TableCell className="text-xs">{r.employee_role || "—"}</TableCell>
-                            <TableCell className="text-xs">{r.direct_manager || "—"}</TableCell>
                             <TableCell>
                               <span className={`text-xs px-2 py-0.5 rounded-full ${r.exists ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
                                 {r.exists ? "Existe" : "Nuevo"}
@@ -860,7 +866,7 @@ export default function Employees() {
 
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
             <DialogTrigger asChild>
-              <Button disabled={atEmployeeLimit}><Plus className="h-4 w-4 mr-2" />Nuevo empleado</Button>
+              <Button disabled={atEmployeeLimit} size="sm"><Plus className="h-4 w-4 mr-2" />Nuevo</Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
@@ -877,33 +883,47 @@ export default function Employees() {
         </div>}
       />
 
-      {/* Advanced toolbar */}
-      <div className="flex items-center gap-2 flex-wrap mb-6">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[180px] max-w-sm">
+      {/* ─── Status Tabs ─── */}
+      <div className="flex items-center gap-1 border-b border-border/40 pb-0">
+        {([
+          { key: "active" as const, label: "Activos", count: statusCounts.active },
+          { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
+          { key: "pending" as const, label: "Pendientes", count: statusCounts.pending },
+          { key: "all" as const, label: "Todos", count: statusCounts.all },
+        ]).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setStatusTab(tab.key)}
+            className={cn(
+              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px",
+              statusTab === tab.key
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+            )}
+          >
+            {tab.label}
+            <span className={cn(
+              "ml-2 text-xs font-semibold tabular-nums px-1.5 py-0.5 rounded-md",
+              statusTab === tab.key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+            )}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* ─── Search + Filters ─── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nombre, email o teléfono…"
-            className="pl-9 h-9 text-xs"
+            className="pl-9 h-9 text-sm"
           />
         </div>
 
-        {/* Status filter */}
-        <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
-          <SelectTrigger className="w-[120px] h-9 text-xs">
-            <Filter className="h-3 w-3 mr-1.5 text-muted-foreground/50" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Activos</SelectItem>
-            <SelectItem value="inactive">Inactivos</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Role filter */}
         {uniqueRoles.length > 0 && (
           <Select value={filterRole} onValueChange={setFilterRole}>
             <SelectTrigger className="w-[140px] h-9 text-xs">
@@ -918,7 +938,6 @@ export default function Employees() {
           </Select>
         )}
 
-        {/* Group filter */}
         {uniqueGroups.length > 0 && (
           <Select value={filterGroup} onValueChange={setFilterGroup}>
             <SelectTrigger className="w-[140px] h-9 text-xs">
@@ -934,48 +953,35 @@ export default function Employees() {
         )}
 
         {activeFilterCount > 0 && (
-          <Button variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground/50 px-2" onClick={clearFilters}>
+          <Button variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground px-2" onClick={clearFilters}>
             <X className="h-3 w-3 mr-1" /> Limpiar
           </Button>
         )}
 
-        <div className="h-5 w-px bg-border/30 mx-1 hidden sm:block" />
-
-        {/* View mode toggle */}
-        <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
-          <button
-            className={cn(
-              "h-9 w-9 flex items-center justify-center transition-colors",
-              viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50"
-            )}
-            onClick={() => setViewMode("grid")}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-          </button>
-          <button
-            className={cn(
-              "h-9 w-9 flex items-center justify-center transition-colors",
-              viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50"
-            )}
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-3.5 w-3.5" />
-          </button>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-muted-foreground tabular-nums">{filtered.length} resultados</span>
+          <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
+            <button
+              className={cn("h-8 w-8 flex items-center justify-center transition-colors", viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:bg-muted/50")}
+              onClick={() => setViewMode("grid")}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+            <button
+              className={cn("h-8 w-8 flex items-center justify-center transition-colors", viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:bg-muted/50")}
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
-
-        {/* Export */}
-        <Button variant="outline" size="sm" className="h-9 text-xs ml-auto" onClick={handleExport} disabled={filtered.length === 0}>
-          <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar
-        </Button>
       </div>
 
-      {/* Content */}
+      {/* ─── Content ─── */}
       {initialLoading ? (
-        <div className={cn(
-          viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2"
-        )}>
+        <div className={cn(viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-1")}>
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className={cn("animate-pulse bg-muted rounded-2xl", viewMode === "grid" ? "h-44" : "h-16")} />
+            <div key={i} className={cn("animate-pulse bg-muted rounded-xl", viewMode === "grid" ? "h-44" : "h-14")} />
           ))}
         </div>
       ) : fetchError ? (
@@ -1085,108 +1091,78 @@ export default function Employees() {
           })}
         </div>
       ) : (
-        /* ─── List View (Table) ─── */
-        <div className="rounded-2xl border border-border/40 bg-card overflow-hidden shadow-xs">
+        /* ─── List View (Table) — Dense ─── */
+        <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="w-12"></TableHead>
+              <TableRow className="bg-muted/30 h-9">
+                <TableHead className="w-10 pl-3"></TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Nombre</TableHead>
-                <TableHead className="hidden md:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Contacto</TableHead>
-                <TableHead className="hidden lg:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Rol</TableHead>
-                <TableHead className="hidden lg:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Grupo</TableHead>
-                <TableHead className="hidden xl:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Inicio</TableHead>
+                <TableHead className="hidden md:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Teléfono</TableHead>
+                <TableHead className="hidden lg:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Email</TableHead>
+                <TableHead className="hidden md:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Rol</TableHead>
+                <TableHead className="hidden xl:table-cell text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Grupo</TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">Estado</TableHead>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((e) => (
-                <TableRow key={e.id} className={`${!e.is_active ? "opacity-40" : ""} group hover:bg-accent/50 transition-colors cursor-pointer`} onClick={() => openDetailSheet(e)}>
-                  <TableCell className="py-3">
-                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="md" />
+                <TableRow
+                  key={e.id}
+                  className={cn(
+                    "group hover:bg-accent/40 transition-colors cursor-pointer h-12",
+                    !e.is_active && "opacity-40"
+                  )}
+                  onClick={() => openDetailSheet(e)}
+                >
+                  <TableCell className="py-2 pl-3">
+                    <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
                   </TableCell>
-                  <TableCell className="py-3">
-                    <div className="text-left">
-                      <span className="text-sm font-semibold">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
-                      <div className="md:hidden mt-1 space-y-0.5">
-                        {e.employee_role && (
-                          <span className="block text-[11px] text-muted-foreground">{formatDisplayText(e.employee_role, "label")}</span>
-                        )}
-                        {e.email && (
-                          <span className="block text-[11px] text-muted-foreground truncate max-w-[200px]">{e.email}</span>
-                        )}
-                        {e.phone_number && (
-                          <span className="block text-[11px] text-muted-foreground">{e.phone_number}</span>
-                        )}
-                      </div>
-                    </div>
+                  <TableCell className="py-2">
+                    <span className="text-sm font-semibold leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</span>
+                    {e.employee_role && (
+                      <span className="md:hidden block text-[11px] text-muted-foreground">{formatDisplayText(e.employee_role, "label")}</span>
+                    )}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell py-3">
-                    <div className="space-y-1">
-                      {e.email ? (
-                        <a href={`mailto:${e.email}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
-                          <Mail className="h-3 w-3 shrink-0" /><span className="truncate max-w-[180px]">{e.email}</span>
-                        </a>
-                      ) : null}
-                      {e.phone_number ? (
-                        <a href={`tel:${e.phone_number}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
-                          <Phone className="h-3 w-3 shrink-0" />{e.phone_number}
-                        </a>
-                      ) : null}
-                      {!e.email && !e.phone_number && (
-                        <span className="text-xs text-muted-foreground/40">—</span>
-                      )}
-                    </div>
+                  <TableCell className="hidden md:table-cell py-2">
+                    {e.phone_number ? (
+                      <a href={`tel:${e.phone_number}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                        <Phone className="h-3 w-3 shrink-0" />{e.phone_number}
+                      </a>
+                    ) : <span className="text-xs text-muted-foreground/30">—</span>}
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell py-3">
+                  <TableCell className="hidden lg:table-cell py-2">
+                    {e.email ? (
+                      <a href={`mailto:${e.email}`} onClick={ev => ev.stopPropagation()} className="text-xs text-muted-foreground hover:text-primary transition-colors truncate max-w-[180px] block">
+                        {e.email}
+                      </a>
+                    ) : <span className="text-xs text-muted-foreground/30">—</span>}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell py-2">
                     {e.employee_role ? (
-                      <Badge variant="secondary" className="text-[11px] font-normal">
+                      <Badge variant="secondary" className="text-[10px] font-normal py-0">
                         {formatDisplayText(e.employee_role, "label")}
                       </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/40">—</span>
-                    )}
+                    ) : <span className="text-xs text-muted-foreground/30">—</span>}
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell py-3">
+                  <TableCell className="hidden xl:table-cell py-2">
                     {e.groups ? (
-                      <div className="flex flex-wrap gap-1">
-                        {e.groups.split(",").slice(0, 2).map((g: string) => (
-                          <Badge key={g.trim()} variant="outline" className="text-[10px] font-normal px-1.5 py-0">
-                            {g.trim()}
-                          </Badge>
-                        ))}
-                        {e.groups.split(",").length > 2 && (
-                          <Badge variant="outline" className="text-[10px] font-normal px-1.5 py-0 text-muted-foreground">
-                            +{e.groups.split(",").length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/40">—</span>
-                    )}
+                      <span className="text-xs text-muted-foreground truncate max-w-[120px] block">{e.groups.split(",")[0].trim()}</span>
+                    ) : <span className="text-xs text-muted-foreground/30">—</span>}
                   </TableCell>
-                  <TableCell className="hidden xl:table-cell py-3">
-                    {e.start_date ? (
-                      <span className="text-xs text-muted-foreground">{e.start_date}</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/40">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-3">
+                  <TableCell className="py-2">
                     <span className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium",
-                      e.is_active
-                        ? "bg-earning/10 text-earning"
-                        : "bg-muted text-muted-foreground"
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
+                      e.is_active ? "bg-[hsl(var(--earning)/0.1)] text-[hsl(var(--earning))]" : "bg-muted text-muted-foreground"
                     )}>
-                      {e.is_active ? "Activo" : "Inactivo"}
+                      {e.is_active ? (e.user_id ? "Activo" : "Pendiente") : "Inactivo"}
                     </span>
                   </TableCell>
-                  <TableCell className="py-3" onClick={ev => ev.stopPropagation()}>
+                  <TableCell className="py-2 pr-3" onClick={ev => ev.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -1211,87 +1187,44 @@ export default function Employees() {
         </div>
       )}
 
-      {/* Detail + Edit Sheet */}
+      {/* Detail + Edit Sheet — Premium */}
       <Sheet open={!!viewEmployee} onOpenChange={(v) => { if (!v) { setViewEmployee(null); setIsEditing(false); } }}>
-        <SheetContent className="w-[400px] sm:w-[540px] p-0">
-          <SheetHeader className="p-6 pb-4 border-b">
-            <div className="flex items-center gap-4 pr-6">
-              <EmployeeAvatar
-                firstName={viewEmployee?.first_name ?? ""}
-                lastName={viewEmployee?.last_name ?? ""}
-                size="lg"
-              />
-              <div className="flex-1 min-w-0">
-                <SheetTitle className="text-lg">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
-                <SheetDescription className="flex items-center gap-2 mt-0.5">
-                  {formatDisplayText(viewEmployee?.employee_role, "label") || "Sin rol"}
-                  <span className={cn(
-                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-                    viewEmployee?.is_active ? "bg-earning/10 text-earning" : "bg-muted text-muted-foreground"
-                  )}>
-                    {viewEmployee?.is_active ? "Activo" : "Inactivo"}
-                  </span>
+        <SheetContent className="w-[440px] sm:w-[580px] p-0 flex flex-col">
+          <div className="bg-gradient-to-br from-primary/[0.04] to-transparent border-b px-6 py-5">
+            <div className="flex items-start gap-4 pr-6">
+              <EmployeeAvatar firstName={viewEmployee?.first_name ?? ""} lastName={viewEmployee?.last_name ?? ""} avatarUrl={viewEmployee?.avatar_url} gender={viewEmployee?.gender} size="xl" className="ring-2 ring-background shadow-lg" />
+              <div className="flex-1 min-w-0 pt-0.5">
+                <SheetTitle className="text-lg font-bold leading-tight">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[11px]">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
+                  <Badge variant="outline" className={cn("text-[10px] font-semibold", viewEmployee?.is_active ? "bg-[hsl(var(--earning)/0.1)] text-[hsl(var(--earning))] border-[hsl(var(--earning)/0.2)]" : "bg-muted text-muted-foreground")}>
+                    {viewEmployee?.is_active ? (viewEmployee?.user_id ? "✓ Activo" : "⏳ Pendiente") : "Inactivo"}
+                  </Badge>
+                </div>
+                <SheetDescription className="mt-1 text-xs text-muted-foreground/70">
+                  {[viewEmployee?.phone_number, viewEmployee?.email].filter(Boolean).join(" · ") || "Sin contacto"}
                 </SheetDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => setInviteOpen(true)}
-              >
-                <Send className="h-3 w-3 mr-1.5" />Invitar
-              </Button>
-              <Button
-                variant={isEditing ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  if (isEditing) { handleSaveFromSheet(); } else { setIsEditing(true); }
-                }}
-                disabled={loading}
-                className="shrink-0"
-              >
-                {isEditing ? (loading ? "Guardando..." : "Guardar") : <><Pencil className="h-3 w-3 mr-1.5" />Editar</>}
-              </Button>
             </div>
-          </SheetHeader>
-          <ScrollArea className="h-[calc(100vh-140px)]">
-            <div className="p-6 pt-4">
-              {isEditing && (
-                <div className="mb-3 flex justify-end">
-                  <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
-                    <X className="h-3 w-3 mr-1" />Cancelar
-                  </Button>
-                </div>
-              )}
-
-              <EmployeeProfileTabs
-                employee={viewEmployee!}
-                companyId={selectedCompanyId!}
-                isEditing={isEditing}
-                form={form}
-                setForm={setForm}
-                isPrivileged={isPrivileged}
-                onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)}
-              />
-
-              <div className="flex gap-2 pt-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}
-                >
-                  {viewEmployee?.is_active ? <><UserX className="h-3 w-3 mr-1.5" />Desactivar</> : <><UserCheck className="h-3 w-3 mr-1.5" />Activar</>}
+            <div className="flex items-center gap-2 mt-4">
+              <Button variant={isEditing ? "default" : "outline"} size="sm" onClick={() => { if (isEditing) { handleSaveFromSheet(); } else { setIsEditing(true); } }} disabled={loading}>
+                {isEditing ? (loading ? "Guardando..." : "✓ Guardar") : <><Pencil className="h-3 w-3 mr-1.5" />Editar</>}
+              </Button>
+              {isEditing && <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancelar</Button>}
+              <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}><Send className="h-3 w-3 mr-1.5" />Invitar</Button>
+              <div className="ml-auto flex items-center gap-1">
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
+                  {viewEmployee?.is_active ? <><UserX className="h-3 w-3 mr-1" />Desactivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                  onClick={() => { if (viewEmployee) { setDeleteTarget(viewEmployee); setPasswordOpen(true); setViewEmployee(null); } }}
-                >
-                  <Trash2 className="h-3 w-3 mr-1.5" />Eliminar
+                <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive" onClick={() => { if (viewEmployee) { setDeleteTarget(viewEmployee); setPasswordOpen(true); setViewEmployee(null); } }}>
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-5">
+              <EmployeeProfileTabs employee={viewEmployee!} companyId={selectedCompanyId!} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)} />
             </div>
           </ScrollArea>
         </SheetContent>
