@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format, addDays, nextMonday } from "date-fns";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,11 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCompensationAdoption, type ConfidenceLevel, type AdoptionDecision } from "@/hooks/useCompensationAdoption";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useCompensationAdoption, type ConfidenceLevel, type AdoptionDecision, type BatchOption } from "@/hooks/useCompensationAdoption";
 import { toast } from "sonner";
 import {
   CheckCircle2, XCircle, Pencil, ShieldCheck, AlertTriangle,
-  Eye, Zap, Loader2, ArrowRight, Users, CircleDot,
+  Eye, Zap, Loader2, ArrowRight, Users, CircleDot, CalendarIcon,
+  FileText, Database,
 } from "lucide-react";
 
 const CONFIDENCE_CONFIG: Record<ConfidenceLevel, { label: string; color: string; icon: any }> = {
@@ -19,9 +24,17 @@ const CONFIDENCE_CONFIG: Record<ConfidenceLevel, { label: string; color: string;
   review: { label: "Revisar", color: "bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))] border-[hsl(var(--destructive)/0.3)]", icon: Eye },
 };
 
+const DATE_PRESETS = [
+  { label: "Hoy", getValue: () => format(new Date(), "yyyy-MM-dd") },
+  { label: "Mañana", getValue: () => format(addDays(new Date(), 1), "yyyy-MM-dd") },
+  { label: "Próximo lunes", getValue: () => format(nextMonday(new Date()), "yyyy-MM-dd") },
+];
+
 export default function CompensationAdoption() {
   const {
-    proposals, stats, loading, generated, batchInfo,
+    proposals, stats, loading, generated,
+    availableBatches, selectedBatch, selectedBatchId, setSelectedBatchId,
+    effectiveDate, setEffectiveDate,
     generateProposals, updateDecision, applyConfirmed,
   } = useCompensationAdoption();
 
@@ -66,43 +79,105 @@ export default function CompensationAdoption() {
     <div className="space-y-6">
       <PageHeader
         title="Adopción de Compensación"
-        subtitle="Revisión y confirmación manual de compensaciones derivadas del último payroll cerrado"
+        subtitle="Revisión y confirmación manual de compensaciones derivadas del payroll cerrado"
         icon={Zap}
         variant="4"
         eyebrow="Compensación"
       />
 
-      {/* Source info */}
-      {batchInfo && (
-        <Card className="border-[hsl(var(--primary)/0.2)] bg-[hsl(var(--primary)/0.03)]">
-          <CardContent className="py-4 flex items-center gap-3 text-sm">
-            <CircleDot className="h-4 w-4 text-primary" />
-            <span className="text-muted-foreground">Fuente:</span>
-            <span className="font-medium">
-              Payroll {batchInfo.payroll_period_start ?? "?"} → {batchInfo.payroll_period_end ?? "?"}
-            </span>
+      {/* ── Step 1: Batch selector ── */}
+      <Card className="border-[hsl(var(--primary)/0.2)]">
+        <CardContent className="py-5 space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Database className="h-4 w-4 text-primary" />
+            Paso 1 — Seleccionar Batch Fuente
+          </div>
+
+          {availableBatches.length === 0 && !loading ? (
+            <p className="text-sm text-destructive">No hay batches aprobados/reconciliados disponibles.</p>
+          ) : (
+            <div className="grid gap-2">
+              {availableBatches.map((b) => (
+                <BatchCard
+                  key={b.id}
+                  batch={b}
+                  selected={selectedBatchId === b.id}
+                  onSelect={() => setSelectedBatchId(b.id)}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Step 2: Effective date ── */}
+      {selectedBatchId && (
+        <Card className="border-[hsl(var(--primary)/0.2)]">
+          <CardContent className="py-5 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <CalendarIcon className="h-4 w-4 text-primary" />
+              Paso 2 — Fecha Efectiva de Adopción
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Los perfiles anteriores se cerrarán con esta fecha. Los nuevos perfiles tendrán vigencia desde esta fecha.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {DATE_PRESETS.map((preset) => {
+                const val = preset.getValue();
+                return (
+                  <Button
+                    key={preset.label}
+                    variant={effectiveDate === val ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEffectiveDate(val)}
+                  >
+                    {preset.label}
+                    {effectiveDate === val && <CheckCircle2 className="h-3 w-3 ml-1" />}
+                  </Button>
+                );
+              })}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {DATE_PRESETS.some((p) => p.getValue() === effectiveDate)
+                      ? "Fecha manual"
+                      : effectiveDate}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={new Date(effectiveDate + "T12:00:00")}
+                    onSelect={(d) => d && setEffectiveDate(format(d, "yyyy-MM-dd"))}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-sm font-mono text-muted-foreground ml-2">
+                Vigencia: {effectiveDate}
+              </span>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {!generated ? (
+      {/* ── Step 3: Generate ── */}
+      {selectedBatchId && !generated ? (
         <Card>
           <CardContent className="py-12 flex flex-col items-center gap-4">
             <Zap className="h-10 w-10 text-primary" />
             <p className="text-muted-foreground text-center max-w-md">
-              Genera propuestas de compensación a partir del último periodo de nómina cerrado.
+              Genera propuestas de compensación a partir del batch seleccionado.
               Nada se aplica automáticamente — cada cambio requiere tu confirmación.
             </p>
             <Button onClick={generateProposals} disabled={loading} size="lg">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
               Generar Propuestas
             </Button>
-            {!batchInfo && !loading && (
-              <p className="text-xs text-destructive">No se encontró un batch aprobado/reconciliado</p>
-            )}
           </CardContent>
         </Card>
-      ) : (
+      ) : generated ? (
         <>
           {/* Stats cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -134,7 +209,10 @@ export default function CompensationAdoption() {
               </Button>
             )}
 
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                Vigencia: <span className="font-mono font-medium">{effectiveDate}</span>
+              </span>
               <Button
                 onClick={handleApply}
                 disabled={applying || stats.accepted === 0}
@@ -288,8 +366,44 @@ export default function CompensationAdoption() {
             </CardContent>
           </Card>
         </>
-      )}
+      ) : null}
     </div>
+  );
+}
+
+/* ── Batch selection card ── */
+function BatchCard({ batch, selected, onSelect }: { batch: BatchOption; selected: boolean; onSelect: () => void }) {
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        "w-full text-left rounded-lg border p-3 transition-colors",
+        selected
+          ? "border-primary bg-[hsl(var(--primary)/0.06)] ring-1 ring-primary/30"
+          : "border-border hover:border-primary/40 hover:bg-muted/40"
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <FileText className={cn("h-4 w-4 shrink-0", selected ? "text-primary" : "text-muted-foreground")} />
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">
+              {batch.truth_file_name ?? "Sin archivo"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {batch.payroll_period_start ?? "?"} → {batch.payroll_period_end ?? "?"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant="outline" className="text-[10px] capitalize">{batch.status}</Badge>
+          {batch.reconciliation_mode && (
+            <Badge variant="secondary" className="text-[10px]">{batch.reconciliation_mode}</Badge>
+          )}
+          {selected && <CheckCircle2 className="h-4 w-4 text-primary" />}
+        </div>
+      </div>
+    </button>
   );
 }
 
