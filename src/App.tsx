@@ -16,6 +16,7 @@ import { Loader2 } from "lucide-react";
 import AdminLayout from "./components/AdminLayout";
 import EmployeeLayout from "./components/EmployeeLayout";
 import ModuleGate from "./components/ModuleGate";
+import Employees from "./pages/admin/Employees";
 
 // Lazy: all pages
 const Index = lazy(() => import("./pages/Index"));
@@ -34,7 +35,6 @@ const UserManual = lazy(() => import("./pages/help/UserManual"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
-const Employees = lazy(() => import("./pages/admin/Employees"));
 const PayPeriods = lazy(() => import("./pages/admin/PayPeriods"));
 const ImportConnecteam = lazy(() => import("./pages/admin/ImportConnecteam"));
 const Concepts = lazy(() => import("./pages/admin/Concepts"));
