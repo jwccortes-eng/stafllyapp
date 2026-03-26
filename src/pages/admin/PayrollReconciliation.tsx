@@ -1208,6 +1208,7 @@ export default function PayrollReconciliationPage() {
                   <TableHead className="text-right py-2.5 text-destructive">− Desc.</TableHead>
                   <TableHead className="text-right py-2.5 !font-bold border-l border-border/30">= Total</TableHead>
                   <TableHead className="py-2.5 min-w-[200px]">Composición</TableHead>
+                  <TableHead className="py-2.5 w-10">Obs</TableHead>
                   <TableHead className="py-2.5 w-8"></TableHead>
                 </TableRow>
               </TableHeader>
