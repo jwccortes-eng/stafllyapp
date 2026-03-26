@@ -633,7 +633,8 @@ function computeHealthScore(rows: ReconciliationRowResult[], systemOnly: SystemE
 
 export function computeBatchSummary(
   rows: ReconciliationRowResult[],
-  systemOnlyEmployees: SystemEmployeeData[]
+  systemOnlyEmployees: SystemEmployeeData[],
+  options?: { isHistorical?: boolean }
 ): BatchSummary {
   const truthCount = rows.length;
   const systemCount = new Set([
@@ -669,7 +670,9 @@ export function computeBatchSummary(
     ryde: sum(matchedRows.map(r => r.system!.ryde)),
     tips: sum(matchedRows.map(r => r.system!.tips)),
     reimbursements: sum(matchedRows.map(r => r.system!.reimbursements)),
-    discount: 0,
+    discount: options?.isHistorical
+      ? sum(rows.map(r => Math.abs(Number(r.truth.discount) || 0)))
+      : 0,
     grand_total: sum(matchedRows.map(r => r.system!.total)),
   };
 
@@ -778,9 +781,16 @@ export function runReconciliation(
     if (system) matchedSystemIds.add(system.employee_id);
 
     // ── Historical Mode: mirror truth → system so variances = 0 ──
-    if (isHistorical && system) {
-      system = {
-        ...system,
+    if (isHistorical) {
+      const mirroredSystem: SystemEmployeeData = {
+        employee_id: system?.employee_id ?? `historical_${i}`,
+        first_name: system?.first_name ?? truth.first_name,
+        last_name: system?.last_name ?? truth.last_name,
+        phone: system?.phone,
+        email: system?.email,
+        external_id: system?.external_id,
+        employer_identification: system?.employer_identification,
+        verification_ssn_ein: system?.verification_ssn_ein,
         total_hours: truth.total_hours ?? 0,
         total_pay: truth.total_pay ?? 0,
         pay_per_day: truth.pay_per_day ?? 0,
@@ -788,8 +798,15 @@ export function runReconciliation(
         tips: truth.tips ?? 0,
         reimbursements: truth.reimbursements ?? 0,
         total: truth.total ?? 0,
+        shift_count: system?.shift_count ?? 0,
+        clock_count: system?.clock_count ?? 0,
         source_tags: ["historical_mirror"],
       };
+      system = mirroredSystem;
+      // Also force match status for unmatched rows in historical mode
+      if (match.match_status === "UNMATCHED") {
+        match = { ...match, match_status: "MATCHED", matched_by: "historical_mirror", match_confidence: 100, match_notes: "Auto-matched via historical mirror" };
+      }
     }
 
     const variances = computeRowVariances(truth, system);
@@ -802,7 +819,7 @@ export function runReconciliation(
   });
 
   const systemOnly = isHistorical ? [] : systemData.filter(s => !matchedSystemIds.has(s.employee_id));
-  const summary = computeBatchSummary(rows, systemOnly);
+  const summary = computeBatchSummary(rows, systemOnly, { isHistorical });
 
   return { rows, systemOnly, summary };
 }
