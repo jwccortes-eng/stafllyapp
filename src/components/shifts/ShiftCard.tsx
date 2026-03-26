@@ -72,7 +72,7 @@ function calcDuration(start: string, end: string): string {
 }
 
 export function ShiftCard({
-  shift, assignmentCount, assignedNames = [], locationName, clientName, clientIds = [], onClick, compact, draggable, onDragStart, showDate, coverageStatus,
+  shift, assignmentCount, assignedNames = [], assignedEmployees = [], locationName, clientName, clientIds = [], onClick, compact, draggable, onDragStart, showDate, coverageStatus,
 }: ShiftCardProps) {
   const color = getClientColor(shift.client_id, clientIds);
   const badges = getStatusBadges(shift, assignmentCount);
