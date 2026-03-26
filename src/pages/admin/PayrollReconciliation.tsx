@@ -796,9 +796,20 @@ export default function PayrollReconciliationPage() {
     truthParseResult, reconciliationRows, systemOnlyEmployees, batchSummary,
     loading, processing,
     loadBatches, createBatch, uploadTruth,
-    runReconciliationForBatch, approveBatch, lockBatch,
+    runReconciliationForBatch, rehydrateBatch, approveBatch, lockBatch,
     exportCSV,
   } = usePayrollReconciliation();
+
+  // Auto-rehydrate persisted results when selecting a batch that's already been executed
+  const rehydratedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeBatch) { rehydratedRef.current = null; return; }
+    if (activeBatch.status === "DRAFT") return;
+    if (reconciliationRows.length > 0) return; // already have data
+    if (rehydratedRef.current === activeBatch.id) return; // already tried
+    rehydratedRef.current = activeBatch.id;
+    rehydrateBatch(activeBatch.id);
+  }, [activeBatch, reconciliationRows.length, rehydrateBatch]);
 
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
