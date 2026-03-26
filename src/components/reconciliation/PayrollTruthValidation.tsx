@@ -916,16 +916,28 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
   // ── CSV Export ──
   const exportDetailedCSV = useCallback((compRows: ComparisonRow[]) => {
     const headers = [
-      "Empleado", "Estado", "Truth Pay", "Truth PPD", "Truth Ryde", "Truth Tips", "Truth Reimb",
-      "Truth TravelH", "Truth Otros", "Truth Discount", "Truth TOTAL", "Truth Observaciones",
+      "Empleado", "Estado",
+      "Base Pay", "Additionals", "Discount", "Total",
+      "Composition Formula", "Observaciones",
+      "Truth Pay", "Truth PPD", "Truth Ryde", "Truth Tips", "Truth Reimb",
+      "Truth TravelH", "Truth Otros", "Truth Discount", "Truth TOTAL",
       "Recon TOTAL", "Varianza", "Fuente Autoritativa",
     ];
     const csvRows = compRows.map(c => {
       const r = c.recon;
       const hasEvidence = r && (r.schedule_count > 0 || r.clock_count > 0 || r.payroll_row_count > 0);
-      return [
-        c.employee,
-        c.status === "match"
+      const basePay = c.truth.totalPay || 0;
+      const additionals = (c.truth.payperDay || 0) + (c.truth.ryde || 0) + (c.truth.tips || 0) + (c.truth.reimbursements || 0) + (c.truth.travelHours || 0) + (c.truth.otros || 0);
+      const discount = Math.abs(c.truth.discount || 0);
+      const total = c.truth.total;
+      // Build composition formula
+      const parts: string[] = [];
+      if (basePay > 0) parts.push(`$${basePay.toFixed(2)}`);
+      if (additionals > 0) parts.push(`+ $${additionals.toFixed(2)}`);
+      if (discount > 0) parts.push(`- $${discount.toFixed(2)}`);
+      const formula = parts.length > 0 ? `${parts.join(' ')} = $${total.toFixed(2)}` : `$${total.toFixed(2)}`;
+
+      const status = c.status === "match"
           ? (hasEvidence ? "EXACTO" : "TRUTH_VALIDADO")
           : c.status === "close"
             ? (hasEvidence ? "CERCANO" : "TRUTH_CERCANO")
@@ -933,7 +945,16 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
               ? "DIFERENTE"
               : c.status === "identity_only"
                 ? "IDENTIDAD_OK_SIN_BASE"
-                : "NO ENCONTRADO",
+                : "NO ENCONTRADO";
+      return [
+        `"${c.employee}"`,
+        status,
+        basePay.toFixed(2),
+        additionals.toFixed(2),
+        discount.toFixed(2),
+        total.toFixed(2),
+        `"${formula}"`,
+        `"${(c.truth.observaciones || "").replace(/"/g, '""')}"`,
         c.truth.totalPay?.toFixed(2) || "0.00",
         c.truth.payperDay?.toFixed(2) || "0.00",
         c.truth.ryde?.toFixed(2) || "0.00",
@@ -943,7 +964,6 @@ export default function PayrollTruthValidation({ companyId, periodStatusId, fina
         c.truth.otros?.toFixed(2) || "0.00",
         c.truth.discount?.toFixed(2) || "0.00",
         c.truth.total.toFixed(2),
-        `"${(c.truth.observaciones || "").replace(/"/g, '""')}"`,
         r?.total_final?.toFixed(2) || "",
         c.totalVariance.toFixed(2),
         r?.authoritative_source || "",
