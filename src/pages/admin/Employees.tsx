@@ -630,27 +630,27 @@ export default function Employees() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         variant="1"
         icon={Users}
         title="Empleados"
-        subtitle={`${filtered.length} de ${employees.length} empleados`}
+        subtitle={`${employees.length} empleados registrados`}
         rightSlot={<div className="flex gap-2 flex-wrap">
           {isPrivileged && (
-            <Button variant="outline" onClick={handleBulkPortalInvite} disabled={bulkInviting}>
+            <Button variant="outline" size="sm" onClick={handleBulkPortalInvite} disabled={bulkInviting}>
               {bulkInviting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-              Enviar Invitaciones Portal
+              Invitaciones Portal
             </Button>
           )}
           <BulkRateAssignment />
-          <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
-            <Download className="h-4 w-4 mr-2" />Exportar Excel
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" />Exportar
           </Button>
           {/* Update Dialog (diff + full) */}
           <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
             <DialogTrigger asChild>
-              <Button variant="outline"><ArrowUpDown className="h-4 w-4 mr-2" />Actualizar datos</Button>
+              <Button variant="outline" size="sm"><ArrowUpDown className="h-4 w-4 mr-2" />Actualizar</Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
@@ -782,7 +782,7 @@ export default function Employees() {
           {/* Import Dialog */}
           <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImport(); }}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Importar nuevos</Button>
+              <Button variant="outline" size="sm"><Upload className="h-4 w-4 mr-2" />Importar</Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
@@ -821,9 +821,7 @@ export default function Employees() {
                           <TableHead className="text-xs">Nombre</TableHead>
                           <TableHead className="text-xs">Teléfono</TableHead>
                           <TableHead className="text-xs">Email</TableHead>
-                          
                           <TableHead className="text-xs">Rol</TableHead>
-                          <TableHead className="text-xs">Manager</TableHead>
                           <TableHead className="text-xs">Estado</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -833,9 +831,7 @@ export default function Employees() {
                             <TableCell className="text-xs font-medium">{r.first_name} {r.last_name}</TableCell>
                             <TableCell className="text-xs">{r.phone_number || "—"}</TableCell>
                             <TableCell className="text-xs">{r.email || "—"}</TableCell>
-                            
                             <TableCell className="text-xs">{r.employee_role || "—"}</TableCell>
-                            <TableCell className="text-xs">{r.direct_manager || "—"}</TableCell>
                             <TableCell>
                               <span className={`text-xs px-2 py-0.5 rounded-full ${r.exists ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
                                 {r.exists ? "Existe" : "Nuevo"}
@@ -870,7 +866,7 @@ export default function Employees() {
 
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
             <DialogTrigger asChild>
-              <Button disabled={atEmployeeLimit}><Plus className="h-4 w-4 mr-2" />Nuevo empleado</Button>
+              <Button disabled={atEmployeeLimit} size="sm"><Plus className="h-4 w-4 mr-2" />Nuevo</Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
@@ -887,33 +883,47 @@ export default function Employees() {
         </div>}
       />
 
-      {/* Advanced toolbar */}
-      <div className="flex items-center gap-2 flex-wrap mb-6">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[180px] max-w-sm">
+      {/* ─── Status Tabs ─── */}
+      <div className="flex items-center gap-1 border-b border-border/40 pb-0">
+        {([
+          { key: "active" as const, label: "Activos", count: statusCounts.active },
+          { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
+          { key: "pending" as const, label: "Pendientes", count: statusCounts.pending },
+          { key: "all" as const, label: "Todos", count: statusCounts.all },
+        ]).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setStatusTab(tab.key)}
+            className={cn(
+              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px",
+              statusTab === tab.key
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+            )}
+          >
+            {tab.label}
+            <span className={cn(
+              "ml-2 text-xs font-semibold tabular-nums px-1.5 py-0.5 rounded-md",
+              statusTab === tab.key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+            )}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* ─── Search + Filters ─── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nombre, email o teléfono…"
-            className="pl-9 h-9 text-xs"
+            className="pl-9 h-9 text-sm"
           />
         </div>
 
-        {/* Status filter */}
-        <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
-          <SelectTrigger className="w-[120px] h-9 text-xs">
-            <Filter className="h-3 w-3 mr-1.5 text-muted-foreground/50" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Activos</SelectItem>
-            <SelectItem value="inactive">Inactivos</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Role filter */}
         {uniqueRoles.length > 0 && (
           <Select value={filterRole} onValueChange={setFilterRole}>
             <SelectTrigger className="w-[140px] h-9 text-xs">
@@ -928,7 +938,6 @@ export default function Employees() {
           </Select>
         )}
 
-        {/* Group filter */}
         {uniqueGroups.length > 0 && (
           <Select value={filterGroup} onValueChange={setFilterGroup}>
             <SelectTrigger className="w-[140px] h-9 text-xs">
@@ -944,48 +953,35 @@ export default function Employees() {
         )}
 
         {activeFilterCount > 0 && (
-          <Button variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground/50 px-2" onClick={clearFilters}>
+          <Button variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground px-2" onClick={clearFilters}>
             <X className="h-3 w-3 mr-1" /> Limpiar
           </Button>
         )}
 
-        <div className="h-5 w-px bg-border/30 mx-1 hidden sm:block" />
-
-        {/* View mode toggle */}
-        <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
-          <button
-            className={cn(
-              "h-9 w-9 flex items-center justify-center transition-colors",
-              viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50"
-            )}
-            onClick={() => setViewMode("grid")}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-          </button>
-          <button
-            className={cn(
-              "h-9 w-9 flex items-center justify-center transition-colors",
-              viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50"
-            )}
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-3.5 w-3.5" />
-          </button>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-muted-foreground tabular-nums">{filtered.length} resultados</span>
+          <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
+            <button
+              className={cn("h-8 w-8 flex items-center justify-center transition-colors", viewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:bg-muted/50")}
+              onClick={() => setViewMode("grid")}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+            <button
+              className={cn("h-8 w-8 flex items-center justify-center transition-colors", viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:bg-muted/50")}
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
-
-        {/* Export */}
-        <Button variant="outline" size="sm" className="h-9 text-xs ml-auto" onClick={handleExport} disabled={filtered.length === 0}>
-          <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar
-        </Button>
       </div>
 
-      {/* Content */}
+      {/* ─── Content ─── */}
       {initialLoading ? (
-        <div className={cn(
-          viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2"
-        )}>
+        <div className={cn(viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-1")}>
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className={cn("animate-pulse bg-muted rounded-2xl", viewMode === "grid" ? "h-44" : "h-16")} />
+            <div key={i} className={cn("animate-pulse bg-muted rounded-xl", viewMode === "grid" ? "h-44" : "h-14")} />
           ))}
         </div>
       ) : fetchError ? (
