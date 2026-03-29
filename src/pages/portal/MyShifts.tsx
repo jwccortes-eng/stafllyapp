@@ -379,23 +379,23 @@ export default function MyShifts() {
 
       {/* Empty states */}
       {filtered.length === 0 && claimable.length === 0 && (
-        <div className="text-center py-12 space-y-3">
-          <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/50 border border-border/20 flex items-center justify-center">
-            <CalendarDays className="h-7 w-7 text-muted-foreground/30" />
+        <div className="text-center py-10 space-y-2">
+          <div className="h-12 w-12 mx-auto rounded-xl bg-muted/40 border border-border/15 flex items-center justify-center">
+            <CalendarDays className="h-6 w-6 text-muted-foreground/25" />
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">
+          <div className="space-y-0.5">
+            <p className="text-[13px] font-semibold text-foreground">
               {activeTab === "hoy" && "Sin turnos hoy"}
               {activeTab === "proximos" && "Sin turnos próximos"}
               {activeTab === "semana" && "Sin turnos esta semana"}
-              {activeTab === "historial" && "Sin historial de turnos"}
+              {activeTab === "historial" && "Sin historial"}
             </p>
-            <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+            <p className="text-[11px] text-muted-foreground/60 max-w-[220px] mx-auto">
               {activeTab === "hoy"
-                ? "No tienes turnos programados para hoy. Revisa tus próximos turnos."
+                ? "No tienes turnos para hoy."
                 : activeTab === "historial"
                 ? "Aún no tienes turnos completados."
-                : "Cuando haya turnos asignados, aparecerán aquí."
+                : "Los turnos asignados aparecerán aquí."
               }
             </p>
           </div>
