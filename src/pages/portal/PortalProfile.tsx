@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   User, Mail, Phone, MapPin, CalendarDays, Wallet,
-  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2, KeyRound,
+  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2, KeyRound, MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export default function PortalProfile() {
   const { employeeId, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const outletCtx = useOutletContext<{ openMore?: () => void } | null>();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [companyName, setCompanyName] = useState("");
@@ -256,6 +257,23 @@ export default function PortalProfile() {
           </Link>
         ))}
       </div>
+
+      {/* More options */}
+      {outletCtx?.openMore && (
+        <button
+          onClick={outletCtx.openMore}
+          className="flex items-center gap-3.5 w-full rounded-2xl border border-border/40 bg-card p-4 hover:bg-accent/50 transition-all duration-200 active:scale-[0.98] shadow-xs text-left"
+        >
+          <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center">
+            <MoreHorizontal className="h-[18px] w-[18px] text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">Más opciones</p>
+            <p className="text-[10px] text-muted-foreground">Disponibilidad, anuncios, recursos</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
+        </button>
+      )}
 
       {/* Change PIN section */}
       <ChangePinSection />

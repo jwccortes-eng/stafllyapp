@@ -88,12 +88,7 @@ export default function EmployeeLayout() {
   // Shared nav + sheet
   const navAndSheet = (
     <>
-      <PortalBottomNav
-        onOpenMore={() => setMoreOpen(true)}
-        showShifts={isModuleEnabled("my_shifts")}
-        showClock={isModuleEnabled("my_clock")}
-        showEarnings={isModuleEnabled("my_payments")}
-      />
+      <PortalBottomNav />
       <PortalMoreSheet
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
@@ -102,6 +97,7 @@ export default function EmployeeLayout() {
         avatarUrl={avatarUrl}
         enabledModules={enabledModules}
         isModuleEnabled={isModuleEnabled}
+        canAccessAdmin={canAccessAdmin}
       />
       <EmployeeChatWidget />
     </>
@@ -125,7 +121,7 @@ export default function EmployeeLayout() {
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 py-3 pb-24 animate-fade-in">
-          <Outlet />
+          <Outlet context={{ openMore: () => setMoreOpen(true) }} />
         </main>
 
         {navAndSheet}
@@ -148,7 +144,7 @@ export default function EmployeeLayout() {
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-6 py-8 pb-28 animate-fade-in">
-        <Outlet />
+        <Outlet context={{ openMore: () => setMoreOpen(true) }} />
       </main>
       {navAndSheet}
     </div>

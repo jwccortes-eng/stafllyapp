@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { X, LogOut, Moon, Sun, User, CalendarCheck, Megaphone, MessageSquare, FileText, Star, BookOpen, ChevronRight } from "lucide-react";
+import { X, LogOut, Moon, Sun, CalendarCheck, Megaphone, FileText, BookOpen, ChevronRight, Wallet, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
@@ -22,13 +22,13 @@ interface PortalMoreSheetProps {
   avatarUrl?: string | null;
   enabledModules: Set<string>;
   isModuleEnabled: (key: string) => boolean;
+  canAccessAdmin?: boolean;
 }
 
 const ALL_MORE_ITEMS: (MoreItem & { moduleKey?: string })[] = [
-  { id: "profile", to: "/portal/profile", icon: User, label: "Mi Perfil", description: "Datos personales" },
   { id: "availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", description: "Gestiona tu horario", moduleKey: "my_availability" },
+  { id: "payments", to: "/portal/payments", icon: Wallet, label: "Pagos", description: "Historial de pagos", moduleKey: "my_payments" },
   { id: "announcements", to: "/portal/announcements", icon: Megaphone, label: "Anuncios", description: "Noticias de la empresa", moduleKey: "my_announcements" },
-  { id: "chat", to: "/portal/chat", icon: MessageSquare, label: "Chat", description: "Mensajes internos", moduleKey: "my_chat" },
   { id: "w9", to: "/portal/w9", icon: FileText, label: "Formulario W-9", description: "Información fiscal", moduleKey: "my_w9" },
   { id: "resources", to: "/portal/resources", icon: BookOpen, label: "Recursos", description: "Material de apoyo", moduleKey: "my_resources" },
 ];
@@ -40,6 +40,7 @@ export function PortalMoreSheet({
   employeeName,
   avatarUrl,
   isModuleEnabled,
+  canAccessAdmin,
 }: PortalMoreSheetProps) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
@@ -86,6 +87,7 @@ export function PortalMoreSheet({
 
         {/* Menu items */}
         <div className="px-4 pb-4 overflow-y-auto max-h-[50vh]">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 pb-2">Más opciones</p>
           <div className="space-y-0.5">
             {visibleItems.map((item) => {
               const isActive =
@@ -124,6 +126,24 @@ export function PortalMoreSheet({
                 </NavLink>
               );
             })}
+
+            {/* Admin access for dual-role users */}
+            {canAccessAdmin && (
+              <NavLink
+                to="/app"
+                onClick={onClose}
+                className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all active:scale-[0.98] text-foreground hover:bg-muted/40 mt-2 border-t border-border/20 pt-4"
+              >
+                <div className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0 bg-accent/60">
+                  <Shield className="h-5 w-5" strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Panel Admin</p>
+                  <p className="text-[11px] text-muted-foreground">Acceder al panel de administración</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/20 shrink-0" />
+              </NavLink>
+            )}
           </div>
         </div>
 
