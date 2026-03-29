@@ -31,6 +31,7 @@ export default function PortalProfile() {
   const { employeeId, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const outletCtx = useOutletContext<{ openMore?: () => void } | null>();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [companyName, setCompanyName] = useState("");
