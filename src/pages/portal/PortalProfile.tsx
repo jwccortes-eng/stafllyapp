@@ -269,7 +269,7 @@ export default function PortalProfile() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold">Más opciones</p>
-            <p className="text-[10px] text-muted-foreground">Disponibilidad, anuncios, recursos</p>
+            <p className="text-[10px] text-muted-foreground">Pagos, disponibilidad, anuncios y más</p>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
         </button>
