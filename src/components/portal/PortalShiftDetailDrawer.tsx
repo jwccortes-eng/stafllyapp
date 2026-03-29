@@ -11,7 +11,7 @@ import { NavigationButtons } from "@/components/navigation/NavigationButtons";
 import { format, parseISO, differenceInMinutes, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ShiftTeamPanel } from "@/components/shifts/ShiftTeamPanel";
 import { ShiftChatPanel } from "@/components/shifts/ShiftChatPanel";
@@ -60,8 +60,7 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   const shiftStart = parseISO(dateStr);
   shiftStart.setHours(h, m, 0, 0);
   const diff = shiftStart.getTime() - now.getTime();
-  if (diff < 0) return null;
-  if (diff > 24 * 60 * 60 * 1000) return null;
+  if (diff < 0 || diff > 24 * 60 * 60 * 1000) return null;
   const hrs = Math.floor(diff / 3600000);
   const mins = Math.floor((diff % 3600000) / 60000);
   if (hrs > 0) return `Empieza en ${hrs}h ${mins}m`;
@@ -70,7 +69,7 @@ function getCountdown(dateStr: string, startTime: string): string | null {
 
 const statusConfig: Record<string, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
   confirmed: { label: "Confirmado", cls: "bg-earning/10 text-earning", icon: CheckCircle2 },
-  pending: { label: "Pendiente de confirmar", cls: "bg-warning/10 text-warning", icon: AlertCircle },
+  pending: { label: "Pendiente", cls: "bg-warning/10 text-warning", icon: AlertCircle },
   rejected: { label: "Rechazado", cls: "bg-deduction/10 text-deduction", icon: XCircle },
   accepted: { label: "Aceptado", cls: "bg-earning/10 text-earning", icon: CheckCircle2 },
 };
@@ -114,117 +113,118 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
 
   const copyAddress = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Copiado", description: "Dirección copiada al portapapeles" });
+    toast({ title: "Copiado", description: "Dirección copiada" });
   };
 
   return (
     <Drawer open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setTab("info"); }}>
       <DrawerContent className="max-h-[90vh]">
-        {/* ── A. Header Summary ── */}
-        <DrawerHeader className="pb-3 space-y-3">
-          {/* Countdown banner */}
+        {/* ── Header ── */}
+        <DrawerHeader className="pb-2 space-y-2 pt-4">
+          {/* Countdown */}
           {countdown && isConfirmed && (
-            <div className="bg-primary/8 rounded-xl px-3.5 py-2 flex items-center gap-2 -mx-2">
-              <Timer className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-bold text-primary">{countdown}</span>
+            <div className="bg-primary/6 rounded-lg px-3 py-1.5 flex items-center gap-1.5 -mx-1">
+              <Timer className="h-3 w-3 text-primary" />
+              <span className="text-[10px] font-bold text-primary">{countdown}</span>
             </div>
           )}
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {shift.shift_code && (
-                <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 rounded-md px-1.5 py-0.5">
+                <span className="text-[9px] font-mono font-bold text-primary bg-primary/10 rounded px-1 py-px">
                   #{shift.shift_code.padStart(4, "0")}
                 </span>
               )}
               {isTodayShift && (
-                <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-wider">HOY</span>
+                <span className="text-[8px] px-1.5 py-px rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-wider">HOY</span>
               )}
             </div>
-            <Badge className={cn("text-[10px] px-2.5 py-0.5 font-bold rounded-full border-0", cfg.cls)}>
-              <StatusIcon className="h-3 w-3 mr-1" />
+            <Badge className={cn("text-[9px] px-2 py-px font-bold rounded-full border-0", cfg.cls)}>
+              <StatusIcon className="h-2.5 w-2.5 mr-0.5" />
               {cfg.label}
             </Badge>
           </div>
 
-          <DrawerTitle className="text-left text-lg font-bold leading-snug">{shift.title}</DrawerTitle>
+          <DrawerTitle className="text-left text-base font-bold leading-snug">{shift.title}</DrawerTitle>
 
-          {/* Date + time prominent */}
-          <div className="flex items-center gap-3 text-sm">
-            <span className="font-semibold text-foreground flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-primary" />
+          {/* Date + time */}
+          <div className="flex items-center gap-2.5 text-[13px]">
+            <span className="font-semibold text-foreground flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5 text-primary" />
               {shift.start_time?.slice(0, 5)} → {shift.end_time?.slice(0, 5)}
             </span>
-            <span className="text-xs text-muted-foreground font-medium">{hoursLabel}</span>
+            <span className="text-[11px] text-muted-foreground/60 font-medium">{hoursLabel}</span>
           </div>
-          <p className="text-xs text-muted-foreground capitalize">
-            {format(parseISO(shift.date), "EEEE, d 'de' MMMM yyyy", { locale: es })}
+          <p className="text-[11px] text-muted-foreground/70 capitalize">
+            {format(parseISO(shift.date), "EEEE d 'de' MMMM yyyy", { locale: es })}
           </p>
         </DrawerHeader>
 
         {/* Tab bar */}
-        <div className="px-4 pb-3 flex items-center gap-1">
+        <div className="px-4 pb-2 flex items-center gap-0.5">
           {(["info", "team", "chat"] as DrawerTab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all",
+                "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
                 tab === t
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted/60"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted/50"
               )}
             >
-              {t === "info" && <><CalendarDays className="h-3.5 w-3.5" /> Detalles</>}
-              {t === "team" && <><Users className="h-3.5 w-3.5" /> Equipo</>}
-              {t === "chat" && <><MessageCircle className="h-3.5 w-3.5" /> Chat</>}
+              {t === "info" && <><CalendarDays className="h-3 w-3" /> Detalles</>}
+              {t === "team" && <><Users className="h-3 w-3" /> Equipo</>}
+              {t === "chat" && <><MessageCircle className="h-3 w-3" /> Chat</>}
             </button>
           ))}
         </div>
 
-        <div className="px-4 pb-6 overflow-y-auto">
+        <div className="px-4 pb-5 overflow-y-auto">
           {tab === "info" && (
-            <div className="space-y-3">
-              {/* ── B. Primary Action Block ── */}
+            <div className="space-y-2.5">
+              {/* Primary action */}
               {isConfirmed && isTodayShift && (
                 <Button
-                  size="lg"
-                  className="w-full h-12 text-sm gap-2 font-bold"
+                  size="default"
+                  className="w-full h-10 text-xs gap-2 font-bold"
                   onClick={() => { onOpenChange(false); navigate(`/portal/clock?shiftId=${shift.id}`); }}
                 >
-                  <LogIn className="h-5 w-5" />
+                  <LogIn className="h-4 w-4" />
                   Marcar Entrada
                 </Button>
               )}
 
-              {/* ── C. Location Block ── */}
+              {/* Client */}
               {shift.client && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40">
-                  <Users className="h-5 w-5 text-primary/70 shrink-0" />
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
+                  <Users className="h-4 w-4 text-primary/60 shrink-0" />
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Cliente</p>
-                    <p className="text-sm font-medium">{shift.client.name}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Cliente</p>
+                    <p className="text-[13px] font-medium">{shift.client.name}</p>
                   </div>
                 </div>
               )}
 
+              {/* Location */}
               {shift.location && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40">
-                    <MapPin className="h-5 w-5 text-primary/70 shrink-0" />
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
+                    <MapPin className="h-4 w-4 text-primary/60 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Ubicación</p>
-                      <p className="text-sm font-medium">{shift.location.name}</p>
+                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Ubicación</p>
+                      <p className="text-[13px] font-medium">{shift.location.name}</p>
                     </div>
                     <button
-                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
+                      className="p-1 rounded-md hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors"
                       onClick={() => copyAddress(shift.location!.name)}
                     >
-                      <Copy className="h-3.5 w-3.5" />
+                      <Copy className="h-3 w-3" />
                     </button>
                   </div>
                   {locationCoords && (
-                    <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navegar a ubicación" />
+                    <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navegar" />
                   )}
                 </div>
               )}
@@ -235,51 +235,49 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-xl bg-primary/[0.04] border border-primary/15 hover:bg-primary/[0.08] transition-colors group"
+                  className="flex items-center gap-2.5 p-2.5 rounded-lg bg-primary/[0.03] border border-primary/10 hover:bg-primary/[0.06] transition-colors group"
                 >
-                  <Navigation className="h-5 w-5 text-primary shrink-0" />
+                  <Navigation className="h-4 w-4 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] uppercase tracking-wider text-primary/60 font-semibold">Punto de encuentro</p>
-                    <p className="text-sm font-medium group-hover:underline">{shift.meeting_point}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-primary/50 font-semibold">Punto de encuentro</p>
+                    <p className="text-[13px] font-medium group-hover:underline">{shift.meeting_point}</p>
                   </div>
-                  <ExternalLink className="h-4 w-4 text-primary/40" />
+                  <ExternalLink className="h-3.5 w-3.5 text-primary/30" />
                 </a>
               )}
 
-              {/* ── E. Instructions Block ── */}
+              {/* Instructions */}
               {shift.special_instructions && (
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-warning/5 border border-warning/20">
-                  <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-warning/[0.04] border border-warning/15">
+                  <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-warning font-bold">Instrucciones especiales</p>
-                    <p className="text-sm mt-1 leading-relaxed">{shift.special_instructions}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-warning font-bold">Instrucciones</p>
+                    <p className="text-[13px] mt-0.5 leading-relaxed">{shift.special_instructions}</p>
                   </div>
                 </div>
               )}
 
               {shift.notes && (
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/40">
-                  <FileText className="h-5 w-5 text-muted-foreground/60 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/30">
+                  <FileText className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Notas del turno</p>
-                    <p className="text-sm mt-1 leading-relaxed">{shift.notes}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Notas</p>
+                    <p className="text-[13px] mt-0.5 leading-relaxed">{shift.notes}</p>
                   </div>
                 </div>
               )}
 
-              {/* ── F. Payment disclaimer ── */}
-              <div className="rounded-xl bg-muted/30 p-3">
-                <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
-                  💡 Las horas programadas son estimadas. La nómina se calcula con las horas reales fichadas.
-                </p>
-              </div>
+              {/* Payment disclaimer */}
+              <p className="text-[9px] text-muted-foreground/50 leading-relaxed px-1">
+                💡 Las horas programadas son estimadas. La nómina se calcula con horas reales fichadas.
+              </p>
 
-              {/* Review button for completed */}
+              {/* Review */}
               {shift.status === "completed" && employeeId && shiftCompanyId && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40">
-                  <Star className="h-5 w-5 text-amber-400 shrink-0" />
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
+                  <Star className="h-4 w-4 text-amber-400 shrink-0" />
                   <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Evaluar este trabajo</p>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Evaluar</p>
                   </div>
                   <ShiftReviewButton
                     shiftId={shift.id}
