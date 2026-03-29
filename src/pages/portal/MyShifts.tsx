@@ -357,7 +357,7 @@ export default function MyShifts() {
 
       {/* Shift list */}
       {filtered.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {filtered.map((a) => (
             <PortalShiftCard
               key={a.id}
