@@ -27,9 +27,9 @@ export function PortalBottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-[env(safe-area-inset-bottom,8px)] pt-1">
-      <div className="mx-auto max-w-md bg-card/95 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-[0_-4px_30px_-8px_hsl(var(--primary)/0.12),0_2px_8px_-2px_rgba(0,0,0,0.08)]">
-        <div className="flex items-center justify-around h-[60px] px-1">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom,8px),8px)] pt-1.5">
+      <div className="mx-auto max-w-md bg-card/95 backdrop-blur-2xl border border-border/40 rounded-2xl shadow-[0_-4px_30px_-8px_hsl(var(--primary)/0.10),0_2px_8px_-2px_rgba(0,0,0,0.06)]">
+        <div className="flex items-center justify-around h-[58px] px-0.5">
           {TABS.map((item) => {
             const active = isActive(item);
 
@@ -38,22 +38,24 @@ export function PortalBottomNav() {
                 key={item.id}
                 to={item.to}
                 end={item.end}
-                className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 active:scale-90 transition-all duration-150"
+                className="flex flex-col items-center justify-center gap-1 flex-1 py-1.5 active:scale-90 transition-all duration-150"
               >
                 <div
                   className={cn(
-                    "flex items-center justify-center h-8 w-8 rounded-xl transition-all duration-200",
+                    "flex items-center justify-center h-7 w-7 rounded-lg transition-all duration-200",
                     active
-                      ? "bg-primary text-primary-foreground shadow-[0_2px_12px_-2px_hsl(var(--primary)/0.5)]"
-                      : "text-muted-foreground/50"
+                      ? "bg-primary text-primary-foreground shadow-[0_2px_10px_-2px_hsl(var(--primary)/0.45)]"
+                      : "text-muted-foreground/60"
                   )}
                 >
-                  <item.icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.2 : 1.8} />
+                  <item.icon className="h-[17px] w-[17px]" strokeWidth={active ? 2.2 : 1.8} />
                 </div>
                 <span
                   className={cn(
-                    "text-[10px] font-medium leading-none transition-colors",
-                    active ? "text-primary font-semibold" : "text-muted-foreground/50"
+                    "text-[10px] leading-none transition-colors",
+                    active
+                      ? "text-primary font-semibold"
+                      : "text-muted-foreground/60 font-medium"
                   )}
                 >
                   {item.label}

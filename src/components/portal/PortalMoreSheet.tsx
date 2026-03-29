@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { X, LogOut, Moon, Sun, CalendarCheck, Megaphone, FileText, BookOpen, ChevronRight, Wallet, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { useTheme } from "next-themes";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -26,8 +27,8 @@ interface PortalMoreSheetProps {
 }
 
 const ALL_MORE_ITEMS: (MoreItem & { moduleKey?: string })[] = [
-  { id: "availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", description: "Gestiona tu horario", moduleKey: "my_availability" },
   { id: "payments", to: "/portal/payments", icon: Wallet, label: "Pagos", description: "Historial de pagos", moduleKey: "my_payments" },
+  { id: "availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", description: "Gestiona tu horario", moduleKey: "my_availability" },
   { id: "announcements", to: "/portal/announcements", icon: Megaphone, label: "Anuncios", description: "Noticias de la empresa", moduleKey: "my_announcements" },
   { id: "w9", to: "/portal/w9", icon: FileText, label: "Formulario W-9", description: "Información fiscal", moduleKey: "my_w9" },
   { id: "resources", to: "/portal/resources", icon: BookOpen, label: "Recursos", description: "Material de apoyo", moduleKey: "my_resources" },
@@ -68,7 +69,7 @@ export function PortalMoreSheet({
         </div>
 
         {/* Profile header */}
-        <div className="px-6 pb-4 pt-2 flex items-center gap-3.5">
+        <div className="px-6 pb-3 pt-2 flex items-center gap-3.5">
           <EmployeeAvatar
             firstName={firstName}
             lastName={lastName}
@@ -85,9 +86,11 @@ export function PortalMoreSheet({
           </Button>
         </div>
 
+        <Separator className="opacity-30" />
+
         {/* Menu items */}
-        <div className="px-4 pb-4 overflow-y-auto max-h-[50vh]">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-4 pb-2">Más opciones</p>
+        <div className="px-4 py-3 overflow-y-auto max-h-[50vh]">
+          <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest px-4 pb-2">Más opciones</p>
           <div className="space-y-0.5">
             {visibleItems.map((item) => {
               const isActive =
@@ -100,7 +103,7 @@ export function PortalMoreSheet({
                   to={item.to}
                   onClick={onClose}
                   className={cn(
-                    "flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all active:scale-[0.98]",
+                    "flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all active:scale-[0.98]",
                     isActive
                       ? "bg-primary/8 text-primary"
                       : "text-foreground hover:bg-muted/40"
@@ -108,47 +111,50 @@ export function PortalMoreSheet({
                 >
                   <div
                     className={cn(
-                      "flex items-center justify-center h-10 w-10 rounded-xl shrink-0",
+                      "flex items-center justify-center h-9 w-9 rounded-lg shrink-0",
                       isActive ? "bg-primary text-primary-foreground" : "bg-muted/50"
                     )}
                   >
-                    <item.icon className="h-5 w-5" strokeWidth={1.8} />
+                    <item.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm font-medium", isActive && "font-semibold")}>
+                    <p className={cn("text-[13px] font-medium", isActive && "font-semibold")}>
                       {item.label}
                     </p>
                     {item.description && (
-                      <p className="text-[11px] text-muted-foreground">{item.description}</p>
+                      <p className="text-[11px] text-muted-foreground/70">{item.description}</p>
                     )}
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground/20 shrink-0" />
                 </NavLink>
               );
             })}
+          </div>
 
-            {/* Admin access for dual-role users */}
-            {canAccessAdmin && (
+          {/* Admin access for dual-role users */}
+          {canAccessAdmin && (
+            <>
+              <Separator className="my-3 opacity-30" />
               <NavLink
                 to="/app"
                 onClick={onClose}
-                className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all active:scale-[0.98] text-foreground hover:bg-muted/40 mt-2 border-t border-border/20 pt-4"
+                className="flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all active:scale-[0.98] text-foreground hover:bg-muted/40"
               >
-                <div className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0 bg-accent/60">
-                  <Shield className="h-5 w-5" strokeWidth={1.8} />
+                <div className="flex items-center justify-center h-9 w-9 rounded-lg shrink-0 bg-accent/50">
+                  <Shield className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.8} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Panel Admin</p>
-                  <p className="text-[11px] text-muted-foreground">Acceder al panel de administración</p>
+                  <p className="text-[13px] font-medium">Panel Admin</p>
+                  <p className="text-[11px] text-muted-foreground/70">Acceder al panel de administración</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground/20 shrink-0" />
               </NavLink>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border/20">
+        <div className="flex items-center justify-between px-6 py-3.5 border-t border-border/20">
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-xl hover:bg-muted/30"
