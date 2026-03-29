@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   User, Mail, Phone, MapPin, CalendarDays, Wallet,
