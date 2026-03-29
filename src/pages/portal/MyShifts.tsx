@@ -315,11 +315,11 @@ export default function MyShifts() {
       {/* Claimable shifts */}
       {claimable.length > 0 && activeTab !== "historial" && (
         <div>
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2 flex items-center gap-1.5">
-            <HandMetal className="h-3.5 w-3.5" />
+          <h2 className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1.5 flex items-center gap-1">
+            <HandMetal className="h-3 w-3" />
             Turnos disponibles · {claimable.length}
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {claimable.map((s) => (
               <div key={s.id} className="rounded-xl border border-dashed border-primary/25 bg-primary/[0.03] p-3.5 space-y-2.5">
                 <div className="flex items-start justify-between">
