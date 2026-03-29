@@ -5,7 +5,7 @@ import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   User, Mail, Phone, MapPin, CalendarDays, Wallet,
-  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2, KeyRound,
+  ChevronRight, LogOut, Shield, BarChart3, Camera, ArrowLeft, Loader2, KeyRound, MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
