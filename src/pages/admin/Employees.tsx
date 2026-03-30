@@ -628,6 +628,7 @@ export default function Employees() {
       <div className="flex items-center gap-0.5 border-b border-border/40">
         {([
           { key: "active" as const, label: "Portal activo", count: statusCounts.active },
+          { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
           { key: "pending" as const, label: "Sin portal", count: statusCounts.pending },
           { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
           { key: "all" as const, label: "Todos", count: statusCounts.all },
