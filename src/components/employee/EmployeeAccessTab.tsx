@@ -12,6 +12,7 @@ import {
   FileText, User, BookOpen, KeyRound, Eye, EyeOff, Loader2, Shield, RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PortalAccessCard } from "./PortalAccessCard";
 
 type EmployeeRecord = Record<string, any>;
 
