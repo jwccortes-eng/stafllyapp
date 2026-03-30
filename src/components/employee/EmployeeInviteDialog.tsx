@@ -49,6 +49,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const copyLink = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
+    onInviteSent?.("copy");
     toast({ title: "Copiado al portapapeles" });
     setTimeout(() => setCopied(false), 2000);
   };
