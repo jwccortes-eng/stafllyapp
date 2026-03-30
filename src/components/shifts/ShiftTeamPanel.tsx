@@ -91,25 +91,11 @@ export function ShiftTeamPanel({ shiftId, companyId, preloaded, compact = false 
           className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
         >
           <div className="flex items-center gap-2">
-            {/* Stacked avatars */}
-            <div className="flex -space-x-2">
-              {members.slice(0, 4).map(m => (
-                <EmployeeAvatar
-                  key={m.id}
-                  firstName={m.first_name}
-                  lastName={m.last_name}
-                  avatarUrl={m.avatar_url}
-                  gender={m.gender}
-                  size="sm"
-                  className="ring-2 ring-background"
-                />
-              ))}
-              {members.length > 4 && (
-                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground ring-2 ring-background">
-                  +{members.length - 4}
-                </div>
-              )}
-            </div>
+            <EmployeeAvatarGroup
+              employees={members.map(m => ({ firstName: m.first_name, lastName: m.last_name, avatarUrl: m.avatar_url, gender: m.gender }))}
+              max={4}
+              size="sm"
+            />
             <span className="text-xs font-medium text-muted-foreground">{members.length} compañero{members.length !== 1 ? "s" : ""}</span>
           </div>
           <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", expanded && "rotate-180")} />
