@@ -508,7 +508,7 @@ export default function Employees() {
 
   const filtered = employees.filter((e) => {
     const matchesSearch = `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusTab === "all" ? true : statusTab === "active" ? e.is_active !== false : statusTab === "inactive" ? e.is_active === false : e.is_active !== false && !e.user_id;
+    const matchesStatus = statusTab === "all" ? true : statusTab === "active" ? (e.is_active !== false && !!e.user_id) : statusTab === "inactive" ? e.is_active === false : e.is_active !== false && !e.user_id;
     const matchesRole = filterRole === "all" || e.employee_role === filterRole;
     const matchesGroup = filterGroup === "all" || e.groups === filterGroup;
     return matchesSearch && matchesStatus && matchesRole && matchesGroup;
