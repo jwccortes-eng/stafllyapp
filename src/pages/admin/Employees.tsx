@@ -126,7 +126,7 @@ export default function Employees() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusTab, setStatusTab] = useState<"active" | "inactive" | "pending" | "all">("active");
+  const [statusTab, setStatusTab] = useState<"active" | "invited" | "inactive" | "pending" | "all">("active");
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterGroup, setFilterGroup] = useState<string>("all");
   const [open, setOpen] = useState(false);
