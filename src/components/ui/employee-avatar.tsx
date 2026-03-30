@@ -28,6 +28,7 @@ const STATUS_COLORS: Record<OnlineStatus, string> = {
 };
 
 const DOT_SIZES: Record<string, string> = {
+  xs: "h-1.5 w-1.5 border",
   sm: "h-2 w-2 border",
   md: "h-2.5 w-2.5 border-[1.5px]",
   lg: "h-3 w-3 border-2",
