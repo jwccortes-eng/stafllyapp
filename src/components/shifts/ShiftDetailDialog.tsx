@@ -722,7 +722,7 @@ export function ShiftDetailDialog({
                               </span>
                             )}
                             {noPortal && (
-                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0">NP</span>
+                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0" title="Sin portal — no tiene cuenta activa">Sin portal</span>
                             )}
                           </div>
                         </div>
