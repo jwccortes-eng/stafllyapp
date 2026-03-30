@@ -817,7 +817,7 @@ export default function Employees() {
                 <SheetTitle className="text-base font-bold leading-tight">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[10px] py-0">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
-                  {viewEmployee && <EmpStatusBadge employee={viewEmployee} />}
+                  {viewEmployee && <EmpStatusBadge employee={viewEmployee} invitation={invitations[viewEmployee.id]} />}
                 </div>
                 <SheetDescription className="mt-1 text-[11px] text-muted-foreground/70 flex items-center gap-3 flex-wrap">
                   {viewEmployee?.phone_number && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{viewEmployee.phone_number}</span>}
