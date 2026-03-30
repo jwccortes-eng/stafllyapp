@@ -293,10 +293,9 @@ export function EmployeeCombobox({
             const empIsDriver = isDriver(emp);
             const group = getGroup(emp);
 
-            // Show group separator
+            // Show group separator when this employee starts a new group
             let groupHeader: React.ReactNode = null;
-            if (!isSelected && group !== lastGroup) {
-              lastGroup = group;
+            if (!isSelected && groupBreaks.has(emp.id)) {
               const labels: Record<GroupKey, { label: string; color: string; icon: React.ReactNode }> = {
                 ready: { label: "Disponibles", color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
                 warning: { label: "Con advertencia", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
