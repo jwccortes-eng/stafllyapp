@@ -672,16 +672,8 @@ export function ShiftDetailDialog({
                         <span className="text-[9px] text-muted-foreground/40">Driver — no requerido</span>
                       </div>
                     )}
-                    {/* Admin slot (placeholder) */}
-                    <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-border/20">
-                      <ShieldCheck className="h-3 w-3 text-muted-foreground/30" />
-                      <span className="text-[9px] text-muted-foreground/40">Admin de turno — próximamente</span>
-                    </div>
-                    {/* Lead slot (placeholder) */}
-                    <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-border/20">
-                      <UsersRound className="h-3 w-3 text-muted-foreground/30" />
-                      <span className="text-[9px] text-muted-foreground/40">Líder / Supervisor — próximamente</span>
-                    </div>
+                    {/* Admin slot (placeholder — hidden until backend ready) */}
+                    {/* Lead slot (placeholder — hidden until backend ready) */}
                   </div>
                 );
               })()}
@@ -722,7 +714,7 @@ export function ShiftDetailDialog({
                               </span>
                             )}
                             {noPortal && (
-                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0">NP</span>
+                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0" title="Sin portal — no tiene cuenta activa">Sin portal</span>
                             )}
                           </div>
                         </div>

@@ -1,9 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Search, AlertTriangle, X, CalendarOff, Car, Zap, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isEmployeeAvailable, type AvailabilityConfig, type AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
@@ -201,7 +202,6 @@ export function EmployeeCombobox({
           value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Buscar trabajador..."
           className="h-7 text-xs pl-8 pr-8"
-          autoFocus
         />
         {search && (
           <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground">
@@ -331,7 +331,14 @@ export function EmployeeCombobox({
                         </span>
                       )}
                       {!emp.user_id && (
-                        <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0">Nuevo</span>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0 cursor-default">Sin portal</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-[10px]">No tiene cuenta activa en el portal</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                     {/* Inline warning — single line */}
