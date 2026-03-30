@@ -349,7 +349,7 @@ function ActivityTab({ employee }: { employee: EmployeeRecord }) {
       {items.map(item => (
         <div key={item.id} className="flex items-start gap-2.5 py-2 border-b border-border/20 last:border-0">
           <div className="h-5 w-5 rounded bg-primary/[0.06] flex items-center justify-center shrink-0 mt-0.5"><Activity className="h-2.5 w-2.5 text-primary/60" /></div>
-          <div className="min-w-0 flex-1"><p className="text-[11px] text-foreground capitalize">{item.action}</p><p className="text-[9px] text-muted-foreground/50">{formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}</p></div>
+          <div className="min-w-0 flex-1"><p className="text-[11px] text-foreground capitalize">{item.action}</p><p className="text-[9px] text-muted-foreground/50">{safeDistanceToNow(item.created_at)}</p></div>
         </div>
       ))}
     </div>
