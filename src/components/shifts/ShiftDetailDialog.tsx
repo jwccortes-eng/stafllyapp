@@ -882,6 +882,10 @@ export function ShiftDetailDialog({
                     availabilityConfigs={availabilityConfigs}
                     availabilityOverrides={availabilityOverrides}
                     availabilityBlockMode="warning"
+                    showBulkActions
+                    remainingSlots={Math.max(0, slotsNum - shiftAssignments.length)}
+                    requiresDriver={!!(shift as any).transportation_required}
+                  />
                   />
                   {selected.length > 0 && (
                     <Button size="sm" onClick={handleAdd} className="w-full h-8 text-xs rounded-xl gap-1.5">
