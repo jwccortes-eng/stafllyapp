@@ -30,8 +30,10 @@ const PORTAL_MODULES = [
 interface Props {
   employee: EmployeeRecord;
   companyId: string;
+  companyName?: string;
   isPrivileged: boolean;
   onEmployeeUpdate?: (updates: Partial<EmployeeRecord>) => void;
+  onInvite?: () => void;
 }
 
 export function EmployeeAccessTab({ employee, companyId, isPrivileged, onEmployeeUpdate }: Props) {
