@@ -115,7 +115,7 @@ function EmpStatusBadge({ employee, showInvite, onInvite }: { employee: Employee
 
 export default function Employees() {
   usePageView("Empleados");
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const { role } = useAuth();
   const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
   const { canAddEmployees, limits, plan } = useSubscription();
