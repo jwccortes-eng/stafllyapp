@@ -804,9 +804,13 @@ export default function Employees() {
                     <EmpStatusBadge employee={e} />
                   </TableCell>
                   <TableCell className="hidden lg:table-cell py-1">
-                    {e.last_login ? (
-                      <span className="text-[10px] text-muted-foreground/60">{formatDistanceToNow(parseISO(e.last_login), { addSuffix: true, locale: es })}</span>
-                    ) : <span className="text-[10px] text-muted-foreground/25">—</span>}
+                    {(() => {
+                      if (!e.last_login) return <span className="text-[10px] text-muted-foreground/25">—</span>;
+                      const d = parseISO(e.last_login);
+                      return isValid(d)
+                        ? <span className="text-[10px] text-muted-foreground/60">{formatDistanceToNow(d, { addSuffix: true, locale: es })}</span>
+                        : <span className="text-[10px] text-muted-foreground/25">—</span>;
+                    })()}
                   </TableCell>
                   <TableCell className="py-1 pr-3" onClick={ev => ev.stopPropagation()}>
                     <DropdownMenu>
