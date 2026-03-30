@@ -161,16 +161,19 @@ export function ShiftAttendancePanel({
               !conf && "border-border",
             )}>
               <div className="flex items-center gap-2 min-w-0">
-                <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="sm" />
-                <div className="min-w-0">
-                  <p className="text-xs font-medium truncate">{emp.first_name} {emp.last_name}</p>
-                  {conf && (
-                    <p className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                <EmployeeIdentityRow
+                  firstName={emp.first_name}
+                  lastName={emp.last_name}
+                  avatarUrl={emp.avatar_url}
+                  gender={emp.gender}
+                  size="sm"
+                  secondary={conf ? (
+                    <span className="flex items-center gap-0.5">
                       <Clock className="h-2 w-2" />
                       {format(new Date(conf.confirmed_at), "HH:mm")}
-                    </p>
-                  )}
-                </div>
+                    </span>
+                  ) : undefined}
+                />
               </div>
               <div className="flex items-center gap-1">
                 {conf ? (
