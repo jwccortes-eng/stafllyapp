@@ -11,7 +11,23 @@ import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
-import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { format, parseISO, formatDistanceToNow, isValid } from "date-fns";
+
+/** Safe date formatter — returns fallback on invalid/missing values */
+function safeFormat(dateStr: string | null | undefined, fmt: string, fallback = "—"): string {
+  if (!dateStr) return fallback;
+  try {
+    const d = parseISO(dateStr);
+    return isValid(d) ? format(d, fmt, { locale: es }) : fallback;
+  } catch { return fallback; }
+}
+function safeDistanceToNow(dateStr: string | null | undefined, fallback = "—"): string {
+  if (!dateStr) return fallback;
+  try {
+    const d = parseISO(dateStr);
+    return isValid(d) ? formatDistanceToNow(d, { addSuffix: true, locale: es }) : fallback;
+  } catch { return fallback; }
+}
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import {
@@ -193,7 +209,7 @@ function PayTab({ employee, companyId }: { employee: EmployeeRecord; companyId: 
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                <div><p className="text-xs font-semibold">{(r.concepts as any)?.name ?? "Concepto"}</p><p className="text-[9px] text-muted-foreground">{r.effective_from ? format(parseISO(r.effective_from), "dd MMM yyyy", { locale: es }) : "Sin inicio"} → {r.effective_to ? format(parseISO(r.effective_to), "dd MMM yyyy", { locale: es }) : "Vigente"}</p></div>
+                <div><p className="text-xs font-semibold">{(r.concepts as any)?.name ?? "Concepto"}</p><p className="text-[9px] text-muted-foreground">{safeFormat(r.effective_from, "dd MMM yyyy", "Sin inicio")} → {safeFormat(r.effective_to, "dd MMM yyyy", "Vigente")}</p></div>
                 <div className="flex items-center gap-2">
                   <div className="text-right"><p className="text-sm font-bold text-primary tabular-nums">${r.rate.toFixed(2)}</p><p className="text-[9px] text-muted-foreground">{(r.concepts as any)?.unit_label ?? "por hora"}</p></div>
                   <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-6 w-6"><MoreHorizontal className="h-3.5 w-3.5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => startEdit(r)}><Pencil className="h-3 w-3 mr-2" />Editar</DropdownMenuItem><DropdownMenuItem className="text-destructive" onClick={() => handleDelete(r.id)}><Trash2 className="h-3 w-3 mr-2" />Eliminar</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
@@ -228,7 +244,7 @@ function ShiftsTab({ employee, companyId }: { employee: EmployeeRecord; companyI
     <div className="space-y-1.5">
       {shifts.map(s => { const shift = s.scheduled_shifts as any; if (!shift) return null; return (
         <Card key={s.id} className="rounded-lg border-border/30"><CardContent className="p-3 flex items-center justify-between">
-          <div><p className="text-xs font-semibold">{shift.title}</p><p className="text-[9px] text-muted-foreground">{shift.date ? format(parseISO(shift.date), "EEE dd MMM", { locale: es }) : "—"} · {shift.start_time?.slice(0, 5)} - {shift.end_time?.slice(0, 5)}</p></div>
+          <div><p className="text-xs font-semibold">{shift.title}</p><p className="text-[9px] text-muted-foreground">{safeFormat(shift.date, "EEE dd MMM")} · {shift.start_time?.slice(0, 5)} - {shift.end_time?.slice(0, 5)}</p></div>
           <Badge className={cn("text-[9px]", statusColors[s.status] ?? "bg-muted text-muted-foreground")}>{s.status === "confirmed" ? "OK" : s.status === "pending" ? "Pend" : s.status}</Badge>
         </CardContent></Card>
       ); })}
@@ -246,8 +262,8 @@ function TimeTab({ employee, companyId }: { employee: EmployeeRecord; companyId:
   return (
     <div className="space-y-1.5">
       {entries.map((e: any) => { const duration = e.clock_out ? ((new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 3600000 - (e.break_minutes ?? 0) / 60).toFixed(1) : null; return (
-        <Card key={e.id} className="rounded-lg border-border/30"><CardContent className="p-3 flex items-center justify-between">
-          <div><p className="text-xs font-semibold">{format(parseISO(e.clock_in), "EEE dd MMM", { locale: es })}</p><p className="text-[9px] text-muted-foreground">{format(parseISO(e.clock_in), "HH:mm")}{e.clock_out ? ` → ${format(parseISO(e.clock_out), "HH:mm")}` : " → En curso"}</p></div>
+         <Card key={e.id} className="rounded-lg border-border/30"><CardContent className="p-3 flex items-center justify-between">
+          <div><p className="text-xs font-semibold">{safeFormat(e.clock_in, "EEE dd MMM")}</p><p className="text-[9px] text-muted-foreground">{safeFormat(e.clock_in, "HH:mm")}{e.clock_out ? ` → ${safeFormat(e.clock_out, "HH:mm")}` : " → En curso"}</p></div>
           <div className="text-right">{duration ? <p className="text-xs font-bold text-primary tabular-nums">{duration}h</p> : <Badge className="bg-warning/10 text-warning text-[9px] animate-pulse">Activo</Badge>}<p className="text-[9px] text-muted-foreground capitalize">{e.status}</p></div>
         </CardContent></Card>
       ); })}
@@ -303,7 +319,7 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
         <div className="space-y-1.5">
           {docs.map((doc: any) => (
             <Card key={doc.id} className="rounded-lg border-border/30"><CardContent className="p-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0"><FileText className="h-3.5 w-3.5 text-primary/50 shrink-0" /><div className="min-w-0"><p className="text-[11px] font-medium truncate">{doc.name}</p><p className="text-[9px] text-muted-foreground">{doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : ""}{doc.created_at && ` · ${format(parseISO(doc.created_at), "dd MMM yyyy", { locale: es })}`}</p></div></div>
+              <div className="flex items-center gap-2 min-w-0"><FileText className="h-3.5 w-3.5 text-primary/50 shrink-0" /><div className="min-w-0"><p className="text-[11px] font-medium truncate">{doc.name}</p><p className="text-[9px] text-muted-foreground">{doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : ""}{doc.created_at && ` · ${safeFormat(doc.created_at, "dd MMM yyyy")}`}</p></div></div>
               <div className="flex items-center gap-0.5"><Button size="icon" variant="ghost" className="h-6 w-6" asChild><a href={doc.file_url} target="_blank" rel="noopener noreferrer"><Download className="h-2.5 w-2.5" /></a></Button><Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button></div>
             </CardContent></Card>
           ))}
@@ -333,7 +349,7 @@ function ActivityTab({ employee }: { employee: EmployeeRecord }) {
       {items.map(item => (
         <div key={item.id} className="flex items-start gap-2.5 py-2 border-b border-border/20 last:border-0">
           <div className="h-5 w-5 rounded bg-primary/[0.06] flex items-center justify-center shrink-0 mt-0.5"><Activity className="h-2.5 w-2.5 text-primary/60" /></div>
-          <div className="min-w-0 flex-1"><p className="text-[11px] text-foreground capitalize">{item.action}</p><p className="text-[9px] text-muted-foreground/50">{formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}</p></div>
+          <div className="min-w-0 flex-1"><p className="text-[11px] text-foreground capitalize">{item.action}</p><p className="text-[9px] text-muted-foreground/50">{safeDistanceToNow(item.created_at)}</p></div>
         </div>
       ))}
     </div>
