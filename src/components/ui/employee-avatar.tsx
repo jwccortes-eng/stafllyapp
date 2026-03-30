@@ -35,6 +35,7 @@ const DOT_SIZES: Record<string, string> = {
 };
 
 const sizes: Record<string, string> = {
+  xs: "h-5 w-5",
   sm: "h-7 w-7",
   md: "h-8 w-8",
   lg: "h-10 w-10",
