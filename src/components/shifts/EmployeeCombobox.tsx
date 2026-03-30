@@ -202,7 +202,6 @@ export function EmployeeCombobox({
           value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Buscar trabajador..."
           className="h-7 text-xs pl-8 pr-8"
-          autoFocus
         />
         {search && (
           <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground">
