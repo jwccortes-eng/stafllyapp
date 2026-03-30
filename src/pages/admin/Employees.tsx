@@ -107,10 +107,11 @@ interface UpdateDiff {
 }
 
 /* ── Status badge component ── */
-function EmpStatusBadge({ employee }: { employee: EmployeeRecord }) {
+function EmpStatusBadge({ employee, showInvite, onInvite }: { employee: EmployeeRecord; showInvite?: boolean; onInvite?: () => void }) {
   const isActive = employee.is_active !== false;
   const hasAccess = !!employee.user_id;
   const hasPin = !!(employee.access_pin ?? "").toString().trim();
+  const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
 
   if (!isActive) {
     return (
@@ -120,31 +121,55 @@ function EmpStatusBadge({ employee }: { employee: EmployeeRecord }) {
       </span>
     );
   }
-  if (!hasAccess) {
+  if (hasAccess) {
     return (
-      <div className="flex items-center gap-1">
-        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-warning/10 text-warning">
-          <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
-          Pendiente
-        </span>
-        {!hasPin && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-destructive/10 text-destructive">
-                <KeyRound className="h-2.5 w-2.5" />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">Sin PIN asignado</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-[hsl(var(--earning)/0.1)] text-[hsl(var(--earning))]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--earning))]" />
+        Activo
+      </span>
     );
   }
+
+  // No user_id — determine sub-state
+  const missingItems: string[] = [];
+  if (!hasPhone) missingItems.push("teléfono");
+  if (!hasPin) missingItems.push("PIN");
+
+  const isReadyToInvite = hasPhone && hasPin;
+
   return (
-    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-[hsl(var(--earning)/0.1)] text-[hsl(var(--earning))]">
-      <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--earning))]" />
-      Activo
-    </span>
+    <div className="flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn(
+            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+            isReadyToInvite
+              ? "bg-primary/10 text-primary"
+              : "bg-warning/10 text-warning"
+          )}>
+            <span className={cn(
+              "h-1.5 w-1.5 rounded-full",
+              isReadyToInvite ? "bg-primary animate-pulse" : "bg-warning animate-pulse"
+            )} />
+            {isReadyToInvite ? "Sin portal" : "Incompleto"}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-[10px] max-w-[180px]">
+          {isReadyToInvite
+            ? "Tiene teléfono y PIN — listo para invitar"
+            : `Falta: ${missingItems.join(", ")}`
+          }
+        </TooltipContent>
+      </Tooltip>
+      {showInvite && isReadyToInvite && onInvite && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onInvite(); }}
+          className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+        >
+          <Send className="h-2.5 w-2.5" /> Invitar
+        </button>
+      )}
+    </div>
   );
 }
 
