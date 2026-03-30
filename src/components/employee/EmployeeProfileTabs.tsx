@@ -360,13 +360,15 @@ function ActivityTab({ employee }: { employee: EmployeeRecord }) {
    MAIN COMPONENT — More compact tabs
    ═══════════════════════════════════════════ */
 export function EmployeeProfileTabs({
-  employee, companyId, isEditing, form, setForm, isPrivileged, onEmployeeUpdate,
+  employee, companyId, isEditing, form, setForm, isPrivileged, onEmployeeUpdate, companyName, onInvite,
 }: {
   employee: EmployeeRecord; companyId: string; isEditing: boolean;
   form: Record<string, string>;
   setForm: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   isPrivileged: boolean;
   onEmployeeUpdate?: (updates: Partial<EmployeeRecord>) => void;
+  companyName?: string;
+  onInvite?: () => void;
 }) {
   const wpHook = useWorkerProfile({ employeeId: employee?.id });
 
