@@ -518,7 +518,7 @@ export default function Employees() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold font-heading tracking-tight">Empleados</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{employees.length} registrados · {statusCounts.active} activos · {statusCounts.pending > 0 ? <span className="text-primary font-medium">{statusCounts.pending} sin portal</span> : "0 pendientes"}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{employees.length} registrados · {statusCounts.active} activos · {statusCounts.invited > 0 ? <span className="text-primary font-medium">{statusCounts.invited} invitados</span> : null}{statusCounts.invited > 0 && statusCounts.pending > 0 ? " · " : ""}{statusCounts.pending > 0 ? <span className="text-warning font-medium">{statusCounts.pending} sin portal</span> : null}</p>
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {isPrivileged && (
