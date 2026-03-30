@@ -109,9 +109,10 @@ interface UpdateDiff {
 
 /* ── Status badge — delegates to reusable component ── */
 import { PortalAccessBadge } from "@/components/employee/PortalAccessBadge";
+import type { InvitationMap } from "@/hooks/useEmployeeInvitations";
 
-function EmpStatusBadge({ employee, showInvite, onInvite }: { employee: EmployeeRecord; showInvite?: boolean; onInvite?: () => void }) {
-  return <PortalAccessBadge employee={employee} showInviteAction={showInvite} onInvite={onInvite} />;
+function EmpStatusBadge({ employee, showInvite, onInvite, invitation }: { employee: EmployeeRecord; showInvite?: boolean; onInvite?: () => void; invitation?: InvitationMap[string] | null }) {
+  return <PortalAccessBadge employee={employee} invitation={invitation} showInviteAction={showInvite} onInvite={onInvite} />;
 }
 
 export default function Employees() {
