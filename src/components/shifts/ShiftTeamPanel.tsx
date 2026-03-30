@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
+import { EmployeeIdentityRow } from "@/components/ui/employee-identity-row";
 import { Phone, MessageCircle, Smartphone, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
