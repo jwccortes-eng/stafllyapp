@@ -14,7 +14,7 @@ interface EmployeeAvatarProps {
   lastName: string;
   avatarUrl?: string | null;
   gender?: string | null;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
   status?: OnlineStatus | null;
 }
