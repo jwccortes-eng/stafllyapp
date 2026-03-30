@@ -36,7 +36,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
   const hasEmail = !!employee.email;
 
-  const message = `Hola ${employee.first_name}!\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\nEnlace: ${portalUrl}\nTu PIN: ${pin}\n\nIngresa con tu número de teléfono y PIN. Selecciona "Acceso empleado" al entrar.`;
+  const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Portal: ${portalUrl}\n📞 Tu teléfono: ${employee.phone_number ?? "—"}\n🔑 Tu PIN: ${pin}\n\nSelecciona "Acceso empleado" e ingresa con tu número y PIN.\n\nDesde el portal podrás:\n✅ Ver tus turnos asignados\n✅ Registrar entrada y salida\n✅ Consultar tus pagos\n✅ Recibir comunicados\n\n— Equipo ${companyName}`;
 
   const phoneDigits = (employee.phone_number ?? "").replace(/\D/g, "");
   const normalizedPhone = phoneDigits.startsWith("00") ? phoneDigits.slice(2) : phoneDigits;
