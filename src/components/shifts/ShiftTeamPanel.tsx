@@ -107,56 +107,29 @@ export function ShiftTeamPanel({ shiftId, companyId, preloaded, compact = false 
           {members.map(m => {
             const cleanPhone = formatPhone(m.phone_number);
             return (
-              <div key={m.id} className="flex items-center gap-2.5 rounded-xl px-3 py-2 hover:bg-muted/30 transition-colors group">
-                <div className="relative">
-                  <EmployeeAvatar
-                    firstName={m.first_name}
-                    lastName={m.last_name}
-                    avatarUrl={m.avatar_url}
-                    gender={m.gender}
-                    size="md"
-                  />
-                  <span className={cn("absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-background", statusDot[m.status] || "bg-muted-foreground/30")} />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate">{m.first_name} {m.last_name}</p>
-                  {cleanPhone && (
-                    <p className="text-[10px] text-muted-foreground truncate">{m.phone_number}</p>
-                  )}
-                </div>
-
-                {/* Contact actions */}
-                {cleanPhone && (
-                  <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                    <a
-                      href={`tel:${cleanPhone}`}
-                      className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-colors"
-                      title="Llamar"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <Phone className="h-3.5 w-3.5" />
-                    </a>
-                    <a
-                      href={`sms:${cleanPhone}`}
-                      className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-earning/10 text-earning transition-colors"
-                      title="SMS"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <Smartphone className="h-3.5 w-3.5" />
-                    </a>
-                    <a
-                      href={`https://wa.me/${cleanPhone.replace("+", "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-[#25D366]/10 text-[#25D366] transition-colors"
-                      title="WhatsApp"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" />
-                    </a>
-                  </div>
-                )}
+              <div key={m.id} className="rounded-xl px-3 py-2 hover:bg-muted/30 transition-colors group">
+                <EmployeeIdentityRow
+                  firstName={m.first_name}
+                  lastName={m.last_name}
+                  avatarUrl={m.avatar_url}
+                  gender={m.gender}
+                  size="md"
+                  secondary={cleanPhone ? m.phone_number : undefined}
+                  trailing={cleanPhone ? (
+                    <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <a href={`tel:${cleanPhone}`} className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary transition-colors" title="Llamar" onClick={e => e.stopPropagation()}>
+                        <Phone className="h-3.5 w-3.5" />
+                      </a>
+                      <a href={`sms:${cleanPhone}`} className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-earning/10 text-earning transition-colors" title="SMS" onClick={e => e.stopPropagation()}>
+                        <Smartphone className="h-3.5 w-3.5" />
+                      </a>
+                      <a href={`https://wa.me/${cleanPhone.replace("+", "")}`} target="_blank" rel="noopener noreferrer" className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-[#25D366]/10 text-[#25D366] transition-colors" title="WhatsApp" onClick={e => e.stopPropagation()}>
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  ) : undefined}
+                />
+                <span className={cn("ml-[42px] inline-block h-2 w-2 rounded-full -mt-1", statusDot[m.status] || "bg-muted-foreground/30")} />
               </div>
             );
           })}
