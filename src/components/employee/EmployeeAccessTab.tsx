@@ -38,7 +38,7 @@ interface Props {
   invitation?: EmployeeInvitation | null;
 }
 
-export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileged, onEmployeeUpdate, onInvite }: Props) {
+export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileged, onEmployeeUpdate, onInvite, invitation }: Props) {
   const [modules, setModules] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
