@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { EmployeeIdentityRow } from "@/components/ui/employee-identity-row";
 import { CheckCircle2, XCircle, Users, Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
