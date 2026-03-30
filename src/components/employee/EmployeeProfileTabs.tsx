@@ -319,7 +319,7 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
         <div className="space-y-1.5">
           {docs.map((doc: any) => (
             <Card key={doc.id} className="rounded-lg border-border/30"><CardContent className="p-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0"><FileText className="h-3.5 w-3.5 text-primary/50 shrink-0" /><div className="min-w-0"><p className="text-[11px] font-medium truncate">{doc.name}</p><p className="text-[9px] text-muted-foreground">{doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : ""}{doc.created_at && ` · ${format(parseISO(doc.created_at), "dd MMM yyyy", { locale: es })}`}</p></div></div>
+              <div className="flex items-center gap-2 min-w-0"><FileText className="h-3.5 w-3.5 text-primary/50 shrink-0" /><div className="min-w-0"><p className="text-[11px] font-medium truncate">{doc.name}</p><p className="text-[9px] text-muted-foreground">{doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : ""}{doc.created_at && ` · ${safeFormat(doc.created_at, "dd MMM yyyy")}`}</p></div></div>
               <div className="flex items-center gap-0.5"><Button size="icon" variant="ghost" className="h-6 w-6" asChild><a href={doc.file_url} target="_blank" rel="noopener noreferrer"><Download className="h-2.5 w-2.5" /></a></Button><Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button></div>
             </CardContent></Card>
           ))}
