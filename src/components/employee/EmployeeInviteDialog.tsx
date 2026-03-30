@@ -21,7 +21,7 @@ interface Props {
 
 const PRODUCTION_URL = "https://staflyapps.com";
 
-export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
+export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent }: Props) {
   const { toast } = useToast();
   const { companies, selectedCompanyId } = useCompany();
   const [sending, setSending] = useState(false);
