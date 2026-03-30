@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PortalAccessCard } from "./PortalAccessCard";
+import type { EmployeeInvitation } from "@/hooks/useEmployeeInvitations";
 
 type EmployeeRecord = Record<string, any>;
 
