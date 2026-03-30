@@ -826,7 +826,7 @@ export default function Employees() {
                     {e.groups ? <span className="text-[10px] text-muted-foreground truncate max-w-[100px] block">{e.groups.split(",")[0].trim()}</span> : <span className="text-[10px] text-muted-foreground/25">—</span>}
                   </TableCell>
                   <TableCell className="py-1">
-                    <EmpStatusBadge employee={e} />
+                    <EmpStatusBadge employee={e} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
                   </TableCell>
                   <TableCell className="hidden lg:table-cell py-1">
                     {(() => {
