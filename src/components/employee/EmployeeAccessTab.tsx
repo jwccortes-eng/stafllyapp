@@ -152,7 +152,7 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
   return (
     <div className="space-y-5">
       {/* Portal Access Status Card */}
-      <PortalAccessCard employee={employee} companyName={companyName ?? "StaflyApps"} onInvite={onInvite} />
+      <PortalAccessCard employee={employee} companyName={companyName ?? "StaflyApps"} invitation={invitation} onInvite={onInvite} />
 
       {/* PIN Management */}
       <div>
