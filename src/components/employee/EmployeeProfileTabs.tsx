@@ -262,8 +262,8 @@ function TimeTab({ employee, companyId }: { employee: EmployeeRecord; companyId:
   return (
     <div className="space-y-1.5">
       {entries.map((e: any) => { const duration = e.clock_out ? ((new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 3600000 - (e.break_minutes ?? 0) / 60).toFixed(1) : null; return (
-        <Card key={e.id} className="rounded-lg border-border/30"><CardContent className="p-3 flex items-center justify-between">
-          <div><p className="text-xs font-semibold">{format(parseISO(e.clock_in), "EEE dd MMM", { locale: es })}</p><p className="text-[9px] text-muted-foreground">{format(parseISO(e.clock_in), "HH:mm")}{e.clock_out ? ` → ${format(parseISO(e.clock_out), "HH:mm")}` : " → En curso"}</p></div>
+         <Card key={e.id} className="rounded-lg border-border/30"><CardContent className="p-3 flex items-center justify-between">
+          <div><p className="text-xs font-semibold">{safeFormat(e.clock_in, "EEE dd MMM")}</p><p className="text-[9px] text-muted-foreground">{safeFormat(e.clock_in, "HH:mm")}{e.clock_out ? ` → ${safeFormat(e.clock_out, "HH:mm")}` : " → En curso"}</p></div>
           <div className="text-right">{duration ? <p className="text-xs font-bold text-primary tabular-nums">{duration}h</p> : <Badge className="bg-warning/10 text-warning text-[9px] animate-pulse">Activo</Badge>}<p className="text-[9px] text-muted-foreground capitalize">{e.status}</p></div>
         </CardContent></Card>
       ); })}
