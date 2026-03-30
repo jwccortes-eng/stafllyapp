@@ -26,7 +26,14 @@ export interface Assignment {
 }
 
 export interface SelectOption { id: string; name: string; }
-export interface Employee { id: string; first_name: string; last_name: string; }
+export interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  avatar_url?: string | null;
+  gender?: string | null;
+  phone_number?: string | null;
+}
 
 export type ViewMode = "day" | "week" | "month" | "employee" | "client";
 

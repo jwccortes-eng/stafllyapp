@@ -14,7 +14,7 @@ interface EmployeeAvatarProps {
   lastName: string;
   avatarUrl?: string | null;
   gender?: string | null;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
   status?: OnlineStatus | null;
 }
@@ -28,6 +28,7 @@ const STATUS_COLORS: Record<OnlineStatus, string> = {
 };
 
 const DOT_SIZES: Record<string, string> = {
+  xs: "h-1.5 w-1.5 border",
   sm: "h-2 w-2 border",
   md: "h-2.5 w-2.5 border-[1.5px]",
   lg: "h-3 w-3 border-2",
@@ -35,6 +36,7 @@ const DOT_SIZES: Record<string, string> = {
 };
 
 const sizes: Record<string, string> = {
+  xs: "h-5 w-5",
   sm: "h-7 w-7",
   md: "h-8 w-8",
   lg: "h-10 w-10",

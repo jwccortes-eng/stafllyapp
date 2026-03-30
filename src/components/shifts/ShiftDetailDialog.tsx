@@ -596,7 +596,7 @@ export function ShiftDetailDialog({
                           e.dataTransfer.effectAllowed = "move";
                         }}
                       >
-                        <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" />
+                        <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="sm" />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold truncate">{emp.first_name} {emp.last_name}</p>
                         </div>
