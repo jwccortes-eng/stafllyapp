@@ -331,7 +331,14 @@ export function EmployeeCombobox({
                         </span>
                       )}
                       {!emp.user_id && (
-                        <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0">Nuevo</span>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0 cursor-default">Sin portal</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-[10px]">No tiene cuenta activa en el portal</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                     {/* Inline warning — single line */}
