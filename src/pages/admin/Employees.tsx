@@ -50,7 +50,7 @@ import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
-import { formatDistanceToNow, parseISO } from "date-fns";
+import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 
 // Fields that only owner/admin can see
