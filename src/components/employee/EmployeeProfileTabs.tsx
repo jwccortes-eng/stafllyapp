@@ -244,7 +244,7 @@ function ShiftsTab({ employee, companyId }: { employee: EmployeeRecord; companyI
     <div className="space-y-1.5">
       {shifts.map(s => { const shift = s.scheduled_shifts as any; if (!shift) return null; return (
         <Card key={s.id} className="rounded-lg border-border/30"><CardContent className="p-3 flex items-center justify-between">
-          <div><p className="text-xs font-semibold">{shift.title}</p><p className="text-[9px] text-muted-foreground">{shift.date ? format(parseISO(shift.date), "EEE dd MMM", { locale: es }) : "—"} · {shift.start_time?.slice(0, 5)} - {shift.end_time?.slice(0, 5)}</p></div>
+          <div><p className="text-xs font-semibold">{shift.title}</p><p className="text-[9px] text-muted-foreground">{safeFormat(shift.date, "EEE dd MMM")} · {shift.start_time?.slice(0, 5)} - {shift.end_time?.slice(0, 5)}</p></div>
           <Badge className={cn("text-[9px]", statusColors[s.status] ?? "bg-muted text-muted-foreground")}>{s.status === "confirmed" ? "OK" : s.status === "pending" ? "Pend" : s.status}</Badge>
         </CardContent></Card>
       ); })}
