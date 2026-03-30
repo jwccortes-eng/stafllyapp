@@ -149,6 +149,9 @@ export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileg
 
   return (
     <div className="space-y-5">
+      {/* Portal Access Status Card */}
+      <PortalAccessCard employee={employee} companyName={companyName ?? "StaflyApps"} onInvite={onInvite} />
+
       {/* PIN Management */}
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2 flex items-center gap-1.5">

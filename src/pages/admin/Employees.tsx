@@ -619,9 +619,9 @@ export default function Employees() {
       {/* ─── Status Tabs ─── */}
       <div className="flex items-center gap-0.5 border-b border-border/40">
         {([
-          { key: "active" as const, label: "Activos", count: statusCounts.active },
+          { key: "active" as const, label: "Portal activo", count: statusCounts.active },
+          { key: "pending" as const, label: "Sin portal", count: statusCounts.pending },
           { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
-          { key: "pending" as const, label: "Pendientes", count: statusCounts.pending },
           { key: "all" as const, label: "Todos", count: statusCounts.all },
         ]).map(tab => (
           <button
@@ -637,7 +637,8 @@ export default function Employees() {
             {tab.label}
             <span className={cn(
               "ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
-              statusTab === tab.key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+              statusTab === tab.key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+              tab.key === "pending" && tab.count > 0 && statusTab !== tab.key && "bg-primary/10 text-primary"
             )}>{tab.count}</span>
           </button>
         ))}
