@@ -11,7 +11,23 @@ import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
-import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { format, parseISO, formatDistanceToNow, isValid } from "date-fns";
+
+/** Safe date formatter — returns fallback on invalid/missing values */
+function safeFormat(dateStr: string | null | undefined, fmt: string, fallback = "—"): string {
+  if (!dateStr) return fallback;
+  try {
+    const d = parseISO(dateStr);
+    return isValid(d) ? format(d, fmt, { locale: es }) : fallback;
+  } catch { return fallback; }
+}
+function safeDistanceToNow(dateStr: string | null | undefined, fallback = "—"): string {
+  if (!dateStr) return fallback;
+  try {
+    const d = parseISO(dateStr);
+    return isValid(d) ? formatDistanceToNow(d, { addSuffix: true, locale: es }) : fallback;
+  } catch { return fallback; }
+}
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import {
