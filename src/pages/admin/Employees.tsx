@@ -764,7 +764,7 @@ export default function Employees() {
                   </div>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <EmpStatusBadge employee={e} />
+                  <EmpStatusBadge employee={e} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
                   {e.access_pin && <span className="text-[9px] text-muted-foreground/50 font-mono">PIN: {e.access_pin}</span>}
                 </div>
               </div>
