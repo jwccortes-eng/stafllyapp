@@ -548,185 +548,147 @@ export function ShiftDetailDialog({
 
           /* ─── TEAM TAB ─── */
           ) : tab === "team" ? (
-            <div className="space-y-3">
-              {/* ── Staffing status header ── */}
+            <div className="space-y-2">
+              {/* ── Staffing command bar ── */}
               {(() => {
                 const confirmed = shiftAssignments.filter(a => a.status === "confirmed").length;
                 const pending = shiftAssignments.filter(a => a.status === "pending" || a.status === "review").length;
                 const rejected = shiftAssignments.filter(a => a.status === "rejected").length;
-                const activeAssigned = shiftAssignments.filter(a => a.status !== "rejected").length;
-                const missing = Math.max(0, slotsNum - activeAssigned);
-                const overstaffed = activeAssigned > slotsNum;
-                const hasDrivers = shiftAssignments.some(a => {
-                  const emp = employees.find(e => e.id === a.employee_id);
-                  return emp && (emp.has_car === "Yes" || emp.has_car === "true" || emp.has_car === "Sí");
-                });
+                const active = shiftAssignments.filter(a => a.status !== "rejected").length;
+                const missing = Math.max(0, slotsNum - active);
+                const over = active > slotsNum;
                 const requiresCar = !!(shift as any).transportation_required;
-                const missingDriver = requiresCar && !hasDrivers;
-                const invitePending = shiftAssignments.filter(a => {
+                const hasDriver = shiftAssignments.some(a => {
+                  const emp = employees.find(e => e.id === a.employee_id);
+                  return emp && (emp.has_car === "Yes" || emp.has_car === "true" || emp.has_car === "Sí") && a.status !== "rejected";
+                });
+                const noPortalCount = shiftAssignments.filter(a => {
                   const emp = employees.find(e => e.id === a.employee_id);
                   return emp && !emp.user_id && a.status !== "rejected";
                 }).length;
 
                 return (
-                  <div className="rounded-xl border border-border/30 bg-gradient-to-br from-muted/30 to-transparent p-3 space-y-2.5">
-                    {/* Main counts */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          "h-9 w-9 rounded-xl flex items-center justify-center text-sm font-bold",
-                          missing === 0 && !overstaffed ? "bg-earning/10 text-earning" :
-                          overstaffed ? "bg-warning/10 text-warning" :
-                          activeAssigned === 0 ? "bg-destructive/10 text-destructive" :
-                          "bg-warning/10 text-warning"
-                        )}>
-                          {activeAssigned}
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold">
-                            {missing === 0 && !overstaffed ? "Completo" :
-                             overstaffed ? "Sobre-dotado" :
-                             activeAssigned === 0 ? "Sin asignar" :
-                             `Faltan ${missing} trabajador${missing !== 1 ? "es" : ""}`}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground tabular-nums">
-                            {activeAssigned} / {slotsNum} plazas
-                          </p>
+                  <div className="rounded-xl border border-border/30 bg-gradient-to-br from-muted/30 to-transparent p-2.5 space-y-2">
+                    {/* Counts row */}
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "h-8 w-8 rounded-lg flex items-center justify-center text-sm font-bold tabular-nums",
+                        missing === 0 && !over ? "bg-earning/10 text-earning" :
+                        over ? "bg-warning/10 text-warning" :
+                        active === 0 ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
+                      )}>
+                        {active}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold truncate">
+                          {missing === 0 && !over ? "Completo" :
+                           over ? `Sobre-dotado (+${active - slotsNum})` :
+                           active === 0 ? "Sin asignar" :
+                           `Faltan ${missing}`}
+                        </p>
+                        <div className="h-1 bg-muted/50 rounded-full overflow-hidden mt-1">
+                          <div className={cn("h-full rounded-full transition-all duration-500",
+                            missing === 0 ? "bg-earning" : fillPercent > 50 ? "bg-primary" : "bg-warning"
+                          )} style={{ width: `${Math.min(100, fillPercent)}%` }} />
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-[9px]">
-                        {confirmed > 0 && (
-                          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-earning/10 text-earning font-semibold">
-                            <CheckCircle2 className="h-2.5 w-2.5" /> {confirmed}
-                          </span>
-                        )}
-                        {pending > 0 && (
-                          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning/10 text-warning font-semibold">
-                            <Clock className="h-2.5 w-2.5" /> {pending}
-                          </span>
-                        )}
-                        {rejected > 0 && (
-                          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive font-semibold">
-                            <XCircle className="h-2.5 w-2.5" /> {rejected}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-[10px] font-semibold text-muted-foreground tabular-nums shrink-0">
+                        {active}/{slotsNum}
+                      </span>
                     </div>
 
-                    {/* Fill bar */}
-                    <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all duration-500",
-                          missing === 0 ? "bg-earning" : fillPercent > 50 ? "bg-primary" : "bg-warning"
-                        )}
-                        style={{ width: `${Math.min(100, fillPercent)}%` }}
-                      />
+                    {/* Status chips + alerts — single row */}
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {confirmed > 0 && (
+                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-earning/10 text-earning text-[8px] font-bold">
+                          <CheckCircle2 className="h-2.5 w-2.5" /> {confirmed} ok
+                        </span>
+                      )}
+                      {pending > 0 && (
+                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning/10 text-warning text-[8px] font-bold">
+                          <Clock className="h-2.5 w-2.5" /> {pending} pend.
+                        </span>
+                      )}
+                      {rejected > 0 && (
+                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive text-[8px] font-bold">
+                          <XCircle className="h-2.5 w-2.5" /> {rejected}
+                        </span>
+                      )}
+                      {requiresCar && !hasDriver && (
+                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive text-[8px] font-bold ring-1 ring-destructive/20">
+                          <Car className="h-2.5 w-2.5" /> Sin driver
+                        </span>
+                      )}
+                      {noPortalCount > 0 && (
+                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning/10 text-warning text-[8px] font-bold">
+                          {noPortalCount} sin portal
+                        </span>
+                      )}
+                      {/* Quick actions inline */}
+                      {effectiveCanEdit && pending > 0 && (
+                        <button
+                          onClick={handleConfirmAll}
+                          className="ml-auto flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-earning/15 text-earning text-[8px] font-bold hover:bg-earning/25 transition-colors"
+                        >
+                          <CheckCircle2 className="h-2.5 w-2.5" /> Confirmar todos
+                        </button>
+                      )}
                     </div>
-
-                    {/* Alert banners */}
-                    {(missingDriver || overstaffed || invitePending > 0 || missing > 0) && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {missingDriver && (
-                          <span className="flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-full bg-destructive/10 text-destructive ring-1 ring-destructive/20">
-                            <Car className="h-3 w-3" /> Falta conductor
-                          </span>
-                        )}
-                        {overstaffed && (
-                          <span className="flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-full bg-warning/10 text-warning ring-1 ring-warning/20">
-                            <AlertTriangle className="h-3 w-3" /> Sobre-dotado (+{activeAssigned - slotsNum})
-                          </span>
-                        )}
-                        {invitePending > 0 && (
-                          <span className="flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-full bg-warning/10 text-warning ring-1 ring-warning/20">
-                            <Users className="h-3 w-3" /> {invitePending} sin portal
-                          </span>
-                        )}
-                        {missing > 0 && missing <= 3 && (
-                          <span className="flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary ring-1 ring-primary/20">
-                            <UserPlus className="h-3 w-3" /> {missing} por asignar
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })()}
 
-              {/* Quick actions bar */}
-              {effectiveCanEdit && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {shiftAssignments.length > 0 && shiftAssignments.some(a => a.status === "pending" || a.status === "review") && (
-                    <Button
-                      variant="outline" size="sm"
-                      className="h-7 text-[10px] gap-1 rounded-full border-earning/30 text-earning hover:bg-earning/10"
-                      onClick={handleConfirmAll}
-                    >
-                      <CheckCircle2 className="h-3 w-3" /> Confirmar todos
-                    </Button>
-                  )}
-                  {unassigned.length > 0 && shiftAssignments.length < slotsNum && (
-                    <Button
-                      variant="outline" size="sm"
-                      className="h-7 text-[10px] gap-1 rounded-full border-primary/30 text-primary hover:bg-primary/10"
-                      onClick={handleAddAll}
-                    >
-                      <UsersRound className="h-3 w-3" /> Llenar plazas
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {/* ── Role slots section ── */}
+              {/* ── Role slots: Driver + Admin + Lead ── */}
               {(() => {
                 const requiresCar = !!(shift as any).transportation_required;
-                if (!requiresCar) return null;
-                const driverAssignments = shiftAssignments.filter(a => {
+                const driverAssigns = shiftAssignments.filter(a => {
                   const emp = employees.find(e => e.id === a.employee_id);
                   return emp && (emp.has_car === "Yes" || emp.has_car === "true" || emp.has_car === "Sí") && a.status !== "rejected";
                 });
+
                 return (
-                  <div className="rounded-xl border border-border/30 bg-muted/20 p-2.5 space-y-1.5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                      <Car className="h-3 w-3" /> Conductores
-                    </p>
-                    {driverAssignments.length > 0 ? driverAssignments.map(a => {
-                      const emp = employees.find(e => e.id === a.employee_id);
-                      if (!emp) return null;
-                      return (
-                        <div key={a.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-earning/[0.05] border border-earning/20">
-                          <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="xs" />
-                          <span className="text-[11px] font-semibold flex-1 truncate">{emp.first_name} {emp.last_name}</span>
-                          <span className="text-[8px] font-bold text-earning bg-earning/10 px-1.5 rounded">Driver</span>
+                  <div className="rounded-xl border border-border/20 bg-muted/10 p-2 space-y-1">
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider px-1">Roles</p>
+                    {/* Driver slot */}
+                    {requiresCar ? (
+                      driverAssigns.length > 0 ? driverAssigns.map(a => {
+                        const emp = employees.find(e => e.id === a.employee_id)!;
+                        return (
+                          <div key={a.id} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-earning/[0.06] border border-earning/20">
+                            <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="xs" />
+                            <span className="text-[10px] font-semibold flex-1 truncate">{emp.first_name} {emp.last_name}</span>
+                            <span className="text-[7px] font-bold text-earning bg-earning/10 px-1 rounded">DRIVER</span>
+                          </div>
+                        );
+                      }) : (
+                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-destructive/30 bg-destructive/[0.03]">
+                          <Car className="h-3 w-3 text-destructive/50" />
+                          <span className="text-[9px] text-destructive font-medium">Sin conductor — requerido</span>
                         </div>
-                      );
-                    }) : (
-                      <div className="flex items-center gap-2 px-2 py-2 rounded-lg border border-dashed border-destructive/30 bg-destructive/[0.03]">
-                        <Car className="h-3.5 w-3.5 text-destructive/60" />
-                        <span className="text-[10px] text-destructive font-medium">Sin conductor asignado — turno requiere transporte</span>
+                      )
+                    ) : (
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-border/20">
+                        <Car className="h-3 w-3 text-muted-foreground/30" />
+                        <span className="text-[9px] text-muted-foreground/40">Driver — no requerido</span>
                       </div>
                     )}
+                    {/* Admin slot (placeholder) */}
+                    <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-border/20">
+                      <ShieldCheck className="h-3 w-3 text-muted-foreground/30" />
+                      <span className="text-[9px] text-muted-foreground/40">Admin de turno — próximamente</span>
+                    </div>
+                    {/* Lead slot (placeholder) */}
+                    <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-border/20">
+                      <UsersRound className="h-3 w-3 text-muted-foreground/30" />
+                      <span className="text-[9px] text-muted-foreground/40">Líder / Supervisor — próximamente</span>
+                    </div>
                   </div>
                 );
               })()}
 
-              {/* ── Role scaffolding: Shift Admin & Lead (future backend) ── */}
-              <div className="rounded-xl border border-border/20 bg-muted/10 p-2.5 space-y-1.5">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                  <ShieldCheck className="h-3 w-3" /> Roles del turno
-                </p>
-                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-border/30">
-                  <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground/40" />
-                  <span className="text-[10px] text-muted-foreground/60 font-medium">Admin de turno — sin asignar</span>
-                </div>
-                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-border/30">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground/40" />
-                  <span className="text-[10px] text-muted-foreground/60 font-medium">Líder / Supervisor — sin asignar</span>
-                </div>
-              </div>
-
+              {/* ── Assigned roster ── */}
               {shiftAssignments.length > 0 ? (
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {shiftAssignments.map(a => {
                     const emp = employees.find(e => e.id === a.employee_id);
                     if (!emp) return null;
@@ -736,11 +698,11 @@ export function ShiftDetailDialog({
                       <div
                         key={a.id}
                         className={cn(
-                          "flex items-center gap-2.5 rounded-xl border px-3 py-2 transition-all duration-200 group",
-                          a.status === "confirmed" && "border-earning/20 bg-earning/[0.03]",
-                          a.status === "rejected" && "border-destructive/20 bg-destructive/[0.03] opacity-50",
-                          a.status === "review" && "border-primary/20 bg-primary/[0.03]",
-                          a.status === "pending" && "border-warning/20 bg-warning/[0.03]",
+                          "flex items-center gap-2 rounded-lg border px-2 py-1.5 transition-all group",
+                          a.status === "confirmed" && "border-earning/15 bg-earning/[0.02]",
+                          a.status === "rejected" && "border-destructive/15 bg-destructive/[0.02] opacity-40",
+                          a.status === "review" && "border-primary/15 bg-primary/[0.02]",
+                          a.status === "pending" && "border-warning/15 bg-warning/[0.02]",
                         )}
                         draggable={effectiveCanEdit}
                         onDragStart={(e) => {
@@ -750,33 +712,30 @@ export function ShiftDetailDialog({
                           e.dataTransfer.effectAllowed = "move";
                         }}
                       >
-                        <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="sm" />
+                        <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="xs" />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-xs font-semibold truncate">{emp.first_name} {emp.last_name}</p>
+                          <div className="flex items-center gap-1">
+                            <p className="text-[11px] font-semibold truncate">{emp.first_name} {emp.last_name}</p>
                             {empIsDriver && (
-                              <span className="h-4 px-1 rounded bg-earning/15 text-earning text-[8px] font-bold flex items-center gap-0.5 shrink-0 ring-1 ring-earning/20">
-                                <Car className="h-2.5 w-2.5" /> Driver
+                              <span className="h-3.5 px-1 rounded bg-earning/15 text-earning text-[7px] font-bold flex items-center shrink-0 ring-1 ring-earning/20">
+                                <Car className="h-2 w-2" />
                               </span>
                             )}
                             {noPortal && (
-                              <span className="h-4 px-1 rounded bg-warning/10 text-warning text-[8px] font-bold shrink-0">Sin portal</span>
+                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0">NP</span>
                             )}
                           </div>
-                          {emp.phone_number && (
-                            <p className="text-[9px] text-muted-foreground/50 tabular-nums">{emp.phone_number}</p>
-                          )}
                         </div>
-                        {/* Contact icons */}
+                        {/* Contact on hover */}
                         {emp.phone_number && (() => {
-                          const cleanPhone = emp.phone_number!.replace(/[^+\d]/g, "");
+                          const ph = emp.phone_number!.replace(/[^+\d]/g, "");
                           return (
-                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <a href={`tel:${cleanPhone}`} className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary" title="Llamar" onClick={e => e.stopPropagation()}>
-                                <Phone className="h-3 w-3" />
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <a href={`tel:${ph}`} className="h-5 w-5 rounded flex items-center justify-center hover:bg-primary/10 text-primary" onClick={e => e.stopPropagation()}>
+                                <Phone className="h-2.5 w-2.5" />
                               </a>
-                              <a href={`https://wa.me/${cleanPhone.replace("+", "")}`} target="_blank" rel="noopener noreferrer" className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[#25D366]/10 text-[#25D366]" title="WhatsApp" onClick={e => e.stopPropagation()}>
-                                <MessageCircleIcon className="h-3 w-3" />
+                              <a href={`https://wa.me/${ph.replace("+", "")}`} target="_blank" rel="noopener noreferrer" className="h-5 w-5 rounded flex items-center justify-center hover:bg-[#25D366]/10 text-[#25D366]" onClick={e => e.stopPropagation()}>
+                                <MessageCircleIcon className="h-2.5 w-2.5" />
                               </a>
                             </div>
                           );
@@ -784,7 +743,7 @@ export function ShiftDetailDialog({
                         {effectiveCanEdit ? (
                           <Select value={a.status} onValueChange={(v) => handleChangeAssignmentStatus(a.id, v)} disabled={updatingStatus === a.id}>
                             <SelectTrigger className={cn(
-                              "h-6 w-[100px] text-[9px] font-semibold border-0 gap-1 rounded-full",
+                              "h-5 w-[80px] text-[8px] font-semibold border-0 gap-0.5 rounded-full px-1.5",
                               a.status === "confirmed" && "text-earning bg-earning/10",
                               a.status === "rejected" && "text-destructive bg-destructive/10",
                               a.status === "review" && "text-primary bg-primary/10",
@@ -800,7 +759,7 @@ export function ShiftDetailDialog({
                             </SelectContent>
                           </Select>
                         ) : (
-                          <span className={cn("text-[10px] font-semibold flex items-center gap-1", statusColors[a.status])}>
+                          <span className={cn("text-[9px] font-semibold flex items-center gap-1", statusColors[a.status])}>
                             {statusIcons[a.status]}
                             {statusLabels[a.status] || a.status}
                           </span>
@@ -815,9 +774,9 @@ export function ShiftDetailDialog({
                         {effectiveCanEdit && (
                           <button
                             onClick={() => setRemoveConfirm({ assignmentId: a.id, employeeName: `${emp.first_name} ${emp.last_name}` })}
-                            className="text-muted-foreground/30 hover:text-destructive transition-colors p-1 rounded-lg hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
+                            className="text-muted-foreground/20 hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3 w-3" />
                           </button>
                         )}
                       </div>
@@ -825,41 +784,72 @@ export function ShiftDetailDialog({
                   })}
                 </div>
               ) : (
-                <div className="text-center py-6">
-                  <div className="h-10 w-10 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
-                    <Users className="h-4 w-4 text-muted-foreground/40" />
-                  </div>
-                  <p className="text-xs text-muted-foreground font-medium">Sin empleados asignados</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Usa el botón de abajo para agregar</p>
+                <div className="text-center py-4">
+                  <Users className="h-5 w-5 text-muted-foreground/30 mx-auto mb-1" />
+                  <p className="text-[10px] text-muted-foreground">Sin empleados asignados</p>
                 </div>
               )}
 
-              {/* Add button */}
+              {/* ── Staffing picker — always visible when slots remain ── */}
               {effectiveCanEdit && (
-                <Button
-                  variant="outline" size="sm"
-                  onClick={() => setShowAddPanel(!showAddPanel)}
-                  className={cn(
-                    "w-full h-9 text-xs gap-1.5 rounded-xl border-dashed",
-                    showAddPanel
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-primary/30 text-primary hover:bg-primary/5"
+                <>
+                  {!showAddPanel ? (
+                    <Button
+                      variant="outline" size="sm"
+                      onClick={() => setShowAddPanel(true)}
+                      className="w-full h-8 text-xs gap-1.5 rounded-xl border-dashed border-primary/30 text-primary hover:bg-primary/5"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      {shiftAssignments.length < slotsNum
+                        ? `Agregar (${slotsNum - shiftAssignments.length} faltan)`
+                        : "Agregar empleados"}
+                    </Button>
+                  ) : (
+                    <div className="border border-primary/20 rounded-xl p-2 space-y-1.5 bg-primary/[0.02]">
+                      <div className="flex items-center justify-between px-1">
+                        <p className="text-[10px] font-semibold text-primary flex items-center gap-1">
+                          <UserPlus className="h-3 w-3" />
+                          Asignar trabajadores
+                        </p>
+                        <button onClick={() => { setShowAddPanel(false); setSelected([]); }} className="text-muted-foreground/50 hover:text-foreground p-0.5">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <EmployeeCombobox
+                        employees={unassigned}
+                        selected={selected}
+                        onToggle={toggleEmployee}
+                        shifts={allShifts}
+                        assignments={assignments}
+                        shiftDate={shift.date}
+                        shiftStart={shift.start_time.slice(0, 5)}
+                        shiftEnd={shift.end_time.slice(0, 5)}
+                        maxHeight="180px"
+                        showChips={false}
+                        availabilityConfigs={availabilityConfigs}
+                        availabilityOverrides={availabilityOverrides}
+                        availabilityBlockMode="warning"
+                        showBulkActions
+                        remainingSlots={Math.max(0, slotsNum - shiftAssignments.length)}
+                        requiresDriver={!!(shift as any).transportation_required}
+                      />
+                      {selected.length > 0 && (
+                        <Button size="sm" onClick={handleAdd} className="w-full h-7 text-[10px] rounded-lg gap-1">
+                          <UserPlus className="h-3 w-3" />
+                          Asignar {selected.length}
+                        </Button>
+                      )}
+                    </div>
                   )}
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  {showAddPanel ? "Cerrar selector" : "Agregar empleados"}
-                </Button>
+                </>
               )}
 
               {/* Claimable toggle */}
               {effectiveCanEdit && (
-                <div className="flex items-center justify-between rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5">
+                <div className="flex items-center justify-between rounded-lg border border-border/20 bg-muted/10 px-2.5 py-2">
                   <div className="flex items-center gap-2">
-                    <Megaphone className="h-3.5 w-3.5 text-primary" />
-                    <div>
-                      <p className="text-[11px] font-semibold">Permitir reclamo</p>
-                      <p className="text-[9px] text-muted-foreground">Empleados pueden solicitar este turno</p>
-                    </div>
+                    <Megaphone className="h-3 w-3 text-primary" />
+                    <p className="text-[10px] font-medium">Reclamo abierto</p>
                   </div>
                   <Switch
                     checked={shift.claimable}
@@ -867,45 +857,6 @@ export function ShiftDetailDialog({
                       if (onSave) await onSave(shift.id, { claimable: checked }, shift);
                     }}
                   />
-                </div>
-              )}
-
-              {/* Add panel — staffing picker */}
-              {showAddPanel && (
-                <div className="border border-primary/20 rounded-xl p-3 space-y-2 bg-primary/[0.02]">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-semibold text-primary flex items-center gap-1.5">
-                      <Users className="h-3 w-3" />
-                      Seleccionar empleados
-                    </p>
-                    <span className="text-[9px] text-muted-foreground">
-                      {slotsNum - shiftAssignments.length} plaza{slotsNum - shiftAssignments.length !== 1 ? "s" : ""} disponible{slotsNum - shiftAssignments.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <EmployeeCombobox
-                    employees={unassigned}
-                    selected={selected}
-                    onToggle={toggleEmployee}
-                    shifts={allShifts}
-                    assignments={assignments}
-                    shiftDate={shift.date}
-                    shiftStart={shift.start_time.slice(0, 5)}
-                    shiftEnd={shift.end_time.slice(0, 5)}
-                    maxHeight="200px"
-                    showChips={false}
-                    availabilityConfigs={availabilityConfigs}
-                    availabilityOverrides={availabilityOverrides}
-                    availabilityBlockMode="warning"
-                    showBulkActions
-                    remainingSlots={Math.max(0, slotsNum - shiftAssignments.length)}
-                    requiresDriver={!!(shift as any).transportation_required}
-                  />
-                  {selected.length > 0 && (
-                    <Button size="sm" onClick={handleAdd} className="w-full h-8 text-xs rounded-xl gap-1.5">
-                      <UserPlus className="h-3 w-3" />
-                      Asignar {selected.length} empleado{selected.length > 1 ? "s" : ""}
-                    </Button>
-                  )}
                 </div>
               )}
             </div>
