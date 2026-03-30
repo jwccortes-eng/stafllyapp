@@ -419,7 +419,7 @@ export function EmployeeProfileTabs({
       <TabsContent value="advances" className="mt-0"><EmployeeAdvancesTab employeeId={employee.id} companyId={companyId} /></TabsContent>
       <TabsContent value="shifts" className="mt-0"><ShiftsTab employee={employee} companyId={companyId} /></TabsContent>
       <TabsContent value="time" className="mt-0"><TimeTab employee={employee} companyId={companyId} /></TabsContent>
-      <TabsContent value="access" className="mt-0"><EmployeeAccessTab employee={employee} companyId={companyId} companyName={companyName} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} onInvite={onInvite} /></TabsContent>
+      <TabsContent value="access" className="mt-0"><EmployeeAccessTab employee={employee} companyId={companyId} companyName={companyName} isPrivileged={isPrivileged} onEmployeeUpdate={onEmployeeUpdate} onInvite={onInvite} invitation={invitation} /></TabsContent>
       <TabsContent value="docs" className="mt-0"><DocumentsTab employee={employee} companyId={companyId} /></TabsContent>
       <TabsContent value="activity" className="mt-0"><ActivityTab employee={employee} /></TabsContent>
     </Tabs>
