@@ -121,6 +121,7 @@ export default function Employees() {
   const { role } = useAuth();
   const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
   const { canAddEmployees, limits, plan } = useSubscription();
+  const { invitations, logInvitation, refetch: refetchInvitations } = useEmployeeInvitations(selectedCompanyId ?? null);
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
