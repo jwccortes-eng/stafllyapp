@@ -710,7 +710,21 @@ export function ShiftDetailDialog({
                 );
               })()}
 
-              {/* Assigned employees list */}
+              {/* ── Role scaffolding: Shift Admin & Lead (future backend) ── */}
+              <div className="rounded-xl border border-border/20 bg-muted/10 p-2.5 space-y-1.5">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" /> Roles del turno
+                </p>
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-border/30">
+                  <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground/40" />
+                  <span className="text-[10px] text-muted-foreground/60 font-medium">Admin de turno — sin asignar</span>
+                </div>
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-border/30">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground/40" />
+                  <span className="text-[10px] text-muted-foreground/60 font-medium">Líder / Supervisor — sin asignar</span>
+                </div>
+              </div>
+
               {shiftAssignments.length > 0 ? (
                 <div className="space-y-1">
                   {shiftAssignments.map(a => {

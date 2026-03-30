@@ -168,8 +168,17 @@ export function EmployeeCombobox({
     for (const id of [...selected]) onToggle(id);
   };
 
-  // Group headers for visual separation
-  let lastGroup: GroupKey | null = null;
+  // Pre-compute group boundaries for headers
+  const groupBreaks = useMemo(() => {
+    const breaks = new Set<string>();
+    let last: GroupKey | null = null;
+    for (const emp of sorted) {
+      if (selected.includes(emp.id)) continue;
+      const g = getGroup(emp);
+      if (g !== last) { breaks.add(emp.id); last = g; }
+    }
+    return breaks;
+  }, [sorted, selected, unavailableMap, conflictMap]);
 
   return (
     <div className="space-y-2">
@@ -284,10 +293,9 @@ export function EmployeeCombobox({
             const empIsDriver = isDriver(emp);
             const group = getGroup(emp);
 
-            // Show group separator
+            // Show group separator when this employee starts a new group
             let groupHeader: React.ReactNode = null;
-            if (!isSelected && group !== lastGroup) {
-              lastGroup = group;
+            if (!isSelected && groupBreaks.has(emp.id)) {
               const labels: Record<GroupKey, { label: string; color: string; icon: React.ReactNode }> = {
                 ready: { label: "Disponibles", color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
                 warning: { label: "Con advertencia", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
