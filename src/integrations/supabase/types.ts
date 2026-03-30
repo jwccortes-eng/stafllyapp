@@ -2302,6 +2302,70 @@ export type Database = {
           },
         ]
       }
+      employee_invitations: {
+        Row: {
+          activated_at: string | null
+          channel: string
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          sent_at: string
+          sent_by: string
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          channel?: string
+          company_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          sent_at?: string
+          sent_by: string
+          status?: string
+        }
+        Update: {
+          activated_at?: string | null
+          channel?: string
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          sent_at?: string
+          sent_by?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invitations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invitations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_location_history: {
         Row: {
           accuracy: number | null
