@@ -500,7 +500,7 @@ export default function Employees() {
   const clearFilters = () => { setFilterRole("all"); setFilterGroup("all"); };
 
   const statusCounts = {
-    active: employees.filter(e => e.is_active !== false).length,
+    active: employees.filter(e => e.is_active !== false && !!e.user_id).length,
     inactive: employees.filter(e => e.is_active === false).length,
     pending: employees.filter(e => e.is_active !== false && !e.user_id).length,
     all: employees.length,
