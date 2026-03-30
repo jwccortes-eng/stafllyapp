@@ -209,7 +209,7 @@ function PayTab({ employee, companyId }: { employee: EmployeeRecord; companyId: 
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                <div><p className="text-xs font-semibold">{(r.concepts as any)?.name ?? "Concepto"}</p><p className="text-[9px] text-muted-foreground">{r.effective_from ? format(parseISO(r.effective_from), "dd MMM yyyy", { locale: es }) : "Sin inicio"} → {r.effective_to ? format(parseISO(r.effective_to), "dd MMM yyyy", { locale: es }) : "Vigente"}</p></div>
+                <div><p className="text-xs font-semibold">{(r.concepts as any)?.name ?? "Concepto"}</p><p className="text-[9px] text-muted-foreground">{safeFormat(r.effective_from, "dd MMM yyyy", "Sin inicio")} → {safeFormat(r.effective_to, "dd MMM yyyy", "Vigente")}</p></div>
                 <div className="flex items-center gap-2">
                   <div className="text-right"><p className="text-sm font-bold text-primary tabular-nums">${r.rate.toFixed(2)}</p><p className="text-[9px] text-muted-foreground">{(r.concepts as any)?.unit_label ?? "por hora"}</p></div>
                   <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-6 w-6"><MoreHorizontal className="h-3.5 w-3.5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => startEdit(r)}><Pencil className="h-3 w-3 mr-2" />Editar</DropdownMenuItem><DropdownMenuItem className="text-destructive" onClick={() => handleDelete(r.id)}><Trash2 className="h-3 w-3 mr-2" />Eliminar</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
