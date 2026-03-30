@@ -87,6 +87,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setEmailSent(true);
+      onInviteSent?.("email");
       toast({ title: "Email enviado ✅", description: `Invitación enviada a ${employee.email}` });
     } catch (err: any) {
       toast({ title: "Error al enviar", description: err.message ?? "Intenta de nuevo", variant: "destructive" });
