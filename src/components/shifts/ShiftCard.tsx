@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { EmployeeAvatarGroup, type AvatarGroupItem } from "@/components/ui/employee-avatar-group";
 import type { Shift } from "./types";
 import { getClientColor, formatShiftCode } from "./types";
 import type { ShiftCoverageItem } from "@/hooks/useShiftCoverage";
