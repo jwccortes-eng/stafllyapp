@@ -1,10 +1,12 @@
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Send, CheckCircle2, AlertTriangle, Clock, Wifi, WifiOff } from "lucide-react";
+import { Send, CheckCircle2, AlertTriangle, Clock, WifiOff, MailCheck } from "lucide-react";
+import type { EmployeeInvitation } from "@/hooks/useEmployeeInvitations";
 
 export type PortalAccessState =
   | "active"       // has user_id
-  | "ready"        // has phone + PIN, no user_id — ready to invite
+  | "invited"      // has invitation record, no user_id
+  | "ready"        // has phone + PIN, no user_id, no invitation
   | "incomplete"   // missing phone or PIN
   | "inactive";    // is_active = false
 
@@ -15,11 +17,12 @@ interface EmployeeLike {
   phone_number?: string | null;
 }
 
-export function getPortalAccessState(emp: EmployeeLike): PortalAccessState {
+export function getPortalAccessState(emp: EmployeeLike, invitation?: EmployeeInvitation | null): PortalAccessState {
   if (emp.is_active === false) return "inactive";
   if (emp.user_id) return "active";
   const hasPhone = !!(emp.phone_number ?? "").replace(/\D/g, "");
   const hasPin = !!(emp.access_pin ?? "").toString().trim();
+  if (invitation) return "invited";
   return hasPhone && hasPin ? "ready" : "incomplete";
 }
 
@@ -44,18 +47,25 @@ const STATE_CONFIG: Record<PortalAccessState, {
     badgeClass: "bg-[hsl(var(--earning)/0.1)] text-[hsl(var(--earning))]",
     Icon: CheckCircle2,
   },
+  invited: {
+    label: "Invitado",
+    tooltip: "Invitación enviada — pendiente de activación",
+    dotClass: "bg-primary animate-pulse",
+    badgeClass: "bg-primary/10 text-primary",
+    Icon: MailCheck,
+  },
   ready: {
     label: "Sin portal",
     tooltip: "Tiene teléfono y PIN — listo para invitar",
-    dotClass: "bg-primary animate-pulse",
-    badgeClass: "bg-primary/10 text-primary",
+    dotClass: "bg-warning",
+    badgeClass: "bg-warning/10 text-warning",
     Icon: Send,
   },
   incomplete: {
     label: "Incompleto",
     tooltip: "",
-    dotClass: "bg-warning animate-pulse",
-    badgeClass: "bg-warning/10 text-warning",
+    dotClass: "bg-destructive/60",
+    badgeClass: "bg-destructive/10 text-destructive",
     Icon: AlertTriangle,
   },
   inactive: {
@@ -69,25 +79,29 @@ const STATE_CONFIG: Record<PortalAccessState, {
 
 interface PortalAccessBadgeProps {
   employee: EmployeeLike;
-  /** Show inline "Invitar" action button for ready state */
+  invitation?: EmployeeInvitation | null;
   showInviteAction?: boolean;
   onInvite?: () => void;
-  /** Compact mode — smaller badge */
   compact?: boolean;
   className?: string;
 }
 
 export function PortalAccessBadge({
   employee,
+  invitation,
   showInviteAction,
   onInvite,
   compact,
   className,
 }: PortalAccessBadgeProps) {
-  const state = getPortalAccessState(employee);
+  const state = getPortalAccessState(employee, invitation);
   const config = STATE_CONFIG[state];
   const missing = state === "incomplete" ? getMissingItems(employee) : [];
-  const tooltipText = state === "incomplete" ? `Falta: ${missing.join(", ")}` : config.tooltip;
+  const tooltipText = state === "incomplete"
+    ? `Falta: ${missing.join(", ")}`
+    : state === "invited" && invitation
+      ? `Enviado por ${invitation.channel} el ${new Date(invitation.sent_at).toLocaleDateString("es")}`
+      : config.tooltip;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -108,12 +122,12 @@ export function PortalAccessBadge({
           </TooltipContent>
         </Tooltip>
 
-        {showInviteAction && state === "ready" && onInvite && (
+        {showInviteAction && (state === "ready" || state === "invited") && onInvite && (
           <button
             onClick={(e) => { e.stopPropagation(); onInvite(); }}
             className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
           >
-            <Send className="h-2.5 w-2.5" /> Invitar
+            <Send className="h-2.5 w-2.5" /> {state === "invited" ? "Reenviar" : "Invitar"}
           </button>
         )}
       </div>

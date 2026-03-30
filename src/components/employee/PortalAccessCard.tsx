@@ -1,22 +1,19 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PortalAccessBadge, getPortalAccessState, type PortalAccessState } from "./PortalAccessBadge";
-import { Send, MessageCircle, Copy, CheckCircle2, Smartphone, Clock } from "lucide-react";
+import { Send, CheckCircle2, Smartphone, Clock, MailCheck, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import type { EmployeeInvitation } from "@/hooks/useEmployeeInvitations";
 
 interface PortalAccessCardProps {
   employee: Record<string, any>;
   companyName: string;
+  invitation?: EmployeeInvitation | null;
   onInvite?: () => void;
 }
 
-/**
- * Portal access status card shown in the employee profile drawer.
- * Shows current state + contextual actions.
- */
-export function PortalAccessCard({ employee, companyName, onInvite }: PortalAccessCardProps) {
-  const state = getPortalAccessState(employee);
+export function PortalAccessCard({ employee, companyName, invitation, onInvite }: PortalAccessCardProps) {
+  const state = getPortalAccessState(employee, invitation);
 
   return (
     <Card className="rounded-xl border-border/40">
@@ -28,13 +25,14 @@ export function PortalAccessCard({ employee, companyName, onInvite }: PortalAcce
               <p className="text-sm font-semibold">Acceso al portal</p>
               <p className="text-[10px] text-muted-foreground">
                 {state === "active" && "El empleado tiene acceso activo al portal"}
+                {state === "invited" && "Invitación enviada — pendiente de activación"}
                 {state === "ready" && "Listo para recibir invitación"}
                 {state === "incomplete" && "Faltan datos para poder invitar"}
                 {state === "inactive" && "Cuenta desactivada"}
               </p>
             </div>
           </div>
-          <PortalAccessBadge employee={employee} />
+          <PortalAccessBadge employee={employee} invitation={invitation} />
         </div>
 
         {/* Details row */}
@@ -53,11 +51,36 @@ export function PortalAccessCard({ employee, companyName, onInvite }: PortalAcce
           </div>
         </div>
 
+        {/* Invitation history */}
+        {invitation && (
+          <div className="bg-primary/[0.03] rounded-lg px-2.5 py-2 space-y-1 border border-primary/10">
+            <p className="text-[10px] font-semibold text-primary flex items-center gap-1">
+              <MailCheck className="h-3 w-3" /> Última invitación
+            </p>
+            <div className="grid grid-cols-2 gap-x-4 text-[10px]">
+              <div>
+                <span className="text-muted-foreground">Canal:</span>
+                <span className="ml-1 font-medium capitalize">{invitation.channel}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Estado:</span>
+                <span className="ml-1 font-medium capitalize">{invitation.status}</span>
+              </div>
+              <div className="col-span-2 mt-0.5">
+                <span className="text-muted-foreground">Enviada:</span>
+                <span className="ml-1 font-medium">
+                  {new Date(invitation.sent_at).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
-        {state === "ready" && onInvite && (
+        {(state === "ready" || state === "invited") && onInvite && (
           <Button size="sm" className="w-full h-8 text-xs gap-1.5" onClick={onInvite}>
-            <Send className="h-3.5 w-3.5" />
-            Enviar invitación
+            {state === "invited" ? <RefreshCw className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
+            {state === "invited" ? "Reenviar invitación" : "Enviar invitación"}
           </Button>
         )}
 
@@ -82,8 +105,9 @@ export function PortalAccessCard({ employee, companyName, onInvite }: PortalAcce
 function StatusIcon({ state }: { state: PortalAccessState }) {
   const config: Record<PortalAccessState, { bg: string; icon: typeof CheckCircle2; iconClass: string }> = {
     active: { bg: "bg-[hsl(var(--earning)/0.1)]", icon: CheckCircle2, iconClass: "text-[hsl(var(--earning))]" },
-    ready: { bg: "bg-primary/10", icon: Send, iconClass: "text-primary" },
-    incomplete: { bg: "bg-warning/10", icon: Clock, iconClass: "text-warning" },
+    invited: { bg: "bg-primary/10", icon: MailCheck, iconClass: "text-primary" },
+    ready: { bg: "bg-warning/10", icon: Send, iconClass: "text-warning" },
+    incomplete: { bg: "bg-destructive/10", icon: Clock, iconClass: "text-destructive" },
     inactive: { bg: "bg-muted", icon: Smartphone, iconClass: "text-muted-foreground" },
   };
   const c = config[state];

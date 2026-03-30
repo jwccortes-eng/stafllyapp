@@ -48,6 +48,7 @@ import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
+import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
@@ -108,9 +109,10 @@ interface UpdateDiff {
 
 /* ── Status badge — delegates to reusable component ── */
 import { PortalAccessBadge } from "@/components/employee/PortalAccessBadge";
+import type { InvitationMap } from "@/hooks/useEmployeeInvitations";
 
-function EmpStatusBadge({ employee, showInvite, onInvite }: { employee: EmployeeRecord; showInvite?: boolean; onInvite?: () => void }) {
-  return <PortalAccessBadge employee={employee} showInviteAction={showInvite} onInvite={onInvite} />;
+function EmpStatusBadge({ employee, showInvite, onInvite, invitation }: { employee: EmployeeRecord; showInvite?: boolean; onInvite?: () => void; invitation?: InvitationMap[string] | null }) {
+  return <PortalAccessBadge employee={employee} invitation={invitation} showInviteAction={showInvite} onInvite={onInvite} />;
 }
 
 export default function Employees() {
@@ -119,11 +121,12 @@ export default function Employees() {
   const { role } = useAuth();
   const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
   const { canAddEmployees, limits, plan } = useSubscription();
+  const { invitations, logInvitation, refetch: refetchInvitations } = useEmployeeInvitations(selectedCompanyId ?? null);
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusTab, setStatusTab] = useState<"active" | "inactive" | "pending" | "all">("active");
+  const [statusTab, setStatusTab] = useState<"active" | "invited" | "inactive" | "pending" | "all">("active");
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterGroup, setFilterGroup] = useState<string>("all");
   const [open, setOpen] = useState(false);
@@ -441,14 +444,19 @@ export default function Employees() {
 
   const statusCounts = {
     active: employees.filter(e => e.is_active !== false && !!e.user_id).length,
+    invited: employees.filter(e => e.is_active !== false && !e.user_id && !!invitations[e.id]).length,
+    pending: employees.filter(e => e.is_active !== false && !e.user_id && !invitations[e.id]).length,
     inactive: employees.filter(e => e.is_active === false).length,
-    pending: employees.filter(e => e.is_active !== false && !e.user_id).length,
     all: employees.length,
   };
 
   const filtered = employees.filter((e) => {
     const matchesSearch = `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusTab === "all" ? true : statusTab === "active" ? (e.is_active !== false && !!e.user_id) : statusTab === "inactive" ? e.is_active === false : e.is_active !== false && !e.user_id;
+    const matchesStatus = statusTab === "all" ? true
+      : statusTab === "active" ? (e.is_active !== false && !!e.user_id)
+      : statusTab === "invited" ? (e.is_active !== false && !e.user_id && !!invitations[e.id])
+      : statusTab === "inactive" ? e.is_active === false
+      : (e.is_active !== false && !e.user_id && !invitations[e.id]);
     const matchesRole = filterRole === "all" || e.employee_role === filterRole;
     const matchesGroup = filterGroup === "all" || e.groups === filterGroup;
     return matchesSearch && matchesStatus && matchesRole && matchesGroup;
@@ -510,7 +518,7 @@ export default function Employees() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold font-heading tracking-tight">Empleados</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{employees.length} registrados · {statusCounts.active} activos · {statusCounts.pending > 0 ? <span className="text-primary font-medium">{statusCounts.pending} sin portal</span> : "0 pendientes"}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{employees.length} registrados · {statusCounts.active} activos · {statusCounts.invited > 0 ? <span className="text-primary font-medium">{statusCounts.invited} invitados</span> : null}{statusCounts.invited > 0 && statusCounts.pending > 0 ? " · " : ""}{statusCounts.pending > 0 ? <span className="text-warning font-medium">{statusCounts.pending} sin portal</span> : null}</p>
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {isPrivileged && (
@@ -620,6 +628,7 @@ export default function Employees() {
       <div className="flex items-center gap-0.5 border-b border-border/40">
         {([
           { key: "active" as const, label: "Portal activo", count: statusCounts.active },
+          { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
           { key: "pending" as const, label: "Sin portal", count: statusCounts.pending },
           { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
           { key: "all" as const, label: "Todos", count: statusCounts.all },
@@ -705,7 +714,7 @@ export default function Employees() {
                   </div>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <EmpStatusBadge employee={e} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
+                  <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
                   {e.access_pin && <span className="text-[9px] text-muted-foreground/50 font-mono">PIN: {e.access_pin}</span>}
                 </div>
               </div>
@@ -767,7 +776,7 @@ export default function Employees() {
                     {e.groups ? <span className="text-[10px] text-muted-foreground truncate max-w-[100px] block">{e.groups.split(",")[0].trim()}</span> : <span className="text-[10px] text-muted-foreground/25">—</span>}
                   </TableCell>
                   <TableCell className="py-1">
-                    <EmpStatusBadge employee={e} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
+                    <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
                   </TableCell>
                   <TableCell className="hidden lg:table-cell py-1">
                     {(() => {
@@ -814,7 +823,7 @@ export default function Employees() {
                 <SheetTitle className="text-base font-bold leading-tight">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[10px] py-0">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
-                  {viewEmployee && <EmpStatusBadge employee={viewEmployee} />}
+                  {viewEmployee && <EmpStatusBadge employee={viewEmployee} invitation={invitations[viewEmployee.id]} />}
                 </div>
                 <SheetDescription className="mt-1 text-[11px] text-muted-foreground/70 flex items-center gap-3 flex-wrap">
                   {viewEmployee?.phone_number && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{viewEmployee.phone_number}</span>}
@@ -841,14 +850,14 @@ export default function Employees() {
           </div>
           <ScrollArea className="flex-1">
             <div className="p-4">
-              <EmployeeProfileTabs employee={viewEmployee!} companyId={selectedCompanyId!} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)} companyName={selectedCompany?.name} onInvite={() => setInviteOpen(true)} />
+              <EmployeeProfileTabs employee={viewEmployee!} companyId={selectedCompanyId!} isEditing={isEditing} form={form} setForm={setForm} isPrivileged={isPrivileged} onEmployeeUpdate={(updates) => setViewEmployee(prev => prev ? { ...prev, ...updates } : prev)} companyName={selectedCompany?.name} onInvite={() => setInviteOpen(true)} invitation={viewEmployee ? invitations[viewEmployee.id] ?? null : null} />
             </div>
           </ScrollArea>
         </SheetContent>
       </Sheet>
 
       {/* Invite Dialog */}
-      {viewEmployee && <EmployeeInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} employee={viewEmployee} />}
+      {viewEmployee && <EmployeeInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} employee={viewEmployee} onInviteSent={(channel) => { logInvitation(viewEmployee.id, channel); refetchInvitations(); }} />}
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>

@@ -16,11 +16,12 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee: Record<string, any>;
+  onInviteSent?: (channel: "whatsapp" | "sms" | "email" | "copy" | "other") => void;
 }
 
 const PRODUCTION_URL = "https://staflyapps.com";
 
-export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
+export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent }: Props) {
   const { toast } = useToast();
   const { companies, selectedCompanyId } = useCompany();
   const [sending, setSending] = useState(false);
@@ -48,6 +49,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
   const copyLink = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
+    onInviteSent?.("copy");
     toast({ title: "Copiado al portapapeles" });
     setTimeout(() => setCopied(false), 2000);
   };
@@ -85,6 +87,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setEmailSent(true);
+      onInviteSent?.("email");
       toast({ title: "Email enviado ✅", description: `Invitación enviada a ${employee.email}` });
     } catch (err: any) {
       toast({ title: "Error al enviar", description: err.message ?? "Intenta de nuevo", variant: "destructive" });
@@ -166,10 +169,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee }: Props) {
                 <p className="text-[10px] text-muted-foreground whitespace-pre-line leading-relaxed">{message}</p>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
-                <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-[#25D366]/30 hover:bg-[#25D366]/10 hover:border-[#25D366]/50 text-[9px]" asChild disabled={!hasPhone}>
+                <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-[#25D366]/30 hover:bg-[#25D366]/10 hover:border-[#25D366]/50 text-[9px]" asChild disabled={!hasPhone} onClick={() => onInviteSent?.("whatsapp")}>
                   <a href={waLink} target="_blank" rel="noopener"><MessageCircle className="h-4 w-4 text-[#25D366]" />WhatsApp</a>
                 </Button>
-                <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-primary/30 hover:bg-primary/10 text-[9px]" asChild disabled={!hasPhone}>
+                <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-primary/30 hover:bg-primary/10 text-[9px]" asChild disabled={!hasPhone} onClick={() => onInviteSent?.("sms")}>
                   <a href={smsLink}><Smartphone className="h-4 w-4 text-primary" />SMS</a>
                 </Button>
                 <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyLink}>
