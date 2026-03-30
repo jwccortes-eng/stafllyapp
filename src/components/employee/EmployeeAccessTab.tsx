@@ -12,6 +12,7 @@ import {
   FileText, User, BookOpen, KeyRound, Eye, EyeOff, Loader2, Shield, RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PortalAccessCard } from "./PortalAccessCard";
 
 type EmployeeRecord = Record<string, any>;
 
@@ -29,11 +30,13 @@ const PORTAL_MODULES = [
 interface Props {
   employee: EmployeeRecord;
   companyId: string;
+  companyName?: string;
   isPrivileged: boolean;
   onEmployeeUpdate?: (updates: Partial<EmployeeRecord>) => void;
+  onInvite?: () => void;
 }
 
-export function EmployeeAccessTab({ employee, companyId, isPrivileged, onEmployeeUpdate }: Props) {
+export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileged, onEmployeeUpdate, onInvite }: Props) {
   const [modules, setModules] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -146,6 +149,9 @@ export function EmployeeAccessTab({ employee, companyId, isPrivileged, onEmploye
 
   return (
     <div className="space-y-5">
+      {/* Portal Access Status Card */}
+      <PortalAccessCard employee={employee} companyName={companyName ?? "StaflyApps"} onInvite={onInvite} />
+
       {/* PIN Management */}
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2 flex items-center gap-1.5">
