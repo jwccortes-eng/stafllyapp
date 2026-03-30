@@ -35,6 +35,7 @@ interface Props {
   isPrivileged: boolean;
   onEmployeeUpdate?: (updates: Partial<EmployeeRecord>) => void;
   onInvite?: () => void;
+  invitation?: EmployeeInvitation | null;
 }
 
 export function EmployeeAccessTab({ employee, companyId, companyName, isPrivileged, onEmployeeUpdate, onInvite }: Props) {
