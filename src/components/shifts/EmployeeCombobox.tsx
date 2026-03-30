@@ -168,8 +168,17 @@ export function EmployeeCombobox({
     for (const id of [...selected]) onToggle(id);
   };
 
-  // Group headers for visual separation
-  let lastGroup: GroupKey | null = null;
+  // Pre-compute group boundaries for headers
+  const groupBreaks = useMemo(() => {
+    const breaks = new Set<string>();
+    let last: GroupKey | null = null;
+    for (const emp of sorted) {
+      if (selected.includes(emp.id)) continue;
+      const g = getGroup(emp);
+      if (g !== last) { breaks.add(emp.id); last = g; }
+    }
+    return breaks;
+  }, [sorted, selected, unavailableMap, conflictMap]);
 
   return (
     <div className="space-y-2">
