@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { EmployeeIdentityRow } from "@/components/ui/employee-identity-row";
 import { CheckCircle2, XCircle, Users, Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -161,16 +161,19 @@ export function ShiftAttendancePanel({
               !conf && "border-border",
             )}>
               <div className="flex items-center gap-2 min-w-0">
-                <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="sm" />
-                <div className="min-w-0">
-                  <p className="text-xs font-medium truncate">{emp.first_name} {emp.last_name}</p>
-                  {conf && (
-                    <p className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                <EmployeeIdentityRow
+                  firstName={emp.first_name}
+                  lastName={emp.last_name}
+                  avatarUrl={emp.avatar_url}
+                  gender={emp.gender}
+                  size="sm"
+                  secondary={conf ? (
+                    <span className="flex items-center gap-0.5">
                       <Clock className="h-2 w-2" />
                       {format(new Date(conf.confirmed_at), "HH:mm")}
-                    </p>
-                  )}
-                </div>
+                    </span>
+                  ) : undefined}
+                />
               </div>
               <div className="flex items-center gap-1">
                 {conf ? (
