@@ -33,6 +33,11 @@ export interface Employee {
   avatar_url?: string | null;
   gender?: string | null;
   phone_number?: string | null;
+  employee_role?: string | null;
+  groups?: string | null;
+  user_id?: string | null;
+  has_car?: string | null;
+  is_active?: boolean;
 }
 
 export type ViewMode = "day" | "week" | "month" | "employee" | "client";

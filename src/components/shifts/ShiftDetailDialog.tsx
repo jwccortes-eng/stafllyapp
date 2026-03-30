@@ -548,17 +548,78 @@ export function ShiftDetailDialog({
           /* ─── TEAM TAB ─── */
           ) : tab === "team" ? (
             <div className="space-y-3">
+              {/* ── Staffing status header ── */}
+              <div className="rounded-xl border border-border/30 bg-gradient-to-br from-muted/30 to-transparent p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold",
+                      fillPercent >= 100 ? "bg-earning/10 text-earning" :
+                      shiftAssignments.length === 0 ? "bg-destructive/10 text-destructive" :
+                      "bg-warning/10 text-warning"
+                    )}>
+                      {shiftAssignments.length}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold">
+                        {fillPercent >= 100 ? "Completo" :
+                         shiftAssignments.length === 0 ? "Sin asignar" :
+                         `Faltan ${slotsNum - shiftAssignments.length}`}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {shiftAssignments.length} / {slotsNum} plazas
+                        {shiftAssignments.length > slotsNum && (
+                          <span className="text-warning ml-1 font-semibold">· Sobre-dotado</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[9px]">
+                    {(() => {
+                      const confirmed = shiftAssignments.filter(a => a.status === "confirmed").length;
+                      const pending = shiftAssignments.filter(a => a.status === "pending" || a.status === "review").length;
+                      return (
+                        <>
+                          {confirmed > 0 && (
+                            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-earning/10 text-earning font-semibold">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> {confirmed}
+                            </span>
+                          )}
+                          {pending > 0 && (
+                            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning/10 text-warning font-semibold">
+                              <Clock className="h-2.5 w-2.5" /> {pending}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+                {/* Fill bar */}
+                <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      fillPercent >= 100 ? "bg-earning" : fillPercent > 50 ? "bg-primary" : "bg-warning"
+                    )}
+                    style={{ width: `${Math.min(100, fillPercent)}%` }}
+                  />
+                </div>
+              </div>
+
               {/* Quick actions bar */}
-              {effectiveCanEdit && shiftAssignments.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-[10px] gap-1 rounded-full border-earning/30 text-earning hover:bg-earning/10"
-                    onClick={handleConfirmAll}
-                  >
-                    <CheckCircle2 className="h-3 w-3" /> Confirmar todos
-                  </Button>
+              {effectiveCanEdit && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {shiftAssignments.length > 0 && shiftAssignments.some(a => a.status === "pending" || a.status === "review") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-[10px] gap-1 rounded-full border-earning/30 text-earning hover:bg-earning/10"
+                      onClick={handleConfirmAll}
+                    >
+                      <CheckCircle2 className="h-3 w-3" /> Confirmar todos
+                    </Button>
+                  )}
                   {unassigned.length > 0 && shiftAssignments.length < slotsNum && (
                     <Button
                       variant="outline"
@@ -566,27 +627,28 @@ export function ShiftDetailDialog({
                       className="h-7 text-[10px] gap-1 rounded-full border-primary/30 text-primary hover:bg-primary/10"
                       onClick={handleAddAll}
                     >
-                      <UsersRound className="h-3 w-3" /> Contratar todo
+                      <UsersRound className="h-3 w-3" /> Llenar plazas
                     </Button>
                   )}
                 </div>
               )}
 
-              {/* Employee list */}
+              {/* Assigned employees list */}
               {shiftAssignments.length > 0 ? (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   {shiftAssignments.map(a => {
                     const emp = employees.find(e => e.id === a.employee_id);
                     if (!emp) return null;
+                    const empIsDriver = (emp as any).has_car === "Yes" || (emp as any).has_car === "true" || (emp as any).has_car === "Sí";
                     return (
                       <div
                         key={a.id}
                         className={cn(
                           "flex items-center gap-2.5 rounded-xl border px-3 py-2 transition-all duration-200 group",
-                          a.status === "confirmed" && "border-earning/20 bg-earning/5",
-                          a.status === "rejected" && "border-destructive/20 bg-destructive/5",
-                          a.status === "review" && "border-primary/20 bg-primary/5",
-                          a.status === "pending" && "border-warning/20 bg-warning/5",
+                          a.status === "confirmed" && "border-earning/20 bg-earning/[0.03]",
+                          a.status === "rejected" && "border-destructive/20 bg-destructive/[0.03]",
+                          a.status === "review" && "border-primary/20 bg-primary/[0.03]",
+                          a.status === "pending" && "border-warning/20 bg-warning/[0.03]",
                         )}
                         draggable={effectiveCanEdit}
                         onDragStart={(e) => {
@@ -598,17 +660,27 @@ export function ShiftDetailDialog({
                       >
                         <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} gender={emp.gender} size="sm" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold truncate">{emp.first_name} {emp.last_name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-semibold truncate">{emp.first_name} {emp.last_name}</p>
+                            {empIsDriver && (
+                              <span className="h-4 px-1 rounded bg-primary/10 text-primary text-[8px] font-bold flex items-center gap-0.5 shrink-0">
+                                <Car className="h-2.5 w-2.5" /> Driver
+                              </span>
+                            )}
+                          </div>
+                          {(emp as any).phone_number && (
+                            <p className="text-[9px] text-muted-foreground/50 tabular-nums">{(emp as any).phone_number}</p>
+                          )}
                         </div>
                         {/* Contact icons */}
                         {(emp as any).phone_number && (() => {
                           const cleanPhone = (emp as any).phone_number.replace(/[^+\d]/g, "");
                           return (
-                            <div className="flex items-center gap-0.5 opacity-50 group-hover:opacity-100 transition-opacity">
-                              <a href={`tel:${cleanPhone}`} className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-primary/10 text-primary" title="Llamar" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <a href={`tel:${cleanPhone}`} className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-primary/10 text-primary" title="Llamar" onClick={e => e.stopPropagation()}>
                                 <Phone className="h-3 w-3" />
                               </a>
-                              <a href={`https://wa.me/${cleanPhone.replace("+", "")}`} target="_blank" rel="noopener noreferrer" className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-[#25D366]/10 text-[#25D366]" title="WhatsApp" onClick={e => e.stopPropagation()}>
+                              <a href={`https://wa.me/${cleanPhone.replace("+", "")}`} target="_blank" rel="noopener noreferrer" className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[#25D366]/10 text-[#25D366]" title="WhatsApp" onClick={e => e.stopPropagation()}>
                                 <MessageCircleIcon className="h-3 w-3" />
                               </a>
                             </div>
@@ -617,7 +689,7 @@ export function ShiftDetailDialog({
                         {effectiveCanEdit ? (
                           <Select value={a.status} onValueChange={(v) => handleChangeAssignmentStatus(a.id, v)} disabled={updatingStatus === a.id}>
                             <SelectTrigger className={cn(
-                              "h-7 w-[110px] text-[10px] font-semibold border-0 gap-1 rounded-full",
+                              "h-6 w-[100px] text-[9px] font-semibold border-0 gap-1 rounded-full",
                               a.status === "confirmed" && "text-earning bg-earning/10",
                               a.status === "rejected" && "text-destructive bg-destructive/10",
                               a.status === "review" && "text-primary bg-primary/10",
@@ -626,10 +698,10 @@ export function ShiftDetailDialog({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="confirmed"><span className="flex items-center gap-1.5 text-earning font-semibold"><ShieldCheck className="h-3 w-3" /> Aceptado</span></SelectItem>
-                              <SelectItem value="rejected"><span className="flex items-center gap-1.5 text-destructive font-semibold"><ShieldX className="h-3 w-3" /> Rechazado</span></SelectItem>
-                              <SelectItem value="review"><span className="flex items-center gap-1.5 text-primary font-semibold"><ShieldQuestion className="h-3 w-3" /> En revisión</span></SelectItem>
-                              <SelectItem value="pending"><span className="flex items-center gap-1.5 text-warning font-semibold"><ShieldQuestion className="h-3 w-3" /> Pendiente</span></SelectItem>
+                              <SelectItem value="confirmed"><span className="flex items-center gap-1 text-earning font-semibold text-[10px]"><ShieldCheck className="h-3 w-3" /> Aceptado</span></SelectItem>
+                              <SelectItem value="rejected"><span className="flex items-center gap-1 text-destructive font-semibold text-[10px]"><ShieldX className="h-3 w-3" /> Rechazado</span></SelectItem>
+                              <SelectItem value="review"><span className="flex items-center gap-1 text-primary font-semibold text-[10px]"><ShieldQuestion className="h-3 w-3" /> En revisión</span></SelectItem>
+                              <SelectItem value="pending"><span className="flex items-center gap-1 text-warning font-semibold text-[10px]"><ShieldQuestion className="h-3 w-3" /> Pendiente</span></SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
@@ -661,12 +733,12 @@ export function ShiftDetailDialog({
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <div className="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                    <Users className="h-5 w-5 text-muted-foreground/40" />
+                <div className="text-center py-6">
+                  <div className="h-10 w-10 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
+                    <Users className="h-4 w-4 text-muted-foreground/40" />
                   </div>
                   <p className="text-xs text-muted-foreground font-medium">Sin empleados asignados</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Agrega empleados desde el botón de abajo</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Usa el botón de abajo para agregar</p>
                 </div>
               )}
 
@@ -676,10 +748,15 @@ export function ShiftDetailDialog({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowAddPanel(!showAddPanel)}
-                  className="w-full h-9 text-xs gap-1.5 rounded-xl border-dashed border-primary/30 text-primary hover:bg-primary/5"
+                  className={cn(
+                    "w-full h-9 text-xs gap-1.5 rounded-xl border-dashed",
+                    showAddPanel
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-primary/30 text-primary hover:bg-primary/5"
+                  )}
                 >
                   <UserPlus className="h-3.5 w-3.5" />
-                  Agregar empleados
+                  {showAddPanel ? "Cerrar selector" : "Agregar empleados"}
                 </Button>
               )}
 
@@ -702,10 +779,18 @@ export function ShiftDetailDialog({
                 </div>
               )}
 
-              {/* Add panel */}
+              {/* Add panel — staffing picker */}
               {showAddPanel && (
                 <div className="border border-primary/20 rounded-xl p-3 space-y-2 bg-primary/[0.02]">
-                  <p className="text-[11px] font-semibold text-primary">Seleccionar empleados</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-semibold text-primary flex items-center gap-1.5">
+                      <Users className="h-3 w-3" />
+                      Seleccionar empleados
+                    </p>
+                    <span className="text-[9px] text-muted-foreground">
+                      {slotsNum - shiftAssignments.length} plaza{slotsNum - shiftAssignments.length !== 1 ? "s" : ""} disponible{slotsNum - shiftAssignments.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
                   <EmployeeCombobox
                     employees={unassigned}
                     selected={selected}
@@ -715,15 +800,15 @@ export function ShiftDetailDialog({
                     shiftDate={shift.date}
                     shiftStart={shift.start_time.slice(0, 5)}
                     shiftEnd={shift.end_time.slice(0, 5)}
-                    maxHeight="160px"
+                    maxHeight="200px"
                     showChips={false}
                     availabilityConfigs={availabilityConfigs}
                     availabilityOverrides={availabilityOverrides}
                     availabilityBlockMode="warning"
                   />
                   {selected.length > 0 && (
-                    <Button size="sm" onClick={handleAdd} className="w-full h-8 text-xs rounded-xl">
-                      <UserPlus className="h-3 w-3 mr-1.5" />
+                    <Button size="sm" onClick={handleAdd} className="w-full h-8 text-xs rounded-xl gap-1.5">
+                      <UserPlus className="h-3 w-3" />
                       Asignar {selected.length} empleado{selected.length > 1 ? "s" : ""}
                     </Button>
                   )}
