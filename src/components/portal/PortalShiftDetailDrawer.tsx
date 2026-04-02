@@ -3,12 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Clock, MapPin, Users, CalendarDays, FileText, Navigation,
-  AlertCircle, LogIn, MessageCircle, Star, Timer, Copy, ExternalLink,
-  CheckCircle2, XCircle,
+  AlertCircle, LogIn, LogOut, MessageCircle, Star, Timer, Copy, ExternalLink,
+  CheckCircle2, XCircle, Briefcase, ScanLine, Phone, Shield, Car,
+  ChevronRight,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { NavigationButtons } from "@/components/navigation/NavigationButtons";
-import { format, parseISO, differenceInMinutes, isToday } from "date-fns";
+import { format, parseISO, differenceInMinutes, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -68,10 +69,10 @@ function getCountdown(dateStr: string, startTime: string): string | null {
 }
 
 const statusConfig: Record<string, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
-  confirmed: { label: "Confirmado", cls: "bg-earning/10 text-earning", icon: CheckCircle2 },
-  pending: { label: "Pendiente", cls: "bg-warning/10 text-warning", icon: AlertCircle },
-  rejected: { label: "Rechazado", cls: "bg-deduction/10 text-deduction", icon: XCircle },
-  accepted: { label: "Aceptado", cls: "bg-earning/10 text-earning", icon: CheckCircle2 },
+  confirmed: { label: "Confirmado", cls: "bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))]", icon: CheckCircle2 },
+  pending: { label: "Pendiente", cls: "bg-[hsl(var(--status-pending)/0.1)] text-[hsl(var(--status-pending))]", icon: AlertCircle },
+  rejected: { label: "Rechazado", cls: "bg-[hsl(var(--status-cancelled)/0.1)] text-[hsl(var(--status-cancelled))]", icon: XCircle },
+  accepted: { label: "Aceptado", cls: "bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))]", icon: CheckCircle2 },
 };
 
 type DrawerTab = "info" | "team" | "chat";
@@ -83,6 +84,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
   const [tab, setTab] = useState<DrawerTab>("info");
   const [empCompanyId, setEmpCompanyId] = useState("");
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [clockingMethod, setClockingMethod] = useState<string | null>(null);
 
   useEffect(() => {
     if (employeeId) {
@@ -92,12 +94,13 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
   }, [employeeId]);
 
   useEffect(() => {
-    if (!shift?.id || !open) { setLocationCoords(null); return; }
-    supabase.from("scheduled_shifts").select("location_id, locations(latitude, longitude)").eq("id", shift.id).maybeSingle()
+    if (!shift?.id || !open) { setLocationCoords(null); setClockingMethod(null); return; }
+    supabase.from("scheduled_shifts").select("location_id, qr_attendance_mode, locations(latitude, longitude)").eq("id", shift.id).maybeSingle()
       .then(({ data }) => {
         const loc = (data as any)?.locations;
         if (loc?.latitude && loc?.longitude) setLocationCoords({ lat: loc.latitude, lng: loc.longitude });
         else setLocationCoords(null);
+        setClockingMethod((data as any)?.qr_attendance_mode || null);
       });
   }, [shift?.id, open]);
 
@@ -105,6 +108,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
 
   const hoursLabel = calcHours(shift.start_time?.slice(0, 5), shift.end_time?.slice(0, 5));
   const isTodayShift = isToday(parseISO(shift.date));
+  const isTomorrowShift = isTomorrow(parseISO(shift.date));
   const cfg = statusConfig[assignmentStatus ?? ""] ?? statusConfig.pending;
   const StatusIcon = cfg.icon;
   const shiftCompanyId = shift.company_id || empCompanyId || "";
@@ -116,62 +120,64 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
     toast({ title: "Copiado", description: "Dirección copiada" });
   };
 
+  const clockLabel = clockingMethod === "required" ? "QR obligatorio" : clockingMethod === "optional" ? "QR opcional" : "Fichaje móvil";
+  const ClockMethodIcon = clockingMethod === "required" || clockingMethod === "optional" ? ScanLine : Phone;
+
   return (
     <Drawer open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setTab("info"); }}>
-      <DrawerContent className="max-h-[90vh]">
+      <DrawerContent className="max-h-[92vh]">
         {/* ── Header ── */}
-        <DrawerHeader className="pb-2 space-y-2 pt-4">
+        <DrawerHeader className="pb-3 space-y-2.5 pt-4">
           {/* Countdown */}
           {countdown && isConfirmed && (
-            <div className="bg-primary/6 rounded-lg px-3 py-1.5 flex items-center gap-1.5 -mx-1">
-              <Timer className="h-3 w-3 text-primary" />
-              <span className="text-[10px] font-bold text-primary">{countdown}</span>
+            <div className="bg-primary/[0.06] rounded-xl px-3.5 py-2 flex items-center gap-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[11px] font-bold text-primary tracking-wide">{countdown}</span>
             </div>
           )}
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               {shift.shift_code && (
-                <span className="text-[9px] font-mono font-bold text-primary bg-primary/10 rounded px-1 py-px">
+                <span className="text-[9px] font-mono font-bold text-primary bg-primary/10 rounded-md px-1.5 py-0.5">
                   #{shift.shift_code.padStart(4, "0")}
                 </span>
               )}
               {isTodayShift && (
-                <span className="text-[8px] px-1.5 py-px rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-wider">HOY</span>
+                <span className="text-[8px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-widest">HOY</span>
+              )}
+              {isTomorrowShift && (
+                <span className="text-[8px] px-2 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase tracking-widest">MAÑANA</span>
               )}
             </div>
-            <Badge className={cn("text-[9px] px-2 py-px font-bold rounded-full border-0", cfg.cls)}>
+            <Badge className={cn("text-[9px] px-2.5 py-0.5 font-bold rounded-full border-0", cfg.cls)}>
               <StatusIcon className="h-2.5 w-2.5 mr-0.5" />
               {cfg.label}
             </Badge>
           </div>
 
-          <DrawerTitle className="text-left text-base font-bold leading-snug">{shift.title}</DrawerTitle>
+          <DrawerTitle className="text-left text-lg font-bold leading-snug">{shift.title}</DrawerTitle>
 
-          {/* Date + time */}
-          <div className="flex items-center gap-2.5 text-[13px]">
-            <span className="font-semibold text-foreground flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-primary" />
-              {shift.start_time?.slice(0, 5)} → {shift.end_time?.slice(0, 5)}
-            </span>
-            <span className="text-[11px] text-muted-foreground/60 font-medium">{hoursLabel}</span>
-          </div>
-          <p className="text-[11px] text-muted-foreground/70 capitalize">
-            {format(parseISO(shift.date), "EEEE d 'de' MMMM yyyy", { locale: es })}
-          </p>
+          {/* Client */}
+          {shift.client && (
+            <p className="text-[12px] text-muted-foreground flex items-center gap-1.5">
+              <Briefcase className="h-3 w-3 text-primary/40" />
+              {shift.client.name}
+            </p>
+          )}
         </DrawerHeader>
 
         {/* Tab bar */}
-        <div className="px-4 pb-2 flex items-center gap-0.5">
+        <div className="px-4 pb-3 flex items-center gap-1 bg-muted/30 mx-4 rounded-xl p-1">
           {(["info", "team", "chat"] as DrawerTab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
+                "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all",
                 tab === t
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted/50"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {t === "info" && <><CalendarDays className="h-3 w-3" /> Detalles</>}
@@ -183,44 +189,36 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
 
         <div className="px-4 pb-5 overflow-y-auto">
           {tab === "info" && (
-            <div className="space-y-2.5">
-              {/* Primary action */}
-              {isConfirmed && isTodayShift && (
-                <Button
-                  size="default"
-                  className="w-full h-10 text-xs gap-2 font-bold"
-                  onClick={() => { onOpenChange(false); navigate(`/portal/clock?shiftId=${shift.id}`); }}
-                >
-                  <LogIn className="h-4 w-4" />
-                  Marcar Entrada
-                </Button>
-              )}
-
-              {/* Client */}
-              {shift.client && (
-                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
-                  <Users className="h-4 w-4 text-primary/60 shrink-0" />
-                  <div>
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Cliente</p>
-                    <p className="text-[13px] font-medium">{shift.client.name}</p>
+            <div className="space-y-3">
+              {/* ── A. Schedule block ── */}
+              <div className="rounded-xl bg-muted/30 p-3.5 space-y-2">
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Horario</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-base font-bold text-foreground tabular-nums">
+                      {shift.start_time?.slice(0, 5)} → {shift.end_time?.slice(0, 5)}
+                    </span>
                   </div>
+                  <span className="text-xs text-muted-foreground/50 bg-muted/50 px-2 py-0.5 rounded-full font-medium">{hoursLabel}</span>
                 </div>
-              )}
+                <p className="text-[12px] text-muted-foreground capitalize">
+                  {format(parseISO(shift.date), "EEEE d 'de' MMMM yyyy", { locale: es })}
+                </p>
+              </div>
 
-              {/* Location */}
+              {/* ── B. Location block ── */}
               {shift.location && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
-                    <MapPin className="h-4 w-4 text-primary/60 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Ubicación</p>
-                      <p className="text-[13px] font-medium">{shift.location.name}</p>
-                    </div>
+                <div className="rounded-xl bg-muted/30 p-3.5 space-y-2">
+                  <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Ubicación</p>
+                  <div className="flex items-center gap-2.5">
+                    <MapPin className="h-4 w-4 text-primary shrink-0" />
+                    <p className="text-[13px] font-semibold flex-1">{shift.location.name}</p>
                     <button
-                      className="p-1 rounded-md hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors"
                       onClick={() => copyAddress(shift.location!.name)}
                     >
-                      <Copy className="h-3 w-3" />
+                      <Copy className="h-3.5 w-3.5" />
                     </button>
                   </div>
                   {locationCoords && (
@@ -229,55 +227,78 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                 </div>
               )}
 
-              {/* Meeting Point */}
+              {/* ── C. Meeting Point ── */}
               {shift.meeting_point && (
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 p-2.5 rounded-lg bg-primary/[0.03] border border-primary/10 hover:bg-primary/[0.06] transition-colors group"
+                  className="flex items-center gap-2.5 p-3.5 rounded-xl bg-primary/[0.04] border border-primary/10 hover:bg-primary/[0.07] transition-colors group"
                 >
-                  <Navigation className="h-4 w-4 text-primary shrink-0" />
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Navigation className="h-4 w-4 text-primary" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[9px] uppercase tracking-wider text-primary/50 font-semibold">Punto de encuentro</p>
-                    <p className="text-[13px] font-medium group-hover:underline">{shift.meeting_point}</p>
+                    <p className="text-[9px] uppercase tracking-widest text-primary/50 font-bold">Punto de encuentro</p>
+                    <p className="text-[13px] font-semibold group-hover:underline mt-0.5">{shift.meeting_point}</p>
                   </div>
                   <ExternalLink className="h-3.5 w-3.5 text-primary/30" />
                 </a>
               )}
 
-              {/* Instructions */}
+              {/* ── D. Clocking block ── */}
+              <div className="rounded-xl bg-muted/30 p-3.5">
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold mb-2">Método de fichaje</p>
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-lg bg-primary/8 flex items-center justify-center">
+                    <ClockMethodIcon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-foreground">{clockLabel}</p>
+                    {clockingMethod === "required" && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Escanea el QR en la ubicación para fichar</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── E. Instructions ── */}
               {shift.special_instructions && (
-                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-warning/[0.04] border border-warning/15">
-                  <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[9px] uppercase tracking-wider text-warning font-bold">Instrucciones</p>
-                    <p className="text-[13px] mt-0.5 leading-relaxed">{shift.special_instructions}</p>
+                <div className="rounded-xl bg-[hsl(var(--status-pending)/0.05)] border border-[hsl(var(--status-pending)/0.15)] p-3.5">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-[hsl(var(--status-pending))] font-bold">Instrucciones</p>
+                      <p className="text-[13px] mt-1 leading-relaxed text-foreground">{shift.special_instructions}</p>
+                    </div>
                   </div>
                 </div>
               )}
 
+              {/* ── F. Notes ── */}
               {shift.notes && (
-                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/30">
-                  <FileText className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Notas</p>
-                    <p className="text-[13px] mt-0.5 leading-relaxed">{shift.notes}</p>
+                <div className="rounded-xl bg-muted/30 p-3.5">
+                  <div className="flex items-start gap-2.5">
+                    <FileText className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Notas</p>
+                      <p className="text-[13px] mt-1 leading-relaxed">{shift.notes}</p>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Payment disclaimer */}
-              <p className="text-[9px] text-muted-foreground/50 leading-relaxed px-1">
+              {/* ── G. Payment disclaimer ── */}
+              <p className="text-[10px] text-muted-foreground/50 leading-relaxed px-1">
                 💡 Las horas programadas son estimadas. La nómina se calcula con horas reales fichadas.
               </p>
 
-              {/* Review */}
+              {/* ── H. Review ── */}
               {shift.status === "completed" && employeeId && shiftCompanyId && (
-                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30">
                   <Star className="h-4 w-4 text-amber-400 shrink-0" />
                   <div className="flex-1">
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Evaluar</p>
+                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Evaluar turno</p>
                   </div>
                   <ShiftReviewButton
                     shiftId={shift.id}
@@ -286,6 +307,18 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                     reviewerId={employeeId}
                   />
                 </div>
+              )}
+
+              {/* ── I. Primary action ── */}
+              {isConfirmed && isTodayShift && (
+                <Button
+                  size="lg"
+                  className="w-full h-12 text-sm gap-2.5 font-bold rounded-xl shadow-lg shadow-primary/20"
+                  onClick={() => { onOpenChange(false); navigate(`/portal/clock?shiftId=${shift.id}`); }}
+                >
+                  <LogIn className="h-4.5 w-4.5" />
+                  Marcar Entrada
+                </Button>
               )}
             </div>
           )}
