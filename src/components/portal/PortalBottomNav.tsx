@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, CalendarDays, Clock, MessageSquare, User } from "lucide-react";
+import { Home, CalendarDays, Clock, Wallet, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TabItem {
@@ -14,7 +14,7 @@ const TABS: TabItem[] = [
   { id: "home", to: "/portal", icon: Home, label: "Inicio", end: true },
   { id: "shifts", to: "/portal/shifts", icon: CalendarDays, label: "Turnos" },
   { id: "clock", to: "/portal/clock", icon: Clock, label: "Reloj" },
-  { id: "chat", to: "/portal/chat", icon: MessageSquare, label: "Chat" },
+  { id: "earnings", to: "/portal/payments", icon: Wallet, label: "Pagos" },
   { id: "profile", to: "/portal/profile", icon: User, label: "Perfil" },
 ];
 
