@@ -45,7 +45,6 @@ export default function EmployeeLayout() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  // Allow any user with an employee profile (dual access)
   if (!employeeId) return <Navigate to={canAccessAdmin ? "/app" : "/auth"} replace />;
 
   if (!employeeActive) {
@@ -85,7 +84,6 @@ export default function EmployeeLayout() {
     );
   }
 
-  // Shared nav + sheet
   const navAndSheet = (
     <>
       <PortalBottomNav />
@@ -106,8 +104,7 @@ export default function EmployeeLayout() {
   if (isMobile) {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col">
-        {/* Minimal top bar */}
-        <header className="sticky top-0 z-30 shrink-0 bg-background/80 backdrop-blur-2xl">
+        <header className="sticky top-0 z-30 shrink-0 bg-background/80 backdrop-blur-2xl border-b border-border/20">
           <div className="flex items-center justify-between px-5 h-12">
             <div className="flex items-center gap-2.5">
               <StaflyLogo size={20} />
@@ -120,7 +117,7 @@ export default function EmployeeLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-3 pb-28 animate-fade-in">
+        <main className="flex-1 overflow-y-auto px-4 py-4 pb-28 animate-fade-in">
           <Outlet context={{ openMore: () => setMoreOpen(true) }} />
         </main>
 
@@ -129,10 +126,10 @@ export default function EmployeeLayout() {
     );
   }
 
-  // Desktop — centered clean layout
+  // Desktop
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-xl border-b border-border/50 shadow-2xs">
+      <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-xl border-b border-border/30 shadow-2xs">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-2.5">
             <StaflyLogo size={32} />
