@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  CalendarDays, Clock, MapPin, CheckCircle2, XCircle, AlertCircle,
-  HandMetal, Users, Loader2, LogIn, ChevronRight, ChevronDown,
-  FileText, Filter, LayoutList, LayoutGrid,
+  CalendarDays, Clock, MapPin, HandMetal, Loader2, LayoutList, LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -154,54 +152,31 @@ export default function MyShifts() {
     setResponding(null); setRejectDialogId(null); setRejectReason("");
   };
 
-  // Filter logic
   const today = startOfDay(new Date());
   const weekInterval = { start: startOfWeek(new Date(), { weekStartsOn: 1 }), end: endOfWeek(new Date(), { weekStartsOn: 1 }) };
 
   const getFiltered = (): ShiftAssignment[] => {
     let list = assignments;
-
-    // Tab filter
     switch (activeTab) {
-      case "hoy":
-        list = list.filter(a => isToday(parseISO(a.shift.date)));
-        break;
-      case "proximos":
-        list = list.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date)));
-        break;
-      case "semana":
-        list = list.filter(a => isWithinInterval(parseISO(a.shift.date), weekInterval));
-        break;
-      case "historial":
-        list = list.filter(a => isBefore(parseISO(a.shift.date), today));
-        break;
+      case "hoy": list = list.filter(a => isToday(parseISO(a.shift.date))); break;
+      case "proximos": list = list.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))); break;
+      case "semana": list = list.filter(a => isWithinInterval(parseISO(a.shift.date), weekInterval)); break;
+      case "historial": list = list.filter(a => isBefore(parseISO(a.shift.date), today)); break;
     }
-
-    // Status filter
     switch (statusFilter) {
-      case "pendientes":
-        list = list.filter(a => a.status === "pending");
-        break;
-      case "confirmados":
-        list = list.filter(a => a.status === "confirmed" || a.status === "accepted");
-        break;
-      case "cancelados":
-        list = list.filter(a => a.status === "rejected");
-        break;
+      case "pendientes": list = list.filter(a => a.status === "pending"); break;
+      case "confirmados": list = list.filter(a => a.status === "confirmed" || a.status === "accepted"); break;
+      case "cancelados": list = list.filter(a => a.status === "rejected"); break;
     }
-
-    // Sort: today first, then by date
     list.sort((a, b) => {
       if (activeTab === "historial") return parseISO(b.shift.date).getTime() - parseISO(a.shift.date).getTime();
       return parseISO(a.shift.date).getTime() - parseISO(b.shift.date).getTime();
     });
-
     return list;
   };
 
   const filtered = getFiltered();
 
-  // Counts for tabs
   const todayCount = assignments.filter(a => isToday(parseISO(a.shift.date))).length;
   const upcomingCount = assignments.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))).length;
   const weekCount = assignments.filter(a => isWithinInterval(parseISO(a.shift.date), weekInterval)).length;
@@ -221,10 +196,9 @@ export default function MyShifts() {
     { key: "cancelados", label: "Cancelados" },
   ];
 
-  // Dynamic subtitle
   const subtitle = (() => {
-    if (todayCount > 0) return `Tienes ${todayCount} turno${todayCount > 1 ? "s" : ""} hoy`;
-    if (upcomingCount > 0) return `${upcomingCount} turno${upcomingCount > 1 ? "s" : ""} próximo${upcomingCount > 1 ? "s" : ""}`;
+    if (todayCount > 0) return `${todayCount} turno${todayCount > 1 ? "s" : ""} hoy`;
+    if (upcomingCount > 0) return `${upcomingCount} próximo${upcomingCount > 1 ? "s" : ""}`;
     return "Sin turnos programados";
   })();
 
@@ -250,34 +224,33 @@ export default function MyShifts() {
   });
 
   return (
-    <div className="space-y-3 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-lg font-bold font-heading tracking-tight text-foreground flex items-center gap-1.5">
-          <CalendarDays className="h-4 w-4 text-primary" />
+        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">
           Mis Turnos
         </h1>
-        <p className="text-[11px] text-muted-foreground/70 mt-0.5">{subtitle}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
       </div>
 
       {/* Tab bar */}
-      <div className="flex items-center gap-0.5 bg-muted/30 p-0.5 rounded-lg overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-2xl overflow-x-auto no-scrollbar">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
             className={cn(
-              "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all flex-1 justify-center",
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-1 justify-center",
               activeTab === t.key
                 ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground/70 hover:text-foreground"
+                : "text-muted-foreground/60 hover:text-foreground"
             )}
           >
             {t.label}
             {t.count > 0 && (
               <span className={cn(
-                "text-[8px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5",
-                activeTab === t.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground/70"
+                "text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1",
+                activeTab === t.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground/60"
               )}>
                 {t.count}
               </span>
@@ -287,17 +260,17 @@ export default function MyShifts() {
       </div>
 
       {/* Status chips + view toggle */}
-      <div className="flex items-center justify-between gap-1.5">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {statusFilters.map((sf) => (
             <button
               key={sf.key}
               onClick={() => setStatusFilter(sf.key)}
               className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap transition-all",
+                "px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all",
                 statusFilter === sf.key
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground/60 hover:bg-muted/40"
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-muted-foreground/50 hover:bg-muted/40"
               )}
             >
               {sf.label}
@@ -306,47 +279,47 @@ export default function MyShifts() {
         </div>
         <button
           onClick={() => setCompactView(!compactView)}
-          className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/40 transition-colors shrink-0"
+          className="p-1.5 rounded-xl text-muted-foreground/40 hover:text-foreground hover:bg-muted/40 transition-colors shrink-0"
         >
-          {compactView ? <LayoutGrid className="h-3.5 w-3.5" /> : <LayoutList className="h-3.5 w-3.5" />}
+          {compactView ? <LayoutGrid className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
         </button>
       </div>
 
       {/* Claimable shifts */}
       {claimable.length > 0 && activeTab !== "historial" && (
         <div>
-          <h2 className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1.5 flex items-center gap-1">
-            <HandMetal className="h-3 w-3" />
+          <h2 className="text-xs font-bold text-primary mb-2 flex items-center gap-1.5">
+            <HandMetal className="h-3.5 w-3.5" />
             Turnos disponibles · {claimable.length}
           </h2>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {claimable.map((s) => (
-              <div key={s.id} className="rounded-xl border border-dashed border-primary/25 bg-primary/[0.03] p-3.5 space-y-2.5">
+              <div key={s.id} className="rounded-2xl border-2 border-dashed border-primary/20 bg-primary/[0.02] p-4 space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground">{s.title}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">
+                    <p className="text-[15px] font-bold text-foreground">{s.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 capitalize">
                       {isToday(parseISO(s.date)) ? "Hoy" : isTomorrow(parseISO(s.date)) ? "Mañana" : format(parseISO(s.date), "EEEE d MMM", { locale: es })}
                     </p>
                   </div>
                   {s.slots && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-primary/10 text-primary">
+                    <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-primary/10 text-primary">
                       {s.slots - s.assignedCount} lugar{(s.slots - s.assignedCount) !== 1 ? "es" : ""}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-3.5 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5 font-medium">
-                    <Clock className="h-3.5 w-3.5" />
+                    <Clock className="h-3.5 w-3.5 text-primary/50" />
                     {s.start_time?.slice(0, 5)} – {s.end_time?.slice(0, 5)}
                   </span>
                   {s.location && (
                     <span className="flex items-center gap-1 truncate">
-                      <MapPin className="h-3 w-3 shrink-0" /> {s.location.name}
+                      <MapPin className="h-3 w-3 shrink-0 text-primary/40" /> {s.location.name}
                     </span>
                   )}
                 </div>
-                <Button size="sm" className="w-full h-9 text-xs" onClick={() => claimShift(s.id)} disabled={claiming === s.id}>
+                <Button size="sm" className="w-full h-10 text-xs rounded-xl font-bold" onClick={() => claimShift(s.id)} disabled={claiming === s.id}>
                   {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Enviando...</> : <><HandMetal className="h-3.5 w-3.5 mr-1.5" />Solicitar turno</>}
                 </Button>
               </div>
@@ -357,7 +330,7 @@ export default function MyShifts() {
 
       {/* Shift list */}
       {filtered.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {filtered.map((a) => (
             <PortalShiftCard
               key={a.id}
@@ -379,20 +352,20 @@ export default function MyShifts() {
 
       {/* Empty states */}
       {filtered.length === 0 && claimable.length === 0 && (
-        <div className="text-center py-10 space-y-2">
-          <div className="h-12 w-12 mx-auto rounded-xl bg-muted/40 border border-border/15 flex items-center justify-center">
-            <CalendarDays className="h-6 w-6 text-muted-foreground/25" />
+        <div className="text-center py-14 space-y-3">
+          <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/30 border border-border/15 flex items-center justify-center">
+            <CalendarDays className="h-7 w-7 text-muted-foreground/20" />
           </div>
-          <div className="space-y-0.5">
-            <p className="text-[13px] font-semibold text-foreground">
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-foreground">
               {activeTab === "hoy" && "Sin turnos hoy"}
               {activeTab === "proximos" && "Sin turnos próximos"}
               {activeTab === "semana" && "Sin turnos esta semana"}
               {activeTab === "historial" && "Sin historial"}
             </p>
-            <p className="text-[11px] text-muted-foreground/60 max-w-[220px] mx-auto">
+            <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">
               {activeTab === "hoy"
-                ? "No tienes turnos para hoy."
+                ? "No tienes turnos programados para hoy."
                 : activeTab === "historial"
                 ? "Aún no tienes turnos completados."
                 : "Los turnos asignados aparecerán aquí."
@@ -403,9 +376,9 @@ export default function MyShifts() {
       )}
 
       {filtered.length === 0 && claimable.length > 0 && activeTab !== "historial" && (
-        <div className="rounded-xl border border-dashed border-primary/30 bg-primary/[0.03] p-5 text-center space-y-2">
-          <HandMetal className="h-6 w-6 text-primary mx-auto" />
-          <p className="text-sm font-semibold text-foreground">¡Hay turnos disponibles!</p>
+        <div className="rounded-2xl border-2 border-dashed border-primary/20 bg-primary/[0.02] p-6 text-center space-y-2">
+          <HandMetal className="h-7 w-7 text-primary mx-auto" />
+          <p className="text-sm font-bold text-foreground">¡Hay turnos disponibles!</p>
           <p className="text-xs text-muted-foreground">Solicita los turnos abiertos de arriba.</p>
         </div>
       )}
@@ -420,17 +393,17 @@ export default function MyShifts() {
 
       {/* Reject dialog */}
       <Dialog open={!!rejectDialogId} onOpenChange={o => { if (!o) { setRejectDialogId(null); setRejectReason(""); } }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base">Rechazar turno</DialogTitle>
+            <DialogTitle className="text-base font-bold">Rechazar turno</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Indica opcionalmente el motivo.</p>
-            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo (opcional)..." rows={3} className="text-sm resize-none" />
+            <p className="text-xs text-muted-foreground">Indica opcionalmente el motivo del rechazo.</p>
+            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo (opcional)..." rows={3} className="text-sm resize-none rounded-xl" />
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancelar</Button>
-            <Button variant="destructive" size="sm" onClick={rejectAssignment} disabled={responding === rejectDialogId}>
+            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancelar</Button>
+            <Button variant="destructive" size="sm" className="rounded-xl" onClick={rejectAssignment} disabled={responding === rejectDialogId}>
               {responding === rejectDialogId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
               Rechazar
             </Button>
