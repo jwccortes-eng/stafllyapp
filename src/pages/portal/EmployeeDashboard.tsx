@@ -308,7 +308,7 @@ export default function EmployeeDashboard() {
             </div>
 
             {/* Title */}
-            <p className="text-base font-bold text-foreground leading-snug">{nextShift.title}</p>
+            <p className="text-base font-bold text-foreground leading-snug line-clamp-2">{nextShift.title}</p>
 
             {/* Time */}
             <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
