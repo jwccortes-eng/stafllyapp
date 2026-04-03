@@ -125,7 +125,7 @@ export default function Applications() {
     <div className="space-y-6">
       <PageHeader
         title="Aplicaciones"
-        description="Gestiona las solicitudes de nuevos trabajadores"
+        subtitle="Gestiona las solicitudes de nuevos trabajadores"
       />
 
       <Tabs value={tab} onValueChange={setTab}>

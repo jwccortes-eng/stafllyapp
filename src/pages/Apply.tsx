@@ -417,7 +417,7 @@ function StepVerification({ documentFile, setDocumentFile }: { documentFile: Fil
 function StepConfirmation({ referenceCode, companyName }: { referenceCode: string; companyName: string }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center gap-6">
-      <div className="h-20 w-20 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg animate-in zoom-in-50 duration-500">
+      <div className="h-20 w-20 rounded-full bg-gradient-to-br from-earning to-status-confirmed flex items-center justify-center shadow-lg animate-in zoom-in-50 duration-500">
         <CheckCircle2 className="h-10 w-10 text-white" />
       </div>
       <div>
