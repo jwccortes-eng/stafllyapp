@@ -116,7 +116,8 @@ export default function EmployeeDashboard() {
 
     const activeClocks = (clockRes.data ?? []) as any[];
     if (activeClocks.length > 0) {
-      setClockStatus({ isClockedIn: true, clockInTime: activeClocks[0].clock_in, shiftTitle: activeClocks[0].scheduled_shifts?.title ?? null });
+      const ac = activeClocks[0];
+      setClockStatus({ isClockedIn: true, clockInTime: ac.clock_in, shiftTitle: ac.scheduled_shifts?.title ?? null });
     } else {
       setClockStatus({ isClockedIn: false, clockInTime: null, shiftTitle: null });
     }
