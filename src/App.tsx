@@ -106,6 +106,7 @@ const PayrollMappings = lazy(() => import("./pages/admin/PayrollMappings"));
 const PayrollReconciliation = lazy(() => import("./pages/admin/PayrollReconciliation"));
 const CompensationAdoption = lazy(() => import("./pages/admin/CompensationAdoption"));
 const Applications = lazy(() => import("./pages/admin/Applications"));
+const ApplicationSettings = lazy(() => import("./pages/admin/ApplicationSettings"));
 const Apply = lazy(() => import("./pages/Apply"));
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
@@ -242,6 +243,7 @@ function App() {
                 <Route path="payroll-reconciliation" element={<PayrollReconciliation />} />
                 <Route path="compensation-adoption" element={<CompensationAdoption />} />
                 <Route path="applications" element={<Applications />} />
+                <Route path="application-settings" element={<ApplicationSettings />} />
               </Route>
 
               {/* Employee portal routes */}
