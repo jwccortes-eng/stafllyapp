@@ -525,6 +525,24 @@ export default function Applications() {
                   </div>
                 )}
 
+                {selected.status === "approved" && (selected as any).approved_employee_id && (
+                  <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground">Empleado vinculado</p>
+                        <p className="text-xs font-semibold text-primary">
+                          {(selected as any).approval_payload?.linked_existing ? "Vinculado a existente" : "Creado como nuevo"}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1" onClick={() => {
+                        window.open(`/app/employees?id=${(selected as any).approved_employee_id}`, "_blank");
+                      }}>
+                        <ExternalLink className="h-3 w-3" /> Ver empleado
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {selected.status === "rejected" && selected.rejection_reason && (
                   <div className="p-3 rounded-xl bg-destructive/5 border border-destructive/10">
                     <p className="text-[10px] text-muted-foreground">Razón de rechazo</p>
