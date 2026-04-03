@@ -149,7 +149,7 @@ export default function PortalProfile() {
       )}
 
       {/* Profile header */}
-      <div className="rounded-2xl gradient-primary p-6 text-primary-foreground relative overflow-hidden shadow-lg">
+      <div className="rounded-2xl gradient-primary p-5 text-primary-foreground relative overflow-hidden shadow-lg">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(200_85%_65%/0.4),transparent_60%)]" />
         <div className="relative flex items-center gap-4">
           {/* Avatar with upload */}
