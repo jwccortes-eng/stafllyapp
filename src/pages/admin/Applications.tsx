@@ -78,6 +78,8 @@ interface Application {
   languages: string[] | null;
   linked_user_id: string | null;
   duplicate_of_application_id: string | null;
+  approved_employee_id: string | null;
+  approval_payload: Record<string, any> | null;
 }
 
 interface ApplicationEvent {
