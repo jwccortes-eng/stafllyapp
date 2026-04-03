@@ -197,10 +197,10 @@ export default function PortalProfile() {
       {infoItems.length > 0 && (
         <div className="grid grid-cols-2 gap-2.5">
           {infoItems.map(item => (
-            <div key={item.label} className="rounded-2xl border border-border/40 bg-card p-3.5 shadow-xs">
+            <div key={item.label} className="rounded-2xl border border-border/30 bg-card p-3.5 shadow-sm">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <item.icon className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider">{item.label}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
               </div>
               <p className="text-sm font-medium text-foreground truncate">{item.value}</p>
             </div>
