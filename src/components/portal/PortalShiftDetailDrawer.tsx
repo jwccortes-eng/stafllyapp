@@ -289,8 +289,8 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
               )}
 
               {/* ── G. Payment disclaimer ── */}
-              <p className="text-[10px] text-muted-foreground/50 leading-relaxed px-1">
-                💡 Las horas programadas son estimadas. La nómina se calcula con horas reales fichadas.
+              <p className="text-[10px] text-muted-foreground/40 leading-relaxed px-1 italic">
+                Las horas programadas son estimadas. La nómina se calcula con las horas reales fichadas.
               </p>
 
               {/* ── H. Review ── */}
