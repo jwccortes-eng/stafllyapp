@@ -3518,6 +3518,8 @@ export type Database = {
         Row: {
           admin_notes: string | null
           application_type: string
+          approval_payload: Json | null
+          approved_employee_id: string | null
           availability: string | null
           can_drive: boolean | null
           can_travel: boolean | null
@@ -3553,6 +3555,8 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           application_type?: string
+          approval_payload?: Json | null
+          approved_employee_id?: string | null
           availability?: string | null
           can_drive?: boolean | null
           can_travel?: boolean | null
@@ -3588,6 +3592,8 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           application_type?: string
+          approval_payload?: Json | null
+          approved_employee_id?: string | null
           availability?: string | null
           can_drive?: boolean | null
           can_travel?: boolean | null
@@ -3621,6 +3627,20 @@ export type Database = {
           worker_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "job_applications_approved_employee_id_fkey"
+            columns: ["approved_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_approved_employee_id_fkey"
+            columns: ["approved_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_applications_company_id_fkey"
             columns: ["company_id"]
