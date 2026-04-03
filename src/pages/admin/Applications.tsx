@@ -99,8 +99,9 @@ export default function Applications() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [approvalConfig, setApprovalConfig] = useState({ role: "employee", portalEnabled: true, pinEnabled: true, sendInvite: false });
+  const [approvalConfig, setApprovalConfig] = useState({ role: "employee", portalEnabled: true, pinEnabled: true, sendInvite: false, inviteChannel: "whatsapp", initialStatus: "active" });
   const [detailTab, setDetailTab] = useState("summary");
+  const [approving, setApproving] = useState(false);
 
   const { data: applications = [], isLoading } = useQuery({
     queryKey: ["job-applications", selectedCompanyId],
