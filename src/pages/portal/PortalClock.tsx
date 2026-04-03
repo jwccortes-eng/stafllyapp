@@ -347,11 +347,12 @@ export default function PortalClock() {
   const isClockedIn = !!activeEntry;
 
   return (
-    <div className="space-y-5">
-      {/* Back */}
-      <button onClick={() => navigate("/portal")} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors -mb-2">
-        <ArrowLeft className="h-3.5 w-3.5" /> Volver
-      </button>
+    <div className="space-y-5 animate-fade-in">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">Reloj</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">Control de asistencia</p>
+      </div>
 
       {/* Missing photo warning */}
       {!hasProfilePhoto && (
