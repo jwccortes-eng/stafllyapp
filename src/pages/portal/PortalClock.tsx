@@ -46,7 +46,10 @@ function isClockInAllowed(shift: TodayShift): { allowed: boolean; message: strin
   shiftStart.setHours(h, m, 0, 0);
   if (now < shiftStart) {
     const diffMin = Math.ceil((shiftStart.getTime() - now.getTime()) / 60000);
-    return { allowed: false, message: `Faltan ${diffMin} min para el inicio del turno (${shift.start_time.slice(0, 5)}).` };
+    const hrs = Math.floor(diffMin / 60);
+    const mins = diffMin % 60;
+    const timeLabel = hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`;
+    return { allowed: false, message: `Tu turno empieza a las ${shift.start_time.slice(0, 5)}. Faltan ${timeLabel}.` };
   }
   return { allowed: true, message: "" };
 }
