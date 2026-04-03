@@ -815,6 +815,17 @@ function formatEventType(t: string): string {
     status_needs_info: "Info solicitada",
     status_duplicate: "Marcada como duplicado",
     status_archived: "Archivada",
+    approval_started: "Aprobación iniciada",
+    approval_completed: "Aprobación completada",
+    approval_failed: "Error en aprobación",
+    linked_existing_employee: "Vinculado a empleado existente",
+    linked_by_phone: "Vinculado por teléfono",
+    linked_by_email: "Vinculado por email",
+    created_new_employee: "Nuevo empleado creado",
+    updated_existing_employee: "Empleado existente actualizado",
+    created_company_membership: "Membresía de empresa creada",
+    invite_sent: "Invitación enviada",
+    role_assigned: "Rol asignado",
   };
   return map[t] ?? t;
 }
