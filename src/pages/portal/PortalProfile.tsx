@@ -129,15 +129,12 @@ export default function PortalProfile() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Back button */}
-      <button
-        onClick={() => navigate("/portal")}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Volver
-      </button>
+    <div className="space-y-5 animate-fade-in">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">Mi Perfil</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">{companyName}</p>
+      </div>
 
       {/* Profile photo required warning */}
       {!profile.avatar_url && (
@@ -152,7 +149,7 @@ export default function PortalProfile() {
       )}
 
       {/* Profile header */}
-      <div className="rounded-2xl gradient-primary p-6 text-primary-foreground relative overflow-hidden shadow-lg">
+      <div className="rounded-2xl gradient-primary p-5 text-primary-foreground relative overflow-hidden shadow-lg">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(200_85%_65%/0.4),transparent_60%)]" />
         <div className="relative flex items-center gap-4">
           {/* Avatar with upload */}
@@ -184,12 +181,11 @@ export default function PortalProfile() {
             />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">
+            <h2 className="text-lg font-bold font-heading tracking-tight leading-tight">
               {profile.first_name} {profile.last_name}
-            </h1>
-            <p className="text-sm opacity-80 mt-0.5">{companyName}</p>
+            </h2>
             {profile.employee_role && (
-              <span className="inline-block mt-2 text-[10px] px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm">
+              <span className="inline-block mt-1.5 text-[10px] px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm">
                 {profile.employee_role}
               </span>
             )}
@@ -201,10 +197,10 @@ export default function PortalProfile() {
       {infoItems.length > 0 && (
         <div className="grid grid-cols-2 gap-2.5">
           {infoItems.map(item => (
-            <div key={item.label} className="rounded-2xl border border-border/40 bg-card p-3.5 shadow-xs">
+            <div key={item.label} className="rounded-2xl border border-border/30 bg-card p-3.5 shadow-sm">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <item.icon className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider">{item.label}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
               </div>
               <p className="text-sm font-medium text-foreground truncate">{item.value}</p>
             </div>

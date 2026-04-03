@@ -207,7 +207,7 @@ export default function EmployeeDashboard() {
   const duration = nextShift ? calcDuration(nextShift.start_time, nextShift.end_time) : "";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 animate-fade-in">
       {/* ── Greeting ── */}
       <div className="flex items-center gap-3.5">
         <EmployeeAvatar
@@ -218,12 +218,12 @@ export default function EmployeeDashboard() {
           className="ring-2 ring-primary/10 shadow-md"
         />
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground font-medium">{greeting},</p>
+          <p className="text-[11px] text-muted-foreground font-medium">{greeting},</p>
           <h1 className="text-xl font-bold font-heading tracking-tight leading-tight text-foreground">
             {firstName}
           </h1>
           {companyName && (
-            <p className="text-[11px] text-muted-foreground/60 mt-0.5 flex items-center gap-1">
+            <p className="text-[10px] text-muted-foreground/50 mt-0.5 flex items-center gap-1">
               <Briefcase className="h-2.5 w-2.5" />
               {companyName}
             </p>
@@ -371,15 +371,15 @@ export default function EmployeeDashboard() {
       {/* No shifts */}
       {isModuleEnabled("my_shifts") && !nextShift && (
         <Link to="/portal/shifts" className="block">
-          <div className="rounded-2xl border-2 border-dashed border-border/40 bg-muted/10 p-8 flex flex-col items-center gap-3">
+          <div className="rounded-2xl border-2 border-dashed border-border/30 bg-muted/5 p-8 flex flex-col items-center gap-3 active:scale-[0.98] transition-all">
             <div className="h-14 w-14 rounded-2xl bg-muted/30 flex items-center justify-center">
-              <CalendarDays className="h-7 w-7 text-muted-foreground/30" />
+              <CalendarDays className="h-7 w-7 text-muted-foreground/25" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-semibold text-foreground">Sin turnos programados</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-1">Los turnos asignados aparecerán aquí</p>
+              <p className="text-sm font-bold text-foreground">Sin turnos programados</p>
+              <p className="text-[11px] text-muted-foreground/50 mt-1">Los turnos asignados aparecerán aquí</p>
             </div>
-            <span className="text-[11px] text-primary font-semibold flex items-center gap-1 mt-1">
+            <span className="text-[11px] text-primary font-bold flex items-center gap-1 mt-1">
               Ver turnos <ArrowRight className="h-3 w-3" />
             </span>
           </div>

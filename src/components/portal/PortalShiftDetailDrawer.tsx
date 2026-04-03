@@ -125,7 +125,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
 
   return (
     <Drawer open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setTab("info"); }}>
-      <DrawerContent className="max-h-[92vh]">
+      <DrawerContent className="max-h-[92vh] overflow-hidden">
         {/* ── Header ── */}
         <DrawerHeader className="pb-3 space-y-2.5 pt-4">
           {/* Countdown */}
@@ -156,7 +156,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
             </Badge>
           </div>
 
-          <DrawerTitle className="text-left text-lg font-bold leading-snug">{shift.title}</DrawerTitle>
+          <DrawerTitle className="text-left text-lg font-bold leading-snug line-clamp-2">{shift.title}</DrawerTitle>
 
           {/* Client */}
           {shift.client && (
@@ -187,7 +187,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
           ))}
         </div>
 
-        <div className="px-4 pb-5 overflow-y-auto">
+        <div className="px-4 pb-6 overflow-y-auto" style={{ maxHeight: "calc(92vh - 200px)" }}>
           {tab === "info" && (
             <div className="space-y-3">
               {/* ── A. Schedule block ── */}
@@ -289,8 +289,8 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
               )}
 
               {/* ── G. Payment disclaimer ── */}
-              <p className="text-[10px] text-muted-foreground/50 leading-relaxed px-1">
-                💡 Las horas programadas son estimadas. La nómina se calcula con horas reales fichadas.
+              <p className="text-[10px] text-muted-foreground/40 leading-relaxed px-1 italic">
+                Las horas programadas son estimadas. La nómina se calcula con las horas reales fichadas.
               </p>
 
               {/* ── H. Review ── */}

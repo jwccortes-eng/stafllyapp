@@ -39,14 +39,14 @@ export function PortalBottomNav() {
                 key={item.id}
                 to={item.to}
                 end={item.end}
-                className="flex flex-col items-center justify-center gap-1 flex-1 py-1 active:scale-90 transition-all duration-150"
+                className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 active:scale-90 transition-all duration-150"
               >
                 <div
                   className={cn(
                     "flex items-center justify-center transition-all duration-200",
                     isClockTab
                       ? cn(
-                          "h-10 w-10 rounded-2xl -mt-2",
+                          "h-11 w-11 rounded-2xl -mt-3",
                           active
                             ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
                             : "bg-primary/10 text-primary"
@@ -59,11 +59,12 @@ export function PortalBottomNav() {
                         )
                   )}
                 >
-                  <item.icon className={cn("h-[17px] w-[17px]", isClockTab && "h-[19px] w-[19px]")} strokeWidth={active ? 2.2 : 1.8} />
+                  <item.icon className={cn("h-[17px] w-[17px]", isClockTab && "h-5 w-5")} strokeWidth={active ? 2.2 : 1.8} />
                 </div>
                 <span
                   className={cn(
                     "text-[10px] leading-none transition-colors",
+                    isClockTab && "mt-0.5",
                     active
                       ? "text-primary font-bold"
                       : "text-muted-foreground/50 font-medium"

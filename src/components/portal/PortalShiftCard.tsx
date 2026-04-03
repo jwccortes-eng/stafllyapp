@@ -1,4 +1,4 @@
-import { Clock, MapPin, Users, CheckCircle2, AlertCircle, XCircle, LogIn, ChevronRight, Navigation, Timer, Briefcase } from "lucide-react";
+import { Clock, MapPin, CheckCircle2, AlertCircle, XCircle, LogIn, ChevronRight, Navigation, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isToday, isTomorrow, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
@@ -58,6 +58,10 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   return `en ${mins}m`;
 }
 
+function formatShiftDate(dateStr: string): string {
+  return format(parseISO(dateStr), "EEE d MMM", { locale: es });
+}
+
 export function PortalShiftCard({
   shift,
   compact = false,
@@ -76,12 +80,13 @@ export function PortalShiftCard({
   const isConfirmed = shift.status === "confirmed" || shift.status === "accepted";
   const duration = calcDuration(shift.start_time, shift.end_time);
 
+  // ── Compact view ──
   if (compact) {
     return (
       <div
         className={cn(
           "flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-card border shadow-sm cursor-pointer active:scale-[0.98] transition-all",
-          isTodayShift ? "border-primary/15" : "border-border/30"
+          isTodayShift ? "border-primary/20" : "border-border/30"
         )}
         onClick={onClick}
       >
@@ -89,21 +94,21 @@ export function PortalShiftCard({
           <p className="text-[8px] font-bold uppercase text-muted-foreground/40 leading-none">
             {format(parseISO(shift.date), "MMM", { locale: es })}
           </p>
-          <p className="text-base font-bold text-foreground/70 leading-tight">
+          <p className="text-base font-bold text-foreground/70 leading-tight tabular-nums">
             {format(parseISO(shift.date), "d")}
           </p>
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-semibold text-foreground truncate">{shift.title}</p>
           <div className="flex items-center gap-2.5 text-[10px] text-muted-foreground/60 mt-0.5">
-            <span className="flex items-center gap-0.5 font-medium">
+            <span className="flex items-center gap-0.5 font-medium tabular-nums">
               <Clock className="h-2.5 w-2.5" />
               {shift.start_time?.slice(0, 5)} – {shift.end_time?.slice(0, 5)}
             </span>
             {shift.client_name && <span className="truncate">{shift.client_name}</span>}
           </div>
         </div>
-        <div className={cn("flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full", cfg.bg, cfg.color)}>
+        <div className={cn("flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0", cfg.bg, cfg.color)}>
           <StatusIcon className="h-2.5 w-2.5" />
           {cfg.label}
         </div>
@@ -111,6 +116,7 @@ export function PortalShiftCard({
     );
   }
 
+  // ── Full card ──
   return (
     <div
       className={cn(
@@ -130,25 +136,25 @@ export function PortalShiftCard({
       )}
 
       <div className="p-4 space-y-2.5">
-        {/* Line 1: Day label + Time + Duration */}
+        {/* Row 1: Day chip + Time + Duration */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             {isTodayShift && (
-              <span className="text-[9px] px-2.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-widest">
+              <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-widest">
                 Hoy
               </span>
             )}
             {isTomorrowShift && (
-              <span className="text-[9px] px-2.5 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase tracking-widest">
+              <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase tracking-widest">
                 Mañana
               </span>
             )}
             {!isTodayShift && !isTomorrowShift && (
               <span className="text-[11px] font-semibold text-muted-foreground capitalize">
-                {format(parseISO(shift.date), "EEE d MMM", { locale: es })}
+                {formatShiftDate(shift.date)}
               </span>
             )}
-            <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+            <span className="text-sm font-bold text-foreground flex items-center gap-1.5 tabular-nums">
               <Clock className="h-3.5 w-3.5 text-primary" />
               {shift.start_time?.slice(0, 5)} – {shift.end_time?.slice(0, 5)}
             </span>
@@ -159,22 +165,22 @@ export function PortalShiftCard({
           </div>
         </div>
 
-        {/* Line 2: Title */}
-        <p className="text-[15px] font-bold text-foreground leading-snug truncate">{shift.title}</p>
+        {/* Row 2: Title */}
+        <p className="text-[15px] font-bold text-foreground leading-snug line-clamp-2">{shift.title}</p>
 
-        {/* Line 3: Location + Client */}
+        {/* Row 3: Location + Client */}
         {(shift.location_name || shift.client_name) && (
           <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
             {shift.location_name && (
-              <span className="flex items-center gap-1.5 truncate">
+              <span className="flex items-center gap-1.5 truncate max-w-[50%]">
                 <MapPin className="h-3 w-3 shrink-0 text-primary/40" />
-                {shift.location_name}
+                <span className="truncate">{shift.location_name}</span>
               </span>
             )}
             {shift.client_name && (
-              <span className="flex items-center gap-1.5 truncate">
+              <span className="flex items-center gap-1.5 truncate max-w-[50%]">
                 <Briefcase className="h-3 w-3 shrink-0 text-primary/40" />
-                {shift.client_name}
+                <span className="truncate">{shift.client_name}</span>
               </span>
             )}
           </div>
@@ -188,22 +194,17 @@ export function PortalShiftCard({
           </div>
         )}
 
-        {/* Status badge */}
+        {/* Status badge row */}
         <div className="flex items-center gap-2">
           <div className={cn("flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full", cfg.bg, cfg.color)}>
             <StatusIcon className="h-3 w-3" />
             {cfg.label}
           </div>
-          {!isTodayShift && !isTomorrowShift && (
-            <span className="text-[10px] text-muted-foreground/40 capitalize">
-              {format(parseISO(shift.date), "d 'de' MMMM", { locale: es })}
-            </span>
-          )}
         </div>
 
-        {/* Actions */}
-        {isPending && (
-          <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
+        {/* Actions: Pending */}
+        {isPending && (onAccept || onReject) && (
+          <div className="flex items-center gap-2 pt-0.5" onClick={e => e.stopPropagation()}>
             <Button size="sm" className="flex-1 h-10 text-xs gap-1.5 font-bold rounded-xl" onClick={onAccept} disabled={responding}>
               <CheckCircle2 className="h-3.5 w-3.5" />
               Confirmar
@@ -214,6 +215,7 @@ export function PortalShiftCard({
           </div>
         )}
 
+        {/* Actions: Clock In */}
         {isConfirmed && isTodayShift && onClockIn && (
           <div onClick={e => e.stopPropagation()}>
             <Button size="sm" className="w-full h-10 text-xs gap-2 font-bold rounded-xl shadow-lg shadow-primary/15" onClick={onClockIn}>
