@@ -71,6 +71,8 @@ export default function PortalClock() {
   const { employeeId } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlShiftId = searchParams.get("shiftId");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
