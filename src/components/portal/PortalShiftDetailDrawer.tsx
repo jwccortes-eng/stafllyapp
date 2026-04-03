@@ -156,7 +156,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
             </Badge>
           </div>
 
-          <DrawerTitle className="text-left text-lg font-bold leading-snug">{shift.title}</DrawerTitle>
+          <DrawerTitle className="text-left text-lg font-bold leading-snug line-clamp-2">{shift.title}</DrawerTitle>
 
           {/* Client */}
           {shift.client && (
