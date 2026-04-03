@@ -491,9 +491,9 @@ export default function PortalClock() {
                 <AlertCircle className="h-4 w-4 text-[hsl(var(--status-pending))]" />
               </div>
               <div>
-                <p className="text-xs font-bold text-foreground">Sin turnos asignados hoy</p>
+                <p className="text-xs font-bold text-foreground">Sin turnos asignados para hoy</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  No tienes turnos programados para hoy.
+                  Revisa tu calendario o contacta a tu supervisor si crees que falta un turno.
                 </p>
               </div>
             </div>
