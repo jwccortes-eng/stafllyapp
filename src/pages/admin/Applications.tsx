@@ -539,7 +539,7 @@ export default function Applications() {
 
       {/* Approval Modal */}
       <Dialog open={showApprovalModal} onOpenChange={setShowApprovalModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
@@ -548,18 +548,60 @@ export default function Applications() {
           </DialogHeader>
           {selected && (
             <div className="space-y-4 py-2">
+              {/* Applicant summary */}
               <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30">
                 <Avatar className="h-10 w-10">
                   <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
                     {selected.first_name[0]}{selected.last_name[0]}
                   </AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground">{selected.first_name} {selected.last_name}</p>
-                  <p className="text-xs text-muted-foreground">{selected.phone}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3" />{selected.phone}
+                    {selected.email && <><Mail className="h-3 w-3 ml-1" />{selected.email}</>}
+                  </div>
                 </div>
+                <WorkerTypeBadge type={selected.worker_type} />
               </div>
 
+              {/* Identity resolution warning */}
+              {existingMatches.length > 0 && (
+                <div className="p-3 rounded-xl border-2 border-primary/30 bg-primary/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Link2 className="h-4 w-4 text-primary" />
+                    <p className="text-xs font-semibold text-primary">Empleado existente detectado</p>
+                  </div>
+                  {existingMatches.map((emp: any) => (
+                    <div key={emp.id} className="flex items-center gap-2 p-2 rounded-lg bg-card border text-xs">
+                      <Avatar className="h-7 w-7">
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{emp.first_name?.[0]}{emp.last_name?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground">{emp.first_name} {emp.last_name}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {emp.is_active ? "Activo" : "Inactivo"} · {emp.user_id ? "Con portal" : "Sin portal"} · {emp.access_pin ? "Con PIN" : "Sin PIN"}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] shrink-0">Se vinculará</Badge>
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-muted-foreground mt-2">
+                    Se vinculará al registro existente en lugar de crear uno nuevo.
+                  </p>
+                </div>
+              )}
+
+              {existingMatches.length === 0 && (
+                <div className="p-3 rounded-xl border border-border/60 bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <UserPlus2 className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Se creará un <strong className="text-foreground">nuevo empleado</strong> en la empresa.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Configuration */}
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground">Rol a asignar</label>
@@ -572,6 +614,17 @@ export default function Applications() {
                   </Select>
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">Estado inicial</label>
+                  <Select value={approvalConfig.initialStatus} onValueChange={(v) => setApprovalConfig((c) => ({ ...c, initialStatus: v }))}>
+                    <SelectTrigger className="rounded-xl h-10"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Activo</SelectItem>
+                      <SelectItem value="inactive">Inactivo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <ToggleOption label="Portal habilitado" value={approvalConfig.portalEnabled} onChange={(v) => setApprovalConfig((c) => ({ ...c, portalEnabled: v }))} />
                   <ToggleOption label="PIN requerido" value={approvalConfig.pinEnabled} onChange={(v) => setApprovalConfig((c) => ({ ...c, pinEnabled: v }))} />
@@ -579,19 +632,40 @@ export default function Applications() {
 
                 <ToggleOption label="Enviar invitación automática" value={approvalConfig.sendInvite} onChange={(v) => setApprovalConfig((c) => ({ ...c, sendInvite: v }))} />
 
-                {rejectionReason && (
+                {approvalConfig.sendInvite && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-foreground">Razón de rechazo (si aplica)</label>
-                    <Textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="min-h-[60px] rounded-xl text-xs" />
+                    <label className="text-xs font-medium text-foreground">Canal de invitación</label>
+                    <Select value={approvalConfig.inviteChannel} onValueChange={(v) => setApprovalConfig((c) => ({ ...c, inviteChannel: v }))}>
+                      <SelectTrigger className="rounded-xl h-10"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                        <SelectItem value="sms">SMS</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
+              </div>
+
+              {/* Action summary */}
+              <div className="p-3 rounded-xl bg-muted/30 space-y-1">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Resumen de acciones</p>
+                <div className="text-xs text-foreground space-y-0.5">
+                  <p>• {existingMatches.length > 0 ? "Vincular a empleado existente" : "Crear nuevo empleado"}</p>
+                  <p>• Rol: <strong>{approvalConfig.role === "supervisor" ? "Supervisor" : "Empleado"}</strong></p>
+                  <p>• Portal: <strong>{approvalConfig.portalEnabled ? "Habilitado" : "Deshabilitado"}</strong></p>
+                  <p>• PIN: <strong>{approvalConfig.pinEnabled ? "Habilitado (últimos 4 dígitos del tel.)" : "Deshabilitado"}</strong></p>
+                  {approvalConfig.sendInvite && <p>• Invitación: <strong>Se enviará por {approvalConfig.inviteChannel}</strong></p>}
+                  <p>• Estado: <strong>{approvalConfig.initialStatus === "active" ? "Activo" : "Inactivo"}</strong></p>
+                </div>
               </div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowApprovalModal(false)}>Cancelar</Button>
-            <Button onClick={handleApprove} disabled={updateStatusMutation.isPending} className="text-primary-foreground">
-              {updateStatusMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar aprobación"}
+            <Button onClick={handleApprove} disabled={approving} className="text-primary-foreground">
+              {approving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
+              Confirmar aprobación
             </Button>
           </DialogFooter>
         </DialogContent>
