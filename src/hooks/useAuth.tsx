@@ -59,6 +59,7 @@ const AuthContext = createContext<AuthContextType>({
   canAccessAdmin: false,
   canAccessPortal: false,
   employeeId: null,
+  allEmployeeIds: [],
   employeeActive: true,
   fullName: null,
   loading: true,
@@ -67,6 +68,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   hasModuleAccess: () => false,
   hasActionPermission: () => false,
+  resolveEmployeeForCompany: () => null,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -78,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return (localStorage.getItem("stafly-active-mode") as ActiveMode) || 'admin';
   });
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [allEmployeeIds, setAllEmployeeIds] = useState<{ id: string; companyId: string }[]>([]);
   const [employeeActive, setEmployeeActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
