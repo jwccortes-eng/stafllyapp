@@ -154,8 +154,14 @@ export default function PortalClock() {
     });
     setShiftQrModes(qrModes);
     const clockableShifts = mappedShifts.filter(s => s.pay_type !== "daily");
+    setHasDailyOnlyShifts(clockableShifts.length === 0 && mappedShifts.length > 0);
     setTodayShifts(clockableShifts);
-    if (clockableShifts.length === 1 && !list.find(e => !e.clock_out)) setSelectedShift(clockableShifts[0]);
+    const activeOpen = list.find(e => !e.clock_out);
+    if (!activeOpen) {
+      const preselect = urlShiftId ? clockableShifts.find(s => s.id === urlShiftId) : null;
+      if (preselect) setSelectedShift(preselect);
+      else if (clockableShifts.length === 1) setSelectedShift(clockableShifts[0]);
+    }
     setLoading(false);
   }, [employeeId]);
 
