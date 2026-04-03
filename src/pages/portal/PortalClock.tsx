@@ -363,7 +363,7 @@ export default function PortalClock() {
           </div>
           <div className="text-left flex-1">
             <p className="text-xs font-bold text-destructive">Foto de perfil requerida</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">No podrás fichar sin subir tu foto</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Sube una foto de tu rostro para poder fichar</p>
           </div>
         </button>
       )}
