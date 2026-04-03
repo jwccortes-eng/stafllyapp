@@ -271,7 +271,8 @@ export default function PortalClock() {
     setActing(true);
     try {
       const clockOutTime = new Date().toISOString();
-      const pos = await capturePosition();
+      let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
+      try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
       await supabase.from("clock_events").insert({
         employee_id: employeeId, company_id: companyId, shift_id: activeEntry.shift_id, time_entry_id: activeEntry.id,
