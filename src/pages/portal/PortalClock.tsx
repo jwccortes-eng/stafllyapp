@@ -486,14 +486,14 @@ export default function PortalClock() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-[hsl(var(--status-pending)/0.2)] bg-[hsl(var(--status-pending)/0.04)] p-4 flex items-start gap-3">
-              <div className="h-9 w-9 rounded-xl bg-[hsl(var(--status-pending)/0.1)] flex items-center justify-center shrink-0">
-                <AlertCircle className="h-4 w-4 text-[hsl(var(--status-pending))]" />
+            <div className="rounded-2xl border border-border/30 bg-muted/10 p-5 flex flex-col items-center gap-3 text-center">
+              <div className="h-12 w-12 rounded-2xl bg-muted/30 flex items-center justify-center">
+                <CalendarDays className="h-6 w-6 text-muted-foreground/25" />
               </div>
               <div>
-                <p className="text-xs font-bold text-foreground">Sin turnos asignados para hoy</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Revisa tu calendario o contacta a tu supervisor si crees que falta un turno.
+                <p className="text-sm font-bold text-foreground">Sin turnos para hoy</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-1 max-w-[240px]">
+                  No tienes turnos asignados para hoy. Si crees que falta uno, contacta a tu supervisor.
                 </p>
               </div>
             </div>
