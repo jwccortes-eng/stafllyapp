@@ -33,6 +33,8 @@ interface AuthContextType {
   /** Whether user has an employee profile */
   canAccessPortal: boolean;
   employeeId: string | null;
+  /** All employee IDs across companies */
+  allEmployeeIds: { id: string; companyId: string }[];
   employeeActive: boolean;
   fullName: string | null;
   loading: boolean;
@@ -41,6 +43,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   hasModuleAccess: (module: string, permission: 'view' | 'edit' | 'delete') => boolean;
   hasActionPermission: (action: string) => boolean;
+  /** Resolve employeeId for a specific company */
+  resolveEmployeeForCompany: (companyId: string) => string | null;
 }
 
 const ADMIN_ROLES = new Set(['developer', 'owner', 'company_owner', 'admin', 'manager', 'supervisor']);
