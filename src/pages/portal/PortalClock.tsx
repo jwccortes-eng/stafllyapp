@@ -614,7 +614,7 @@ export default function PortalClock() {
             <Clock className="h-7 w-7 text-muted-foreground/20" />
           </div>
           <p className="text-sm font-bold text-foreground">Sin registros hoy</p>
-          <p className="text-xs text-muted-foreground/50 max-w-[240px] mx-auto">Tus fichajes del día aparecerán aquí</p>
+          <p className="text-xs text-muted-foreground/50 max-w-[240px] mx-auto">Cuando fiches entrada o salida, tus registros aparecerán aquí.</p>
         </div>
       )}
 

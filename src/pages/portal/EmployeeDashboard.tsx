@@ -207,7 +207,7 @@ export default function EmployeeDashboard() {
   const duration = nextShift ? calcDuration(nextShift.start_time, nextShift.end_time) : "";
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in pb-24">
       {/* ── Greeting ── */}
       <div className="flex items-center gap-3.5">
         <EmployeeAvatar
