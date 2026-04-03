@@ -3367,6 +3367,83 @@ export type Database = {
           },
         ]
       }
+      job_applications: {
+        Row: {
+          admin_notes: string | null
+          availability: string | null
+          can_drive: boolean | null
+          city: string | null
+          company_id: string
+          created_at: string
+          document_url: string | null
+          email: string | null
+          first_name: string
+          id: string
+          last_name: string
+          notes: string | null
+          phone: string
+          reference_code: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          ssn_last4: string | null
+          status: string
+          updated_at: string
+          worker_type: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          availability?: string | null
+          can_drive?: boolean | null
+          city?: string | null
+          company_id: string
+          created_at?: string
+          document_url?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          notes?: string | null
+          phone: string
+          reference_code?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          ssn_last4?: string | null
+          status?: string
+          updated_at?: string
+          worker_type?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          availability?: string | null
+          can_drive?: boolean | null
+          city?: string | null
+          company_id?: string
+          created_at?: string
+          document_url?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          notes?: string | null
+          phone?: string
+          reference_code?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          ssn_last4?: string | null
+          status?: string
+          updated_at?: string
+          worker_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kiosk_devices: {
         Row: {
           company_id: string

@@ -1,23 +1,32 @@
 
-# Worker App Premium Redesign
+## Worker Application & Onboarding Flow
 
-## Fase 1 — Foundation + Home + Shifts (este mensaje)
-1. **Design tokens**: Actualizar variables CSS para el portal worker con un feel más premium/warm
-2. **Worker Home redesign** (`EmployeeDashboard.tsx`): Greeting, next shift hero, quick stats, shortcuts, alerts
-3. **My Shifts redesign** (`MyShifts.tsx`): Cleaner cards, date chips, status system, better scanning
-4. **PortalShiftCard redesign**: Modular, premium, operational
-5. **Bottom Nav polish**: Iconos + labels más claros
+### Phase 1: Database Schema
+- Create `job_applications` table with fields: first_name, last_name, phone, email, worker_type, city, availability, can_drive, document_url, ssn_last4, status (pending/reviewing/approved/rejected), company_id, reference_code, notes, reviewed_by, reviewed_at
+- RLS: public insert (no auth needed), company-scoped read/update for admins
 
-## Fase 2 — Shift Detail + Clock + Earnings
-6. **Shift Detail** (`PortalShiftDetailDrawer.tsx`): Modular sections, sticky actions
-7. **Clock flow** (`PortalClock.tsx`): Simpler, clearer, status-aware
-8. **Earnings** (`MyPayments.tsx` / `Accumulated.tsx`): Digestible summaries, date chips
+### Phase 2: Public Applicant Flow (6 screens)
+- Route: `/apply/:companySlug` — mobile-first, no auth required
+- Step 1: Welcome (company logo + name + CTA)
+- Step 2: Basic info (name, phone, email)
+- Step 3: Worker type selector (visual cards)
+- Step 4: Location & availability
+- Step 5: Verification (document upload, optional SSN last 4)
+- Step 6: Confirmation with reference number
 
-## Fase 3 — Opportunities + Profile + Polish
-9. **Opportunities**: Open shifts browser (may need new page)
-10. **Profile** (`PortalProfile.tsx`): Cleaner hierarchy, document status
-11. **Final polish pass**: Consistency, animations, edge cases
+### Phase 3: Admin Approval Panel
+- Route: `/app/applications`
+- Tab view: Pending / Reviewing / Approved / Rejected
+- Table with avatar, name, type, status, date
+- Detail drawer with tabs (Summary, Info, Documents, History)
+- Approve/Reject actions that can optionally create an employee record
 
----
+### Phase 4: Integration
+- Add nav item for admin sidebar
+- On approval → auto-create employee record + send invitation
+- Detect existing users by phone/email
 
-**Principio rector**: Preservar toda la lógica operativa de StaflyApps. Solo mejorar presentación, claridad y UX móvil.
+### Key Decisions Needed
+1. Should approved applicants auto-become employees, or require a separate step?
+2. Document storage: use existing `employee-documents` bucket?
+3. SSN field: follow existing policy (last 4 only)?
