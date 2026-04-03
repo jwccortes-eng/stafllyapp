@@ -63,7 +63,7 @@ export function useEmployeeInvitations(companyId: string | null) {
         sent_by: user.id,
         notes: notes ?? null,
       })
-      .select("id, employee_id, channel, status, sent_at, sent_by, activated_at, notes")
+      .select("id, employee_id, channel, status, sent_at, sent_by, activated_at, notes, invite_token, expires_at")
       .single();
 
     if (!error && data) {
