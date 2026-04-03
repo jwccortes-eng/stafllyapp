@@ -243,6 +243,7 @@ function App() {
                 <Route path="payroll-reconciliation" element={<PayrollReconciliation />} />
                 <Route path="compensation-adoption" element={<CompensationAdoption />} />
                 <Route path="applications" element={<Applications />} />
+                <Route path="application-settings" element={<ApplicationSettings />} />
               </Route>
 
               {/* Employee portal routes */}
