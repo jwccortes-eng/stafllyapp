@@ -605,11 +605,11 @@ export default function PortalClock() {
 
       {todayEntries.length === 0 && !isClockedIn && todayShifts.length === 0 && (
         <div className="text-center py-10 space-y-3">
-          <div className="h-16 w-16 mx-auto rounded-2xl bg-muted/30 flex items-center justify-center">
-            <Clock className="h-8 w-8 text-muted-foreground/20" />
+          <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/30 flex items-center justify-center">
+            <Clock className="h-7 w-7 text-muted-foreground/20" />
           </div>
-          <p className="text-sm font-bold text-foreground">No hay registros hoy</p>
-          <p className="text-xs text-muted-foreground/60 max-w-[220px] mx-auto">No tienes turnos programados para hoy</p>
+          <p className="text-sm font-bold text-foreground">Sin registros hoy</p>
+          <p className="text-xs text-muted-foreground/50 max-w-[240px] mx-auto">Tus fichajes del día aparecerán aquí</p>
         </div>
       )}
 
