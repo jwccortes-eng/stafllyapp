@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 interface TimeEntry {
   id: string;
@@ -71,6 +71,8 @@ export default function PortalClock() {
   const { employeeId } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlShiftId = searchParams.get("shiftId");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
@@ -90,6 +92,7 @@ export default function PortalClock() {
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [shiftQrModes, setShiftQrModes] = useState<Record<string, string>>({});
   const [successState, setSuccessState] = useState<{ type: "in" | "out"; time: string; shift: string } | null>(null);
+  const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -151,8 +154,14 @@ export default function PortalClock() {
     });
     setShiftQrModes(qrModes);
     const clockableShifts = mappedShifts.filter(s => s.pay_type !== "daily");
+    setHasDailyOnlyShifts(clockableShifts.length === 0 && mappedShifts.length > 0);
     setTodayShifts(clockableShifts);
-    if (clockableShifts.length === 1 && !list.find(e => !e.clock_out)) setSelectedShift(clockableShifts[0]);
+    const activeOpen = list.find(e => !e.clock_out);
+    if (!activeOpen) {
+      const preselect = urlShiftId ? clockableShifts.find(s => s.id === urlShiftId) : null;
+      if (preselect) setSelectedShift(preselect);
+      else if (clockableShifts.length === 1) setSelectedShift(clockableShifts[0]);
+    }
     setLoading(false);
   }, [employeeId]);
 
@@ -471,9 +480,13 @@ export default function PortalClock() {
           ) : (
             <div className="rounded-2xl border border-border/30 bg-muted/10 p-5 flex flex-col items-center gap-2 text-center">
               <CalendarDays className="h-7 w-7 text-muted-foreground/20" />
-              <p className="text-sm font-bold text-foreground">Sin turnos para hoy</p>
+              <p className="text-sm font-bold text-foreground">
+                {hasDailyOnlyShifts ? "Turnos de pago diario" : "Sin turnos para hoy"}
+              </p>
               <p className="text-[11px] text-muted-foreground/60 max-w-[240px]">
-                No tienes turnos asignados. Si crees que falta uno, contacta a tu supervisor.
+                {hasDailyOnlyShifts
+                  ? "Tus turnos de hoy no requieren fichaje. Tu pago se calcula automáticamente."
+                  : "No tienes turnos asignados. Si crees que falta uno, contacta a tu supervisor."}
               </p>
             </div>
           )}
