@@ -241,6 +241,7 @@ function App() {
                 <Route path="payroll-mappings" element={<PayrollMappings />} />
                 <Route path="payroll-reconciliation" element={<PayrollReconciliation />} />
                 <Route path="compensation-adoption" element={<CompensationAdoption />} />
+                <Route path="applications" element={<Applications />} />
               </Route>
 
               {/* Employee portal routes */}
