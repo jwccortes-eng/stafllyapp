@@ -371,15 +371,15 @@ export default function EmployeeDashboard() {
       {/* No shifts */}
       {isModuleEnabled("my_shifts") && !nextShift && (
         <Link to="/portal/shifts" className="block">
-          <div className="rounded-2xl border-2 border-dashed border-border/40 bg-muted/10 p-8 flex flex-col items-center gap-3">
+          <div className="rounded-2xl border-2 border-dashed border-border/30 bg-muted/5 p-8 flex flex-col items-center gap-3 active:scale-[0.98] transition-all">
             <div className="h-14 w-14 rounded-2xl bg-muted/30 flex items-center justify-center">
-              <CalendarDays className="h-7 w-7 text-muted-foreground/30" />
+              <CalendarDays className="h-7 w-7 text-muted-foreground/25" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-semibold text-foreground">Sin turnos programados</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-1">Los turnos asignados aparecerán aquí</p>
+              <p className="text-sm font-bold text-foreground">Sin turnos programados</p>
+              <p className="text-[11px] text-muted-foreground/50 mt-1">Los turnos asignados aparecerán aquí</p>
             </div>
-            <span className="text-[11px] text-primary font-semibold flex items-center gap-1 mt-1">
+            <span className="text-[11px] text-primary font-bold flex items-center gap-1 mt-1">
               Ver turnos <ArrowRight className="h-3 w-3" />
             </span>
           </div>
