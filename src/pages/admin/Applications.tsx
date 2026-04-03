@@ -147,6 +147,37 @@ export default function Applications() {
     },
   });
 
+  // Existing employee matches for identity resolution
+  const { data: existingMatches = [] } = useQuery({
+    queryKey: ["employee-matches", selected?.phone, selected?.email, selectedCompanyId],
+    enabled: !!selected && !!selectedCompanyId,
+    queryFn: async () => {
+      if (!selected || !selectedCompanyId) return [];
+      const phone = selected.phone?.replace(/\D/g, "") || "";
+      const conditions: any[] = [];
+      if (phone) {
+        const { data: byPhone } = await supabase
+          .from("employees")
+          .select("id, first_name, last_name, phone_number, email, is_active, user_id, access_pin, portal_access_enabled")
+          .eq("company_id", selectedCompanyId)
+          .eq("phone_number", phone);
+        if (byPhone?.length) conditions.push(...byPhone);
+      }
+      if (selected.email) {
+        const { data: byEmail } = await supabase
+          .from("employees")
+          .select("id, first_name, last_name, phone_number, email, is_active, user_id, access_pin, portal_access_enabled")
+          .eq("company_id", selectedCompanyId)
+          .eq("email", selected.email.toLowerCase().trim());
+        if (byEmail?.length) conditions.push(...byEmail);
+      }
+      // Deduplicate
+      const unique = new Map<string, any>();
+      conditions.forEach((e) => unique.set(e.id, e));
+      return Array.from(unique.values());
+    },
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, extraFields }: { id: string; status: AppStatus; extraFields?: Record<string, any> }) => {
       const { error } = await supabase
@@ -181,8 +212,40 @@ export default function Applications() {
 
   const handleApprove = async () => {
     if (!selected) return;
-    await updateStatusMutation.mutateAsync({ id: selected.id, status: "approved" });
-    setShowApprovalModal(false);
+    setApproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("approve-application", {
+        body: {
+          application_id: selected.id,
+          role: approvalConfig.role,
+          portal_enabled: approvalConfig.portalEnabled,
+          pin_enabled: approvalConfig.pinEnabled,
+          send_invite: approvalConfig.sendInvite,
+          invite_channel: approvalConfig.inviteChannel,
+          initial_status: approvalConfig.initialStatus,
+          admin_notes: adminNotes || null,
+          link_existing_employee_id: existingMatches.length === 1 ? existingMatches[0].id : null,
+        },
+      });
+
+      if (error) throw new Error(error.message || "Approval failed");
+      if (data?.error) throw new Error(data.error);
+
+      const msgs: string[] = ["✅ Solicitud aprobada"];
+      if (data.created_new) msgs.push("Nuevo empleado creado");
+      if (data.linked_existing) msgs.push("Vinculado a empleado existente");
+      if (data.invite_sent) msgs.push("Invitación enviada");
+      toast.success(msgs.join(" · "));
+
+      queryClient.invalidateQueries({ queryKey: ["job-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["application-events"] });
+      setShowApprovalModal(false);
+      setSelected(null);
+    } catch (err: any) {
+      toast.error(err.message || "Error al aprobar solicitud");
+    } finally {
+      setApproving(false);
+    }
   };
 
   const handleReject = () => {
