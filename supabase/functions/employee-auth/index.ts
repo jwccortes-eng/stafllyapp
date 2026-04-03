@@ -410,6 +410,36 @@ Deno.serve(async (req) => {
 
       await ensureEmployeeRole(adminClient, employee.user_id);
 
+      // Link ALL employees with same phone to this user_id + ensure company_users entries
+      if (employee.user_id) {
+        const { data: allPhoneEmps } = await adminClient
+          .from("employees")
+          .select("id, company_id, user_id")
+          .eq("phone_number", cleanPhone)
+          .eq("is_active", true);
+
+        for (const emp of (allPhoneEmps ?? [])) {
+          // Link employee to same user_id if not already linked
+          if (!emp.user_id) {
+            await adminClient.from("employees").update({ user_id: employee.user_id }).eq("id", emp.id);
+          }
+          // Ensure company_users entry exists
+          const { data: existingCU } = await adminClient
+            .from("company_users")
+            .select("id")
+            .eq("user_id", employee.user_id)
+            .eq("company_id", emp.company_id)
+            .maybeSingle();
+          if (!existingCU) {
+            await adminClient.from("company_users").insert({
+              user_id: employee.user_id,
+              company_id: emp.company_id,
+              role: "employee",
+            }).then(() => {});
+          }
+        }
+      }
+
       const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({
         email: empEmail,
         password: pwd,

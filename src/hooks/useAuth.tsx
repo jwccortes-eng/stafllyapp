@@ -33,6 +33,8 @@ interface AuthContextType {
   /** Whether user has an employee profile */
   canAccessPortal: boolean;
   employeeId: string | null;
+  /** All employee IDs across companies */
+  allEmployeeIds: { id: string; companyId: string }[];
   employeeActive: boolean;
   fullName: string | null;
   loading: boolean;
@@ -41,6 +43,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   hasModuleAccess: (module: string, permission: 'view' | 'edit' | 'delete') => boolean;
   hasActionPermission: (action: string) => boolean;
+  /** Resolve employeeId for a specific company */
+  resolveEmployeeForCompany: (companyId: string) => string | null;
 }
 
 const ADMIN_ROLES = new Set(['developer', 'owner', 'company_owner', 'admin', 'manager', 'supervisor']);
@@ -55,6 +59,7 @@ const AuthContext = createContext<AuthContextType>({
   canAccessAdmin: false,
   canAccessPortal: false,
   employeeId: null,
+  allEmployeeIds: [],
   employeeActive: true,
   fullName: null,
   loading: true,
@@ -63,6 +68,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   hasModuleAccess: () => false,
   hasActionPermission: () => false,
+  resolveEmployeeForCompany: () => null,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -74,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return (localStorage.getItem("stafly-active-mode") as ActiveMode) || 'admin';
   });
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [allEmployeeIds, setAllEmployeeIds] = useState<{ id: string; companyId: string }[]>([]);
   const [employeeActive, setEmployeeActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<ModulePermission[]>([]);
@@ -109,13 +116,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data: empData } = await supabase
         .from("employees")
-        .select("id, is_active")
+        .select("id, is_active, company_id")
         .eq("user_id", userId)
-        .eq("is_active", true)
-        .maybeSingle();
+        .eq("is_active", true);
+
+      const activeEmps = (empData ?? []).map(e => ({ id: e.id, companyId: e.company_id }));
+      setAllEmployeeIds(activeEmps);
 
       // If has employee profile, add employee to role set
-      if (empData?.id) {
+      if (activeEmps.length > 0) {
         availableRoles.add("employee");
       }
 
@@ -153,9 +162,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setActionPermissions([]);
       }
 
-      if (empData?.id) {
-        setEmployeeId(empData.id);
-        setEmployeeActive(empData.is_active ?? false);
+      // Set first employee as default (company context will refine later)
+      const firstEmp = activeEmps[0];
+      if (firstEmp) {
+        setEmployeeId(firstEmp.id);
+        setEmployeeActive(true);
       } else {
         setEmployeeId(null);
         setEmployeeActive(true);
@@ -163,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Auto-set active mode based on what access user has
       const hasAdminRole = [...availableRoles].some(r => ADMIN_ROLES.has(r));
-      const hasEmployeeProfile = !!empData?.id;
+      const hasEmployeeProfile = activeEmps.length > 0;
       const savedMode = localStorage.getItem("stafly-active-mode") as ActiveMode | null;
 
       if (savedMode === 'employee' && hasEmployeeProfile) {
@@ -232,7 +243,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const canAccessAdmin = [...allRoles].some(r => ADMIN_ROLES.has(r));
-  const canAccessPortal = !!employeeId;
+  const canAccessPortal = !!employeeId || allEmployeeIds.length > 0;
+
+  const resolveEmployeeForCompany = useCallback((companyId: string): string | null => {
+    return allEmployeeIds.find(e => e.companyId === companyId)?.id ?? null;
+  }, [allEmployeeIds]);
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
     if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
@@ -259,8 +274,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, session, role, allRoles, activeMode, setActiveMode,
       canAccessAdmin, canAccessPortal,
-      employeeId, employeeActive, fullName, loading,
+      employeeId, allEmployeeIds, employeeActive, fullName, loading,
       permissions, actionPermissions, signOut, hasModuleAccess, hasActionPermission,
+      resolveEmployeeForCompany,
     }}>
       {children}
     </AuthContext.Provider>
