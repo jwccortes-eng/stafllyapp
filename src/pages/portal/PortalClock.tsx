@@ -347,7 +347,7 @@ export default function PortalClock() {
   const isClockedIn = !!activeEntry;
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in pb-24">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">Reloj</h1>
