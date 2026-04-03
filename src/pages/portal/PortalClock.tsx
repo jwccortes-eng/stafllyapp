@@ -281,12 +281,14 @@ export default function PortalClock() {
       if (!scheduleCheck.withinSchedule) {
         await supabase.from("time_entries").update({ clock_out: clockOutTime, status: "pending", notes: `⚠️ Salida fuera de horario.` }).eq("id", activeEntry.id);
         // Log out-of-schedule clock-out as alert instead of ticket (more reliable)
-        await supabase.from("clock_alerts").insert({
-          employee_id: employeeId, company_id: companyId,
-          shift_id: activeEntry.shift_id,
-          type: "OUT_OF_SCHEDULE_CLOCKOUT", severity: "medium",
-          description: `Clock-out a las ${format(new Date(), "HH:mm")} fuera del horario programado.`,
-        } as any).catch(() => {/* non-critical */});
+        try {
+          await supabase.from("clock_alerts").insert({
+            employee_id: employeeId, company_id: companyId,
+            shift_id: activeEntry.shift_id,
+            type: "OUT_OF_SCHEDULE_CLOCKOUT", severity: "medium",
+            description: `Clock-out a las ${format(new Date(), "HH:mm")} fuera del horario programado.`,
+          } as any);
+        } catch { /* non-critical */ }
       } else {
         const { error } = await supabase.from("time_entries").update({ clock_out: clockOutTime }).eq("id", activeEntry.id);
         if (error) throw error;
