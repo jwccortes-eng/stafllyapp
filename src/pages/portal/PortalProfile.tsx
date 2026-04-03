@@ -181,12 +181,11 @@ export default function PortalProfile() {
             />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold font-heading tracking-tight leading-tight">
+            <h2 className="text-lg font-bold font-heading tracking-tight leading-tight">
               {profile.first_name} {profile.last_name}
-            </h1>
-            <p className="text-sm opacity-80 mt-0.5">{companyName}</p>
+            </h2>
             {profile.employee_role && (
-              <span className="inline-block mt-2 text-[10px] px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm">
+              <span className="inline-block mt-1.5 text-[10px] px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm">
                 {profile.employee_role}
               </span>
             )}
