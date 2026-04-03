@@ -122,8 +122,14 @@ export default function MyPayments() {
   useEffect(() => {
     if (!employeeId) return;
     async function load() {
+      // First get employee's company_id for scoping
+      const { data: empData } = await supabase
+        .from("employees").select("company_id").eq("id", employeeId!).maybeSingle();
+      if (!empData) { setPayments([]); setLoading(false); return; }
+
       const { data: publishedPeriods } = await supabase
         .from("pay_periods").select("id, start_date, end_date")
+        .eq("company_id", empData.company_id)
         .not("published_at", "is", null).order("start_date", { ascending: false });
       const publishedIds = (publishedPeriods ?? []).map((p: any) => p.id);
       const periodMap = new Map<string, { start_date: string; end_date: string }>();

@@ -104,7 +104,7 @@ export default function EmployeeDashboard() {
         .select("status, scheduled_shifts!inner (id, title, date, start_time, end_time, status, meeting_point, locations (name), clients (name))")
         .eq("employee_id", employeeId).neq("status", "rejected")
         .gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(5),
-      supabase.from("time_entries").select("id, clock_in, clock_out, shift_id").eq("employee_id", employeeId).is("clock_out", null).limit(1) as any,
+      supabase.from("time_entries").select("id, clock_in, clock_out, shift_id, scheduled_shifts(title)").eq("employee_id", employeeId).is("clock_out", null).limit(1) as any,
       supabase.from("time_entries").select("clock_in, clock_out")
         .eq("employee_id", employeeId).gte("clock_in", weekStart).lte("clock_in", weekEnd),
     ]);
@@ -116,7 +116,8 @@ export default function EmployeeDashboard() {
 
     const activeClocks = (clockRes.data ?? []) as any[];
     if (activeClocks.length > 0) {
-      setClockStatus({ isClockedIn: true, clockInTime: activeClocks[0].clock_in, shiftTitle: activeClocks[0].scheduled_shifts?.title ?? null });
+      const ac = activeClocks[0];
+      setClockStatus({ isClockedIn: true, clockInTime: ac.clock_in, shiftTitle: ac.scheduled_shifts?.title ?? null });
     } else {
       setClockStatus({ isClockedIn: false, clockInTime: null, shiftTitle: null });
     }

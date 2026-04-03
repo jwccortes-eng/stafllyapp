@@ -211,7 +211,8 @@ export default function PortalClock() {
     if (!employeeId || !companyId || !selectedShift) return;
     setActing(true);
     try {
-      const pos = await capturePosition();
+      let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
+      try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
       if (selectedShift.id) {
         const { data: shiftData } = await supabase.from("scheduled_shifts")
@@ -270,7 +271,8 @@ export default function PortalClock() {
     setActing(true);
     try {
       const clockOutTime = new Date().toISOString();
-      const pos = await capturePosition();
+      let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
+      try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
       await supabase.from("clock_events").insert({
         employee_id: employeeId, company_id: companyId, shift_id: activeEntry.shift_id, time_entry_id: activeEntry.id,
@@ -278,13 +280,15 @@ export default function PortalClock() {
       } as any);
       if (!scheduleCheck.withinSchedule) {
         await supabase.from("time_entries").update({ clock_out: clockOutTime, status: "pending", notes: `⚠️ Salida fuera de horario.` }).eq("id", activeEntry.id);
-        await supabase.from("employee_tickets").insert({
-          company_id: companyId, employee_id: employeeId,
-          subject: "Salida fuera de horario programado",
-          description: `Clock-out a las ${format(new Date(), "HH:mm")} fuera del horario.`,
-          type: "time_adjustment", source: "auto", priority: "medium", status: "new",
-          source_entity_type: "time_entry", source_entity_id: activeEntry.id,
-        });
+        // Log out-of-schedule clock-out as alert instead of ticket (more reliable)
+        try {
+          await supabase.from("clock_alerts").insert({
+            employee_id: employeeId, company_id: companyId,
+            shift_id: activeEntry.shift_id,
+            type: "OUT_OF_SCHEDULE_CLOCKOUT", severity: "medium",
+            description: `Clock-out a las ${format(new Date(), "HH:mm")} fuera del horario programado.`,
+          } as any);
+        } catch { /* non-critical */ }
       } else {
         const { error } = await supabase.from("time_entries").update({ clock_out: clockOutTime }).eq("id", activeEntry.id);
         if (error) throw error;

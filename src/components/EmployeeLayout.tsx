@@ -117,7 +117,7 @@ export default function EmployeeLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-4 pb-28 animate-fade-in">
+        <main className="flex-1 overflow-y-auto px-4 py-4 animate-fade-in">
           <Outlet context={{ openMore: () => setMoreOpen(true) }} />
         </main>
 
@@ -140,7 +140,7 @@ export default function EmployeeLayout() {
           </div>
         </div>
       </header>
-      <main className="max-w-3xl mx-auto px-6 py-8 pb-28 animate-fade-in">
+      <main className="max-w-3xl mx-auto px-6 py-8 animate-fade-in">
         <Outlet context={{ openMore: () => setMoreOpen(true) }} />
       </main>
       {navAndSheet}
