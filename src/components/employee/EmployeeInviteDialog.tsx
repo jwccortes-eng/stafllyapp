@@ -17,6 +17,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   employee: Record<string, any>;
   onInviteSent?: (channel: "whatsapp" | "sms" | "email" | "copy" | "other") => void;
+  inviteToken?: string | null;
 }
 
 const PRODUCTION_URL = "https://staflyapps.com";
