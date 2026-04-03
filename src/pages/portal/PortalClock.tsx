@@ -92,6 +92,7 @@ export default function PortalClock() {
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [shiftQrModes, setShiftQrModes] = useState<Record<string, string>>({});
   const [successState, setSuccessState] = useState<{ type: "in" | "out"; time: string; shift: string } | null>(null);
+  const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
