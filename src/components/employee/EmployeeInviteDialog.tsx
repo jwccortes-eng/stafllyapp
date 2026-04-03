@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
-import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
