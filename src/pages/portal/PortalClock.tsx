@@ -509,15 +509,17 @@ export default function PortalClock() {
         </div>
       )}
 
-      {/* QR Scan button */}
-      <Button
-        variant="outline"
-        onClick={() => setQrScannerOpen(true)}
-        className="w-full h-12 rounded-2xl text-sm font-bold gap-2.5 border-primary/20 text-primary hover:bg-primary/5"
-      >
-        <ScanLine className="h-5 w-5" />
-        Escanear QR
-      </Button>
+      {/* QR Scan button — only show if any shift uses QR */}
+      {Object.values(shiftQrModes).some(m => m === "required" || m === "optional") && (
+        <Button
+          variant="outline"
+          onClick={() => setQrScannerOpen(true)}
+          className="w-full h-12 rounded-2xl text-sm font-bold gap-2.5 border-primary/20 text-primary hover:bg-primary/5"
+        >
+          <ScanLine className="h-5 w-5" />
+          Escanear QR del turno
+        </Button>
+      )}
 
       {/* Clock in/out button */}
       {isClockedIn ? (
