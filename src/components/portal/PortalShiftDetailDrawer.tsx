@@ -187,7 +187,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
           ))}
         </div>
 
-        <div className="px-4 pb-6 overflow-y-auto" style={{ maxHeight: "calc(92vh - 200px)" }}>
+        <div className="px-4 pb-[max(env(safe-area-inset-bottom,24px),24px)] overflow-y-auto" style={{ maxHeight: "calc(92vh - 200px)" }}>
           {tab === "info" && (
             <div className="space-y-3">
               {/* ── A. Schedule block ── */}

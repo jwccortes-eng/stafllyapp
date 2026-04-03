@@ -46,7 +46,10 @@ function isClockInAllowed(shift: TodayShift): { allowed: boolean; message: strin
   shiftStart.setHours(h, m, 0, 0);
   if (now < shiftStart) {
     const diffMin = Math.ceil((shiftStart.getTime() - now.getTime()) / 60000);
-    return { allowed: false, message: `Faltan ${diffMin} min para el inicio del turno (${shift.start_time.slice(0, 5)}).` };
+    const hrs = Math.floor(diffMin / 60);
+    const mins = diffMin % 60;
+    const timeLabel = hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`;
+    return { allowed: false, message: `Tu turno empieza a las ${shift.start_time.slice(0, 5)}. Faltan ${timeLabel}.` };
   }
   return { allowed: true, message: "" };
 }
@@ -347,7 +350,7 @@ export default function PortalClock() {
   const isClockedIn = !!activeEntry;
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in pb-24">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">Reloj</h1>
@@ -486,14 +489,14 @@ export default function PortalClock() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-[hsl(var(--status-pending)/0.2)] bg-[hsl(var(--status-pending)/0.04)] p-4 flex items-start gap-3">
-              <div className="h-9 w-9 rounded-xl bg-[hsl(var(--status-pending)/0.1)] flex items-center justify-center shrink-0">
-                <AlertCircle className="h-4 w-4 text-[hsl(var(--status-pending))]" />
+            <div className="rounded-2xl border border-border/30 bg-muted/10 p-5 flex flex-col items-center gap-3 text-center">
+              <div className="h-12 w-12 rounded-2xl bg-muted/30 flex items-center justify-center">
+                <CalendarDays className="h-6 w-6 text-muted-foreground/25" />
               </div>
               <div>
-                <p className="text-xs font-bold text-foreground">Sin turnos asignados para hoy</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Revisa tu calendario o contacta a tu supervisor si crees que falta un turno.
+                <p className="text-sm font-bold text-foreground">Sin turnos para hoy</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-1 max-w-[240px]">
+                  No tienes turnos asignados para hoy. Si crees que falta uno, contacta a tu supervisor.
                 </p>
               </div>
             </div>
@@ -509,15 +512,17 @@ export default function PortalClock() {
         </div>
       )}
 
-      {/* QR Scan button */}
-      <Button
-        variant="outline"
-        onClick={() => setQrScannerOpen(true)}
-        className="w-full h-12 rounded-2xl text-sm font-bold gap-2.5 border-primary/20 text-primary hover:bg-primary/5"
-      >
-        <ScanLine className="h-5 w-5" />
-        Escanear QR
-      </Button>
+      {/* QR Scan button — only show if any shift uses QR */}
+      {Object.values(shiftQrModes).some(m => m === "required" || m === "optional") && (
+        <Button
+          variant="outline"
+          onClick={() => setQrScannerOpen(true)}
+          className="w-full h-12 rounded-2xl text-sm font-bold gap-2.5 border-primary/20 text-primary hover:bg-primary/5"
+        >
+          <ScanLine className="h-5 w-5" />
+          Escanear QR del turno
+        </Button>
+      )}
 
       {/* Clock in/out button */}
       {isClockedIn ? (
@@ -609,7 +614,7 @@ export default function PortalClock() {
             <Clock className="h-7 w-7 text-muted-foreground/20" />
           </div>
           <p className="text-sm font-bold text-foreground">Sin registros hoy</p>
-          <p className="text-xs text-muted-foreground/50 max-w-[240px] mx-auto">Tus fichajes del día aparecerán aquí</p>
+          <p className="text-xs text-muted-foreground/50 max-w-[240px] mx-auto">Cuando fiches entrada o salida, tus registros aparecerán aquí.</p>
         </div>
       )}
 
