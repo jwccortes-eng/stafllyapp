@@ -116,13 +116,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data: empData } = await supabase
         .from("employees")
-        .select("id, is_active")
+        .select("id, is_active, company_id")
         .eq("user_id", userId)
-        .eq("is_active", true)
-        .maybeSingle();
+        .eq("is_active", true);
+
+      const activeEmps = (empData ?? []).map(e => ({ id: e.id, companyId: e.company_id }));
+      setAllEmployeeIds(activeEmps);
 
       // If has employee profile, add employee to role set
-      if (empData?.id) {
+      if (activeEmps.length > 0) {
         availableRoles.add("employee");
       }
 
@@ -160,9 +162,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setActionPermissions([]);
       }
 
-      if (empData?.id) {
-        setEmployeeId(empData.id);
-        setEmployeeActive(empData.is_active ?? false);
+      // Set first employee as default (company context will refine later)
+      const firstEmp = activeEmps[0];
+      if (firstEmp) {
+        setEmployeeId(firstEmp.id);
+        setEmployeeActive(true);
       } else {
         setEmployeeId(null);
         setEmployeeActive(true);
@@ -170,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Auto-set active mode based on what access user has
       const hasAdminRole = [...availableRoles].some(r => ADMIN_ROLES.has(r));
-      const hasEmployeeProfile = !!empData?.id;
+      const hasEmployeeProfile = activeEmps.length > 0;
       const savedMode = localStorage.getItem("stafly-active-mode") as ActiveMode | null;
 
       if (savedMode === 'employee' && hasEmployeeProfile) {
