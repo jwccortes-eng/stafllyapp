@@ -102,7 +102,7 @@ export default function AcceptInvite() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm space-y-6 text-center">
-        <StaflyBrand size="md" />
+        <StaflyLogo size={28} />
 
         {state === "loading" && (
           <div className="space-y-3 pt-8">
