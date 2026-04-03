@@ -480,9 +480,13 @@ export default function PortalClock() {
           ) : (
             <div className="rounded-2xl border border-border/30 bg-muted/10 p-5 flex flex-col items-center gap-2 text-center">
               <CalendarDays className="h-7 w-7 text-muted-foreground/20" />
-              <p className="text-sm font-bold text-foreground">Sin turnos para hoy</p>
+              <p className="text-sm font-bold text-foreground">
+                {hasDailyOnlyShifts ? "Turnos de pago diario" : "Sin turnos para hoy"}
+              </p>
               <p className="text-[11px] text-muted-foreground/60 max-w-[240px]">
-                No tienes turnos asignados. Si crees que falta uno, contacta a tu supervisor.
+                {hasDailyOnlyShifts
+                  ? "Tus turnos de hoy no requieren fichaje. Tu pago se calcula automáticamente."
+                  : "No tienes turnos asignados. Si crees que falta uno, contacta a tu supervisor."}
               </p>
             </div>
           )}
