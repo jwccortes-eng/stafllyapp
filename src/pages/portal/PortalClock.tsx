@@ -211,7 +211,8 @@ export default function PortalClock() {
     if (!employeeId || !companyId || !selectedShift) return;
     setActing(true);
     try {
-      const pos = await capturePosition();
+      let pos: { latitude: number; longitude: number; accuracy: number } | null = null;
+      try { pos = await capturePosition(); } catch { /* GPS unavailable */ }
       const device = getDeviceId();
       if (selectedShift.id) {
         const { data: shiftData } = await supabase.from("scheduled_shifts")
