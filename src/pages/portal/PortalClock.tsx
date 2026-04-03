@@ -161,11 +161,11 @@ export default function PortalClock() {
   const initiateClockIn = () => {
     if (!employeeId || !companyId || !selectedShift) return;
     if (!hasProfilePhoto) {
-      toast({ title: "Foto de perfil requerida", description: "Debes subir una foto de tu rostro antes de poder fichar.", variant: "destructive" });
+      toast({ title: "Foto de perfil requerida", description: "Sube una foto antes de fichar.", variant: "destructive" });
       return;
     }
     const check = isClockInAllowed(selectedShift);
-    if (!check.allowed) { toast({ title: "No permitido", description: check.message, variant: "destructive" }); return; }
+    if (!check.allowed) { toast({ title: "Aún no disponible", description: check.message, variant: "destructive" }); return; }
     if (clockPhotoRequired) { setPendingClockAction("in"); setPhotoDialogOpen(true); }
     else handleClockIn(null);
   };
@@ -188,23 +188,23 @@ export default function PortalClock() {
     if (!employeeId || !companyId) return;
     const parts = data.split(":");
     if (parts.length !== 4 || parts[0] !== "stafly" || parts[1] !== "shift") {
-      toast({ title: "QR inválido", description: "Este código no es un QR de turno válido.", variant: "destructive" }); return;
+      toast({ title: "QR inválido", description: "Este código no corresponde a un turno.", variant: "destructive" }); return;
     }
     const [, , scannedShiftId, scannedToken] = parts;
     const { data: shiftData } = await supabase.from("scheduled_shifts")
       .select("id, title, qr_token, qr_attendance_mode, start_time, end_time, date").eq("id", scannedShiftId).maybeSingle();
     if (!shiftData) { toast({ title: "Turno no encontrado", variant: "destructive" }); return; }
-    if (shiftData.qr_token !== scannedToken) { toast({ title: "QR expirado", variant: "destructive" }); return; }
+    if (shiftData.qr_token !== scannedToken) { toast({ title: "QR expirado o inválido", description: "Pide un nuevo código a tu supervisor.", variant: "destructive" }); return; }
     const { data: assignment } = await supabase.from("shift_assignments")
       .select("id, status").eq("shift_id", scannedShiftId).eq("employee_id", employeeId).neq("status", "rejected").maybeSingle();
-    if (!assignment) { toast({ title: "No asignado", variant: "destructive" }); return; }
+    if (!assignment) { toast({ title: "No estás asignado a este turno", variant: "destructive" }); return; }
     const matchingShift = todayShifts.find(s => s.id === scannedShiftId);
     if (matchingShift) setSelectedShift(matchingShift);
     if (activeEntry && activeEntry.shift_id === scannedShiftId) { initiateClockOut(); }
     else if (!activeEntry) {
       if (matchingShift) setTimeout(() => initiateClockIn(), 100);
-      else toast({ title: "Turno no disponible hoy", variant: "destructive" });
-    } else { toast({ title: "Ya fichado", description: "Ya tienes un turno activo.", variant: "destructive" }); }
+      else toast({ title: "Este turno no es de hoy", variant: "destructive" });
+    } else { toast({ title: "Ya tienes un turno activo", description: "Marca salida primero.", variant: "destructive" }); }
   };
 
   const handleClockIn = async (photoUrl: string | null) => {
@@ -223,7 +223,7 @@ export default function PortalClock() {
           const enforcementEnabled = geoSetting?.value != null && typeof geoSetting.value === "object" && (geoSetting.value as any)?.enforce === true;
           if (!pos) {
             if (enforcementEnabled) {
-              toast({ title: "Ubicación requerida", description: "Activa los servicios de ubicación e intenta de nuevo.", variant: "destructive" });
+              toast({ title: "Activa tu ubicación", description: "Tu empresa requiere ubicación GPS para fichar. Actívala en ajustes e intenta de nuevo.", variant: "destructive" });
               setActing(false); return;
             }
           } else {
@@ -231,7 +231,7 @@ export default function PortalClock() {
             const radius = loc.geofence_radius ?? 200;
             if (dist > radius) {
               if (enforcementEnabled) {
-                toast({ title: "Fuera del área permitida", description: `Estás a ${Math.round(dist)}m (radio: ${radius}m).`, variant: "destructive" });
+                toast({ title: "Estás fuera del área de trabajo", description: `Acércate a la ubicación del turno (${Math.round(dist)}m de distancia).`, variant: "destructive" });
                 await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: "high", description: `Clock-in bloqueado a ${Math.round(dist)}m` } as any);
                 setActing(false); return;
               } else {
@@ -259,7 +259,7 @@ export default function PortalClock() {
       setSelectedShift(null);
       await loadData();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message ?? "No se pudo registrar.", variant: "destructive" });
+      toast({ title: "No se pudo registrar", description: err.message ?? "Intenta de nuevo.", variant: "destructive" });
     } finally { setActing(false); }
   };
 
@@ -293,7 +293,7 @@ export default function PortalClock() {
       setTimeout(() => setSuccessState(null), 4000);
       await loadData();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message ?? "No se pudo registrar.", variant: "destructive" });
+      toast({ title: "No se pudo registrar", description: err.message ?? "Intenta de nuevo.", variant: "destructive" });
     } finally { setActing(false); }
   };
 
@@ -306,10 +306,10 @@ export default function PortalClock() {
         type: "manual_time_request", title: "Solicitud de horario no capturado",
         body: requestMessage.trim(), metadata: { employee_id: employeeId, request_date: format(new Date(), "yyyy-MM-dd") },
       } as any);
-      toast({ title: "Solicitud enviada" });
+      toast({ title: "Solicitud enviada", description: "Tu supervisor la revisará pronto." });
       setRequestOpen(false); setRequestMessage("");
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error al enviar", description: err.message, variant: "destructive" });
     } finally { setSendingRequest(false); }
   };
 
@@ -340,34 +340,28 @@ export default function PortalClock() {
   if (loading) {
     return (
       <div className="space-y-4 pt-8">
-        <div className="h-20 animate-pulse bg-muted rounded-2xl" />
-        <div className="h-48 animate-pulse bg-muted rounded-2xl" />
         <div className="h-16 animate-pulse bg-muted rounded-2xl" />
+        <div className="h-40 animate-pulse bg-muted rounded-2xl" />
+        <div className="h-14 animate-pulse bg-muted rounded-2xl" />
       </div>
     );
   }
 
   const isClockedIn = !!activeEntry;
+  const hasQrShifts = Object.values(shiftQrModes).some(m => m === "required" || m === "optional");
 
   return (
-    <div className="space-y-5 animate-fade-in pb-24">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">Reloj</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">Control de asistencia</p>
-      </div>
-
+    <div className="space-y-4 animate-fade-in pb-24">
       {/* Missing photo warning */}
       {!hasProfilePhoto && (
         <button onClick={() => navigate("/portal/profile")}
-          className="w-full rounded-xl border-2 border-destructive/30 bg-destructive/5 p-3.5 flex items-center gap-3 hover:bg-destructive/10 transition-colors active:scale-[0.98]">
-          <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
-            <Camera className="h-5 w-5 text-destructive" />
-          </div>
+          className="w-full rounded-xl border-2 border-destructive/30 bg-destructive/5 p-3 flex items-center gap-3 hover:bg-destructive/10 transition-colors active:scale-[0.98]">
+          <Camera className="h-5 w-5 text-destructive shrink-0" />
           <div className="text-left flex-1">
-            <p className="text-xs font-bold text-destructive">Foto de perfil requerida</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Sube una foto de tu rostro para poder fichar</p>
+            <p className="text-xs font-bold text-destructive">Sube tu foto de perfil</p>
+            <p className="text-[10px] text-muted-foreground">Requerida para poder fichar</p>
           </div>
+          <ChevronRight className="h-4 w-4 text-destructive/30" />
         </button>
       )}
 
@@ -379,65 +373,49 @@ export default function PortalClock() {
             ? "bg-[hsl(var(--status-confirmed)/0.08)] border-2 border-[hsl(var(--status-confirmed)/0.2)]"
             : "bg-primary/[0.06] border-2 border-primary/20"
         )}>
-          <div className={cn(
-            "h-14 w-14 rounded-2xl mx-auto flex items-center justify-center",
-            successState.type === "in" ? "bg-[hsl(var(--status-confirmed)/0.15)]" : "bg-primary/10"
-          )}>
-            <CheckCircle2 className={cn("h-7 w-7", successState.type === "in" ? "text-[hsl(var(--status-confirmed))]" : "text-primary")} />
-          </div>
+          <CheckCircle2 className={cn("h-10 w-10 mx-auto", successState.type === "in" ? "text-[hsl(var(--status-confirmed))]" : "text-primary")} />
           <p className="text-lg font-bold font-heading text-foreground">
-            {successState.type === "in" ? "Entrada registrada" : "Salida registrada"}
+            {successState.type === "in" ? "✓ Entrada registrada" : "✓ Salida registrada"}
           </p>
-          <p className="text-sm text-muted-foreground">
-            {successState.shift} · {successState.time}
-          </p>
+          <p className="text-sm text-muted-foreground">{successState.shift} · {successState.time}</p>
         </div>
       )}
 
-      {/* ── Current time ── */}
-      <div className="text-center space-y-1">
-        <p className="text-5xl font-bold font-heading tracking-tight tabular-nums text-foreground">
+      {/* ── Current time — compact ── */}
+      <div className="text-center">
+        <p className="text-4xl font-bold font-heading tracking-tight tabular-nums text-foreground">
           {format(now, "HH:mm")}
+          <span className="text-lg text-muted-foreground/40 ml-0.5">{format(now, "ss")}</span>
         </p>
-        <p className="text-xs text-muted-foreground/60 font-medium tabular-nums">{format(now, "ss")}s</p>
-        <p className="text-[13px] text-muted-foreground capitalize">
-          {format(now, "EEEE, d 'de' MMMM", { locale: es })}
+        <p className="text-[12px] text-muted-foreground capitalize mt-0.5">
+          {format(now, "EEEE d 'de' MMMM", { locale: es })}
         </p>
       </div>
 
-      {/* ── Status card ── */}
-      <div className={cn(
-        "rounded-2xl p-5 text-center relative overflow-hidden transition-all",
-        isClockedIn
-          ? "bg-gradient-to-br from-[hsl(var(--status-confirmed))] to-[hsl(var(--status-confirmed)/0.8)] text-white"
-          : "bg-card border border-border/40 text-foreground shadow-sm"
-      )}>
-        {isClockedIn && <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,hsl(0_0%_100%/0.12),transparent_60%)]" />}
-        <div className="relative space-y-2">
-          <div className="flex items-center justify-center gap-2">
-            <div className={cn("h-2.5 w-2.5 rounded-full", isClockedIn ? "bg-white animate-pulse" : "bg-muted-foreground/30")} />
-            <span className="text-xs font-bold uppercase tracking-widest">
-              {isClockedIn ? "En turno" : "Fuera de turno"}
-            </span>
+      {/* ── Clocked-in status ── */}
+      {isClockedIn && (
+        <div className="rounded-2xl p-4 text-center relative overflow-hidden bg-gradient-to-br from-[hsl(var(--status-confirmed))] to-[hsl(var(--status-confirmed)/0.8)] text-white">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,hsl(0_0%_100%/0.12),transparent_60%)]" />
+          <div className="relative space-y-1.5">
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-widest">En turno</span>
+            </div>
+            <p className="text-3xl font-bold tabular-nums font-heading">{getElapsed()}</p>
+            <p className="text-[11px] opacity-80">Entrada: {format(new Date(activeEntry!.clock_in), "HH:mm")}</p>
           </div>
-          {isClockedIn && (
-            <>
-              <p className="text-4xl font-bold tabular-nums font-heading">{getElapsed()}</p>
-              <p className="text-xs opacity-80">Entrada: {format(new Date(activeEntry!.clock_in), "HH:mm")}</p>
-            </>
-          )}
         </div>
-      </div>
+      )}
 
-      {/* ── Shift selection ── */}
+      {/* ── Shift selection — only when not clocked in ── */}
       {!isClockedIn && (
         <>
           {todayShifts.length > 0 ? (
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">
-                Selecciona tu turno
+                {todayShifts.length === 1 ? "Tu turno de hoy" : "Selecciona tu turno"}
               </p>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {todayShifts.map(s => {
                   const isSelected = selectedShift?.id === s.id;
                   const alreadyClockedShift = todayEntries.some(e => e.shift_id === s.id);
@@ -447,21 +425,14 @@ export default function PortalClock() {
                       key={s.id} disabled={alreadyClockedShift}
                       onClick={() => setSelectedShift(isSelected ? null : s)}
                       className={cn(
-                        "w-full rounded-xl border p-3.5 text-left transition-all",
+                        "w-full rounded-xl border p-3 text-left transition-all min-h-[56px]",
                         isSelected && "border-primary bg-primary/[0.04] ring-2 ring-primary/20",
                         !isSelected && !alreadyClockedShift && "border-border/40 hover:border-primary/30 bg-card shadow-sm",
                         alreadyClockedShift && "opacity-40 cursor-not-allowed bg-muted/20",
                       )}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {s.shift_code && (
-                            <span className="text-[9px] font-mono font-bold text-primary bg-primary/10 rounded-md px-1.5 py-0.5">
-                              #{(s.shift_code).padStart(4, "0")}
-                            </span>
-                          )}
-                          <span className="text-[14px] font-bold truncate">{s.title}</span>
-                        </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[13px] font-bold truncate flex-1">{s.title}</span>
                         {alreadyClockedShift && (
                           <span className="text-[9px] font-bold text-[hsl(var(--status-confirmed))] flex items-center gap-0.5 shrink-0">
                             <CheckCircle2 className="h-3 w-3" /> Completado
@@ -469,12 +440,17 @@ export default function PortalClock() {
                         )}
                         {!alreadyClockedShift && !timeCheck.allowed && (
                           <span className="text-[9px] font-bold text-[hsl(var(--status-pending))] flex items-center gap-0.5 shrink-0">
-                            <ShieldAlert className="h-3 w-3" /> No disponible
+                            <Clock className="h-3 w-3" /> Aún no
+                          </span>
+                        )}
+                        {!alreadyClockedShift && timeCheck.allowed && isSelected && (
+                          <span className="text-[9px] font-bold text-primary flex items-center gap-0.5 shrink-0">
+                            <CheckCircle2 className="h-3 w-3" /> Listo
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1.5">
-                        <span className="flex items-center gap-1 font-medium">
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
+                        <span className="flex items-center gap-1 font-medium tabular-nums">
                           <Clock className="h-3 w-3" /> {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
                         </span>
                         {s.location_name && (
@@ -489,16 +465,12 @@ export default function PortalClock() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-border/30 bg-muted/10 p-5 flex flex-col items-center gap-3 text-center">
-              <div className="h-12 w-12 rounded-2xl bg-muted/30 flex items-center justify-center">
-                <CalendarDays className="h-6 w-6 text-muted-foreground/25" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">Sin turnos para hoy</p>
-                <p className="text-[11px] text-muted-foreground/60 mt-1 max-w-[240px]">
-                  No tienes turnos asignados para hoy. Si crees que falta uno, contacta a tu supervisor.
-                </p>
-              </div>
+            <div className="rounded-2xl border border-border/30 bg-muted/10 p-5 flex flex-col items-center gap-2 text-center">
+              <CalendarDays className="h-7 w-7 text-muted-foreground/20" />
+              <p className="text-sm font-bold text-foreground">Sin turnos para hoy</p>
+              <p className="text-[11px] text-muted-foreground/60 max-w-[240px]">
+                No tienes turnos asignados. Si crees que falta uno, contacta a tu supervisor.
+              </p>
             </div>
           )}
         </>
@@ -507,28 +479,16 @@ export default function PortalClock() {
       {/* Clock-in blocked warning */}
       {!isClockedIn && clockInBlocked && selectedShift && (
         <div className="rounded-xl border border-[hsl(var(--status-pending)/0.3)] bg-[hsl(var(--status-pending)/0.05)] p-3 flex items-start gap-2.5">
-          <ShieldAlert className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0 mt-0.5" />
+          <Clock className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0 mt-0.5" />
           <p className="text-[11px] text-[hsl(var(--status-pending))] font-medium leading-relaxed">{clockInBlocked}</p>
         </div>
       )}
 
-      {/* QR Scan button — only show if any shift uses QR */}
-      {Object.values(shiftQrModes).some(m => m === "required" || m === "optional") && (
-        <Button
-          variant="outline"
-          onClick={() => setQrScannerOpen(true)}
-          className="w-full h-12 rounded-2xl text-sm font-bold gap-2.5 border-primary/20 text-primary hover:bg-primary/5"
-        >
-          <ScanLine className="h-5 w-5" />
-          Escanear QR del turno
-        </Button>
-      )}
-
-      {/* Clock in/out button */}
+      {/* ── Primary CTA ── */}
       {isClockedIn ? (
         <Button
           onClick={initiateClockOut} disabled={acting}
-          className="w-full h-16 rounded-2xl text-lg font-bold gap-3 shadow-xl transition-all active:scale-[0.95] bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+          className="w-full h-14 rounded-2xl text-base font-bold gap-3 shadow-xl transition-all active:scale-[0.95] bg-destructive hover:bg-destructive/90 text-destructive-foreground"
         >
           {acting ? <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <><LogOut className="h-5 w-5" /> Marcar Salida</>}
         </Button>
@@ -536,85 +496,80 @@ export default function PortalClock() {
         <Button
           onClick={initiateClockIn}
           disabled={acting || !companyId || !selectedShift || !!clockInBlocked || !hasProfilePhoto}
-          className="w-full h-16 rounded-2xl text-lg font-bold gap-3 shadow-xl transition-all active:scale-[0.95] gradient-primary text-white hover:shadow-2xl disabled:opacity-50"
+          className="w-full h-14 rounded-2xl text-base font-bold gap-3 shadow-xl transition-all active:scale-[0.95] gradient-primary text-white hover:shadow-2xl disabled:opacity-40"
         >
           {acting ? <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <><LogIn className="h-5 w-5" /> Marcar Entrada</>}
         </Button>
       )}
 
-      {/* Manual time request */}
-      {!isClockedIn && (
-        <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground gap-1.5" onClick={() => setRequestOpen(true)}>
-          <FileText className="h-3.5 w-3.5" /> Solicitar horario no capturado
-        </Button>
-      )}
+      {/* QR + manual row */}
+      <div className="flex items-center gap-2">
+        {hasQrShifts && (
+          <Button
+            variant="outline"
+            onClick={() => setQrScannerOpen(true)}
+            className="flex-1 h-11 rounded-xl text-xs font-bold gap-2 border-primary/20 text-primary hover:bg-primary/5"
+          >
+            <ScanLine className="h-4 w-4" />
+            Escanear QR
+          </Button>
+        )}
+        {!isClockedIn && (
+          <Button variant="ghost" size="sm" className={cn("h-11 text-xs text-muted-foreground gap-1.5", hasQrShifts ? "flex-1" : "w-full")} onClick={() => setRequestOpen(true)}>
+            <FileText className="h-3.5 w-3.5" /> Reportar horario
+          </Button>
+        )}
+      </div>
 
       {/* Today summary */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="rounded-2xl border border-border/40 bg-card p-3.5 shadow-sm">
-          <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
-            <Timer className="h-3.5 w-3.5" />
-            <span className="text-[9px] font-bold uppercase tracking-widest">Horas hoy</span>
+      {(todayEntries.length > 0 || isClockedIn) && (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-border/40 bg-card p-3 shadow-sm">
+            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+              <Timer className="h-3 w-3" />
+              <span className="text-[9px] font-bold uppercase tracking-widest">Horas hoy</span>
+            </div>
+            <p className="text-lg font-bold text-foreground tabular-nums font-heading">{totalHoursToday()}</p>
           </div>
-          <p className="text-xl font-bold text-foreground tabular-nums font-heading">{totalHoursToday()}</p>
-        </div>
-        <div className="rounded-2xl border border-border/40 bg-card p-3.5 shadow-sm">
-          <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
-            <CalendarDays className="h-3.5 w-3.5" />
-            <span className="text-[9px] font-bold uppercase tracking-widest">Registros</span>
+          <div className="rounded-xl border border-border/40 bg-card p-3 shadow-sm">
+            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+              <CalendarDays className="h-3 w-3" />
+              <span className="text-[9px] font-bold uppercase tracking-widest">Registros</span>
+            </div>
+            <p className="text-lg font-bold text-foreground tabular-nums font-heading">{todayEntries.length}</p>
           </div>
-          <p className="text-xl font-bold text-foreground tabular-nums font-heading">{todayEntries.length}</p>
         </div>
-      </div>
+      )}
 
       {/* Daily history */}
       {todayEntries.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">Historial de hoy</h3>
           {todayEntries.map((entry) => {
             const isActive = !entry.clock_out;
             return (
               <div key={entry.id} className={cn(
-                "rounded-xl border bg-card p-3.5 flex items-center gap-3 shadow-sm",
+                "rounded-xl border bg-card p-3 flex items-center gap-3 shadow-sm",
                 isActive && "border-[hsl(var(--status-confirmed)/0.2)] bg-[hsl(var(--status-confirmed)/0.03)]"
               )}>
                 <div className={cn(
-                  "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+                  "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
                   isActive ? "bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))]" : "bg-muted text-muted-foreground"
                 )}>
-                  <Clock className="h-4 w-4" />
+                  <Clock className="h-3.5 w-3.5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="text-sm font-bold tabular-nums">{format(new Date(entry.clock_in), "HH:mm")}</span>
                     <span className="text-muted-foreground/40 text-xs">→</span>
                     <span className="text-sm font-bold tabular-nums">{entry.clock_out ? format(new Date(entry.clock_out), "HH:mm") : "—"}</span>
+                    {isActive && <span className="text-[9px] font-bold text-[hsl(var(--status-confirmed))] ml-1">En curso</span>}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {isActive ? <span className="text-[hsl(var(--status-confirmed))] font-bold">En curso</span> : getDuration(entry)}
-                  </p>
+                  {!isActive && <p className="text-[10px] text-muted-foreground mt-0.5">{getDuration(entry)}</p>}
                 </div>
-                <span className={cn(
-                  "text-[9px] px-2.5 py-0.5 rounded-full font-bold",
-                  entry.status === "approved" ? "bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))]" :
-                  entry.status === "rejected" ? "bg-destructive/10 text-destructive" :
-                  "bg-[hsl(var(--status-pending)/0.1)] text-[hsl(var(--status-pending))]"
-                )}>
-                  {entry.status === "approved" ? "Aprobado" : entry.status === "rejected" ? "Rechazado" : "Pendiente"}
-                </span>
               </div>
             );
           })}
-        </div>
-      )}
-
-      {todayEntries.length === 0 && !isClockedIn && todayShifts.length === 0 && (
-        <div className="text-center py-10 space-y-3">
-          <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/30 flex items-center justify-center">
-            <Clock className="h-7 w-7 text-muted-foreground/20" />
-          </div>
-          <p className="text-sm font-bold text-foreground">Sin registros hoy</p>
-          <p className="text-xs text-muted-foreground/50 max-w-[240px] mx-auto">Cuando fiches entrada o salida, tus registros aparecerán aquí.</p>
         </div>
       )}
 
@@ -624,14 +579,14 @@ export default function PortalClock() {
           <DialogHeader>
             <DialogTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
-              Solicitar horario no capturado
+              Reportar horario no capturado
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Describe la situación y las horas trabajadas.</p>
+            <p className="text-xs text-muted-foreground">Describe qué horas trabajaste y por qué no pudiste fichar.</p>
             <Textarea value={requestMessage} onChange={e => setRequestMessage(e.target.value)}
-              placeholder="Ej: Trabajé de 8:00 a 17:00 pero no pude marcar entrada..." rows={4} className="text-sm resize-none" />
-            <Button onClick={handleSendTimeRequest} disabled={sendingRequest || !requestMessage.trim()} className="w-full h-10 text-sm font-bold rounded-xl">
+              placeholder="Ej: Trabajé de 8:00 a 17:00 pero no pude marcar entrada porque..." rows={4} className="text-sm resize-none" />
+            <Button onClick={handleSendTimeRequest} disabled={sendingRequest || !requestMessage.trim()} className="w-full h-11 text-sm font-bold rounded-xl">
               {sendingRequest ? <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" /> : null}
               Enviar solicitud
             </Button>
