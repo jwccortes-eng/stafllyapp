@@ -6,7 +6,7 @@ import { es } from "date-fns/locale";
 import {
   Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users,
   AlertCircle, FileText, ArrowLeft, ShieldAlert, Camera, ScanLine,
-  CheckCircle2, XCircle, Briefcase, Navigation,
+  CheckCircle2, XCircle, Briefcase, Navigation, ChevronRight,
 } from "lucide-react";
 import { capturePosition, getDeviceId, distanceMeters } from "@/lib/geo-helpers";
 import { ClockPhotoCapture } from "@/components/portal/ClockPhotoCapture";
