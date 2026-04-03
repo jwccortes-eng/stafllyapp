@@ -11,6 +11,8 @@ export interface EmployeeInvitation {
   sent_by: string;
   activated_at: string | null;
   notes: string | null;
+  invite_token: string | null;
+  expires_at: string | null;
 }
 
 /** Map of employee_id → latest invitation */
