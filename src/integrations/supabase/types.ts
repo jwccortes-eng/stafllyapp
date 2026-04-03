@@ -2456,7 +2456,9 @@ export type Database = {
           company_id: string
           created_at: string
           employee_id: string
+          expires_at: string | null
           id: string
+          invite_token: string
           metadata: Json | null
           notes: string | null
           sent_at: string
@@ -2469,7 +2471,9 @@ export type Database = {
           company_id: string
           created_at?: string
           employee_id: string
+          expires_at?: string | null
           id?: string
+          invite_token?: string
           metadata?: Json | null
           notes?: string | null
           sent_at?: string
@@ -2482,7 +2486,9 @@ export type Database = {
           company_id?: string
           created_at?: string
           employee_id?: string
+          expires_at?: string | null
           id?: string
+          invite_token?: string
           metadata?: Json | null
           notes?: string | null
           sent_at?: string
