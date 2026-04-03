@@ -113,7 +113,17 @@ export default function PortalProfile() {
     );
   }
 
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <div className="text-center py-14 space-y-3">
+        <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/30 flex items-center justify-center">
+          <User className="h-7 w-7 text-muted-foreground/20" />
+        </div>
+        <p className="text-sm font-bold text-foreground">No se pudo cargar tu perfil</p>
+        <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">Intenta cerrar sesión y volver a entrar.</p>
+      </div>
+    );
+  }
 
   const infoItems = [
     { icon: Mail, label: "Email", value: profile.email },
