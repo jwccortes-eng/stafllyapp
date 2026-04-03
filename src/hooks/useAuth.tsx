@@ -243,7 +243,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const canAccessAdmin = [...allRoles].some(r => ADMIN_ROLES.has(r));
-  const canAccessPortal = !!employeeId;
+  const canAccessPortal = !!employeeId || allEmployeeIds.length > 0;
+
+  const resolveEmployeeForCompany = useCallback((companyId: string): string | null => {
+    return allEmployeeIds.find(e => e.companyId === companyId)?.id ?? null;
+  }, [allEmployeeIds]);
 
   const hasModuleAccess = (module: string, permission: 'view' | 'edit' | 'delete'): boolean => {
     if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
@@ -270,8 +274,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, session, role, allRoles, activeMode, setActiveMode,
       canAccessAdmin, canAccessPortal,
-      employeeId, employeeActive, fullName, loading,
+      employeeId, allEmployeeIds, employeeActive, fullName, loading,
       permissions, actionPermissions, signOut, hasModuleAccess, hasActionPermission,
+      resolveEmployeeForCompany,
     }}>
       {children}
     </AuthContext.Provider>
