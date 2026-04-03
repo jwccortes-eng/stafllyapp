@@ -152,7 +152,7 @@ export default function PortalClock() {
     setShiftQrModes(qrModes);
     const clockableShifts = mappedShifts.filter(s => s.pay_type !== "daily");
     setTodayShifts(clockableShifts);
-    if (mappedShifts.length === 1 && !list.find(e => !e.clock_out)) setSelectedShift(mappedShifts[0]);
+    if (clockableShifts.length === 1 && !list.find(e => !e.clock_out)) setSelectedShift(clockableShifts[0]);
     setLoading(false);
   }, [employeeId]);
 
