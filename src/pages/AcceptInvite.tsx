@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
-import { StaflyBrand } from "@/components/brand/StaflyBrand";
+import { StaflyLogo } from "@/components/brand/StaflyBrand";
 
 type InviteState = "loading" | "valid" | "expired" | "used" | "invalid";
 
