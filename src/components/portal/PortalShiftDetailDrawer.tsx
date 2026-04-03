@@ -125,7 +125,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
 
   return (
     <Drawer open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setTab("info"); }}>
-      <DrawerContent className="max-h-[92vh]">
+      <DrawerContent className="max-h-[92vh] overflow-hidden">
         {/* ── Header ── */}
         <DrawerHeader className="pb-3 space-y-2.5 pt-4">
           {/* Countdown */}
