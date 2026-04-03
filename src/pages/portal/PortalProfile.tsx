@@ -129,15 +129,12 @@ export default function PortalProfile() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Back button */}
-      <button
-        onClick={() => navigate("/portal")}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Volver
-      </button>
+    <div className="space-y-5 animate-fade-in">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">Mi Perfil</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">{companyName}</p>
+      </div>
 
       {/* Profile photo required warning */}
       {!profile.avatar_url && (
