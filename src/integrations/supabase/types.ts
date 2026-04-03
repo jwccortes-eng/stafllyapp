@@ -204,6 +204,144 @@ export type Database = {
           },
         ]
       }
+      application_configs: {
+        Row: {
+          allow_file_uploads: boolean
+          application_enabled: boolean
+          auto_send_invite_on_approval: boolean
+          company_id: string
+          cover_image_url: string | null
+          created_at: string
+          default_role_mapping: Json | null
+          id: string
+          intro_text: string | null
+          optional_fields: Json
+          require_document: boolean
+          require_email: boolean
+          require_emergency_contact: boolean
+          require_work_auth: boolean
+          required_fields: Json
+          updated_at: string
+          visible_worker_types: Json
+        }
+        Insert: {
+          allow_file_uploads?: boolean
+          application_enabled?: boolean
+          auto_send_invite_on_approval?: boolean
+          company_id: string
+          cover_image_url?: string | null
+          created_at?: string
+          default_role_mapping?: Json | null
+          id?: string
+          intro_text?: string | null
+          optional_fields?: Json
+          require_document?: boolean
+          require_email?: boolean
+          require_emergency_contact?: boolean
+          require_work_auth?: boolean
+          required_fields?: Json
+          updated_at?: string
+          visible_worker_types?: Json
+        }
+        Update: {
+          allow_file_uploads?: boolean
+          application_enabled?: boolean
+          auto_send_invite_on_approval?: boolean
+          company_id?: string
+          cover_image_url?: string | null
+          created_at?: string
+          default_role_mapping?: Json | null
+          id?: string
+          intro_text?: string | null
+          optional_fields?: Json
+          require_document?: boolean
+          require_email?: boolean
+          require_emergency_contact?: boolean
+          require_work_auth?: boolean
+          required_fields?: Json
+          updated_at?: string
+          visible_worker_types?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_configs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_documents: {
+        Row: {
+          application_id: string
+          file_name: string | null
+          file_type: string
+          file_url: string
+          id: string
+          uploaded_at: string
+        }
+        Insert: {
+          application_id: string
+          file_name?: string | null
+          file_type?: string
+          file_url: string
+          id?: string
+          uploaded_at?: string
+        }
+        Update: {
+          application_id?: string
+          file_name?: string | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_events: {
+        Row: {
+          application_id: string
+          created_at: string
+          created_by: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          created_by?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          created_by?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auth_rate_limits: {
         Row: {
           created_at: string
@@ -642,6 +780,9 @@ export type Database = {
       }
       companies: {
         Row: {
+          application_cover_url: string | null
+          application_enabled: boolean
+          application_intro: string | null
           brand_color: string | null
           company_code: number | null
           created_at: string
@@ -655,6 +796,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          application_cover_url?: string | null
+          application_enabled?: boolean
+          application_intro?: string | null
           brand_color?: string | null
           company_code?: number | null
           created_at?: string
@@ -668,6 +812,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          application_cover_url?: string | null
+          application_enabled?: boolean
+          application_intro?: string | null
           brand_color?: string | null
           company_code?: number | null
           created_at?: string
@@ -3370,21 +3517,34 @@ export type Database = {
       job_applications: {
         Row: {
           admin_notes: string | null
+          application_type: string
           availability: string | null
           can_drive: boolean | null
+          can_travel: boolean | null
           city: string | null
           company_id: string
           created_at: string
           document_url: string | null
+          draft_data: Json | null
+          duplicate_of_application_id: string | null
+          duplicate_of_user_id: string | null
           email: string | null
+          emergency_contact: string | null
+          experience_summary: string | null
           first_name: string
+          has_car: boolean | null
           id: string
+          languages: string[] | null
           last_name: string
+          linked_user_id: string | null
           notes: string | null
           phone: string
           reference_code: string
+          rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          role_suggestion: string | null
+          source: string | null
           ssn_last4: string | null
           status: string
           updated_at: string
@@ -3392,21 +3552,34 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          application_type?: string
           availability?: string | null
           can_drive?: boolean | null
+          can_travel?: boolean | null
           city?: string | null
           company_id: string
           created_at?: string
           document_url?: string | null
+          draft_data?: Json | null
+          duplicate_of_application_id?: string | null
+          duplicate_of_user_id?: string | null
           email?: string | null
+          emergency_contact?: string | null
+          experience_summary?: string | null
           first_name: string
+          has_car?: boolean | null
           id?: string
+          languages?: string[] | null
           last_name: string
+          linked_user_id?: string | null
           notes?: string | null
           phone: string
           reference_code?: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          role_suggestion?: string | null
+          source?: string | null
           ssn_last4?: string | null
           status?: string
           updated_at?: string
@@ -3414,21 +3587,34 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          application_type?: string
           availability?: string | null
           can_drive?: boolean | null
+          can_travel?: boolean | null
           city?: string | null
           company_id?: string
           created_at?: string
           document_url?: string | null
+          draft_data?: Json | null
+          duplicate_of_application_id?: string | null
+          duplicate_of_user_id?: string | null
           email?: string | null
+          emergency_contact?: string | null
+          experience_summary?: string | null
           first_name?: string
+          has_car?: boolean | null
           id?: string
+          languages?: string[] | null
           last_name?: string
+          linked_user_id?: string | null
           notes?: string | null
           phone?: string
           reference_code?: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          role_suggestion?: string | null
+          source?: string | null
           ssn_last4?: string | null
           status?: string
           updated_at?: string
@@ -3440,6 +3626,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_duplicate_of_application_id_fkey"
+            columns: ["duplicate_of_application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
             referencedColumns: ["id"]
           },
         ]
