@@ -11,6 +11,8 @@ export interface EmployeeInvitation {
   sent_by: string;
   activated_at: string | null;
   notes: string | null;
+  invite_token: string | null;
+  expires_at: string | null;
 }
 
 /** Map of employee_id → latest invitation */
@@ -26,7 +28,7 @@ export function useEmployeeInvitations(companyId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("employee_invitations")
-      .select("id, employee_id, channel, status, sent_at, sent_by, activated_at, notes")
+      .select("id, employee_id, channel, status, sent_at, sent_by, activated_at, notes, invite_token, expires_at")
       .eq("company_id", companyId)
       .order("sent_at", { ascending: false });
 
@@ -61,7 +63,7 @@ export function useEmployeeInvitations(companyId: string | null) {
         sent_by: user.id,
         notes: notes ?? null,
       })
-      .select("id, employee_id, channel, status, sent_at, sent_by, activated_at, notes")
+      .select("id, employee_id, channel, status, sent_at, sent_by, activated_at, notes, invite_token, expires_at")
       .single();
 
     if (!error && data) {

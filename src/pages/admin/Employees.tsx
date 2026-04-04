@@ -857,7 +857,7 @@ export default function Employees() {
       </Sheet>
 
       {/* Invite Dialog */}
-      {viewEmployee && <EmployeeInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} employee={viewEmployee} onInviteSent={(channel) => { logInvitation(viewEmployee.id, channel); refetchInvitations(); }} />}
+      {viewEmployee && <EmployeeInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} employee={viewEmployee} inviteToken={invitations[viewEmployee.id]?.invite_token ?? null} onInviteSent={(channel) => { logInvitation(viewEmployee.id, channel); refetchInvitations(); }} />}
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>

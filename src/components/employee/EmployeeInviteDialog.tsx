@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
-import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
@@ -17,21 +17,24 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   employee: Record<string, any>;
   onInviteSent?: (channel: "whatsapp" | "sms" | "email" | "copy" | "other") => void;
+  inviteToken?: string | null;
 }
 
 const PRODUCTION_URL = "https://staflyapps.com";
 
-export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent }: Props) {
+export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken }: Props) {
   const { toast } = useToast();
   const { companies, selectedCompanyId } = useCompany();
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
   const company = companies.find(c => c.id === selectedCompanyId);
   const companyName = company?.name ?? "la empresa";
 
   const portalUrl = `${PRODUCTION_URL}/auth`;
+  const inviteUrl = inviteToken ? `${PRODUCTION_URL}/invite?token=${inviteToken}` : null;
   const pin = typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : "—";
   const hasPin = pin !== "—";
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
@@ -46,12 +49,20 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const waLink = `https://api.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(message)}`;
   const smsLink = `sms:${employee.phone_number ?? ""}?body=${encodeURIComponent(message)}`;
 
-  const copyLink = async () => {
+  const copyMessage = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
     onInviteSent?.("copy");
     toast({ title: "Copiado al portapapeles" });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyInviteLink = async () => {
+    if (!inviteUrl) return;
+    await navigator.clipboard.writeText(inviteUrl);
+    setLinkCopied(true);
+    toast({ title: "Enlace copiado", description: inviteUrl });
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const sendEmail = async () => {
@@ -153,6 +164,17 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             </div>
           </div>
 
+          {/* Invite link */}
+          {inviteUrl && (
+            <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
+              <Link2 className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteUrl}</span>
+              <Button variant="outline" size="sm" className={cn("h-7 text-[9px] shrink-0", linkCopied && "border-[hsl(var(--earning)/0.5)] text-[hsl(var(--earning))]")} onClick={copyInviteLink}>
+                {linkCopied ? <><Check className="h-3 w-3 mr-1" />Copiado</> : <><Copy className="h-3 w-3 mr-1" />Copiar enlace</>}
+              </Button>
+            </div>
+          )}
+
           {/* Send channels */}
           <Tabs defaultValue="link" className="w-full">
             <TabsList className="w-full grid grid-cols-2 h-8 bg-muted/30 rounded-lg">
@@ -175,7 +197,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                 <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-primary/30 hover:bg-primary/10 text-[9px]" asChild disabled={!hasPhone} onClick={() => onInviteSent?.("sms")}>
                   <a href={smsLink}><Smartphone className="h-4 w-4 text-primary" />SMS</a>
                 </Button>
-                <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyLink}>
+                <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyMessage}>
                   {copied ? <Check className="h-4 w-4 text-[hsl(var(--earning))]" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
                   {copied ? "Copiado" : "Copiar"}
                 </Button>
