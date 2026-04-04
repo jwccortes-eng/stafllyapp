@@ -241,6 +241,11 @@ export default function Apply() {
           languages: languages.trim() ? languages.split(",").map((l) => l.trim()) : null,
           source,
           role_suggestion: searchParams.get("role") ?? null,
+          address_line: address.address_line.trim() || null,
+          address_city: address.address_city.trim() || null,
+          address_state: address.address_state.trim() || null,
+          address_zip: address.address_zip.trim() || null,
+          formatted_address: [address.address_line, address.address_city, address.address_state, address.address_zip].filter(Boolean).join(", ") || null,
         })
         .select("id, reference_code")
         .single();
