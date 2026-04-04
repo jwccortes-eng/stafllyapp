@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSoundContext } from "@/hooks/useSound";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
