@@ -295,6 +295,66 @@ export function ShiftEditDialog({
             </SectionCard>
           </div>
 
+          {/* ── Roles & Transport (always visible) ── */}
+          <SectionCard icon={Users} title="Roles del turno">
+            <div>
+              <Label className="text-[11px] text-muted-foreground font-medium">Admin del turno</Label>
+              {(() => {
+                const shiftAssignedIds = shift ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id) : [];
+                const adminCandidates = shiftAssignedIds.length > 0
+                  ? employees.filter(e => shiftAssignedIds.includes(e.id))
+                  : employees;
+                return (
+                  <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {adminCandidates.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
+              <p className="text-[10px] text-muted-foreground mt-0.5">Responsable de confirmar asistencia del equipo.</p>
+            </div>
+          </SectionCard>
+
+          <SectionCard icon={Car} title="Transporte">
+            <div className="flex items-center gap-2">
+              <Checkbox checked={transportRequired} onCheckedChange={c => setTransportRequired(!!c)} id="edit-transport" />
+              <Label htmlFor="edit-transport" className="text-xs font-normal cursor-pointer">¿Este turno requiere transporte?</Label>
+            </div>
+            {transportRequired && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground font-medium">Capacidad por vehículo</Label>
+                    <Input type="number" min="1" value={carCapacity} onChange={e => setCarCapacity(e.target.value)} className="h-9 text-sm mt-1" />
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <p className="text-[11px] text-muted-foreground font-medium mb-1">Vehículos necesarios</p>
+                    <div className="h-9 flex items-center px-3 rounded-md border border-border/30 bg-muted/20 text-sm font-semibold">
+                      {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 4))}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
+                  <Select value={driverEmployeeId || "none"} onValueChange={v => setDriverEmployeeId(v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
+                  <Input value={transportNotes} onChange={e => setTransportNotes(e.target.value)} placeholder="Ej: Recoger en oficina a las 7:30 AM" className="h-9 text-sm mt-1" />
+                </div>
+              </>
+            )}
+          </SectionCard>
+
           {/* ── Advanced options (collapsed by default) ── */}
           <Collapsible>
             <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 transition-colors group">
@@ -305,66 +365,7 @@ export function ShiftEditDialog({
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-3">
-
-              {/* ── Transportation ── */}
-              <SectionCard icon={Car} title="Transporte">
-                <div className="flex items-center gap-2">
-                  <Checkbox checked={transportRequired} onCheckedChange={c => setTransportRequired(!!c)} id="edit-transport" />
-                  <Label htmlFor="edit-transport" className="text-xs font-normal cursor-pointer">¿Este turno requiere transporte?</Label>
-                </div>
-                {transportRequired && (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-[11px] text-muted-foreground font-medium">Capacidad por vehículo</Label>
-                        <Input type="number" min="1" value={carCapacity} onChange={e => setCarCapacity(e.target.value)} className="h-9 text-sm mt-1" />
-                      </div>
-                      <div className="flex flex-col justify-end">
-                        <p className="text-[11px] text-muted-foreground font-medium mb-1">Vehículos necesarios</p>
-                        <div className="h-9 flex items-center px-3 rounded-md border border-border/30 bg-muted/20 text-sm font-semibold">
-                          {Math.ceil((parseInt(slots) || 1) / (parseInt(carCapacity) || 4))}
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
-                      <Select value={driverEmployeeId || "none"} onValueChange={v => setDriverEmployeeId(v === "none" ? "" : v)}>
-                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
-                      <Input value={transportNotes} onChange={e => setTransportNotes(e.target.value)} placeholder="Ej: Recoger en oficina a las 7:30 AM" className="h-9 text-sm mt-1" />
-                    </div>
-                  </>
-                )}
-              </SectionCard>
-
-              {/* ── Details ── */}
               <SectionCard icon={FileText} title="Detalles adicionales">
-                <div>
-                  <Label className="text-[11px] text-muted-foreground font-medium">Admin del turno</Label>
-                  {(() => {
-                    const shiftAssignedIds = shift ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id) : [];
-                    const adminCandidates = shiftAssignedIds.length > 0
-                      ? employees.filter(e => shiftAssignedIds.includes(e.id))
-                      : employees;
-                    return (
-                      <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
-                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {adminCandidates.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    );
-                  })()}
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Puede confirmar asistencia del equipo.</p>
-                </div>
                 <div>
                   <Label className="text-[11px] text-muted-foreground font-medium">Notas</Label>
                   <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" />

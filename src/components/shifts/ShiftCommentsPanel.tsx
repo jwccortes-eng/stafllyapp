@@ -52,6 +52,17 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
 
   useEffect(() => { loadComments(); }, [loadComments]);
 
+  // Realtime subscription for auto-refresh
+  useEffect(() => {
+    const channel = supabase
+      .channel(`shift-comments-${shiftId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shift_comments", filter: `shift_id=eq.${shiftId}` }, () => {
+        loadComments();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [shiftId, loadComments]);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
