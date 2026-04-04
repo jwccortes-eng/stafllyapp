@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { applyUrl } from "@/lib/app-url";
 import {
   Settings2, Link2, Copy, ExternalLink, Loader2, Save,
   UtensilsCrossed, Car, SprayCan, ChefHat, Briefcase,

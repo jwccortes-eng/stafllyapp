@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { applyUrl } from "@/lib/app-url";
 import {
   CheckCircle2, XCircle, Eye, Loader2, Clock, User, Search,
   Phone, Mail, MapPin, Car, Briefcase, FileText, Calendar,
