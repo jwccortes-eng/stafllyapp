@@ -575,6 +575,7 @@ function StepReview({ data, consent, setConsent, onEdit }: { data: any; consent:
 
       <ReviewSection title="Ubicación" onEdit={() => onEdit(3)}>
         {data.city && <ReviewRow label="Ciudad" value={data.city} />}
+        {data.address?.address_line && <ReviewRow label="Dirección" value={[data.address.address_line, data.address.address_city, data.address.address_state, data.address.address_zip].filter(Boolean).join(", ")} />}
         <ReviewRow label="Disponibilidad" value={AVAIL_LABELS[data.availability] ?? data.availability} />
         <ReviewRow label="Vehículo" value={data.hasCar ? "Sí" : "No"} />
         <ReviewRow label="Desplazamiento" value={data.canTravel ? "Sí" : "No"} />
