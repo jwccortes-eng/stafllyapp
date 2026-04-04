@@ -35,6 +35,7 @@ import type { Shift, Assignment, Employee, SelectOption } from "./types";
 import { formatShiftCode, getClientColor } from "./types";
 import { SendNotificationDialog } from "./SendNotificationDialog";
 import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
+import { ShiftAuditTrail } from "./ShiftAuditTrail";
 
 interface ShiftDetailDialogProps {
   shift: Shift | null;
