@@ -530,7 +530,7 @@ function StepVerification({ documentFile, setDocumentFile, emergencyContact, set
         {(config.require_emergency_contact || true) && (
           <FieldInput label="Contacto de emergencia" value={emergencyContact} onChange={setEmergencyContact} hint="Nombre y teléfono" required={config.require_emergency_contact} icon={<Phone className="h-4 w-4" />} />
         )}
-        <FieldInput label="Idiomas" value={languages} onChange={setLanguages} hint="Separados por coma" icon={<Globe className="h-4 w-4" />} />
+        <LanguageMultiSelect value={languages} onChange={setLanguages} />
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Experiencia relevante</label>
           <Textarea value={experienceSummary} onChange={(e) => setExperienceSummary(e.target.value)} placeholder="Cuéntanos brevemente sobre tu experiencia..." className="min-h-[80px] rounded-xl text-sm" />
