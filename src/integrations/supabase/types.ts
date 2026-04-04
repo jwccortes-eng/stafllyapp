@@ -11154,6 +11154,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      expire_old_invitations: { Args: never; Returns: number }
       has_action_permission: {
         Args: { _action: string; _company_id: string; _user_id: string }
         Returns: boolean
