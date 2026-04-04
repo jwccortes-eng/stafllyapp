@@ -90,7 +90,7 @@ export default function Auth() {
         password,
         options: {
           data: { full_name: fullName, company_name: companyName.trim() },
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: APP_BASE_URL,
         },
       });
       if (error) toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
