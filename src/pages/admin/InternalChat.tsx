@@ -26,6 +26,7 @@ interface Message { id: string; conversation_id: string; sender_id: string; cont
 export default function InternalChat() {
   const { user } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const { play } = useSoundContext();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
