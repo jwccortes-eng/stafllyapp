@@ -346,13 +346,21 @@ export function ShiftEditDialog({
               <SectionCard icon={FileText} title="Detalles adicionales">
                 <div>
                   <Label className="text-[11px] text-muted-foreground font-medium">Admin del turno</Label>
-                  <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sin asignar</SelectItem>
-                      {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  {(() => {
+                    const shiftAssignedIds = shift ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id) : [];
+                    const adminCandidates = shiftAssignedIds.length > 0
+                      ? employees.filter(e => shiftAssignedIds.includes(e.id))
+                      : employees;
+                    return (
+                      <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
+                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {adminCandidates.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
                   <p className="text-[10px] text-muted-foreground mt-0.5">Puede confirmar asistencia del equipo.</p>
                 </div>
                 <div>
