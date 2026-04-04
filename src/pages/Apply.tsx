@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { CitySelect } from "@/components/apply/CitySelect";
+import { LanguageMultiSelect } from "@/components/apply/LanguageMultiSelect";
 import {
   ChevronRight, ChevronLeft, CheckCircle2, Loader2,
   UtensilsCrossed, Car, SprayCan, Briefcase, ChefHat,
