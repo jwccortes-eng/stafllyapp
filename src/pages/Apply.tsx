@@ -360,7 +360,7 @@ export default function Apply() {
         {step === 0 && <StepWelcome companyName={company.name} introText={config.intro_text ?? company.application_intro} coverImage={coverImage} onStart={handleNext} />}
         {step === 1 && <StepBasicInfo {...{ firstName, setFirstName, lastName, setLastName, phone, setPhone, email, setEmail, errors, requireEmail: config.require_email }} />}
         {step === 2 && <StepWorkerType selected={workerType} onSelect={setWorkerType} error={errors.workerType} types={visibleTypes} />}
-        {step === 3 && <StepLocation {...{ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel }} />}
+        {step === 3 && <StepLocation {...{ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel, address, setAddress }} />}
         {step === 4 && <StepVerification {...{ documentFile, setDocumentFile, emergencyContact, setEmergencyContact, experienceSummary, setExperienceSummary, languages, setLanguages, config }} />}
         {step === 5 && (
           <StepReview
