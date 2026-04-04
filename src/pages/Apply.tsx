@@ -163,7 +163,7 @@ export default function Apply() {
       }));
     }, 800);
     return () => clearTimeout(autosaveTimer.current);
-  }, [firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step, draftKey]);
+  }, [firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step, draftKey, address]);
 
   // Duplicate check
   const checkDuplicate = useCallback(async () => {
