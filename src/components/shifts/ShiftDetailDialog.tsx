@@ -657,8 +657,25 @@ export function ShiftDetailDialog({
                 return (
                   <div className="rounded-xl border border-border/20 bg-muted/10 p-2 space-y-1">
                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider px-1">Roles</p>
-                    {/* Driver slot */}
-                    {requiresCar ? (
+                    {/* Admin slot — always visible */}
+                    {(() => {
+                      const adminId = (shift as any)?.shift_admin_id;
+                      const adminEmp = adminId ? employees.find(e => e.id === adminId) : null;
+                      return adminEmp ? (
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-primary/[0.06] border border-primary/20">
+                          <EmployeeAvatar firstName={adminEmp.first_name} lastName={adminEmp.last_name} avatarUrl={adminEmp.avatar_url} gender={adminEmp.gender} size="xs" />
+                          <span className="text-[10px] font-semibold flex-1 truncate">{adminEmp.first_name} {adminEmp.last_name}</span>
+                          <span className="text-[7px] font-bold text-primary bg-primary/10 px-1 rounded">ADMIN</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-warning/30 bg-warning/[0.03]">
+                          <ShieldCheck className="h-3 w-3 text-warning/50" />
+                          <span className="text-[9px] text-warning font-medium">Sin admin — seleccionar en edición</span>
+                        </div>
+                      );
+                    })()}
+                    {/* Driver slot — only when transport required */}
+                    {requiresCar && (
                       driverAssigns.length > 0 ? driverAssigns.map(a => {
                         const emp = employees.find(e => e.id === a.employee_id)!;
                         return (
@@ -674,29 +691,7 @@ export function ShiftDetailDialog({
                           <span className="text-[9px] text-destructive font-medium">Sin conductor — requerido</span>
                         </div>
                       )
-                    ) : (
-                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-border/20">
-                        <Car className="h-3 w-3 text-muted-foreground/30" />
-                        <span className="text-[9px] text-muted-foreground/40">Driver — no requerido</span>
-                      </div>
                     )}
-                    {/* Admin slot */}
-                    {(() => {
-                      const adminId = (shift as any)?.shift_admin_id;
-                      const adminEmp = adminId ? employees.find(e => e.id === adminId) : null;
-                      return adminEmp ? (
-                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-primary/[0.06] border border-primary/20">
-                          <EmployeeAvatar firstName={adminEmp.first_name} lastName={adminEmp.last_name} avatarUrl={adminEmp.avatar_url} gender={adminEmp.gender} size="xs" />
-                          <span className="text-[10px] font-semibold flex-1 truncate">{adminEmp.first_name} {adminEmp.last_name}</span>
-                          <span className="text-[7px] font-bold text-primary bg-primary/10 px-1 rounded">ADMIN</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-warning/30 bg-warning/[0.03]">
-                          <ShieldCheck className="h-3 w-3 text-warning/50" />
-                          <span className="text-[9px] text-warning font-medium">Sin admin asignado</span>
-                        </div>
-                      );
-                    })()}
                   </div>
                 );
               })()}
