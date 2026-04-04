@@ -125,14 +125,49 @@ export default function MyShifts() {
   const claimShift = async (shiftId: string) => {
     if (!employeeId) return;
     setClaiming(shiftId);
-    const { data: emp } = await supabase.from("employees").select("company_id").eq("id", employeeId).maybeSingle();
-    if (!emp) { setClaiming(null); return; }
-    const { data: existing } = await supabase.from("shift_requests").select("id").eq("shift_id", shiftId).eq("employee_id", employeeId).maybeSingle();
-    if (existing) { toast({ title: "Ya solicitaste este turno", variant: "destructive" }); setClaiming(null); return; }
-    const { error } = await supabase.from("shift_requests").insert({ shift_id: shiftId, employee_id: employeeId, company_id: emp.company_id, status: "pending" } as any);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: "¡Solicitud enviada!" }); await load(); }
-    setClaiming(null);
+
+    // Optimistic UI: remove from claimable immediately
+    const claimedShift = claimable.find(s => s.id === shiftId);
+    setClaimable(prev => prev.filter(s => s.id !== shiftId));
+
+    try {
+      const { data: emp } = await supabase.from("employees").select("company_id").eq("id", employeeId).maybeSingle();
+      if (!emp) throw new Error("Empleado no encontrado");
+
+      // Check for existing request/assignment to prevent duplicates
+      const { data: existing } = await supabase.from("shift_requests").select("id").eq("shift_id", shiftId).eq("employee_id", employeeId).maybeSingle();
+      if (existing) throw new Error("Ya solicitaste este turno");
+
+      // Race condition guard: re-check slot availability
+      const { data: currentShift } = await supabase.from("scheduled_shifts")
+        .select("slots, shift_assignments(id)").eq("id", shiftId).maybeSingle();
+      if (currentShift) {
+        const filled = currentShift.shift_assignments?.length ?? 0;
+        if (currentShift.slots && filled >= currentShift.slots) throw new Error("Este turno ya está lleno");
+      }
+
+      const { error } = await supabase.from("shift_requests").insert({
+        shift_id: shiftId, employee_id: employeeId, company_id: emp.company_id, status: "pending",
+      } as any);
+      if (error) throw error;
+
+      // Success feedback: sound + vibration + toast
+      try {
+        const audio = new Audio("data:audio/wav;base64,UklGRl9vT19teleXBdYXZlZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU" + "AAAAAAA=");
+        audio.volume = 0.3;
+        audio.play().catch(() => {});
+      } catch {}
+      if (navigator.vibrate) navigator.vibrate(100);
+
+      toast({ title: "✅ ¡Solicitud enviada!", description: claimedShift ? `Turno "${claimedShift.title}" solicitado exitosamente.` : "Tu solicitud fue registrada." });
+      await load();
+    } catch (err: any) {
+      // Rollback optimistic update
+      if (claimedShift) setClaimable(prev => [...prev, claimedShift].sort((a, b) => a.date.localeCompare(b.date)));
+      toast({ title: "Error", description: err.message ?? "No se pudo solicitar el turno.", variant: "destructive" });
+    } finally {
+      setClaiming(null);
+    }
   };
 
   const acceptAssignment = async (assignmentId: string) => {
