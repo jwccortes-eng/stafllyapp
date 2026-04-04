@@ -178,11 +178,36 @@ export default function MyShifts() {
     }
   };
 
+  const notifyAdminOfResponse = async (assignmentId: string, action: "confirmed" | "rejected") => {
+    try {
+      const { data: sa } = await supabase.from("shift_assignments").select("shift_id, employee_id").eq("id", assignmentId).maybeSingle();
+      if (!sa) return;
+      const { data: shift } = await supabase.from("scheduled_shifts").select("title, company_id, date, start_time").eq("id", sa.shift_id).maybeSingle();
+      if (!shift) return;
+      const { data: emp } = await supabase.from("employees").select("first_name, last_name").eq("id", sa.employee_id).maybeSingle();
+      const empName = emp ? `${emp.first_name ?? ""} ${emp.last_name ?? ""}`.trim() : "Empleado";
+      const { data: admins } = await supabase.from("company_users").select("user_id").eq("company_id", shift.company_id).in("role", ["admin", "company_owner", "owner"]);
+      const emoji = action === "confirmed" ? "✅" : "❌";
+      const verb = action === "confirmed" ? "confirmó" : "rechazó";
+      for (const admin of admins ?? []) {
+        await supabase.from("notifications").insert({
+          company_id: shift.company_id,
+          recipient_id: admin.user_id,
+          recipient_type: "user",
+          type: action === "confirmed" ? "shift_confirmed" : "shift_rejected",
+          title: `${emoji} ${empName} ${verb} turno`,
+          body: `"${shift.title}" — ${shift.date} a las ${(shift.start_time as string).slice(0, 5)}`,
+          metadata: { shift_id: sa.shift_id, employee_id: sa.employee_id, assignment_id: assignmentId },
+        });
+      }
+    } catch { /* non-blocking */ }
+  };
+
   const acceptAssignment = async (assignmentId: string) => {
     setResponding(assignmentId);
     const { error } = await supabase.from("shift_assignments").update({ status: "confirmed", responded_at: new Date().toISOString() } as any).eq("id", assignmentId);
     if (error) toast.error("Error", { description: error.message });
-    else { toast.success("¡Turno confirmado!"); await load(); }
+    else { toast.success("¡Turno confirmado!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
     setResponding(null);
   };
 
@@ -191,7 +216,7 @@ export default function MyShifts() {
     setResponding(rejectDialogId);
     const { error } = await supabase.from("shift_assignments").update({ status: "rejected", responded_at: new Date().toISOString(), rejection_reason: rejectReason.trim() || null } as any).eq("id", rejectDialogId);
     if (error) toast.error("Error", { description: error.message });
-    else { toast.success("Turno rechazado"); await load(); }
+    else { toast.success("Turno rechazado"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
     setResponding(null); setRejectDialogId(null); setRejectReason("");
   };
 
