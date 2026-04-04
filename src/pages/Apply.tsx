@@ -467,7 +467,7 @@ function StepLocation({ city, setCity, availability, setAvailability, hasCar, se
         <p className="text-sm text-muted-foreground">¿Dónde y cuándo puedes trabajar?</p>
       </div>
       <div className="space-y-4">
-        <FieldInput label="Ciudad / Zona" value={city} onChange={setCity} icon={<MapPin className="h-4 w-4" />} />
+        <CitySelect value={city} onChange={setCity} />
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Disponibilidad</label>
           <div className="grid grid-cols-2 gap-2">
