@@ -939,6 +939,8 @@ export function ShiftDetailDialog({
             <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} isAdmin={true} />
           ) : tab === "rides" ? (
             <ShiftRidesPanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canEdit={effectiveCanEdit} />
+          ) : tab === "audit" ? (
+            <ShiftAuditTrail shiftId={shift.id} />
           ) : null}
         </div>
 
