@@ -364,7 +364,7 @@ export default function Apply() {
         {step === 4 && <StepVerification {...{ documentFile, setDocumentFile, emergencyContact, setEmergencyContact, experienceSummary, setExperienceSummary, languages, setLanguages, config }} />}
         {step === 5 && (
           <StepReview
-            data={{ firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages }}
+            data={{ firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, address }}
             consent={consent}
             setConsent={setConsent}
             onEdit={goToStep}
