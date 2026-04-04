@@ -1,7 +1,9 @@
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Send, CheckCircle2, AlertTriangle, Clock, WifiOff, MailCheck } from "lucide-react";
+import { Send, CheckCircle2, AlertTriangle, Clock, WifiOff, MailCheck, MailOpen, Eye } from "lucide-react";
 import type { EmployeeInvitation } from "@/hooks/useEmployeeInvitations";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 
 export type PortalAccessState =
   | "active"       // has user_id
@@ -32,6 +34,23 @@ function getMissingItems(emp: EmployeeLike): string[] {
   if (!(emp.access_pin ?? "").toString().trim()) items.push("PIN");
   return items;
 }
+
+function fmtAgo(iso: string | null): string {
+  if (!iso) return "";
+  try {
+    return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: es });
+  } catch { return ""; }
+}
+
+const INVITE_STATUS_LABELS: Record<string, { label: string; icon: typeof Clock }> = {
+  created: { label: "Creada", icon: Clock },
+  sent: { label: "Enviada", icon: Send },
+  opened: { label: "Abierta", icon: Eye },
+  accepted: { label: "Aceptada", icon: CheckCircle2 },
+  expired: { label: "Expirada", icon: AlertTriangle },
+  revoked: { label: "Revocada", icon: WifiOff },
+  failed: { label: "Fallida", icon: AlertTriangle },
+};
 
 const STATE_CONFIG: Record<PortalAccessState, {
   label: string;
@@ -97,11 +116,30 @@ export function PortalAccessBadge({
   const state = getPortalAccessState(employee, invitation);
   const config = STATE_CONFIG[state];
   const missing = state === "incomplete" ? getMissingItems(employee) : [];
-  const tooltipText = state === "incomplete"
-    ? `Falta: ${missing.join(", ")}`
-    : state === "invited" && invitation
-      ? `Enviado por ${invitation.channel} el ${new Date(invitation.sent_at).toLocaleDateString("es")}`
-      : config.tooltip;
+
+  // Build rich tooltip for invited state
+  let tooltipText = config.tooltip;
+  if (state === "incomplete") {
+    tooltipText = `Falta: ${missing.join(", ")}`;
+  } else if (state === "invited" && invitation) {
+    const statusInfo = INVITE_STATUS_LABELS[invitation.status];
+    const lines: string[] = [];
+    lines.push(`Estado: ${statusInfo?.label ?? invitation.status}`);
+    lines.push(`Canal: ${invitation.channel}`);
+    if (invitation.sent_at) lines.push(`Enviada: ${fmtAgo(invitation.sent_at)}`);
+    if (invitation.opened_at) lines.push(`Abierta: ${fmtAgo(invitation.opened_at)}`);
+    if (invitation.accepted_at) lines.push(`Aceptada: ${fmtAgo(invitation.accepted_at)}`);
+    if (invitation.expires_at) {
+      const exp = new Date(invitation.expires_at);
+      lines.push(exp < new Date() ? "⚠️ Expirada" : `Expira: ${fmtAgo(invitation.expires_at)}`);
+    }
+    tooltipText = lines.join("\n");
+  }
+
+  // Sub-status for invited employees
+  const inviteSubLabel = invitation && state === "invited"
+    ? INVITE_STATUS_LABELS[invitation.status]?.label ?? invitation.status
+    : null;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -115,9 +153,12 @@ export function PortalAccessBadge({
             )}>
               <span className={cn("rounded-full shrink-0", compact ? "h-1 w-1" : "h-1.5 w-1.5", config.dotClass)} />
               {config.label}
+              {inviteSubLabel && !compact && (
+                <span className="text-[8px] opacity-70 ml-0.5">· {inviteSubLabel}</span>
+              )}
             </span>
           </TooltipTrigger>
-          <TooltipContent side="top" className="text-[10px] max-w-[200px]">
+          <TooltipContent side="top" className="text-[10px] max-w-[220px] whitespace-pre-line">
             {tooltipText}
           </TooltipContent>
         </Tooltip>
