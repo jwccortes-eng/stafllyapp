@@ -448,8 +448,13 @@ export function ShiftDetailDialog({
             <TabButton active={tab === "comments"} onClick={() => setTab("comments")}>
               <MessageSquare className="h-3 w-3" /> Notas
             </TabButton>
-            <TabButton active={tab === "rides"} onClick={() => setTab("rides")}>
-              <Car className="h-3 w-3" /> Rides
+            {!!(shift as any).transportation_required && (
+              <TabButton active={tab === "rides"} onClick={() => setTab("rides")}>
+                <Car className="h-3 w-3" /> Rides
+              </TabButton>
+            )}
+            <TabButton active={tab === "audit"} onClick={() => setTab("audit")}>
+              <FileText className="h-3 w-3" /> Historial
             </TabButton>
           </div>
         </div>
