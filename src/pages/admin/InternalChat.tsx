@@ -71,6 +71,10 @@ export default function InternalChat() {
       .channel("internal-messages-rt")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "internal_messages" }, (payload) => {
         const msg = payload.new as Message;
+        // Sound for messages from others
+        if ((msg as any).sender_id !== userId) {
+          play("chat");
+        }
         if (msg.conversation_id === selectedConvo) {
           setMessages(prev => [...prev, msg]);
           setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }), 100);
