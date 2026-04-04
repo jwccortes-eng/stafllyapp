@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSoundContext } from "@/hooks/useSound";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,11 +33,13 @@ interface ShiftChatPanelProps {
 
 export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin = false }: ShiftChatPanelProps) {
   const { user, employeeId } = useAuth();
+  const { play } = useSoundContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
   const [chatConfig, setChatConfig] = useState<{ is_open: boolean; id?: string } | null>(null);
+  const prevCountRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Determine if chat should be auto-open based on date
@@ -125,13 +128,19 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin = false 
         schema: "public",
         table: "shift_chat_messages",
         filter: `shift_id=eq.${shiftId}`,
-      }, () => {
+      }, (payload) => {
+        // Play chat sound for messages from others
+        const senderId = (payload.new as any)?.sender_user_id || (payload.new as any)?.sender_employee_id;
+        const isOwnMessage = senderId === user?.id || senderId === employeeId;
+        if (!isOwnMessage) {
+          play("chat");
+        }
         loadMessages();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [shiftId, loadMessages]);
+  }, [shiftId, loadMessages, play, user, employeeId]);
 
   // Auto-scroll
   useEffect(() => {

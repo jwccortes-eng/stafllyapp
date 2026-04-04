@@ -10,6 +10,7 @@ import { CompanyProvider } from "@/hooks/useCompany";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { SoundProvider } from "@/hooks/useSound";
 import { Loader2 } from "lucide-react";
 
 // Eager: shell components needed immediately
@@ -147,6 +148,7 @@ function App() {
       <TooltipProvider>
         <AuthProvider>
           <CompanyProvider>
+          <SoundProvider>
           <Toaster />
           <Sonner />
           <NetworkListener />
@@ -272,6 +274,7 @@ function App() {
             </Suspense>
           </BrowserRouter>
           </ErrorBoundary>
+          </SoundProvider>
           </CompanyProvider>
         </AuthProvider>
       </TooltipProvider>

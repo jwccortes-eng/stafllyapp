@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useSoundContext } from "@/hooks/useSound";
 import { toast } from "sonner";
 
 export interface AppNotification {
@@ -18,16 +19,14 @@ export interface AppNotification {
 export function useNotifications() {
   const { user, role } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const { play } = useSoundContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const audioUnlockedRef = useRef(false);
   const notifPermissionRef = useRef<NotificationPermission>("default");
 
-  // Request browser notification permission + warm-up AudioContext on first interaction
+  // Request browser notification permission
   useEffect(() => {
-    // Request notification permission
     if ("Notification" in window) {
       notifPermissionRef.current = Notification.permission;
       if (Notification.permission === "default") {
@@ -36,34 +35,6 @@ export function useNotifications() {
         });
       }
     }
-
-    const unlock = () => {
-      if (audioUnlockedRef.current) return;
-      try {
-        const ctx = new AudioContext();
-        const buffer = ctx.createBuffer(1, 1, 22050);
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.start(0);
-        audioCtxRef.current = ctx;
-        audioUnlockedRef.current = true;
-      } catch {
-        // ignore
-      }
-      // Re-request notification permission on interaction if still default
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission().then((perm) => {
-          notifPermissionRef.current = perm;
-        });
-      }
-    };
-    document.addEventListener("click", unlock, { once: true });
-    document.addEventListener("touchstart", unlock, { once: true });
-    return () => {
-      document.removeEventListener("click", unlock);
-      document.removeEventListener("touchstart", unlock);
-    };
   }, []);
 
   const fetchNotifications = useCallback(async () => {
@@ -124,42 +95,11 @@ export function useNotifications() {
     setLoading(false);
   }, [user, role, selectedCompanyId]);
 
-  const playSound = useCallback(() => {
-    try {
-      // Reuse unlocked context if available, else create new one
-      const ctx = audioCtxRef.current?.state !== "closed"
-        ? audioCtxRef.current ?? new AudioContext()
-        : new AudioContext();
-
-      // Resume if suspended (autoplay policy)
-      if (ctx.state === "suspended") {
-        ctx.resume().catch(() => {});
-      }
-
-      const now = ctx.currentTime;
-
-      const playTone = (freq: number, startAt: number, duration: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = freq;
-        osc.type = "sine";
-        gain.gain.setValueAtTime(0, startAt);
-        gain.gain.linearRampToValueAtTime(0.5, startAt + 0.02);
-        gain.gain.setValueAtTime(0.5, startAt + duration * 0.6);
-        gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
-        osc.start(startAt);
-        osc.stop(startAt + duration);
-      };
-
-      // Three-tone ascending alert for urgency
-      playTone(880, now, 0.12);
-      playTone(1109, now + 0.14, 0.12);
-      playTone(1319, now + 0.28, 0.2);
-    } catch {
-      // Audio not available
-    }
+  // Determine sound type based on notification type
+  const getSoundType = useCallback((notifType: string): "notification" | "chat" | "alert" => {
+    if (["no_clockin_alert", "no_show_alert", "critical_alert"].includes(notifType)) return "alert";
+    if (["shift_chat", "chat_message"].includes(notifType)) return "chat";
+    return "notification";
   }, []);
 
   // Show native browser/OS notification (appears in notification shade on mobile)
@@ -228,7 +168,7 @@ export function useNotifications() {
           const newNotif = payload.new as AppNotification;
           setNotifications(prev => [newNotif, ...prev].slice(0, 30));
           setUnreadCount(prev => prev + 1);
-          playSound();
+          play(getSoundType(newNotif.type));
           showSystemNotification(newNotif.title, newNotif.body);
           toast(newNotif.title, { description: newNotif.body, duration: 5000 });
         }
@@ -250,7 +190,7 @@ export function useNotifications() {
               const newNotif = payload.new as AppNotification;
               setNotifications(prev => [newNotif, ...prev].slice(0, 30));
               setUnreadCount(prev => prev + 1);
-              playSound();
+              play(getSoundType(newNotif.type));
               showSystemNotification(newNotif.title, newNotif.body);
               toast(newNotif.title, { description: newNotif.body, duration: 5000 });
             }
@@ -264,7 +204,7 @@ export function useNotifications() {
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [user, playSound, showSystemNotification]);
+  }, [user, play, getSoundType, showSystemNotification]);
 
   return {
     notifications,
