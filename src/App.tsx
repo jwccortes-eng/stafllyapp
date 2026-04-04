@@ -148,6 +148,7 @@ function App() {
       <TooltipProvider>
         <AuthProvider>
           <CompanyProvider>
+          <SoundProvider>
           <Toaster />
           <Sonner />
           <NetworkListener />
