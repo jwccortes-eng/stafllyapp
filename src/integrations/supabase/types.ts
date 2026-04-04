@@ -3525,6 +3525,10 @@ export type Database = {
       }
       job_applications: {
         Row: {
+          address_city: string | null
+          address_line: string | null
+          address_state: string | null
+          address_zip: string | null
           admin_notes: string | null
           application_type: string
           approval_payload: Json | null
@@ -3543,6 +3547,7 @@ export type Database = {
           emergency_contact: string | null
           experience_summary: string | null
           first_name: string
+          formatted_address: string | null
           has_car: boolean | null
           id: string
           languages: string[] | null
@@ -3562,6 +3567,10 @@ export type Database = {
           worker_type: string
         }
         Insert: {
+          address_city?: string | null
+          address_line?: string | null
+          address_state?: string | null
+          address_zip?: string | null
           admin_notes?: string | null
           application_type?: string
           approval_payload?: Json | null
@@ -3580,6 +3589,7 @@ export type Database = {
           emergency_contact?: string | null
           experience_summary?: string | null
           first_name: string
+          formatted_address?: string | null
           has_car?: boolean | null
           id?: string
           languages?: string[] | null
@@ -3599,6 +3609,10 @@ export type Database = {
           worker_type?: string
         }
         Update: {
+          address_city?: string | null
+          address_line?: string | null
+          address_state?: string | null
+          address_zip?: string | null
           admin_notes?: string | null
           application_type?: string
           approval_payload?: Json | null
@@ -3617,6 +3631,7 @@ export type Database = {
           emergency_contact?: string | null
           experience_summary?: string | null
           first_name?: string
+          formatted_address?: string | null
           has_car?: boolean | null
           id?: string
           languages?: string[] | null

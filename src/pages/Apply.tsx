@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { CitySelect } from "@/components/apply/CitySelect";
 import { LanguageMultiSelect } from "@/components/apply/LanguageMultiSelect";
+import { AddressInput, type AddressData } from "@/components/apply/AddressInput";
 import {
   ChevronRight, ChevronLeft, CheckCircle2, Loader2,
   UtensilsCrossed, Car, SprayCan, Briefcase, ChefHat,
@@ -87,6 +88,7 @@ export default function Apply() {
   const [experienceSummary, setExperienceSummary] = useState("");
   const [languages, setLanguages] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [address, setAddress] = useState<AddressData>({ address_line: "", address_city: "", address_state: "", address_zip: "" });
 
   const source = searchParams.get("source") ?? "direct_link";
   const draftKey = companySlug ? `${DRAFT_KEY_PREFIX}${companySlug}` : null;
@@ -156,11 +158,11 @@ export default function Apply() {
     autosaveTimer.current = setTimeout(() => {
       localStorage.setItem(draftKey, JSON.stringify({
         firstName, lastName, phone, email, workerType, city,
-        availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step,
+        availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step, address,
       }));
     }, 800);
     return () => clearTimeout(autosaveTimer.current);
-  }, [firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step, draftKey]);
+  }, [firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step, draftKey, address]);
 
   // Duplicate check
   const checkDuplicate = useCallback(async () => {
@@ -239,6 +241,11 @@ export default function Apply() {
           languages: languages.trim() ? languages.split(",").map((l) => l.trim()) : null,
           source,
           role_suggestion: searchParams.get("role") ?? null,
+          address_line: address.address_line.trim() || null,
+          address_city: address.address_city.trim() || null,
+          address_state: address.address_state.trim() || null,
+          address_zip: address.address_zip.trim() || null,
+          formatted_address: [address.address_line, address.address_city, address.address_state, address.address_zip].filter(Boolean).join(", ") || null,
         })
         .select("id, reference_code")
         .single();
@@ -353,11 +360,11 @@ export default function Apply() {
         {step === 0 && <StepWelcome companyName={company.name} introText={config.intro_text ?? company.application_intro} coverImage={coverImage} onStart={handleNext} />}
         {step === 1 && <StepBasicInfo {...{ firstName, setFirstName, lastName, setLastName, phone, setPhone, email, setEmail, errors, requireEmail: config.require_email }} />}
         {step === 2 && <StepWorkerType selected={workerType} onSelect={setWorkerType} error={errors.workerType} types={visibleTypes} />}
-        {step === 3 && <StepLocation {...{ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel }} />}
+        {step === 3 && <StepLocation {...{ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel, address, setAddress }} />}
         {step === 4 && <StepVerification {...{ documentFile, setDocumentFile, emergencyContact, setEmergencyContact, experienceSummary, setExperienceSummary, languages, setLanguages, config }} />}
         {step === 5 && (
           <StepReview
-            data={{ firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages }}
+            data={{ firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, address }}
             consent={consent}
             setConsent={setConsent}
             onEdit={goToStep}
@@ -459,7 +466,7 @@ function StepWorkerType({ selected, onSelect, error, types }: { selected: string
   );
 }
 
-function StepLocation({ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel }: any) {
+function StepLocation({ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel, address, setAddress }: any) {
   return (
     <div className="space-y-5">
       <div>
@@ -468,6 +475,7 @@ function StepLocation({ city, setCity, availability, setAvailability, hasCar, se
       </div>
       <div className="space-y-4">
         <CitySelect value={city} onChange={setCity} />
+        <AddressInput value={address} onChange={setAddress} />
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Disponibilidad</label>
           <div className="grid grid-cols-2 gap-2">
@@ -567,6 +575,7 @@ function StepReview({ data, consent, setConsent, onEdit }: { data: any; consent:
 
       <ReviewSection title="Ubicación" onEdit={() => onEdit(3)}>
         {data.city && <ReviewRow label="Ciudad" value={data.city} />}
+        {data.address?.address_line && <ReviewRow label="Dirección" value={[data.address.address_line, data.address.address_city, data.address.address_state, data.address.address_zip].filter(Boolean).join(", ")} />}
         <ReviewRow label="Disponibilidad" value={AVAIL_LABELS[data.availability] ?? data.availability} />
         <ReviewRow label="Vehículo" value={data.hasCar ? "Sí" : "No"} />
         <ReviewRow label="Desplazamiento" value={data.canTravel ? "Sí" : "No"} />
