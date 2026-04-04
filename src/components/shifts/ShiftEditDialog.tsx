@@ -384,12 +384,6 @@ export function ShiftEditDialog({
                   <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" />
                 </div>
                 <div>
-                  <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-                    <Compass className="h-3 w-3" /> Punto de encuentro
-                  </Label>
-                  <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm mt-1" />
-                </div>
-                <div>
                   <Label className="text-[11px] text-muted-foreground font-medium">Instrucciones especiales</Label>
                   <Textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} rows={2} placeholder="Ej: Llevar uniforme negro..." className="text-sm resize-none mt-1" />
                 </div>
