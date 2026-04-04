@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 interface Props {
@@ -19,8 +20,6 @@ interface Props {
   onInviteSent?: (channel: "whatsapp" | "sms" | "email" | "copy" | "other") => void;
   inviteToken?: string | null;
 }
-
-const PRODUCTION_URL = "https://staflyapps.com";
 
 export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken }: Props) {
   const { toast } = useToast();
@@ -33,8 +32,8 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const company = companies.find(c => c.id === selectedCompanyId);
   const companyName = company?.name ?? "la empresa";
 
-  const portalUrl = `${PRODUCTION_URL}/auth`;
-  const inviteUrl = inviteToken ? `${PRODUCTION_URL}/invite?token=${inviteToken}` : null;
+  const portalUrl = portalAuthUrl();
+  const inviteLink = inviteToken ? inviteUrl(inviteToken) : null;
   const pin = typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : "—";
   const hasPin = pin !== "—";
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
@@ -58,10 +57,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   };
 
   const copyInviteLink = async () => {
-    if (!inviteUrl) return;
-    await navigator.clipboard.writeText(inviteUrl);
+    if (!inviteLink) return;
+    await navigator.clipboard.writeText(inviteLink);
     setLinkCopied(true);
-    toast({ title: "Enlace copiado", description: inviteUrl });
+    toast({ title: "Enlace copiado", description: inviteLink });
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
@@ -165,10 +164,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
           </div>
 
           {/* Invite link */}
-          {inviteUrl && (
+          {inviteLink && (
             <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
               <Link2 className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteUrl}</span>
+              <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteLink}</span>
               <Button variant="outline" size="sm" className={cn("h-7 text-[9px] shrink-0", linkCopied && "border-[hsl(var(--earning)/0.5)] text-[hsl(var(--earning))]")} onClick={copyInviteLink}>
                 {linkCopied ? <><Check className="h-3 w-3 mr-1" />Copiado</> : <><Copy className="h-3 w-3 mr-1" />Copiar enlace</>}
               </Button>
