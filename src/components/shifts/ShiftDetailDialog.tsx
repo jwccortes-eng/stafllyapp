@@ -528,9 +528,12 @@ export function ShiftDetailDialog({
                 <div className="space-y-3">
                   {/* Info cards */}
                   <div className="rounded-xl border border-border/30 bg-muted/20 divide-y divide-border/30">
-                    <InfoRow icon={Hash} label="Nombre del turno" value={shift.title} />
+                    <InfoRow icon={StickyNote} label="Nombre del turno" value={shift.title || undefined} empty="Sin nombre (solo código)" />
                     <InfoRow icon={Building2} label="Cliente" value={client ? formatDisplayText(client.name, "name") : undefined} empty="Sin asignar" />
                     <InfoRow icon={MapPin} label="Ubicación" value={location?.name} empty="Sin asignar" />
+                    {(shift as any).meeting_point && (
+                      <InfoRow icon={Compass} label="Dirección / Punto de encuentro" value={(shift as any).meeting_point} />
+                    )}
                     <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
                   </div>
 
