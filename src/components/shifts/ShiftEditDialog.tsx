@@ -317,26 +317,35 @@ export function ShiftEditDialog({
             </SectionCard>
           </div>
 
-          {/* ── Roles: Admin (only show when employees assigned) ── */}
-          <SectionCard icon={Users} title="Admin del turno">
+          {/* ── Roles: Admin (required when employees assigned) ── */}
+          <SectionCard icon={Users} title={shiftAssignedIds.length > 0 ? "Admin del turno *" : "Admin del turno"}>
             <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Responsable operativo</Label>
+              <Label className="text-[11px] text-muted-foreground font-medium">
+                Responsable operativo {shiftAssignedIds.length > 0 && <span className="text-destructive">*</span>}
+              </Label>
               {(() => {
-                const shiftAssignedIds = shift ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id) : [];
                 const adminCandidates = shiftAssignedIds.length > 0
                   ? employees.filter(e => shiftAssignedIds.includes(e.id))
                   : employees;
                 return (
                   <>
                     <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
-                      <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                      <SelectTrigger className={cn("h-9 text-sm mt-1", adminMissing && "border-destructive/50 ring-1 ring-destructive/20")}>
+                        <SelectValue placeholder="Sin asignar" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Sin asignar</SelectItem>
                         {adminCandidates.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     {shiftAssignedIds.length === 0 && (
-                      <p className="text-[10px] text-warning mt-0.5">⚠ Asigna empleados primero para filtrar candidatos a admin.</p>
+                      <p className="text-[10px] text-amber-500 mt-0.5">⚠ Asigna empleados primero para seleccionar admin.</p>
+                    )}
+                    {adminMissing && (
+                      <p className="text-[10px] text-destructive mt-0.5 font-medium">⛔ Obligatorio: selecciona un responsable antes de guardar.</p>
+                    )}
+                    {shiftAdminId && !adminIsAssigned && shiftAssignedIds.length > 0 && (
+                      <p className="text-[10px] text-destructive mt-0.5 font-medium">⛔ El admin seleccionado no está asignado al turno.</p>
                     )}
                   </>
                 );
