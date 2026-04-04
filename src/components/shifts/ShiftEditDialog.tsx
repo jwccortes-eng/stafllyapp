@@ -168,8 +168,9 @@ export function ShiftEditDialog({
           {/* ── Basic info ── */}
           <SectionCard icon={StickyNote} title="Información básica">
             <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno</Label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Turno mañana" className="h-9 text-sm mt-1" />
+              <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno <span className="text-muted-foreground/40">(opcional)</span></Label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Evento corporativo, Servicio VIP..." className="h-9 text-sm mt-1" />
+              <p className="text-[10px] text-muted-foreground/50 mt-0.5">El código de turno se asigna automáticamente.</p>
             </div>
           </SectionCard>
 
