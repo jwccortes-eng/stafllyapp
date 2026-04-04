@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { ArrowLeft, FileText, Calendar, DollarSign, TrendingUp, TrendingDown, CheckCircle2, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
@@ -25,19 +26,30 @@ interface PeriodInfo {
 
 export default function PayStub() {
   const { periodId } = useParams<{ periodId: string }>();
-  const { employeeId } = useAuth();
+  const { employeeId, resolveEmployeeForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+  const effectiveEmployeeId = selectedCompanyId
+    ? resolveEmployeeForCompany(selectedCompanyId) ?? employeeId
+    : employeeId;
   const [period, setPeriod] = useState<PeriodInfo | null>(null);
   const [basePay, setBasePay] = useState(0);
   const [movements, setMovements] = useState<MovementDetail[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!employeeId || !periodId) return;
+    if (!effectiveEmployeeId || !periodId) return;
     async function load() {
+      // Scope period query by employee's company
+      const { data: empData } = await supabase
+        .from("employees").select("company_id").eq("id", effectiveEmployeeId!).maybeSingle();
+
       const [periodRes, baseRes, movRes] = await Promise.all([
-        supabase.from("pay_periods").select("start_date, end_date, status, paid_at").eq("id", periodId).maybeSingle(),
-        supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", employeeId).eq("period_id", periodId).maybeSingle(),
-        supabase.from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)").eq("employee_id", employeeId).eq("period_id", periodId),
+        supabase.from("pay_periods").select("start_date, end_date, status, paid_at")
+          .eq("id", periodId)
+          .eq("company_id", empData?.company_id ?? "")
+          .maybeSingle(),
+        supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", effectiveEmployeeId!).eq("period_id", periodId).maybeSingle(),
+        supabase.from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)").eq("employee_id", effectiveEmployeeId!).eq("period_id", periodId),
       ]);
 
       if (periodRes.data) setPeriod(periodRes.data as PeriodInfo);
@@ -56,7 +68,7 @@ export default function PayStub() {
       setLoading(false);
     }
     load();
-  }, [employeeId, periodId]);
+  }, [effectiveEmployeeId, periodId]);
 
   if (loading) {
     return (
