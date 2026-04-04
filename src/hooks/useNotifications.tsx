@@ -166,9 +166,10 @@ export function useNotifications() {
         { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_id=eq.${user.id}` },
         (payload) => {
           const newNotif = payload.new as AppNotification;
+            console.info("[notifications] realtime insert", { notificationId: newNotif.id, type: newNotif.type, recipient: user.id });
           setNotifications(prev => [newNotif, ...prev].slice(0, 30));
           setUnreadCount(prev => prev + 1);
-          play(getSoundType(newNotif.type));
+            void play(getSoundType(newNotif.type));
           showSystemNotification(newNotif.title, newNotif.body);
           toast(newNotif.title, { description: newNotif.body, duration: 5000 });
         }
@@ -188,9 +189,10 @@ export function useNotifications() {
             { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_id=eq.${empId}` },
             (payload) => {
               const newNotif = payload.new as AppNotification;
+              console.info("[notifications] realtime insert", { notificationId: newNotif.id, type: newNotif.type, recipient: empId });
               setNotifications(prev => [newNotif, ...prev].slice(0, 30));
               setUnreadCount(prev => prev + 1);
-              play(getSoundType(newNotif.type));
+              void play(getSoundType(newNotif.type));
               showSystemNotification(newNotif.title, newNotif.body);
               toast(newNotif.title, { description: newNotif.body, duration: 5000 });
             }

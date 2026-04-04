@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { NavItem } from "@/components/navigation/nav-items";
 import CompanySwitcher from "@/components/CompanySwitcher";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
+import { SoundStatusControl } from "@/components/SoundStatusControl";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
   const location = useLocation();
@@ -107,6 +108,7 @@ export default function AdminLayout() {
             </div>
             <div className="flex items-center gap-1">
               <ModeSwitcher compact />
+              <SoundStatusControl compact />
               {companies.length > 1 && (
                 <div className="max-w-[140px]">
                   <CompanySwitcher collapsed={false} />

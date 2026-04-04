@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
+import { SoundStatusControl } from "@/components/SoundStatusControl";
 import { CommandPaletteTrigger } from "@/components/CommandPalette";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
@@ -72,6 +73,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
       {/* Right: actions */}
       <div className="flex items-center gap-1.5">
         <ModeSwitcher />
+        <SoundStatusControl />
         {/* Global Create */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
