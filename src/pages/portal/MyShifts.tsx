@@ -167,12 +167,12 @@ export default function MyShifts() {
       } catch {}
       if (navigator.vibrate) navigator.vibrate(100);
 
-      toast({ title: "✅ ¡Solicitud enviada!", description: claimedShift ? `Turno "${claimedShift.title}" solicitado exitosamente.` : "Tu solicitud fue registrada." });
+      toast.success("✅ ¡Solicitud enviada!", { description: claimedShift ? `Turno "${claimedShift.title}" solicitado exitosamente.` : "Tu solicitud fue registrada." });
       await load();
     } catch (err: any) {
       // Rollback optimistic update
       if (claimedShift) setClaimable(prev => [...prev, claimedShift].sort((a, b) => a.date.localeCompare(b.date)));
-      toast({ title: "Error", description: err.message ?? "No se pudo solicitar el turno.", variant: "destructive" });
+      toast.error("Error", { description: err.message ?? "No se pudo solicitar el turno." });
     } finally {
       setClaiming(null);
     }
