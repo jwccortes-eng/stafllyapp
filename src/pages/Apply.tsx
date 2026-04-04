@@ -158,6 +158,7 @@ export default function Apply() {
     autosaveTimer.current = setTimeout(() => {
       localStorage.setItem(draftKey, JSON.stringify({
         firstName, lastName, phone, email, workerType, city,
+        availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step, address,
         availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step,
       }));
     }, 800);
