@@ -128,13 +128,19 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin = false 
         schema: "public",
         table: "shift_chat_messages",
         filter: `shift_id=eq.${shiftId}`,
-      }, () => {
+      }, (payload) => {
+        // Play chat sound for messages from others
+        const senderId = (payload.new as any)?.sender_user_id || (payload.new as any)?.sender_employee_id;
+        const isOwnMessage = senderId === user?.id || senderId === employeeId;
+        if (!isOwnMessage) {
+          play("chat");
+        }
         loadMessages();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [shiftId, loadMessages]);
+  }, [shiftId, loadMessages, play, user, employeeId]);
 
   // Auto-scroll
   useEffect(() => {
