@@ -153,9 +153,17 @@ export default function MyShifts() {
 
       // Success feedback: sound + vibration + toast
       try {
-        const audio = new Audio("data:audio/wav;base64,UklGRl9vT19teleXBdYXZlZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU" + "AAAAAAA=");
-        audio.volume = 0.3;
-        audio.play().catch(() => {});
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = "sine";
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.2);
       } catch {}
       if (navigator.vibrate) navigator.vibrate(100);
 
