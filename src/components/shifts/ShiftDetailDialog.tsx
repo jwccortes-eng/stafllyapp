@@ -12,10 +12,10 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { EmployeeCombobox } from "./EmployeeCombobox";
 import {
   Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
-  CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
+  CheckCircle2, XCircle, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
   CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy, FileText, Radar,
-  AlertTriangle,
+  AlertTriangle, Compass, History,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
