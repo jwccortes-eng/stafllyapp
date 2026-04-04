@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { Link } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -16,7 +17,11 @@ interface PeriodAccum {
 }
 
 export default function Accumulated() {
-  const { employeeId } = useAuth();
+  const { employeeId, resolveEmployeeForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+  const effectiveEmployeeId = selectedCompanyId
+    ? resolveEmployeeForCompany(selectedCompanyId) ?? employeeId
+    : employeeId;
   const [periods, setPeriods] = useState<PeriodAccum[]>([]);
   const [loading, setLoading] = useState(true);
   const [empName, setEmpName] = useState<string | null>(null);
@@ -24,27 +29,28 @@ export default function Accumulated() {
   const [currentPeriod, setCurrentPeriod] = useState<{ start_date: string; end_date: string; status: string; published_at: string | null } | null>(null);
 
   useEffect(() => {
-    if (!employeeId) return;
+    if (!effectiveEmployeeId) return;
     async function load() {
-      // Fetch employee info
       const { data: empData } = await supabase
         .from("employees")
         .select("first_name, last_name, company_id")
-        .eq("id", employeeId)
+        .eq("id", effectiveEmployeeId)
         .maybeSingle();
-      if (empData) {
-        setEmpName(`${empData.first_name} ${empData.last_name}`);
-        const { data: comp } = await supabase.from("companies").select("name").eq("id", empData.company_id).maybeSingle();
-        setCompanyName(comp?.name ?? null);
-        const { data: latestPeriod } = await supabase.from("pay_periods")
-          .select("start_date, end_date, status, published_at")
-          .eq("company_id", empData.company_id)
-          .order("start_date", { ascending: false }).limit(1).maybeSingle();
-        setCurrentPeriod(latestPeriod ?? null);
-      }
+      if (!empData) { setPeriods([]); setLoading(false); return; }
 
+      setEmpName(`${empData.first_name} ${empData.last_name}`);
+      const { data: comp } = await supabase.from("companies").select("name").eq("id", empData.company_id).maybeSingle();
+      setCompanyName(comp?.name ?? null);
+      const { data: latestPeriod } = await supabase.from("pay_periods")
+        .select("start_date, end_date, status, published_at")
+        .eq("company_id", empData.company_id)
+        .order("start_date", { ascending: false }).limit(1).maybeSingle();
+      setCurrentPeriod(latestPeriod ?? null);
+
+      // CRITICAL: scope pay_periods by company_id
       const { data: publishedPeriods } = await supabase
         .from("pay_periods").select("id, start_date, end_date")
+        .eq("company_id", empData.company_id)
         .not("published_at", "is", null).order("start_date", { ascending: false });
 
       const pIds = (publishedPeriods ?? []).map((p: any) => p.id);
@@ -54,8 +60,8 @@ export default function Accumulated() {
       if (pIds.length === 0) { setPeriods([]); setLoading(false); return; }
 
       const [bpRes, movRes] = await Promise.all([
-        supabase.from("period_base_pay").select("period_id, base_total_pay").eq("employee_id", employeeId).in("period_id", pIds),
-        supabase.from("movements").select("period_id, total_value, concepts(category)").eq("employee_id", employeeId).in("period_id", pIds),
+        supabase.from("period_base_pay").select("period_id, base_total_pay").eq("employee_id", effectiveEmployeeId).in("period_id", pIds),
+        supabase.from("movements").select("period_id, total_value, concepts(category)").eq("employee_id", effectiveEmployeeId).in("period_id", pIds),
       ]);
 
       const map = new Map<string, PeriodAccum>();
@@ -65,9 +71,14 @@ export default function Accumulated() {
         map.set(bp.period_id, { period_id: bp.period_id, start_date: info.start_date, end_date: info.end_date, base: Number(bp.base_total_pay) || 0, extras: 0, deductions: 0, total: 0 });
       });
 
+      // Also seed from movements (employee may have movements without base_pay)
       (movRes.data ?? []).forEach((m: any) => {
-        const row = map.get(m.period_id);
-        if (!row) return;
+        if (!map.has(m.period_id)) {
+          const info = pMap.get(m.period_id);
+          if (!info) return;
+          map.set(m.period_id, { period_id: m.period_id, start_date: info.start_date, end_date: info.end_date, base: 0, extras: 0, deductions: 0, total: 0 });
+        }
+        const row = map.get(m.period_id)!;
         if (m.concepts?.category === "extra") row.extras += Number(m.total_value) || 0;
         else row.deductions += Number(m.total_value) || 0;
       });
@@ -77,7 +88,7 @@ export default function Accumulated() {
       setLoading(false);
     }
     load();
-  }, [employeeId]);
+  }, [effectiveEmployeeId]);
 
   const totals = useMemo(() => {
     const base = periods.reduce((s, r) => s + r.base, 0);
@@ -115,10 +126,8 @@ export default function Accumulated() {
     );
   }
 
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <Link to="/portal" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3">
           <ArrowLeft className="h-4 w-4" /> Volver
@@ -131,7 +140,6 @@ export default function Accumulated() {
         />
       </div>
 
-      {/* Total card */}
       <div className="rounded-2xl bg-card border p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -145,7 +153,6 @@ export default function Accumulated() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-card border p-4 text-center">
           <p className="text-xs text-muted-foreground font-medium">Base</p>
@@ -161,7 +168,6 @@ export default function Accumulated() {
         </div>
       </div>
 
-      {/* Period list */}
       <div>
         <h2 className="text-sm font-semibold text-foreground mb-4">Desglose por semana</h2>
         {periods.length === 0 ? (

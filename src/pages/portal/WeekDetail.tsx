@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import {
   ArrowLeft, DollarSign, TrendingUp, TrendingDown, Wallet, FileText,
 } from "lucide-react";
@@ -19,7 +20,11 @@ interface MovementDetail {
 
 export default function WeekDetail() {
   const { periodId } = useParams();
-  const { employeeId } = useAuth();
+  const { employeeId, resolveEmployeeForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+  const effectiveEmployeeId = selectedCompanyId
+    ? resolveEmployeeForCompany(selectedCompanyId) ?? employeeId
+    : employeeId;
   const navigate = useNavigate();
   const [basePay, setBasePay] = useState(0);
   const [movements, setMovements] = useState<MovementDetail[]>([]);
@@ -27,19 +32,25 @@ export default function WeekDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!employeeId || !periodId) return;
+    if (!effectiveEmployeeId || !periodId) return;
     async function load() {
+      // Get employee's company for scoping
+      const { data: empData } = await supabase
+        .from("employees").select("company_id").eq("id", effectiveEmployeeId!).maybeSingle();
+      if (!empData) { navigate("/portal"); return; }
+
       const { data: periodData } = await supabase
         .from("pay_periods")
         .select("start_date, end_date, published_at")
         .eq("id", periodId)
+        .eq("company_id", empData.company_id)
         .maybeSingle();
 
       if (!periodData?.published_at) { navigate("/portal"); return; }
 
       const [bpRes, movRes] = await Promise.all([
-        supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", employeeId).eq("period_id", periodId).maybeSingle(),
-        supabase.from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)").eq("employee_id", employeeId).eq("period_id", periodId),
+        supabase.from("period_base_pay").select("base_total_pay").eq("employee_id", effectiveEmployeeId!).eq("period_id", periodId).maybeSingle(),
+        supabase.from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)").eq("employee_id", effectiveEmployeeId!).eq("period_id", periodId),
       ]);
 
       setBasePay(Number(bpRes.data?.base_total_pay) || 0);
@@ -53,7 +64,7 @@ export default function WeekDetail() {
       setLoading(false);
     }
     load();
-  }, [employeeId, periodId]);
+  }, [effectiveEmployeeId, periodId]);
 
   const extras = useMemo(() => movements.filter(m => m.category === "extra"), [movements]);
   const deductions = useMemo(() => movements.filter(m => m.category === "deduction"), [movements]);
@@ -82,7 +93,6 @@ export default function WeekDetail() {
         />
       </div>
 
-      {/* Total card */}
       <div className="rounded-2xl bg-card border p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -95,7 +105,6 @@ export default function WeekDetail() {
         </div>
       </div>
 
-      {/* Breakdown */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-card border p-4 text-center">
           <p className="text-xs text-muted-foreground font-medium">Base</p>
@@ -111,7 +120,6 @@ export default function WeekDetail() {
         </div>
       </div>
 
-      {/* Extras list */}
       {extras.length > 0 && (
         <div>
           <h2 className="text-sm font-semibold text-foreground mb-3">Extras</h2>
@@ -138,7 +146,6 @@ export default function WeekDetail() {
         </div>
       )}
 
-      {/* Deductions list */}
       {deductions.length > 0 && (
         <div>
           <h2 className="text-sm font-semibold text-foreground mb-3">Deducciones</h2>
