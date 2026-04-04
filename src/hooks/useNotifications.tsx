@@ -204,7 +204,7 @@ export function useNotifications() {
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [user, playSound, showSystemNotification]);
+  }, [user, play, getSoundType, showSystemNotification]);
 
   return {
     notifications,
