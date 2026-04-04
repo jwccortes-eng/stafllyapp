@@ -88,6 +88,7 @@ export default function Apply() {
   const [experienceSummary, setExperienceSummary] = useState("");
   const [languages, setLanguages] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [address, setAddress] = useState<AddressData>({ address_line: "", address_city: "", address_state: "", address_zip: "" });
 
   const source = searchParams.get("source") ?? "direct_link";
   const draftKey = companySlug ? `${DRAFT_KEY_PREFIX}${companySlug}` : null;
