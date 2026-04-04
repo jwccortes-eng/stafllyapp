@@ -99,6 +99,7 @@ const CompanyMigration = lazy(() => import("./pages/admin/CompanyMigration"));
 const ReconciliationReport = lazy(() => import("./pages/admin/ReconciliationReport"));
 const AdvancesLoans = lazy(() => import("./pages/admin/AdvancesLoans"));
 const ShiftOperations = lazy(() => import("./pages/admin/ShiftOperations"));
+const OperationsCommandCenter = lazy(() => import("./pages/admin/OperationsCommandCenter"));
 const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliation"));
 const CompensationValidation = lazy(() => import("./pages/admin/CompensationValidation"));
 const PayrollPilotClose = lazy(() => import("./pages/admin/PayrollPilotClose"));
@@ -239,6 +240,7 @@ function App() {
                 <Route path="advances-loans" element={<AdvancesLoans />} />
                 <Route path="kiosk-devices" element={<KioskDevices />} />
                 <Route path="shift-ops" element={<ShiftOperations />} />
+                <Route path="ops-center" element={<OperationsCommandCenter />} />
                 <Route path="compensation-validation" element={<CompensationValidation />} />
                 <Route path="payroll-pilot-close" element={<PayrollPilotClose />} />
                 <Route path="payroll-mappings" element={<PayrollMappings />} />
