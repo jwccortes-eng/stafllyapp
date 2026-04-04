@@ -186,7 +186,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                 <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-primary/30 hover:bg-primary/10 text-[9px]" asChild disabled={!hasPhone} onClick={() => onInviteSent?.("sms")}>
                   <a href={smsLink}><Smartphone className="h-4 w-4 text-primary" />SMS</a>
                 </Button>
-                <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyLink}>
+                <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyMessage}>
                   {copied ? <Check className="h-4 w-4 text-[hsl(var(--earning))]" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
                   {copied ? "Copiado" : "Copiar"}
                 </Button>
