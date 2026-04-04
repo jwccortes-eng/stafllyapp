@@ -13,7 +13,7 @@ import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { PortalShiftDetailDrawer } from "@/components/portal/PortalShiftDetailDrawer";
 import { PortalShiftCard, type PortalShiftData } from "@/components/portal/PortalShiftCard";
