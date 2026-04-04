@@ -22,11 +22,12 @@ interface Props {
 
 const PRODUCTION_URL = "https://staflyapps.com";
 
-export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent }: Props) {
+export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken }: Props) {
   const { toast } = useToast();
   const { companies, selectedCompanyId } = useCompany();
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
   const company = companies.find(c => c.id === selectedCompanyId);
