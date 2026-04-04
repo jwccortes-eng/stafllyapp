@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock, Shield, Phone, KeyRound } from "lucide-react";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 
 type InviteState = "loading" | "valid" | "expired" | "used" | "invalid";
@@ -13,6 +13,7 @@ interface InviteData {
   status: string;
   expires_at: string | null;
   company_name?: string;
+  company_logo?: string | null;
   employee_name?: string;
   employee_phone?: string;
 }
@@ -24,13 +25,13 @@ export default function AcceptInvite() {
   const [state, setState] = useState<InviteState>("loading");
   const [invite, setInvite] = useState<InviteData | null>(null);
   const [activating, setActivating] = useState(false);
+  const [activated, setActivated] = useState(false);
   const markedOpened = useRef(false);
 
   useEffect(() => {
     if (!token) { setState("invalid"); return; }
 
     (async () => {
-      // Look up invitation by token
       const { data, error } = await (supabase
         .from("employee_invitations" as any)
         .select("id, employee_id, status, expires_at, company_id, opened_at")
@@ -39,42 +40,29 @@ export default function AcceptInvite() {
 
       if (error || !data) { setState("invalid"); return; }
 
-      // Check if already accepted
-      if (data.status === "accepted") {
-        setState("used");
-        return;
-      }
+      if (data.status === "accepted") { setState("used"); return; }
 
-      // Check expiry
       if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        // Mark as expired if not already
         if (data.status !== "expired") {
-          await (supabase
-            .from("employee_invitations" as any)
-            .update({ status: "expired" })
-            .eq("id", data.id) as any);
+          await (supabase.from("employee_invitations" as any)
+            .update({ status: "expired" }).eq("id", data.id) as any);
         }
         setState("expired");
         return;
       }
 
-      // Mark as opened (only once)
       if (!markedOpened.current && data.status !== "opened" && data.status !== "accepted") {
         markedOpened.current = true;
-        await (supabase
-          .from("employee_invitations" as any)
-          .update({ 
-            status: "opened", 
-            opened_at: data.opened_at ?? new Date().toISOString() 
-          })
+        await (supabase.from("employee_invitations" as any)
+          .update({ status: "opened", opened_at: data.opened_at ?? new Date().toISOString() })
           .eq("id", data.id) as any);
       }
 
-      // Fetch employee + company names
       let employeeName = "";
       let companyName = "";
+      let companyLogo: string | null = null;
       let employeePhone = "";
-      
+
       const { data: emp } = await supabase
         .from("employees")
         .select("first_name, last_name, company_id, phone_number")
@@ -86,15 +74,17 @@ export default function AcceptInvite() {
         employeePhone = emp.phone_number ?? "";
         const { data: co } = await supabase
           .from("companies")
-          .select("name")
+          .select("name, logo_url")
           .eq("id", emp.company_id)
           .single();
         companyName = co?.name ?? "";
+        companyLogo = co?.logo_url ?? null;
       }
 
       setInvite({
         ...data,
         company_name: companyName,
+        company_logo: companyLogo,
         employee_name: employeeName,
         employee_phone: employeePhone,
       });
@@ -106,19 +96,14 @@ export default function AcceptInvite() {
     if (!invite) return;
     setActivating(true);
 
-    // 1. Mark invitation as accepted
-    await (supabase
-      .from("employee_invitations" as any)
+    await (supabase.from("employee_invitations" as any)
       .update({ status: "accepted", accepted_at: new Date().toISOString() })
       .eq("id", invite.id) as any);
 
-    // 2. Enable portal access on employee (correct field: portal_access_enabled)
-    await supabase
-      .from("employees")
+    await supabase.from("employees")
       .update({ portal_access_enabled: true } as any)
       .eq("id", invite.employee_id);
 
-    // 3. Log acceptance event
     await supabase.from("application_events" as any).insert({
       application_id: invite.id,
       event_type: "invitation_accepted",
@@ -126,97 +111,151 @@ export default function AcceptInvite() {
     } as any);
 
     setActivating(false);
-    // Redirect to login
-    navigate("/auth");
+    setActivated(true);
   };
 
+  const maskedPhone = invite?.employee_phone
+    ? invite.employee_phone.replace(/\d(?=\d{4})/g, "•")
+    : null;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm space-y-6 text-center">
-        <StaflyLogo size={28} />
-
-        {state === "loading" && (
-          <div className="space-y-3 pt-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">Validando invitación...</p>
-          </div>
-        )}
-
-        {state === "invalid" && (
-          <div className="space-y-3 pt-8">
-            <XCircle className="h-10 w-10 text-destructive mx-auto" />
-            <h2 className="text-lg font-bold">Enlace inválido</h2>
-            <p className="text-sm text-muted-foreground">
-              Este enlace de invitación no es válido. Solicita uno nuevo a tu administrador.
-            </p>
-            <Button variant="outline" onClick={() => navigate("/auth")} className="mt-4">
-              Ir al inicio de sesión
-            </Button>
-          </div>
-        )}
-
-        {state === "expired" && (
-          <div className="space-y-3 pt-8">
-            <Clock className="h-10 w-10 text-warning mx-auto" />
-            <h2 className="text-lg font-bold">Invitación expirada</h2>
-            <p className="text-sm text-muted-foreground">
-              Este enlace ha expirado. Solicita uno nuevo a tu administrador.
-            </p>
-            <Button variant="outline" onClick={() => navigate("/auth")} className="mt-4">
-              Ir al inicio de sesión
-            </Button>
-          </div>
-        )}
-
-        {state === "used" && (
-          <div className="space-y-3 pt-8">
-            <CheckCircle2 className="h-10 w-10 text-[hsl(var(--earning))] mx-auto" />
-            <h2 className="text-lg font-bold">Invitación ya utilizada</h2>
-            <p className="text-sm text-muted-foreground">
-              Esta invitación ya fue aceptada. Inicia sesión con tu teléfono y PIN.
-            </p>
-            <Button onClick={() => navigate("/auth")} className="mt-4">
-              Iniciar sesión
-            </Button>
-          </div>
-        )}
-
-        {state === "valid" && invite && (
-          <div className="space-y-4 pt-6">
-            <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
-            <h2 className="text-lg font-bold">¡Bienvenido/a!</h2>
-            {invite.employee_name && (
-              <p className="text-base font-semibold">{invite.employee_name}</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
+      <div className="w-full max-w-sm">
+        {/* Card */}
+        <div className="bg-card rounded-2xl border border-border/60 shadow-lg overflow-hidden">
+          {/* Brand header */}
+          <div className="bg-gradient-to-br from-primary/[0.06] to-transparent px-6 pt-6 pb-4 flex flex-col items-center gap-3 border-b border-border/40">
+            {invite?.company_logo ? (
+              <img src={invite.company_logo} alt="" className="h-12 w-12 rounded-xl object-cover shadow" />
+            ) : (
+              <StaflyLogo size={28} />
             )}
-            {invite.company_name && (
-              <p className="text-sm text-muted-foreground">
-                Has sido invitado/a a <span className="font-medium text-foreground">{invite.company_name}</span>
-              </p>
+            {invite?.company_name && (
+              <span className="text-xs font-semibold text-muted-foreground">{invite.company_name}</span>
             )}
-            <p className="text-sm text-muted-foreground">
-              Activa tu cuenta para acceder al portal de empleados.
-            </p>
-
-            {/* Access info preview */}
-            <div className="bg-muted/40 rounded-lg p-3 text-left space-y-1 text-[12px]">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Teléfono</span>
-                <span className="font-medium">{invite.employee_phone || "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Acceso</span>
-                <span className="font-medium">Teléfono + PIN</span>
-              </div>
-            </div>
-
-            <Button onClick={handleAccept} disabled={activating} className="w-full mt-4">
-              {activating ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Activando...</> : "Activar mi cuenta"}
-            </Button>
-            <p className="text-[10px] text-muted-foreground/60">
-              Después podrás iniciar sesión con tu teléfono y PIN
-            </p>
           </div>
-        )}
+
+          <div className="px-6 py-6 space-y-5">
+            {state === "loading" && (
+              <div className="flex flex-col items-center gap-3 py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Validando invitación...</p>
+              </div>
+            )}
+
+            {state === "invalid" && (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <XCircle className="h-7 w-7 text-destructive" />
+                </div>
+                <h2 className="text-lg font-bold text-foreground">Enlace inválido</h2>
+                <p className="text-sm text-muted-foreground max-w-[260px]">
+                  Este enlace de invitación no es válido. Solicita uno nuevo a tu administrador.
+                </p>
+                <Button variant="outline" onClick={() => navigate("/auth")} className="mt-2 rounded-xl">
+                  Ir al inicio de sesión
+                </Button>
+              </div>
+            )}
+
+            {state === "expired" && (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="h-14 w-14 rounded-full bg-warning/10 flex items-center justify-center">
+                  <Clock className="h-7 w-7 text-warning" />
+                </div>
+                <h2 className="text-lg font-bold text-foreground">Invitación expirada</h2>
+                <p className="text-sm text-muted-foreground max-w-[260px]">
+                  Este enlace ha expirado. Solicita uno nuevo a tu administrador.
+                </p>
+                <Button variant="outline" onClick={() => navigate("/auth")} className="mt-2 rounded-xl">
+                  Ir al inicio de sesión
+                </Button>
+              </div>
+            )}
+
+            {state === "used" && (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="h-14 w-14 rounded-full bg-[hsl(var(--earning))]/10 flex items-center justify-center">
+                  <CheckCircle2 className="h-7 w-7 text-[hsl(var(--earning))]" />
+                </div>
+                <h2 className="text-lg font-bold text-foreground">Cuenta ya activada</h2>
+                <p className="text-sm text-muted-foreground max-w-[260px]">
+                  Tu cuenta ya fue activada. Inicia sesión con tu teléfono y PIN.
+                </p>
+                <Button onClick={() => navigate("/auth")} className="mt-2 w-full rounded-xl h-11">
+                  Iniciar sesión
+                </Button>
+              </div>
+            )}
+
+            {state === "valid" && invite && !activated && (
+              <>
+                <div className="text-center space-y-1">
+                  <h2 className="text-xl font-bold text-foreground">¡Bienvenido/a!</h2>
+                  {invite.employee_name && (
+                    <p className="text-base font-semibold text-foreground">{invite.employee_name}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Activa tu acceso al portal de empleados
+                  </p>
+                </div>
+
+                {/* Credentials preview */}
+                <div className="rounded-xl border border-border/60 bg-muted/30 divide-y divide-border/40">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-muted-foreground">Tu teléfono</p>
+                      <p className="text-sm font-medium text-foreground">{maskedPhone || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <KeyRound className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-muted-foreground">Acceso</p>
+                      <p className="text-sm font-medium text-foreground">Teléfono + PIN de 4 dígitos</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button onClick={handleAccept} disabled={activating} className="w-full h-12 rounded-xl text-base font-semibold">
+                  {activating ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Activando...</>
+                  ) : (
+                    "Activar mi cuenta"
+                  )}
+                </Button>
+
+                <div className="flex items-center gap-2 justify-center">
+                  <Shield className="h-3 w-3 text-muted-foreground/50" />
+                  <p className="text-[10px] text-muted-foreground/60">
+                    Tu información está protegida
+                  </p>
+                </div>
+              </>
+            )}
+
+            {state === "valid" && activated && (
+              <div className="flex flex-col items-center gap-4 py-6 text-center">
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[hsl(var(--earning))] to-[hsl(var(--status-confirmed))] flex items-center justify-center shadow-lg animate-in zoom-in-50 duration-500">
+                  <CheckCircle2 className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-foreground">¡Cuenta activada!</h2>
+                <p className="text-sm text-muted-foreground max-w-[260px]">
+                  Tu portal está listo. Inicia sesión con tu número de teléfono y PIN.
+                </p>
+                <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl text-base font-semibold mt-1">
+                  Iniciar sesión ahora
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-[10px] text-muted-foreground/40 mt-4">
+          Powered by Stafly
+        </p>
       </div>
     </div>
   );
