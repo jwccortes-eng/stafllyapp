@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
-import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -21,25 +22,57 @@ interface Props {
   inviteToken?: string | null;
 }
 
-export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken }: Props) {
+export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken: initialToken }: Props) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { companies, selectedCompanyId } = useCompany();
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [liveToken, setLiveToken] = useState<string | null>(initialToken ?? null);
+  const [creatingInvite, setCreatingInvite] = useState(false);
 
   const company = companies.find(c => c.id === selectedCompanyId);
   const companyName = company?.name ?? "la empresa";
 
   const portalUrl = portalAuthUrl();
-  const inviteLink = inviteToken ? inviteUrl(inviteToken) : null;
+  const inviteLink = liveToken ? inviteUrl(liveToken) : null;
   const pin = typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : "—";
   const hasPin = pin !== "—";
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
   const hasEmail = !!employee.email;
 
-  const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Portal: ${portalUrl}\n📞 Tu teléfono: ${employee.phone_number ?? "—"}\n🔑 Tu PIN: ${pin}\n\nSelecciona "Acceso empleado" e ingresa con tu número y PIN.\n\nDesde el portal podrás:\n✅ Ver tus turnos asignados\n✅ Registrar entrada y salida\n✅ Consultar tus pagos\n✅ Recibir comunicados\n\n— Equipo ${companyName}`;
+  // Auto-create invitation if none exists when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    setLiveToken(initialToken ?? null);
+    if (initialToken || !selectedCompanyId || !user?.id || !employee.id) return;
+
+    let cancelled = false;
+    (async () => {
+      setCreatingInvite(true);
+      const { data, error } = await supabase
+        .from("employee_invitations")
+        .insert({
+          company_id: selectedCompanyId,
+          employee_id: employee.id,
+          channel: "copy" as const,
+          status: "created" as const,
+          sent_by: user.id,
+          sent_at: new Date().toISOString(),
+        })
+        .select("invite_token")
+        .single();
+      if (!cancelled && !error && data) {
+        setLiveToken(data.invite_token);
+      }
+      if (!cancelled) setCreatingInvite(false);
+    })();
+    return () => { cancelled = true; };
+  }, [open, initialToken, selectedCompanyId, user?.id, employee.id]);
+
+  const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Portal: ${portalUrl}\n📞 Tu teléfono: ${employee.phone_number ?? "—"}\n🔑 Tu PIN: ${pin}\n\nSelecciona "Acceso empleado" e ingresa con tu número y PIN.\n\nDesde el portal podrás:\n✅ Ver tus turnos asignados\n✅ Registrar entrada y salida\n✅ Consultar tus pagos\n✅ Recibir comunicados\n\n${inviteLink ? `🔗 Activa tu cuenta: ${inviteLink}\n\n` : ""}— Equipo ${companyName}`;
 
   const phoneDigits = (employee.phone_number ?? "").replace(/\D/g, "");
   const normalizedPhone = phoneDigits.startsWith("00") ? phoneDigits.slice(2) : phoneDigits;
@@ -81,14 +114,16 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
               <p style="font-size: 14px; color: hsl(220, 15%, 46%); line-height: 1.6; margin: 0 0 20px;">
                 Te invitamos a acceder al portal de empleados de <strong>${companyName}</strong>.
               </p>
+              ${inviteLink ? `
+              <div style="text-align: center; margin: 24px 0;">
+                <a href="${inviteLink}" style="display: inline-block; background: hsl(222, 100%, 59%); color: #ffffff; font-size: 14px; font-weight: 600; border-radius: 16px; padding: 12px 28px; text-decoration: none;">Activar mi cuenta</a>
+              </div>
+              ` : ""}
               <div style="background: hsl(220, 20%, 97%); border-radius: 12px; padding: 16px; margin: 0 0 20px;">
-                <p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0 0 8px;">📱 <strong>Enlace:</strong> <a href="${portalUrl}" style="color: hsl(222, 100%, 59%);">${portalUrl}</a></p>
+                <p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0 0 8px;">📱 <strong>Portal:</strong> <a href="${portalUrl}" style="color: hsl(222, 100%, 59%);">${portalUrl}</a></p>
                 <p style="font-size: 13px; color: hsl(220, 15%, 30%); margin: 0;">🔑 <strong>Tu PIN:</strong> ${pin}</p>
               </div>
               <p style="font-size: 13px; color: hsl(220, 15%, 46%); line-height: 1.6;">Ingresa con tu número de teléfono y tu PIN de 4 dígitos.</p>
-              <div style="margin: 24px 0;">
-                <a href="${portalUrl}" style="display: inline-block; background: hsl(222, 100%, 59%); color: #ffffff; font-size: 14px; font-weight: 600; border-radius: 16px; padding: 12px 28px; text-decoration: none;">Ir al portal</a>
-              </div>
               <p style="font-size: 12px; color: hsl(220, 15%, 46%); margin: 30px 0 0;">Si no esperabas esta invitación, ignora este correo.</p>
             </div>
           `,
@@ -163,16 +198,24 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             </div>
           </div>
 
-          {/* Invite link */}
-          {inviteLink && (
-            <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
-              <Link2 className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteLink}</span>
-              <Button variant="outline" size="sm" className={cn("h-7 text-[9px] shrink-0", linkCopied && "border-[hsl(var(--earning)/0.5)] text-[hsl(var(--earning))]")} onClick={copyInviteLink}>
-                {linkCopied ? <><Check className="h-3 w-3 mr-1" />Copiado</> : <><Copy className="h-3 w-3 mr-1" />Copiar enlace</>}
-              </Button>
-            </div>
-          )}
+          {/* Invite link — always visible */}
+          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
+            <Link2 className="h-4 w-4 text-primary shrink-0" />
+            {creatingInvite ? (
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-1">
+                <Loader2 className="h-3 w-3 animate-spin" /> Generando enlace...
+              </span>
+            ) : inviteLink ? (
+              <>
+                <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteLink}</span>
+                <Button variant="outline" size="sm" className={cn("h-7 text-[9px] shrink-0", linkCopied && "border-[hsl(var(--earning)/0.5)] text-[hsl(var(--earning))]")} onClick={copyInviteLink}>
+                  {linkCopied ? <><Check className="h-3 w-3 mr-1" />Copiado</> : <><Copy className="h-3 w-3 mr-1" />Copiar enlace</>}
+                </Button>
+              </>
+            ) : (
+              <span className="text-[10px] text-muted-foreground flex-1">Enlace no disponible</span>
+            )}
+          </div>
 
           {/* Send channels */}
           <Tabs defaultValue="link" className="w-full">
