@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useSoundContext } from "@/hooks/useSound";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ interface Message { id: string; conversation_id: string; sender_id: string; cont
 export default function InternalChat() {
   const { user } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const { play } = useSoundContext();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
@@ -69,6 +71,10 @@ export default function InternalChat() {
       .channel("internal-messages-rt")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "internal_messages" }, (payload) => {
         const msg = payload.new as Message;
+        // Sound for messages from others
+        if ((msg as any).sender_id !== userId) {
+          play("chat");
+        }
         if (msg.conversation_id === selectedConvo) {
           setMessages(prev => [...prev, msg]);
           setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }), 100);
