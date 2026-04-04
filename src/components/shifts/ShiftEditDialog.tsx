@@ -417,7 +417,7 @@ export function ShiftEditDialog({
 
         {/* Footer */}
         <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
-          <Button onClick={handleSave} disabled={saving || !date} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
+          <Button onClick={handleSave} disabled={saving || !date || (shiftAssignedIds.length > 0 && (!shiftAdminId || !adminIsAssigned))} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Guardar cambios
           </Button>
