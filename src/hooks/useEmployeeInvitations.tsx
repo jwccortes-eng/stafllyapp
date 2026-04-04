@@ -6,10 +6,11 @@ export interface EmployeeInvitation {
   id: string;
   employee_id: string;
   channel: "whatsapp" | "sms" | "email" | "copy" | "other";
-  status: "sent" | "delivered" | "opened" | "activated" | "failed";
-  sent_at: string;
+  status: "created" | "sent" | "opened" | "accepted" | "expired" | "revoked" | "failed";
+  sent_at: string | null;
   sent_by: string;
-  activated_at: string | null;
+  opened_at: string | null;
+  accepted_at: string | null;
   notes: string | null;
   invite_token: string | null;
   expires_at: string | null;
@@ -28,9 +29,9 @@ export function useEmployeeInvitations(companyId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("employee_invitations")
-      .select("id, employee_id, channel, status, sent_at, sent_by, activated_at, notes, invite_token, expires_at")
+      .select("id, employee_id, channel, status, sent_at, sent_by, accepted_at, opened_at, notes, invite_token, expires_at")
       .eq("company_id", companyId)
-      .order("sent_at", { ascending: false });
+      .order("created_at", { ascending: false });
 
     // Build map: keep only latest invitation per employee
     const map: InvitationMap = {};
@@ -61,9 +62,10 @@ export function useEmployeeInvitations(companyId: string | null) {
         channel,
         status: "sent" as const,
         sent_by: user.id,
+        sent_at: new Date().toISOString(),
         notes: notes ?? null,
       })
-      .select("id, employee_id, channel, status, sent_at, sent_by, activated_at, notes, invite_token, expires_at")
+      .select("id, employee_id, channel, status, sent_at, sent_by, accepted_at, opened_at, notes, invite_token, expires_at")
       .single();
 
     if (!error && data) {
