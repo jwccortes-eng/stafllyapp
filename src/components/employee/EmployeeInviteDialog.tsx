@@ -49,12 +49,20 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const waLink = `https://api.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(message)}`;
   const smsLink = `sms:${employee.phone_number ?? ""}?body=${encodeURIComponent(message)}`;
 
-  const copyLink = async () => {
+  const copyMessage = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
     onInviteSent?.("copy");
     toast({ title: "Copiado al portapapeles" });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyInviteLink = async () => {
+    if (!inviteUrl) return;
+    await navigator.clipboard.writeText(inviteUrl);
+    setLinkCopied(true);
+    toast({ title: "Enlace copiado", description: inviteUrl });
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const sendEmail = async () => {
