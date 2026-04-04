@@ -274,6 +274,7 @@ function App() {
             </Suspense>
           </BrowserRouter>
           </ErrorBoundary>
+          </SoundProvider>
           </CompanyProvider>
         </AuthProvider>
       </TooltipProvider>
