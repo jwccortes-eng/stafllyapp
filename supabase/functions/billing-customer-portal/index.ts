@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const origin = req.headers.get("origin") || "https://staflyapp.lovable.app";
+    const origin = req.headers.get("origin") || "https://staflyapps.com";
 
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,

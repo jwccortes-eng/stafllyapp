@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 interface Props {

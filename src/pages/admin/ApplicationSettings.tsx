@@ -127,7 +127,7 @@ export default function ApplicationSettings() {
     update("visible_worker_types", next);
   };
 
-  const applicationLink = selectedCompany?.slug ? `${window.location.origin}/apply/${selectedCompany.slug}` : "";
+  const applicationLink = selectedCompany?.slug ? applyUrl(selectedCompany.slug) : "";
 
   if (isLoading) {
     return (
