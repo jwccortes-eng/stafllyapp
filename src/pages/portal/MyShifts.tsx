@@ -181,8 +181,8 @@ export default function MyShifts() {
   const acceptAssignment = async (assignmentId: string) => {
     setResponding(assignmentId);
     const { error } = await supabase.from("shift_assignments").update({ status: "confirmed", responded_at: new Date().toISOString() } as any).eq("id", assignmentId);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: "¡Turno confirmado!" }); await load(); }
+    if (error) toast.error("Error", { description: error.message });
+    else { toast.success("¡Turno confirmado!"); await load(); }
     setResponding(null);
   };
 
