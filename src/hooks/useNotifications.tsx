@@ -19,16 +19,14 @@ export interface AppNotification {
 export function useNotifications() {
   const { user, role } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const { play } = useSoundContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const audioUnlockedRef = useRef(false);
   const notifPermissionRef = useRef<NotificationPermission>("default");
 
-  // Request browser notification permission + warm-up AudioContext on first interaction
+  // Request browser notification permission
   useEffect(() => {
-    // Request notification permission
     if ("Notification" in window) {
       notifPermissionRef.current = Notification.permission;
       if (Notification.permission === "default") {
@@ -37,34 +35,6 @@ export function useNotifications() {
         });
       }
     }
-
-    const unlock = () => {
-      if (audioUnlockedRef.current) return;
-      try {
-        const ctx = new AudioContext();
-        const buffer = ctx.createBuffer(1, 1, 22050);
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.start(0);
-        audioCtxRef.current = ctx;
-        audioUnlockedRef.current = true;
-      } catch {
-        // ignore
-      }
-      // Re-request notification permission on interaction if still default
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission().then((perm) => {
-          notifPermissionRef.current = perm;
-        });
-      }
-    };
-    document.addEventListener("click", unlock, { once: true });
-    document.addEventListener("touchstart", unlock, { once: true });
-    return () => {
-      document.removeEventListener("click", unlock);
-      document.removeEventListener("touchstart", unlock);
-    };
   }, []);
 
   const fetchNotifications = useCallback(async () => {
