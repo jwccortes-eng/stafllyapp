@@ -98,7 +98,7 @@ export default function KioskDevices() {
   };
 
   const copyKioskUrl = (d: KioskDevice) => {
-    navigator.clipboard.writeText(`${window.location.origin}/kiosk?device=${d.device_identifier}`);
+    navigator.clipboard.writeText(`${APP_BASE_URL}/kiosk?device=${d.device_identifier}`);
     setCopied(d.id); toast({ title: "URL copiada" }); setTimeout(() => setCopied(null), 2000);
   };
 

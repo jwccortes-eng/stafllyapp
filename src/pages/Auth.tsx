@@ -261,7 +261,7 @@ export default function Auth() {
                         }
                         setLoading(true);
                         const { error } = await supabase.auth.resetPasswordForEmail(identifier, {
-                          redirectTo: `${window.location.origin}/reset-password`,
+                          redirectTo: `${APP_BASE_URL}/reset-password`,
                         });
                         setLoading(false);
                         if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
