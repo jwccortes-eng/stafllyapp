@@ -57,10 +57,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   };
 
   const copyInviteLink = async () => {
-    if (!inviteUrl) return;
-    await navigator.clipboard.writeText(inviteUrl);
+    if (!inviteLink) return;
+    await navigator.clipboard.writeText(inviteLink);
     setLinkCopied(true);
-    toast({ title: "Enlace copiado", description: inviteUrl });
+    toast({ title: "Enlace copiado", description: inviteLink });
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
