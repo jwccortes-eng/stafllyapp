@@ -6,8 +6,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Clock, CalendarRange, Upload, MoreHorizontal, List, Calendar as CalendarIcon,
   FileBarChart, AlertTriangle, GitCompareArrows, Download, Settings, RefreshCw,
+  Monitor, Copy,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { toast } from "sonner";
+import { APP_BASE_URL } from "@/lib/app-url";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -109,6 +112,18 @@ export default function TimeClock() {
               <DropdownMenuItem onClick={() => navigate("/app/payroll-settings")} className="gap-2 text-sm">
                 <Settings className="h-4 w-4" />
                 Config. de nómina
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/app/kiosk-devices")} className="gap-2 text-sm">
+                <Monitor className="h-4 w-4" />
+                Terminales kiosk
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const url = `${APP_BASE_URL}/kiosk`;
+                navigator.clipboard.writeText(url);
+                toast.success("URL del kiosk copiada", { description: url });
+              }} className="gap-2 text-sm">
+                <Copy className="h-4 w-4" />
+                Copiar URL kiosk
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

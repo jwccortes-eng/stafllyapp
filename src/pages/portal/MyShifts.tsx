@@ -13,7 +13,7 @@ import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { PortalShiftDetailDrawer } from "@/components/portal/PortalShiftDetailDrawer";
 import { PortalShiftCard, type PortalShiftData } from "@/components/portal/PortalShiftCard";
@@ -69,7 +69,7 @@ export default function MyShifts() {
   const [activeTab, setActiveTab] = useState<TabFilter>("hoy");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
   const [compactView, setCompactView] = useState(false);
-  const { toast } = useToast();
+  // toast imported from sonner at top
 
   const load = async () => {
     if (!employeeId) { setAssignments([]); setClaimable([]); setLoading(false); return; }
@@ -167,12 +167,12 @@ export default function MyShifts() {
       } catch {}
       if (navigator.vibrate) navigator.vibrate(100);
 
-      toast({ title: "✅ ¡Solicitud enviada!", description: claimedShift ? `Turno "${claimedShift.title}" solicitado exitosamente.` : "Tu solicitud fue registrada." });
+      toast.success("✅ ¡Solicitud enviada!", { description: claimedShift ? `Turno "${claimedShift.title}" solicitado exitosamente.` : "Tu solicitud fue registrada." });
       await load();
     } catch (err: any) {
       // Rollback optimistic update
       if (claimedShift) setClaimable(prev => [...prev, claimedShift].sort((a, b) => a.date.localeCompare(b.date)));
-      toast({ title: "Error", description: err.message ?? "No se pudo solicitar el turno.", variant: "destructive" });
+      toast.error("Error", { description: err.message ?? "No se pudo solicitar el turno." });
     } finally {
       setClaiming(null);
     }
@@ -181,8 +181,8 @@ export default function MyShifts() {
   const acceptAssignment = async (assignmentId: string) => {
     setResponding(assignmentId);
     const { error } = await supabase.from("shift_assignments").update({ status: "confirmed", responded_at: new Date().toISOString() } as any).eq("id", assignmentId);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: "¡Turno confirmado!" }); await load(); }
+    if (error) toast.error("Error", { description: error.message });
+    else { toast.success("¡Turno confirmado!"); await load(); }
     setResponding(null);
   };
 
@@ -190,8 +190,8 @@ export default function MyShifts() {
     if (!rejectDialogId) return;
     setResponding(rejectDialogId);
     const { error } = await supabase.from("shift_assignments").update({ status: "rejected", responded_at: new Date().toISOString(), rejection_reason: rejectReason.trim() || null } as any).eq("id", rejectDialogId);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: "Turno rechazado" }); await load(); }
+    if (error) toast.error("Error", { description: error.message });
+    else { toast.success("Turno rechazado"); await load(); }
     setResponding(null); setRejectDialogId(null); setRejectReason("");
   };
 

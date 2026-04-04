@@ -268,6 +268,33 @@ export function ShiftEditDialog({
             )}
           </SectionCard>
 
+          {/* ── Clock & QR (always visible) ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <SectionCard icon={Clock} title="Método de fichaje">
+              <Select value={clockMethod} onValueChange={v => setClockMethod(v as "mobile" | "kiosk" | "both")}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="both">📱🖥 Ambos (Móvil + Kiosk)</SelectItem>
+                  <SelectItem value="mobile">📱 Solo Móvil</SelectItem>
+                  <SelectItem value="kiosk">🖥 Solo Kiosk</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">Define desde dónde pueden fichar los empleados.</p>
+            </SectionCard>
+
+            <SectionCard icon={QrCode} title="Asistencia por QR">
+              <ShiftQRSection
+                shiftId={shift.id}
+                qrToken={qrToken}
+                qrAttendanceMode={qrAttendanceMode}
+                onUpdate={(updates) => {
+                  if (updates.qr_attendance_mode !== undefined) setQrAttendanceMode(updates.qr_attendance_mode);
+                  if (updates.qr_token !== undefined) setQrToken(updates.qr_token);
+                }}
+              />
+            </SectionCard>
+          </div>
+
           {/* ── Advanced options (collapsed by default) ── */}
           <Collapsible>
             <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 transition-colors group">
@@ -278,31 +305,6 @@ export function ShiftEditDialog({
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-3">
-              {/* ── Clock Method ── */}
-              <SectionCard icon={Clock} title="Método de fichaje">
-                <Select value={clockMethod} onValueChange={v => setClockMethod(v as "mobile" | "kiosk" | "both")}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="both">📱🖥 Ambos (Móvil + Kiosk)</SelectItem>
-                    <SelectItem value="mobile">📱 Solo Móvil</SelectItem>
-                    <SelectItem value="kiosk">🖥 Solo Kiosk</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-[10px] text-muted-foreground">Define desde dónde pueden fichar los empleados.</p>
-              </SectionCard>
-
-              {/* ── QR Attendance ── */}
-              <SectionCard icon={QrCode} title="Asistencia por QR">
-                <ShiftQRSection
-                  shiftId={shift.id}
-                  qrToken={qrToken}
-                  qrAttendanceMode={qrAttendanceMode}
-                  onUpdate={(updates) => {
-                    if (updates.qr_attendance_mode !== undefined) setQrAttendanceMode(updates.qr_attendance_mode);
-                    if (updates.qr_token !== undefined) setQrToken(updates.qr_token);
-                  }}
-                />
-              </SectionCard>
 
               {/* ── Transportation ── */}
               <SectionCard icon={Car} title="Transporte">

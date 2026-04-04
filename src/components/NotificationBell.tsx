@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, CheckCheck, ExternalLink } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink, Briefcase, Megaphone, CreditCard, Clock, UserPlus, Star } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 
 const TYPE_ROUTES: Record<string, string> = {
@@ -52,9 +52,56 @@ const TYPE_COLORS: Record<string, string> = {
   review_pending: "bg-yellow-500",
 };
 
+type FilterTab = "all" | "shifts" | "clock" | "people" | "other";
+
+const FILTER_GROUPS: Record<FilterTab, string[] | null> = {
+  all: null,
+  shifts: ["shift_request_new", "shift_assigned", "shift_available", "shift_updated", "shift_confirmed", "shift_rejected", "shift_reminder"],
+  clock: ["clock_request", "no_clock"],
+  people: ["new_application", "invitation_accepted", "invitation_expired", "review_pending"],
+  other: ["announcement", "payment_ready", "period_closed", "payroll_email"],
+};
+
+const FILTER_ICONS: Record<FilterTab, React.ReactNode> = {
+  all: <Bell className="h-3 w-3" />,
+  shifts: <Briefcase className="h-3 w-3" />,
+  clock: <Clock className="h-3 w-3" />,
+  people: <UserPlus className="h-3 w-3" />,
+  other: <Megaphone className="h-3 w-3" />,
+};
+
+const FILTER_LABELS: Record<FilterTab, string> = {
+  all: "Todo",
+  shifts: "Turnos",
+  clock: "Fichajes",
+  people: "Personal",
+  other: "Otros",
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  shift_request_new: "Solicitud",
+  shift_assigned: "Asignación",
+  shift_available: "Disponible",
+  shift_updated: "Actualización",
+  shift_confirmed: "Confirmado",
+  shift_rejected: "Rechazado",
+  clock_request: "Fichaje",
+  announcement: "Anuncio",
+  payment_ready: "Pago",
+  shift_reminder: "Recordatorio",
+  no_clock: "Sin fichaje",
+  period_closed: "Periodo",
+  payroll_email: "Nómina",
+  new_application: "Aplicación",
+  invitation_accepted: "Invitación",
+  invitation_expired: "Expirada",
+  review_pending: "Evaluación",
+};
+
 export default function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<FilterTab>("all");
   const navigate = useNavigate();
 
   const handleClick = (n: typeof notifications[0]) => {
@@ -63,6 +110,17 @@ export default function NotificationBell() {
     setOpen(false);
     navigate(route);
   };
+
+  const filtered = FILTER_GROUPS[filter]
+    ? notifications.filter(n => FILTER_GROUPS[filter]!.includes(n.type))
+    : notifications;
+
+  const filterCounts = Object.entries(FILTER_GROUPS).reduce((acc, [key, types]) => {
+    acc[key as FilterTab] = types
+      ? notifications.filter(n => !n.read_at && types.includes(n.type)).length
+      : unreadCount;
+    return acc;
+  }, {} as Record<FilterTab, number>);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -79,7 +137,7 @@ export default function NotificationBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[360px] p-0 rounded-2xl shadow-xl border-border/50" sideOffset={8}>
+      <PopoverContent align="end" className="w-[380px] p-0 rounded-2xl shadow-xl border-border/50" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
           <h3 className="text-sm font-heading font-bold">Notificaciones</h3>
@@ -102,29 +160,66 @@ export default function NotificationBell() {
           </div>
         </div>
 
+        {/* Filter tabs */}
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-border/20 overflow-x-auto">
+          {(Object.keys(FILTER_LABELS) as FilterTab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors whitespace-nowrap",
+                filter === tab
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              )}
+            >
+              {FILTER_ICONS[tab]}
+              {FILTER_LABELS[tab]}
+              {filterCounts[tab] > 0 && (
+                <span className={cn(
+                  "min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center",
+                  filter === tab ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"
+                )}>
+                  {filterCounts[tab]}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* Notifications list */}
         <ScrollArea className="max-h-[380px]">
-          {notifications.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Bell className="h-8 w-8 text-muted-foreground/30 mb-2" />
-              <p className="text-sm text-muted-foreground/60">Sin notificaciones</p>
+              <p className="text-sm text-muted-foreground/60">
+                {filter === "all" ? "Sin notificaciones" : "Sin notificaciones en esta categoría"}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-border/20">
-              {notifications.map((n) => (
+              {filtered.map((n) => (
                 <button
                   key={n.id}
                   onClick={() => handleClick(n)}
                   className={cn(
                     "w-full text-left px-4 py-3 hover:bg-muted/30 transition-colors flex gap-3 items-start",
-                    !n.read_at && "bg-primary/3"
+                    !n.read_at && "bg-primary/[0.03]"
                   )}
                 >
                   <div className={cn(
-                    "mt-1 h-2 w-2 rounded-full shrink-0 transition-opacity",
+                    "mt-1.5 h-2 w-2 rounded-full shrink-0 transition-opacity",
                     !n.read_at ? (TYPE_COLORS[n.type] || "bg-primary") : "opacity-0"
                   )} />
                   <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={cn(
+                        "text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded",
+                        !n.read_at ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                      )}>
+                        {TYPE_LABELS[n.type] || n.type}
+                      </span>
+                    </div>
                     <p className={cn(
                       "text-[13px] leading-snug",
                       !n.read_at ? "font-semibold text-foreground" : "font-medium text-foreground/80"
@@ -134,9 +229,15 @@ export default function NotificationBell() {
                     <p className="text-[12px] text-muted-foreground/70 leading-snug mt-0.5 line-clamp-2">
                       {n.body}
                     </p>
-                    <p className="text-[10px] text-muted-foreground/40 mt-1">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es })}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[10px] text-muted-foreground/40">
+                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es })}
+                      </p>
+                      <span className="text-[10px] text-muted-foreground/25">·</span>
+                      <p className="text-[10px] text-muted-foreground/30 tabular-nums">
+                        {format(new Date(n.created_at), "dd MMM, HH:mm", { locale: es })}
+                      </p>
+                    </div>
                   </div>
                   <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/20 shrink-0 mt-1" />
                 </button>
