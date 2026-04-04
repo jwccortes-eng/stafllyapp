@@ -33,6 +33,7 @@ interface ShiftEditDialogProps {
   clients: SelectOption[];
   locations: LocationOption[];
   employees?: Employee[];
+  assignments?: { shift_id: string; employee_id: string; status: string }[];
   onSave: (shiftId: string, updates: Partial<Shift> & Record<string, any>, oldShift: Shift) => Promise<void>;
 }
 
