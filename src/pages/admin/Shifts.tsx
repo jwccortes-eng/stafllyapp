@@ -1480,6 +1480,7 @@ export default function Shifts() {
         clients={clients}
         locations={locations}
         employees={employees}
+        assignments={assignments}
         onSave={handleEditShift}
       />
     </div>
