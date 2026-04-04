@@ -190,8 +190,8 @@ export default function MyShifts() {
     if (!rejectDialogId) return;
     setResponding(rejectDialogId);
     const { error } = await supabase.from("shift_assignments").update({ status: "rejected", responded_at: new Date().toISOString(), rejection_reason: rejectReason.trim() || null } as any).eq("id", rejectDialogId);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: "Turno rechazado" }); await load(); }
+    if (error) toast.error("Error", { description: error.message });
+    else { toast.success("Turno rechazado"); await load(); }
     setResponding(null); setRejectDialogId(null); setRejectReason("");
   };
 
