@@ -190,7 +190,7 @@ export function useNotifications() {
               const newNotif = payload.new as AppNotification;
               setNotifications(prev => [newNotif, ...prev].slice(0, 30));
               setUnreadCount(prev => prev + 1);
-              playSound();
+              play(getSoundType(newNotif.type));
               showSystemNotification(newNotif.title, newNotif.body);
               toast(newNotif.title, { description: newNotif.body, duration: 5000 });
             }
