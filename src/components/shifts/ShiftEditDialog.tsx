@@ -120,8 +120,22 @@ export function ShiftEditDialog({
     }
   };
 
+  // Compute assigned employee IDs for admin validation
+  const shiftAssignedIds = shift ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id) : [];
+  const adminIsAssigned = !shiftAdminId || shiftAssignedIds.includes(shiftAdminId);
+  const adminMissing = !shiftAdminId && shiftAssignedIds.length > 0;
+
   const handleSave = async () => {
     if (!date) return;
+    // Hard rule: if employees are assigned, admin must be set and must be one of them
+    if (shiftAssignedIds.length > 0 && !shiftAdminId) {
+      toast.error("Selecciona un admin del turno antes de guardar. El responsable operativo es obligatorio.");
+      return;
+    }
+    if (shiftAdminId && shiftAssignedIds.length > 0 && !shiftAssignedIds.includes(shiftAdminId)) {
+      toast.error("El admin del turno debe ser uno de los empleados asignados.");
+      return;
+    }
     setSaving(true);
     try {
       await onSave(shift.id, {
