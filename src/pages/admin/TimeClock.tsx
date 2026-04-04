@@ -118,7 +118,7 @@ export default function TimeClock() {
                 Terminales kiosk
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
-                const url = getAppUrl("/kiosk");
+                const url = `${APP_BASE_URL}/kiosk`;
                 navigator.clipboard.writeText(url);
                 toast.success("URL del kiosk copiada", { description: url });
               }} className="gap-2 text-sm">
