@@ -95,42 +95,11 @@ export function useNotifications() {
     setLoading(false);
   }, [user, role, selectedCompanyId]);
 
-  const playSound = useCallback(() => {
-    try {
-      // Reuse unlocked context if available, else create new one
-      const ctx = audioCtxRef.current?.state !== "closed"
-        ? audioCtxRef.current ?? new AudioContext()
-        : new AudioContext();
-
-      // Resume if suspended (autoplay policy)
-      if (ctx.state === "suspended") {
-        ctx.resume().catch(() => {});
-      }
-
-      const now = ctx.currentTime;
-
-      const playTone = (freq: number, startAt: number, duration: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = freq;
-        osc.type = "sine";
-        gain.gain.setValueAtTime(0, startAt);
-        gain.gain.linearRampToValueAtTime(0.5, startAt + 0.02);
-        gain.gain.setValueAtTime(0.5, startAt + duration * 0.6);
-        gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
-        osc.start(startAt);
-        osc.stop(startAt + duration);
-      };
-
-      // Three-tone ascending alert for urgency
-      playTone(880, now, 0.12);
-      playTone(1109, now + 0.14, 0.12);
-      playTone(1319, now + 0.28, 0.2);
-    } catch {
-      // Audio not available
-    }
+  // Determine sound type based on notification type
+  const getSoundType = useCallback((notifType: string): "notification" | "chat" | "alert" => {
+    if (["no_clockin_alert", "no_show_alert", "critical_alert"].includes(notifType)) return "alert";
+    if (["shift_chat", "chat_message"].includes(notifType)) return "chat";
+    return "notification";
   }, []);
 
   // Show native browser/OS notification (appears in notification shade on mobile)
