@@ -33,11 +33,13 @@ interface ShiftChatPanelProps {
 
 export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin = false }: ShiftChatPanelProps) {
   const { user, employeeId } = useAuth();
+  const { play } = useSoundContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
   const [chatConfig, setChatConfig] = useState<{ is_open: boolean; id?: string } | null>(null);
+  const prevCountRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Determine if chat should be auto-open based on date
