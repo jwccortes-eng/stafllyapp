@@ -52,7 +52,7 @@ function SectionCard({ icon: Icon, title, children }: { icon: any; title: string
 }
 
 export function ShiftEditDialog({
-  shift, open, onOpenChange, clients, locations, employees = [], onSave,
+  shift, open, onOpenChange, clients, locations, employees = [], assignments = [], onSave,
 }: ShiftEditDialogProps) {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
