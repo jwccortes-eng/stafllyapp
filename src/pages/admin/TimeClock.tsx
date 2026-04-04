@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
-import { getAppUrl } from "@/lib/app-url";
+import { APP_BASE_URL } from "@/lib/app-url";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,

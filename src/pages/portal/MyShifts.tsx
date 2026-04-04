@@ -69,7 +69,7 @@ export default function MyShifts() {
   const [activeTab, setActiveTab] = useState<TabFilter>("hoy");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
   const [compactView, setCompactView] = useState(false);
-  const { toast } = useToast();
+  // toast imported from sonner at top
 
   const load = async () => {
     if (!employeeId) { setAssignments([]); setClaimable([]); setLoading(false); return; }
