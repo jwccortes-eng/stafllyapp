@@ -240,6 +240,7 @@ function App() {
                 <Route path="advances-loans" element={<AdvancesLoans />} />
                 <Route path="kiosk-devices" element={<KioskDevices />} />
                 <Route path="shift-ops" element={<ShiftOperations />} />
+                <Route path="ops-center" element={<OperationsCommandCenter />} />
                 <Route path="compensation-validation" element={<CompensationValidation />} />
                 <Route path="payroll-pilot-close" element={<PayrollPilotClose />} />
                 <Route path="payroll-mappings" element={<PayrollMappings />} />
