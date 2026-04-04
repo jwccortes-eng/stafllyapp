@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -120,8 +121,22 @@ export function ShiftEditDialog({
     }
   };
 
+  // Compute assigned employee IDs for admin validation
+  const shiftAssignedIds = shift ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id) : [];
+  const adminIsAssigned = !shiftAdminId || shiftAssignedIds.includes(shiftAdminId);
+  const adminMissing = !shiftAdminId && shiftAssignedIds.length > 0;
+
   const handleSave = async () => {
     if (!date) return;
+    // Hard rule: if employees are assigned, admin must be set and must be one of them
+    if (shiftAssignedIds.length > 0 && !shiftAdminId) {
+      toast.error("Selecciona un admin del turno antes de guardar. El responsable operativo es obligatorio.");
+      return;
+    }
+    if (shiftAdminId && shiftAssignedIds.length > 0 && !shiftAssignedIds.includes(shiftAdminId)) {
+      toast.error("El admin del turno debe ser uno de los empleados asignados.");
+      return;
+    }
     setSaving(true);
     try {
       await onSave(shift.id, {
@@ -303,26 +318,35 @@ export function ShiftEditDialog({
             </SectionCard>
           </div>
 
-          {/* ── Roles: Admin (only show when employees assigned) ── */}
-          <SectionCard icon={Users} title="Admin del turno">
+          {/* ── Roles: Admin (required when employees assigned) ── */}
+          <SectionCard icon={Users} title={shiftAssignedIds.length > 0 ? "Admin del turno *" : "Admin del turno"}>
             <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Responsable operativo</Label>
+              <Label className="text-[11px] text-muted-foreground font-medium">
+                Responsable operativo {shiftAssignedIds.length > 0 && <span className="text-destructive">*</span>}
+              </Label>
               {(() => {
-                const shiftAssignedIds = shift ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id) : [];
                 const adminCandidates = shiftAssignedIds.length > 0
                   ? employees.filter(e => shiftAssignedIds.includes(e.id))
                   : employees;
                 return (
                   <>
                     <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
-                      <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                      <SelectTrigger className={cn("h-9 text-sm mt-1", adminMissing && "border-destructive/50 ring-1 ring-destructive/20")}>
+                        <SelectValue placeholder="Sin asignar" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Sin asignar</SelectItem>
                         {adminCandidates.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     {shiftAssignedIds.length === 0 && (
-                      <p className="text-[10px] text-warning mt-0.5">⚠ Asigna empleados primero para filtrar candidatos a admin.</p>
+                      <p className="text-[10px] text-amber-500 mt-0.5">⚠ Asigna empleados primero para seleccionar admin.</p>
+                    )}
+                    {adminMissing && (
+                      <p className="text-[10px] text-destructive mt-0.5 font-medium">⛔ Obligatorio: selecciona un responsable antes de guardar.</p>
+                    )}
+                    {shiftAdminId && !adminIsAssigned && shiftAssignedIds.length > 0 && (
+                      <p className="text-[10px] text-destructive mt-0.5 font-medium">⛔ El admin seleccionado no está asignado al turno.</p>
                     )}
                   </>
                 );
@@ -394,7 +418,7 @@ export function ShiftEditDialog({
 
         {/* Footer */}
         <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
-          <Button onClick={handleSave} disabled={saving || !date} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
+          <Button onClick={handleSave} disabled={saving || !date || (shiftAssignedIds.length > 0 && (!shiftAdminId || !adminIsAssigned))} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Guardar cambios
           </Button>
