@@ -309,7 +309,7 @@ export default function OperationsCommandCenter() {
 
   return (
     <div className="space-y-5">
-      <PageHeader heading="Operations Command Center" description="Control de turnos en tiempo real" />
+      <PageHeader title="Operations Command Center" subtitle="Control de turnos en tiempo real" icon={Radio} variant="4" />
 
       {/* ─── Date nav + filters ─── */}
       <div className="flex flex-wrap items-center gap-2">
