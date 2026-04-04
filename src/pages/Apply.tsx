@@ -466,7 +466,7 @@ function StepWorkerType({ selected, onSelect, error, types }: { selected: string
   );
 }
 
-function StepLocation({ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel }: any) {
+function StepLocation({ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel, address, setAddress }: any) {
   return (
     <div className="space-y-5">
       <div>
@@ -475,6 +475,7 @@ function StepLocation({ city, setCity, availability, setAvailability, hasCar, se
       </div>
       <div className="space-y-4">
         <CitySelect value={city} onChange={setCity} />
+        <AddressInput value={address} onChange={setAddress} />
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Disponibilidad</label>
           <div className="grid grid-cols-2 gap-2">
