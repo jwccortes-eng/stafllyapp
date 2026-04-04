@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { CitySelect } from "@/components/apply/CitySelect";
+import { LanguageMultiSelect } from "@/components/apply/LanguageMultiSelect";
 import {
   ChevronRight, ChevronLeft, CheckCircle2, Loader2,
   UtensilsCrossed, Car, SprayCan, Briefcase, ChefHat,
@@ -465,7 +467,7 @@ function StepLocation({ city, setCity, availability, setAvailability, hasCar, se
         <p className="text-sm text-muted-foreground">¿Dónde y cuándo puedes trabajar?</p>
       </div>
       <div className="space-y-4">
-        <FieldInput label="Ciudad / Zona" value={city} onChange={setCity} icon={<MapPin className="h-4 w-4" />} />
+        <CitySelect value={city} onChange={setCity} />
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Disponibilidad</label>
           <div className="grid grid-cols-2 gap-2">
@@ -528,7 +530,7 @@ function StepVerification({ documentFile, setDocumentFile, emergencyContact, set
         {(config.require_emergency_contact || true) && (
           <FieldInput label="Contacto de emergencia" value={emergencyContact} onChange={setEmergencyContact} hint="Nombre y teléfono" required={config.require_emergency_contact} icon={<Phone className="h-4 w-4" />} />
         )}
-        <FieldInput label="Idiomas" value={languages} onChange={setLanguages} hint="Separados por coma" icon={<Globe className="h-4 w-4" />} />
+        <LanguageMultiSelect value={languages} onChange={setLanguages} />
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Experiencia relevante</label>
           <Textarea value={experienceSummary} onChange={(e) => setExperienceSummary(e.target.value)} placeholder="Cuéntanos brevemente sobre tu experiencia..." className="min-h-[80px] rounded-xl text-sm" />
