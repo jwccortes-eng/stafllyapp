@@ -73,7 +73,8 @@ export default function InternalChat() {
         const msg = payload.new as Message;
         // Sound for messages from others
         if ((msg as any).sender_id !== userId) {
-          play("chat");
+          console.info("[internal-chat] incoming message -> play(chat)", { messageId: msg.id, conversationId: msg.conversation_id });
+          void play("chat");
         }
         if (msg.conversation_id === selectedConvo) {
           setMessages(prev => [...prev, msg]);
@@ -91,7 +92,7 @@ export default function InternalChat() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [selectedCompanyId, selectedConvo]);
+  }, [play, selectedCompanyId, selectedConvo, userId]);
 
   const loadMessages = async (convoId: string) => {
     setLoadingMsgs(true);

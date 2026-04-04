@@ -133,7 +133,8 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin = false 
         const senderId = (payload.new as any)?.sender_user_id || (payload.new as any)?.sender_employee_id;
         const isOwnMessage = senderId === user?.id || senderId === employeeId;
         if (!isOwnMessage) {
-          play("chat");
+          console.info("[shift-chat] incoming message -> play(chat)", { messageId: (payload.new as any)?.id, shiftId });
+          void play("chat");
         }
         loadMessages();
       })
