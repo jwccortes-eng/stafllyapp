@@ -20,8 +20,6 @@ interface Props {
   inviteToken?: string | null;
 }
 
-const PRODUCTION_URL = "https://staflyapps.com";
-
 export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken }: Props) {
   const { toast } = useToast();
   const { companies, selectedCompanyId } = useCompany();
@@ -33,8 +31,8 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const company = companies.find(c => c.id === selectedCompanyId);
   const companyName = company?.name ?? "la empresa";
 
-  const portalUrl = `${PRODUCTION_URL}/auth`;
-  const inviteUrl = inviteToken ? `${PRODUCTION_URL}/invite?token=${inviteToken}` : null;
+  const portalUrl = portalAuthUrl();
+  const inviteLink = inviteToken ? inviteUrl(inviteToken) : null;
   const pin = typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : "—";
   const hasPin = pin !== "—";
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
