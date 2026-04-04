@@ -2451,7 +2451,7 @@ export type Database = {
       }
       employee_invitations: {
         Row: {
-          activated_at: string | null
+          accepted_at: string | null
           channel: string
           company_id: string
           created_at: string
@@ -2461,12 +2461,13 @@ export type Database = {
           invite_token: string
           metadata: Json | null
           notes: string | null
+          opened_at: string | null
           sent_at: string
           sent_by: string
           status: string
         }
         Insert: {
-          activated_at?: string | null
+          accepted_at?: string | null
           channel?: string
           company_id: string
           created_at?: string
@@ -2476,12 +2477,13 @@ export type Database = {
           invite_token?: string
           metadata?: Json | null
           notes?: string | null
+          opened_at?: string | null
           sent_at?: string
           sent_by: string
           status?: string
         }
         Update: {
-          activated_at?: string | null
+          accepted_at?: string | null
           channel?: string
           company_id?: string
           created_at?: string
@@ -2491,6 +2493,7 @@ export type Database = {
           invite_token?: string
           metadata?: Json | null
           notes?: string | null
+          opened_at?: string | null
           sent_at?: string
           sent_by?: string
           status?: string
