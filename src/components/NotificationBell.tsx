@@ -13,6 +13,8 @@ import { es } from "date-fns/locale";
 const TYPE_ROUTES: Record<string, string> = {
   shift_request_new: "/app/requests",
   shift_assigned: "/portal/shifts",
+  shift_available: "/portal/shifts",
+  shift_updated: "/portal/shifts",
   shift_confirmed: "/app/shifts",
   shift_rejected: "/app/shifts",
   clock_request: "/app/requests",
@@ -22,6 +24,10 @@ const TYPE_ROUTES: Record<string, string> = {
   no_clock: "/app/timeclock",
   period_closed: "/app/summary",
   payroll_email: "/app/summary",
+  new_application: "/app/applications",
+  invitation_accepted: "/app/employees",
+  invitation_expired: "/app/employees",
+  review_pending: "/app/shifts",
 };
 
 function getNotificationRoute(n: { type: string; metadata: Record<string, any> | null }) {
