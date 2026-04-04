@@ -254,6 +254,7 @@ Deno.serve(async (req) => {
         channel: invite_channel,
         status: "sent",
         sent_by: caller.id,
+        sent_at: new Date().toISOString(),
         notes: `Auto-invite from application approval (${app.reference_code})`,
       });
       inviteSent = true;
