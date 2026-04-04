@@ -929,7 +929,7 @@ export function ShiftDetailDialog({
             </div>
 
           ) : tab === "attendance" ? (
-            <ShiftAttendancePanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canManage={effectiveCanEdit} />
+            <ShiftAttendancePanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canManage={effectiveCanEdit} shiftAdminId={(shift as any)?.shift_admin_id} />
           ) : tab === "comments" ? (
             <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
           ) : tab === "chat" ? (
