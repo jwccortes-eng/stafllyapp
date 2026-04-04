@@ -34,6 +34,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const companyName = company?.name ?? "la empresa";
 
   const portalUrl = `${PRODUCTION_URL}/auth`;
+  const inviteUrl = inviteToken ? `${PRODUCTION_URL}/invite?token=${inviteToken}` : null;
   const pin = typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : "—";
   const hasPin = pin !== "—";
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
