@@ -107,7 +107,7 @@ export default function KioskDevices() {
     <div className="space-y-6">
       <PageHeader title="Dispositivos Kiosk" subtitle="Gestiona los terminales de fichaje compartido" icon={Monitor}
         rightSlot={<div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild><a href={`${window.location.origin}/kiosk`} target="_blank" rel="noopener"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Abrir Kiosk</a></Button>
+          <Button variant="outline" size="sm" asChild><a href={`${APP_BASE_URL}/kiosk`} target="_blank" rel="noopener"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Abrir Kiosk</a></Button>
           <Button size="sm" onClick={openCreate}><Plus className="h-3.5 w-3.5 mr-1.5" />Nuevo Kiosk</Button>
         </div>}
       />
