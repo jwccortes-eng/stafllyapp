@@ -672,8 +672,23 @@ export function ShiftDetailDialog({
                         <span className="text-[9px] text-muted-foreground/40">Driver — no requerido</span>
                       </div>
                     )}
-                    {/* Admin slot (placeholder — hidden until backend ready) */}
-                    {/* Lead slot (placeholder — hidden until backend ready) */}
+                    {/* Admin slot */}
+                    {(() => {
+                      const adminId = (shift as any)?.shift_admin_id;
+                      const adminEmp = adminId ? employees.find(e => e.id === adminId) : null;
+                      return adminEmp ? (
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-primary/[0.06] border border-primary/20">
+                          <EmployeeAvatar firstName={adminEmp.first_name} lastName={adminEmp.last_name} avatarUrl={adminEmp.avatar_url} gender={adminEmp.gender} size="xs" />
+                          <span className="text-[10px] font-semibold flex-1 truncate">{adminEmp.first_name} {adminEmp.last_name}</span>
+                          <span className="text-[7px] font-bold text-primary bg-primary/10 px-1 rounded">ADMIN</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-warning/30 bg-warning/[0.03]">
+                          <ShieldCheck className="h-3 w-3 text-warning/50" />
+                          <span className="text-[9px] text-warning font-medium">Sin admin asignado</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })()}
@@ -712,6 +727,9 @@ export function ShiftDetailDialog({
                               <span className="h-3.5 px-1 rounded bg-earning/15 text-earning text-[7px] font-bold flex items-center shrink-0 ring-1 ring-earning/20">
                                 <Car className="h-2 w-2" />
                               </span>
+                            )}
+                            {a.employee_id === (shift as any)?.shift_admin_id && (
+                              <span className="h-3.5 px-1 rounded bg-primary/15 text-primary text-[7px] font-bold shrink-0 ring-1 ring-primary/20">ADMIN</span>
                             )}
                             {noPortal && (
                               <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0" title="Sin portal — no tiene cuenta activa">Sin portal</span>
