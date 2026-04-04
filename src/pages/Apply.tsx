@@ -96,8 +96,9 @@ export default function Apply() {
       const { data: co } = await supabase
         .from("companies")
         .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url")
-        .eq("slug", companySlug)
+        .eq("slug", companySlug.toLowerCase())
         .eq("is_active", true)
+        .eq("application_enabled", true)
         .maybeSingle();
       setCompany(co);
 
