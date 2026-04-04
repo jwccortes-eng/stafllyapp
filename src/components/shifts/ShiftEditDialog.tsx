@@ -241,6 +241,13 @@ export function ShiftEditDialog({
                 <Label htmlFor="edit-claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
               </div>
             </div>
+            <div>
+              <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+                <Compass className="h-3 w-3" /> Dirección / Punto de encuentro
+              </Label>
+              <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta con el cliente, o escribe manualmente..." className="h-9 text-sm mt-1" />
+              <p className="text-[10px] text-muted-foreground/50 mt-0.5">Se prefillea desde el cliente pero puedes cambiarla.</p>
+            </div>
           </SectionCard>
 
           {/* ── Payment ── */}
