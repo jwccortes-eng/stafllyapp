@@ -728,6 +728,9 @@ export function ShiftDetailDialog({
                                 <Car className="h-2 w-2" />
                               </span>
                             )}
+                            {a.employee_id === (shift as any)?.shift_admin_id && (
+                              <span className="h-3.5 px-1 rounded bg-primary/15 text-primary text-[7px] font-bold shrink-0 ring-1 ring-primary/20">ADMIN</span>
+                            )}
                             {noPortal && (
                               <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0" title="Sin portal — no tiene cuenta activa">Sin portal</span>
                             )}
