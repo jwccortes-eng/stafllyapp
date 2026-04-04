@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { CitySelect } from "@/components/apply/CitySelect";
 import { LanguageMultiSelect } from "@/components/apply/LanguageMultiSelect";
+import { AddressInput, type AddressData } from "@/components/apply/AddressInput";
 import {
   ChevronRight, ChevronLeft, CheckCircle2, Loader2,
   UtensilsCrossed, Car, SprayCan, Briefcase, ChefHat,
