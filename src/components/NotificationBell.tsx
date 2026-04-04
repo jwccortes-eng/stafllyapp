@@ -13,6 +13,8 @@ import { es } from "date-fns/locale";
 const TYPE_ROUTES: Record<string, string> = {
   shift_request_new: "/app/requests",
   shift_assigned: "/portal/shifts",
+  shift_available: "/portal/shifts",
+  shift_updated: "/portal/shifts",
   shift_confirmed: "/app/shifts",
   shift_rejected: "/app/shifts",
   clock_request: "/app/requests",
@@ -22,6 +24,10 @@ const TYPE_ROUTES: Record<string, string> = {
   no_clock: "/app/timeclock",
   period_closed: "/app/summary",
   payroll_email: "/app/summary",
+  new_application: "/app/applications",
+  invitation_accepted: "/app/employees",
+  invitation_expired: "/app/employees",
+  review_pending: "/app/shifts",
 };
 
 function getNotificationRoute(n: { type: string; metadata: Record<string, any> | null }) {
@@ -31,6 +37,8 @@ function getNotificationRoute(n: { type: string; metadata: Record<string, any> |
 const TYPE_COLORS: Record<string, string> = {
   shift_request_new: "bg-amber-500",
   shift_assigned: "bg-primary",
+  shift_available: "bg-emerald-500",
+  shift_updated: "bg-sky-500",
   clock_request: "bg-orange-500",
   announcement: "bg-blue-500",
   payment_ready: "bg-emerald-500",
@@ -38,6 +46,10 @@ const TYPE_COLORS: Record<string, string> = {
   no_clock: "bg-destructive",
   period_closed: "bg-teal-500",
   payroll_email: "bg-violet-500",
+  new_application: "bg-cyan-500",
+  invitation_accepted: "bg-green-500",
+  invitation_expired: "bg-orange-400",
+  review_pending: "bg-yellow-500",
 };
 
 export default function NotificationBell() {
