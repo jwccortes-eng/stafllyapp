@@ -164,10 +164,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
           </div>
 
           {/* Invite link */}
-          {inviteUrl && (
+          {inviteLink && (
             <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
               <Link2 className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteUrl}</span>
+              <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteLink}</span>
               <Button variant="outline" size="sm" className={cn("h-7 text-[9px] shrink-0", linkCopied && "border-[hsl(var(--earning)/0.5)] text-[hsl(var(--earning))]")} onClick={copyInviteLink}>
                 {linkCopied ? <><Check className="h-3 w-3 mr-1" />Copiado</> : <><Copy className="h-3 w-3 mr-1" />Copiar enlace</>}
               </Button>
