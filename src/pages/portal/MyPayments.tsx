@@ -91,7 +91,11 @@ function PaymentTrendChart({ payments }: { payments: PaymentRow[] }) {
 }
 
 export default function MyPayments() {
-  const { employeeId } = useAuth();
+  const { employeeId, resolveEmployeeForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+  const effectiveEmployeeId = selectedCompanyId
+    ? resolveEmployeeForCompany(selectedCompanyId) ?? employeeId
+    : employeeId;
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null);
@@ -101,18 +105,18 @@ export default function MyPayments() {
 
   const loadPeriodDetails = useCallback(async (periodId: string) => {
     if (periodDetails[periodId]) return;
-    if (!employeeId) return;
+    if (!effectiveEmployeeId) return;
     setLoadingDetails(periodId);
     const { data } = await supabase
       .from("movements").select("id, total_value, quantity, rate, note, concepts(name, category)")
-      .eq("employee_id", employeeId).eq("period_id", periodId);
+      .eq("employee_id", effectiveEmployeeId).eq("period_id", periodId);
     const details: MovementDetail[] = (data ?? []).map((m: any) => ({
       id: m.id, concept_name: m.concepts?.name ?? "", category: m.concepts?.category ?? "",
       quantity: m.quantity, rate: m.rate, total_value: Number(m.total_value), note: m.note,
     }));
     setPeriodDetails(prev => ({ ...prev, [periodId]: details }));
     setLoadingDetails(null);
-  }, [employeeId, periodDetails]);
+  }, [effectiveEmployeeId, periodDetails]);
 
   const toggleExpand = useCallback((periodId: string) => {
     if (expandedPeriod === periodId) setExpandedPeriod(null);
@@ -120,11 +124,11 @@ export default function MyPayments() {
   }, [expandedPeriod, loadPeriodDetails]);
 
   useEffect(() => {
-    if (!employeeId) return;
+    if (!effectiveEmployeeId) return;
     async function load() {
       // First get employee's company_id for scoping
       const { data: empData } = await supabase
-        .from("employees").select("company_id").eq("id", employeeId!).maybeSingle();
+        .from("employees").select("company_id").eq("id", effectiveEmployeeId!).maybeSingle();
       if (!empData) { setPayments([]); setLoading(false); return; }
 
       const { data: publishedPeriods } = await supabase
@@ -137,10 +141,11 @@ export default function MyPayments() {
       if (publishedIds.length === 0) { setPayments([]); setLoading(false); return; }
 
       const [bpRes, movRes] = await Promise.all([
-        supabase.from("period_base_pay").select("period_id, base_total_pay").eq("employee_id", employeeId!).in("period_id", publishedIds),
-        supabase.from("movements").select("period_id, total_value, concepts(category)").eq("employee_id", employeeId!).in("period_id", publishedIds),
+        supabase.from("period_base_pay").select("period_id, base_total_pay").eq("employee_id", effectiveEmployeeId!).in("period_id", publishedIds),
+        supabase.from("movements").select("period_id, total_value, concepts(category)").eq("employee_id", effectiveEmployeeId!).in("period_id", publishedIds),
       ]);
       const paymentMap = new Map<string, PaymentRow>();
+      // Seed from base_pay
       (bpRes.data ?? []).forEach((bp: any) => {
         const pInfo = periodMap.get(bp.period_id);
         if (!pInfo) return;
@@ -149,9 +154,17 @@ export default function MyPayments() {
           base_total_pay: Number(bp.base_total_pay) || 0, extras_total: 0, deductions_total: 0, total_final_pay: 0,
         });
       });
+      // Also seed from movements (employee may have movements without base_pay)
       (movRes.data ?? []).forEach((m: any) => {
-        const row = paymentMap.get(m.period_id);
-        if (!row) return;
+        if (!paymentMap.has(m.period_id)) {
+          const pInfo = periodMap.get(m.period_id);
+          if (!pInfo) return;
+          paymentMap.set(m.period_id, {
+            period_id: m.period_id, start_date: pInfo.start_date, end_date: pInfo.end_date,
+            base_total_pay: 0, extras_total: 0, deductions_total: 0, total_final_pay: 0,
+          });
+        }
+        const row = paymentMap.get(m.period_id)!;
         if (m.concepts?.category === "extra") row.extras_total += Number(m.total_value) || 0;
         else row.deductions_total += Number(m.total_value) || 0;
       });
@@ -160,8 +173,7 @@ export default function MyPayments() {
       setLoading(false);
     }
     load();
-  }, [employeeId]);
-
+  }, [effectiveEmployeeId]);
   const filteredPayments = useMemo(() => {
     if (dateRange === "all") return payments;
     if (dateRange === "last4") return payments.slice(0, 4);
