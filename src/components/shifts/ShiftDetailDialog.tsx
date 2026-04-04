@@ -12,10 +12,10 @@ import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { EmployeeCombobox } from "./EmployeeCombobox";
 import {
   Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
-  CheckCircle2, XCircle, Hash, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
+  CheckCircle2, XCircle, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
   CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy, FileText, Radar,
-  AlertTriangle,
+  AlertTriangle, Compass, History,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
@@ -35,6 +35,7 @@ import type { Shift, Assignment, Employee, SelectOption } from "./types";
 import { formatShiftCode, getClientColor } from "./types";
 import { SendNotificationDialog } from "./SendNotificationDialog";
 import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
+import { ShiftAuditTrail } from "./ShiftAuditTrail";
 
 interface ShiftDetailDialogProps {
   shift: Shift | null;
@@ -448,8 +449,13 @@ export function ShiftDetailDialog({
             <TabButton active={tab === "comments"} onClick={() => setTab("comments")}>
               <MessageSquare className="h-3 w-3" /> Notas
             </TabButton>
-            <TabButton active={tab === "rides"} onClick={() => setTab("rides")}>
-              <Car className="h-3 w-3" /> Rides
+            {!!(shift as any).transportation_required && (
+              <TabButton active={tab === "rides"} onClick={() => setTab("rides")}>
+                <Car className="h-3 w-3" /> Rides
+              </TabButton>
+            )}
+            <TabButton active={tab === "audit"} onClick={() => setTab("audit")}>
+              <FileText className="h-3 w-3" /> Historial
             </TabButton>
           </div>
         </div>
@@ -523,9 +529,12 @@ export function ShiftDetailDialog({
                 <div className="space-y-3">
                   {/* Info cards */}
                   <div className="rounded-xl border border-border/30 bg-muted/20 divide-y divide-border/30">
-                    <InfoRow icon={Hash} label="Nombre del turno" value={shift.title} />
+                    <InfoRow icon={StickyNote} label="Nombre del turno" value={shift.title || undefined} empty="Sin nombre (solo código)" />
                     <InfoRow icon={Building2} label="Cliente" value={client ? formatDisplayText(client.name, "name") : undefined} empty="Sin asignar" />
                     <InfoRow icon={MapPin} label="Ubicación" value={location?.name} empty="Sin asignar" />
+                    {(shift as any).meeting_point && (
+                      <InfoRow icon={Compass} label="Dirección / Punto de encuentro" value={(shift as any).meeting_point} />
+                    )}
                     <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
                   </div>
 
@@ -649,8 +658,25 @@ export function ShiftDetailDialog({
                 return (
                   <div className="rounded-xl border border-border/20 bg-muted/10 p-2 space-y-1">
                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider px-1">Roles</p>
-                    {/* Driver slot */}
-                    {requiresCar ? (
+                    {/* Admin slot — always visible */}
+                    {(() => {
+                      const adminId = (shift as any)?.shift_admin_id;
+                      const adminEmp = adminId ? employees.find(e => e.id === adminId) : null;
+                      return adminEmp ? (
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-primary/[0.06] border border-primary/20">
+                          <EmployeeAvatar firstName={adminEmp.first_name} lastName={adminEmp.last_name} avatarUrl={adminEmp.avatar_url} gender={adminEmp.gender} size="xs" />
+                          <span className="text-[10px] font-semibold flex-1 truncate">{adminEmp.first_name} {adminEmp.last_name}</span>
+                          <span className="text-[7px] font-bold text-primary bg-primary/10 px-1 rounded">ADMIN</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-warning/30 bg-warning/[0.03]">
+                          <ShieldCheck className="h-3 w-3 text-warning/50" />
+                          <span className="text-[9px] text-warning font-medium">Sin admin — seleccionar en edición</span>
+                        </div>
+                      );
+                    })()}
+                    {/* Driver slot — only when transport required */}
+                    {requiresCar && (
                       driverAssigns.length > 0 ? driverAssigns.map(a => {
                         const emp = employees.find(e => e.id === a.employee_id)!;
                         return (
@@ -666,29 +692,7 @@ export function ShiftDetailDialog({
                           <span className="text-[9px] text-destructive font-medium">Sin conductor — requerido</span>
                         </div>
                       )
-                    ) : (
-                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-border/20">
-                        <Car className="h-3 w-3 text-muted-foreground/30" />
-                        <span className="text-[9px] text-muted-foreground/40">Driver — no requerido</span>
-                      </div>
                     )}
-                    {/* Admin slot */}
-                    {(() => {
-                      const adminId = (shift as any)?.shift_admin_id;
-                      const adminEmp = adminId ? employees.find(e => e.id === adminId) : null;
-                      return adminEmp ? (
-                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-primary/[0.06] border border-primary/20">
-                          <EmployeeAvatar firstName={adminEmp.first_name} lastName={adminEmp.last_name} avatarUrl={adminEmp.avatar_url} gender={adminEmp.gender} size="xs" />
-                          <span className="text-[10px] font-semibold flex-1 truncate">{adminEmp.first_name} {adminEmp.last_name}</span>
-                          <span className="text-[7px] font-bold text-primary bg-primary/10 px-1 rounded">ADMIN</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg border border-dashed border-warning/30 bg-warning/[0.03]">
-                          <ShieldCheck className="h-3 w-3 text-warning/50" />
-                          <span className="text-[9px] text-warning font-medium">Sin admin asignado</span>
-                        </div>
-                      );
-                    })()}
                   </div>
                 );
               })()}
@@ -936,6 +940,8 @@ export function ShiftDetailDialog({
             <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} isAdmin={true} />
           ) : tab === "rides" ? (
             <ShiftRidesPanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canEdit={effectiveCanEdit} />
+          ) : tab === "audit" ? (
+            <ShiftAuditTrail shiftId={shift.id} />
           ) : null}
         </div>
 

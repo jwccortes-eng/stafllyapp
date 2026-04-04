@@ -168,8 +168,9 @@ export function ShiftEditDialog({
           {/* ── Basic info ── */}
           <SectionCard icon={StickyNote} title="Información básica">
             <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno</Label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Turno mañana" className="h-9 text-sm mt-1" />
+              <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno <span className="text-muted-foreground/40">(opcional)</span></Label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Evento corporativo, Servicio VIP..." className="h-9 text-sm mt-1" />
+              <p className="text-[10px] text-muted-foreground/50 mt-0.5">El código de turno se asigna automáticamente.</p>
             </div>
           </SectionCard>
 
@@ -240,6 +241,13 @@ export function ShiftEditDialog({
                 <Label htmlFor="edit-claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
               </div>
             </div>
+            <div>
+              <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+                <Compass className="h-3 w-3" /> Dirección / Punto de encuentro
+              </Label>
+              <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta con el cliente, o escribe manualmente..." className="h-9 text-sm mt-1" />
+              <p className="text-[10px] text-muted-foreground/50 mt-0.5">Se prefillea desde el cliente pero puedes cambiarla.</p>
+            </div>
           </SectionCard>
 
           {/* ── Payment ── */}
@@ -295,26 +303,31 @@ export function ShiftEditDialog({
             </SectionCard>
           </div>
 
-          {/* ── Roles & Transport (always visible) ── */}
-          <SectionCard icon={Users} title="Roles del turno">
+          {/* ── Roles: Admin (only show when employees assigned) ── */}
+          <SectionCard icon={Users} title="Admin del turno">
             <div>
-              <Label className="text-[11px] text-muted-foreground font-medium">Admin del turno</Label>
+              <Label className="text-[11px] text-muted-foreground font-medium">Responsable operativo</Label>
               {(() => {
                 const shiftAssignedIds = shift ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id) : [];
                 const adminCandidates = shiftAssignedIds.length > 0
                   ? employees.filter(e => shiftAssignedIds.includes(e.id))
                   : employees;
                 return (
-                  <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sin asignar</SelectItem>
-                      {adminCandidates.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select value={shiftAdminId || "none"} onValueChange={v => setShiftAdminId(v === "none" ? "" : v)}>
+                      <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sin asignar</SelectItem>
+                        {adminCandidates.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    {shiftAssignedIds.length === 0 && (
+                      <p className="text-[10px] text-warning mt-0.5">⚠ Asigna empleados primero para filtrar candidatos a admin.</p>
+                    )}
+                  </>
                 );
               })()}
-              <p className="text-[10px] text-muted-foreground mt-0.5">Responsable de confirmar asistencia del equipo.</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Confirma asistencia del equipo.</p>
             </div>
           </SectionCard>
 
@@ -369,12 +382,6 @@ export function ShiftEditDialog({
                 <div>
                   <Label className="text-[11px] text-muted-foreground font-medium">Notas</Label>
                   <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" />
-                </div>
-                <div>
-                  <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-                    <Compass className="h-3 w-3" /> Punto de encuentro
-                  </Label>
-                  <Input value={meetingPoint} onChange={e => setMeetingPoint(e.target.value)} placeholder="Se autocompleta al seleccionar cliente..." className="h-9 text-sm mt-1" />
                 </div>
                 <div>
                   <Label className="text-[11px] text-muted-foreground font-medium">Instrucciones especiales</Label>
