@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { APP_BASE_URL } from "@/lib/app-url";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,7 +91,7 @@ export default function Auth() {
         password,
         options: {
           data: { full_name: fullName, company_name: companyName.trim() },
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: APP_BASE_URL,
         },
       });
       if (error) toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
@@ -261,7 +262,7 @@ export default function Auth() {
                         }
                         setLoading(true);
                         const { error } = await supabase.auth.resetPasswordForEmail(identifier, {
-                          redirectTo: `${window.location.origin}/reset-password`,
+                          redirectTo: `${APP_BASE_URL}/reset-password`,
                         });
                         setLoading(false);
                         if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
