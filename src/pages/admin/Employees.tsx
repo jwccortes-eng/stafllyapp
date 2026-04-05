@@ -154,6 +154,9 @@ export default function Employees() {
   const [updateMode, setUpdateMode] = useState<"diff" | "full">("full");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [bulkInviting, setBulkInviting] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<EmployeeRecord | null>(null);
+  const [colPrefsOpen, setColPrefsOpen] = useState(false);
+  const { visibleColumns, savePreferences } = useColumnPreferences("employees");
   const { toast } = useToast();
 
   const handleBulkPortalInvite = async () => {
