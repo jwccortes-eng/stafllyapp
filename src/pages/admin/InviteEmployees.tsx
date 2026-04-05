@@ -16,6 +16,7 @@ import { Users } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { formatPersonName } from "@/lib/format-helpers";
+import { portalAuthUrl } from "@/lib/app-url";
 
 interface Employee {
   id: string;
@@ -44,7 +45,7 @@ export default function InviteEmployees() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const companyName = selectedCompany?.name ?? "StaflyApps";
-  const portalUrl = "https://staflyapps.com/auth";
+  const portalUrl = portalAuthUrl();
 
   useEffect(() => {
     if (!selectedCompanyId) return;
