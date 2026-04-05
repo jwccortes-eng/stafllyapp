@@ -2642,6 +2642,73 @@ export type Database = {
           },
         ]
       }
+      employee_onboarding_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          document_type: string
+          employee_id: string
+          file_name: string | null
+          file_url: string
+          id: string
+          notes: string | null
+          status: string
+          uploaded_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          document_type: string
+          employee_id: string
+          file_name?: string | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          status?: string
+          uploaded_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          document_type?: string
+          employee_id?: string
+          file_name?: string | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          uploaded_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_onboarding_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_onboarding_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_onboarding_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_portal_modules: {
         Row: {
           company_id: string
@@ -2866,6 +2933,7 @@ export type Database = {
           has_vehicle: boolean | null
           id: string
           is_active: boolean
+          languages: string[] | null
           last_login: string | null
           last_name: string
           must_change_pin: boolean
@@ -2927,6 +2995,7 @@ export type Database = {
           has_vehicle?: boolean | null
           id?: string
           is_active?: boolean
+          languages?: string[] | null
           last_login?: string | null
           last_name: string
           must_change_pin?: boolean
@@ -2988,6 +3057,7 @@ export type Database = {
           has_vehicle?: boolean | null
           id?: string
           is_active?: boolean
+          languages?: string[] | null
           last_login?: string | null
           last_name?: string
           must_change_pin?: boolean
