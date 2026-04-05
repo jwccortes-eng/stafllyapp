@@ -135,48 +135,47 @@ export default function Apply() {
 
       setCompany(coCheck);
 
-      if (co) {
-        const { data: cfg } = await supabase
-          .from("application_configs")
-          .select("*")
-          .eq("company_id", co.id)
-          .maybeSingle();
-        if (cfg) {
-          setConfig({
-            require_email: cfg.require_email,
-            require_document: cfg.require_document,
-            require_emergency_contact: cfg.require_emergency_contact,
-            allow_file_uploads: cfg.allow_file_uploads,
-            visible_worker_types: (cfg.visible_worker_types as string[]) ?? DEFAULT_CONFIG.visible_worker_types,
-            intro_text: cfg.intro_text,
-            cover_image_url: cfg.cover_image_url,
-          });
-        }
-        // Restore draft
-        if (draftKey) {
-          try {
-            const saved = localStorage.getItem(draftKey);
-            if (saved) {
-              const d = JSON.parse(saved);
-              if (d.firstName) setFirstName(d.firstName);
-              if (d.lastName) setLastName(d.lastName);
-              if (d.phone) setPhone(d.phone);
-              if (d.email) setEmail(d.email);
-              if (d.workerType) setWorkerType(d.workerType);
-              if (d.city) setCity(d.city);
-              if (d.availability) setAvailability(d.availability);
-              if (d.hasCar) setHasCar(d.hasCar);
-              if (d.canTravel) setCanTravel(d.canTravel);
-              if (d.emergencyContact) setEmergencyContact(d.emergencyContact);
-              if (d.experienceSummary) setExperienceSummary(d.experienceSummary);
-              if (d.languages) setLanguages(d.languages);
-              if (d.step && d.step > 0 && d.step < 5) setStep(d.step);
-            }
-          } catch { /* ignore */ }
-        }
+      const { data: cfg } = await supabase
+        .from("application_configs")
+        .select("*")
+        .eq("company_id", coCheck.id)
+        .maybeSingle();
+      if (cfg) {
+        setConfig({
+          require_email: cfg.require_email,
+          require_document: cfg.require_document,
+          require_emergency_contact: cfg.require_emergency_contact,
+          allow_file_uploads: cfg.allow_file_uploads,
+          visible_worker_types: (cfg.visible_worker_types as string[]) ?? DEFAULT_CONFIG.visible_worker_types,
+          intro_text: cfg.intro_text,
+          cover_image_url: cfg.cover_image_url,
+        });
+      }
+      // Restore draft
+      if (draftKey) {
+        try {
+          const saved = localStorage.getItem(draftKey);
+          if (saved) {
+            const d = JSON.parse(saved);
+            if (d.firstName) setFirstName(d.firstName);
+            if (d.lastName) setLastName(d.lastName);
+            if (d.phone) setPhone(d.phone);
+            if (d.email) setEmail(d.email);
+            if (d.workerType) setWorkerType(d.workerType);
+            if (d.city) setCity(d.city);
+            if (d.availability) setAvailability(d.availability);
+            if (d.hasCar) setHasCar(d.hasCar);
+            if (d.canTravel) setCanTravel(d.canTravel);
+            if (d.emergencyContact) setEmergencyContact(d.emergencyContact);
+            if (d.experienceSummary) setExperienceSummary(d.experienceSummary);
+            if (d.languages) setLanguages(d.languages);
+            if (d.step && d.step > 0 && d.step < 5) setStep(d.step);
+          }
+        } catch { /* ignore */ }
       }
       setLoading(false);
-    })();
+    };
+    loadCompany();
   }, [companySlug]);
 
   // Autosave draft
