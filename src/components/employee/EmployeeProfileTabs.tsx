@@ -151,6 +151,8 @@ function InfoTab({ employee, isEditing, form, setForm, isPrivileged }: {
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5">📅 Disponibilidad</h3>
         <EmployeeAvailabilitySection employeeId={employee.id} readOnly={!isEditing} />
       </div>
+      {/* Vehicle Documents Section */}
+      <VehicleDocumentsSection employeeId={employee.id} />
     </div>
   );
 }
