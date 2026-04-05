@@ -68,6 +68,12 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     setEmailSent(false);
     if (!selectedCompanyId || !user?.id || !employee.id) return;
 
+    // ─── SECURITY: Validate employee belongs to selected company ───
+    if (employee.company_id && employee.company_id !== selectedCompanyId) {
+      console.error("[invite] company mismatch: employee=%s selected=%s", employee.company_id, selectedCompanyId);
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       setCreatingInvite(true);
@@ -157,6 +163,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   // Resend: create new invitation
   const resendInvite = async () => {
     if (!selectedCompanyId || !user?.id || !employee.id) return;
+    if (employee.company_id && employee.company_id !== selectedCompanyId) return;
     setCreatingInvite(true);
     const { data, error } = await supabase
       .from("employee_invitations")
