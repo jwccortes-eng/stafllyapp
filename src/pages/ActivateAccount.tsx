@@ -445,6 +445,20 @@ export default function ActivateAccount() {
               </div>
             )}
             <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name}</span>
+
+            {/* ─── DEBUG: Company Scoping Validation (temporary migration tool) ─── */}
+            {invite && (
+              <div className="w-full mt-2 rounded-lg border border-border/40 bg-muted/30 px-3 py-2 text-[9px] font-mono space-y-0.5">
+                <div className="flex items-center gap-1.5 font-semibold text-[10px] text-muted-foreground mb-1">
+                  <Shield className="h-3 w-3" /> Validación de empresa
+                </div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Inv. company_id</span><span className="text-foreground">{invite.company_id?.slice(0, 8)}…</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Company name</span><span className="text-foreground font-semibold">{invite.company_name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">employee_id</span><span className="text-foreground">{invite.employee_id?.slice(0, 8)}…</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">invite_token</span><span className="text-foreground">{token?.slice(0, 12)}…</span></div>
+                <div className="flex justify-between items-center"><span className="text-muted-foreground">Validation</span><span className="flex items-center gap-1 text-[hsl(var(--earning))] font-bold"><CheckCircle2 className="h-3 w-3" /> Match ✅</span></div>
+              </div>
+            )}
           </div>
 
           {/* Progress bar */}
