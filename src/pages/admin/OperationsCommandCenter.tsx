@@ -107,6 +107,7 @@ export default function OperationsCommandCenter() {
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const [drawerAssignments, setDrawerAssignments] = useState<AssignmentRow[]>([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
+  const [replaceTarget, setReplaceTarget] = useState<{ shiftId: string; shiftTitle: string; shiftDate: string; startTime: string; endTime: string; excludeIds: string[] } | null>(null);
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
 
   const isToday = isSameDay(selectedDate, new Date());
