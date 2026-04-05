@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
-import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock } from "lucide-react";
+import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -311,9 +311,30 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         </div>
 
         <div className="px-5 pb-5 space-y-4">
+          {/* ─── DEBUG: Company Scoping Validation (temporary migration tool) ─── */}
+          <div className={cn(
+            "rounded-lg border px-3 py-2 text-[9px] font-mono space-y-0.5",
+            companyMismatch ? "border-destructive/40 bg-destructive/5" : "border-border/40 bg-muted/30"
+          )}>
+            <div className="flex items-center gap-1.5 font-semibold text-[10px] text-muted-foreground mb-1">
+              <Shield className="h-3 w-3" /> Validación de empresa
+            </div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Empresa seleccionada</span><span className="text-foreground font-semibold">{companyName}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">selectedCompanyId</span><span className="text-foreground">{selectedCompanyId?.slice(0, 8)}…</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">employee.company_id</span><span className="text-foreground">{employee.company_id?.slice(0, 8) ?? "N/A"}…</span></div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Validation</span>
+              {companyMismatch ? (
+                <span className="flex items-center gap-1 text-destructive font-bold"><AlertTriangle className="h-3 w-3" /> Mismatch ❌</span>
+              ) : (
+                <span className="flex items-center gap-1 text-[hsl(var(--earning))] font-bold"><CheckCircle2 className="h-3 w-3" /> Match ✅</span>
+              )}
+            </div>
+          </div>
+
           {/* SECURITY: Company mismatch block */}
           {companyMismatch && (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
               <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
                 <AlertTriangle className="h-7 w-7 text-destructive" />
               </div>
