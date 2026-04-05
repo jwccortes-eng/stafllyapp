@@ -163,6 +163,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   // Resend: create new invitation
   const resendInvite = async () => {
     if (!selectedCompanyId || !user?.id || !employee.id) return;
+    if (employee.company_id && employee.company_id !== selectedCompanyId) return;
     setCreatingInvite(true);
     const { data, error } = await supabase
       .from("employee_invitations")
