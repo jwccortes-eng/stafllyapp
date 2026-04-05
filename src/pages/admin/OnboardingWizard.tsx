@@ -71,7 +71,7 @@ export default function OnboardingWizard() {
 
     const { data, error } = await supabase
       .from("companies")
-      .insert({ name: companyName.trim(), slug } as any)
+      .insert({ name: companyName.trim(), slug, is_active: true, application_enabled: true } as any)
       .select("id")
       .single();
 

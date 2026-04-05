@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid,
   FlaskConical, Copy, Check, CreditCard, ChevronDown, ChevronRight,
@@ -45,6 +46,7 @@ interface CompanyRecord {
   name: string;
   slug: string;
   is_active: boolean;
+  application_enabled: boolean;
   is_sandbox: boolean;
   invite_code: string;
   company_code: number | null;
@@ -112,7 +114,7 @@ export default function CompaniesPage() {
   const fetchCompanies = async () => {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color")
+      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color, application_enabled")
       .order("company_code");
 
     if (!data) return;
@@ -208,7 +210,7 @@ export default function CompaniesPage() {
     e.preventDefault();
     setLoading(true);
     const slug = formSlug || generateSlug(formName);
-    const { error } = await supabase.from("companies").insert({ name: formName.trim(), slug } as any);
+    const { error } = await supabase.from("companies").insert({ name: formName.trim(), slug, is_active: true, application_enabled: true } as any);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Empresa creada" }); setCreateOpen(false); setFormName(""); setFormSlug(""); fetchCompanies(); refetch(); }
     setLoading(false);
@@ -531,6 +533,19 @@ export default function CompaniesPage() {
                               <div className="space-y-1">
                                 <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Tipo</p>
                                 <p className="text-sm">{c.is_sandbox ? "🧪 Sandbox" : "Producción"}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Recibir aplicaciones</p>
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={c.application_enabled}
+                                    onCheckedChange={async (v) => {
+                                      await supabase.from("companies").update({ application_enabled: v } as any).eq("id", c.id);
+                                      fetchCompanies();
+                                    }}
+                                  />
+                                  <span className="text-xs text-muted-foreground">{c.application_enabled ? "Activo" : "Desactivado"}</span>
+                                </div>
                               </div>
                             </div>
                           </TabsContent>

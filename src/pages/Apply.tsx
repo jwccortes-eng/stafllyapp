@@ -71,6 +71,7 @@ export default function Apply() {
   const [referenceCode, setReferenceCode] = useState("");
   const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [applicationDisabledCompany, setApplicationDisabledCompany] = useState<string | null>(null);
 
   // Form
   const [firstName, setFirstName] = useState("");
@@ -97,13 +98,21 @@ export default function Apply() {
   useEffect(() => {
     if (!companySlug) return;
     (async () => {
-      const { data: co } = await supabase
+      // First check if company exists at all
+      const { data: coCheck } = await supabase
         .from("companies")
-        .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url")
+        .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url, is_active, application_enabled")
         .eq("slug", companySlug.toLowerCase())
-        .eq("is_active", true)
-        .eq("application_enabled", true)
         .maybeSingle();
+
+      if (coCheck && (!coCheck.is_active || !coCheck.application_enabled)) {
+        setCompany(null);
+        setApplicationDisabledCompany(coCheck.name);
+        setLoading(false);
+        return;
+      }
+
+      const co = coCheck?.is_active && coCheck?.application_enabled ? coCheck : null;
       setCompany(co);
 
       if (co) {
@@ -292,8 +301,19 @@ export default function Apply() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
         <StaflyMark size={48} />
-        <h1 className="text-xl font-heading font-bold mt-4 text-foreground">Empresa no encontrada</h1>
-        <p className="text-sm text-muted-foreground mt-2">El enlace que usaste no es válido o la empresa no está activa.</p>
+        {applicationDisabledCompany ? (
+          <>
+            <h1 className="text-xl font-heading font-bold mt-4 text-foreground">Aplicaciones cerradas</h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+              <strong>{applicationDisabledCompany}</strong> no está aceptando aplicaciones en este momento. Intenta más tarde o contacta a la empresa directamente.
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-xl font-heading font-bold mt-4 text-foreground">Empresa no encontrada</h1>
+            <p className="text-sm text-muted-foreground mt-2">El enlace que usaste no es válido o la empresa no existe.</p>
+          </>
+        )}
       </div>
     );
   }
