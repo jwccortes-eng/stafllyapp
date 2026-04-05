@@ -1930,6 +1930,64 @@ export type Database = {
           },
         ]
       }
+      employee_archive_records: {
+        Row: {
+          archived_by: string
+          company_id: string
+          created_at: string
+          effective_date: string
+          eligible_for_rehire: boolean | null
+          employee_id: string
+          id: string
+          notes: string | null
+          reason: string
+        }
+        Insert: {
+          archived_by: string
+          company_id: string
+          created_at?: string
+          effective_date?: string
+          eligible_for_rehire?: boolean | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          reason: string
+        }
+        Update: {
+          archived_by?: string
+          company_id?: string
+          created_at?: string
+          effective_date?: string
+          eligible_for_rehire?: boolean | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_archive_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_archive_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_archive_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_availability_config: {
         Row: {
           blocked_weekdays: number[]
@@ -2773,11 +2831,16 @@ export type Database = {
           added_by: string | null
           added_via: string | null
           address: string | null
+          address_city: string | null
+          address_line: string | null
+          address_state: string | null
+          address_zip: string | null
           approx_latitude: number | null
           approx_longitude: number | null
           available_for_work: boolean
           avatar_url: string | null
           birthday: string | null
+          can_drive: boolean | null
           certifications: string[] | null
           company_id: string
           connecteam_employee_id: string | null
@@ -2786,9 +2849,12 @@ export type Database = {
           created_at: string
           created_from_reconciliation: boolean | null
           date_added: string | null
+          date_of_birth: string | null
           direct_manager: string | null
           driver_licence: string | null
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           employee_role: string | null
           employer_identification: string | null
           end_date: string | null
@@ -2797,11 +2863,14 @@ export type Database = {
           gender: string | null
           groups: string | null
           has_car: string | null
+          has_vehicle: boolean | null
           id: string
           is_active: boolean
           last_login: string | null
           last_name: string
           must_change_pin: boolean
+          onboarding_completed_at: string | null
+          onboarding_status: string | null
           passport_public: boolean
           phone_number: string | null
           portal_access_enabled: boolean
@@ -2810,6 +2879,7 @@ export type Database = {
           recommended_by: string | null
           service_category_ids: string[] | null
           skills: string[] | null
+          ssn_last4: string | null
           start_date: string | null
           tags: string | null
           updated_at: string
@@ -2822,11 +2892,16 @@ export type Database = {
           added_by?: string | null
           added_via?: string | null
           address?: string | null
+          address_city?: string | null
+          address_line?: string | null
+          address_state?: string | null
+          address_zip?: string | null
           approx_latitude?: number | null
           approx_longitude?: number | null
           available_for_work?: boolean
           avatar_url?: string | null
           birthday?: string | null
+          can_drive?: boolean | null
           certifications?: string[] | null
           company_id?: string
           connecteam_employee_id?: string | null
@@ -2835,9 +2910,12 @@ export type Database = {
           created_at?: string
           created_from_reconciliation?: boolean | null
           date_added?: string | null
+          date_of_birth?: string | null
           direct_manager?: string | null
           driver_licence?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           employee_role?: string | null
           employer_identification?: string | null
           end_date?: string | null
@@ -2846,11 +2924,14 @@ export type Database = {
           gender?: string | null
           groups?: string | null
           has_car?: string | null
+          has_vehicle?: boolean | null
           id?: string
           is_active?: boolean
           last_login?: string | null
           last_name: string
           must_change_pin?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_status?: string | null
           passport_public?: boolean
           phone_number?: string | null
           portal_access_enabled?: boolean
@@ -2859,6 +2940,7 @@ export type Database = {
           recommended_by?: string | null
           service_category_ids?: string[] | null
           skills?: string[] | null
+          ssn_last4?: string | null
           start_date?: string | null
           tags?: string | null
           updated_at?: string
@@ -2871,11 +2953,16 @@ export type Database = {
           added_by?: string | null
           added_via?: string | null
           address?: string | null
+          address_city?: string | null
+          address_line?: string | null
+          address_state?: string | null
+          address_zip?: string | null
           approx_latitude?: number | null
           approx_longitude?: number | null
           available_for_work?: boolean
           avatar_url?: string | null
           birthday?: string | null
+          can_drive?: boolean | null
           certifications?: string[] | null
           company_id?: string
           connecteam_employee_id?: string | null
@@ -2884,9 +2971,12 @@ export type Database = {
           created_at?: string
           created_from_reconciliation?: boolean | null
           date_added?: string | null
+          date_of_birth?: string | null
           direct_manager?: string | null
           driver_licence?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           employee_role?: string | null
           employer_identification?: string | null
           end_date?: string | null
@@ -2895,11 +2985,14 @@ export type Database = {
           gender?: string | null
           groups?: string | null
           has_car?: string | null
+          has_vehicle?: boolean | null
           id?: string
           is_active?: boolean
           last_login?: string | null
           last_name?: string
           must_change_pin?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_status?: string | null
           passport_public?: boolean
           phone_number?: string | null
           portal_access_enabled?: boolean
@@ -2908,6 +3001,7 @@ export type Database = {
           recommended_by?: string | null
           service_category_ids?: string[] | null
           skills?: string[] | null
+          ssn_last4?: string | null
           start_date?: string | null
           tags?: string | null
           updated_at?: string
@@ -10316,6 +10410,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_column_preferences: {
+        Row: {
+          id: string
+          page_key: string
+          updated_at: string
+          user_id: string
+          visible_columns: Json
+        }
+        Insert: {
+          id?: string
+          page_key?: string
+          updated_at?: string
+          user_id: string
+          visible_columns?: Json
+        }
+        Update: {
+          id?: string
+          page_key?: string
+          updated_at?: string
+          user_id?: string
+          visible_columns?: Json
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
