@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -53,6 +53,8 @@ import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
+import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
+import { ColumnPreferencesDialog, useColumnPreferences, EMPLOYEE_COLUMNS } from "@/components/employee/ColumnPreferencesDialog";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
