@@ -7,7 +7,7 @@ import { format, addDays, isSameDay, differenceInMinutes, parseISO } from "date-
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useSound } from "@/hooks/useSound";
+import { useSoundContext } from "@/hooks/useSound";
 
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Badge } from "@/components/ui/badge";
