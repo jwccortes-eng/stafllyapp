@@ -167,7 +167,11 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   // Resend: create new invitation
   const resendInvite = async () => {
     if (!selectedCompanyId || !user?.id || !employee.id) return;
-    if (employee.company_id && employee.company_id !== selectedCompanyId) return;
+    if (employee.company_id && employee.company_id !== selectedCompanyId) {
+      console.error("[invite] BLOCKED resend: company mismatch — employee.company_id=%s selectedCompanyId=%s", employee.company_id, selectedCompanyId);
+      toast({ title: "Error de seguridad", description: "Este empleado no pertenece a la empresa seleccionada.", variant: "destructive" });
+      return;
+    }
     setCreatingInvite(true);
     const { data, error } = await supabase
       .from("employee_invitations")
