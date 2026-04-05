@@ -959,7 +959,7 @@ export default function Employees() {
         <ArchiveEmployeeDialog
           open={!!archiveTarget}
           onOpenChange={(v) => { if (!v) setArchiveTarget(null); }}
-          employee={archiveTarget}
+          employee={{ id: archiveTarget.id, first_name: archiveTarget.first_name ?? "", last_name: archiveTarget.last_name ?? "", company_id: archiveTarget.company_id }}
           onArchived={() => { setArchiveTarget(null); setViewEmployee(null); fetchEmployees(); }}
         />
       )}
