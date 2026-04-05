@@ -21,8 +21,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import {
   Loader2, Search, ChevronLeft, ChevronRight, Radio, Clock, AlertTriangle,
   Users, Car, Shield, Eye, CheckCircle2, XCircle, Phone, MessageSquare,
-  UserCheck, MapPin, Building2, RefreshCw, Bell, Zap,
+  UserCheck, MapPin, Building2, RefreshCw, Bell, Zap, UserPlus,
 } from "lucide-react";
+import { ReplacementSuggestionDialog } from "@/components/shifts/ReplacementSuggestionDialog";
 
 // ─── Types ───
 interface ShiftRow {
@@ -106,6 +107,7 @@ export default function OperationsCommandCenter() {
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const [drawerAssignments, setDrawerAssignments] = useState<AssignmentRow[]>([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
+  const [replaceTarget, setReplaceTarget] = useState<{ shiftId: string; shiftTitle: string; shiftDate: string; startTime: string; endTime: string; excludeIds: string[] } | null>(null);
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
 
   const isToday = isSameDay(selectedDate, new Date());
@@ -486,6 +488,20 @@ export default function OperationsCommandCenter() {
                         <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => resolveAlert(a.id)}>
                           <CheckCircle2 className="h-3 w-3" /> Resolver
                         </Button>
+                        {(a.type === "no_show" || a.type === "no_show_alert" || a.type === "no_clockin" || a.type === "no_clockin_alert") && a.shift_id && (
+                          <Button size="sm" variant="default" className="h-7 text-[10px] gap-1" onClick={() => {
+                            const s = shifts.find(sh => sh.id === a.shift_id);
+                            if (s) {
+                              setReplaceTarget({
+                                shiftId: s.id, shiftTitle: s.title, shiftDate: s.date,
+                                startTime: s.start_time, endTime: s.end_time,
+                                excludeIds: [],
+                              });
+                            }
+                          }}>
+                            <UserPlus className="h-3 w-3" /> Reemplazar
+                          </Button>
+                        )}
                         <Button size="sm" variant="ghost" className="h-7 text-[10px] gap-1" onClick={() => a.shift_id && navigate(`/app/shift-ops?id=${a.shift_id}`)}>
                           <Eye className="h-3 w-3" /> Ver turno
                         </Button>
@@ -581,7 +597,18 @@ export default function OperationsCommandCenter() {
 
                 <Separator />
 
-                {/* Quick action */}
+                {/* Quick actions */}
+                {selectedShift && (
+                  <Button size="sm" className="w-full gap-2 text-xs" onClick={() => {
+                    setReplaceTarget({
+                      shiftId: selectedShift.id, shiftTitle: selectedShift.title, shiftDate: selectedShift.date,
+                      startTime: selectedShift.start_time, endTime: selectedShift.end_time,
+                      excludeIds: drawerAssignments.map(a => a.employee_id),
+                    });
+                  }}>
+                    <UserPlus className="h-3.5 w-3.5" /> Buscar reemplazo
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => { setSelectedShiftId(null); navigate(`/app/shift-ops?id=${selectedShiftId}`); }}>
                   <Eye className="h-3.5 w-3.5" /> Abrir centro de operaciones del turno
                 </Button>
@@ -590,6 +617,22 @@ export default function OperationsCommandCenter() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Replacement suggestion dialog */}
+      {replaceTarget && selectedCompanyId && (
+        <ReplacementSuggestionDialog
+          open={!!replaceTarget}
+          onOpenChange={o => { if (!o) setReplaceTarget(null); }}
+          shiftId={replaceTarget.shiftId}
+          shiftTitle={replaceTarget.shiftTitle}
+          shiftDate={replaceTarget.shiftDate}
+          shiftStartTime={replaceTarget.startTime}
+          shiftEndTime={replaceTarget.endTime}
+          companyId={selectedCompanyId}
+          excludeEmployeeIds={replaceTarget.excludeIds}
+          onAssigned={() => { loadData(); if (selectedShiftId) loadDrawer(selectedShiftId); }}
+        />
+      )}
     </div>
   );
 }
