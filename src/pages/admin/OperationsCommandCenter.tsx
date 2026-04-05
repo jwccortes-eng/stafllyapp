@@ -3,152 +3,146 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
-import { format, addDays, isSameDay } from "date-fns";
+import { format, addDays, isSameDay, differenceInMinutes, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useSound } from "@/hooks/useSound";
 
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { PageHeader } from "@/components/ui/page-header";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, Search, ChevronLeft, ChevronRight, Radio, Clock, AlertTriangle,
   Users, Car, Shield, Eye, CheckCircle2, XCircle, Phone, MessageSquare,
-  UserCheck, MapPin, Building2, RefreshCw, Bell, Zap, UserPlus,
+  MapPin, Building2, RefreshCw, Bell, Zap, UserPlus, Plus, Send,
+  Activity, CalendarPlus, UserCheck, ArrowRight, Timer,
 } from "lucide-react";
 import { ReplacementSuggestionDialog } from "@/components/shifts/ReplacementSuggestionDialog";
 
 // ─── Types ───
 interface ShiftRow {
-  id: string;
-  title: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  status: string;
-  slots: number;
-  shift_code: string | null;
-  client_id: string | null;
-  location_id: string | null;
-  shift_admin_id: string | null;
-  driver_employee_id: string | null;
+  id: string; title: string; date: string; start_time: string; end_time: string;
+  status: string; slots: number; shift_code: string | null;
+  client_id: string | null; location_id: string | null;
+  shift_admin_id: string | null; driver_employee_id: string | null;
   transportation_required: boolean;
-  client_name?: string;
-  location_name?: string;
-  assigned: number;
-  confirmed: number;
-  clocked_in: number;
-  absent: number;
-  pending: number;
+  client_name?: string; location_name?: string;
+  assigned: number; confirmed: number; clocked_in: number; absent: number; pending: number;
   risk_level: "ok" | "warning" | "critical";
+  admin_name?: string;
 }
 
 interface AlertRow {
-  id: string;
-  type: string;
-  severity: string;
-  description: string | null;
-  employee_name: string;
-  employee_id: string;
-  shift_id: string | null;
-  shift_title: string;
-  created_at: string;
-  resolved_at: string | null;
+  id: string; type: string; severity: string; description: string | null;
+  employee_name: string; employee_id: string; employee_avatar?: string | null;
+  shift_id: string | null; shift_title: string; client_name?: string;
+  created_at: string; resolved_at: string | null; phone_number?: string | null;
+  minutes_late?: number;
 }
 
 interface AssignmentRow {
-  id: string;
-  employee_id: string;
-  status: string;
-  assignment_role: string;
-  first_name: string;
-  last_name: string;
-  phone_number: string | null;
-  clocked_in: boolean;
-  clock_in_time: string | null;
-  confirmed_at: string | null;
+  id: string; employee_id: string; status: string; assignment_role: string;
+  first_name: string; last_name: string; phone_number: string | null;
+  avatar_url: string | null;
+  clocked_in: boolean; clock_in_time: string | null; confirmed_at: string | null;
 }
 
-// ─── Helpers ───
+interface ActivityEvent {
+  id: string; type: string; title: string; body: string; created_at: string;
+  employee_name?: string; employee_avatar?: string | null;
+}
+
+// ─── Constants ───
 const RISK_STYLES = {
-  ok: { bg: "bg-earning/10", text: "text-earning", label: "OK" },
-  warning: { bg: "bg-warning/10", text: "text-warning", label: "⚠️ Riesgo" },
-  critical: { bg: "bg-destructive/10", text: "text-destructive", label: "🔴 Crítico" },
+  ok: { bg: "bg-earning/10", text: "text-earning", label: "OK", dot: "bg-earning" },
+  warning: { bg: "bg-warning/10", text: "text-warning", label: "Riesgo", dot: "bg-warning" },
+  critical: { bg: "bg-destructive/10", text: "text-destructive", label: "Crítico", dot: "bg-destructive" },
 };
 
-const ALERT_ICONS: Record<string, string> = {
-  no_confirmation: "⏳",
-  no_clockin: "🚫",
-  late_arrival: "⏰",
-  geofence_violation: "📍",
-  no_clockin_alert: "🚫",
-  no_show_alert: "❌",
-  early_departure: "🚪",
+const ALERT_CONFIG: Record<string, { emoji: string; label: string; color: string }> = {
+  no_show: { emoji: "❌", label: "No-show", color: "border-destructive/30 bg-destructive/[0.04]" },
+  no_show_alert: { emoji: "❌", label: "No-show", color: "border-destructive/30 bg-destructive/[0.04]" },
+  no_clockin: { emoji: "🚫", label: "Sin fichaje", color: "border-destructive/30 bg-destructive/[0.04]" },
+  no_clockin_alert: { emoji: "🚫", label: "Sin fichaje", color: "border-warning/30 bg-warning/[0.04]" },
+  no_confirmation: { emoji: "⏳", label: "Sin confirmar", color: "border-warning/30 bg-warning/[0.04]" },
+  late_arrival: { emoji: "⏰", label: "Tardanza", color: "border-warning/30 bg-warning/[0.04]" },
+  geofence_violation: { emoji: "📍", label: "Fuera de zona", color: "border-warning/30 bg-warning/[0.04]" },
+  early_departure: { emoji: "🚪", label: "Salida temprana", color: "border-warning/30 bg-warning/[0.04]" },
 };
 
 export default function OperationsCommandCenter() {
   const navigate = useNavigate();
   const { selectedCompanyId } = useCompany();
   const { user } = useAuth();
+  const { play } = useSound();
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [clientFilter, setClientFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
+  const [activityFeed, setActivityFeed] = useState<ActivityEvent[]>([]);
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const [drawerAssignments, setDrawerAssignments] = useState<AssignmentRow[]>([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
-  const [replaceTarget, setReplaceTarget] = useState<{ shiftId: string; shiftTitle: string; shiftDate: string; startTime: string; endTime: string; excludeIds: string[] } | null>(null);
+  const [replaceTarget, setReplaceTarget] = useState<{
+    shiftId: string; shiftTitle: string; shiftDate: string;
+    startTime: string; endTime: string; excludeIds: string[];
+  } | null>(null);
+  const [activeSection, setActiveSection] = useState("alerts");
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
+  const prevAlertCountRef = useRef(0);
 
   const isToday = isSameDay(selectedDate, new Date());
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-  // ─── Load shifts + alerts ───
+  // ─── Load all data ───
   const loadData = useCallback(async () => {
     if (!selectedCompanyId) return;
     setLoading(true);
 
-    const [shiftsRes, assignRes, entriesRes, confirmRes, alertsRes, clientsRes, locsRes] = await Promise.all([
-      supabase.from("scheduled_shifts").select("id, title, date, start_time, end_time, status, slots, shift_code, client_id, location_id, shift_admin_id, driver_employee_id, transportation_required")
+    const [shiftsRes, assignRes, entriesRes, alertsRes, clientsRes, locsRes, empsRes, notifRes] = await Promise.all([
+      supabase.from("scheduled_shifts")
+        .select("id, title, date, start_time, end_time, status, slots, shift_code, client_id, location_id, shift_admin_id, driver_employee_id, transportation_required")
         .eq("company_id", selectedCompanyId).eq("date", dateStr).is("deleted_at", null).order("start_time"),
       supabase.from("shift_assignments").select("id, shift_id, employee_id, status, assignment_role")
         .eq("company_id", selectedCompanyId),
       supabase.from("time_entries").select("id, employee_id, shift_id, clock_in, clock_out")
         .eq("company_id", selectedCompanyId).gte("clock_in", `${dateStr}T00:00:00`).lte("clock_in", `${dateStr}T23:59:59`),
-      supabase.from("shift_attendance_confirmations").select("shift_id, employee_id, confirmed_at")
-        .eq("company_id", selectedCompanyId),
       supabase.from("clock_alerts").select("id, type, severity, description, employee_id, shift_id, created_at, resolved_at")
         .eq("company_id", selectedCompanyId).is("resolved_at", null).order("created_at", { ascending: false }).limit(50),
       supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId),
       supabase.from("locations").select("id, name").eq("company_id", selectedCompanyId),
+      supabase.from("employees").select("id, first_name, last_name, avatar_url, phone_number")
+        .eq("company_id", selectedCompanyId).eq("is_active", true),
+      supabase.from("notifications").select("id, type, title, body, created_at, recipient_id, metadata")
+        .eq("company_id", selectedCompanyId).gte("created_at", `${dateStr}T00:00:00`)
+        .order("created_at", { ascending: false }).limit(30),
     ]);
 
-    const clientMap = new Map((clientsRes.data ?? []).map(c => [c.id, c.name]));
-    const locMap = new Map((locsRes.data ?? []).map(l => [l.id, l.name]));
+    const clientMap = new Map((clientsRes.data ?? []).map((c: any) => [c.id, c.name]));
+    const locMap = new Map((locsRes.data ?? []).map((l: any) => [l.id, l.name]));
+    const empMap = new Map((empsRes.data ?? []).map((e: any) => [e.id, e]));
     const allAssignments = assignRes.data ?? [];
     const allEntries = entriesRes.data ?? [];
-    const allConfirms = confirmRes.data ?? [];
+    const now = new Date();
 
     // Build shift rows
     const shiftRows: ShiftRow[] = (shiftsRes.data ?? []).map((s: any) => {
-      const sa = allAssignments.filter(a => (a as any).shift_id === s.id && !["rejected", "removed"].includes((a as any).status));
-      const clockedIn = allEntries.filter(e => (e as any).shift_id === s.id && !(e as any).clock_out).length;
-      const confirmed = sa.filter(a => (a as any).status === "confirmed").length;
-      const pending = sa.filter(a => (a as any).status === "pending").length;
-      const absent = sa.length - clockedIn - pending;
+      const sa = allAssignments.filter((a: any) => a.shift_id === s.id && !["rejected", "removed"].includes(a.status));
+      const clockedIn = allEntries.filter((e: any) => e.shift_id === s.id && !e.clock_out).length;
+      const confirmed = sa.filter((a: any) => a.status === "confirmed" || a.status === "accepted").length;
+      const pending = sa.filter((a: any) => a.status === "pending").length;
 
       let risk_level: "ok" | "warning" | "critical" = "ok";
-      const now = new Date();
       const shiftStart = new Date(`${s.date}T${s.start_time}`);
       const minutesPast = (now.getTime() - shiftStart.getTime()) / 60000;
 
@@ -157,127 +151,144 @@ export default function OperationsCommandCenter() {
       if (pending > 0 && minutesPast > 0) risk_level = "warning";
       if (sa.length === 0 && s.status === "published") risk_level = "critical";
 
+      const adminEmp = s.shift_admin_id ? empMap.get(s.shift_admin_id) : null;
+
       return {
-        ...s,
-        client_name: s.client_id ? clientMap.get(s.client_id) : undefined,
+        ...s, client_name: s.client_id ? clientMap.get(s.client_id) : undefined,
         location_name: s.location_id ? locMap.get(s.location_id) : undefined,
-        assigned: sa.length,
-        confirmed,
-        clocked_in: clockedIn,
-        absent: Math.max(0, absent),
-        pending,
-        risk_level,
+        assigned: sa.length, confirmed, clocked_in: clockedIn,
+        absent: Math.max(0, sa.length - clockedIn - pending), pending, risk_level,
+        admin_name: adminEmp ? `${adminEmp.first_name} ${adminEmp.last_name}` : undefined,
       };
     });
-
     setShifts(shiftRows);
 
-    // Build alert rows with employee names
-    const alertEmpIds = [...new Set((alertsRes.data ?? []).map((a: any) => a.employee_id))];
-    let empNameMap = new Map<string, string>();
-    if (alertEmpIds.length > 0) {
-      const { data: emps } = await supabase.from("employees").select("id, first_name, last_name").in("id", alertEmpIds);
-      (emps ?? []).forEach((e: any) => empNameMap.set(e.id, `${e.first_name} ${e.last_name}`));
+    // Build alert rows with employee info
+    const shiftNameMap = new Map(shiftRows.map(s => [s.id, s]));
+    setAlerts((alertsRes.data ?? []).map((a: any) => {
+      const emp = empMap.get(a.employee_id);
+      const shift = a.shift_id ? shiftNameMap.get(a.shift_id) : null;
+      let minutesLate = 0;
+      if (shift) {
+        const shiftStart = new Date(`${shift.date}T${shift.start_time}`);
+        minutesLate = Math.max(0, Math.floor((now.getTime() - shiftStart.getTime()) / 60000));
+      }
+      return {
+        ...a,
+        employee_name: emp ? `${emp.first_name} ${emp.last_name}` : "—",
+        employee_avatar: emp?.avatar_url ?? null,
+        phone_number: emp?.phone_number ?? null,
+        shift_title: shift?.title ?? "—",
+        client_name: shift?.client_name,
+        minutes_late: minutesLate,
+      };
+    }));
+
+    // Build activity feed from notifications
+    setActivityFeed((notifRes.data ?? []).map((n: any) => {
+      const empId = n.metadata?.employee_id;
+      const emp = empId ? empMap.get(empId) : null;
+      return {
+        id: n.id, type: n.type, title: n.title, body: n.body, created_at: n.created_at,
+        employee_name: emp ? `${emp.first_name} ${emp.last_name}` : undefined,
+        employee_avatar: emp?.avatar_url ?? null,
+      };
+    }));
+
+    // Sound for new alerts
+    const newAlertCount = (alertsRes.data ?? []).length;
+    if (newAlertCount > prevAlertCountRef.current && prevAlertCountRef.current > 0) {
+      play("alert");
     }
-
-    const shiftNameMap = new Map(shiftRows.map(s => [s.id, s.title]));
-
-    setAlerts((alertsRes.data ?? []).map((a: any) => ({
-      ...a,
-      employee_name: empNameMap.get(a.employee_id) ?? "—",
-      shift_title: a.shift_id ? (shiftNameMap.get(a.shift_id) ?? "—") : "—",
-    })));
+    prevAlertCountRef.current = newAlertCount;
 
     setLoading(false);
-  }, [selectedCompanyId, dateStr]);
+  }, [selectedCompanyId, dateStr, play]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   // ─── Realtime subscriptions ───
   useEffect(() => {
     if (!selectedCompanyId) return;
-
-    // Clean up previous channels
     channelsRef.current.forEach(ch => supabase.removeChannel(ch));
     channelsRef.current = [];
 
-    const handleChange = () => { loadData(); };
+    const refresh = () => { loadData(); };
 
-    const ch1 = supabase.channel("ops-assignments")
-      .on("postgres_changes", { event: "*", schema: "public", table: "shift_assignments", filter: `company_id=eq.${selectedCompanyId}` }, handleChange)
+    const ch1 = supabase.channel("ops-pro-assign")
+      .on("postgres_changes", { event: "*", schema: "public", table: "shift_assignments", filter: `company_id=eq.${selectedCompanyId}` }, refresh)
+      .subscribe();
+    const ch2 = supabase.channel("ops-pro-clock")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "clock_events", filter: `company_id=eq.${selectedCompanyId}` }, refresh)
+      .subscribe();
+    const ch3 = supabase.channel("ops-pro-alerts")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clock_alerts", filter: `company_id=eq.${selectedCompanyId}` }, refresh)
+      .subscribe();
+    const ch4 = supabase.channel("ops-pro-entries")
+      .on("postgres_changes", { event: "*", schema: "public", table: "time_entries", filter: `company_id=eq.${selectedCompanyId}` }, refresh)
+      .subscribe();
+    const ch5 = supabase.channel("ops-pro-notifs")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `company_id=eq.${selectedCompanyId}` }, () => {
+        play("notification");
+        refresh();
+      })
       .subscribe();
 
-    const ch2 = supabase.channel("ops-clock-events")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "clock_events", filter: `company_id=eq.${selectedCompanyId}` }, handleChange)
-      .subscribe();
-
-    const ch3 = supabase.channel("ops-alerts")
-      .on("postgres_changes", { event: "*", schema: "public", table: "clock_alerts", filter: `company_id=eq.${selectedCompanyId}` }, handleChange)
-      .subscribe();
-
-    const ch4 = supabase.channel("ops-time-entries")
-      .on("postgres_changes", { event: "*", schema: "public", table: "time_entries", filter: `company_id=eq.${selectedCompanyId}` }, handleChange)
-      .subscribe();
-
-    channelsRef.current = [ch1, ch2, ch3, ch4];
-
-    return () => {
-      channelsRef.current.forEach(ch => supabase.removeChannel(ch));
-      channelsRef.current = [];
-    };
-  }, [selectedCompanyId, loadData]);
+    channelsRef.current = [ch1, ch2, ch3, ch4, ch5];
+    return () => { channelsRef.current.forEach(ch => supabase.removeChannel(ch)); channelsRef.current = []; };
+  }, [selectedCompanyId, loadData, play]);
 
   // ─── KPIs ───
   const totalActiveClocks = useMemo(() => shifts.reduce((n, s) => n + s.clocked_in, 0), [shifts]);
   const totalPending = useMemo(() => shifts.reduce((n, s) => n + s.pending, 0), [shifts]);
   const totalNoClockIn = useMemo(() => shifts.filter(s => {
-    const shiftStart = new Date(`${s.date}T${s.start_time}`);
-    return new Date() > shiftStart && s.clocked_in === 0 && s.assigned > 0;
+    const ss = new Date(`${s.date}T${s.start_time}`);
+    return new Date() > ss && s.clocked_in === 0 && s.assigned > 0;
   }).length, [shifts]);
+  const criticalShifts = useMemo(() => shifts.filter(s => s.risk_level === "critical").length, [shifts]);
   const totalAlerts = alerts.length;
-  const transportIssues = useMemo(() => shifts.filter(s => s.transportation_required && !s.driver_employee_id && s.assigned > 0).length, [shifts]);
 
-  // ─── Filters ───
-  const clients = useMemo(() => [...new Set(shifts.map(s => s.client_name).filter(Boolean) as string[])].sort(), [shifts]);
-
+  // ─── Shift filters ───
   const filteredShifts = useMemo(() => {
     let list = shifts;
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(s => s.title.toLowerCase().includes(q) || s.client_name?.toLowerCase().includes(q) || s.location_name?.toLowerCase().includes(q));
     }
-    if (statusFilter !== "all") {
-      if (statusFilter === "critical") list = list.filter(s => s.risk_level === "critical");
-      else if (statusFilter === "warning") list = list.filter(s => s.risk_level === "warning");
-      else if (statusFilter === "ok") list = list.filter(s => s.risk_level === "ok");
-    }
-    if (clientFilter !== "all") list = list.filter(s => s.client_name === clientFilter);
+    if (statusFilter !== "all") list = list.filter(s => s.risk_level === statusFilter);
     return list;
-  }, [shifts, search, statusFilter, clientFilter]);
+  }, [shifts, search, statusFilter]);
 
-  // ─── Drawer: shift detail ───
+  const inProgressShifts = useMemo(() => {
+    const now = new Date();
+    return shifts.filter(s => {
+      const start = new Date(`${s.date}T${s.start_time}`);
+      const end = new Date(`${s.date}T${s.end_time}`);
+      return now >= start && now <= end && s.assigned > 0;
+    });
+  }, [shifts]);
+
+  const upcomingShifts = useMemo(() => {
+    const now = new Date();
+    return shifts.filter(s => new Date(`${s.date}T${s.start_time}`) > now);
+  }, [shifts]);
+
+  // ─── Drawer ───
   const selectedShift = useMemo(() => shifts.find(s => s.id === selectedShiftId), [shifts, selectedShiftId]);
 
   const loadDrawer = useCallback(async (shiftId: string) => {
     setSelectedShiftId(shiftId);
     setDrawerLoading(true);
-
     const [assignRes, entriesRes] = await Promise.all([
-      supabase.from("shift_assignments").select("id, employee_id, status, assignment_role, employees(first_name, last_name, phone_number)")
+      supabase.from("shift_assignments").select("id, employee_id, status, assignment_role, employees(first_name, last_name, phone_number, avatar_url)")
         .eq("shift_id", shiftId) as any,
       supabase.from("time_entries").select("employee_id, clock_in").eq("shift_id", shiftId).is("clock_out", null),
     ]);
-
     const clockedSet = new Set((entriesRes.data ?? []).map((e: any) => e.employee_id));
-
     setDrawerAssignments((assignRes.data ?? []).map((a: any) => ({
-      id: a.id,
-      employee_id: a.employee_id,
-      status: a.status,
-      assignment_role: a.assignment_role,
-      first_name: a.employees?.first_name ?? "—",
-      last_name: a.employees?.last_name ?? "",
-      phone_number: a.employees?.phone_number,
+      id: a.id, employee_id: a.employee_id, status: a.status, assignment_role: a.assignment_role,
+      first_name: a.employees?.first_name ?? "—", last_name: a.employees?.last_name ?? "",
+      phone_number: a.employees?.phone_number, avatar_url: a.employees?.avatar_url ?? null,
       clocked_in: clockedSet.has(a.employee_id),
       clock_in_time: (entriesRes.data ?? []).find((e: any) => e.employee_id === a.employee_id)?.clock_in ?? null,
       confirmed_at: null,
@@ -285,226 +296,228 @@ export default function OperationsCommandCenter() {
     setDrawerLoading(false);
   }, []);
 
-  // ─── Resolve alert ───
   const resolveAlert = async (alertId: string) => {
     const { error } = await supabase.from("clock_alerts").update({ resolved_at: new Date().toISOString(), resolved_by: user?.id } as any).eq("id", alertId);
     if (error) toast.error(error.message);
-    else {
-      toast.success("Alerta resuelta");
-      setAlerts(prev => prev.filter(a => a.id !== alertId));
-    }
+    else { toast.success("Alerta resuelta"); setAlerts(prev => prev.filter(a => a.id !== alertId)); }
   };
 
-  // ─── Employee state badge ───
-  const empStateBadge = (a: AssignmentRow) => {
-    if (a.clocked_in) return <Badge variant="success" className="text-[9px]">🟢 Fichado</Badge>;
-    if (a.status === "confirmed") return <Badge variant="info" className="text-[9px]">✅ Confirmado</Badge>;
-    if (a.status === "rejected") return <Badge variant="destructive" className="text-[9px]">❌ Rechazado</Badge>;
-    return <Badge variant="warning" className="text-[9px]">⏳ Pendiente</Badge>;
+  const openReplace = (s: ShiftRow) => {
+    setReplaceTarget({
+      shiftId: s.id, shiftTitle: s.title, shiftDate: s.date,
+      startTime: s.start_time, endTime: s.end_time, excludeIds: [],
+    });
   };
 
-  const roleBadge = (role: string) => {
-    if (role === "shift_admin" || role === "shift_lead") return <Badge variant="info" className="text-[9px]">🛡️ Admin</Badge>;
-    if (role === "driver") return <Badge variant="warning" className="text-[9px]">🚗 Driver</Badge>;
-    return null;
+  // ─── Render helpers ───
+  const empBadge = (status: string, clockedIn: boolean) => {
+    if (clockedIn) return <Badge variant="success" className="text-[9px] gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-earning inline-block" />Fichado</Badge>;
+    if (status === "confirmed" || status === "accepted") return <Badge variant="info" className="text-[9px]">Confirmado</Badge>;
+    if (status === "rejected") return <Badge variant="destructive" className="text-[9px]">Rechazado</Badge>;
+    return <Badge variant="warning" className="text-[9px]">Pendiente</Badge>;
   };
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Operations Command Center" subtitle="Control de turnos en tiempo real" icon={Radio} variant="4" />
-
-      {/* ─── Date nav + filters ─── */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setSelectedDate(d => addDays(d, -1))}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-          <Button variant={isToday ? "default" : "outline"} size="sm" className="h-9 text-xs min-w-[100px]" onClick={() => setSelectedDate(new Date())}>
-            {isToday ? "📡 Hoy" : format(selectedDate, "EEE d MMM", { locale: es })}
-          </Button>
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setSelectedDate(d => addDays(d, 1))}><ChevronRight className="h-3.5 w-3.5" /></Button>
-        </div>
-
-        <div className="relative flex-1 max-w-[220px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar turno..." className="pl-9 h-9" />
-        </div>
-
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-9 w-auto min-w-[120px] text-xs">
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="ok">✅ OK</SelectItem>
-            <SelectItem value="warning">⚠️ Riesgo</SelectItem>
-            <SelectItem value="critical">🔴 Crítico</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {clients.length > 0 && (
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="h-9 w-auto min-w-[130px] text-xs">
-              <SelectValue placeholder="Cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos clientes</SelectItem>
-              {clients.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-
-        <Button variant="ghost" size="icon" className="h-9 w-9 ml-auto" onClick={loadData} title="Actualizar">
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-
-        {isToday && (
-          <div className="flex items-center gap-1.5 text-[10px] text-earning font-medium">
-            <Radio className="h-3 w-3 animate-pulse" /> EN VIVO
+    <div className="space-y-4">
+      {/* ─── Header ─── */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Radio className="h-5 w-5 text-primary" />
           </div>
-        )}
+          <div>
+            <h1 className="text-lg font-bold font-heading flex items-center gap-2">
+              Command Center
+              {isToday && (
+                <span className="flex items-center gap-1 text-[10px] text-earning font-bold bg-earning/10 px-2 py-0.5 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-earning animate-pulse" /> EN VIVO
+                </span>
+              )}
+            </h1>
+            <p className="text-xs text-muted-foreground">Control operativo en tiempo real</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(d => addDays(d, -1))}><ChevronLeft className="h-3.5 w-3.5" /></Button>
+          <Button variant={isToday ? "default" : "outline"} size="sm" className="h-8 text-xs min-w-[90px]" onClick={() => setSelectedDate(new Date())}>
+            {isToday ? "Hoy" : format(selectedDate, "EEE d MMM", { locale: es })}
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(d => addDays(d, 1))}><ChevronRight className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadData}><RefreshCw className="h-3.5 w-3.5" /></Button>
+        </div>
       </div>
 
-      {/* ─── KPI Cards ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <KpiCard value={totalActiveClocks} label="Fichajes activos" accent="earning" icon={<Clock className="h-4 w-4 text-earning" />} />
-        <KpiCard value={totalPending} label="Confirmaciones pendientes" accent="warning" icon={<Users className="h-4 w-4 text-warning" />} />
-        <KpiCard value={totalNoClockIn} label="Sin fichaje" accent="deduction" icon={<XCircle className="h-4 w-4 text-deduction" />} />
-        <KpiCard value={totalAlerts} label="Alertas activas" accent={totalAlerts > 0 ? "warning" : "muted"} icon={<AlertTriangle className="h-4 w-4 text-warning" />} />
-        <KpiCard value={transportIssues} label="Sin conductor" accent={transportIssues > 0 ? "deduction" : "muted"} icon={<Car className="h-4 w-4 text-deduction" />} />
+      {/* ─── KPIs ─── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <KpiCard value={totalActiveClocks} label="Fichajes activos" accent="earning" size="sm" icon={<Clock className="h-3.5 w-3.5 text-earning" />} />
+        <KpiCard value={shifts.length} label="Turnos del día" accent="primary" size="sm" icon={<Zap className="h-3.5 w-3.5 text-primary" />} />
+        <KpiCard value={totalPending} label="Sin confirmar" accent="warning" size="sm" icon={<AlertTriangle className="h-3.5 w-3.5 text-warning" />} />
+        <KpiCard value={totalAlerts} label="Alertas activas" accent={totalAlerts > 0 ? "deduction" : "muted"} size="sm" icon={<Bell className="h-3.5 w-3.5 text-deduction" />} />
+        <KpiCard value={criticalShifts} label="Turnos críticos" accent={criticalShifts > 0 ? "deduction" : "muted"} size="sm" icon={<XCircle className="h-3.5 w-3.5 text-deduction" />} />
+      </div>
+
+      {/* ─── Quick Actions Bar ─── */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/shifts")}>
+          <CalendarPlus className="h-3.5 w-3.5" /> Crear turno
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/invite-employees")}>
+          <Send className="h-3.5 w-3.5" /> Invitar empleado
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/timeclock")}>
+          <Clock className="h-3.5 w-3.5" /> Time Clock
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/live-map")}>
+          <MapPin className="h-3.5 w-3.5" /> Live Map
+        </Button>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-          {/* ─── Shift Table (2/3) ─── */}
-          <div className="xl:col-span-2 space-y-2">
-            <h2 className="text-sm font-bold flex items-center gap-2">
-              <Zap className="h-4 w-4 text-primary" /> Turnos ({filteredShifts.length})
-            </h2>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+          {/* ═══ LEFT: Main content (8 cols) ═══ */}
+          <div className="xl:col-span-8 space-y-4">
 
-            {filteredShifts.length === 0 ? (
-              <div className="rounded-2xl border border-border/30 bg-card p-8 text-center text-sm text-muted-foreground">
-                No hay turnos para esta fecha
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredShifts.map(s => {
-                  const risk = RISK_STYLES[s.risk_level];
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => loadDrawer(s.id)}
-                      className={cn(
-                        "w-full rounded-2xl border bg-card p-3 text-left transition-all hover:shadow-md hover:scale-[1.005] active:scale-[0.995]",
-                        s.risk_level === "critical" && "border-destructive/30",
-                        s.risk_level === "warning" && "border-warning/30",
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* Risk indicator */}
-                        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", risk.bg)}>
-                          {s.risk_level === "ok" ? <CheckCircle2 className={cn("h-5 w-5", risk.text)} /> :
-                           s.risk_level === "warning" ? <AlertTriangle className={cn("h-5 w-5", risk.text)} /> :
-                           <XCircle className={cn("h-5 w-5", risk.text)} />}
-                        </div>
+            {/* ── A. LIVE ALERTS ── */}
+            {alerts.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-destructive flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" /> Alertas en vivo ({alerts.length})
+                </h2>
+                <div className="space-y-1.5">
+                  {alerts.map(a => {
+                    const cfg = ALERT_CONFIG[a.type] ?? { emoji: "⚠️", label: a.type, color: "border-border/30" };
+                    return (
+                      <div key={a.id} className={cn("rounded-xl border p-3 flex items-start gap-3", cfg.color)}>
+                        {/* Avatar */}
+                        <Avatar className="h-9 w-9 shrink-0">
+                          {a.employee_avatar && <AvatarImage src={a.employee_avatar} />}
+                          <AvatarFallback className="text-[10px] font-bold bg-destructive/10 text-destructive">
+                            {a.employee_name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold truncate">{s.title}</p>
-                            {s.shift_code && <span className="text-[10px] text-muted-foreground">#{String(s.shift_code).padStart(4, "0")}</span>}
-                            <Badge variant="outline" className={cn("text-[9px]", risk.text)}>{risk.label}</Badge>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold">{a.employee_name}</span>
+                            <Badge variant={a.severity === "critical" ? "destructive" : "warning"} className="text-[8px] h-4">
+                              {cfg.emoji} {cfg.label}
+                            </Badge>
+                            {a.minutes_late != null && a.minutes_late > 0 && (
+                              <span className="text-[9px] text-destructive font-bold flex items-center gap-0.5">
+                                <Timer className="h-2.5 w-2.5" /> +{a.minutes_late}min
+                              </span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground">
-                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}</span>
-                            {s.client_name && <span className="flex items-center gap-1 truncate"><Building2 className="h-3 w-3" />{s.client_name}</span>}
-                            {s.location_name && <span className="flex items-center gap-1 truncate"><MapPin className="h-3 w-3" />{s.location_name}</span>}
-                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                            {a.shift_title}{a.client_name ? ` • ${a.client_name}` : ""}
+                          </p>
+                          <p className="text-[9px] text-muted-foreground/50">{format(new Date(a.created_at), "HH:mm")}</p>
                         </div>
 
-                        {/* Stats chips */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <div className="rounded-lg bg-muted/40 px-2 py-1 text-center">
-                            <p className="text-xs font-bold tabular-nums">{s.assigned}/{s.slots ?? 1}</p>
-                            <p className="text-[9px] text-muted-foreground">Asignados</p>
-                          </div>
-                          <div className="rounded-lg bg-earning/10 px-2 py-1 text-center">
-                            <p className="text-xs font-bold tabular-nums text-earning">{s.clocked_in}</p>
-                            <p className="text-[9px] text-muted-foreground">Fichados</p>
-                          </div>
-                          {s.pending > 0 && (
-                            <div className="rounded-lg bg-warning/10 px-2 py-1 text-center">
-                              <p className="text-xs font-bold tabular-nums text-warning">{s.pending}</p>
-                              <p className="text-[9px] text-muted-foreground">Pend.</p>
-                            </div>
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {a.phone_number && (
+                            <a href={`https://wa.me/${a.phone_number.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
+                              className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted/50 transition-colors" title="WhatsApp">
+                              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                            </a>
                           )}
-                          {s.transportation_required && (
-                            <Car className={cn("h-4 w-4", s.driver_employee_id ? "text-earning" : "text-destructive")} />
+                          {a.shift_id && (
+                            <Button size="sm" variant="default" className="h-7 text-[9px] gap-1 px-2" onClick={() => {
+                              const s = shifts.find(sh => sh.id === a.shift_id);
+                              if (s) openReplace(s);
+                            }}>
+                              <UserPlus className="h-3 w-3" /> Reemplazar
+                            </Button>
                           )}
-                          {s.shift_admin_id && <Shield className="h-4 w-4 text-primary" />}
+                          <Button size="sm" variant="ghost" className="h-7 text-[9px] px-2" onClick={() => resolveAlert(a.id)}>
+                            <CheckCircle2 className="h-3 w-3" />
+                          </Button>
                         </div>
-
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </section>
             )}
-          </div>
 
-          {/* ─── Alerts Panel (1/3) ─── */}
-          <div className="space-y-2">
-            <h2 className="text-sm font-bold flex items-center gap-2">
-              <Bell className="h-4 w-4 text-warning" /> Alertas ({alerts.length})
-            </h2>
+            {/* ── B. IN-PROGRESS SHIFTS ── */}
+            {inProgressShifts.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-earning flex items-center gap-1.5">
+                  <Activity className="h-3.5 w-3.5" /> En progreso ({inProgressShifts.length})
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {inProgressShifts.map(s => (
+                    <ShiftCard key={s.id} shift={s} onClick={() => loadDrawer(s.id)} onReplace={() => openReplace(s)} variant="in-progress" />
+                  ))}
+                </div>
+              </section>
+            )}
 
-            <ScrollArea className="h-[500px]">
-              {alerts.length === 0 ? (
-                <div className="rounded-2xl border border-border/30 bg-card p-6 text-center text-sm text-muted-foreground">
-                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-earning" />
-                  Sin alertas activas
+            {/* ── C. ALL DAY SHIFTS ── */}
+            <section className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 text-primary" /> Turnos del día ({filteredShifts.length})
+                </h2>
+                <div className="flex items-center gap-1.5">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                    <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-8 h-7 w-40 text-xs" />
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-7 w-auto min-w-[80px] text-[10px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="ok">✅ OK</SelectItem>
+                      <SelectItem value="warning">⚠️ Riesgo</SelectItem>
+                      <SelectItem value="critical">🔴 Crítico</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {filteredShifts.length === 0 ? (
+                <div className="rounded-2xl border border-border/30 bg-card p-8 text-center text-sm text-muted-foreground">
+                  No hay turnos para esta fecha
                 </div>
               ) : (
-                <div className="space-y-2 pr-2">
-                  {alerts.map(a => (
-                    <div key={a.id} className={cn(
-                      "rounded-xl border p-3 space-y-1.5",
-                      a.severity === "critical" ? "border-destructive/30 bg-destructive/[0.03]" : "border-warning/30 bg-warning/[0.03]",
-                    )}>
-                      <div className="flex items-start gap-2">
-                        <span className="text-base">{ALERT_ICONS[a.type] ?? "⚠️"}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold">{a.employee_name}</p>
-                          <p className="text-[10px] text-muted-foreground">{a.shift_title} • {a.type.replace(/_/g, " ")}</p>
-                          {a.description && <p className="text-[10px] text-muted-foreground mt-0.5">{a.description}</p>}
-                          <p className="text-[9px] text-muted-foreground/60 mt-1">{format(new Date(a.created_at), "HH:mm", { locale: es })}</p>
-                        </div>
-                        <Badge variant={a.severity === "critical" ? "destructive" : "warning"} className="text-[9px] shrink-0">
-                          {a.severity}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => resolveAlert(a.id)}>
-                          <CheckCircle2 className="h-3 w-3" /> Resolver
-                        </Button>
-                        {(a.type === "no_show" || a.type === "no_show_alert" || a.type === "no_clockin" || a.type === "no_clockin_alert") && a.shift_id && (
-                          <Button size="sm" variant="default" className="h-7 text-[10px] gap-1" onClick={() => {
-                            const s = shifts.find(sh => sh.id === a.shift_id);
-                            if (s) {
-                              setReplaceTarget({
-                                shiftId: s.id, shiftTitle: s.title, shiftDate: s.date,
-                                startTime: s.start_time, endTime: s.end_time,
-                                excludeIds: [],
-                              });
-                            }
-                          }}>
-                            <UserPlus className="h-3 w-3" /> Reemplazar
-                          </Button>
-                        )}
-                        <Button size="sm" variant="ghost" className="h-7 text-[10px] gap-1" onClick={() => a.shift_id && navigate(`/app/shift-ops?id=${a.shift_id}`)}>
-                          <Eye className="h-3 w-3" /> Ver turno
-                        </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {filteredShifts.map(s => (
+                    <ShiftCard key={s.id} shift={s} onClick={() => loadDrawer(s.id)} onReplace={() => openReplace(s)} />
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          {/* ═══ RIGHT: Activity Feed (4 cols) ═══ */}
+          <div className="xl:col-span-4 space-y-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Activity className="h-3.5 w-3.5" /> Actividad en tiempo real
+            </h2>
+            <ScrollArea className="h-[600px] rounded-2xl border border-border/30 bg-card">
+              {activityFeed.length === 0 ? (
+                <div className="p-6 text-center text-xs text-muted-foreground">Sin actividad hoy</div>
+              ) : (
+                <div className="divide-y divide-border/20">
+                  {activityFeed.map(ev => (
+                    <div key={ev.id} className="px-3 py-2.5 flex items-start gap-2.5 hover:bg-muted/20 transition-colors">
+                      <Avatar className="h-7 w-7 shrink-0 mt-0.5">
+                        {ev.employee_avatar && <AvatarImage src={ev.employee_avatar} />}
+                        <AvatarFallback className="text-[9px] font-bold bg-primary/10 text-primary">
+                          {ev.employee_name ? ev.employee_name.split(" ").map(n => n[0]).join("").slice(0, 2) : "📢"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-semibold truncate">{ev.title}</p>
+                        <p className="text-[10px] text-muted-foreground line-clamp-2">{ev.body}</p>
+                        <p className="text-[9px] text-muted-foreground/40 mt-0.5">{format(new Date(ev.created_at), "HH:mm")}</p>
                       </div>
                     </div>
                   ))}
@@ -519,9 +532,13 @@ export default function OperationsCommandCenter() {
       <Sheet open={!!selectedShiftId} onOpenChange={open => { if (!open) setSelectedShiftId(null); }}>
         <SheetContent className="w-full sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
+            <SheetTitle className="flex items-center gap-2 text-sm">
               {selectedShift?.title}
-              {selectedShift && <Badge variant="outline" className="text-[9px]">{RISK_STYLES[selectedShift.risk_level].label}</Badge>}
+              {selectedShift && (
+                <Badge variant="outline" className={cn("text-[9px]", RISK_STYLES[selectedShift.risk_level].text)}>
+                  {RISK_STYLES[selectedShift.risk_level].label}
+                </Badge>
+              )}
             </SheetTitle>
           </SheetHeader>
 
@@ -530,64 +547,45 @@ export default function OperationsCommandCenter() {
           ) : (
             <ScrollArea className="h-[calc(100vh-120px)] mt-4">
               <div className="space-y-4 pr-2">
-                {/* Shift meta */}
                 {selectedShift && (
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-xl bg-muted/30 p-2.5">
-                      <p className="text-[10px] text-muted-foreground">Horario</p>
-                      <p className="text-sm font-semibold">{selectedShift.start_time.slice(0, 5)} – {selectedShift.end_time.slice(0, 5)}</p>
-                    </div>
-                    <div className="rounded-xl bg-muted/30 p-2.5">
-                      <p className="text-[10px] text-muted-foreground">Plazas</p>
-                      <p className="text-sm font-semibold">{selectedShift.assigned} / {selectedShift.slots ?? 1}</p>
-                    </div>
-                    {selectedShift.client_name && (
-                      <div className="rounded-xl bg-muted/30 p-2.5">
-                        <p className="text-[10px] text-muted-foreground">Cliente</p>
-                        <p className="text-sm font-semibold truncate">{selectedShift.client_name}</p>
-                      </div>
-                    )}
-                    {selectedShift.location_name && (
-                      <div className="rounded-xl bg-muted/30 p-2.5">
-                        <p className="text-[10px] text-muted-foreground">Ubicación</p>
-                        <p className="text-sm font-semibold truncate">{selectedShift.location_name}</p>
-                      </div>
-                    )}
+                    <InfoCell label="Horario" value={`${selectedShift.start_time.slice(0, 5)} – ${selectedShift.end_time.slice(0, 5)}`} />
+                    <InfoCell label="Plazas" value={`${selectedShift.assigned} / ${selectedShift.slots ?? 1}`} />
+                    {selectedShift.client_name && <InfoCell label="Cliente" value={selectedShift.client_name} />}
+                    {selectedShift.location_name && <InfoCell label="Ubicación" value={selectedShift.location_name} />}
+                    {selectedShift.admin_name && <InfoCell label="Admin" value={selectedShift.admin_name} />}
                   </div>
                 )}
 
                 <Separator />
 
-                {/* Employee list */}
                 <h3 className="text-xs font-bold flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Equipo ({drawerAssignments.length})</h3>
-                <div className="space-y-1.5">
-                  {drawerAssignments.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">Sin asignaciones</p>
-                  ) : drawerAssignments.map(a => (
+                <div className="space-y-1">
+                  {drawerAssignments.map(a => (
                     <div key={a.id} className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors",
+                      "flex items-center gap-3 rounded-xl px-3 py-2 transition-colors",
                       a.clocked_in ? "bg-earning/[0.05]" : a.status === "rejected" ? "bg-destructive/[0.05]" : "bg-muted/20",
                     )}>
                       <Avatar className="h-8 w-8">
+                        {a.avatar_url && <AvatarImage src={a.avatar_url} />}
                         <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
-                          {a.first_name[0]}{a.last_name[0]}
+                          {a.first_name[0]}{a.last_name?.[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold truncate">{a.first_name} {a.last_name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {a.clocked_in && a.clock_in_time && (
-                            <span className="text-[9px] text-earning">Fichó {format(new Date(a.clock_in_time), "HH:mm")}</span>
-                          )}
-                        </div>
+                        {a.clocked_in && a.clock_in_time && (
+                          <span className="text-[9px] text-earning">Fichó {format(new Date(a.clock_in_time), "HH:mm")}</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
-                        {roleBadge(a.assignment_role)}
-                        {empStateBadge(a)}
+                        {a.assignment_role === "shift_admin" && <Badge variant="info" className="text-[8px]">🛡️</Badge>}
+                        {a.assignment_role === "driver" && <Badge variant="warning" className="text-[8px]">🚗</Badge>}
+                        {empBadge(a.status, a.clocked_in)}
                       </div>
                       {a.phone_number && (
                         <a href={`https://wa.me/${a.phone_number.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
-                          className="shrink-0 rounded-lg p-1.5 hover:bg-muted/50 transition-colors">
+                          className="shrink-0 rounded-lg p-1.5 hover:bg-muted/50">
                           <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                         </a>
                       )}
@@ -597,20 +595,13 @@ export default function OperationsCommandCenter() {
 
                 <Separator />
 
-                {/* Quick actions */}
                 {selectedShift && (
-                  <Button size="sm" className="w-full gap-2 text-xs" onClick={() => {
-                    setReplaceTarget({
-                      shiftId: selectedShift.id, shiftTitle: selectedShift.title, shiftDate: selectedShift.date,
-                      startTime: selectedShift.start_time, endTime: selectedShift.end_time,
-                      excludeIds: drawerAssignments.map(a => a.employee_id),
-                    });
-                  }}>
+                  <Button size="sm" className="w-full gap-2 text-xs" onClick={() => openReplace(selectedShift)}>
                     <UserPlus className="h-3.5 w-3.5" /> Buscar reemplazo
                   </Button>
                 )}
                 <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => { setSelectedShiftId(null); navigate(`/app/shift-ops?id=${selectedShiftId}`); }}>
-                  <Eye className="h-3.5 w-3.5" /> Abrir centro de operaciones del turno
+                  <Eye className="h-3.5 w-3.5" /> Abrir operaciones del turno
                 </Button>
               </div>
             </ScrollArea>
@@ -618,21 +609,102 @@ export default function OperationsCommandCenter() {
         </SheetContent>
       </Sheet>
 
-      {/* Replacement suggestion dialog */}
+      {/* Replacement dialog */}
       {replaceTarget && selectedCompanyId && (
         <ReplacementSuggestionDialog
           open={!!replaceTarget}
           onOpenChange={o => { if (!o) setReplaceTarget(null); }}
-          shiftId={replaceTarget.shiftId}
-          shiftTitle={replaceTarget.shiftTitle}
-          shiftDate={replaceTarget.shiftDate}
-          shiftStartTime={replaceTarget.startTime}
-          shiftEndTime={replaceTarget.endTime}
-          companyId={selectedCompanyId}
+          shiftId={replaceTarget.shiftId} shiftTitle={replaceTarget.shiftTitle}
+          shiftDate={replaceTarget.shiftDate} shiftStartTime={replaceTarget.startTime}
+          shiftEndTime={replaceTarget.endTime} companyId={selectedCompanyId}
           excludeEmployeeIds={replaceTarget.excludeIds}
           onAssigned={() => { loadData(); if (selectedShiftId) loadDrawer(selectedShiftId); }}
         />
       )}
+    </div>
+  );
+}
+
+// ─── Sub-components ───
+
+function ShiftCard({ shift: s, onClick, onReplace, variant }: {
+  shift: ShiftRow; onClick: () => void; onReplace: () => void; variant?: "in-progress";
+}) {
+  const risk = RISK_STYLES[s.risk_level];
+  const isInProgress = variant === "in-progress";
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full rounded-xl border bg-card p-3 text-left transition-all hover:shadow-md active:scale-[0.995]",
+        s.risk_level === "critical" && "border-destructive/25",
+        s.risk_level === "warning" && "border-warning/25",
+        isInProgress && "border-earning/20 bg-earning/[0.02]",
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        {/* Risk dot */}
+        <div className={cn("h-2 w-2 rounded-full mt-1.5 shrink-0", risk.dot)} />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-xs font-bold truncate">{s.title}</p>
+            {s.shift_code && <span className="text-[9px] text-muted-foreground/50">#{String(s.shift_code).padStart(4, "0")}</span>}
+            <Badge variant="outline" className={cn("text-[8px] h-4", risk.text)}>{risk.label}</Badge>
+          </div>
+
+          <div className="flex items-center gap-2.5 mt-1 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-0.5 font-medium tabular-nums">
+              <Clock className="h-2.5 w-2.5" />{s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
+            </span>
+            {s.client_name && <span className="flex items-center gap-0.5 truncate"><Building2 className="h-2.5 w-2.5" />{s.client_name}</span>}
+            {s.location_name && <span className="flex items-center gap-0.5 truncate"><MapPin className="h-2.5 w-2.5" />{s.location_name}</span>}
+          </div>
+
+          {/* Staff stats */}
+          <div className="flex items-center gap-2 mt-1.5">
+            <StatChip value={s.assigned} max={s.slots ?? 1} label="asignados" color="muted" />
+            <StatChip value={s.clocked_in} label="fichados" color="earning" />
+            {s.pending > 0 && <StatChip value={s.pending} label="pend." color="warning" />}
+            {s.transportation_required && (
+              <Car className={cn("h-3.5 w-3.5", s.driver_employee_id ? "text-earning" : "text-destructive")} />
+            )}
+            {s.admin_name && (
+              <span className="text-[9px] text-primary/70 flex items-center gap-0.5 ml-auto truncate max-w-[100px]">
+                <Shield className="h-2.5 w-2.5" />{s.admin_name.split(" ")[0]}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0 mt-1" />
+      </div>
+    </button>
+  );
+}
+
+function StatChip({ value, max, label, color }: { value: number; max?: number; label: string; color: string }) {
+  const colors = {
+    earning: "text-earning",
+    warning: "text-warning",
+    deduction: "text-destructive",
+    muted: "text-foreground",
+  };
+  return (
+    <span className={cn("text-[9px] font-medium", colors[color as keyof typeof colors] ?? "text-foreground")}>
+      <span className="font-bold tabular-nums">{value}</span>
+      {max != null && <span className="text-muted-foreground/40">/{max}</span>}
+      <span className="text-muted-foreground/60 ml-0.5">{label}</span>
+    </span>
+  );
+}
+
+function InfoCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-muted/30 p-2.5">
+      <p className="text-[10px] text-muted-foreground">{label}</p>
+      <p className="text-sm font-semibold truncate">{value}</p>
     </div>
   );
 }
