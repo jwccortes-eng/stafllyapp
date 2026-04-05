@@ -61,16 +61,20 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
   const hasEmail = !!employee.email;
 
+  const [companyMismatch, setCompanyMismatch] = useState(false);
+
   // Load or create invitation when dialog opens
   useEffect(() => {
     if (!open) return;
     setLiveToken(initialToken ?? null);
     setEmailSent(false);
+    setCompanyMismatch(false);
     if (!selectedCompanyId || !user?.id || !employee.id) return;
 
     // ─── SECURITY: Validate employee belongs to selected company ───
     if (employee.company_id && employee.company_id !== selectedCompanyId) {
-      console.error("[invite] company mismatch: employee=%s selected=%s", employee.company_id, selectedCompanyId);
+      console.error("[invite] BLOCKED: company mismatch — employee.company_id=%s selectedCompanyId=%s employee=%s", employee.company_id, selectedCompanyId, employee.id);
+      setCompanyMismatch(true);
       return;
     }
 
@@ -163,7 +167,11 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   // Resend: create new invitation
   const resendInvite = async () => {
     if (!selectedCompanyId || !user?.id || !employee.id) return;
-    if (employee.company_id && employee.company_id !== selectedCompanyId) return;
+    if (employee.company_id && employee.company_id !== selectedCompanyId) {
+      console.error("[invite] BLOCKED resend: company mismatch — employee.company_id=%s selectedCompanyId=%s", employee.company_id, selectedCompanyId);
+      toast({ title: "Error de seguridad", description: "Este empleado no pertenece a la empresa seleccionada.", variant: "destructive" });
+      return;
+    }
     setCreatingInvite(true);
     const { data, error } = await supabase
       .from("employee_invitations")
@@ -303,6 +311,19 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         </div>
 
         <div className="px-5 pb-5 space-y-4">
+          {/* SECURITY: Company mismatch block */}
+          {companyMismatch && (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-7 w-7 text-destructive" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">Error de empresa</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Este empleado pertenece a otra empresa. Cambia al contexto correcto antes de invitar.
+              </p>
+            </div>
+          )}
+
           {/* Accepted state */}
           {isAccepted && (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
@@ -314,7 +335,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             </div>
           )}
 
-          {!isAccepted && (
+          {!isAccepted && !companyMismatch && (
             <>
               {/* Readiness checklist */}
               <div className="rounded-lg border border-border/40 p-3 space-y-1.5">
