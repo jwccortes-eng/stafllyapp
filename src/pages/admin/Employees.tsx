@@ -954,6 +954,24 @@ export default function Employees() {
         onConfirm={handleDelete}
       />
 
+      {/* Archive Employee Dialog */}
+      {archiveTarget && (
+        <ArchiveEmployeeDialog
+          open={!!archiveTarget}
+          onOpenChange={(v) => { if (!v) setArchiveTarget(null); }}
+          employee={archiveTarget}
+          onArchived={() => { setArchiveTarget(null); setViewEmployee(null); fetchEmployees(); }}
+        />
+      )}
+
+      {/* Column Preferences */}
+      <ColumnPreferencesDialog
+        open={colPrefsOpen}
+        onOpenChange={setColPrefsOpen}
+        visibleColumns={visibleColumns}
+        onSave={savePreferences}
+      />
+
       {/* Audit */}
       <div className="mt-6">
         <AuditPanel entityType="employee" title="Actividad de empleados" hideViews compact />
