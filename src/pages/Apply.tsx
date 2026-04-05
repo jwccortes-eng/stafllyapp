@@ -96,24 +96,44 @@ export default function Apply() {
 
   // Load company + config
   useEffect(() => {
-    if (!companySlug) return;
-    (async () => {
-      // First check if company exists at all
-      const { data: coCheck } = await supabase
+    if (!companySlug) {
+      console.warn("[apply] no companySlug param");
+      setLoading(false);
+      return;
+    }
+    const loadCompany = async () => {
+      console.log("[apply] loading company with slug:", companySlug);
+      setLoading(true);
+      const { data: coCheck, error } = await supabase
         .from("companies")
         .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url, is_active, application_enabled")
-        .eq("slug", companySlug.toLowerCase())
+        .eq("slug", companySlug.toLowerCase().trim())
         .maybeSingle();
 
-      if (coCheck && (!coCheck.is_active || !coCheck.application_enabled)) {
+      console.log("[apply] result:", { data: coCheck, error });
+
+      if (error) {
+        console.error("[apply] error:", error);
+        setCompany(null);
+        setLoading(false);
+        return;
+      }
+
+      if (!coCheck) {
+        console.warn("[apply] no company found for slug:", companySlug);
+        setCompany(null);
+        setLoading(false);
+        return;
+      }
+
+      if (!coCheck.is_active || !coCheck.application_enabled) {
         setCompany(null);
         setApplicationDisabledCompany(coCheck.name);
         setLoading(false);
         return;
       }
 
-      const co = coCheck?.is_active && coCheck?.application_enabled ? coCheck : null;
-      setCompany(co);
+      setCompany(coCheck);
 
       if (co) {
         const { data: cfg } = await supabase
