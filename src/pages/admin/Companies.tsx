@@ -45,6 +45,7 @@ interface CompanyRecord {
   name: string;
   slug: string;
   is_active: boolean;
+  application_enabled: boolean;
   is_sandbox: boolean;
   invite_code: string;
   company_code: number | null;
@@ -112,7 +113,7 @@ export default function CompaniesPage() {
   const fetchCompanies = async () => {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color")
+      .select("id, name, slug, is_active, is_sandbox, invite_code, company_code, created_at, logo_url, brand_color, application_enabled")
       .order("company_code");
 
     if (!data) return;
