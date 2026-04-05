@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Search, MoreHorizontal, Pencil, Building2, Plus, Users, LayoutGrid,
   FlaskConical, Copy, Check, CreditCard, ChevronDown, ChevronRight,
