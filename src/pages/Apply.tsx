@@ -301,8 +301,19 @@ export default function Apply() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
         <StaflyMark size={48} />
-        <h1 className="text-xl font-heading font-bold mt-4 text-foreground">Empresa no encontrada</h1>
-        <p className="text-sm text-muted-foreground mt-2">El enlace que usaste no es válido o la empresa no está activa.</p>
+        {applicationDisabledCompany ? (
+          <>
+            <h1 className="text-xl font-heading font-bold mt-4 text-foreground">Aplicaciones cerradas</h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+              <strong>{applicationDisabledCompany}</strong> no está aceptando aplicaciones en este momento. Intenta más tarde o contacta a la empresa directamente.
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-xl font-heading font-bold mt-4 text-foreground">Empresa no encontrada</h1>
+            <p className="text-sm text-muted-foreground mt-2">El enlace que usaste no es válido o la empresa no existe.</p>
+          </>
+        )}
       </div>
     );
   }
