@@ -280,11 +280,17 @@ export default function Employees() {
   };
 
   const toggleActive = async (emp: EmployeeRecord) => {
-    const { error } = await supabase.from("employees").update({ is_active: !emp.is_active }).eq("id", emp.id);
+    if (emp.is_active) {
+      // Deactivating → open archive dialog with mandatory reason
+      setArchiveTarget(emp);
+      return;
+    }
+    // Reactivating
+    const { error } = await supabase.from("employees").update({ is_active: true }).eq("id", emp.id);
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: emp.is_active ? "Empleado desactivado" : "Empleado activado" });
+      toast({ title: "Empleado activado" });
       fetchEmployees();
     }
   };
