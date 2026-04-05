@@ -281,16 +281,30 @@ export default function Employees() {
 
   const toggleActive = async (emp: EmployeeRecord) => {
     if (emp.is_active) {
-      // Deactivating → open archive dialog with mandatory reason
       setArchiveTarget(emp);
       return;
     }
-    // Reactivating
+    // Reactivating — check rehire eligibility first
+    const { data: archiveRec } = await supabase
+      .from("employee_archive_records" as any)
+      .select("eligible_for_rehire, reason, notes")
+      .eq("employee_id", emp.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single() as any;
+
+    if (archiveRec && archiveRec.eligible_for_rehire === false) {
+      const proceed = window.confirm(
+        `⚠️ ALERTA: ${emp.first_name} ${emp.last_name} fue marcado como NO RECONTRATABLE.\n\nMotivo: ${archiveRec.reason}\n${archiveRec.notes ? `Notas: ${archiveRec.notes}` : ""}\n\n¿Deseas reactivar de todos modos?`
+      );
+      if (!proceed) return;
+    }
+
     const { error } = await supabase.from("employees").update({ is_active: true }).eq("id", emp.id);
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado activado" });
+      toast({ title: "Empleado reactivado" });
       fetchEmployees();
     }
   };
