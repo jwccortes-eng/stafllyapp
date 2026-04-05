@@ -173,7 +173,7 @@ function App() {
               <Route path="/apply/:companySlug" element={<Apply />} />
               <Route path="/join/:inviteCode" element={<JoinCompany />} />
               <Route path="/invite" element={<AcceptInvite />} />
-
+              <Route path="/activate/:token" element={<ActivateAccount />} />
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
