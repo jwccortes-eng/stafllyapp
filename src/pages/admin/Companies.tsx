@@ -534,6 +534,19 @@ export default function CompaniesPage() {
                                 <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Tipo</p>
                                 <p className="text-sm">{c.is_sandbox ? "🧪 Sandbox" : "Producción"}</p>
                               </div>
+                              <div className="space-y-1">
+                                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Recibir aplicaciones</p>
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={c.application_enabled}
+                                    onCheckedChange={async (v) => {
+                                      await supabase.from("companies").update({ application_enabled: v } as any).eq("id", c.id);
+                                      fetchCompanies();
+                                    }}
+                                  />
+                                  <span className="text-xs text-muted-foreground">{c.application_enabled ? "Activo" : "Desactivado"}</span>
+                                </div>
+                              </div>
                             </div>
                           </TabsContent>
 
