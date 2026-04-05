@@ -597,7 +597,18 @@ export default function OperationsCommandCenter() {
 
                 <Separator />
 
-                {/* Quick action */}
+                {/* Quick actions */}
+                {selectedShift && (
+                  <Button size="sm" className="w-full gap-2 text-xs" onClick={() => {
+                    setReplaceTarget({
+                      shiftId: selectedShift.id, shiftTitle: selectedShift.title, shiftDate: selectedShift.date,
+                      startTime: selectedShift.start_time, endTime: selectedShift.end_time,
+                      excludeIds: drawerAssignments.map(a => a.employee_id),
+                    });
+                  }}>
+                    <UserPlus className="h-3.5 w-3.5" /> Buscar reemplazo
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => { setSelectedShiftId(null); navigate(`/app/shift-ops?id=${selectedShiftId}`); }}>
                   <Eye className="h-3.5 w-3.5" /> Abrir centro de operaciones del turno
                 </Button>
@@ -606,6 +617,22 @@ export default function OperationsCommandCenter() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Replacement suggestion dialog */}
+      {replaceTarget && selectedCompanyId && (
+        <ReplacementSuggestionDialog
+          open={!!replaceTarget}
+          onOpenChange={o => { if (!o) setReplaceTarget(null); }}
+          shiftId={replaceTarget.shiftId}
+          shiftTitle={replaceTarget.shiftTitle}
+          shiftDate={replaceTarget.shiftDate}
+          shiftStartTime={replaceTarget.startTime}
+          shiftEndTime={replaceTarget.endTime}
+          companyId={selectedCompanyId}
+          excludeEmployeeIds={replaceTarget.excludeIds}
+          onAssigned={() => { loadData(); if (selectedShiftId) loadDrawer(selectedShiftId); }}
+        />
+      )}
     </div>
   );
 }
