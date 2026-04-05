@@ -311,6 +311,19 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         </div>
 
         <div className="px-5 pb-5 space-y-4">
+          {/* SECURITY: Company mismatch block */}
+          {companyMismatch && (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-7 w-7 text-destructive" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">Error de empresa</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Este empleado pertenece a otra empresa. Cambia al contexto correcto antes de invitar.
+              </p>
+            </div>
+          )}
+
           {/* Accepted state */}
           {isAccepted && (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
