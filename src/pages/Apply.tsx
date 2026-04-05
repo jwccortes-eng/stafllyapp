@@ -96,67 +96,86 @@ export default function Apply() {
 
   // Load company + config
   useEffect(() => {
-    if (!companySlug) return;
-    (async () => {
-      // First check if company exists at all
-      const { data: coCheck } = await supabase
+    if (!companySlug) {
+      console.warn("[apply] no companySlug param");
+      setLoading(false);
+      return;
+    }
+    const loadCompany = async () => {
+      console.log("[apply] loading company with slug:", companySlug);
+      setLoading(true);
+      const { data: coCheck, error } = await supabase
         .from("companies")
         .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url, is_active, application_enabled")
-        .eq("slug", companySlug.toLowerCase())
+        .eq("slug", companySlug.toLowerCase().trim())
         .maybeSingle();
 
-      if (coCheck && (!coCheck.is_active || !coCheck.application_enabled)) {
+      console.log("[apply] result:", { data: coCheck, error });
+
+      if (error) {
+        console.error("[apply] error:", error);
+        setCompany(null);
+        setLoading(false);
+        return;
+      }
+
+      if (!coCheck) {
+        console.warn("[apply] no company found for slug:", companySlug);
+        setCompany(null);
+        setLoading(false);
+        return;
+      }
+
+      if (!coCheck.is_active || !coCheck.application_enabled) {
         setCompany(null);
         setApplicationDisabledCompany(coCheck.name);
         setLoading(false);
         return;
       }
 
-      const co = coCheck?.is_active && coCheck?.application_enabled ? coCheck : null;
-      setCompany(co);
+      setCompany(coCheck);
 
-      if (co) {
-        const { data: cfg } = await supabase
-          .from("application_configs")
-          .select("*")
-          .eq("company_id", co.id)
-          .maybeSingle();
-        if (cfg) {
-          setConfig({
-            require_email: cfg.require_email,
-            require_document: cfg.require_document,
-            require_emergency_contact: cfg.require_emergency_contact,
-            allow_file_uploads: cfg.allow_file_uploads,
-            visible_worker_types: (cfg.visible_worker_types as string[]) ?? DEFAULT_CONFIG.visible_worker_types,
-            intro_text: cfg.intro_text,
-            cover_image_url: cfg.cover_image_url,
-          });
-        }
-        // Restore draft
-        if (draftKey) {
-          try {
-            const saved = localStorage.getItem(draftKey);
-            if (saved) {
-              const d = JSON.parse(saved);
-              if (d.firstName) setFirstName(d.firstName);
-              if (d.lastName) setLastName(d.lastName);
-              if (d.phone) setPhone(d.phone);
-              if (d.email) setEmail(d.email);
-              if (d.workerType) setWorkerType(d.workerType);
-              if (d.city) setCity(d.city);
-              if (d.availability) setAvailability(d.availability);
-              if (d.hasCar) setHasCar(d.hasCar);
-              if (d.canTravel) setCanTravel(d.canTravel);
-              if (d.emergencyContact) setEmergencyContact(d.emergencyContact);
-              if (d.experienceSummary) setExperienceSummary(d.experienceSummary);
-              if (d.languages) setLanguages(d.languages);
-              if (d.step && d.step > 0 && d.step < 5) setStep(d.step);
-            }
-          } catch { /* ignore */ }
-        }
+      const { data: cfg } = await supabase
+        .from("application_configs")
+        .select("*")
+        .eq("company_id", coCheck.id)
+        .maybeSingle();
+      if (cfg) {
+        setConfig({
+          require_email: cfg.require_email,
+          require_document: cfg.require_document,
+          require_emergency_contact: cfg.require_emergency_contact,
+          allow_file_uploads: cfg.allow_file_uploads,
+          visible_worker_types: (cfg.visible_worker_types as string[]) ?? DEFAULT_CONFIG.visible_worker_types,
+          intro_text: cfg.intro_text,
+          cover_image_url: cfg.cover_image_url,
+        });
+      }
+      // Restore draft
+      if (draftKey) {
+        try {
+          const saved = localStorage.getItem(draftKey);
+          if (saved) {
+            const d = JSON.parse(saved);
+            if (d.firstName) setFirstName(d.firstName);
+            if (d.lastName) setLastName(d.lastName);
+            if (d.phone) setPhone(d.phone);
+            if (d.email) setEmail(d.email);
+            if (d.workerType) setWorkerType(d.workerType);
+            if (d.city) setCity(d.city);
+            if (d.availability) setAvailability(d.availability);
+            if (d.hasCar) setHasCar(d.hasCar);
+            if (d.canTravel) setCanTravel(d.canTravel);
+            if (d.emergencyContact) setEmergencyContact(d.emergencyContact);
+            if (d.experienceSummary) setExperienceSummary(d.experienceSummary);
+            if (d.languages) setLanguages(d.languages);
+            if (d.step && d.step > 0 && d.step < 5) setStep(d.step);
+          }
+        } catch { /* ignore */ }
       }
       setLoading(false);
-    })();
+    };
+    loadCompany();
   }, [companySlug]);
 
   // Autosave draft
