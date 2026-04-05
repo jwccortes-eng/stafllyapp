@@ -544,6 +544,14 @@ export default function Employees() {
         <div>
           <h1 className="text-xl font-bold font-heading tracking-tight">Empleados</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{employees.length} registrados · {statusCounts.active} activos · {statusCounts.invited > 0 ? <span className="text-primary font-medium">{statusCounts.invited} invitados</span> : null}{statusCounts.invited > 0 && statusCounts.pending > 0 ? " · " : ""}{statusCounts.pending > 0 ? <span className="text-warning font-medium">{statusCounts.pending} sin portal</span> : null}</p>
+          {/* ─── DEBUG: Company context badge (temporary migration tool) ─── */}
+          {selectedCompany && (
+            <div className="mt-1 inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
+              <Building2 className="h-3 w-3" />
+              <span className="font-semibold text-foreground">{selectedCompany.name}</span>
+              <span className="text-muted-foreground/60">({selectedCompanyId?.slice(0, 8)}…)</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {isPrivileged && (
