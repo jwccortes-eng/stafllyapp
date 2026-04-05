@@ -900,6 +900,9 @@ export default function Employees() {
               <div className="flex-1 min-w-0 pt-0.5">
                 <SheetTitle className="text-base font-bold leading-tight">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  {viewEmployee?.employer_identification && (
+                    <Badge variant="outline" className="text-[9px] py-0 font-mono">#{viewEmployee.employer_identification}</Badge>
+                  )}
                   {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[10px] py-0">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
                   {viewEmployee && <EmpStatusBadge employee={viewEmployee} invitation={invitations[viewEmployee.id]} />}
                 </div>
@@ -918,7 +921,7 @@ export default function Employees() {
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setInviteOpen(true)}><Send className="h-3 w-3 mr-1" />Invitar</Button>
               <div className="ml-auto flex items-center gap-0.5">
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
-                  {viewEmployee?.is_active ? <><UserX className="h-3 w-3 mr-1" />Desactivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
+                  {viewEmployee?.is_active ? <><Archive className="h-3 w-3 mr-1" />Archivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
                 </Button>
                 <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => { if (viewEmployee) { setDeleteTarget(viewEmployee); setPasswordOpen(true); setViewEmployee(null); } }}>
                   <Trash2 className="h-3 w-3" />
