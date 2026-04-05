@@ -61,16 +61,20 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
   const hasEmail = !!employee.email;
 
+  const [companyMismatch, setCompanyMismatch] = useState(false);
+
   // Load or create invitation when dialog opens
   useEffect(() => {
     if (!open) return;
     setLiveToken(initialToken ?? null);
     setEmailSent(false);
+    setCompanyMismatch(false);
     if (!selectedCompanyId || !user?.id || !employee.id) return;
 
     // ─── SECURITY: Validate employee belongs to selected company ───
     if (employee.company_id && employee.company_id !== selectedCompanyId) {
-      console.error("[invite] company mismatch: employee=%s selected=%s", employee.company_id, selectedCompanyId);
+      console.error("[invite] BLOCKED: company mismatch — employee.company_id=%s selectedCompanyId=%s employee=%s", employee.company_id, selectedCompanyId, employee.id);
+      setCompanyMismatch(true);
       return;
     }
 
