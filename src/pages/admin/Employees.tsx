@@ -684,6 +684,9 @@ export default function Employees() {
         )}
         {activeFilterCount > 0 && <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground px-2" onClick={clearFilters}><X className="h-3 w-3 mr-1" />Limpiar</Button>}
         <div className="ml-auto flex items-center gap-1.5">
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)}>
+            <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
           <span className="text-[10px] text-muted-foreground tabular-nums">{filtered.length}</span>
           <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
             <button className={cn("h-7 w-7 flex items-center justify-center transition-colors", viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/40 hover:bg-muted/50")} onClick={() => setViewMode("list")}><List className="h-3 w-3" /></button>
