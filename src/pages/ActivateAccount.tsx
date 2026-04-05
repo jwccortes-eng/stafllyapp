@@ -10,16 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import {
   Loader2, CheckCircle2, XCircle, Clock, Shield, Camera, ArrowRight, ArrowLeft,
   Building2, Sparkles, Phone, KeyRound, MapPin, Globe, Heart, Car, User,
+  FileText, Upload, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PageState = "loading" | "valid" | "expired" | "used" | "invalid";
-type WizardStep = "welcome" | "pin" | "personal" | "address" | "details" | "photo" | "ready";
+type WizardStep = "welcome" | "pin" | "personal" | "address" | "details" | "documents" | "photo" | "ready";
 
-const STEPS: WizardStep[] = ["welcome", "pin", "personal", "address", "details", "photo", "ready"];
+const BASE_STEPS: WizardStep[] = ["welcome", "pin", "personal", "address", "details", "photo", "ready"];
+const STEPS_WITH_DOCS: WizardStep[] = ["welcome", "pin", "personal", "address", "details", "documents", "photo", "ready"];
+
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
   "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
@@ -83,10 +87,21 @@ export default function ActivateAccount() {
     languages: [], emergency_contact_name: "", emergency_contact_phone: "",
     can_drive: false, has_vehicle: false, ssn: "",
   });
-  const fileRef = useRef<HTMLInputElement>(null);
 
-  const stepIndex = STEPS.indexOf(wizardStep);
-  const totalSteps = STEPS.length;
+  // Document uploads for vehicle owners
+  const [driverLicenseFile, setDriverLicenseFile] = useState<File | null>(null);
+  const [driverLicensePreview, setDriverLicensePreview] = useState<string | null>(null);
+  const [vehicleRegFile, setVehicleRegFile] = useState<File | null>(null);
+  const [vehicleRegPreview, setVehicleRegPreview] = useState<string | null>(null);
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const driverLicenseRef = useRef<HTMLInputElement>(null);
+  const vehicleRegRef = useRef<HTMLInputElement>(null);
+
+  // Dynamic steps based on has_vehicle
+  const steps = profileForm.has_vehicle ? STEPS_WITH_DOCS : BASE_STEPS;
+  const stepIndex = steps.indexOf(wizardStep);
+  const totalVisibleSteps = steps.filter(s => s !== "ready").length;
 
   const updateForm = (key: keyof ProfileForm, value: any) => {
     setProfileForm(prev => ({ ...prev, [key]: value }));
@@ -121,7 +136,7 @@ export default function ActivateAccount() {
           .eq("id", data.id) as any);
       }
 
-      // ─── SECURITY: Use invitation's company_id as authoritative source ───
+      // SECURITY: Use invitation's company_id as authoritative source
       const invitationCompanyId = data.company_id;
       if (!invitationCompanyId) { setPageState("invalid"); return; }
 
@@ -133,14 +148,14 @@ export default function ActivateAccount() {
 
       if (!emp) { setPageState("invalid"); return; }
 
-      // ─── SECURITY: Validate employee belongs to the invitation's company ───
+      // SECURITY: Validate employee belongs to the invitation's company
       if (emp.company_id !== invitationCompanyId) {
         console.error("[activate] company_id mismatch: invitation=%s employee=%s", invitationCompanyId, emp.company_id);
         setPageState("invalid");
         return;
       }
 
-      // ─── Fetch branding from the INVITATION's company, not heuristic ───
+      // Fetch branding from the INVITATION's company
       const { data: co } = await supabase
         .from("companies")
         .select("name, logo_url, brand_color")
@@ -191,24 +206,32 @@ export default function ActivateAccount() {
     setWizardStep("personal");
   };
 
-  // ─── Photo handler ───
+  // ─── File handlers ───
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     if (!f.type.startsWith("image/")) return;
-    if (f.size > 5 * 1024 * 1024) {
-      setError("Imagen demasiado grande. Máximo 5 MB.");
-      return;
-    }
+    if (f.size > 5 * 1024 * 1024) { setError("Imagen demasiado grande. Máximo 5 MB."); return; }
     setAvatarFile(f);
     setAvatarPreview(URL.createObjectURL(f));
     setError("");
   };
 
+  const handleDocSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "license" | "registration") => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 10 * 1024 * 1024) { setError("Archivo demasiado grande. Máximo 10 MB."); return; }
+    const preview = f.type.startsWith("image/") ? URL.createObjectURL(f) : f.name;
+    if (type === "license") { setDriverLicenseFile(f); setDriverLicensePreview(preview); }
+    else { setVehicleRegFile(f); setVehicleRegPreview(preview); }
+    setError("");
+  };
+
   // ─── Validation ───
-  const isPersonalValid = profileForm.first_name.trim() && profileForm.last_name.trim() && profileForm.email.trim() && profileForm.date_of_birth;
+  const isPersonalValid = profileForm.first_name.trim() && profileForm.last_name.trim() && profileForm.email.trim() && profileForm.date_of_birth && profileForm.ssn.replace(/\D/g, "").length >= 4;
   const isAddressValid = profileForm.address_line.trim() && profileForm.address_city.trim() && profileForm.address_state && profileForm.address_zip.trim().length >= 5;
-  const isDetailsValid = profileForm.emergency_contact_name.trim() && profileForm.emergency_contact_phone.trim() && profileForm.ssn.replace(/\D/g, "").length >= 4;
+  const isDetailsValid = profileForm.emergency_contact_name.trim() && profileForm.emergency_contact_phone.trim();
+  const isDocsValid = !profileForm.has_vehicle || (!!driverLicenseFile && !!vehicleRegFile);
 
   // ─── Save progress ───
   const saveProgress = async () => {
@@ -226,16 +249,55 @@ export default function ActivateAccount() {
       emergency_contact_phone: profileForm.emergency_contact_phone.trim() || null,
       can_drive: profileForm.can_drive,
       has_vehicle: profileForm.has_vehicle,
+      languages: profileForm.languages.length > 0 ? profileForm.languages : null,
       onboarding_status: "incomplete",
     };
 
-    // SSN: only store last 4 digits
     if (profileForm.ssn.trim()) {
       const digits = profileForm.ssn.replace(/\D/g, "");
       updates.ssn_last4 = digits.slice(-4);
     }
 
     await supabase.from("employees").update(updates as any).eq("id", invite.employee_id);
+  };
+
+  // ─── Upload documents ───
+  const uploadDocuments = async (): Promise<boolean> => {
+    if (!invite || !profileForm.has_vehicle) return true;
+    if (!driverLicenseFile || !vehicleRegFile) return false;
+
+    const uploadDoc = async (file: File, docType: string) => {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${invite.employee_id}/${docType}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("employee-documents")
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("employee-documents").getPublicUrl(path);
+      return urlData.publicUrl;
+    };
+
+    try {
+      const licenseUrl = await uploadDoc(driverLicenseFile, "driver_license");
+      const regUrl = await uploadDoc(vehicleRegFile, "vehicle_registration");
+
+      // Save document records
+      for (const doc of [
+        { document_type: "driver_license", file_url: licenseUrl, file_name: driverLicenseFile.name },
+        { document_type: "vehicle_registration", file_url: regUrl, file_name: vehicleRegFile.name },
+      ]) {
+        await supabase.from("employee_onboarding_documents" as any).upsert({
+          employee_id: invite.employee_id,
+          company_id: invite.company_id,
+          ...doc,
+          status: "pending",
+        } as any, { onConflict: "employee_id,document_type" });
+      }
+      return true;
+    } catch (err: any) {
+      setError("Error al subir documentos: " + (err?.message || "Intenta de nuevo."));
+      return false;
+    }
   };
 
   // ─── Activate ───
@@ -245,8 +307,13 @@ export default function ActivateAccount() {
     setError("");
 
     try {
-      // Save all profile data first
       await saveProgress();
+
+      // Upload vehicle documents if required
+      if (profileForm.has_vehicle) {
+        const docsOk = await uploadDocuments();
+        if (!docsOk) { setBusy(false); return; }
+      }
 
       let avatarUrl: string | undefined;
       if (avatarFile) {
@@ -261,14 +328,8 @@ export default function ActivateAccount() {
         }
       }
 
-      // Activate via edge function
       const { data, error: fnErr } = await supabase.functions.invoke("employee-auth", {
-        body: {
-          action: "activate",
-          phone: invite.employee_phone,
-          pin: pin,
-          avatar_url: avatarUrl,
-        },
+        body: { action: "activate", phone: invite.employee_phone, pin, avatar_url: avatarUrl },
       });
 
       if (fnErr || data?.error) {
@@ -277,7 +338,6 @@ export default function ActivateAccount() {
         return;
       }
 
-      // Mark invitation accepted + onboarding complete
       await (supabase.from("employee_invitations" as any)
         .update({ status: "accepted", accepted_at: new Date().toISOString() })
         .eq("id", invite.id) as any);
@@ -310,16 +370,16 @@ export default function ActivateAccount() {
     : "";
 
   const goBack = () => {
-    const idx = STEPS.indexOf(wizardStep);
-    if (idx > 0) setWizardStep(STEPS[idx - 1]);
+    const idx = steps.indexOf(wizardStep);
+    if (idx > 0) setWizardStep(steps[idx - 1]);
   };
 
   const goNext = async () => {
-    const idx = STEPS.indexOf(wizardStep);
-    if (wizardStep === "personal" || wizardStep === "address" || wizardStep === "details") {
+    const idx = steps.indexOf(wizardStep);
+    if (["personal", "address", "details"].includes(wizardStep)) {
       await saveProgress();
     }
-    if (idx < STEPS.length - 1) setWizardStep(STEPS[idx + 1]);
+    if (idx < steps.length - 1) setWizardStep(steps[idx + 1]);
   };
 
   // ─── Error / expired / used states ───
@@ -347,18 +407,12 @@ export default function ActivateAccount() {
       <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-b from-background to-muted/20 p-4">
         <div className="w-full max-w-sm">
           <div className="bg-card rounded-3xl border border-border/50 shadow-xl overflow-hidden">
-            <div className="px-8 pt-8 pb-4 flex flex-col items-center">
-              <StaflyLogo size={28} />
-            </div>
+            <div className="px-8 pt-8 pb-4 flex flex-col items-center"><StaflyLogo size={28} /></div>
             <div className="px-8 pb-8 flex flex-col items-center gap-4 text-center">
-              <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center">
-                {cfg.icon}
-              </div>
+              <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center">{cfg.icon}</div>
               <h2 className="text-xl font-bold text-foreground">{cfg.title}</h2>
               <p className="text-sm text-muted-foreground max-w-[280px]">{cfg.desc}</p>
-              <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl mt-2">
-                Ir a iniciar sesión
-              </Button>
+              <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl mt-2">Ir a iniciar sesión</Button>
             </div>
           </div>
         </div>
@@ -390,28 +444,18 @@ export default function ActivateAccount() {
                 <Building2 className="h-6 w-6 text-primary" />
               </div>
             )}
-            <span className="text-xs font-semibold text-muted-foreground tracking-wide">
-              {invite?.company_name}
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground tracking-wide">{invite?.company_name}</span>
           </div>
 
           {/* Progress bar */}
           {wizardStep !== "ready" && (
             <div className="px-6 pt-4">
               <div className="flex items-center gap-1">
-                {STEPS.filter(s => s !== "ready").map((s, i) => (
-                  <div
-                    key={s}
-                    className={cn(
-                      "h-1 rounded-full flex-1 transition-all duration-500",
-                      i <= stepIndex ? "bg-primary" : "bg-border"
-                    )}
-                  />
+                {steps.filter(s => s !== "ready").map((s, i) => (
+                  <div key={s} className={cn("h-1 rounded-full flex-1 transition-all duration-500", i <= stepIndex ? "bg-primary" : "bg-border")} />
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">
-                Paso {stepIndex + 1} de {totalSteps - 1}
-              </p>
+              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">Paso {stepIndex + 1} de {totalVisibleSteps}</p>
             </div>
           )}
 
@@ -425,9 +469,7 @@ export default function ActivateAccount() {
                     <h2 className="text-xl font-bold text-foreground">
                       ¡Hola{invite.employee_first_name ? `, ${invite.employee_first_name}` : ""}!
                     </h2>
-                    <p className="text-sm text-muted-foreground">
-                      Completa tu perfil para activar tu portal de empleado
-                    </p>
+                    <p className="text-sm text-muted-foreground">Completa tu perfil para activar tu portal de empleado</p>
                   </div>
 
                   <div className="rounded-xl border border-border/50 bg-muted/20 divide-y divide-border/30">
@@ -449,16 +491,14 @@ export default function ActivateAccount() {
                       <KeyRound className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-muted-foreground">Pasos requeridos</p>
-                        <p className="text-sm font-medium text-foreground">PIN → Perfil → Dirección → Foto</p>
+                        <p className="text-sm font-medium text-foreground">PIN → Perfil → Dirección → Detalles → Foto</p>
                       </div>
                     </div>
                   </div>
 
                   <Button onClick={() => setWizardStep("pin")} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
-                    Comenzar activación
-                    <ArrowRight className="h-4 w-4" />
+                    Comenzar activación <ArrowRight className="h-4 w-4" />
                   </Button>
-
                   <div className="flex items-center gap-1.5 justify-center">
                     <Shield className="h-3 w-3 text-muted-foreground/40" />
                     <p className="text-[10px] text-muted-foreground/50">Tu información está protegida</p>
@@ -477,16 +517,11 @@ export default function ActivateAccount() {
                       {pinPhase === "create" ? "Elige un PIN de 4 dígitos para acceder" : "Ingresa el mismo PIN para confirmar"}
                     </p>
                   </div>
-
                   <div className="flex items-center justify-center gap-2">
-                    <div className={cn("h-1.5 rounded-full transition-all duration-300",
-                      pinPhase === "create" ? "w-10 bg-primary" : "w-5 bg-primary/30")} />
-                    <div className={cn("h-1.5 rounded-full transition-all duration-300",
-                      pinPhase === "confirm" ? "w-10 bg-primary" : "w-5 bg-border")} />
+                    <div className={cn("h-1.5 rounded-full transition-all duration-300", pinPhase === "create" ? "w-10 bg-primary" : "w-5 bg-primary/30")} />
+                    <div className={cn("h-1.5 rounded-full transition-all duration-300", pinPhase === "confirm" ? "w-10 bg-primary" : "w-5 bg-border")} />
                   </div>
-
                   {error && <p className="text-xs text-destructive text-center font-medium">{error}</p>}
-
                   {pinPhase === "create" ? (
                     <NumericKeypad value={pin} maxLength={4} onChange={setPin} onComplete={handlePinCreate} />
                   ) : (
@@ -503,7 +538,6 @@ export default function ActivateAccount() {
                     <h2 className="text-lg font-bold">Información personal</h2>
                     <p className="text-xs text-muted-foreground">Datos básicos requeridos</p>
                   </div>
-
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
@@ -515,38 +549,30 @@ export default function ActivateAccount() {
                         <Input value={profileForm.last_name} onChange={e => updateForm("last_name", e.target.value)} placeholder="García" className="h-9 text-sm" />
                       </div>
                     </div>
-
                     <div className="space-y-1">
                       <Label className="text-xs">Email <span className="text-destructive">*</span></Label>
                       <Input type="email" value={profileForm.email} onChange={e => updateForm("email", e.target.value)} placeholder="juan@email.com" className="h-9 text-sm" />
                     </div>
-
                     <div className="space-y-1">
                       <Label className="text-xs">Fecha de nacimiento <span className="text-destructive">*</span></Label>
                       <Input type="date" value={profileForm.date_of_birth} onChange={e => updateForm("date_of_birth", e.target.value)} className="h-9 text-sm" />
                     </div>
-
                     <div className="space-y-1">
-                      <Label className="text-xs">SSN <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">SSN (últimos 4 dígitos mínimo) <span className="text-destructive">*</span></Label>
                       <Input
                         type="password"
                         value={profileForm.ssn}
                         onChange={e => updateForm("ssn", e.target.value.replace(/[^0-9-]/g, ""))}
-                        placeholder="XXX-XX-XXXX"
+                        placeholder="XXX-XX-XXXX o últimos 4 dígitos"
                         maxLength={11}
                         className="h-9 text-sm font-mono"
                       />
-                      <p className="text-[9px] text-muted-foreground/60">Solo se guardan los últimos 4 dígitos. Dato encriptado.</p>
+                      <p className="text-[9px] text-muted-foreground/60">Solo se guardan los últimos 4 dígitos. Tu información está protegida.</p>
                     </div>
                   </div>
-
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1">
-                      <ArrowLeft className="h-4 w-4" /> Atrás
-                    </Button>
-                    <Button onClick={goNext} disabled={!isPersonalValid} className="flex-1 h-10 rounded-xl gap-1">
-                      Siguiente <ArrowRight className="h-4 w-4" />
-                    </Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
+                    <Button onClick={goNext} disabled={!isPersonalValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -559,13 +585,11 @@ export default function ActivateAccount() {
                     <h2 className="text-lg font-bold">Dirección</h2>
                     <p className="text-xs text-muted-foreground">Dirección completa requerida</p>
                   </div>
-
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <Label className="text-xs">Dirección <span className="text-destructive">*</span></Label>
                       <Input value={profileForm.address_line} onChange={e => updateForm("address_line", e.target.value)} placeholder="123 Main St, Apt 4" className="h-9 text-sm" />
                     </div>
-
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-xs">Ciudad <span className="text-destructive">*</span></Label>
@@ -579,26 +603,14 @@ export default function ActivateAccount() {
                         </Select>
                       </div>
                     </div>
-
                     <div className="space-y-1">
                       <Label className="text-xs">ZIP Code <span className="text-destructive">*</span></Label>
-                      <Input
-                        value={profileForm.address_zip}
-                        onChange={e => updateForm("address_zip", e.target.value.replace(/\D/g, "").slice(0, 5))}
-                        placeholder="33101"
-                        maxLength={5}
-                        className="h-9 text-sm w-32"
-                      />
+                      <Input value={profileForm.address_zip} onChange={e => updateForm("address_zip", e.target.value.replace(/\D/g, "").slice(0, 5))} placeholder="33101" maxLength={5} className="h-9 text-sm w-32" />
                     </div>
                   </div>
-
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1">
-                      <ArrowLeft className="h-4 w-4" /> Atrás
-                    </Button>
-                    <Button onClick={goNext} disabled={!isAddressValid} className="flex-1 h-10 rounded-xl gap-1">
-                      Siguiente <ArrowRight className="h-4 w-4" />
-                    </Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
+                    <Button onClick={goNext} disabled={!isAddressValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -611,7 +623,6 @@ export default function ActivateAccount() {
                     <h2 className="text-lg font-bold">Detalles adicionales</h2>
                     <p className="text-xs text-muted-foreground">Contacto de emergencia y disponibilidad</p>
                   </div>
-
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <Label className="text-xs">Contacto de emergencia <span className="text-destructive">*</span></Label>
@@ -628,8 +639,7 @@ export default function ActivateAccount() {
                       <div className="flex flex-wrap gap-1.5">
                         {LANGUAGES.map(lang => (
                           <button
-                            key={lang}
-                            type="button"
+                            key={lang} type="button"
                             onClick={() => {
                               setProfileForm(prev => ({
                                 ...prev,
@@ -668,15 +678,99 @@ export default function ActivateAccount() {
                         <Switch checked={profileForm.has_vehicle} onCheckedChange={v => updateForm("has_vehicle", v)} />
                       </div>
                     </div>
+
+                    {profileForm.has_vehicle && (
+                      <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/20 p-3">
+                        <AlertTriangle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <p className="text-xs text-primary">
+                          Como tienes vehículo, en el siguiente paso necesitarás subir tu <strong>licencia de conducir</strong> y el <strong>registration del vehículo</strong>.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
+                    <Button onClick={goNext} disabled={!isDetailsValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP: Documents (only if has_vehicle) ── */}
+              {wizardStep === "documents" && profileForm.has_vehicle && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div className="text-center space-y-1">
+                    <FileText className="h-5 w-5 text-primary mx-auto" />
+                    <h2 className="text-lg font-bold">Documentos requeridos</h2>
+                    <p className="text-xs text-muted-foreground">Sube tu licencia y registro de vehículo</p>
                   </div>
 
+                  <div className="space-y-3">
+                    {/* Driver License */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        Licencia de conducir <span className="text-destructive">*</span>
+                        {driverLicenseFile && <CheckCircle2 className="h-3.5 w-3.5 text-earning" />}
+                      </Label>
+                      <input ref={driverLicenseRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "license")} className="hidden" />
+                      <button
+                        onClick={() => driverLicenseRef.current?.click()}
+                        className={cn(
+                          "w-full rounded-xl border-2 border-dashed p-4 flex flex-col items-center gap-2 transition-colors",
+                          driverLicenseFile ? "border-earning/30 bg-earning/5" : "border-border hover:border-primary/30"
+                        )}
+                      >
+                        {driverLicensePreview && driverLicensePreview.startsWith("blob:") ? (
+                          <img src={driverLicensePreview} alt="" className="h-20 rounded-lg object-cover" />
+                        ) : driverLicenseFile ? (
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-earning" />
+                            <span className="text-xs font-medium text-earning truncate max-w-[200px]">{driverLicenseFile.name}</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="h-6 w-6 text-muted-foreground/50" />
+                            <span className="text-xs text-muted-foreground">Toca para subir foto o PDF</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Vehicle Registration */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        Registration del vehículo <span className="text-destructive">*</span>
+                        {vehicleRegFile && <CheckCircle2 className="h-3.5 w-3.5 text-earning" />}
+                      </Label>
+                      <input ref={vehicleRegRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "registration")} className="hidden" />
+                      <button
+                        onClick={() => vehicleRegRef.current?.click()}
+                        className={cn(
+                          "w-full rounded-xl border-2 border-dashed p-4 flex flex-col items-center gap-2 transition-colors",
+                          vehicleRegFile ? "border-earning/30 bg-earning/5" : "border-border hover:border-primary/30"
+                        )}
+                      >
+                        {vehicleRegPreview && vehicleRegPreview.startsWith("blob:") ? (
+                          <img src={vehicleRegPreview} alt="" className="h-20 rounded-lg object-cover" />
+                        ) : vehicleRegFile ? (
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-earning" />
+                            <span className="text-xs font-medium text-earning truncate max-w-[200px]">{vehicleRegFile.name}</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="h-6 w-6 text-muted-foreground/50" />
+                            <span className="text-xs text-muted-foreground">Toca para subir foto o PDF</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {error && <p className="text-xs text-destructive text-center">{error}</p>}
+
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1">
-                      <ArrowLeft className="h-4 w-4" /> Atrás
-                    </Button>
-                    <Button onClick={goNext} disabled={!isDetailsValid} className="flex-1 h-10 rounded-xl gap-1">
-                      Siguiente <ArrowRight className="h-4 w-4" />
-                    </Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
+                    <Button onClick={goNext} disabled={!isDocsValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -686,9 +780,7 @@ export default function ActivateAccount() {
                 <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <h2 className="text-lg font-bold text-foreground">Foto de perfil</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Sube una foto clara de tu rostro para identificarte
-                    </p>
+                    <p className="text-sm text-muted-foreground">Sube una foto clara de tu rostro para identificarte</p>
                   </div>
 
                   <input ref={fileRef} type="file" accept="image/*" capture="user" onChange={handlePhotoSelect} className="hidden" />
@@ -698,9 +790,7 @@ export default function ActivateAccount() {
                       {avatarPreview ? (
                         <AvatarImage src={avatarPreview} />
                       ) : (
-                        <AvatarFallback className="bg-muted/30 text-muted-foreground">
-                          <Camera className="h-8 w-8" />
-                        </AvatarFallback>
+                        <AvatarFallback className="bg-muted/30 text-muted-foreground"><Camera className="h-8 w-8" /></AvatarFallback>
                       )}
                     </Avatar>
                     <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1.5 shadow-md">
@@ -718,22 +808,9 @@ export default function ActivateAccount() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1">
-                      <ArrowLeft className="h-4 w-4" /> Atrás
-                    </Button>
-                    <Button
-                      onClick={handleActivate}
-                      disabled={!avatarPreview || busy}
-                      className="flex-1 h-12 rounded-xl text-base font-semibold gap-2"
-                    >
-                      {busy ? (
-                        <><Loader2 className="h-4 w-4 animate-spin" /> Activando...</>
-                      ) : (
-                        <>
-                          Activar mi cuenta
-                          <ArrowRight className="h-4 w-4" />
-                        </>
-                      )}
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
+                    <Button onClick={handleActivate} disabled={!avatarPreview || busy} className="flex-1 h-12 rounded-xl text-base font-semibold gap-2">
+                      {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Activando...</> : <>Activar mi cuenta <ArrowRight className="h-4 w-4" /></>}
                     </Button>
                   </div>
                 </div>
@@ -747,15 +824,11 @@ export default function ActivateAccount() {
                   </div>
                   <div className="space-y-1">
                     <h2 className="text-xl font-bold text-foreground">¡Todo listo! 🎉</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Tu portal está activado. Ya puedes ver turnos, confirmar asistencia y chatear.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Tu portal está activado. Ya puedes ver turnos, confirmar asistencia y chatear.</p>
                   </div>
-
                   <div className="rounded-xl border border-earning/20 bg-earning/5 p-4 space-y-2 text-left">
                     <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-earning" />
-                      Perfil completo
+                      <CheckCircle2 className="h-3.5 w-3.5 text-earning" /> Perfil completo
                     </p>
                     <div className="text-xs text-muted-foreground space-y-1 ml-5">
                       <p>• Ver y confirmar turnos</p>
@@ -764,13 +837,8 @@ export default function ActivateAccount() {
                       <p>• Ver pagos y anuncios</p>
                     </div>
                   </div>
-
-                  <Button
-                    onClick={() => navigate("/portal")}
-                    className="w-full h-12 rounded-xl text-base font-semibold gap-2"
-                  >
-                    Ir a mi portal
-                    <ArrowRight className="h-4 w-4" />
+                  <Button onClick={() => navigate("/portal")} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
+                    Ir a mi portal <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
               )}
@@ -778,9 +846,7 @@ export default function ActivateAccount() {
           </ScrollArea>
         </div>
 
-        <p className="text-center text-[10px] text-muted-foreground/40 mt-4">
-          Powered by Stafly
-        </p>
+        <p className="text-center text-[10px] text-muted-foreground/40 mt-4">Powered by Stafly</p>
       </div>
     </div>
   );
