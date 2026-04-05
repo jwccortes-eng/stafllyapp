@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -53,6 +53,8 @@ import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
+import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
+import { ColumnPreferencesDialog, useColumnPreferences, EMPLOYEE_COLUMNS } from "@/components/employee/ColumnPreferencesDialog";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -152,6 +154,9 @@ export default function Employees() {
   const [updateMode, setUpdateMode] = useState<"diff" | "full">("full");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [bulkInviting, setBulkInviting] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<EmployeeRecord | null>(null);
+  const [colPrefsOpen, setColPrefsOpen] = useState(false);
+  const { visibleColumns, savePreferences } = useColumnPreferences("employees");
   const { toast } = useToast();
 
   const handleBulkPortalInvite = async () => {
@@ -181,7 +186,7 @@ export default function Employees() {
     if (!selectedCompanyId) return;
     setFetchError(false);
     try {
-      const { data, error } = await supabase.from("employees").select("id, company_id, first_name, last_name, phone_number, email, employee_role, is_active, start_date, end_date, groups, tags, direct_manager, connecteam_employee_id, user_id, created_at, updated_at, avatar_url, country_code, date_added, driver_licence, english_level, gender, has_car, qualify, recommended_by, added_by, added_via, last_login, access_pin").eq("company_id", selectedCompanyId).order("first_name");
+      const { data, error } = await supabase.from("employees").select("id, company_id, first_name, last_name, phone_number, email, employee_role, is_active, start_date, end_date, groups, tags, direct_manager, connecteam_employee_id, user_id, created_at, updated_at, avatar_url, country_code, date_added, driver_licence, english_level, gender, has_car, qualify, recommended_by, added_by, added_via, last_login, access_pin, employer_identification, onboarding_status, address_city, address_state, can_drive, has_vehicle").eq("company_id", selectedCompanyId).order("first_name");
       if (error) throw error;
       setEmployees((data as EmployeeRecord[]) ?? []);
     } catch (err) {
@@ -275,11 +280,17 @@ export default function Employees() {
   };
 
   const toggleActive = async (emp: EmployeeRecord) => {
-    const { error } = await supabase.from("employees").update({ is_active: !emp.is_active }).eq("id", emp.id);
+    if (emp.is_active) {
+      // Deactivating → open archive dialog with mandatory reason
+      setArchiveTarget(emp);
+      return;
+    }
+    // Reactivating
+    const { error } = await supabase.from("employees").update({ is_active: true }).eq("id", emp.id);
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: emp.is_active ? "Empleado desactivado" : "Empleado activado" });
+      toast({ title: "Empleado activado" });
       fetchEmployees();
     }
   };
@@ -673,6 +684,9 @@ export default function Employees() {
         )}
         {activeFilterCount > 0 && <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground px-2" onClick={clearFilters}><X className="h-3 w-3 mr-1" />Limpiar</Button>}
         <div className="ml-auto flex items-center gap-1.5">
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)}>
+            <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
           <span className="text-[10px] text-muted-foreground tabular-nums">{filtered.length}</span>
           <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
             <button className={cn("h-7 w-7 flex items-center justify-center transition-colors", viewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/40 hover:bg-muted/50")} onClick={() => setViewMode("list")}><List className="h-3 w-3" /></button>
@@ -729,12 +743,20 @@ export default function Employees() {
               <TableRow className="bg-muted/30 h-8">
                 <TableHead className="w-8 pl-3 pr-0"></TableHead>
                 <TableHead className="text-[10px]">Nombre</TableHead>
-                <TableHead className="hidden sm:table-cell text-[10px]">Teléfono</TableHead>
-                <TableHead className="hidden md:table-cell text-[10px]">Email</TableHead>
-                <TableHead className="hidden lg:table-cell text-[10px]">Rol</TableHead>
-                <TableHead className="hidden xl:table-cell text-[10px]">Grupo</TableHead>
-                <TableHead className="text-[10px] w-[80px]">Estado</TableHead>
-                <TableHead className="hidden lg:table-cell text-[10px] w-[80px]">Último login</TableHead>
+                {visibleColumns.includes("employer_identification") && <TableHead className="text-[10px] w-[70px]">ID</TableHead>}
+                {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Teléfono</TableHead>}
+                {visibleColumns.includes("email") && <TableHead className="hidden md:table-cell text-[10px]">Email</TableHead>}
+                {visibleColumns.includes("employee_role") && <TableHead className="hidden lg:table-cell text-[10px]">Rol</TableHead>}
+                {visibleColumns.includes("groups") && <TableHead className="hidden xl:table-cell text-[10px]">Grupo</TableHead>}
+                {visibleColumns.includes("onboarding_status") && <TableHead className="hidden lg:table-cell text-[10px]">Onboarding</TableHead>}
+                {visibleColumns.includes("address_city") && <TableHead className="hidden xl:table-cell text-[10px]">Ciudad</TableHead>}
+                {visibleColumns.includes("address_state") && <TableHead className="hidden xl:table-cell text-[10px]">Estado</TableHead>}
+                {visibleColumns.includes("can_drive") && <TableHead className="hidden xl:table-cell text-[10px]">Conduce</TableHead>}
+                {visibleColumns.includes("has_vehicle") && <TableHead className="hidden xl:table-cell text-[10px]">Vehículo</TableHead>}
+                {visibleColumns.includes("english_level") && <TableHead className="hidden xl:table-cell text-[10px]">Inglés</TableHead>}
+                {visibleColumns.includes("start_date") && <TableHead className="hidden xl:table-cell text-[10px]">Inicio</TableHead>}
+                {visibleColumns.includes("status") && <TableHead className="text-[10px] w-[80px]">Estado</TableHead>}
+                {visibleColumns.includes("last_login") && <TableHead className="hidden lg:table-cell text-[10px] w-[80px]">Último login</TableHead>}
                 <TableHead className="w-8 pr-3"></TableHead>
               </TableRow>
             </TableHeader>
@@ -757,36 +779,92 @@ export default function Employees() {
                       <span className="sm:hidden block text-[10px] text-muted-foreground mt-0.5">{e.phone_number || e.email || ""}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell py-1">
-                    {e.phone_number ? (
-                      <a href={`tel:${e.phone_number}`} onClick={ev => ev.stopPropagation()} className="text-[11px] text-muted-foreground hover:text-primary transition-colors">{e.phone_number}</a>
-                    ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell py-1">
-                    {e.email ? (
-                      <span className="text-[11px] text-muted-foreground truncate max-w-[160px] block">{e.email}</span>
-                    ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell py-1">
-                    {e.employee_role ? (
-                      <span className="text-[10px] text-muted-foreground">{formatDisplayText(e.employee_role, "label")}</span>
-                    ) : <span className="text-[10px] text-muted-foreground/25">—</span>}
-                  </TableCell>
-                  <TableCell className="hidden xl:table-cell py-1">
-                    {e.groups ? <span className="text-[10px] text-muted-foreground truncate max-w-[100px] block">{e.groups.split(",")[0].trim()}</span> : <span className="text-[10px] text-muted-foreground/25">—</span>}
-                  </TableCell>
-                  <TableCell className="py-1">
-                    <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell py-1">
-                    {(() => {
-                      if (!e.last_login) return <span className="text-[10px] text-muted-foreground/25">—</span>;
-                      const d = parseISO(e.last_login);
-                      return isValid(d)
-                        ? <span className="text-[10px] text-muted-foreground/60">{formatDistanceToNow(d, { addSuffix: true, locale: es })}</span>
-                        : <span className="text-[10px] text-muted-foreground/25">—</span>;
-                    })()}
-                  </TableCell>
+                  {visibleColumns.includes("employer_identification") && (
+                    <TableCell className="py-1">
+                      {e.employer_identification ? (
+                        <span className="text-[11px] font-mono font-semibold text-primary/80">#{e.employer_identification}</span>
+                      ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("phone_number") && (
+                    <TableCell className="hidden sm:table-cell py-1">
+                      {e.phone_number ? (
+                        <a href={`tel:${e.phone_number}`} onClick={ev => ev.stopPropagation()} className="text-[11px] text-muted-foreground hover:text-primary transition-colors">{e.phone_number}</a>
+                      ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("email") && (
+                    <TableCell className="hidden md:table-cell py-1">
+                      {e.email ? (
+                        <span className="text-[11px] text-muted-foreground truncate max-w-[160px] block">{e.email}</span>
+                      ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("employee_role") && (
+                    <TableCell className="hidden lg:table-cell py-1">
+                      {e.employee_role ? (
+                        <span className="text-[10px] text-muted-foreground">{formatDisplayText(e.employee_role, "label")}</span>
+                      ) : <span className="text-[10px] text-muted-foreground/25">—</span>}
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("groups") && (
+                    <TableCell className="hidden xl:table-cell py-1">
+                      {e.groups ? <span className="text-[10px] text-muted-foreground truncate max-w-[100px] block">{e.groups.split(",")[0].trim()}</span> : <span className="text-[10px] text-muted-foreground/25">—</span>}
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("onboarding_status") && (
+                    <TableCell className="hidden lg:table-cell py-1">
+                      <Badge variant={e.onboarding_status === "complete" ? "default" : "secondary"} className="text-[9px] py-0">
+                        {e.onboarding_status === "complete" ? "Completo" : e.onboarding_status === "incomplete" ? "Incompleto" : "Pendiente"}
+                      </Badge>
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("address_city") && (
+                    <TableCell className="hidden xl:table-cell py-1">
+                      <span className="text-[10px] text-muted-foreground">{e.address_city || "—"}</span>
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("address_state") && (
+                    <TableCell className="hidden xl:table-cell py-1">
+                      <span className="text-[10px] text-muted-foreground">{e.address_state || "—"}</span>
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("can_drive") && (
+                    <TableCell className="hidden xl:table-cell py-1">
+                      <span className="text-[10px]">{e.can_drive ? "✓" : "—"}</span>
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("has_vehicle") && (
+                    <TableCell className="hidden xl:table-cell py-1">
+                      <span className="text-[10px]">{e.has_vehicle ? "✓" : "—"}</span>
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("english_level") && (
+                    <TableCell className="hidden xl:table-cell py-1">
+                      <span className="text-[10px] text-muted-foreground">{e.english_level || "—"}</span>
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("start_date") && (
+                    <TableCell className="hidden xl:table-cell py-1">
+                      <span className="text-[10px] text-muted-foreground">{e.start_date || "—"}</span>
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("status") && (
+                    <TableCell className="py-1">
+                      <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
+                    </TableCell>
+                  )}
+                  {visibleColumns.includes("last_login") && (
+                    <TableCell className="hidden lg:table-cell py-1">
+                      {(() => {
+                        if (!e.last_login) return <span className="text-[10px] text-muted-foreground/25">—</span>;
+                        const d = parseISO(e.last_login);
+                        return isValid(d)
+                          ? <span className="text-[10px] text-muted-foreground/60">{formatDistanceToNow(d, { addSuffix: true, locale: es })}</span>
+                          : <span className="text-[10px] text-muted-foreground/25">—</span>;
+                      })()}
+                    </TableCell>
+                  )}
                   <TableCell className="py-1 pr-3" onClick={ev => ev.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -799,7 +877,7 @@ export default function Employees() {
                         <DropdownMenuItem onClick={() => { setViewEmployee(e); setInviteOpen(true); }} className="text-xs"><Send className="h-3.5 w-3.5 mr-2" />Invitar</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => toggleActive(e)} className="text-xs">
-                          {e.is_active ? <><UserX className="h-3.5 w-3.5 mr-2" />Desactivar</> : <><UserCheck className="h-3.5 w-3.5 mr-2" />Activar</>}
+                          {e.is_active ? <><Archive className="h-3.5 w-3.5 mr-2" />Archivar</> : <><UserCheck className="h-3.5 w-3.5 mr-2" />Activar</>}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive text-xs" onClick={() => { setDeleteTarget(e); setPasswordOpen(true); }}><Trash2 className="h-3.5 w-3.5 mr-2" />Eliminar</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -822,6 +900,9 @@ export default function Employees() {
               <div className="flex-1 min-w-0 pt-0.5">
                 <SheetTitle className="text-base font-bold leading-tight">{formatPersonName(`${viewEmployee?.first_name} ${viewEmployee?.last_name}`)}</SheetTitle>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  {viewEmployee?.employer_identification && (
+                    <Badge variant="outline" className="text-[9px] py-0 font-mono">#{viewEmployee.employer_identification}</Badge>
+                  )}
                   {viewEmployee?.employee_role && <Badge variant="secondary" className="text-[10px] py-0">{formatDisplayText(viewEmployee.employee_role, "label")}</Badge>}
                   {viewEmployee && <EmpStatusBadge employee={viewEmployee} invitation={invitations[viewEmployee.id]} />}
                 </div>
@@ -840,7 +921,7 @@ export default function Employees() {
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setInviteOpen(true)}><Send className="h-3 w-3 mr-1" />Invitar</Button>
               <div className="ml-auto flex items-center gap-0.5">
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
-                  {viewEmployee?.is_active ? <><UserX className="h-3 w-3 mr-1" />Desactivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
+                  {viewEmployee?.is_active ? <><Archive className="h-3 w-3 mr-1" />Archivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
                 </Button>
                 <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => { if (viewEmployee) { setDeleteTarget(viewEmployee); setPasswordOpen(true); setViewEmployee(null); } }}>
                   <Trash2 className="h-3 w-3" />
@@ -871,6 +952,24 @@ export default function Employees() {
         title="Eliminar empleado"
         description={`Se eliminará permanentemente a ${deleteTarget?.first_name} ${deleteTarget?.last_name}.`}
         onConfirm={handleDelete}
+      />
+
+      {/* Archive Employee Dialog */}
+      {archiveTarget && (
+        <ArchiveEmployeeDialog
+          open={!!archiveTarget}
+          onOpenChange={(v) => { if (!v) setArchiveTarget(null); }}
+          employee={{ id: archiveTarget.id, first_name: archiveTarget.first_name ?? "", last_name: archiveTarget.last_name ?? "", company_id: archiveTarget.company_id }}
+          onArchived={() => { setArchiveTarget(null); setViewEmployee(null); fetchEmployees(); }}
+        />
+      )}
+
+      {/* Column Preferences */}
+      <ColumnPreferencesDialog
+        open={colPrefsOpen}
+        onOpenChange={setColPrefsOpen}
+        visibleColumns={visibleColumns}
+        onSave={savePreferences}
       />
 
       {/* Audit */}
