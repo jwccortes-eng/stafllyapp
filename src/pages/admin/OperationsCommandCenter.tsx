@@ -82,7 +82,7 @@ export default function OperationsCommandCenter() {
   const navigate = useNavigate();
   const { selectedCompanyId } = useCompany();
   const { user } = useAuth();
-  const { play } = useSound();
+  const { play } = useSoundContext();
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
