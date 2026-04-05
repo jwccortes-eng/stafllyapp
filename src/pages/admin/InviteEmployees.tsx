@@ -44,7 +44,7 @@ export default function InviteEmployees() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const companyName = selectedCompany?.name ?? "StaflyApps";
-  const portalUrl = "https://staflyapps.com/auth";
+  const portalUrl = portalAuthUrl();
 
   useEffect(() => {
     if (!selectedCompanyId) return;
