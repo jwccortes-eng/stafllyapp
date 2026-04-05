@@ -100,7 +100,7 @@ export function ReplacementSuggestionDialog({
           .select("worker_profile_id, overall_score, total_completed_shifts, no_show_count")
           .in("worker_profile_id", wpIds);
 
-        const wpToUser = new Map(profiles.map(p => [p.id, p.user_id]));
+        const wpToUser = new Map<string, string>(profiles.map(p => [p.id, p.user_id]));
         for (const s of scores ?? []) {
           const uid = wpToUser.get(s.worker_profile_id);
           if (uid) {
