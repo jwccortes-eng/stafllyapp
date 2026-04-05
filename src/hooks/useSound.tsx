@@ -99,9 +99,11 @@ function playTones(ctx: AudioContext, type: SoundType) {
 
 export function SoundProvider({ children }: { children: ReactNode }) {
   const storedEnabled = typeof window !== "undefined" ? window.localStorage.getItem(SOUND_ENABLED_KEY) : null;
-  const [isEnabled, setIsEnabledState] = useState(storedEnabled === "true");
+  // Default to ENABLED on first visit (null) — only disable if explicitly set to "false"
+  const defaultEnabled = storedEnabled !== "false";
+  const [isEnabled, setIsEnabledState] = useState(defaultEnabled);
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [status, setStatus] = useState<SoundStatus>(storedEnabled === "true" ? "blocked" : "disabled");
+  const [status, setStatus] = useState<SoundStatus>(defaultEnabled ? "blocked" : "disabled");
 
   const ctxRef = useRef<AudioContext | null>(null);
   const promptShownRef = useRef(typeof window !== "undefined" && window.localStorage.getItem(SOUND_PROMPT_KEY) === "true");
@@ -112,6 +114,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   });
   const lastPlayRef = useRef<{ type: SoundType; at: number } | null>(null);
   const explicitDisableRef = useRef(storedEnabled === "false");
+  const gestureUnlockedOnceRef = useRef(false);
 
   const ensureAudioContext = useCallback(async (source: string) => {
     if (typeof window === "undefined") return null;
@@ -309,6 +312,12 @@ export function SoundProvider({ children }: { children: ReactNode }) {
 
     const handleGesture = () => {
       if (explicitDisableRef.current) return;
+      if (gestureUnlockedOnceRef.current) return;
+      gestureUnlockedOnceRef.current = true;
+      // Persist enabled state on first gesture
+      if (typeof window !== "undefined" && !window.localStorage.getItem(SOUND_ENABLED_KEY)) {
+        window.localStorage.setItem(SOUND_ENABLED_KEY, "true");
+      }
       void unlockAudio({ source: "global-gesture" });
     };
 
