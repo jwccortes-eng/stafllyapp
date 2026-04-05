@@ -121,6 +121,10 @@ export default function ActivateAccount() {
           .eq("id", data.id) as any);
       }
 
+      // ─── SECURITY: Use invitation's company_id as authoritative source ───
+      const invitationCompanyId = data.company_id;
+      if (!invitationCompanyId) { setPageState("invalid"); return; }
+
       const { data: emp } = await supabase
         .from("employees")
         .select("first_name, last_name, company_id, phone_number, avatar_url, email")
@@ -129,10 +133,18 @@ export default function ActivateAccount() {
 
       if (!emp) { setPageState("invalid"); return; }
 
+      // ─── SECURITY: Validate employee belongs to the invitation's company ───
+      if (emp.company_id !== invitationCompanyId) {
+        console.error("[activate] company_id mismatch: invitation=%s employee=%s", invitationCompanyId, emp.company_id);
+        setPageState("invalid");
+        return;
+      }
+
+      // ─── Fetch branding from the INVITATION's company, not heuristic ───
       const { data: co } = await supabase
         .from("companies")
         .select("name, logo_url, brand_color")
-        .eq("id", emp.company_id)
+        .eq("id", invitationCompanyId)
         .single();
 
       if (emp.avatar_url) setAvatarPreview(emp.avatar_url);
@@ -146,7 +158,7 @@ export default function ActivateAccount() {
 
       setInvite({
         ...data,
-        company_id: emp.company_id,
+        company_id: invitationCompanyId,
         company_name: co?.name ?? "",
         company_logo: co?.logo_url ?? null,
         brand_color: co?.brand_color ?? null,
