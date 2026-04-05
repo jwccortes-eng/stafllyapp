@@ -116,6 +116,77 @@ function FieldRow({ field, employee, isEditing, form, setForm }: {
   );
 }
 
+/* ── Vehicle Documents Section ── */
+function VehicleDocumentsSection({ employeeId }: { employeeId: string }) {
+  const [docs, setDocs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("employee_onboarding_documents" as any)
+        .select("*")
+        .eq("employee_id", employeeId)
+        .in("document_type", ["driver_license", "vehicle_registration"]);
+      setDocs((data as any[]) ?? []);
+      setLoading(false);
+    })();
+  }, [employeeId]);
+
+  if (loading) return null;
+  if (docs.length === 0) return null;
+
+  const docLabels: Record<string, string> = {
+    driver_license: "Licencia de conducir",
+    vehicle_registration: "Registration del vehículo",
+  };
+
+  return (
+    <div>
+      <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5 flex items-center gap-1">
+        <Car className="h-3 w-3" /> Documentos de vehículo
+      </h3>
+      <Card className="rounded-lg border-border/30">
+        <CardContent className="p-3 space-y-2">
+          {["driver_license", "vehicle_registration"].map(type => {
+            const doc = docs.find((d: any) => d.document_type === type);
+            return (
+              <div key={type} className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-3 w-3 text-muted-foreground/40" />
+                  <span className="text-[11px] text-muted-foreground">{docLabels[type]}</span>
+                </div>
+                {doc ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className={cn("text-[9px]",
+                      doc.status === "approved" ? "bg-earning/10 text-earning border-earning/20" :
+                      doc.status === "pending" ? "bg-warning/10 text-warning border-warning/20" :
+                      "bg-muted text-muted-foreground"
+                    )}>
+                      {doc.status === "approved" ? <><CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Verificado</> :
+                       doc.status === "pending" ? <><AlertCircle className="h-2.5 w-2.5 mr-0.5" /> Pendiente</> :
+                       doc.status}
+                    </Badge>
+                    {doc.file_url && (
+                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20">
+                    <AlertCircle className="h-2.5 w-2.5 mr-0.5" /> Faltante
+                  </Badge>
+                )}
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 /* ── Info Tab — compact ── */
 function InfoTab({ employee, isEditing, form, setForm, isPrivileged }: {
   employee: EmployeeRecord; isEditing: boolean; form: Record<string, string>;
