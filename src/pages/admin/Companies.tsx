@@ -208,7 +208,7 @@ export default function CompaniesPage() {
     e.preventDefault();
     setLoading(true);
     const slug = formSlug || generateSlug(formName);
-    const { error } = await supabase.from("companies").insert({ name: formName.trim(), slug } as any);
+    const { error } = await supabase.from("companies").insert({ name: formName.trim(), slug, is_active: true, application_enabled: true } as any);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Empresa creada" }); setCreateOpen(false); setFormName(""); setFormSlug(""); fetchCompanies(); refetch(); }
     setLoading(false);

@@ -97,13 +97,21 @@ export default function Apply() {
   useEffect(() => {
     if (!companySlug) return;
     (async () => {
-      const { data: co } = await supabase
+      // First check if company exists at all
+      const { data: coCheck } = await supabase
         .from("companies")
-        .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url")
+        .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url, is_active, application_enabled")
         .eq("slug", companySlug.toLowerCase())
-        .eq("is_active", true)
-        .eq("application_enabled", true)
         .maybeSingle();
+
+      if (coCheck && (!coCheck.is_active || !coCheck.application_enabled)) {
+        setCompany(null);
+        setApplicationDisabledCompany(coCheck.name);
+        setLoading(false);
+        return;
+      }
+
+      const co = coCheck?.is_active && coCheck?.application_enabled ? coCheck : null;
       setCompany(co);
 
       if (co) {
