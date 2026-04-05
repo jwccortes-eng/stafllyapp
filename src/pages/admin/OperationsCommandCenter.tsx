@@ -488,11 +488,10 @@ export default function OperationsCommandCenter() {
                         <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => resolveAlert(a.id)}>
                           <CheckCircle2 className="h-3 w-3" /> Resolver
                         </Button>
-                        {(a.type === "no_show" || a.type === "no_show_alert") && a.shift_id && (
+                        {(a.type === "no_show" || a.type === "no_show_alert" || a.type === "no_clockin" || a.type === "no_clockin_alert") && a.shift_id && (
                           <Button size="sm" variant="default" className="h-7 text-[10px] gap-1" onClick={() => {
                             const s = shifts.find(sh => sh.id === a.shift_id);
                             if (s) {
-                              const assignedIds = (alertsRes => drawerAssignments.map(da => da.employee_id))();
                               setReplaceTarget({
                                 shiftId: s.id, shiftTitle: s.title, shiftDate: s.date,
                                 startTime: s.start_time, endTime: s.end_time,
