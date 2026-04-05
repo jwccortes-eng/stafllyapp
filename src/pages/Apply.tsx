@@ -71,6 +71,7 @@ export default function Apply() {
   const [referenceCode, setReferenceCode] = useState("");
   const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [applicationDisabledCompany, setApplicationDisabledCompany] = useState<string | null>(null);
 
   // Form
   const [firstName, setFirstName] = useState("");
