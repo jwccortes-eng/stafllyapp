@@ -21,8 +21,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import {
   Loader2, Search, ChevronLeft, ChevronRight, Radio, Clock, AlertTriangle,
   Users, Car, Shield, Eye, CheckCircle2, XCircle, Phone, MessageSquare,
-  UserCheck, MapPin, Building2, RefreshCw, Bell, Zap,
+  UserCheck, MapPin, Building2, RefreshCw, Bell, Zap, UserPlus,
 } from "lucide-react";
+import { ReplacementSuggestionDialog } from "@/components/shifts/ReplacementSuggestionDialog";
 
 // ─── Types ───
 interface ShiftRow {
