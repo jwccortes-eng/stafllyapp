@@ -10514,37 +10514,55 @@ export type Database = {
       upgrade_requests: {
         Row: {
           company_id: string
+          company_name: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
+          current_plan: string | null
           id: string
           notes: string | null
           plan_requested: string
           requested_by: string
           resolved_at: string | null
           resolved_by: string | null
+          source: string | null
           status: string
           updated_at: string
         }
         Insert: {
           company_id: string
+          company_name?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
+          current_plan?: string | null
           id?: string
           notes?: string | null
           plan_requested?: string
           requested_by: string
           resolved_at?: string | null
           resolved_by?: string | null
+          source?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           company_id?: string
+          company_name?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
+          current_plan?: string | null
           id?: string
           notes?: string | null
           plan_requested?: string
           requested_by?: string
           resolved_at?: string | null
           resolved_by?: string | null
+          source?: string | null
           status?: string
           updated_at?: string
         }
