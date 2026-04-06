@@ -246,73 +246,96 @@ export default function Apply() {
   const handleBack = () => setStep((s) => Math.max(s - 1, 0));
   const goToStep = (s: number) => { if (s < step) setStep(s); };
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   /* ─── Submit ─── */
   const handleSubmit = async () => {
     if (!company || !consent) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
       let documentUrl: string | undefined;
       if (documentFile) {
         const ext = documentFile.name.split(".").pop();
         const path = `${company.id}/${Date.now()}.${ext}`;
-        await supabase.storage.from("application-documents").upload(path, documentFile);
+        const { error: uploadErr } = await supabase.storage.from("application-documents").upload(path, documentFile);
+        if (uploadErr) {
+          console.error("[apply] upload error:", uploadErr);
+          throw new Error("No se pudo subir el documento. Intenta de nuevo.");
+        }
         documentUrl = path;
       }
 
+      const payload = {
+        company_id: company.id,
+        application_type: "internal",
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone: phone.trim(),
+        email: email.trim() || null,
+        worker_type: workerType,
+        city: city.trim() || null,
+        availability,
+        can_drive: canDrive,
+        has_car: hasCar,
+        can_travel: canTravel,
+        document_url: documentUrl ?? null,
+        emergency_contact: emergencyContact.trim() || null,
+        experience_summary: experienceSummary.trim() || null,
+        languages: languages.trim() ? languages.split(",").map((l) => l.trim()) : null,
+        source,
+        role_suggestion: searchParams.get("role") ?? null,
+        address_line: address.address_line.trim() || null,
+        address_city: address.address_city.trim() || null,
+        address_state: address.address_state.trim() || null,
+        address_zip: address.address_zip.trim() || null,
+        formatted_address: [address.address_line, address.address_city, address.address_state, address.address_zip].filter(Boolean).join(", ") || null,
+      };
+
+      console.log("[apply] submitting payload:", JSON.stringify(payload, null, 2));
+
       const { data, error } = await supabase
         .from("job_applications")
-        .insert({
-          company_id: company.id,
-          application_type: "internal",
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          phone: phone.trim(),
-          email: email.trim() || null,
-          worker_type: workerType,
-          city: city.trim() || null,
-          availability,
-          can_drive: canDrive,
-          has_car: hasCar,
-          can_travel: canTravel,
-          document_url: documentUrl ?? null,
-          emergency_contact: emergencyContact.trim() || null,
-          experience_summary: experienceSummary.trim() || null,
-          languages: languages.trim() ? languages.split(",").map((l) => l.trim()) : null,
-          source,
-          role_suggestion: searchParams.get("role") ?? null,
-          address_line: address.address_line.trim() || null,
-          address_city: address.address_city.trim() || null,
-          address_state: address.address_state.trim() || null,
-          address_zip: address.address_zip.trim() || null,
-          formatted_address: [address.address_line, address.address_city, address.address_state, address.address_zip].filter(Boolean).join(", ") || null,
-        })
+        .insert(payload)
         .select("id, reference_code")
         .single();
 
-      if (error) throw error;
+      console.log("[apply] insert result:", { data, error });
 
-      // Create audit event
-      await supabase.from("application_events").insert({
+      if (error) {
+        console.error("[apply] supabase error:", error);
+        throw new Error(
+          error.code === "23505"
+            ? "Ya existe una solicitud con estos datos."
+            : error.code === "42501" || error.message?.includes("row-level security")
+            ? "No se pudo guardar la solicitud. Contacta a la empresa."
+            : `Error al enviar: ${error.message}`
+        );
+      }
+
+      // Create audit event (non-blocking)
+      supabase.from("application_events").insert({
         application_id: data.id,
         event_type: "submitted",
         event_data: { source, device: navigator.userAgent.slice(0, 100) },
-      });
+      }).then(r => { if (r.error) console.warn("[apply] event insert error:", r.error); });
 
-      // Upload document record
+      // Upload document record (non-blocking)
       if (documentUrl && data.id) {
-        await supabase.from("application_documents").insert({
+        supabase.from("application_documents").insert({
           application_id: data.id,
           file_url: documentUrl,
           file_type: "id_document",
           file_name: documentFile?.name ?? "document",
-        });
+        }).then(r => { if (r.error) console.warn("[apply] doc record error:", r.error); });
       }
 
-      setReferenceCode(data.reference_code);
+      setReferenceCode(data.reference_code ?? data.id.slice(0, 8).toUpperCase());
       setStep(6);
       if (draftKey) localStorage.removeItem(draftKey);
-    } catch (err) {
-      console.error("Submit error:", err);
+    } catch (err: any) {
+      console.error("[apply] submit error:", err);
+      setSubmitError(err?.message ?? "Ocurrió un error al enviar tu solicitud. Intenta de nuevo.");
     } finally {
       setSubmitting(false);
     }
@@ -426,6 +449,14 @@ export default function Apply() {
           />
         )}
         {step === 6 && <StepConfirmation referenceCode={referenceCode} companyName={company.name} />}
+
+        {/* Submit error */}
+        {submitError && step === 5 && (
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/30 mt-3">
+            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <p className="text-xs text-destructive">{submitError}</p>
+          </div>
+        )}
 
         {/* Navigation */}
         {step > 0 && step < 6 && (
