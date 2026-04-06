@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { Check, MessageCircle, Mail, CheckCircle2, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useContactSales, useRequestUpgrade } from "@/hooks/useBilling";
+import { useContactSales } from "@/hooks/useBilling";
 import { cn } from "@/lib/utils";
+import UpgradeRequestDialog from "@/components/billing/UpgradeRequestDialog";
 
 const plans = [
   {
