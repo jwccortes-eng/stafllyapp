@@ -1,81 +1,57 @@
-import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { toast } from "@/hooks/use-toast";
 
+const SALES_WHATSAPP = "https://wa.me/18493330000?text=Hola%2C%20quiero%20información%20sobre%20los%20planes%20de%20StaflyApps";
+const SALES_EMAIL = "sales@staflyapps.com";
+
 /**
- * Hook to create a Stripe Checkout session for upgrading.
- * Returns a mutation that accepts { priceId }.
+ * Opens the sales contact flow (WhatsApp or email).
+ * Stripe checkout is disabled — all upgrades are manual for now.
  */
-export function useCreateCheckoutSession() {
+export function useContactSales() {
   const { selectedCompanyId } = useCompany();
 
-  return useMutation({
-    mutationFn: async ({ priceId }: { priceId: string }) => {
-      if (!selectedCompanyId) throw new Error("No company selected");
+  const contactSales = (channel: "whatsapp" | "email" = "whatsapp") => {
+    if (channel === "whatsapp") {
+      window.open(SALES_WHATSAPP, "_blank");
+    } else {
+      window.location.href = `mailto:${SALES_EMAIL}?subject=Solicitud de plan - ${selectedCompanyId || "nueva empresa"}`;
+    }
+    toast({
+      title: "Solicitud enviada",
+      description: "Nuestro equipo se pondrá en contacto contigo pronto.",
+    });
+  };
 
-      const { data, error } = await supabase.functions.invoke("billing-checkout", {
-        body: { priceId, companyId: selectedCompanyId },
-      });
-
-      if (error) throw error;
-      return data as { url?: string; stub?: boolean; message?: string };
-    },
-    onSuccess: (data) => {
-      if (data?.url) {
-        window.location.href = data.url;
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "No se recibió URL de checkout. Verifica la configuración de Stripe.",
-        variant: "destructive",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "No se pudo iniciar el checkout.",
-        variant: "destructive",
-      });
-    },
-  });
+  return { contactSales, salesWhatsApp: SALES_WHATSAPP, salesEmail: SALES_EMAIL };
 }
 
 /**
- * Hook to open the Stripe Customer Portal for managing subscriptions.
+ * @deprecated — Stripe checkout is disabled. Use useContactSales() instead.
+ */
+export function useCreateCheckoutSession() {
+  return {
+    mutate: () => {
+      toast({
+        title: "Pasarela no disponible",
+        description: "El pago automático aún no está activo. Contacta a ventas para activar tu plan.",
+      });
+    },
+    isPending: false,
+  };
+}
+
+/**
+ * @deprecated — Stripe portal is disabled. Use useContactSales() instead.
  */
 export function useOpenCustomerPortal() {
-  const { selectedCompanyId } = useCompany();
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!selectedCompanyId) throw new Error("No company selected");
-
-      const { data, error } = await supabase.functions.invoke("billing-customer-portal", {
-        body: { companyId: selectedCompanyId },
-      });
-
-      if (error) throw error;
-      return data as { url?: string; stub?: boolean; message?: string };
-    },
-    onSuccess: (data) => {
-      if (data?.url) {
-        window.location.href = data.url;
-        return;
-      }
+  return {
+    mutate: () => {
       toast({
-        title: "Error",
-        description: "No se pudo abrir el portal. Asegúrate de tener una suscripción activa.",
-        variant: "destructive",
+        title: "Portal no disponible",
+        description: "Contacta a ventas para gestionar tu suscripción.",
       });
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "No se pudo abrir el portal de cliente.",
-        variant: "destructive",
-      });
-    },
-  });
+    isPending: false,
+  };
 }
