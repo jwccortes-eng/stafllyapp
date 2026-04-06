@@ -783,6 +783,7 @@ export type Database = {
           application_cover_url: string | null
           application_enabled: boolean
           application_intro: string | null
+          billing_status: string
           brand_color: string | null
           company_code: number | null
           created_at: string
@@ -791,14 +792,24 @@ export type Database = {
           is_active: boolean
           is_sandbox: boolean
           logo_url: string | null
+          max_admins: number
+          max_employees: number
           name: string
+          paid_features_enabled: boolean
+          plan_activated_at: string | null
+          plan_activated_by: string | null
+          plan_code: string
+          plan_status: string
           slug: string
+          trial_ends_at: string | null
           updated_at: string
+          upgrade_requested_at: string | null
         }
         Insert: {
           application_cover_url?: string | null
           application_enabled?: boolean
           application_intro?: string | null
+          billing_status?: string
           brand_color?: string | null
           company_code?: number | null
           created_at?: string
@@ -807,14 +818,24 @@ export type Database = {
           is_active?: boolean
           is_sandbox?: boolean
           logo_url?: string | null
+          max_admins?: number
+          max_employees?: number
           name: string
+          paid_features_enabled?: boolean
+          plan_activated_at?: string | null
+          plan_activated_by?: string | null
+          plan_code?: string
+          plan_status?: string
           slug: string
+          trial_ends_at?: string | null
           updated_at?: string
+          upgrade_requested_at?: string | null
         }
         Update: {
           application_cover_url?: string | null
           application_enabled?: boolean
           application_intro?: string | null
+          billing_status?: string
           brand_color?: string | null
           company_code?: number | null
           created_at?: string
@@ -823,9 +844,18 @@ export type Database = {
           is_active?: boolean
           is_sandbox?: boolean
           logo_url?: string | null
+          max_admins?: number
+          max_employees?: number
           name?: string
+          paid_features_enabled?: boolean
+          plan_activated_at?: string | null
+          plan_activated_by?: string | null
+          plan_code?: string
+          plan_status?: string
           slug?: string
+          trial_ends_at?: string | null
           updated_at?: string
+          upgrade_requested_at?: string | null
         }
         Relationships: []
       }
@@ -10474,6 +10504,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "truth_resolution_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      upgrade_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          plan_requested: string
+          requested_by: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          plan_requested?: string
+          requested_by: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          plan_requested?: string
+          requested_by?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upgrade_requests_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
