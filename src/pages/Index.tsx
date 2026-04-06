@@ -8,6 +8,16 @@ export default function Index() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Detect Supabase auth hash fragments at root and redirect to callback handler
+    const hash = window.location.hash;
+    if (hash && (hash.includes("access_token") || hash.includes("error") || hash.includes("type=") || hash.includes("refresh_token"))) {
+      console.log("[index] Auth hash detected, redirecting to /auth/callback");
+      navigate(`/auth/callback${hash}`, { replace: true });
+      return;
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     if (loading) return;
     if (!user) return;
     if (canAccessAdmin && canAccessPortal) {

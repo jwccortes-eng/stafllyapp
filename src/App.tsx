@@ -112,6 +112,7 @@ const ApplicationSettings = lazy(() => import("./pages/admin/ApplicationSettings
 const Apply = lazy(() => import("./pages/Apply"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
 const MyPayments = lazy(() => import("./pages/portal/MyPayments"));
@@ -161,6 +162,7 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/install" element={<Install />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
