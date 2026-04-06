@@ -1,7 +1,7 @@
 import { useSubscription } from "@/hooks/useSubscription";
-import { Sparkles, Clock } from "lucide-react";
+import { useContactSales } from "@/hooks/useBilling";
+import { Sparkles, Clock, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 
 interface UpgradeBannerProps {
   feature?: string;
@@ -10,7 +10,7 @@ interface UpgradeBannerProps {
 
 export default function UpgradeBanner({ feature, moduleKey }: UpgradeBannerProps) {
   const { isPremium, isLoading, isTrial, trialDaysLeft, requiredPlanForModule } = useSubscription();
-  const navigate = useNavigate();
+  const { contactSales } = useContactSales();
 
   if (isLoading || isPremium) return null;
 
@@ -32,12 +32,13 @@ export default function UpgradeBanner({ feature, moduleKey }: UpgradeBannerProps
               {trialDaysLeft} día{trialDaysLeft !== 1 ? 's' : ''} restantes de tu prueba Pro.
             </>
           ) : (
-            "Actualiza tu plan para acceder a herramientas avanzadas."
+            "Contacta a nuestro equipo para activar funciones avanzadas."
           )}
         </p>
       </div>
-      <Button size="sm" onClick={() => navigate("/app/pricing")}>
-        Ver planes
+      <Button size="sm" onClick={() => contactSales("whatsapp")} className="gap-1.5">
+        <MessageCircle className="h-4 w-4" />
+        Hablar con ventas
       </Button>
     </div>
   );

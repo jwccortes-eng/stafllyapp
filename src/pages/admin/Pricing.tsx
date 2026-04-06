@@ -1,10 +1,10 @@
-import { Check, Sparkles, Clock } from "lucide-react";
+import { Check, Sparkles, Clock, MessageCircle, Mail } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useCreateCheckoutSession } from "@/hooks/useBilling";
+import { useContactSales } from "@/hooks/useBilling";
 import { cn } from "@/lib/utils";
 
 const plans = [
@@ -19,8 +19,9 @@ const plans = [
       "Hasta 25 empleados",
       "Directorio y turnos básicos",
       "Anuncios",
+      "Portal de empleados",
     ],
-    priceId: null,
+    isFree: true,
   },
   {
     id: "pro",
@@ -38,13 +39,12 @@ const plans = [
       "Clientes y ubicaciones",
       "Soporte prioritario",
     ],
-    priceId: "price_1T5C9xK7PYTRtWks5cRmmPtJ",
   },
   {
     id: "enterprise",
     name: "Enterprise",
-    price: "$149",
-    period: "/mes",
+    price: "Personalizado",
+    period: "",
     description: "Para operaciones a gran escala",
     features: [
       "Todo en Pro",
@@ -55,18 +55,12 @@ const plans = [
       "API externa",
       "SLA garantizado",
     ],
-    priceId: "price_1T5CAJK7PYTRtWksY7nUGqB5",
   },
 ];
 
 export default function Pricing() {
   const { plan: currentPlan, isLoading, isTrial, trialDaysLeft } = useSubscription();
-  const checkoutMutation = useCreateCheckoutSession();
-
-  const handleCheckout = (priceId: string | null) => {
-    if (!priceId) return;
-    checkoutMutation.mutate({ priceId });
-  };
+  const { contactSales } = useContactSales();
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -74,7 +68,7 @@ export default function Pricing() {
         variant="4"
         eyebrow="PLANES"
         title="Planes y precios"
-        subtitle="Elige el plan que mejor se adapte a tu operación"
+        subtitle="Elige el plan que mejor se adapte a tu operación. Los planes pagos se activan contactando a nuestro equipo."
       />
 
       {/* Trial notice */}
@@ -88,17 +82,29 @@ export default function Pricing() {
             <p className="text-xs text-muted-foreground">
               {trialDaysLeft > 0
                 ? `Te quedan ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''} para explorar todas las funciones Pro.`
-                : 'Tu prueba ha expirado. Selecciona un plan para continuar.'}
+                : 'Tu prueba ha expirado. Contacta a ventas para continuar.'}
             </p>
           </div>
           <Sparkles className="h-5 w-5 text-primary/40" />
         </div>
       )}
 
+      {/* Manual upgrade notice */}
+      <div className="max-w-5xl mx-auto rounded-xl border border-muted bg-muted/30 px-5 py-3 flex items-center gap-3">
+        <MessageCircle className="h-5 w-5 text-primary shrink-0" />
+        <div className="flex-1">
+          <p className="text-sm font-medium text-foreground">
+            Los planes pagos se activan de forma personalizada
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Contáctanos por WhatsApp o email para activar tu plan. Próximamente habilitaremos el pago en línea.
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         {plans.map((p, idx) => {
           const isCurrent = currentPlan === p.id;
-          const isTrialPlan = isTrial && p.id === "pro";
           return (
             <Card
               key={p.id}
@@ -118,7 +124,7 @@ export default function Pricing() {
                 <CardDescription>{p.description}</CardDescription>
                 <div className="mt-3">
                   <span className="text-3xl font-bold">{p.price}</span>
-                  <span className="text-muted-foreground text-sm">{p.period}</span>
+                  {p.period && <span className="text-muted-foreground text-sm">{p.period}</span>}
                 </div>
               </CardHeader>
               <CardContent className="flex-1">
@@ -131,23 +137,37 @@ export default function Pricing() {
                   ))}
                 </ul>
               </CardContent>
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  variant={isCurrent || isTrialPlan ? "outline" : p.popular ? "default" : "secondary"}
-                  disabled={(isCurrent && !isTrial) || isLoading || checkoutMutation.isPending}
-                  onClick={() => handleCheckout(p.priceId)}
-                >
-                  {isCurrent && !isTrial
-                    ? "Plan actual"
-                    : isTrialPlan
-                      ? "Activar Pro"
-                      : checkoutMutation.isPending
-                        ? "Procesando…"
-                        : p.priceId
-                          ? "Seleccionar"
-                          : "Plan actual"}
-                </Button>
+              <CardFooter className="flex flex-col gap-2">
+                {isCurrent ? (
+                  <Button className="w-full" variant="outline" disabled>
+                    Plan actual
+                  </Button>
+                ) : p.isFree ? (
+                  <Button className="w-full" variant="outline" disabled>
+                    Plan actual
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      className="w-full gap-1.5"
+                      variant={p.popular ? "default" : "secondary"}
+                      onClick={() => contactSales("whatsapp")}
+                      disabled={isLoading}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Hablar con ventas
+                    </Button>
+                    <Button
+                      className="w-full gap-1.5"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => contactSales("email")}
+                    >
+                      <Mail className="h-4 w-4" />
+                      Enviar email
+                    </Button>
+                  </>
+                )}
               </CardFooter>
             </Card>
           );
