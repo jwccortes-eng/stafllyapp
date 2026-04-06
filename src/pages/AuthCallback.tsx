@@ -124,7 +124,7 @@ export default function AuthCallback() {
       .limit(1);
 
     const emp = empData?.[0];
-    log(`Employee: ${emp ? `${emp.id} (onboarding: ${emp.onboarding_completed})` : "none"}`);
+    log(`Employee: ${emp ? `${emp.id} (onboarding: ${emp.onboarding_status})` : "none"}`);
 
     // Check if admin
     const { data: roleData } = await supabase
@@ -139,15 +139,15 @@ export default function AuthCallback() {
     // Check for pending invitation
     const { data: inviteData } = await supabase
       .from("employee_invitations")
-      .select("id, token, employee_id")
+      .select("id, invite_token, employee_id")
       .eq("employee_id", emp?.id ?? "00000000-0000-0000-0000-000000000000")
       .in("status", ["created", "sent", "opened"])
       .order("created_at", { ascending: false })
       .limit(1);
 
-    if (inviteData?.[0]?.token) {
-      log(`Active invitation found, redirecting to activate/${inviteData[0].token}`);
-      navigate(`/activate/${inviteData[0].token}`, { replace: true });
+    if (inviteData?.[0]?.invite_token) {
+      log(`Active invitation found, redirecting to activate/${inviteData[0].invite_token}`);
+      navigate(`/activate/${inviteData[0].invite_token}`, { replace: true });
       return;
     }
 
@@ -157,14 +157,14 @@ export default function AuthCallback() {
       // Try to find any invitation token for this employee
       const { data: anyInvite } = await supabase
         .from("employee_invitations")
-        .select("token")
+        .select("invite_token")
         .eq("employee_id", emp.id)
         .order("created_at", { ascending: false })
         .limit(1);
 
-      if (anyInvite?.[0]?.token) {
-        log(`Redirecting to activation: /activate/${anyInvite[0].token}`);
-        navigate(`/activate/${anyInvite[0].token}`, { replace: true });
+      if (anyInvite?.[0]?.invite_token) {
+        log(`Redirecting to activation: /activate/${anyInvite[0].invite_token}`);
+        navigate(`/activate/${anyInvite[0].invite_token}`, { replace: true });
         return;
       }
     }
