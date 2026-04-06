@@ -148,8 +148,7 @@ export default function Pricing() {
                       <Button
                         className="w-full"
                         variant="outline"
-                        onClick={() => requestUpgrade.mutate({})}
-                        disabled={requestUpgrade.isPending}
+                        onClick={() => setUpgradeOpen(true)}
                       >
                         <Sparkles className="h-4 w-4 mr-1.5" />
                         Solicitar plan Pro
