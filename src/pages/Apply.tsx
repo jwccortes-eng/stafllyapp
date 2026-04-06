@@ -450,6 +450,14 @@ export default function Apply() {
         )}
         {step === 6 && <StepConfirmation referenceCode={referenceCode} companyName={company.name} />}
 
+        {/* Submit error */}
+        {submitError && step === 5 && (
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/30 mt-3">
+            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <p className="text-xs text-destructive">{submitError}</p>
+          </div>
+        )}
+
         {/* Navigation */}
         {step > 0 && step < 6 && (
           <div className="flex gap-3 mt-auto pt-6 pb-safe">
