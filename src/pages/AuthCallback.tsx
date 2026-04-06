@@ -118,7 +118,7 @@ export default function AuthCallback() {
     // Check if employee
     const { data: empData } = await supabase
       .from("employees")
-      .select("id, company_id, is_active, onboarding_completed")
+      .select("id, company_id, is_active, onboarding_status")
       .eq("user_id", userId)
       .eq("is_active", true)
       .limit(1);
@@ -152,7 +152,7 @@ export default function AuthCallback() {
     }
 
     // Check onboarding
-    if (emp && !emp.onboarding_completed) {
+    if (emp && emp.onboarding_status !== 'completed') {
       log("Onboarding incomplete, checking for invitation...");
       // Try to find any invitation token for this employee
       const { data: anyInvite } = await supabase
