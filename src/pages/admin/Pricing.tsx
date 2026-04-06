@@ -51,10 +51,11 @@ const plans = [
 export default function Pricing() {
   const { planCode, isLoading, hasRequestedUpgrade, maxEmployees, maxAdmins } = useSubscription();
   const { contactSales } = useContactSales();
-  const requestUpgrade = useRequestUpgrade();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   return (
     <div className="space-y-8 animate-fade-in">
+      <UpgradeRequestDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
       <PageHeader
         variant="4"
         eyebrow="PLANES"
