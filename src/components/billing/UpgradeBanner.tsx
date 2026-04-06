@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useContactSales, useRequestUpgrade } from "@/hooks/useBilling";
+import { useContactSales } from "@/hooks/useBilling";
 import { Sparkles, MessageCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import UpgradeRequestDialog from "./UpgradeRequestDialog";
 
 interface UpgradeBannerProps {
   feature?: string;
@@ -11,7 +13,7 @@ interface UpgradeBannerProps {
 export default function UpgradeBanner({ feature, moduleKey }: UpgradeBannerProps) {
   const { isPaid, isLoading, hasRequestedUpgrade, requiredPlanForModule } = useSubscription();
   const { contactSales } = useContactSales();
-  const requestUpgrade = useRequestUpgrade();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   if (isLoading || isPaid) return null;
 
@@ -38,34 +40,30 @@ export default function UpgradeBanner({ feature, moduleKey }: UpgradeBannerProps
   }
 
   return (
-    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center gap-4 animate-slide-up press-scale">
-      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 animate-scale-in">
-        <Sparkles className="h-5 w-5 text-primary" />
+    <>
+      <UpgradeRequestDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center gap-4 animate-slide-up press-scale">
+        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 animate-scale-in">
+          <Sparkles className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">
+            {feature ? `"${feature}" requiere plan ${requiredPlan || 'Pro'}` : "Desbloquea todas las funciones"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Contacta a nuestro equipo para activar funciones avanzadas.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setUpgradeOpen(true)}>
+            Solicitar plan
+          </Button>
+          <Button size="sm" onClick={() => contactSales("whatsapp")} className="gap-1.5">
+            <MessageCircle className="h-4 w-4" />
+            Ventas
+          </Button>
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground">
-          {feature ? `"${feature}" requiere plan ${requiredPlan || 'Pro'}` : "Desbloquea todas las funciones"}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Contacta a nuestro equipo para activar funciones avanzadas.
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            requestUpgrade.mutate({});
-          }}
-          disabled={requestUpgrade.isPending}
-        >
-          Solicitar plan
-        </Button>
-        <Button size="sm" onClick={() => contactSales("whatsapp")} className="gap-1.5">
-          <MessageCircle className="h-4 w-4" />
-          Ventas
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }

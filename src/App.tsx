@@ -109,6 +109,7 @@ const PayrollReconciliation = lazy(() => import("./pages/admin/PayrollReconcilia
 const CompensationAdoption = lazy(() => import("./pages/admin/CompensationAdoption"));
 const Applications = lazy(() => import("./pages/admin/Applications"));
 const ApplicationSettings = lazy(() => import("./pages/admin/ApplicationSettings"));
+const UpgradeRequests = lazy(() => import("./pages/admin/UpgradeRequests"));
 const Apply = lazy(() => import("./pages/Apply"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));
@@ -253,6 +254,7 @@ function App() {
                 <Route path="compensation-adoption" element={<CompensationAdoption />} />
                 <Route path="applications" element={<Applications />} />
                 <Route path="application-settings" element={<ApplicationSettings />} />
+                <Route path="upgrade-requests" element={<UpgradeRequests />} />
               </Route>
 
               {/* Employee portal routes */}

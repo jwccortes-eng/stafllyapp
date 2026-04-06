@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { Check, MessageCircle, Mail, CheckCircle2, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useContactSales, useRequestUpgrade } from "@/hooks/useBilling";
+import { useContactSales } from "@/hooks/useBilling";
 import { cn } from "@/lib/utils";
+import UpgradeRequestDialog from "@/components/billing/UpgradeRequestDialog";
 
 const plans = [
   {
@@ -49,10 +51,11 @@ const plans = [
 export default function Pricing() {
   const { planCode, isLoading, hasRequestedUpgrade, maxEmployees, maxAdmins } = useSubscription();
   const { contactSales } = useContactSales();
-  const requestUpgrade = useRequestUpgrade();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   return (
     <div className="space-y-8 animate-fade-in">
+      <UpgradeRequestDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
       <PageHeader
         variant="4"
         eyebrow="PLANES"
@@ -145,8 +148,7 @@ export default function Pricing() {
                       <Button
                         className="w-full"
                         variant="outline"
-                        onClick={() => requestUpgrade.mutate({})}
-                        disabled={requestUpgrade.isPending}
+                        onClick={() => setUpgradeOpen(true)}
                       >
                         <Sparkles className="h-4 w-4 mr-1.5" />
                         Solicitar plan Pro

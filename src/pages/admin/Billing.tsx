@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useSubscription, PLAN_INFO } from "@/hooks/useSubscription";
-import { useContactSales, useRequestUpgrade } from "@/hooks/useBilling";
+import { useContactSales } from "@/hooks/useBilling";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
+import UpgradeRequestDialog from "@/components/billing/UpgradeRequestDialog";
 import { PageHeader } from "@/components/ui/page-header";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -33,7 +35,7 @@ export default function Billing() {
   } = useSubscription();
   const navigate = useNavigate();
   const { contactSales } = useContactSales();
-  const requestUpgrade = useRequestUpgrade();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   if (isLoading) {
     return <PageSkeleton variant="detail" />;
@@ -44,6 +46,7 @@ export default function Billing() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <UpgradeRequestDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
       <PageHeader
         variant="2"
         icon={CreditCard}
@@ -56,8 +59,7 @@ export default function Billing() {
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => requestUpgrade.mutate({})}
-                disabled={requestUpgrade.isPending}
+                onClick={() => setUpgradeOpen(true)}
                 className="press-scale gap-1.5"
               >
                 <Sparkles className="h-4 w-4" />Solicitar Pro
@@ -132,8 +134,7 @@ export default function Billing() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => requestUpgrade.mutate({})}
-                  disabled={requestUpgrade.isPending}
+                  onClick={() => setUpgradeOpen(true)}
                 >
                   Solicitar plan
                 </Button>
