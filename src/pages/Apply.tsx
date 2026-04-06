@@ -61,12 +61,13 @@ const DEFAULT_CONFIG: AppConfig = {
 };
 
 export default function Apply() {
-  const { companySlug } = useParams<{ companySlug: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(0);
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [referenceCode, setReferenceCode] = useState("");
   const [duplicateWarning, setDuplicateWarning] = useState(false);
@@ -92,36 +93,46 @@ export default function Apply() {
   const [address, setAddress] = useState<AddressData>({ address_line: "", address_city: "", address_state: "", address_zip: "" });
 
   const source = searchParams.get("source") ?? "direct_link";
-  const draftKey = companySlug ? `${DRAFT_KEY_PREFIX}${companySlug}` : null;
+  const normalizedSlug = slug?.toLowerCase().trim() ?? "";
+  const draftKey = normalizedSlug ? `${DRAFT_KEY_PREFIX}${normalizedSlug}` : null;
 
   // Load company + config
   useEffect(() => {
-    if (!companySlug) {
-      console.warn("[apply] no companySlug param");
-      setLoading(false);
-      return;
-    }
     const loadCompany = async () => {
-      console.log("[apply] loading company with slug:", companySlug);
+      console.log("[apply] slug:", slug);
+      if (!slug) {
+        console.error("[apply] missing slug");
+        setCompany(null);
+        setApplicationDisabledCompany(null);
+        setError("Falta el slug de la empresa en el enlace.");
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
+      setError(null);
+      setApplicationDisabledCompany(null);
+
       const { data: coCheck, error } = await supabase
         .from("companies")
         .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url, is_active, application_enabled")
-        .eq("slug", companySlug.toLowerCase().trim())
+        .eq("slug", normalizedSlug)
         .maybeSingle();
 
-      console.log("[apply] result:", { data: coCheck, error });
+      console.log("[apply] company result:", coCheck, error);
 
       if (error) {
         console.error("[apply] error:", error);
         setCompany(null);
+        setError(error.message);
         setLoading(false);
         return;
       }
 
       if (!coCheck) {
-        console.warn("[apply] no company found for slug:", companySlug);
+        console.warn("[apply] no company found for slug:", normalizedSlug);
         setCompany(null);
+        setError(`No existe ninguna empresa con slug \"${normalizedSlug}\".`);
         setLoading(false);
         return;
       }
@@ -176,7 +187,7 @@ export default function Apply() {
       setLoading(false);
     };
     loadCompany();
-  }, [companySlug]);
+  }, [normalizedSlug, slug]);
 
   // Autosave draft
   const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -326,6 +337,11 @@ export default function Apply() {
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
               <strong>{applicationDisabledCompany}</strong> no está aceptando aplicaciones en este momento. Intenta más tarde o contacta a la empresa directamente.
             </p>
+          </>
+        ) : error ? (
+          <>
+            <h1 className="text-xl font-heading font-bold mt-4 text-foreground">Error al cargar empresa</h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-sm">{error}</p>
           </>
         ) : (
           <>
