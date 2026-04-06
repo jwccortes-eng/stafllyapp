@@ -91,7 +91,7 @@ export default function Auth() {
         password,
         options: {
           data: { full_name: fullName, company_name: companyName.trim() },
-          emailRedirectTo: APP_BASE_URL,
+          emailRedirectTo: `${APP_BASE_URL}/auth/callback`,
         },
       });
       if (error) toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
