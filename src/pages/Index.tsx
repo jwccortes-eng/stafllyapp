@@ -1,11 +1,24 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import Landing from "./Landing";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+const Landing = React.lazy(() => import("./Landing"));
 
 export default function Index() {
   const { user, loading, canAccessAdmin, canAccessPortal, activeMode } = useAuth();
   const navigate = useNavigate();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Safety timeout: if loading takes >5s, force show landing
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => {
+      console.warn("[index] Auth loading timed out after 5s, showing landing");
+      setTimedOut(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   useEffect(() => {
     // Detect Supabase auth hash fragments at root and redirect to callback handler
@@ -15,10 +28,14 @@ export default function Index() {
       navigate(`/auth/callback${hash}`, { replace: true });
       return;
     }
+    // Clean stale empty hash
+    if (hash === "#" || hash === "") {
+      window.history.replaceState(null, "", window.location.pathname || "/");
+    }
   }, [navigate]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading && !timedOut) return;
     if (!user) return;
     if (canAccessAdmin && canAccessPortal) {
       navigate(activeMode === 'employee' ? "/portal" : "/app");
@@ -27,9 +44,9 @@ export default function Index() {
     } else if (canAccessPortal) {
       navigate("/portal");
     }
-  }, [user, loading, navigate, canAccessAdmin, canAccessPortal, activeMode]);
+  }, [user, loading, timedOut, navigate, canAccessAdmin, canAccessPortal, activeMode]);
 
-  if (loading) {
+  if (loading && !timedOut) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
@@ -40,7 +57,21 @@ export default function Index() {
     );
   }
 
-  if (!user) return <Landing />;
+  if (!user) {
+    return (
+      <ErrorBoundary>
+        <React.Suspense
+          fallback={
+            <div className="flex min-h-screen items-center justify-center bg-background">
+              <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+            </div>
+          }
+        >
+          <Landing />
+        </React.Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   return null;
 }
