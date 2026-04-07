@@ -306,70 +306,194 @@ export default function Landing() {
         )}
       </header>
 
-      {/* ══════════ HERO ══════════ */}
-      <section className="relative pt-24 pb-8 sm:pt-32 sm:pb-16 overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: "radial-gradient(ellipse 80% 60% at 50% -10%, hsl(210 100% 94% / 0.7), transparent 60%)",
-        }} />
-        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none" style={{
-          background: "linear-gradient(to bottom, transparent, hsl(var(--background)))",
-        }} />
+      {/* ══════════ HERO — CINEMATIC ══════════ */}
+      <section className="relative pt-24 pb-12 sm:pt-32 sm:pb-20 lg:pt-36 lg:pb-28 overflow-hidden">
+        {/* Layered background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ background: "radial-gradient(ellipse 90% 70% at 50% -20%, hsl(210 100% 92% / 0.8), transparent 65%)" }} className="absolute inset-0" />
+          <div style={{ background: "radial-gradient(ellipse 60% 50% at 80% 20%, hsl(210 100% 88% / 0.35), transparent 50%)" }} className="absolute inset-0" />
+          <div style={{ background: "radial-gradient(ellipse 40% 40% at 20% 80%, hsl(200 100% 92% / 0.25), transparent 50%)" }} className="absolute inset-0" />
+          <div style={{ background: "linear-gradient(to bottom, transparent 70%, hsl(var(--background)))" }} className="absolute inset-0" />
+        </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Text center */}
-          <div className="text-center max-w-3xl mx-auto">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide mb-6 px-4 py-1.5 rounded-full bg-primary/[0.07] text-primary border border-primary/10">
-              <Zap className="h-3.5 w-3.5" />
-              {c.hero.badge}
-            </span>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
-            <h1 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[56px] font-extrabold tracking-tight leading-[1.08] text-foreground font-heading whitespace-pre-line">
-              {c.hero.h1}
-            </h1>
+            {/* LEFT — Copy */}
+            <div className="text-center lg:text-left max-w-xl mx-auto lg:mx-0">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-widest uppercase mb-5 px-3.5 py-1.5 rounded-full bg-primary/[0.08] text-primary border border-primary/10">
+                <Activity className="h-3 w-3" />
+                {c.hero.badge}
+              </span>
 
-            <p className="mt-5 text-base sm:text-lg leading-relaxed text-muted-foreground max-w-2xl mx-auto">
-              {c.hero.sub}
-            </p>
+              <h1 className="text-[30px] sm:text-4xl md:text-5xl lg:text-[52px] font-extrabold tracking-tight leading-[1.06] text-foreground font-heading whitespace-pre-line">
+                {c.hero.h1}
+              </h1>
 
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                to="/auth?register=true"
-                className="inline-flex items-center gap-2 rounded-full px-8 h-12 text-[15px] font-semibold text-primary-foreground bg-primary hover:bg-primary/90 shadow-[0_4px_24px_-4px_hsl(210_100%_50%/0.45)] transition-all active:scale-[0.97]"
-              >
-                {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                to="/portal"
-                className="inline-flex items-center gap-1.5 rounded-full h-12 px-8 text-[15px] font-semibold border border-border hover:bg-accent transition-all active:scale-[0.97] text-foreground"
-              >
-                {c.ctaPortal}
-              </Link>
+              <p className="mt-5 text-base sm:text-[17px] leading-relaxed text-muted-foreground max-w-lg mx-auto lg:mx-0">
+                {c.hero.sub}
+              </p>
+
+              <div className="mt-8 flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3">
+                <Link
+                  to="/auth?register=true"
+                  className="inline-flex items-center gap-2 rounded-full px-8 h-12 text-[15px] font-semibold text-primary-foreground bg-primary hover:bg-primary/90 shadow-[0_4px_28px_-4px_hsl(210_100%_50%/0.5)] transition-all active:scale-[0.97] hover:shadow-[0_6px_36px_-4px_hsl(210_100%_50%/0.55)]"
+                >
+                  {c.ctaPrimary} <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/portal"
+                  className="inline-flex items-center gap-1.5 rounded-full h-12 px-8 text-[15px] font-semibold border border-border/60 hover:bg-accent/60 backdrop-blur-sm transition-all active:scale-[0.97] text-foreground"
+                >
+                  {c.ctaPortal}
+                </Link>
+              </div>
+
+              <div className="mt-5 flex items-center justify-center lg:justify-start gap-5 flex-wrap text-sm text-muted-foreground">
+                {c.hero.pills.map((pill, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    {pill}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            <div className="mt-5 flex items-center justify-center gap-5 flex-wrap text-sm text-muted-foreground">
-              {c.hero.pills.map((pill, i) => (
-                <span key={i} className="inline-flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                  {pill}
-                </span>
-              ))}
-            </div>
-          </div>
+            {/* RIGHT — Cinematic Product Scene */}
+            <div className="relative hidden sm:block" style={{ perspective: "1200px" }}>
+              {/* Ambient glow behind the scene */}
+              <div className="absolute -inset-8 rounded-3xl pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 40%, hsl(210 100% 60% / 0.08), transparent 70%)" }} />
 
-          {/* Hero platform image */}
-          <div className="mt-12 sm:mt-16 max-w-5xl mx-auto">
-            <div className="relative rounded-2xl overflow-hidden shadow-[0_20px_60px_-15px_hsl(220_25%_12%/0.25)] border border-border/60 bg-card">
-              <img
-                src={heroPlatform}
-                alt="StaflyApps Platform"
-                className="w-full h-auto block"
-                loading="eager"
-                width={1920}
-                height={1200}
-              />
-              {/* Subtle gradient overlay at bottom */}
-              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card/60 to-transparent" />
+              {/* Main dashboard panel */}
+              <div
+                className="relative rounded-2xl border border-border/50 bg-card/95 backdrop-blur-md shadow-[0_24px_80px_-12px_hsl(220_25%_12%/0.2)] overflow-hidden"
+                style={{ transform: "rotateY(-2deg) rotateX(1deg)" }}
+              >
+                {/* Top bar */}
+                <div className="flex items-center gap-2 px-5 py-3 border-b border-border/40 bg-muted/30">
+                  <div className="flex gap-1.5">
+                    <div className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-status-pending/60" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-status-confirmed/60" />
+                  </div>
+                  <div className="flex-1 flex justify-center">
+                    <div className="bg-muted/60 rounded-md px-12 py-1 text-[10px] text-muted-foreground font-mono">app.staflyapps.com</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-muted-foreground/40">
+                    <Bell className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+
+                {/* Dashboard content */}
+                <div className="p-5 space-y-4">
+                  {/* KPI row */}
+                  <div className="grid grid-cols-4 gap-3">
+                    {[
+                      { label: lang === "es" ? "Empleados" : "Employees", value: "847", icon: <Users className="h-3.5 w-3.5" />, trend: "+12" },
+                      { label: lang === "es" ? "Turnos hoy" : "Shifts today", value: "124", icon: <CalendarDays className="h-3.5 w-3.5" />, trend: "" },
+                      { label: lang === "es" ? "Clock-in" : "Clocked in", value: "94.2%", icon: <Clock className="h-3.5 w-3.5" />, trend: "" },
+                      { label: "Payroll", value: "$48.3K", icon: <DollarSign className="h-3.5 w-3.5" />, trend: "" },
+                    ].map((kpi, i) => (
+                      <div key={i} className="bg-muted/30 rounded-xl p-3 border border-border/30">
+                        <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                          {kpi.icon}
+                          <span className="text-[10px] font-medium truncate">{kpi.label}</span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-lg font-bold text-foreground font-heading tabular-nums">{kpi.value}</span>
+                          {kpi.trend && <span className="text-[9px] font-semibold text-status-confirmed">↑{kpi.trend}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Employee list */}
+                  <div className="bg-muted/20 rounded-xl border border-border/30 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/20">
+                      <span className="text-[11px] font-semibold text-foreground">{lang === "es" ? "Equipo activo" : "Active team"}</span>
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-status-confirmed bg-status-confirmed/10 px-2 py-0.5 rounded-full">
+                        <CircleDot className="h-2 w-2" /> Live
+                      </span>
+                    </div>
+                    <div className="divide-y divide-border/20">
+                      {[
+                        { name: "Maria G.", role: lang === "es" ? "Supervisora" : "Supervisor", status: "active", shift: "8:00–4:00 PM" },
+                        { name: "Carlos R.", role: lang === "es" ? "Operador" : "Operator", status: "active", shift: "6:00–2:00 PM" },
+                        { name: "Ana L.", role: lang === "es" ? "Asistente" : "Assistant", status: "pending", shift: "10:00–6:00 PM" },
+                        { name: "David M.", role: "Driver", status: "active", shift: "7:00–3:00 PM" },
+                      ].map((emp, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                            {emp.name.split(" ").map(n => n[0]).join("")}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-semibold text-foreground truncate">{emp.name}</p>
+                            <p className="text-[9px] text-muted-foreground">{emp.role}</p>
+                          </div>
+                          <span className="text-[9px] text-muted-foreground hidden sm:block">{emp.shift}</span>
+                          <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${emp.status === "active" ? "bg-status-confirmed" : "bg-status-pending"}`} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating notification cards */}
+              <div
+                className="absolute -top-4 -right-6 sm:-right-10 bg-card rounded-xl border border-border/50 shadow-[0_8px_30px_-8px_hsl(220_25%_12%/0.18)] p-3.5 w-52 backdrop-blur-md z-10"
+                style={{ animation: "hero-float 6s ease-in-out infinite", transform: "translateZ(40px)" }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-lg bg-status-confirmed/10 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-status-confirmed" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-foreground">{lang === "es" ? "Turno asignado" : "Shift assigned"}</p>
+                    <p className="text-[9px] text-muted-foreground">{lang === "es" ? "12 trabajadores" : "12 workers"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="absolute -bottom-3 -left-4 sm:-left-8 bg-card rounded-xl border border-border/50 shadow-[0_8px_30px_-8px_hsl(220_25%_12%/0.18)] p-3.5 w-48 backdrop-blur-md z-10"
+                style={{ animation: "hero-float 6s ease-in-out 2s infinite", transform: "translateZ(30px)" }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-foreground">Payroll</p>
+                    <p className="text-[9px] text-muted-foreground">{lang === "es" ? "Pendiente — $4,200" : "Pending — $4,200"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="absolute top-1/2 -right-3 sm:-right-6 bg-card rounded-xl border border-border/50 shadow-[0_8px_30px_-8px_hsl(220_25%_12%/0.18)] p-3 w-44 backdrop-blur-md z-10"
+                style={{ animation: "hero-float 6s ease-in-out 4s infinite", transform: "translateZ(20px)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-accent-warm/10 flex items-center justify-center shrink-0">
+                    <UserPlus className="h-3.5 w-3.5 text-accent-warm" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-foreground">{lang === "es" ? "Nueva solicitud" : "New application"}</p>
+                    <p className="text-[9px] text-muted-foreground">{lang === "es" ? "Hace 2 min" : "2 min ago"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="absolute bottom-1/3 -left-2 sm:-left-5 bg-card rounded-lg border border-border/50 shadow-[0_4px_20px_-6px_hsl(220_25%_12%/0.15)] px-3 py-2 backdrop-blur-md z-10"
+                style={{ animation: "hero-float 6s ease-in-out 3s infinite" }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-status-confirmed animate-pulse" />
+                  <span className="text-[9px] font-semibold text-foreground">{lang === "es" ? "3 ficharon ahora" : "3 clocked in now"}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
