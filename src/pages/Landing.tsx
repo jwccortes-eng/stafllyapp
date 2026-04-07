@@ -5,10 +5,10 @@ import {
   CalendarDays, DollarSign, Users, Clock, Shield,
   ArrowRight, CheckCircle2, Globe, Menu, X, Upload,
   Building2, Smartphone, UserCog, Zap, BarChart3,
-  MapPin, Star, ChevronRight,
+  MapPin, Star, ChevronRight, Activity, Bell, FileText,
+  TrendingUp, CircleDot, UserPlus,
 } from "lucide-react";
 import { StaflyLogo, StaflyMark } from "@/components/brand/StaflyBrand";
-import heroPlatform from "@/assets/hero-platform-premium.jpg";
 
 /* ───────── i18n ───────── */
 const i18n = {
