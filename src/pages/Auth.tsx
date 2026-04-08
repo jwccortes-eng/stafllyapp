@@ -40,20 +40,24 @@ export default function Auth() {
       if (metaCompanyName && !needsSetupChecked) {
         setNeedsSetupChecked(true);
         setSettingUp(true);
+        console.log("[Auth] Auto-setup triggered for company:", metaCompanyName);
         try {
           const { data, error } = await supabase.functions.invoke("setup-company", {
             body: { company_name: metaCompanyName },
           });
+          console.log("[Auth] setup-company response:", JSON.stringify(data), error ? JSON.stringify(error) : "no error");
           if (error) throw error;
           if (data?.already_setup) {
-            // Already has a company, just redirect
+            console.log("[Auth] Company already exists, redirecting...");
           } else if (data?.success) {
+            console.log("[Auth] Company created:", data.company_id);
             toast({ title: "¡Empresa creada!", description: `${metaCompanyName} está lista. Tienes 14 días de prueba Pro.` });
           }
           window.location.reload();
           return;
         } catch (err: any) {
-          console.error("Auto-setup error:", err);
+          console.error("[Auth] Auto-setup error:", err?.message, JSON.stringify(err));
+          toast({ title: "Error configurando empresa", description: err?.message || "Intenta recargar la página.", variant: "destructive" });
         } finally {
           setSettingUp(false);
         }
@@ -78,15 +82,20 @@ export default function Auth() {
     setLoading(true);
 
     if (isLogin) {
+      console.log("[Auth] Login attempt:", identifier);
       const { error } = await supabase.auth.signInWithPassword({ email: identifier, password });
-      if (error) toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+      if (error) {
+        console.error("[Auth] Login error:", error.message, error.status);
+        toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
+      }
     } else {
       if (!companyName.trim()) {
         toast({ title: "Error", description: "Ingresa el nombre de tu empresa", variant: "destructive" });
         setLoading(false);
         return;
       }
-      const { error } = await supabase.auth.signUp({
+      console.log("[Auth] Signup attempt:", { email: identifier, fullName, companyName: companyName.trim() });
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email: identifier,
         password,
         options: {
@@ -94,8 +103,18 @@ export default function Auth() {
           emailRedirectTo: `${APP_BASE_URL}/auth/callback`,
         },
       });
-      if (error) toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
-      else toast({ title: "Cuenta creada", description: "Revisa tu email para confirmar tu cuenta." });
+      if (error) {
+        console.error("[Auth] Signup error:", error.message, error.status, JSON.stringify(error));
+        // Show specific message for "already registered"
+        if (error.message?.includes('already registered') || (error as any).status === 422) {
+          toast({ title: "Email ya registrado", description: "Este email ya tiene una cuenta. Intenta iniciar sesión o recupera tu contraseña.", variant: "destructive" });
+        } else {
+          toast({ title: "Error al registrarse", description: getUserFriendlyError(error), variant: "destructive" });
+        }
+      } else {
+        console.log("[Auth] Signup success:", signUpData?.user?.id, "confirmation pending:", !signUpData?.user?.email_confirmed_at);
+        toast({ title: "Cuenta creada", description: "Revisa tu email para confirmar tu cuenta." });
+      }
     }
     setLoading(false);
   };
