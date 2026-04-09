@@ -239,44 +239,86 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
           <DialogDescription>Asigna usuarios y roles a esta empresa</DialogDescription>
         </DialogHeader>
 
-        {/* Add user form */}
-        <div className="flex gap-2 items-end">
-          <div className="flex-1 space-y-1">
-            <Label className="text-xs">Usuario</Label>
-            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Seleccionar usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUsers.length === 0 ? (
-                  <SelectItem value="__none" disabled>No hay usuarios disponibles</SelectItem>
-                ) : (
-                  availableUsers.map(u => (
-                    <SelectItem key={u.user_id} value={u.user_id}>
-                      {u.full_name || u.email}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-32 space-y-1">
-            <Label className="text-xs">Rol</Label>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_OPTIONS.map(r => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button size="sm" onClick={handleAdd} disabled={loading || !selectedUserId} className="h-9">
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        <Tabs defaultValue="existing" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 h-8">
+            <TabsTrigger value="existing" className="text-xs">Existente</TabsTrigger>
+            <TabsTrigger value="new" className="text-xs"><UserPlus className="h-3 w-3 mr-1" />Crear nuevo</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="existing" className="mt-2">
+            <div className="flex gap-2 items-end">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs">Usuario</Label>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Seleccionar usuario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUsers.length === 0 ? (
+                      <SelectItem value="__none" disabled>No hay usuarios disponibles</SelectItem>
+                    ) : (
+                      availableUsers.map(u => (
+                        <SelectItem key={u.user_id} value={u.user_id}>
+                          {u.full_name || u.email}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-32 space-y-1">
+                <Label className="text-xs">Rol</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(r => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button size="sm" onClick={handleAdd} disabled={loading || !selectedUserId} className="h-9">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="new" className="mt-2 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre completo</Label>
+                <Input className="h-9 text-sm" placeholder="Juan Pérez" value={newFullName} onChange={e => setNewFullName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Rol</Label>
+                <Select value={newRole} onValueChange={setNewRole}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(r => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Email</Label>
+              <Input className="h-9 text-sm" type="email" placeholder="email@ejemplo.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Contraseña</Label>
+              <Input className="h-9 text-sm" type="password" placeholder="Mínimo 6 caracteres" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+            </div>
+            <Button size="sm" className="w-full h-9" onClick={handleCreateAndAssign} disabled={creating || !newEmail || !newPassword || newPassword.length < 6}>
+              <UserPlus className="h-4 w-4 mr-1" />
+              {creating ? "Creando..." : "Crear y asignar"}
+            </Button>
+          </TabsContent>
+        </Tabs>
 
         {/* Current users */}
         <div className="border rounded-lg overflow-hidden">
