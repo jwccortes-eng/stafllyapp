@@ -181,80 +181,80 @@ function App() {
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
-                <Route path="employees" element={<Employees />} />
-                <Route path="periods" element={<ModuleGate moduleKey="periods"><PayPeriods /></ModuleGate>} />
-                <Route path="import" element={<ModuleGate moduleKey="import"><ImportConnecteam /></ModuleGate>} />
-                <Route path="concepts" element={<Concepts />} />
-                <Route path="movements" element={<ModuleGate moduleKey="movements"><Movements /></ModuleGate>} />
-                <Route path="summary" element={<ModuleGate moduleKey="summary"><PeriodSummary /></ModuleGate>} />
-                <Route path="summary/detail" element={<ModuleGate moduleKey="summary"><EmployeePeriodDetail /></ModuleGate>} />
-                <Route path="reports" element={<ModuleGate moduleKey="reports"><PeriodSummary /></ModuleGate>} />
-                <Route path="reports/employee" element={<ModuleGate moduleKey="reports"><EmployeeReport /></ModuleGate>} />
+                <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
+                <Route path="periods" element={<CompanyRequiredGuard><ModuleGate moduleKey="periods"><PayPeriods /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="import" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportConnecteam /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="concepts" element={<CompanyRequiredGuard><Concepts /></CompanyRequiredGuard>} />
+                <Route path="movements" element={<CompanyRequiredGuard><ModuleGate moduleKey="movements"><Movements /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="summary" element={<CompanyRequiredGuard><ModuleGate moduleKey="summary"><PeriodSummary /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="summary/detail" element={<CompanyRequiredGuard><ModuleGate moduleKey="summary"><EmployeePeriodDetail /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="reports" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><PeriodSummary /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="reports/employee" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><EmployeeReport /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="companies" element={<CompaniesPage />} />
                 <Route path="global" element={<OwnerDashboard />} />
-                <Route path="invite" element={<InviteEmployees />} />
+                <Route path="invite" element={<CompanyRequiredGuard><InviteEmployees /></CompanyRequiredGuard>} />
                 <Route path="directory" element={<Directory />} />
-                <Route path="clients" element={<ModuleGate moduleKey="clients"><Clients /></ModuleGate>} />
-                <Route path="locations" element={<ModuleGate moduleKey="locations"><Locations /></ModuleGate>} />
-                <Route path="shifts" element={<Shifts />} />
-                <Route path="import-schedule" element={<ModuleGate moduleKey="import"><ImportSchedule /></ModuleGate>} />
-                <Route path="import-timeclock" element={<ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate>} />
-                <Route path="import-extras" element={<ModuleGate moduleKey="import"><ImportPayrollExtras /></ModuleGate>} />
-                <Route path="bulk-import-shifts" element={<BulkImportShifts />} />
-                <Route path="import-wizard" element={<ModuleGate moduleKey="import"><ImportWizard /></ModuleGate>} />
-                <Route path="shift-requests" element={<ShiftRequests />} />
-                <Route path="timeclock" element={<ModuleGate moduleKey="timeclock"><TimeClock /></ModuleGate>} />
-                <Route path="today" element={<TodayView />} />
-                <Route path="announcements" element={<Announcements />} />
-                <Route path="chat" element={<ModuleGate moduleKey="chat"><InternalChat /></ModuleGate>} />
+                <Route path="clients" element={<CompanyRequiredGuard><ModuleGate moduleKey="clients"><Clients /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="locations" element={<CompanyRequiredGuard><ModuleGate moduleKey="locations"><Locations /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="shifts" element={<CompanyRequiredGuard><Shifts /></CompanyRequiredGuard>} />
+                <Route path="import-schedule" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportSchedule /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="import-timeclock" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportTimeClock /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="import-extras" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportPayrollExtras /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="bulk-import-shifts" element={<CompanyRequiredGuard><BulkImportShifts /></CompanyRequiredGuard>} />
+                <Route path="import-wizard" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportWizard /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="shift-requests" element={<CompanyRequiredGuard><ShiftRequests /></CompanyRequiredGuard>} />
+                <Route path="timeclock" element={<CompanyRequiredGuard><ModuleGate moduleKey="timeclock"><TimeClock /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="today" element={<CompanyRequiredGuard><TodayView /></CompanyRequiredGuard>} />
+                <Route path="announcements" element={<CompanyRequiredGuard><Announcements /></CompanyRequiredGuard>} />
+                <Route path="chat" element={<CompanyRequiredGuard><ModuleGate moduleKey="chat"><InternalChat /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="settings" element={<PlatformSettings />} />
                 <Route path="activity" element={<ActivityLog />} />
-                <Route path="onboarding" element={<OnboardingWizard />} />
-                <Route path="permissions" element={<Permissions />} />
-                <Route path="company-config" element={<CompanyConfig />} />
-                <Route path="automations" element={<ModuleGate moduleKey="automations"><Automations /></ModuleGate>} />
-                <Route path="payroll-settings" element={<PayrollSettings />} />
-                <Route path="monetization" element={<ModuleGate moduleKey="monetization"><MonetizationReport /></ModuleGate>} />
+                <Route path="onboarding" element={<CompanyRequiredGuard><OnboardingWizard /></CompanyRequiredGuard>} />
+                <Route path="permissions" element={<CompanyRequiredGuard><Permissions /></CompanyRequiredGuard>} />
+                <Route path="company-config" element={<CompanyRequiredGuard><CompanyConfig /></CompanyRequiredGuard>} />
+                <Route path="automations" element={<CompanyRequiredGuard><ModuleGate moduleKey="automations"><Automations /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="payroll-settings" element={<CompanyRequiredGuard><PayrollSettings /></CompanyRequiredGuard>} />
+                <Route path="monetization" element={<CompanyRequiredGuard><ModuleGate moduleKey="monetization"><MonetizationReport /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="pricing" element={<Pricing />} />
                 <Route path="billing" element={<Billing />} />
                 <Route path="system-health" element={<SystemHealth />} />
                 <Route path="implementations" element={<Implementations />} />
-                <Route path="notification-templates" element={<NotificationTemplates />} />
+                <Route path="notification-templates" element={<CompanyRequiredGuard><NotificationTemplates /></CompanyRequiredGuard>} />
                 <Route path="notifications" element={<NotificationsPage />} />
-                <Route path="requests" element={<Requests />} />
+                <Route path="requests" element={<CompanyRequiredGuard><Requests /></CompanyRequiredGuard>} />
                 <Route path="leads" element={<Leads />} />
                 <Route path="admin" element={<AdminHub />} />
-                <Route path="discrepancies" element={<ModuleGate moduleKey="reports"><DiscrepancyReport /></ModuleGate>} />
-                <Route path="comparison" element={<ComparisonReport />} />
-                <Route path="w9" element={<ContractorW9 />} />
-                <Route path="1099" element={<TaxForms1099 />} />
-                <Route path="import-inactive" element={<ImportInactiveEmployees />} />
-                <Route path="unpaid-shifts" element={<ModuleGate moduleKey="reports"><UnpaidShiftsReport /></ModuleGate>} />
-                <Route path="staffing-requests" element={<StaffingRequests />} />
-                <Route path="invoices" element={<InvoicesPage />} />
-                <Route path="service-categories" element={<ServiceCategories />} />
-                <Route path="ai-workforce" element={<AIWorkforce />} />
-                <Route path="live-map" element={<LiveMap />} />
-                <Route path="leaderboard" element={<Leaderboard />} />
-                <Route path="passport" element={<WorkerPassport />} />
-                <Route path="attendance" element={<Attendance />} />
-                <Route path="quality" element={<QualityDashboard />} />
-                <Route path="migration" element={<MigrationCommandCenter />} />
-                <Route path="company-migration" element={<CompanyMigration />} />
-                <Route path="reconciliation-report" element={<ReconciliationReport />} />
-                <Route path="staged-reconciliation" element={<StagedReconciliation />} />
-                <Route path="advances-loans" element={<AdvancesLoans />} />
-                <Route path="kiosk-devices" element={<KioskDevices />} />
-                <Route path="shift-ops" element={<ShiftOperations />} />
-                <Route path="ops-center" element={<OperationsCommandCenter />} />
-                <Route path="compensation-validation" element={<CompensationValidation />} />
-                <Route path="payroll-pilot-close" element={<PayrollPilotClose />} />
-                <Route path="payroll-mappings" element={<PayrollMappings />} />
-                <Route path="payroll-reconciliation" element={<PayrollReconciliation />} />
-                <Route path="compensation-adoption" element={<CompensationAdoption />} />
-                <Route path="applications" element={<Applications />} />
-                <Route path="application-settings" element={<ApplicationSettings />} />
+                <Route path="discrepancies" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><DiscrepancyReport /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="comparison" element={<CompanyRequiredGuard><ComparisonReport /></CompanyRequiredGuard>} />
+                <Route path="w9" element={<CompanyRequiredGuard><ContractorW9 /></CompanyRequiredGuard>} />
+                <Route path="1099" element={<CompanyRequiredGuard><TaxForms1099 /></CompanyRequiredGuard>} />
+                <Route path="import-inactive" element={<CompanyRequiredGuard><ImportInactiveEmployees /></CompanyRequiredGuard>} />
+                <Route path="unpaid-shifts" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><UnpaidShiftsReport /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="staffing-requests" element={<CompanyRequiredGuard><StaffingRequests /></CompanyRequiredGuard>} />
+                <Route path="invoices" element={<CompanyRequiredGuard><InvoicesPage /></CompanyRequiredGuard>} />
+                <Route path="service-categories" element={<CompanyRequiredGuard><ServiceCategories /></CompanyRequiredGuard>} />
+                <Route path="ai-workforce" element={<CompanyRequiredGuard><AIWorkforce /></CompanyRequiredGuard>} />
+                <Route path="live-map" element={<CompanyRequiredGuard><LiveMap /></CompanyRequiredGuard>} />
+                <Route path="leaderboard" element={<CompanyRequiredGuard><Leaderboard /></CompanyRequiredGuard>} />
+                <Route path="passport" element={<CompanyRequiredGuard><WorkerPassport /></CompanyRequiredGuard>} />
+                <Route path="attendance" element={<CompanyRequiredGuard><Attendance /></CompanyRequiredGuard>} />
+                <Route path="quality" element={<CompanyRequiredGuard><QualityDashboard /></CompanyRequiredGuard>} />
+                <Route path="migration" element={<CompanyRequiredGuard><MigrationCommandCenter /></CompanyRequiredGuard>} />
+                <Route path="company-migration" element={<CompanyRequiredGuard><CompanyMigration /></CompanyRequiredGuard>} />
+                <Route path="reconciliation-report" element={<CompanyRequiredGuard><ReconciliationReport /></CompanyRequiredGuard>} />
+                <Route path="staged-reconciliation" element={<CompanyRequiredGuard><StagedReconciliation /></CompanyRequiredGuard>} />
+                <Route path="advances-loans" element={<CompanyRequiredGuard><AdvancesLoans /></CompanyRequiredGuard>} />
+                <Route path="kiosk-devices" element={<CompanyRequiredGuard><KioskDevices /></CompanyRequiredGuard>} />
+                <Route path="shift-ops" element={<CompanyRequiredGuard><ShiftOperations /></CompanyRequiredGuard>} />
+                <Route path="ops-center" element={<CompanyRequiredGuard><OperationsCommandCenter /></CompanyRequiredGuard>} />
+                <Route path="compensation-validation" element={<CompanyRequiredGuard><CompensationValidation /></CompanyRequiredGuard>} />
+                <Route path="payroll-pilot-close" element={<CompanyRequiredGuard><PayrollPilotClose /></CompanyRequiredGuard>} />
+                <Route path="payroll-mappings" element={<CompanyRequiredGuard><PayrollMappings /></CompanyRequiredGuard>} />
+                <Route path="payroll-reconciliation" element={<CompanyRequiredGuard><PayrollReconciliation /></CompanyRequiredGuard>} />
+                <Route path="compensation-adoption" element={<CompanyRequiredGuard><CompensationAdoption /></CompanyRequiredGuard>} />
+                <Route path="applications" element={<CompanyRequiredGuard><Applications /></CompanyRequiredGuard>} />
+                <Route path="application-settings" element={<CompanyRequiredGuard><ApplicationSettings /></CompanyRequiredGuard>} />
                 <Route path="upgrade-requests" element={<UpgradeRequests />} />
               </Route>
 
