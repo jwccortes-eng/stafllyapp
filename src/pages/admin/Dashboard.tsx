@@ -343,7 +343,7 @@ function ActivityRow({ item }: { item: any }) {
    ═══════════════════════════════════════════════════ */
 
 export default function AdminDashboard() {
-  const { selectedCompanyId, selectedCompany, isModuleActive, companies, setSelectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany, isModuleActive, companies, setSelectedCompanyId, isGlobalMode } = useCompany();
   const { role, hasModuleAccess, fullName } = useAuth();
   const { config: payrollConfig, currentWeek } = usePayrollConfig();
   const navigate = useNavigate();
