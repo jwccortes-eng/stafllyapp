@@ -517,25 +517,6 @@ export default function Employees() {
   };
 
   const visibleFields = CONNECTEAM_FIELDS.filter(f => isPrivileged || !SENSITIVE_FIELD_KEYS.has(f.key));
-  const BOOLEAN_FIELDS = new Set(["has_car"]);
-
-  const EmployeeForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
-    <form onSubmit={onSubmit} className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-      {visibleFields.map(f => (
-        <FormField key={f.key} label={f.label} required={f.required} htmlFor={`emp-${f.key}`}>
-          {BOOLEAN_FIELDS.has(f.key) ? (
-            <div className="flex items-center gap-2 h-8">
-              <Checkbox id={`emp-${f.key}`} checked={form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí"} onCheckedChange={c => setForm(prev => ({ ...prev, [f.key]: c ? "Yes" : "No" }))} />
-              <Label htmlFor={`emp-${f.key}`} className="text-xs font-normal cursor-pointer">{form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí" ? "Sí" : "No"}</Label>
-            </div>
-          ) : (
-            <Input id={`emp-${f.key}`} value={form[f.key] ?? ""} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} required={f.required} className="h-8 text-sm" />
-          )}
-        </FormField>
-      ))}
-      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
-    </form>
-  );
 
   return (
     <div className="space-y-3">
