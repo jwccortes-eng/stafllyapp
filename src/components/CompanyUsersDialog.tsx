@@ -132,6 +132,46 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     setGuardAction(() => doAdd);
   };
 
+  const doCreateAndAssign = async () => {
+    if (!newEmail || !newPassword || !companyId) return;
+    setCreating(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      const { data, error } = await supabase.functions.invoke("invite-admin", {
+        body: { email: newEmail, password: newPassword, full_name: newFullName, role: newRole },
+      });
+      if (error || !data?.user_id) {
+        toast({ title: "Error al crear usuario", description: error?.message || data?.error || "Error desconocido", variant: "destructive" });
+        setCreating(false);
+        return;
+      }
+      // Now assign to company
+      const { error: assignErr } = await supabase
+        .from("company_users")
+        .insert({ company_id: companyId, user_id: data.user_id, role: newRole } as any);
+      if (assignErr) {
+        toast({ title: "Usuario creado pero no asignado", description: assignErr.message, variant: "destructive" });
+      } else {
+        toast({ title: "Usuario creado y asignado exitosamente" });
+        setNewEmail("");
+        setNewPassword("");
+        setNewFullName("");
+        setNewRole("admin");
+        fetchCompanyUsers();
+        onUpdated();
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+    setCreating(false);
+  };
+
+  const handleCreateAndAssign = () => {
+    setGuardTitle("Crear y asignar usuario a " + companyName);
+    setGuardAction(() => doCreateAndAssign);
+  };
+
   const doRemove = async (cuId: string, cuRole: string) => {
     // Prevent removing last company_owner
     if (cuRole === 'company_owner') {
