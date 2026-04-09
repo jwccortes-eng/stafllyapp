@@ -117,6 +117,37 @@ function EmpStatusBadge({ employee, showInvite, onInvite, invitation }: { employ
   return <PortalAccessBadge employee={employee} invitation={invitation} showInviteAction={showInvite} onInvite={onInvite} />;
 }
 
+const BOOLEAN_FIELDS = new Set(["has_car"]);
+
+interface EmployeeFormProps {
+  fields: typeof CONNECTEAM_FIELDS;
+  form: Record<string, string>;
+  setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  loading: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+  submitLabel: string;
+}
+
+function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }: EmployeeFormProps) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+      {fields.map(f => (
+        <FormField key={f.key} label={f.label} required={f.required} htmlFor={`emp-${f.key}`}>
+          {BOOLEAN_FIELDS.has(f.key) ? (
+            <div className="flex items-center gap-2 h-8">
+              <Checkbox id={`emp-${f.key}`} checked={form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí"} onCheckedChange={c => setForm(prev => ({ ...prev, [f.key]: c ? "Yes" : "No" }))} />
+              <Label htmlFor={`emp-${f.key}`} className="text-xs font-normal cursor-pointer">{form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí" ? "Sí" : "No"}</Label>
+            </div>
+          ) : (
+            <Input id={`emp-${f.key}`} value={form[f.key] ?? ""} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} required={f.required} className="h-8 text-sm" />
+          )}
+        </FormField>
+      ))}
+      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
+    </form>
+  );
+}
+
 export default function Employees() {
   usePageView("Empleados");
   const { selectedCompanyId, selectedCompany } = useCompany();
@@ -517,25 +548,6 @@ export default function Employees() {
   };
 
   const visibleFields = CONNECTEAM_FIELDS.filter(f => isPrivileged || !SENSITIVE_FIELD_KEYS.has(f.key));
-  const BOOLEAN_FIELDS = new Set(["has_car"]);
-
-  const EmployeeForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
-    <form onSubmit={onSubmit} className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-      {visibleFields.map(f => (
-        <FormField key={f.key} label={f.label} required={f.required} htmlFor={`emp-${f.key}`}>
-          {BOOLEAN_FIELDS.has(f.key) ? (
-            <div className="flex items-center gap-2 h-8">
-              <Checkbox id={`emp-${f.key}`} checked={form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí"} onCheckedChange={c => setForm(prev => ({ ...prev, [f.key]: c ? "Yes" : "No" }))} />
-              <Label htmlFor={`emp-${f.key}`} className="text-xs font-normal cursor-pointer">{form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí" ? "Sí" : "No"}</Label>
-            </div>
-          ) : (
-            <Input id={`emp-${f.key}`} value={form[f.key] ?? ""} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} required={f.required} className="h-8 text-sm" />
-          )}
-        </FormField>
-      ))}
-      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
-    </form>
-  );
 
   return (
     <div className="space-y-3">
@@ -652,7 +664,7 @@ export default function Employees() {
           </Dialog>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
             <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />Nuevo</Button></DialogTrigger>
-            <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Nuevo empleado</DialogTitle><DialogDescription>Ingresa los datos del nuevo empleado</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Límite de ${limits.maxEmployees} empleados`} /> : <EmployeeForm onSubmit={handleCreate} submitLabel="Crear" />}</DialogContent>
+            <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Nuevo empleado</DialogTitle><DialogDescription>Ingresa los datos del nuevo empleado</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Límite de ${limits.maxEmployees} empleados`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Crear" />}</DialogContent>
           </Dialog>
         </div>
       </div>
@@ -964,7 +976,7 @@ export default function Employees() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
-        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Editar empleado</DialogTitle><DialogDescription>Modifica los datos del empleado</DialogDescription></DialogHeader><EmployeeForm onSubmit={handleUpdate} submitLabel="Guardar cambios" /></DialogContent>
+        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Editar empleado</DialogTitle><DialogDescription>Modifica los datos del empleado</DialogDescription></DialogHeader><EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Guardar cambios" /></DialogContent>
       </Dialog>
 
       {/* Delete Confirmation */}
