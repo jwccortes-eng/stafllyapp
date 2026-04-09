@@ -459,17 +459,6 @@ export default function Apply() {
         </div>
       )}
 
-      {/* Duplicate warning */}
-      {duplicateWarning && step === 1 && (
-        <div className="px-4 max-w-lg mx-auto w-full mt-3">
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-800 dark:text-amber-200">
-              Parece que ya existe una solicitud con este teléfono. Puedes continuar, pero un administrador verificará.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Content */}
       <main className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-6">
