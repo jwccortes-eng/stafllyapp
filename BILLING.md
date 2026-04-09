@@ -1,103 +1,148 @@
-# Módulo de Billing / Suscripciones
+# Módulo de Billing / Suscripciones — StaflyApps
 
-## Arquitectura
+## Principios
+
+| Principio | Detalle |
+|-----------|---------|
+| **Billing es PER COMPANY** | Cada empresa tiene su propio plan, límites y estado de facturación |
+| **Roles ≠ Billing** | Los roles controlan acceso/gobernanza; el plan controla módulos/límites |
+| **Dual mode compatible** | Global mode (developer/owner) nunca es bloqueado por plan de empresa |
+
+---
+
+## Arquitectura actual (estable)
+
+### Fuente de verdad: tabla `companies`
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `plan_code` | TEXT | `free` \| `paid_manual` |
+| `plan_status` | TEXT | `active` \| `suspended` \| `pending` |
+| `billing_status` | TEXT | `none` \| `contact_requested` \| `invoiced` \| `paid` |
+| `max_employees` | INT | Límite de empleados activos |
+| `max_admins` | INT | Límite de administradores |
+| `paid_features_enabled` | BOOL | Features premium activadas |
+| `trial_ends_at` | TIMESTAMPTZ | (reservado, no en uso) |
+| `plan_activated_at` | TIMESTAMPTZ | Fecha de activación del plan |
+| `plan_activated_by` | UUID | Quién activó el plan |
+| `upgrade_requested_at` | TIMESTAMPTZ | Fecha de solicitud de upgrade |
+
+### Planes disponibles
+
+| Plan Code | Label | Max Employees | Max Admins | Módulos |
+|-----------|-------|---------------|------------|---------|
+| `free` | Starter | 10 | 2 | employees, concepts, shifts, announcements, applications, directory |
+| `paid_manual` | Pro | 999 (configurable) | 10 | Todo lo anterior + timeclock, periods, import, movements, summary, reports, clients, locations, automations, chat, monetization, api-access, reconciliation, command-center, payroll |
+
+### Module gating
+
+- `MODULE_PLAN_MAP` en `useSubscription.tsx` define qué plan mínimo requiere cada módulo
+- `ModuleGate` component bloquea acceso y muestra upgrade prompt
+- **Global mode bypass**: ModuleGate no aplica cuando `isGlobalMode === true`
+
+---
+
+## Flujo comercial actual (Free + Paid Manual)
+
+1. Empresa se registra → `plan_code: free`, `plan_status: active`
+2. Admin solicita upgrade → `upgrade_requests` table, `billing_status: contact_requested`
+3. Equipo interno contacta y activa manualmente → `plan_code: paid_manual`
+4. Gestión en `/app/upgrade-requests` (panel interno)
+
+---
+
+## Dual mode y billing
+
+| Modo | Pricing page | Module gating |
+|------|-------------|---------------|
+| **Company mode** | Muestra plan de la empresa seleccionada con CTAs de upgrade | Aplica según `plan_code` de la empresa |
+| **Global mode** | Muestra tabla resumen de todas las empresas y sus planes | **No aplica** — developer/owner accede a todo |
+
+---
+
+## Archivos clave
 
 ```
 src/
-  hooks/useSubscription.tsx       → Hook de estado de suscripción (React Query)
-  hooks/useBilling.tsx            → Hooks: useCreateCheckoutSession, useOpenCustomerPortal
+  hooks/useSubscription.tsx       → Hook de estado de plan (React Query, lee companies)
+  hooks/useBilling.tsx            → Hooks: useContactSales, useRequestUpgrade
+  components/ModuleGate.tsx       → Gate de módulos (bypass en global mode)
   components/billing/
-    UpgradeBanner.tsx             → Banner de upgrade (feature gating)
+    UpgradeBanner.tsx             → Banner de upgrade
+    UpgradeRequestDialog.tsx      → Diálogo de solicitud de upgrade
   pages/admin/
-    Pricing.tsx                   → Página de planes (/admin/pricing)
-    Billing.tsx                   → Estado de suscripción (/admin/billing)
+    Pricing.tsx                   → Dual: overview global / plan de empresa
+    Billing.tsx                   → Estado de suscripción (company mode)
 
 supabase/
   functions/
-    billing-checkout/index.ts           → Stub: crear Stripe Checkout session
-    billing-webhook/index.ts            → Stub: recibir webhooks de Stripe
-    billing-subscription-status/index.ts → GET: leer estado de suscripción
-    billing-customer-portal/index.ts    → Stub: abrir Stripe Customer Portal
+    billing-checkout/index.ts           → Stub para futuro Stripe Checkout
+    billing-webhook/index.ts            → Stub para futuro Stripe webhook
+    billing-subscription-status/index.ts → GET estado de suscripción
+    billing-customer-portal/index.ts    → Stub para futuro Stripe Portal
 ```
 
-## Tablas
+---
 
-### `subscriptions`
+## Tablas de soporte
 
-| Campo                    | Tipo        | Descripción                          |
-|--------------------------|-------------|--------------------------------------|
-| id                       | UUID        | Primary key                          |
-| company_id               | UUID        | FK → companies (unique)              |
-| plan                     | TEXT        | free, pro, enterprise                |
-| status                   | TEXT        | active, trialing, past_due, canceled |
-| stripe_customer_id       | TEXT        | Stripe Customer ID                   |
-| stripe_subscription_id   | TEXT        | Stripe Subscription ID               |
-| current_period_end       | TIMESTAMPTZ | Fecha de próxima renovación          |
-| cancel_at_period_end     | BOOLEAN     | Si se cancela al final del periodo   |
+### `upgrade_requests`
+
+Registra interés de upgrade para seguimiento comercial.
 
 ### `billing_events`
 
-| Campo          | Tipo        | Descripción                    |
-|----------------|-------------|--------------------------------|
-| id             | UUID        | Primary key                    |
-| company_id     | UUID        | FK → companies                 |
-| type           | TEXT        | Tipo de evento Stripe          |
-| payload_json   | JSONB       | Payload completo del evento    |
-| created_at     | TIMESTAMPTZ | Timestamp del evento           |
+Reservada para eventos de facturación futuros (webhooks Stripe, etc.).
 
-## Activar Stripe en producción
+---
 
-### 1. Agregar secrets
+## Modelo futuro (migration-safe)
 
-Agrega los siguientes secrets en Lovable Cloud → Settings → Secrets:
+Cuando se necesite automatizar pagos o llevar historial:
 
-- `STRIPE_SECRET_KEY` → Tu clave secreta de Stripe (`sk_live_...`)
-- `STRIPE_WEBHOOK_SECRET` → El signing secret del webhook (`whsec_...`)
+### 1. Crear tabla `company_subscriptions`
 
-### 2. Crear productos y precios en Stripe
-
-1. Ve a [Stripe Dashboard → Products](https://dashboard.stripe.com/products)
-2. Crea los productos: **Pro** y **Enterprise**
-3. Asigna precios recurrentes mensuales
-4. Copia los Price IDs (`price_...`)
-5. Reemplaza `PRICE_PRO_MONTHLY` y `PRICE_ENTERPRISE_MONTHLY` en `src/pages/admin/Pricing.tsx`
-
-### 3. Configurar webhook
-
-1. Ve a [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
-2. Añade endpoint: `https://<project-ref>.supabase.co/functions/v1/billing-webhook`
-3. Suscribe los eventos:
-   - `checkout.session.completed`
-   - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-   - `invoice.payment_failed`
-4. Copia el signing secret y agrégalo como `STRIPE_WEBHOOK_SECRET`
-
-### 4. Descomentar lógica real
-
-En `billing-checkout/index.ts`, `billing-webhook/index.ts` y `billing-customer-portal/index.ts`, descomenta las líneas marcadas con `// TODO` para activar la integración real.
-
-### 5. Feature Gating
-
-Usa el hook `useSubscription()` en cualquier componente:
-
-```tsx
-const { isPremium, canAccessFeature } = useSubscription();
-
-if (!canAccessFeature("automations")) {
-  return <UpgradeBanner feature="Automatizaciones" />;
-}
+```sql
+CREATE TABLE company_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID REFERENCES companies(id) ON DELETE CASCADE NOT NULL,
+  plan_code TEXT NOT NULL DEFAULT 'free',
+  status TEXT NOT NULL DEFAULT 'active',
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ended_at TIMESTAMPTZ,
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  cancel_at_period_end BOOLEAN DEFAULT false,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
-Features premium configuradas: `automations`, `monetization`, `advanced-reports`, `api-access`.
+### 2. Migrar datos
 
-### 6. Variables de entorno esperadas (placeholders)
+- Copiar `plan_code`, `plan_status` de `companies` a `company_subscriptions`
+- Mantener `companies.plan_code` como cache/read para performance
 
-| Variable              | Descripción                    | Ejemplo          |
-|-----------------------|--------------------------------|------------------|
-| STRIPE_SECRET_KEY     | Clave secreta de Stripe        | `sk_live_...`    |
-| STRIPE_WEBHOOK_SECRET | Signing secret del webhook     | `whsec_...`      |
+### 3. Conectar Stripe
 
-Los Price IDs se configuran directamente en `Pricing.tsx`:
-- `PRICE_PRO_MONTHLY` → Price ID de Stripe para plan Pro
-- `PRICE_ENTERPRISE_MONTHLY` → Price ID de Stripe para plan Enterprise
+- Activar `billing-checkout`, `billing-webhook`, `billing-customer-portal`
+- Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+
+### 4. No romper lo actual
+
+- `useSubscription` sigue leyendo de `companies` como cache
+- Agregar fallback a `company_subscriptions` cuando exista
+- Transición gradual, empresa por empresa
+
+---
+
+## Variables de entorno (futuras)
+
+| Variable | Descripción |
+|----------|-------------|
+| `STRIPE_SECRET_KEY` | Clave secreta de Stripe |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret del webhook |
+
+No son necesarias en el modelo actual (manual).

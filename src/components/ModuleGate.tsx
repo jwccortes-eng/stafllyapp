@@ -1,4 +1,5 @@
 import { useSubscription, MODULE_PLAN_MAP, PLAN_LIMITS, PlanId } from "@/hooks/useSubscription";
+import { useCompany } from "@/hooks/useCompany";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Lock, ArrowRight, Sparkles } from "lucide-react";
@@ -12,10 +13,19 @@ interface ModuleGateProps {
 /**
  * Wraps a page component. If the current plan doesn't have access
  * to the module, shows an upgrade prompt instead of the page content.
+ *
+ * Global-mode users (developer/owner with no company selected) are
+ * never gated — billing is per-company, not per-user.
  */
 export default function ModuleGate({ moduleKey, children }: ModuleGateProps) {
   const { canAccessModule, plan } = useSubscription();
+  const { isGlobalMode } = useCompany();
   const navigate = useNavigate();
+
+  // Global mode bypasses all module gating — billing is per-company
+  if (isGlobalMode) {
+    return <>{children}</>;
+  }
 
   if (canAccessModule(moduleKey)) {
     return <>{children}</>;
