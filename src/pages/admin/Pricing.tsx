@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Check, MessageCircle, Mail, CheckCircle2, Sparkles } from "lucide-react";
+import { Check, MessageCircle, Mail, CheckCircle2, Sparkles, Building2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useContactSales } from "@/hooks/useBilling";
+import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import UpgradeRequestDialog from "@/components/billing/UpgradeRequestDialog";
 
@@ -49,9 +50,18 @@ const plans = [
 ];
 
 export default function Pricing() {
-  const { planCode, isLoading, hasRequestedUpgrade, maxEmployees, maxAdmins } = useSubscription();
+  const { planCode, planStatus, isLoading, hasRequestedUpgrade, maxEmployees, maxAdmins } = useSubscription();
   const { contactSales } = useContactSales();
+  const { companies, selectedCompanyId } = useCompany();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  const companyName = companies.find(c => c.id === selectedCompanyId)?.name;
+
+  const statusLabel: Record<string, string> = {
+    active: "Activo",
+    suspended: "Suspendido",
+    pending: "Pendiente",
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -62,6 +72,21 @@ export default function Pricing() {
         title="Planes y precios"
         subtitle="Elige el plan que mejor se adapte a tu operación."
       />
+
+      {/* Company context banner */}
+      {companyName && (
+        <div className="max-w-4xl mx-auto rounded-xl border border-border bg-card px-5 py-3 flex items-center gap-3">
+          <Building2 className="h-5 w-5 text-primary shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">
+              Plan de: <span className="font-semibold">{companyName}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Plan {planCode === "paid_manual" ? "Pro" : "Starter"} · Estado: {statusLabel[planStatus] ?? planStatus}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Manual upgrade notice */}
       <div className="max-w-4xl mx-auto rounded-xl border border-muted bg-muted/30 px-5 py-3 flex items-center gap-3">
