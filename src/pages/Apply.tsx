@@ -131,8 +131,21 @@ export default function Apply() {
 
       if (!coCheck) {
         console.warn("[apply] no company found for slug:", normalizedSlug);
+        // Try case-insensitive / partial match as fallback
+        const { data: fuzzy } = await supabase
+          .from("companies")
+          .select("id, name, slug, is_active, application_enabled")
+          .ilike("slug", `%${normalizedSlug.replace(/-/g, "%")}%`)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+        if (fuzzy && fuzzy.application_enabled) {
+          console.log("[apply] fuzzy match found, redirecting to:", fuzzy.slug);
+          window.location.replace(`/apply/${fuzzy.slug}`);
+          return;
+        }
         setCompany(null);
-        setError(`No existe ninguna empresa con slug \"${normalizedSlug}\".`);
+        setError(`No encontramos la empresa. Verifica el enlace o contacta a tu administrador.`);
         setLoading(false);
         return;
       }
