@@ -119,7 +119,7 @@ function GlobalSubscriptionOverview() {
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Badge variant={c.plan_code === "paid_manual" ? "default" : "outline"}>
+                <Badge variant={c.plan_code === "paid_manual" || c.plan_code === "enterprise" || c.paid_features_enabled ? "default" : "outline"}>
                   {planLabel(c.plan_code)}
                 </Badge>
                 <Badge variant={c.plan_status === "active" ? "secondary" : "destructive"}>
