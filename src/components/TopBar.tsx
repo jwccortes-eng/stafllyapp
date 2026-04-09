@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { useNavigate } from "react-router-dom";
-import { Plus, CalendarDays, Users, Building2, MapPin, Moon, Sun } from "lucide-react";
+import { Plus, CalendarDays, Users, Building2, MapPin, Moon, Sun, Globe } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -26,7 +26,7 @@ const CREATE_OPTIONS = [
 
 export default function TopBar({ collapsed }: { collapsed: boolean }) {
   const { user, role, fullName, signOut } = useAuth();
-  const { selectedCompany, companies } = useCompany();
+  const { selectedCompany, companies, isGlobalMode } = useCompany();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
@@ -44,12 +44,20 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
         collapsed ? "ml-[60px]" : "ml-[240px]"
       )}
     >
-      {/* Left: Company context badge + Search */}
+      {/* Left: Context badge + Search */}
       <div className="flex items-center gap-3 flex-1 max-w-lg">
-        {selectedCompany && (
-          <div className={cn(
-            "flex items-center gap-2.5 shrink-0 pr-3 border-r border-border/30"
-          )}>
+        {isGlobalMode ? (
+          <div className="flex items-center gap-2.5 shrink-0 pr-3 border-r border-border/30">
+            <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
+              <Globe className="h-4 w-4 text-accent-foreground" />
+            </div>
+            <div className="hidden sm:flex flex-col min-w-0">
+              <span className="text-[13px] font-semibold text-foreground leading-tight">Vista Global</span>
+              <span className="text-[10px] text-muted-foreground/60 leading-tight">{companies.length} empresas</span>
+            </div>
+          </div>
+        ) : selectedCompany ? (
+          <div className="flex items-center gap-2.5 shrink-0 pr-3 border-r border-border/30">
             <CompanyLogo
               name={selectedCompany.name}
               logoUrl={selectedCompany.logo_url}
@@ -58,7 +66,6 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
               active
               glow
             />
-            {/* Company name */}
             <span className={cn(
               "font-semibold text-foreground truncate hidden sm:inline leading-tight",
               isMultiCompany ? "text-[13px] max-w-[200px]" : "text-[12px] max-w-[160px]"
@@ -66,7 +73,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
               {selectedCompany.name}
             </span>
           </div>
-        )}
+        ) : null}
         <CommandPaletteTrigger collapsed={false} />
       </div>
 
@@ -74,23 +81,25 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
       <div className="flex items-center gap-1.5">
         <ModeSwitcher />
         <SoundStatusControl />
-        {/* Global Create */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold">
-              <Plus className="h-3.5 w-3.5" />
-              Crear
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {CREATE_OPTIONS.map(opt => (
-              <DropdownMenuItem key={opt.route} onClick={() => navigate(opt.route)} className="gap-2 text-[13px]">
-                <opt.icon className="h-4 w-4 text-muted-foreground" />
-                {opt.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Global Create — only in company mode */}
+        {!isGlobalMode && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold">
+                <Plus className="h-3.5 w-3.5" />
+                Crear
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {CREATE_OPTIONS.map(opt => (
+                <DropdownMenuItem key={opt.route} onClick={() => navigate(opt.route)} className="gap-2 text-[13px]">
+                  <opt.icon className="h-4 w-4 text-muted-foreground" />
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Theme toggle */}
         <button
