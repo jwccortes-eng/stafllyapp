@@ -14,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const plans = [
   {
-    id: "free" as const,
+    id: "free" as PlanCode,
     name: "Starter",
     price: "$0",
     period: "/mes",
@@ -31,7 +31,7 @@ const plans = [
     isFree: true,
   },
   {
-    id: "paid_manual" as const,
+    id: "paid_manual" as PlanCode,
     name: "Pro",
     price: "Personalizado",
     period: "",
@@ -49,6 +49,21 @@ const plans = [
       "Soporte prioritario",
     ],
   },
+  {
+    id: "enterprise" as PlanCode,
+    name: "Enterprise",
+    price: "A medida",
+    period: "",
+    description: "Para operaciones de gran escala",
+    features: [
+      "Todo lo de Pro",
+      "Admins y empleados ilimitados",
+      "Soporte dedicado",
+      "Onboarding personalizado",
+      "SLA garantizado",
+      "Integraciones a medida",
+    ],
+  },
 ];
 
 const statusLabel: Record<string, string> = {
@@ -57,7 +72,11 @@ const statusLabel: Record<string, string> = {
   pending: "Pendiente",
 };
 
-const planLabel = (code: string) => (code === "paid_manual" ? "Pro" : "Starter");
+const planLabel = (code: string) => {
+  if (code === "enterprise") return "Enterprise";
+  if (code === "paid_manual") return "Pro";
+  return "Starter";
+};
 
 /* ─── Global overview: all companies' plans ─── */
 function GlobalSubscriptionOverview() {
