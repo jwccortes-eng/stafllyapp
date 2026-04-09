@@ -54,6 +54,13 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
   const [selectedRole, setSelectedRole] = useState("admin");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  // New user form state
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newFullName, setNewFullName] = useState("");
+  const [newRole, setNewRole] = useState("admin");
+  const [creating, setCreating] = useState(false);
   
   // Guard state for protected actions
   const [guardAction, setGuardAction] = useState<(() => Promise<void>) | null>(null);
