@@ -664,7 +664,7 @@ export default function Employees() {
           </Dialog>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
             <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />Nuevo</Button></DialogTrigger>
-            <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Nuevo empleado</DialogTitle><DialogDescription>Ingresa los datos del nuevo empleado</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Límite de ${limits.maxEmployees} empleados`} /> : <EmployeeForm onSubmit={handleCreate} submitLabel="Crear" />}</DialogContent>
+            <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Nuevo empleado</DialogTitle><DialogDescription>Ingresa los datos del nuevo empleado</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Límite de ${limits.maxEmployees} empleados`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Crear" />}</DialogContent>
           </Dialog>
         </div>
       </div>
@@ -976,7 +976,7 @@ export default function Employees() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
-        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Editar empleado</DialogTitle><DialogDescription>Modifica los datos del empleado</DialogDescription></DialogHeader><EmployeeForm onSubmit={handleUpdate} submitLabel="Guardar cambios" /></DialogContent>
+        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Editar empleado</DialogTitle><DialogDescription>Modifica los datos del empleado</DialogDescription></DialogHeader><EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Guardar cambios" /></DialogContent>
       </Dialog>
 
       {/* Delete Confirmation */}
