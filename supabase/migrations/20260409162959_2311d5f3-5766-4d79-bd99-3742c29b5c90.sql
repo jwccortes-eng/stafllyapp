@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Applicants can view own application" ON public.job_applications;
