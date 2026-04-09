@@ -17,13 +17,17 @@ interface CompanyContextType {
   companies: Company[];
   selectedCompanyId: string | null;
   selectedCompany: Company | null;
-  setSelectedCompanyId: (id: string) => void;
+  setSelectedCompanyId: (id: string | null) => void;
   /** Switch company with cache invalidation */
-  switchCompany: (id: string) => void;
+  switchCompany: (id: string | null) => void;
   loading: boolean;
   refetch: () => Promise<void>;
   activeModules: Set<string>;
   isModuleActive: (module: string) => boolean;
+  /** Whether user is in global mode (no company selected, developer/owner only) */
+  isGlobalMode: boolean;
+  /** Whether user CAN enter global mode */
+  canUseGlobalMode: boolean;
 }
 
 const CompanyContext = createContext<CompanyContextType>({
@@ -36,14 +40,30 @@ const CompanyContext = createContext<CompanyContextType>({
   refetch: async () => {},
   activeModules: new Set(),
   isModuleActive: () => true,
+  isGlobalMode: false,
+  canUseGlobalMode: false,
 });
+
+const GLOBAL_MODE_ROLES = new Set(["developer", "owner"]);
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const { user, role } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedCompanyId, setSelectedCompanyIdRaw] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeModules, setActiveModules] = useState<Set<string>>(new Set());
+
+  const canUseGlobalMode = !!role && GLOBAL_MODE_ROLES.has(role);
+  const isGlobalMode = canUseGlobalMode && selectedCompanyId === null;
+
+  const setSelectedCompanyId = useCallback((id: string | null) => {
+    setSelectedCompanyIdRaw(id);
+    if (id) {
+      localStorage.setItem("selectedCompanyId", id);
+    } else {
+      localStorage.removeItem("selectedCompanyId");
+    }
+  }, []);
 
   const fetchCompanies = async () => {
     if (!user) {
@@ -76,29 +96,47 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
     setCompanies(list);
 
-    // Ensure selected company is always valid for the current list
-    const hasValidSelection = !!selectedCompanyId && list.some(c => c.id === selectedCompanyId);
-    if (!hasValidSelection && list.length > 0) {
-      const stored = localStorage.getItem("selectedCompanyId");
-      if (stored && list.some(c => c.id === stored)) {
-        setSelectedCompanyId(stored);
+    // Restore or auto-assign selected company
+    const stored = localStorage.getItem("selectedCompanyId");
+
+    if (canUseGlobalMode) {
+      // Developer/owner: respect stored selection, including null (global mode)
+      if (stored === null) {
+        // No stored selection → stay in global mode
+        setSelectedCompanyIdRaw(null);
+      } else if (list.some(c => c.id === stored)) {
+        setSelectedCompanyIdRaw(stored);
       } else {
-        setSelectedCompanyId(list[0].id);
+        // Stored company no longer valid → global mode
+        setSelectedCompanyIdRaw(null);
+        localStorage.removeItem("selectedCompanyId");
       }
-    } else if (list.length === 0 && selectedCompanyId) {
-      setSelectedCompanyId(null);
+    } else {
+      // Regular users MUST have a company context
+      const hasValidSelection = !!selectedCompanyId && list.some(c => c.id === selectedCompanyId);
+      if (!hasValidSelection && list.length > 0) {
+        if (stored && list.some(c => c.id === stored)) {
+          setSelectedCompanyIdRaw(stored);
+        } else {
+          const first = list[0].id;
+          setSelectedCompanyIdRaw(first);
+          localStorage.setItem("selectedCompanyId", first);
+        }
+      } else if (list.length === 0 && selectedCompanyId) {
+        setSelectedCompanyIdRaw(null);
+      }
     }
 
     setLoading(false);
   };
 
   /** Switch company: update state + invalidate all cached queries */
-  const switchCompany = useCallback((id: string) => {
+  const switchCompany = useCallback((id: string | null) => {
     if (id === selectedCompanyId) return;
     setSelectedCompanyId(id);
     // Invalidate all React Query caches so screens reload with new company data
     queryClient.invalidateQueries();
-  }, [selectedCompanyId]);
+  }, [selectedCompanyId, setSelectedCompanyId]);
 
   useEffect(() => {
     if (user && role !== undefined) fetchCompanies();
@@ -106,7 +144,6 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (selectedCompanyId) {
-      localStorage.setItem("selectedCompanyId", selectedCompanyId);
       // Fetch active modules for selected company
       supabase
         .from("company_modules")
@@ -116,19 +153,25 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         .then(({ data }) => {
           setActiveModules(new Set((data ?? []).map(d => d.module)));
         });
+    } else {
+      setActiveModules(new Set());
     }
   }, [selectedCompanyId]);
 
   const selectedCompany = companies.find(c => c.id === selectedCompanyId) ?? null;
 
   const isModuleActive = (module: string) => {
-    // If no modules configured yet, show everything
-    if (activeModules.size === 0) return true;
+    // In global mode or no modules configured, show everything
+    if (isGlobalMode || activeModules.size === 0) return true;
     return activeModules.has(module);
   };
 
   return (
-    <CompanyContext.Provider value={{ companies, selectedCompanyId, selectedCompany, setSelectedCompanyId, switchCompany, loading, refetch: fetchCompanies, activeModules, isModuleActive }}>
+    <CompanyContext.Provider value={{
+      companies, selectedCompanyId, selectedCompany, setSelectedCompanyId,
+      switchCompany, loading, refetch: fetchCompanies, activeModules, isModuleActive,
+      isGlobalMode, canUseGlobalMode,
+    }}>
       {children}
     </CompanyContext.Provider>
   );
