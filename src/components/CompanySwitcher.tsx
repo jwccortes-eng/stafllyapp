@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Search, LayoutDashboard, User, Shield } from "lucide-react";
+import { Check, ChevronsUpDown, Search, LayoutDashboard, User, Shield, Globe } from "lucide-react";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -26,7 +26,7 @@ interface CompanySwitcherProps {
 }
 
 export default function CompanySwitcher({ collapsed = false }: CompanySwitcherProps) {
-  const { companies, selectedCompanyId, selectedCompany, switchCompany } = useCompany();
+  const { companies, selectedCompanyId, selectedCompany, switchCompany, isGlobalMode, canUseGlobalMode } = useCompany();
   const { user, role, activeMode, canAccessAdmin, canAccessPortal } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,6 +67,13 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
       return;
     }
 
+    // Developer/owner can switch without PIN
+    if (canUseGlobalMode) {
+      performSwitch(company.id);
+      setOpen(false);
+      return;
+    }
+
     if (companies.length > 1) {
       setOpen(false);
       setPendingCompany({
@@ -80,6 +87,15 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
     }
 
     performSwitch(company.id);
+  };
+
+  const handleGoGlobal = () => {
+    switchCompany(null);
+    setOpen(false);
+    const isDetailPage = /\/app\/[^/]+\/[^/]+/.test(location.pathname);
+    if (isDetailPage) {
+      navigate('/app', { replace: true });
+    }
   };
 
   const performSwitch = (companyId: string) => {
@@ -96,13 +112,21 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
     setPendingCompany(null);
   };
 
-  if (companies.length === 0) return null;
+  if (companies.length === 0 && !canUseGlobalMode) return null;
 
   const isDual = canAccessAdmin && canAccessPortal;
   const isAdmin = activeMode === 'admin';
 
   // Active mode pill
   const ModePill = () => {
+    if (isGlobalMode) {
+      return (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider leading-none bg-accent text-accent-foreground">
+          <Globe className="h-2.5 w-2.5" />
+          Global
+        </span>
+      );
+    }
     if (!isDual) return null;
     return (
       <span className={cn(
@@ -117,8 +141,8 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
     );
   };
 
-  // Single company
-  if (companies.length === 1) {
+  // Single company, non-global user
+  if (companies.length === 1 && !canUseGlobalMode) {
     return (
       <div className={cn(
         "flex items-center gap-2.5",
@@ -142,7 +166,7 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
     );
   }
 
-  // Multi company - full switcher
+  // Multi company or global-mode capable - full switcher
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
@@ -151,18 +175,26 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
             "flex items-center gap-2.5 rounded-xl transition-all duration-200 hover:bg-accent/40 group w-full",
             collapsed ? "justify-center p-1.5" : "px-2.5 py-2"
           )}>
-            <CompanyLogo
-              name={selectedCompany?.name || ""}
-              logoUrl={selectedCompany?.logo_url}
-              brandColor={selectedCompany?.brand_color}
-              size="sm"
-              active
-              glow
-            />
+            {isGlobalMode ? (
+              <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                <Globe className="h-4 w-4 text-accent-foreground" />
+              </div>
+            ) : (
+              <CompanyLogo
+                name={selectedCompany?.name || ""}
+                logoUrl={selectedCompany?.logo_url}
+                brandColor={selectedCompany?.brand_color}
+                size="sm"
+                active
+                glow
+              />
+            )}
             {!collapsed && (
               <>
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-[12px] font-semibold text-foreground truncate leading-tight">{selectedCompany?.name}</p>
+                  <p className="text-[12px] font-semibold text-foreground truncate leading-tight">
+                    {isGlobalMode ? "Vista Global" : selectedCompany?.name}
+                  </p>
                   <ModePill />
                 </div>
                 <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
@@ -182,10 +214,10 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
               <div className="flex items-center gap-1.5">
                 <Shield className="h-3 w-3 text-muted-foreground/40" />
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
-                  Cambiar empresa
+                  {canUseGlobalMode ? "Contexto" : "Cambiar empresa"}
                 </p>
               </div>
-              {isDual && (
+              {isDual && !isGlobalMode && (
                 <span className={cn(
                   "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold",
                   isAdmin
@@ -210,7 +242,41 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
               </div>
             )}
           </div>
+
           <div className="px-2 pb-2 max-h-[320px] overflow-y-auto scrollbar-thin space-y-0.5">
+            {/* Global mode option for developer/owner */}
+            {canUseGlobalMode && (
+              <button
+                onClick={handleGoGlobal}
+                className={cn(
+                  "flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2.5 text-left transition-all duration-150",
+                  isGlobalMode
+                    ? "bg-accent/60 ring-1 ring-accent"
+                    : "hover:bg-accent/40"
+                )}
+              >
+                <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                  <Globe className="h-4 w-4 text-accent-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={cn("text-[12px] font-medium truncate leading-tight", isGlobalMode && "font-semibold")}>
+                    Vista Global
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Todas las empresas</p>
+                </div>
+                {isGlobalMode && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[9px] font-bold uppercase text-accent-foreground/60 tracking-wider">Activa</span>
+                    <Check className="h-3.5 w-3.5 text-accent-foreground" />
+                  </div>
+                )}
+              </button>
+            )}
+
+            {canUseGlobalMode && companies.length > 0 && (
+              <div className="border-t border-border/20 my-1" />
+            )}
+
             {filtered.map((company) => {
               const isSelected = company.id === selectedCompanyId;
               const companyRole = companyRoles[company.id];
@@ -260,7 +326,9 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
           {/* Footer hint */}
           <div className="px-3 py-2 border-t border-border/30 bg-muted/20">
             <p className="text-[9px] text-muted-foreground/40 text-center">
-              🔒 Se requiere código de confirmación para cambiar
+              {canUseGlobalMode
+                ? "🌐 Selecciona una empresa o usa Vista Global"
+                : "🔒 Se requiere código de confirmación para cambiar"}
             </p>
           </div>
         </PopoverContent>
