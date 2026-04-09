@@ -18,6 +18,15 @@ import {
   Phone, Mail, User, Globe,
 } from "lucide-react";
 
+/* ─── Helpers ─── */
+function normalizePhone(raw: string): string {
+  if (!raw) return "";
+  let digits = raw.replace(/\D/g, "");
+  // US numbers: strip leading 1 if 11 digits
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  return digits;
+}
+
 /* ─── Constants ─── */
 const DEFAULT_WORKER_TYPES = [
   { value: "waiter", label: "Mesero", icon: UtensilsCrossed },
