@@ -79,7 +79,7 @@ export default function Apply() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [referenceCode, setReferenceCode] = useState("");
-  const [duplicateWarning, setDuplicateWarning] = useState(false);
+  const [_duplicateWarning, _setDuplicateWarning] = useState(false); // kept for type compat
   const [consent, setConsent] = useState(false);
   const [applicationDisabledCompany, setApplicationDisabledCompany] = useState<string | null>(null);
 
