@@ -17,6 +17,7 @@ import { Loader2 } from "lucide-react";
 import AdminLayout from "./components/AdminLayout";
 import EmployeeLayout from "./components/EmployeeLayout";
 import ModuleGate from "./components/ModuleGate";
+import { CompanyRequiredGuard } from "./components/CompanyRequiredGuard";
 import Employees from "./pages/admin/Employees";
 
 // Lazy: all pages
