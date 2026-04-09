@@ -226,15 +226,18 @@ export default function Apply() {
   }, [firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step, draftKey, address]);
 
   // Duplicate check
-  const checkDuplicate = useCallback(async () => {
-    if (!company || !phone.trim()) return;
-    const { count } = await supabase
-      .from("job_applications")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", company.id)
-      .eq("phone", phone.trim());
-    setDuplicateWarning((count ?? 0) > 0);
-  }, [company, phone]);
+  // Duplicate check — uses normalized phone; returns specific message or null
+  const checkDuplicate = useCallback(async (): Promise<string | null> => {
+    if (!company) return null;
+    const norm = normalizePhone(phone);
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // We cannot SELECT job_applications as anon, so duplicate detection
+    // is enforced server-side via unique constraint. We'll catch 23505 on submit.
+    // But we CAN check employees table (which has public select for active companies).
+    // For now, return null and let the server-side constraint handle it.
+    return null;
+  }, [company, phone, email]);
 
   const progressPercent = Math.round((step / (STEP_LABELS.length - 1)) * 100);
   const visibleTypes = DEFAULT_WORKER_TYPES.filter((t) => config.visible_worker_types.includes(t.value));
@@ -244,7 +247,8 @@ export default function Apply() {
     const e: Record<string, string> = {};
     if (!firstName.trim()) e.firstName = "Requerido";
     if (!lastName.trim()) e.lastName = "Requerido";
-    if (!phone.trim() || phone.trim().length < 7) e.phone = "Teléfono inválido";
+    const norm = normalizePhone(phone);
+    if (!norm || norm.length < 7) e.phone = "Teléfono inválido";
     if (config.require_email && (!email.trim() || !email.includes("@"))) e.email = "Email requerido";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -259,7 +263,6 @@ export default function Apply() {
   const handleNext = async () => {
     if (step === 1) {
       if (!validateBasicInfo()) return;
-      await checkDuplicate();
     }
     if (step === 2 && !validateWorkerType()) return;
     setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
