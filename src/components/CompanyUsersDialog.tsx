@@ -13,9 +13,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, UserCog, User, Crown } from "lucide-react";
+import { Trash2, Plus, Shield, UserCog, User, Crown, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CompanyActionGuard from "@/components/CompanyActionGuard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CompanyUser {
   id: string;
