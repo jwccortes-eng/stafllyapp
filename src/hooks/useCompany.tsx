@@ -100,22 +100,16 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setCompanies(list);
 
     // Restore or auto-assign selected company
-    const stored = localStorage.getItem("selectedCompanyId");
-
     if (canUseGlobalMode) {
-      // Developer/owner: respect stored selection, including null (global mode)
-      if (stored === null) {
-        // No stored selection → stay in global mode
+      // Developer/owner: ALWAYS start in global mode on fresh load.
+      // Only honour a prior selection if the user manually switched this session.
+      if (!manuallySelected) {
         setSelectedCompanyIdRaw(null);
-      } else if (list.some(c => c.id === stored)) {
-        setSelectedCompanyIdRaw(stored);
-      } else {
-        // Stored company no longer valid → global mode
-        setSelectedCompanyIdRaw(null);
-        localStorage.removeItem("selectedCompanyId");
       }
+      // If they did manually select, keep current selectedCompanyId as-is.
     } else {
       // Regular users MUST have a company context
+      const stored = localStorage.getItem("selectedCompanyId");
       const hasValidSelection = !!selectedCompanyId && list.some(c => c.id === selectedCompanyId);
       if (!hasValidSelection && list.length > 0) {
         if (stored && list.some(c => c.id === stored)) {
