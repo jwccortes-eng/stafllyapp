@@ -169,8 +169,8 @@ export default function Pricing() {
           </div>
 
           {hasRequestedUpgrade && (
-            <div className="max-w-4xl mx-auto rounded-xl border border-green-500/20 bg-green-50 dark:bg-green-950/20 px-5 py-3 flex items-center gap-3 animate-slide-up">
-              <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+          <div className="max-w-4xl mx-auto rounded-xl border border-primary/20 bg-primary/5 px-5 py-3 flex items-center gap-3 animate-slide-up">
+              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Tu solicitud de upgrade fue enviada</p>
                 <p className="text-xs text-muted-foreground">
