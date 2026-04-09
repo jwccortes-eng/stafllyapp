@@ -1,4 +1,4 @@
-import { useSubscription, MODULE_PLAN_MAP, PLAN_LIMITS, PlanId } from "@/hooks/useSubscription";
+import { useSubscription, MODULE_PLAN_MAP, PLAN_INFO, PlanCode } from "@/hooks/useSubscription";
 import { useCompany } from "@/hooks/useCompany";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ interface ModuleGateProps {
  * never gated — billing is per-company, not per-user.
  */
 export default function ModuleGate({ moduleKey, children }: ModuleGateProps) {
-  const { canAccessModule, plan } = useSubscription();
+  const { canAccessModule, requiredPlanForModule, planCode } = useSubscription();
   const { isGlobalMode } = useCompany();
   const navigate = useNavigate();
 
@@ -31,8 +31,8 @@ export default function ModuleGate({ moduleKey, children }: ModuleGateProps) {
     return <>{children}</>;
   }
 
-  const requiredPlan = MODULE_PLAN_MAP[moduleKey] as PlanId | undefined;
-  const planLabel = requiredPlan ? PLAN_LIMITS[requiredPlan]?.label : "Pro";
+  const planLabel = requiredPlanForModule(moduleKey) ?? "Pro";
+  const currentLabel = PLAN_INFO[planCode]?.label ?? "Starter";
 
   return (
     <div className="flex items-center justify-center min-h-[60vh] animate-fade-in">
@@ -45,7 +45,7 @@ export default function ModuleGate({ moduleKey, children }: ModuleGateProps) {
             Función exclusiva de {planLabel}
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Tu plan actual (<span className="font-semibold">{PLAN_LIMITS[plan]?.label ?? "Starter"}</span>) no incluye este módulo.
+            Tu plan actual (<span className="font-semibold">{currentLabel}</span>) no incluye este módulo.
             Actualiza tu plan para desbloquear esta funcionalidad y muchas más.
           </p>
         </div>
