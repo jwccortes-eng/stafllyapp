@@ -13,9 +13,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, UserCog, User, Crown } from "lucide-react";
+import { Trash2, Plus, Shield, UserCog, User, Crown, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CompanyActionGuard from "@/components/CompanyActionGuard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CompanyUser {
   id: string;
@@ -53,6 +54,13 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
   const [selectedRole, setSelectedRole] = useState("admin");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  // New user form state
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newFullName, setNewFullName] = useState("");
+  const [newRole, setNewRole] = useState("admin");
+  const [creating, setCreating] = useState(false);
   
   // Guard state for protected actions
   const [guardAction, setGuardAction] = useState<(() => Promise<void>) | null>(null);
@@ -124,6 +132,46 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     setGuardAction(() => doAdd);
   };
 
+  const doCreateAndAssign = async () => {
+    if (!newEmail || !newPassword || !companyId) return;
+    setCreating(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      const { data, error } = await supabase.functions.invoke("invite-admin", {
+        body: { email: newEmail, password: newPassword, full_name: newFullName, role: newRole },
+      });
+      if (error || !data?.user_id) {
+        toast({ title: "Error al crear usuario", description: error?.message || data?.error || "Error desconocido", variant: "destructive" });
+        setCreating(false);
+        return;
+      }
+      // Now assign to company
+      const { error: assignErr } = await supabase
+        .from("company_users")
+        .insert({ company_id: companyId, user_id: data.user_id, role: newRole } as any);
+      if (assignErr) {
+        toast({ title: "Usuario creado pero no asignado", description: assignErr.message, variant: "destructive" });
+      } else {
+        toast({ title: "Usuario creado y asignado exitosamente" });
+        setNewEmail("");
+        setNewPassword("");
+        setNewFullName("");
+        setNewRole("admin");
+        fetchCompanyUsers();
+        onUpdated();
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+    setCreating(false);
+  };
+
+  const handleCreateAndAssign = () => {
+    setGuardTitle("Crear y asignar usuario a " + companyName);
+    setGuardAction(() => doCreateAndAssign);
+  };
+
   const doRemove = async (cuId: string, cuRole: string) => {
     // Prevent removing last company_owner
     if (cuRole === 'company_owner') {
@@ -191,44 +239,86 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
           <DialogDescription>Asigna usuarios y roles a esta empresa</DialogDescription>
         </DialogHeader>
 
-        {/* Add user form */}
-        <div className="flex gap-2 items-end">
-          <div className="flex-1 space-y-1">
-            <Label className="text-xs">Usuario</Label>
-            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Seleccionar usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUsers.length === 0 ? (
-                  <SelectItem value="__none" disabled>No hay usuarios disponibles</SelectItem>
-                ) : (
-                  availableUsers.map(u => (
-                    <SelectItem key={u.user_id} value={u.user_id}>
-                      {u.full_name || u.email}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-32 space-y-1">
-            <Label className="text-xs">Rol</Label>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_OPTIONS.map(r => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button size="sm" onClick={handleAdd} disabled={loading || !selectedUserId} className="h-9">
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        <Tabs defaultValue="existing" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 h-8">
+            <TabsTrigger value="existing" className="text-xs">Existente</TabsTrigger>
+            <TabsTrigger value="new" className="text-xs"><UserPlus className="h-3 w-3 mr-1" />Crear nuevo</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="existing" className="mt-2">
+            <div className="flex gap-2 items-end">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs">Usuario</Label>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Seleccionar usuario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUsers.length === 0 ? (
+                      <SelectItem value="__none" disabled>No hay usuarios disponibles</SelectItem>
+                    ) : (
+                      availableUsers.map(u => (
+                        <SelectItem key={u.user_id} value={u.user_id}>
+                          {u.full_name || u.email}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-32 space-y-1">
+                <Label className="text-xs">Rol</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(r => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button size="sm" onClick={handleAdd} disabled={loading || !selectedUserId} className="h-9">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="new" className="mt-2 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre completo</Label>
+                <Input className="h-9 text-sm" placeholder="Juan Pérez" value={newFullName} onChange={e => setNewFullName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Rol</Label>
+                <Select value={newRole} onValueChange={setNewRole}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(r => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Email</Label>
+              <Input className="h-9 text-sm" type="email" placeholder="email@ejemplo.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Contraseña</Label>
+              <Input className="h-9 text-sm" type="password" placeholder="Mínimo 6 caracteres" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+            </div>
+            <Button size="sm" className="w-full h-9" onClick={handleCreateAndAssign} disabled={creating || !newEmail || !newPassword || newPassword.length < 6}>
+              <UserPlus className="h-4 w-4 mr-1" />
+              {creating ? "Creando..." : "Crear y asignar"}
+            </Button>
+          </TabsContent>
+        </Tabs>
 
         {/* Current users */}
         <div className="border rounded-lg overflow-hidden">
