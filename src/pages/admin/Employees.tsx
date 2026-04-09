@@ -117,6 +117,37 @@ function EmpStatusBadge({ employee, showInvite, onInvite, invitation }: { employ
   return <PortalAccessBadge employee={employee} invitation={invitation} showInviteAction={showInvite} onInvite={onInvite} />;
 }
 
+const BOOLEAN_FIELDS = new Set(["has_car"]);
+
+interface EmployeeFormProps {
+  fields: typeof CONNECTEAM_FIELDS;
+  form: Record<string, string>;
+  setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  loading: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+  submitLabel: string;
+}
+
+function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }: EmployeeFormProps) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+      {fields.map(f => (
+        <FormField key={f.key} label={f.label} required={f.required} htmlFor={`emp-${f.key}`}>
+          {BOOLEAN_FIELDS.has(f.key) ? (
+            <div className="flex items-center gap-2 h-8">
+              <Checkbox id={`emp-${f.key}`} checked={form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí"} onCheckedChange={c => setForm(prev => ({ ...prev, [f.key]: c ? "Yes" : "No" }))} />
+              <Label htmlFor={`emp-${f.key}`} className="text-xs font-normal cursor-pointer">{form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí" ? "Sí" : "No"}</Label>
+            </div>
+          ) : (
+            <Input id={`emp-${f.key}`} value={form[f.key] ?? ""} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} required={f.required} className="h-8 text-sm" />
+          )}
+        </FormField>
+      ))}
+      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
+    </form>
+  );
+}
+
 export default function Employees() {
   usePageView("Empleados");
   const { selectedCompanyId, selectedCompany } = useCompany();
