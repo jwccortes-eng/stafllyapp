@@ -307,13 +307,14 @@ export default function Apply() {
 
       console.log("[apply] submitting payload:", JSON.stringify(payload, null, 2));
 
-      const { data, error } = await supabase
-        .from("job_applications")
-        .insert(payload)
-        .select("id, reference_code")
-        .single();
+      // Generate a client-side ID so we can reference it for audit/docs without needing SELECT back
+      const applicationId = crypto.randomUUID();
 
-      console.log("[apply] insert result:", { data, error });
+      const { error } = await supabase
+        .from("job_applications")
+        .insert({ id: applicationId, ...payload });
+
+      console.log("[apply] insert result:", { applicationId, error });
 
       if (error) {
         console.error("[apply] supabase error:", error);
@@ -328,22 +329,23 @@ export default function Apply() {
 
       // Create audit event (non-blocking)
       supabase.from("application_events").insert({
-        application_id: data.id,
+        application_id: applicationId,
         event_type: "submitted",
         event_data: { source, device: navigator.userAgent.slice(0, 100) },
       }).then(r => { if (r.error) console.warn("[apply] event insert error:", r.error); });
 
       // Upload document record (non-blocking)
-      if (documentUrl && data.id) {
+      if (documentUrl) {
         supabase.from("application_documents").insert({
-          application_id: data.id,
+          application_id: applicationId,
           file_url: documentUrl,
           file_type: "id_document",
           file_name: documentFile?.name ?? "document",
         }).then(r => { if (r.error) console.warn("[apply] doc record error:", r.error); });
       }
 
-      setReferenceCode(data.reference_code ?? data.id.slice(0, 8).toUpperCase());
+      // Use first 8 chars of the generated ID as confirmation code
+      setReferenceCode(applicationId.slice(0, 8).toUpperCase());
       setStep(6);
       if (draftKey) localStorage.removeItem(draftKey);
     } catch (err: any) {
