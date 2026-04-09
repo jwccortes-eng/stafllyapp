@@ -18,6 +18,15 @@ import {
   Phone, Mail, User, Globe,
 } from "lucide-react";
 
+/* ─── Helpers ─── */
+function normalizePhone(raw: string): string {
+  if (!raw) return "";
+  let digits = raw.replace(/\D/g, "");
+  // US numbers: strip leading 1 if 11 digits
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  return digits;
+}
+
 /* ─── Constants ─── */
 const DEFAULT_WORKER_TYPES = [
   { value: "waiter", label: "Mesero", icon: UtensilsCrossed },
@@ -70,7 +79,7 @@ export default function Apply() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [referenceCode, setReferenceCode] = useState("");
-  const [duplicateWarning, setDuplicateWarning] = useState(false);
+  
   const [consent, setConsent] = useState(false);
   const [applicationDisabledCompany, setApplicationDisabledCompany] = useState<string | null>(null);
 
@@ -217,15 +226,18 @@ export default function Apply() {
   }, [firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step, draftKey, address]);
 
   // Duplicate check
-  const checkDuplicate = useCallback(async () => {
-    if (!company || !phone.trim()) return;
-    const { count } = await supabase
-      .from("job_applications")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", company.id)
-      .eq("phone", phone.trim());
-    setDuplicateWarning((count ?? 0) > 0);
-  }, [company, phone]);
+  // Duplicate check — uses normalized phone; returns specific message or null
+  const checkDuplicate = useCallback(async (): Promise<string | null> => {
+    if (!company) return null;
+    const norm = normalizePhone(phone);
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // We cannot SELECT job_applications as anon, so duplicate detection
+    // is enforced server-side via unique constraint. We'll catch 23505 on submit.
+    // But we CAN check employees table (which has public select for active companies).
+    // For now, return null and let the server-side constraint handle it.
+    return null;
+  }, [company, phone, email]);
 
   const progressPercent = Math.round((step / (STEP_LABELS.length - 1)) * 100);
   const visibleTypes = DEFAULT_WORKER_TYPES.filter((t) => config.visible_worker_types.includes(t.value));
@@ -235,7 +247,8 @@ export default function Apply() {
     const e: Record<string, string> = {};
     if (!firstName.trim()) e.firstName = "Requerido";
     if (!lastName.trim()) e.lastName = "Requerido";
-    if (!phone.trim() || phone.trim().length < 7) e.phone = "Teléfono inválido";
+    const norm = normalizePhone(phone);
+    if (!norm || norm.length < 7) e.phone = "Teléfono inválido";
     if (config.require_email && (!email.trim() || !email.includes("@"))) e.email = "Email requerido";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -250,7 +263,6 @@ export default function Apply() {
   const handleNext = async () => {
     if (step === 1) {
       if (!validateBasicInfo()) return;
-      await checkDuplicate();
     }
     if (step === 2 && !validateWorkerType()) return;
     setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
@@ -279,13 +291,16 @@ export default function Apply() {
         documentUrl = path;
       }
 
+      // Normalize phone for consistent storage across devices/browsers
+      const normalizedPhoneValue = normalizePhone(phone);
+
       const payload = {
         company_id: company.id,
         application_type: "internal",
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        phone: phone.trim(),
-        email: email.trim() || null,
+        phone: normalizedPhoneValue,
+        email: email.trim().toLowerCase() || null,
         worker_type: workerType,
         city: city.trim() || null,
         availability,
@@ -318,13 +333,21 @@ export default function Apply() {
 
       if (error) {
         console.error("[apply] supabase error:", error);
-        throw new Error(
-          error.code === "23505"
-            ? "Ya existe una solicitud con estos datos."
-            : error.code === "42501" || error.message?.includes("row-level security")
-            ? "No se pudo guardar la solicitud. Contacta a la empresa."
-            : `Error al enviar: ${error.message}`
-        );
+        const msg = error.message ?? "";
+        if (error.code === "23505") {
+          // Determine which field caused the duplicate
+          if (msg.includes("phone")) {
+            throw new Error("Este teléfono ya está registrado. Si ya aplicaste, contacta a la empresa para seguimiento.");
+          } else if (msg.includes("email")) {
+            throw new Error("Este email ya está registrado.");
+          } else {
+            throw new Error("Ya existe una solicitud con estos datos.");
+          }
+        } else if (error.code === "42501" || msg.includes("row-level security")) {
+          throw new Error("No se pudo guardar la solicitud. Contacta a la empresa.");
+        } else {
+          throw new Error(`Error al enviar: ${msg}`);
+        }
       }
 
       // Create audit event (non-blocking)
@@ -436,17 +459,6 @@ export default function Apply() {
         </div>
       )}
 
-      {/* Duplicate warning */}
-      {duplicateWarning && step === 1 && (
-        <div className="px-4 max-w-lg mx-auto w-full mt-3">
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-800 dark:text-amber-200">
-              Parece que ya existe una solicitud con este teléfono. Puedes continuar, pero un administrador verificará.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Content */}
       <main className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-6">
