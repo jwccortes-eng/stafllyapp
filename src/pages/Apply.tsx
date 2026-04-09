@@ -291,13 +291,16 @@ export default function Apply() {
         documentUrl = path;
       }
 
+      // Normalize phone for consistent storage across devices/browsers
+      const normalizedPhoneValue = normalizePhone(phone);
+
       const payload = {
         company_id: company.id,
         application_type: "internal",
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        phone: phone.trim(),
-        email: email.trim() || null,
+        phone: normalizedPhoneValue,
+        email: email.trim().toLowerCase() || null,
         worker_type: workerType,
         city: city.trim() || null,
         availability,
@@ -330,13 +333,21 @@ export default function Apply() {
 
       if (error) {
         console.error("[apply] supabase error:", error);
-        throw new Error(
-          error.code === "23505"
-            ? "Ya existe una solicitud con estos datos."
-            : error.code === "42501" || error.message?.includes("row-level security")
-            ? "No se pudo guardar la solicitud. Contacta a la empresa."
-            : `Error al enviar: ${error.message}`
-        );
+        const msg = error.message ?? "";
+        if (error.code === "23505") {
+          // Determine which field caused the duplicate
+          if (msg.includes("phone")) {
+            throw new Error("Este teléfono ya está registrado. Si ya aplicaste, contacta a la empresa para seguimiento.");
+          } else if (msg.includes("email")) {
+            throw new Error("Este email ya está registrado.");
+          } else {
+            throw new Error("Ya existe una solicitud con estos datos.");
+          }
+        } else if (error.code === "42501" || msg.includes("row-level security")) {
+          throw new Error("No se pudo guardar la solicitud. Contacta a la empresa.");
+        } else {
+          throw new Error(`Error al enviar: ${msg}`);
+        }
       }
 
       // Create audit event (non-blocking)
