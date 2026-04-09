@@ -52,12 +52,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [selectedCompanyId, setSelectedCompanyIdRaw] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeModules, setActiveModules] = useState<Set<string>>(new Set());
+  /** Tracks whether the user has manually switched company in this session */
+  const [manuallySelected, setManuallySelected] = useState(false);
 
   const canUseGlobalMode = !!role && GLOBAL_MODE_ROLES.has(role);
   const isGlobalMode = canUseGlobalMode && selectedCompanyId === null;
 
   const setSelectedCompanyId = useCallback((id: string | null) => {
     setSelectedCompanyIdRaw(id);
+    setManuallySelected(true);
     if (id) {
       localStorage.setItem("selectedCompanyId", id);
     } else {
