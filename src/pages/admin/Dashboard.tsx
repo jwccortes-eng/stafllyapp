@@ -343,7 +343,7 @@ function ActivityRow({ item }: { item: any }) {
    ═══════════════════════════════════════════════════ */
 
 export default function AdminDashboard() {
-  const { selectedCompanyId, selectedCompany, isModuleActive, companies, setSelectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany, isModuleActive, companies, setSelectedCompanyId, isGlobalMode } = useCompany();
   const { role, hasModuleAccess, fullName } = useAuth();
   const { config: payrollConfig, currentWeek } = usePayrollConfig();
   const navigate = useNavigate();
@@ -1072,6 +1072,58 @@ export default function AdminDashboard() {
 
   if (fetchError) {
     return <ErrorBlock title="Error al cargar el dashboard" message="No pudimos cargar los datos. Verifica tu conexión e intenta de nuevo." onRetry={() => window.location.reload()} />;
+  }
+
+  /* ── Global Mode: Platform Overview ── */
+  if (isGlobalMode) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mb-0.5">
+            <Sparkles className="h-3.5 w-3.5 text-primary/50" />
+            {greeting}
+          </p>
+          <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
+            {fullName || "Dashboard"}
+          </h1>
+          <p className="text-xs text-muted-foreground/70 mt-0.5">Vista Global — {companies.length} empresas</p>
+        </div>
+
+        {/* Company grid */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Crown className="h-4 w-4 text-warning" />
+            <h2 className="text-sm font-semibold font-heading text-foreground">Selecciona una empresa para operar</h2>
+            <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {companies.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { setSelectedCompanyId(c.id); }}
+                className="text-left p-4 rounded-2xl border border-border/40 bg-card hover:border-primary/20 hover:shadow-sm transition-all duration-200 group active:scale-[0.98]"
+              >
+                <div className="flex items-start gap-2.5">
+                  <div className="h-9 w-9 rounded-xl flex items-center justify-center text-sm font-bold bg-muted text-muted-foreground shrink-0">
+                    {c.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{c.slug}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
+                  <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
+                    {c.is_active ? "● Activa" : "○ Inactiva"}
+                  </span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

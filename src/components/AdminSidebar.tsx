@@ -9,7 +9,7 @@ import {
   Clock, MapPin, Megaphone, MessageCircle, ChevronDown,
   Inbox, Wrench, Lock, Sparkles, ClipboardList, Receipt, Brain,
   Map as MapIcon, ContactRound, Award, GitCompareArrows,
-  FileText, Bell, UserPlus, Star, ArrowLeftRight,
+  FileText, Bell, UserPlus, Star, ArrowLeftRight, Globe,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -36,8 +36,8 @@ interface LinkDef {
   roles?: string[];
 }
 
-/* ── Simplified grouping: Principal / Nómina / Más ── */
-const ALL_LINKS: LinkDef[] = [
+/* ── Company-scoped links ── */
+const COMPANY_LINKS: LinkDef[] = [
   // PRINCIPAL — core daily operations
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Principal" },
   { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Principal" },
@@ -65,17 +65,30 @@ const ALL_LINKS: LinkDef[] = [
   { to: "/app/migration", icon: ArrowLeftRight, label: "Migración", module: null, section: "Más", roles: ["developer", "owner"] },
 ];
 
-const SECTION_ORDER = ["Principal", "Nómina", "Más"];
+/* ── Global/Platform-level links (developer/owner only) ── */
+const GLOBAL_LINKS: LinkDef[] = [
+  { to: "/app", icon: LayoutDashboard, label: "Panel Global", module: null, end: true, section: "Plataforma" },
+  { to: "/app/companies", icon: Building2, label: "Empresas", module: null, section: "Plataforma" },
+  { to: "/app/directory", icon: Users, label: "Directorio", module: null, section: "Plataforma" },
+  { to: "/app/activity", icon: FileText, label: "Actividad", module: null, section: "Plataforma" },
+  { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Plataforma" },
+  { to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "Herramientas" },
+  { to: "/app/billing", icon: Receipt, label: "Facturación", module: null, section: "Herramientas" },
+  { to: "/app/system-health", icon: BarChart3, label: "Sistema", module: null, section: "Herramientas" },
+];
+
+const COMPANY_SECTION_ORDER = ["Principal", "Nómina", "Más"];
+const GLOBAL_SECTION_ORDER = ["Plataforma", "Herramientas"];
 
 export default function AdminSidebar() {
   const { signOut, role, hasModuleAccess, user, fullName } = useAuth();
-  const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
+  const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive, isGlobalMode, canUseGlobalMode } = useCompany();
   const { canAccessModule, requiredPlanForModule, isTrial, trialDaysLeft } = useSubscription();
   const location = useLocation();
   const navigate = useNavigate();
   const { collapsed, setCollapsed } = useSidebarCollapsed();
 
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(SECTION_ORDER));
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set([...COMPANY_SECTION_ORDER, ...GLOBAL_SECTION_ORDER]));
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -97,7 +110,11 @@ export default function AdminSidebar() {
     return () => clearInterval(interval);
   }, [selectedCompanyId]);
 
+  const activeLinks = isGlobalMode ? GLOBAL_LINKS : COMPANY_LINKS;
+  const activeSectionOrder = isGlobalMode ? GLOBAL_SECTION_ORDER : COMPANY_SECTION_ORDER;
+
   const isLinkVisible = (link: LinkDef) => {
+    if (isGlobalMode) return true; // Global mode shows all platform links
     if (link.module) {
       if (!isModuleActive(link.module)) return false;
       if (role === 'developer' || role === 'owner' || role === 'company_owner' || role === 'admin') return true;
@@ -109,7 +126,7 @@ export default function AdminSidebar() {
   };
 
   const isModuleLocked = (module: string | null): boolean => {
-    if (!module) return false;
+    if (!module || isGlobalMode) return false;
     return !canAccessModule(module);
   };
 
@@ -122,17 +139,17 @@ export default function AdminSidebar() {
 
   const visibleSections = useMemo(() => {
     const sectionMap = new Map<string, LinkDef[]>();
-    for (const link of ALL_LINKS) {
+    for (const link of activeLinks) {
       if (!isLinkVisible(link)) continue;
       if (!sectionMap.has(link.section)) sectionMap.set(link.section, []);
       sectionMap.get(link.section)!.push(link);
     }
     const result: { label: string; links: LinkDef[] }[] = [];
-    for (const sec of SECTION_ORDER) {
+    for (const sec of activeSectionOrder) {
       if (sectionMap.has(sec)) result.push({ label: sec, links: sectionMap.get(sec)! });
     }
     return result;
-  }, [role, selectedCompanyId]);
+  }, [role, selectedCompanyId, isGlobalMode]);
 
   useEffect(() => {
     const activeSection = visibleSections.find(s => s.links.some(l => isActive(l.to, l.end)));
@@ -285,11 +302,25 @@ export default function AdminSidebar() {
         <CompanySwitcher collapsed={collapsed} />
       </div>
 
+      {/* ── Global mode banner ── */}
+      {isGlobalMode && !collapsed && (
+        <div className="mx-3 mt-3 rounded-xl border border-accent bg-accent/30 px-3 py-2 shrink-0">
+          <div className="flex items-center gap-2">
+            <Globe className="h-3.5 w-3.5 text-accent-foreground" />
+            <span className="text-[11px] font-bold text-accent-foreground">Modo Global</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+            Selecciona una empresa para operar en contexto.
+          </p>
+        </div>
+      )}
+
       {/* ── Navigation ── */}
       <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto scrollbar-thin">
         {visibleSections.map(renderSection)}
 
-        {isOwner && (
+        {/* Admin link only in company mode for owners */}
+        {!isGlobalMode && isOwner && (
           <>
             <div className="border-t border-border/20 my-2.5" />
             {renderLink({ to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "", end: true })}
@@ -298,7 +329,7 @@ export default function AdminSidebar() {
       </nav>
 
       {/* Trial banner */}
-      {isTrial && trialDaysLeft !== null && !collapsed && (
+      {isTrial && trialDaysLeft !== null && !collapsed && !isGlobalMode && (
         <div className="mx-3 mb-2 rounded-xl border border-primary/15 bg-primary/[0.05] px-3 py-2.5 shrink-0">
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -338,8 +369,6 @@ export default function AdminSidebar() {
           )}
         </Tooltip>
       </div>
-
-      {/* CompanyActionGuard is now inside CompanySwitcher */}
     </aside>
   );
 }
