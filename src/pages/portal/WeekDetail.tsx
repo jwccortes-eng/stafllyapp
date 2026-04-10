@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
+import {
+  ArrowLeft, DollarSign, TrendingUp, TrendingDown, Wallet, FileText,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 
