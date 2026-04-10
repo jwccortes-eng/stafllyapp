@@ -9235,6 +9235,7 @@ export type Database = {
           location_id: string | null
           meeting_point: string | null
           notes: string | null
+          operational_version: number
           pay_type: string
           qr_attendance_mode: string
           qr_token: string | null
@@ -9268,6 +9269,7 @@ export type Database = {
           location_id?: string | null
           meeting_point?: string | null
           notes?: string | null
+          operational_version?: number
           pay_type?: string
           qr_attendance_mode?: string
           qr_token?: string | null
@@ -9301,6 +9303,7 @@ export type Database = {
           location_id?: string | null
           meeting_point?: string | null
           notes?: string | null
+          operational_version?: number
           pay_type?: string
           qr_attendance_mode?: string
           qr_token?: string | null
@@ -9451,35 +9454,53 @@ export type Database = {
       }
       shift_assignments: {
         Row: {
+          accepted_at: string | null
+          accepted_shift_version: number | null
           assignment_role: string | null
           company_id: string
           created_at: string
           employee_id: string
           id: string
+          last_notified_at: string | null
+          rejected_at: string | null
           rejection_reason: string | null
           responded_at: string | null
+          response_required: boolean
+          response_status: string
           shift_id: string
           status: string
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_shift_version?: number | null
           assignment_role?: string | null
           company_id: string
           created_at?: string
           employee_id: string
           id?: string
+          last_notified_at?: string | null
+          rejected_at?: string | null
           rejection_reason?: string | null
           responded_at?: string | null
+          response_required?: boolean
+          response_status?: string
           shift_id: string
           status?: string
         }
         Update: {
+          accepted_at?: string | null
+          accepted_shift_version?: number | null
           assignment_role?: string | null
           company_id?: string
           created_at?: string
           employee_id?: string
           id?: string
+          last_notified_at?: string | null
+          rejected_at?: string | null
           rejection_reason?: string | null
           responded_at?: string | null
+          response_required?: boolean
+          response_status?: string
           shift_id?: string
           status?: string
         }
