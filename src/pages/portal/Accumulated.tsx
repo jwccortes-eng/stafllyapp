@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useCompany } from "@/hooks/useCompany";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { Link } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -18,10 +18,7 @@ interface PeriodAccum {
 
 export default function Accumulated() {
   const { employeeId, resolveEmployeeForCompany } = useAuth();
-  const { selectedCompanyId } = useCompany();
-  const effectiveEmployeeId = selectedCompanyId
-    ? resolveEmployeeForCompany(selectedCompanyId) ?? employeeId
-    : employeeId;
+  const { effectiveEmployeeId } = useEffectiveEmployee();
   const [periods, setPeriods] = useState<PeriodAccum[]>([]);
   const [loading, setLoading] = useState(true);
   const [empName, setEmpName] = useState<string | null>(null);
