@@ -157,14 +157,16 @@ export function useCompensationMutations() {
   ) => {
     if (!user || !selectedCompanyId) throw new Error("Not authenticated");
 
-    // Check existing active profile
-    const { data: existing } = await supabase
+    // Check existing active profile (use order+limit to avoid maybeSingle failure on duplicates)
+    const { data: existingArr } = await supabase
       .from("compensation_profiles")
       .select("*")
       .eq("company_id", selectedCompanyId)
       .eq("employee_id", employeeId)
       .eq("is_active", true)
-      .maybeSingle();
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const existing = existingArr?.[0] ?? null;
 
     const profileData = {
       company_id: selectedCompanyId,

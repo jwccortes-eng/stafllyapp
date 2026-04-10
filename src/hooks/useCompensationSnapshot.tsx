@@ -21,14 +21,16 @@ export function useCompensationSnapshot() {
   ) => {
     if (!user || !selectedCompanyId) return null;
 
-    // Get active compensation profile
-    const { data: profile } = await supabase
+    // Get active compensation profile (order+limit to handle duplicates safely)
+    const { data: profileArr } = await supabase
       .from("compensation_profiles")
       .select("*")
       .eq("company_id", selectedCompanyId)
       .eq("employee_id", employeeId)
       .eq("is_active", true)
-      .maybeSingle();
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const profile = profileArr?.[0] ?? null;
 
     if (!profile) return null;
 
