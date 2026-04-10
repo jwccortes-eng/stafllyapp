@@ -387,21 +387,16 @@ export default function UsersPage() {
 
     // Now fetch only the profiles/roles/perms for these users
     const userIdArray = Array.from(relevantUserIds);
-    if (userIdArray.length === 0 && selectedCompanyId) {
+    if (userIdArray.length === 0) {
       setUsers([]);
       setPromoCodes((promoCodesRes.data ?? []) as unknown as PromoCode[]);
       return;
     }
 
-    let profilesQuery = supabase.from("profiles").select("user_id, email, full_name");
-    let rolesQuery = supabase.from("user_roles").select("user_id, role");
-    let permsQuery = supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete");
-
-    if (selectedCompanyId && userIdArray.length > 0) {
-      profilesQuery = profilesQuery.in("user_id", userIdArray);
-      rolesQuery = rolesQuery.in("user_id", userIdArray);
-      permsQuery = permsQuery.in("user_id", userIdArray);
-    }
+    // Scope profiles/roles/perms to only users belonging to this company
+    const profilesQuery = supabase.from("profiles").select("user_id, email, full_name").in("user_id", userIdArray);
+    const rolesQuery = supabase.from("user_roles").select("user_id, role").in("user_id", userIdArray);
+    const permsQuery = supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete").in("user_id", userIdArray);
 
     const [profilesRes, rolesRes, permsRes] = await Promise.all([
       profilesQuery,
