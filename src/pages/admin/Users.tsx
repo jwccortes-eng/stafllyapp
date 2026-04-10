@@ -356,20 +356,17 @@ export default function UsersPage() {
   const atAdminLimit = !canAddAdmins(adminCount);
 
   const fetchUsers = async () => {
-    // Build company-scoped queries when a company is selected
-    let companyUsersQuery = supabase.from("company_users").select("user_id, company_id, role, companies(id, name)");
-    let employeesQuery = supabase.from("employees").select("id, user_id, first_name, last_name, is_active");
-    let subsQuery = supabase.from("subscriptions").select("company_id, plan, status");
-    let modulesQuery = supabase.from("company_modules").select("company_id, module, is_active");
-    let redemptionsQuery = supabase.from("promo_redemptions").select("company_id, promo_codes(code, modules)");
-
-    if (selectedCompanyId) {
-      companyUsersQuery = companyUsersQuery.eq("company_id", selectedCompanyId);
-      employeesQuery = employeesQuery.eq("company_id", selectedCompanyId);
-      subsQuery = subsQuery.eq("company_id", selectedCompanyId);
-      modulesQuery = modulesQuery.eq("company_id", selectedCompanyId);
-      redemptionsQuery = redemptionsQuery.eq("company_id", selectedCompanyId);
+    // TENANT ISOLATION: Always require a company context
+    if (!selectedCompanyId) {
+      setUsers([]);
+      return;
     }
+
+    const companyUsersQuery = supabase.from("company_users").select("user_id, company_id, role, companies(id, name)").eq("company_id", selectedCompanyId);
+    const employeesQuery = supabase.from("employees").select("id, user_id, first_name, last_name, is_active").eq("company_id", selectedCompanyId);
+    const subsQuery = supabase.from("subscriptions").select("company_id, plan, status").eq("company_id", selectedCompanyId);
+    const modulesQuery = supabase.from("company_modules").select("company_id, module, is_active").eq("company_id", selectedCompanyId);
+    const redemptionsQuery = supabase.from("promo_redemptions").select("company_id, promo_codes(code, modules)").eq("company_id", selectedCompanyId);
 
     const [companyUsersRes, employeesRes, subsRes, modulesRes, redemptionsRes, promoCodesRes] = await Promise.all([
       companyUsersQuery,
