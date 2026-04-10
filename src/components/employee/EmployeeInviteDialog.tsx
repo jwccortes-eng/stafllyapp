@@ -66,6 +66,11 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
   const [companyMismatch, setCompanyMismatch] = useState(false);
 
+  // Reset livePin when dialog opens/closes
+  useEffect(() => {
+    if (!open) { setLivePin(null); }
+  }, [open]);
+
   // Load or create invitation when dialog opens
   useEffect(() => {
     if (!open) return;
