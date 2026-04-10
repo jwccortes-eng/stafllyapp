@@ -101,8 +101,9 @@ export default function EmployeeCompensationTab({
         .eq("company_id", companyId)
         .eq("employee_id", employeeId)
         .eq("is_active", true)
-        .maybeSingle();
-      return data as CompensationProfile | null;
+        .order("created_at", { ascending: false })
+        .limit(1);
+      return (data && data.length > 0 ? data[0] : null) as CompensationProfile | null;
     },
   });
 
