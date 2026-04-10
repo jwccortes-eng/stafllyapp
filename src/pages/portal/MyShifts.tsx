@@ -300,6 +300,14 @@ export default function MyShifts() {
     );
   }
 
+  // Use response_status for display; fall back to assignment status for backwards compat
+  const getDisplayStatus = (a: ShiftAssignment): string => {
+    if (a.response_status === "needs_reacceptance") return "needs_reacceptance";
+    if (a.response_status === "accepted" || a.status === "confirmed" || a.status === "accepted") return "confirmed";
+    if (a.response_status === "rejected" || a.status === "rejected") return "rejected";
+    return "pending";
+  };
+
   const toCardData = (a: ShiftAssignment): PortalShiftData => ({
     id: a.shift.id,
     assignmentId: a.id,
@@ -307,7 +315,7 @@ export default function MyShifts() {
     date: a.shift.date,
     start_time: a.shift.start_time,
     end_time: a.shift.end_time,
-    status: a.status,
+    status: getDisplayStatus(a),
     location_name: a.shift.location?.name,
     client_name: a.shift.client?.name,
     meeting_point: a.shift.meeting_point,
