@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { cn } from "@/lib/utils";
 import { Clock, CalendarDays, MapPin, ArrowLeftRight, LogIn, LogOut, Timer, ChevronRight } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";

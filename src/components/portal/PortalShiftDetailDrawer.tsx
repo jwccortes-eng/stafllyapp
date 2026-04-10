@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShiftTeamPanel } from "@/components/shifts/ShiftTeamPanel";
 import { ShiftChatPanel } from "@/components/shifts/ShiftChatPanel";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
