@@ -203,6 +203,27 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     setCreatingInvite(false);
   };
 
+  // Auto-generate a secure 4-digit PIN
+  const generatePin = async () => {
+    if (!employee.id) return;
+    setGeneratingPin(true);
+    try {
+      // Generate a random 4-digit PIN (1000–9999 to avoid leading zeros)
+      const newPin = String(Math.floor(1000 + Math.random() * 9000));
+      const { error } = await supabase
+        .from("employees")
+        .update({ access_pin: newPin } as any)
+        .eq("id", employee.id);
+      if (error) throw error;
+      setLivePin(newPin);
+      toast({ title: "PIN generado", description: `Nuevo PIN: ${newPin}` });
+    } catch (err: any) {
+      toast({ title: "Error al generar PIN", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingPin(false);
+    }
+  };
+
   const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Portal: ${portalUrl}\n📞 Tu teléfono: ${employee.phone_number ?? "—"}\n🔑 Tu PIN: ${pin}\n\nSelecciona "Acceso empleado" e ingresa con tu número y PIN.\n\nDesde el portal podrás:\n✅ Ver tus turnos asignados\n✅ Registrar entrada y salida\n✅ Consultar tus pagos\n✅ Recibir comunicados\n\n${inviteLink ? `🔗 Activa tu cuenta: ${inviteLink}\n\n` : ""}— Equipo ${companyName}`;
 
   const phoneDigits = (employee.phone_number ?? "").replace(/\D/g, "");
