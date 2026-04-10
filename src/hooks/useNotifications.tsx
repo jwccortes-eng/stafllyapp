@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { useSoundContext } from "@/hooks/useSound";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ export interface AppNotification {
 export function useNotifications() {
   const { user, role } = useAuth();
   const { selectedCompanyId } = useCompany();
+  const { effectiveEmployeeId } = useEffectiveEmployee();
   const { play } = useSoundContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -70,15 +72,8 @@ export function useNotifications() {
       setNotifications(unique);
       setUnreadCount(unique.filter(n => !n.read_at).length);
     } else {
-      // Employee portal or non-admin: find by employee linked to user
-      const { data: empData } = await supabase
-        .from("employees")
-        .select("id")
-        .eq("user_id", user.id)
-        .limit(1);
-
-      const employeeId = empData?.[0]?.id;
-      const recipientIds = [user.id, ...(employeeId ? [employeeId] : [])];
+      // Employee portal: use effectiveEmployeeId (company-scoped) instead of first employee found
+      const recipientIds = [user.id, ...(effectiveEmployeeId ? [effectiveEmployeeId] : [])];
 
       const { data, error } = await supabase
         .from("notifications")
@@ -93,7 +88,7 @@ export function useNotifications() {
       }
     }
     setLoading(false);
-  }, [user, role, selectedCompanyId]);
+  }, [user, role, selectedCompanyId, effectiveEmployeeId]);
 
   // Determine sound type based on notification type
   const getSoundType = useCallback((notifType: string): "notification" | "chat" | "alert" => {
@@ -152,7 +147,7 @@ export function useNotifications() {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Realtime subscription — listen for both user.id and employeeId recipients
+  // Realtime subscription — listen for both user.id and effectiveEmployeeId recipients
   useEffect(() => {
     if (!user) return;
 
@@ -177,36 +172,31 @@ export function useNotifications() {
       .subscribe();
     channels.push(userChannel);
 
-    // Channel for employee-targeted notifications (different recipient_id)
-    const getEmployeeId = async () => {
-      const { data } = await supabase.from("employees").select("id").eq("user_id", user.id).limit(1);
-      const empId = data?.[0]?.id;
-      if (empId && empId !== user.id) {
-        const empChannel = supabase
-          .channel("employee-notifications")
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_id=eq.${empId}` },
-            (payload) => {
-              const newNotif = payload.new as AppNotification;
-              console.info("[notifications] realtime insert", { notificationId: newNotif.id, type: newNotif.type, recipient: empId });
-              setNotifications(prev => [newNotif, ...prev].slice(0, 30));
-              setUnreadCount(prev => prev + 1);
-              void play(getSoundType(newNotif.type));
-              showSystemNotification(newNotif.title, newNotif.body);
-              toast(newNotif.title, { description: newNotif.body, duration: 5000 });
-            }
-          )
-          .subscribe();
-        channels.push(empChannel);
-      }
-    };
-    getEmployeeId();
+    // Channel for employee-targeted notifications (uses effectiveEmployeeId for company isolation)
+    if (effectiveEmployeeId && effectiveEmployeeId !== user.id) {
+      const empChannel = supabase
+        .channel("employee-notifications")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_id=eq.${effectiveEmployeeId}` },
+          (payload) => {
+            const newNotif = payload.new as AppNotification;
+            console.info("[notifications] realtime insert", { notificationId: newNotif.id, type: newNotif.type, recipient: effectiveEmployeeId });
+            setNotifications(prev => [newNotif, ...prev].slice(0, 30));
+            setUnreadCount(prev => prev + 1);
+            void play(getSoundType(newNotif.type));
+            showSystemNotification(newNotif.title, newNotif.body);
+            toast(newNotif.title, { description: newNotif.body, duration: 5000 });
+          }
+        )
+        .subscribe();
+      channels.push(empChannel);
+    }
 
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [user, play, getSoundType, showSystemNotification]);
+  }, [user, effectiveEmployeeId, play, getSoundType, showSystemNotification]);
 
   return {
     notifications,
