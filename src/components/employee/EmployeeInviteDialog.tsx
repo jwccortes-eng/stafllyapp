@@ -437,24 +437,23 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                 </div>
               </div>
 
-              {/* Invite link */}
-              <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
-                <Link2 className="h-4 w-4 text-primary shrink-0" />
-                {creatingInvite ? (
+              {/* Invite link (optional enhancement) */}
+              {creatingInvite ? (
+                <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
+                  <Link2 className="h-4 w-4 text-primary shrink-0" />
                   <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-1">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Generando enlace...
+                    <Loader2 className="h-3 w-3 animate-spin" /> Generando enlace de activación...
                   </span>
-                ) : inviteLink ? (
-                  <>
-                    <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteLink}</span>
-                    <Button variant="outline" size="sm" className={cn("h-7 text-[9px] shrink-0", linkCopied && "border-[hsl(var(--earning)/0.5)] text-[hsl(var(--earning))]")} onClick={copyInviteLink}>
-                      {linkCopied ? <><Check className="h-3 w-3 mr-1" />Copiado</> : <><Copy className="h-3 w-3 mr-1" />Copiar</>}
-                    </Button>
-                  </>
-                ) : (
-                  <span className="text-[10px] text-muted-foreground flex-1">Enlace no disponible</span>
-                )}
-              </div>
+                </div>
+              ) : inviteLink ? (
+                <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
+                  <Link2 className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-[10px] text-muted-foreground truncate flex-1">{inviteLink}</span>
+                  <Button variant="outline" size="sm" className={cn("h-7 text-[9px] shrink-0", linkCopied && "border-[hsl(var(--earning)/0.5)] text-[hsl(var(--earning))]")} onClick={copyInviteLink}>
+                    {linkCopied ? <><Check className="h-3 w-3 mr-1" />Copiado</> : <><Copy className="h-3 w-3 mr-1" />Copiar</>}
+                  </Button>
+                </div>
+              ) : null}
 
               {/* Resend button */}
               {canResend && (
@@ -465,9 +464,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
               )}
 
               {/* Send channels */}
-              <Tabs defaultValue="link" className="w-full">
+              {/* Send channels — always visible, decoupled from invite_link */}
+              <Tabs defaultValue="message" className="w-full">
                 <TabsList className="w-full grid grid-cols-2 h-8 bg-muted/30 rounded-lg">
-                  <TabsTrigger value="link" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1">
+                  <TabsTrigger value="message" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1">
                     <MessageCircle className="h-3 w-3" /> Mensaje
                   </TabsTrigger>
                   <TabsTrigger value="email" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1">
@@ -475,41 +475,59 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="link" className="mt-2.5 space-y-2.5">
+                <TabsContent value="message" className="mt-2.5 space-y-2.5">
                   <div className="bg-background rounded-lg border border-border/30 p-2.5 max-h-36 overflow-y-auto">
                     <p className="text-[10px] text-muted-foreground whitespace-pre-line leading-relaxed">{message}</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-[#25D366]/30 hover:bg-[#25D366]/10 hover:border-[#25D366]/50 text-[9px]" asChild disabled={!hasPhone} onClick={() => markSent("whatsapp")}>
-                      <a href={waLink} target="_blank" rel="noopener"><MessageCircle className="h-4 w-4 text-[#25D366]" />WhatsApp</a>
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-primary/30 hover:bg-primary/10 text-[9px]" asChild disabled={!hasPhone} onClick={() => markSent("sms")}>
-                      <a href={smsLink}><Smartphone className="h-4 w-4 text-primary" />SMS</a>
-                    </Button>
-                    <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyMessage}>
-                      {copied ? <Check className="h-4 w-4 text-[hsl(var(--earning))]" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
-                      {copied ? "Copiado" : "Copiar"}
-                    </Button>
-                  </div>
-                  {!hasPhone && <p className="text-[9px] text-warning text-center">⚠️ Sin teléfono registrado</p>}
+                  {isReady ? (
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-[#25D366]/30 hover:bg-[#25D366]/10 hover:border-[#25D366]/50 text-[9px]" asChild onClick={() => markSent("whatsapp")}>
+                        <a href={waLink} target="_blank" rel="noopener"><MessageCircle className="h-4 w-4 text-[#25D366]" />WhatsApp</a>
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-primary/30 hover:bg-primary/10 text-[9px]" asChild onClick={() => markSent("sms")}>
+                        <a href={smsLink}><Smartphone className="h-4 w-4 text-primary" />SMS</a>
+                      </Button>
+                      <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyMessage}>
+                        {copied ? <Check className="h-4 w-4 text-[hsl(var(--earning))]" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+                        {copied ? "Copiado" : "Copiar"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-2">
+                      <p className="text-[10px] text-warning flex items-center justify-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {!hasPhone && !hasPin ? "Registra un teléfono y genera un PIN para enviar" : !hasPhone ? "Registra un teléfono para enviar por mensaje" : "Genera un PIN para habilitar el envío"}
+                      </p>
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="email" className="mt-2.5 space-y-2.5">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px]">Email del empleado</Label>
-                    <Input value={employee.email ?? ""} disabled className="h-8 text-xs bg-muted/30" />
-                  </div>
-                  {emailSent ? (
-                    <div className="flex items-center gap-2 justify-center py-3 text-[hsl(var(--earning))]">
-                      <CheckCircle2 className="h-5 w-5" />
-                      <span className="text-xs font-medium">Invitación enviada ✅</span>
-                    </div>
+                  {hasEmail ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px]">Email del empleado</Label>
+                        <Input value={employee.email} disabled className="h-8 text-xs bg-muted/30" />
+                      </div>
+                      {emailSent ? (
+                        <div className="flex items-center gap-2 justify-center py-3 text-[hsl(var(--earning))]">
+                          <CheckCircle2 className="h-5 w-5" />
+                          <span className="text-xs font-medium">Invitación enviada ✅</span>
+                        </div>
+                      ) : (
+                        <Button className="w-full h-8 text-xs" onClick={sendEmail} disabled={sending || !hasPin}>
+                          {sending ? "Enviando..." : <><Mail className="h-3.5 w-3.5 mr-1.5" />Enviar invitación por email</>}
+                        </Button>
+                      )}
+                      {!hasPin && <p className="text-[9px] text-warning text-center">⚠️ Genera un PIN antes de enviar por email</p>}
+                    </>
                   ) : (
-                    <Button className="w-full h-8 text-xs" onClick={sendEmail} disabled={!hasEmail || sending}>
-                      {sending ? "Enviando..." : <><Mail className="h-3.5 w-3.5 mr-1.5" />Enviar invitación por email</>}
-                    </Button>
+                    <div className="flex flex-col items-center gap-2 py-4 text-center">
+                      <Mail className="h-6 w-6 text-muted-foreground/40" />
+                      <p className="text-xs text-muted-foreground font-medium">Este empleado no tiene email registrado</p>
+                      <p className="text-[10px] text-muted-foreground/60">Agrega un email en el perfil del empleado para enviar por este canal.</p>
+                    </div>
                   )}
-                  {!hasEmail && <p className="text-[9px] text-warning text-center">⚠️ Sin email registrado</p>}
                 </TabsContent>
               </Tabs>
             </>
