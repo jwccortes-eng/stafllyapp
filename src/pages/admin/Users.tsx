@@ -356,20 +356,17 @@ export default function UsersPage() {
   const atAdminLimit = !canAddAdmins(adminCount);
 
   const fetchUsers = async () => {
-    // Build company-scoped queries when a company is selected
-    let companyUsersQuery = supabase.from("company_users").select("user_id, company_id, role, companies(id, name)");
-    let employeesQuery = supabase.from("employees").select("id, user_id, first_name, last_name, is_active");
-    let subsQuery = supabase.from("subscriptions").select("company_id, plan, status");
-    let modulesQuery = supabase.from("company_modules").select("company_id, module, is_active");
-    let redemptionsQuery = supabase.from("promo_redemptions").select("company_id, promo_codes(code, modules)");
-
-    if (selectedCompanyId) {
-      companyUsersQuery = companyUsersQuery.eq("company_id", selectedCompanyId);
-      employeesQuery = employeesQuery.eq("company_id", selectedCompanyId);
-      subsQuery = subsQuery.eq("company_id", selectedCompanyId);
-      modulesQuery = modulesQuery.eq("company_id", selectedCompanyId);
-      redemptionsQuery = redemptionsQuery.eq("company_id", selectedCompanyId);
+    // TENANT ISOLATION: Always require a company context
+    if (!selectedCompanyId) {
+      setUsers([]);
+      return;
     }
+
+    const companyUsersQuery = supabase.from("company_users").select("user_id, company_id, role, companies(id, name)").eq("company_id", selectedCompanyId);
+    const employeesQuery = supabase.from("employees").select("id, user_id, first_name, last_name, is_active").eq("company_id", selectedCompanyId);
+    const subsQuery = supabase.from("subscriptions").select("company_id, plan, status").eq("company_id", selectedCompanyId);
+    const modulesQuery = supabase.from("company_modules").select("company_id, module, is_active").eq("company_id", selectedCompanyId);
+    const redemptionsQuery = supabase.from("promo_redemptions").select("company_id, promo_codes(code, modules)").eq("company_id", selectedCompanyId);
 
     const [companyUsersRes, employeesRes, subsRes, modulesRes, redemptionsRes, promoCodesRes] = await Promise.all([
       companyUsersQuery,
@@ -390,21 +387,16 @@ export default function UsersPage() {
 
     // Now fetch only the profiles/roles/perms for these users
     const userIdArray = Array.from(relevantUserIds);
-    if (userIdArray.length === 0 && selectedCompanyId) {
+    if (userIdArray.length === 0) {
       setUsers([]);
       setPromoCodes((promoCodesRes.data ?? []) as unknown as PromoCode[]);
       return;
     }
 
-    let profilesQuery = supabase.from("profiles").select("user_id, email, full_name");
-    let rolesQuery = supabase.from("user_roles").select("user_id, role");
-    let permsQuery = supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete");
-
-    if (selectedCompanyId && userIdArray.length > 0) {
-      profilesQuery = profilesQuery.in("user_id", userIdArray);
-      rolesQuery = rolesQuery.in("user_id", userIdArray);
-      permsQuery = permsQuery.in("user_id", userIdArray);
-    }
+    // Scope profiles/roles/perms to only users belonging to this company
+    const profilesQuery = supabase.from("profiles").select("user_id, email, full_name").in("user_id", userIdArray);
+    const rolesQuery = supabase.from("user_roles").select("user_id, role").in("user_id", userIdArray);
+    const permsQuery = supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete").in("user_id", userIdArray);
 
     const [profilesRes, rolesRes, permsRes] = await Promise.all([
       profilesQuery,
