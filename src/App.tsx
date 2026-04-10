@@ -130,6 +130,11 @@ const PortalChat = lazy(() => import("./pages/portal/PortalChat"));
 const MyW9 = lazy(() => import("./pages/portal/MyW9"));
 const MyAvailability = lazy(() => import("./pages/portal/MyAvailability"));
 
+// Parceros community
+const ParcerosCommunity = lazy(() => import("./pages/parceros/ParcerosCommunity"));
+const ChannelView = lazy(() => import("./pages/parceros/ChannelView"));
+const FlashJobDetail = lazy(() => import("./pages/parceros/FlashJobDetail"));
+
 import { queryClient } from "@/lib/query-client";
 
 function NetworkListener() {
