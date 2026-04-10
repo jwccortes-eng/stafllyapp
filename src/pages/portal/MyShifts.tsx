@@ -254,9 +254,12 @@ export default function MyShifts() {
       case "historial": list = list.filter(a => isBefore(parseISO(a.shift.date), today)); break;
     }
     switch (statusFilter) {
-      case "pendientes": list = list.filter(a => a.status === "pending"); break;
-      case "confirmados": list = list.filter(a => a.status === "confirmed" || a.status === "accepted"); break;
-      case "cancelados": list = list.filter(a => a.status === "rejected"); break;
+      case "pendientes": list = list.filter(a => {
+        const ds = getDisplayStatus(a);
+        return ds === "pending" || ds === "needs_reacceptance";
+      }); break;
+      case "confirmados": list = list.filter(a => getDisplayStatus(a) === "confirmed"); break;
+      case "cancelados": list = list.filter(a => getDisplayStatus(a) === "rejected"); break;
     }
     list.sort((a, b) => {
       if (activeTab === "historial") return parseISO(b.shift.date).getTime() - parseISO(a.shift.date).getTime();

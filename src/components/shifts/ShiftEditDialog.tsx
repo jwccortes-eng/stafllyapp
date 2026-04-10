@@ -126,6 +126,25 @@ export function ShiftEditDialog({
   const adminIsAssigned = !shiftAdminId || shiftAssignedIds.includes(shiftAdminId);
   const adminMissing = !shiftAdminId && shiftAssignedIds.length > 0;
 
+  // Detect material changes that would require re-acceptance
+  const hasMaterialChange = (() => {
+    if (!shift) return false;
+    const s = shift as any;
+    return (
+      date !== s.date ||
+      startTime !== s.start_time?.slice(0, 5) ||
+      endTime !== s.end_time?.slice(0, 5) ||
+      locationId !== (s.location_id || "") ||
+      title.trim() !== (s.title || "") ||
+      meetingPoint.trim() !== (s.meeting_point || "") ||
+      notes.trim() !== (s.notes || "") ||
+      specialInstructions.trim() !== (s.special_instructions || "") ||
+      payType !== (s.pay_type || "hourly")
+    );
+  })();
+
+  const hasAcceptedAssignments = shiftAssignedIds.length > 0;
+
   const handleSave = async () => {
     if (!date) return;
     // Hard rule: if employees are assigned, admin must be set and must be one of them

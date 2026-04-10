@@ -72,6 +72,7 @@ function getCountdown(dateStr: string, startTime: string): string | null {
 const statusConfig: Record<string, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
   confirmed: { label: "Confirmado", cls: "bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))]", icon: CheckCircle2 },
   pending: { label: "Pendiente", cls: "bg-[hsl(var(--status-pending)/0.1)] text-[hsl(var(--status-pending))]", icon: AlertCircle },
+  needs_reacceptance: { label: "Requiere nueva aceptación", cls: "bg-[hsl(var(--status-pending)/0.1)] text-[hsl(var(--status-pending))]", icon: AlertCircle },
   rejected: { label: "Rechazado", cls: "bg-[hsl(var(--status-cancelled)/0.1)] text-[hsl(var(--status-cancelled))]", icon: XCircle },
   accepted: { label: "Aceptado", cls: "bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))]", icon: CheckCircle2 },
 };
