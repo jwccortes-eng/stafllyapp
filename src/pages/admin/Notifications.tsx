@@ -17,6 +17,7 @@ import type { AppNotification } from "@/hooks/useNotifications";
 const TYPE_LABELS: Record<string, string> = {
   shift_request_new: "Solicitud de turno",
   shift_assigned: "Turno asignado",
+  shift_published: "Turno publicado",
   shift_confirmed: "Turno confirmado",
   shift_rejected: "Turno rechazado",
   clock_request: "Solicitud de marcaje",
@@ -32,6 +33,7 @@ const TYPE_LABELS: Record<string, string> = {
 const TYPE_ROUTES: Record<string, string> = {
   shift_request_new: "/app/requests",
   shift_assigned: "/portal/shifts",
+  shift_published: "/portal/shifts",
   shift_confirmed: "/app/shifts",
   shift_rejected: "/app/shifts",
   clock_request: "/app/requests",
@@ -42,6 +44,7 @@ const TYPE_ROUTES: Record<string, string> = {
 const TYPE_COLORS: Record<string, string> = {
   shift_request_new: "bg-amber-500",
   shift_assigned: "bg-primary",
+  shift_published: "bg-primary",
   clock_request: "bg-orange-500",
   announcement: "bg-blue-500",
   payment_ready: "bg-emerald-500",

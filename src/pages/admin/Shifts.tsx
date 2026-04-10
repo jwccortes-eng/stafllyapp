@@ -622,6 +622,48 @@ export default function Shifts() {
       .update({ status: "published" } as any)
       .in("id", ids);
     if (error) { toast.error(error.message); setBulkPublishing(false); return; }
+
+    for (const shift of draftShifts) {
+      await logShiftActivity("publicar_turno", shift.id, { status: shift.status }, { status: "published" });
+
+      const shiftAssigns = assignments.filter(a => a.shift_id === shift.id);
+      const employeeIds = shiftAssigns.map(a => a.employee_id);
+
+      await sendShiftNotifications(
+        shift.id,
+        shift.title,
+        "shift_published",
+        `Turno publicado: ${shift.title}`,
+        `Tu turno "${shift.title}" del ${shift.date} (${shift.start_time.slice(0, 5)}-${shift.end_time.slice(0, 5)}) ha sido publicado.`,
+        employeeIds,
+        { broadcast: true }
+      );
+
+      if (shift.claimable && selectedCompanyId) {
+        const { data: activeEmps } = await supabase
+          .from("employees")
+          .select("id")
+          .eq("company_id", selectedCompanyId)
+          .eq("is_active", true);
+
+        const assignedSet = new Set(employeeIds);
+        const claimRecipients = (activeEmps ?? []).map(e => e.id).filter(id => !assignedSet.has(id));
+
+        if (claimRecipients.length > 0) {
+          const dateLabel = new Date(shift.date + "T12:00:00").toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" });
+          await sendShiftNotifications(
+            shift.id,
+            shift.title,
+            "shift_claimable",
+            "Turno disponible para reclamar",
+            `"${shift.title}" el ${dateLabel} (${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}). Aplica y te notificaremos si eres aceptado.`,
+            claimRecipients,
+            { claimable: true }
+          );
+        }
+      }
+    }
+
     toast.success(`${ids.length} turno(s) publicados`);
     setBulkPublishing(false);
     loadData();
