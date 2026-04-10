@@ -436,7 +436,15 @@ export function ShiftEditDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
+        <div className="px-4 py-3 border-t border-border/30 bg-muted/10 space-y-2">
+          {hasMaterialChange && hasAcceptedAssignments && (
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-[hsl(var(--status-pending)/0.08)] border border-[hsl(var(--status-pending)/0.2)]">
+              <AlertCircle className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0 mt-0.5" />
+              <p className="text-[11px] text-[hsl(var(--status-pending))] font-medium leading-snug">
+                Este cambio requerirá nueva aceptación de los {shiftAssignedIds.length} empleado{shiftAssignedIds.length > 1 ? "s" : ""} asignado{shiftAssignedIds.length > 1 ? "s" : ""}.
+              </p>
+            </div>
+          )}
           <Button onClick={handleSave} disabled={saving || !date || (shiftAssignedIds.length > 0 && (!shiftAdminId || !adminIsAssigned))} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Guardar cambios
