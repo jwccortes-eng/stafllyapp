@@ -144,6 +144,7 @@ export function useCompensationMutations() {
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["compensation-profiles"] });
     qc.invalidateQueries({ queryKey: ["compensation-changelog"] });
+    qc.invalidateQueries({ queryKey: ["comp-profile-single"] });
   };
 
   const upsertProfile = useCallback(async (
