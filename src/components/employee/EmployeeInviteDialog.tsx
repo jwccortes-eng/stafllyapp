@@ -50,14 +50,17 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const [inviteSentAt, setInviteSentAt] = useState<string | null>(null);
   const [inviteChannel, setInviteChannel] = useState<string | null>(null);
   const [inviteId, setInviteId] = useState<string | null>(null);
+  const [generatingPin, setGeneratingPin] = useState(false);
+  const [livePin, setLivePin] = useState<string | null>(null);
 
   const company = companies.find(c => c.id === selectedCompanyId);
   const companyName = company?.name ?? "la empresa";
 
   const portalUrl = portalAuthUrl();
   const inviteLink = liveToken ? inviteUrl(liveToken) : null;
-  const pin = typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : "—";
-  const hasPin = pin !== "—";
+  const currentPin = livePin ?? (typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : null);
+  const pin = currentPin ?? "—";
+  const hasPin = currentPin !== null;
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
   const hasEmail = !!employee.email;
 
