@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
-import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield } from "lucide-react";
+import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -50,18 +50,26 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const [inviteSentAt, setInviteSentAt] = useState<string | null>(null);
   const [inviteChannel, setInviteChannel] = useState<string | null>(null);
   const [inviteId, setInviteId] = useState<string | null>(null);
+  const [generatingPin, setGeneratingPin] = useState(false);
+  const [livePin, setLivePin] = useState<string | null>(null);
 
   const company = companies.find(c => c.id === selectedCompanyId);
   const companyName = company?.name ?? "la empresa";
 
   const portalUrl = portalAuthUrl();
   const inviteLink = liveToken ? inviteUrl(liveToken) : null;
-  const pin = typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : "—";
-  const hasPin = pin !== "—";
+  const currentPin = livePin ?? (typeof employee.access_pin === "string" && employee.access_pin.trim() ? employee.access_pin.trim() : null);
+  const pin = currentPin ?? "—";
+  const hasPin = currentPin !== null;
   const hasPhone = !!(employee.phone_number ?? "").replace(/\D/g, "");
   const hasEmail = !!employee.email;
 
   const [companyMismatch, setCompanyMismatch] = useState(false);
+
+  // Reset livePin when dialog opens/closes
+  useEffect(() => {
+    if (!open) { setLivePin(null); }
+  }, [open]);
 
   // Load or create invitation when dialog opens
   useEffect(() => {
@@ -193,6 +201,27 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       toast({ title: "Nueva invitación generada" });
     }
     setCreatingInvite(false);
+  };
+
+  // Auto-generate a secure 4-digit PIN
+  const generatePin = async () => {
+    if (!employee.id) return;
+    setGeneratingPin(true);
+    try {
+      // Generate a random 4-digit PIN (1000–9999 to avoid leading zeros)
+      const newPin = String(Math.floor(1000 + Math.random() * 9000));
+      const { error } = await supabase
+        .from("employees")
+        .update({ access_pin: newPin } as any)
+        .eq("id", employee.id);
+      if (error) throw error;
+      setLivePin(newPin);
+      toast({ title: "PIN generado", description: `Nuevo PIN: ${newPin}` });
+    } catch (err: any) {
+      toast({ title: "Error al generar PIN", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingPin(false);
+    }
   };
 
   const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Portal: ${portalUrl}\n📞 Tu teléfono: ${employee.phone_number ?? "—"}\n🔑 Tu PIN: ${pin}\n\nSelecciona "Acceso empleado" e ingresa con tu número y PIN.\n\nDesde el portal podrás:\n✅ Ver tus turnos asignados\n✅ Registrar entrada y salida\n✅ Consultar tus pagos\n✅ Recibir comunicados\n\n${inviteLink ? `🔗 Activa tu cuenta: ${inviteLink}\n\n` : ""}— Equipo ${companyName}`;
@@ -365,12 +394,29 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                   <div key={c.label} className="flex items-center gap-2 text-[11px]">
                     {c.ok ? <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--earning))]" /> : <AlertTriangle className="h-3.5 w-3.5 text-warning" />}
                     <span className="text-muted-foreground w-16">{c.label}</span>
-                    <span className={cn("font-medium", c.ok ? "text-foreground" : "text-warning")}>{c.detail}</span>
+                    <span className={cn("font-medium flex-1", c.ok ? "text-foreground" : "text-warning")}>{c.detail}</span>
+                    {c.label === "PIN" && !c.ok && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-6 text-[9px] px-2.5 gap-1 shrink-0"
+                        onClick={generatePin}
+                        disabled={generatingPin}
+                      >
+                        {generatingPin ? <Loader2 className="h-3 w-3 animate-spin" /> : <KeyRound className="h-3 w-3" />}
+                        Generar PIN
+                      </Button>
+                    )}
                   </div>
                 ))}
-                {!isReady && (
+                {!isReady && !hasPin && hasPhone && (
+                  <p className="text-[10px] text-primary mt-2 flex items-center gap-1">
+                    <KeyRound className="h-3 w-3" /> Genera un PIN para habilitar la invitación
+                  </p>
+                )}
+                {!isReady && !hasPhone && (
                   <p className="text-[10px] text-warning mt-1.5 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" /> Completa teléfono y PIN antes de invitar
+                    <AlertTriangle className="h-3 w-3" /> Registra un teléfono antes de invitar
                   </p>
                 )}
               </div>
