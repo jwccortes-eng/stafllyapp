@@ -183,6 +183,10 @@ function App() {
               <Route path="/join/:inviteCode" element={<JoinCompany />} />
               <Route path="/invite" element={<AcceptInvite />} />
               <Route path="/activate/:token" element={<ActivateAccount />} />
+              {/* Parceros community */}
+              <Route path="/parceros" element={<ParcerosCommunity />} />
+              <Route path="/parceros/channel/:id" element={<ChannelView />} />
+              <Route path="/parceros/flash/:id" element={<FlashJobDetail />} />
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
