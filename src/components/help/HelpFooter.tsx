@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
-import { HelpCircle, ExternalLink } from "lucide-react";
+import { HelpCircle, ExternalLink, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { downloadChatGPTPromptPDF } from "@/lib/export-chatgpt-prompt-pdf";
-import { FileDown } from "lucide-react";
 
 interface Props {
   lang: "es" | "en";
@@ -16,8 +14,8 @@ const links = [
 
 export function HelpFooter({ lang }: Props) {
   const t = lang === "es"
-    ? { linksTitle: "Links útiles", contactTitle: "¿No encontraste lo que buscas?", contactDesc: "Si tu empresa tiene soporte habilitado, contacta a tu Manager/Admin.", email: "soporte@staflyapps.com", download: "Descargar Mega-Prompt (PDF)" }
-    : { linksTitle: "Useful links", contactTitle: "Didn't find what you need?", contactDesc: "If support is enabled, contact your Manager/Admin.", email: "support@staflyapps.com", download: "Download Mega-Prompt (PDF)" };
+    ? { linksTitle: "Links útiles", contactTitle: "¿No encontraste lo que buscas?", contactDesc: "Si tu empresa tiene soporte habilitado, contacta a tu Manager/Admin.", email: "soporte@staflyapps.com", manual: "Manual de Usuario" }
+    : { linksTitle: "Useful links", contactTitle: "Didn't find what you need?", contactDesc: "If support is enabled, contact your Manager/Admin.", email: "support@staflyapps.com", manual: "User Manual" };
 
   return (
     <div className="space-y-6">
@@ -46,9 +44,11 @@ export function HelpFooter({ lang }: Props) {
           {lang === "es" ? "Escríbenos a" : "Email us at"}{" "}
           <span className="text-primary font-medium">{t.email}</span>
         </p>
-        <Button variant="outline" size="sm" onClick={downloadChatGPTPromptPDF} className="mt-2">
-          <FileDown className="h-4 w-4 mr-1.5" />
-          {t.download}
+        <Button variant="outline" size="sm" asChild className="mt-2">
+          <Link to="/manual">
+            <BookOpen className="h-4 w-4 mr-1.5" />
+            {t.manual}
+          </Link>
         </Button>
       </div>
     </div>
