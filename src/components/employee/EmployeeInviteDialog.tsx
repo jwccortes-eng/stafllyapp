@@ -394,12 +394,29 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                   <div key={c.label} className="flex items-center gap-2 text-[11px]">
                     {c.ok ? <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--earning))]" /> : <AlertTriangle className="h-3.5 w-3.5 text-warning" />}
                     <span className="text-muted-foreground w-16">{c.label}</span>
-                    <span className={cn("font-medium", c.ok ? "text-foreground" : "text-warning")}>{c.detail}</span>
+                    <span className={cn("font-medium flex-1", c.ok ? "text-foreground" : "text-warning")}>{c.detail}</span>
+                    {c.label === "PIN" && !c.ok && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-6 text-[9px] px-2.5 gap-1 shrink-0"
+                        onClick={generatePin}
+                        disabled={generatingPin}
+                      >
+                        {generatingPin ? <Loader2 className="h-3 w-3 animate-spin" /> : <KeyRound className="h-3 w-3" />}
+                        Generar PIN
+                      </Button>
+                    )}
                   </div>
                 ))}
-                {!isReady && (
+                {!isReady && !hasPin && hasPhone && (
+                  <p className="text-[10px] text-primary mt-2 flex items-center gap-1">
+                    <KeyRound className="h-3 w-3" /> Genera un PIN para habilitar la invitación
+                  </p>
+                )}
+                {!isReady && !hasPhone && (
                   <p className="text-[10px] text-warning mt-1.5 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" /> Completa teléfono y PIN antes de invitar
+                    <AlertTriangle className="h-3 w-3" /> Registra un teléfono antes de invitar
                   </p>
                 )}
               </div>
