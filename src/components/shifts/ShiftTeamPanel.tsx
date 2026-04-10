@@ -10,6 +10,7 @@ interface TeamMember {
   id: string;
   employee_id: string;
   status: string;
+  response_status: string;
   first_name: string;
   last_name: string;
   phone_number: string | null;
@@ -36,7 +37,7 @@ export function ShiftTeamPanel({ shiftId, companyId, preloaded, compact = false 
       setLoading(true);
       const { data } = await supabase
         .from("shift_assignments")
-        .select("id, employee_id, status, employees!inner(first_name, last_name, phone_number, avatar_url, gender)")
+        .select("id, employee_id, status, response_status, employees!inner(first_name, last_name, phone_number, avatar_url, gender)")
         .eq("shift_id", shiftId)
         .not("status", "in", '("rejected","removed")');
 
@@ -44,6 +45,7 @@ export function ShiftTeamPanel({ shiftId, companyId, preloaded, compact = false 
         id: a.id,
         employee_id: a.employee_id,
         status: a.status,
+        response_status: a.response_status ?? "pending",
         first_name: a.employees.first_name,
         last_name: a.employees.last_name,
         phone_number: a.employees.phone_number,
@@ -80,7 +82,15 @@ export function ShiftTeamPanel({ shiftId, companyId, preloaded, compact = false 
     confirmed: "bg-earning",
     accepted: "bg-earning",
     pending: "bg-warning",
+    needs_reacceptance: "bg-amber-500",
     review: "bg-primary",
+  };
+
+  const responseBadge: Record<string, { label: string; cls: string }> = {
+    accepted: { label: "Aceptado", cls: "text-earning bg-earning/10" },
+    pending: { label: "Pendiente", cls: "text-warning bg-warning/10" },
+    needs_reacceptance: { label: "Re-aceptar", cls: "text-amber-600 bg-amber-500/10" },
+    rejected: { label: "Rechazado", cls: "text-destructive bg-destructive/10" },
   };
 
   return (
@@ -129,7 +139,14 @@ export function ShiftTeamPanel({ shiftId, companyId, preloaded, compact = false 
                     </div>
                   ) : undefined}
                 />
-                <span className={cn("ml-[42px] inline-block h-2 w-2 rounded-full -mt-1", statusDot[m.status] || "bg-muted-foreground/30")} />
+                <div className="flex items-center gap-1.5 ml-[42px] -mt-1">
+                  <span className={cn("inline-block h-2 w-2 rounded-full", statusDot[m.response_status] || statusDot[m.status] || "bg-muted-foreground/30")} />
+                  {responseBadge[m.response_status] && (
+                    <span className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded-full", responseBadge[m.response_status].cls)}>
+                      {responseBadge[m.response_status].label}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
