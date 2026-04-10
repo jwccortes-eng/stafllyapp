@@ -71,6 +71,7 @@ export const EMPLOYEE_NAV_ITEMS: NavItem[] = [
   { id: "portal-shifts", to: "/portal/shifts", icon: CalendarDays, label: "Turnos", module: null, section: "Principal" },
   { id: "portal-availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", module: null, section: "Principal" },
   { id: "portal-chat", to: "/portal/chat", icon: MessageSquare, label: "Chat", module: null, section: "Principal" },
+  { id: "portal-parceros", to: "/parceros", icon: Users, label: "Parceros", module: null, section: "Comunidad" },
   { id: "portal-profile", to: "/portal/profile", icon: User, label: "Perfil", module: null, section: "Principal" },
 ];
 
