@@ -3478,43 +3478,76 @@ export type Database = {
       }
       implementation_log: {
         Row: {
+          affected_company: string | null
           category: string | null
           completed_at: string | null
           created_at: string
           description: string | null
+          evidence: string | null
+          fix_applied: string | null
           id: string
+          item_type: string | null
+          module: string | null
           notes: string | null
+          origin: string | null
           priority: string | null
           prompt_ref: string | null
+          responsible: string | null
+          root_cause: string | null
+          sprint: string | null
           status: string
+          target_date: string | null
           title: string
           updated_at: string
+          validation_required: string | null
         }
         Insert: {
+          affected_company?: string | null
           category?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          evidence?: string | null
+          fix_applied?: string | null
           id?: string
+          item_type?: string | null
+          module?: string | null
           notes?: string | null
+          origin?: string | null
           priority?: string | null
           prompt_ref?: string | null
+          responsible?: string | null
+          root_cause?: string | null
+          sprint?: string | null
           status?: string
+          target_date?: string | null
           title: string
           updated_at?: string
+          validation_required?: string | null
         }
         Update: {
+          affected_company?: string | null
           category?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          evidence?: string | null
+          fix_applied?: string | null
           id?: string
+          item_type?: string | null
+          module?: string | null
           notes?: string | null
+          origin?: string | null
           priority?: string | null
           prompt_ref?: string | null
+          responsible?: string | null
+          root_cause?: string | null
+          sprint?: string | null
           status?: string
+          target_date?: string | null
           title?: string
           updated_at?: string
+          validation_required?: string | null
         }
         Relationships: []
       }
