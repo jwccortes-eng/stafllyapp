@@ -23,7 +23,7 @@ const WEEKDAYS = [
 ];
 
 export default function MyAvailability() {
-  const { employeeId } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const today = new Date();
   const [weekOffset, setWeekOffset] = useState(0);
 

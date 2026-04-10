@@ -13,7 +13,8 @@ import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "d
 import { es } from "date-fns/locale";
 
 export function MyShiftCard() {
-  const { employeeId, canAccessPortal, canAccessAdmin, setActiveMode } = useAuth();
+  const { canAccessPortal, canAccessAdmin, setActiveMode } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
   const [nextShift, setNextShift] = useState<{
     title: string; date: string; start_time: string; end_time: string; location_name: string | null;

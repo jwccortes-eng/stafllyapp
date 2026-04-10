@@ -25,7 +25,7 @@ const TAX_CLASSIFICATIONS = [
 ];
 
 export default function MyW9() {
-  const { employeeId } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [existing, setExisting] = useState<any>(null);

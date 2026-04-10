@@ -79,7 +79,7 @@ type DrawerTab = "info" | "team" | "chat";
 
 export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenChange }: PortalShiftDetailDrawerProps) {
   const navigate = useNavigate();
-  const { employeeId } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
   const [tab, setTab] = useState<DrawerTab>("info");
   const [empCompanyId, setEmpCompanyId] = useState("");

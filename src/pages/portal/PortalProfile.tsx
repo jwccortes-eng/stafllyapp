@@ -28,7 +28,8 @@ interface EmployeeProfile {
 }
 
 export default function PortalProfile() {
-  const { employeeId, signOut } = useAuth();
+  const { signOut } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
   const navigate = useNavigate();
   const outletCtx = useOutletContext<{ openMore?: () => void } | null>();
