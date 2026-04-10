@@ -130,6 +130,11 @@ const PortalChat = lazy(() => import("./pages/portal/PortalChat"));
 const MyW9 = lazy(() => import("./pages/portal/MyW9"));
 const MyAvailability = lazy(() => import("./pages/portal/MyAvailability"));
 
+// Parceros community
+const ParcerosCommunity = lazy(() => import("./pages/parceros/ParcerosCommunity"));
+const ChannelView = lazy(() => import("./pages/parceros/ChannelView"));
+const FlashJobDetail = lazy(() => import("./pages/parceros/FlashJobDetail"));
+
 import { queryClient } from "@/lib/query-client";
 
 function NetworkListener() {
@@ -178,6 +183,10 @@ function App() {
               <Route path="/join/:inviteCode" element={<JoinCompany />} />
               <Route path="/invite" element={<AcceptInvite />} />
               <Route path="/activate/:token" element={<ActivateAccount />} />
+              {/* Parceros community */}
+              <Route path="/parceros" element={<ParcerosCommunity />} />
+              <Route path="/parceros/channel/:id" element={<ChannelView />} />
+              <Route path="/parceros/flash/:id" element={<FlashJobDetail />} />
               {/* Admin routes */}
               <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
