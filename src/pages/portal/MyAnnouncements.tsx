@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { Megaphone, Pin, ExternalLink, AlertTriangle, Bell, Heart, ThumbsUp, Laugh, PartyPopper, Play } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,7 @@ const EMOJI_OPTIONS = [
 ];
 
 export default function MyAnnouncements() {
-  const { employeeId } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [reactions, setReactions] = useState<Record<string, ReactionCount[]>>({});
   const [loading, setLoading] = useState(true);

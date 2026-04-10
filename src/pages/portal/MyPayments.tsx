@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useCompany } from "@/hooks/useCompany";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { Link } from "react-router-dom";
 import {
   TrendingUp, TrendingDown, ChevronDown,
@@ -93,10 +93,7 @@ function PaymentTrendChart({ payments }: { payments: PaymentRow[] }) {
 
 export default function MyPayments() {
   const { employeeId, resolveEmployeeForCompany } = useAuth();
-  const { selectedCompanyId } = useCompany();
-  const effectiveEmployeeId = selectedCompanyId
-    ? resolveEmployeeForCompany(selectedCompanyId) ?? employeeId
-    : employeeId;
+  const { effectiveEmployeeId } = useEffectiveEmployee();
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null);

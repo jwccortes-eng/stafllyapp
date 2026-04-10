@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShiftTeamPanel } from "@/components/shifts/ShiftTeamPanel";
 import { ShiftChatPanel } from "@/components/shifts/ShiftChatPanel";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -79,7 +80,7 @@ type DrawerTab = "info" | "team" | "chat";
 
 export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenChange }: PortalShiftDetailDrawerProps) {
   const navigate = useNavigate();
-  const { employeeId } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
   const [tab, setTab] = useState<DrawerTab>("info");
   const [empCompanyId, setEmpCompanyId] = useState("");

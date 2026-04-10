@@ -7,13 +7,15 @@ import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { cn } from "@/lib/utils";
 import { Clock, CalendarDays, MapPin, ArrowLeftRight, LogIn, LogOut, Timer, ChevronRight } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 
 export function MyShiftCard() {
-  const { employeeId, canAccessPortal, canAccessAdmin, setActiveMode } = useAuth();
+  const { canAccessPortal, canAccessAdmin, setActiveMode } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
   const [nextShift, setNextShift] = useState<{
     title: string; date: string; start_time: string; end_time: string; location_name: string | null;

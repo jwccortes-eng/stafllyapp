@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPersonName } from "@/lib/format-helpers";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { Link, useNavigate } from "react-router-dom";
 import { usePortalModules } from "@/hooks/usePortalModules";
 import {
@@ -53,7 +53,7 @@ function calcDuration(start: string, end: string): string {
 }
 
 export default function EmployeeDashboard() {
-  const { employeeId } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
   const { isModuleEnabled } = usePortalModules();
   const [empName, setEmpName] = useState("");

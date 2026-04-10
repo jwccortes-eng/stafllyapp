@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ const TAX_CLASSIFICATIONS = [
 ];
 
 export default function MyW9() {
-  const { employeeId } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [existing, setExisting] = useState<any>(null);

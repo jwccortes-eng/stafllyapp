@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useCompany } from "@/hooks/useCompany";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { ArrowLeft, FileText, Calendar, DollarSign, TrendingUp, TrendingDown, CheckCircle2, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
@@ -27,10 +27,7 @@ interface PeriodInfo {
 export default function PayStub() {
   const { periodId } = useParams<{ periodId: string }>();
   const { employeeId, resolveEmployeeForCompany } = useAuth();
-  const { selectedCompanyId } = useCompany();
-  const effectiveEmployeeId = selectedCompanyId
-    ? resolveEmployeeForCompany(selectedCompanyId) ?? employeeId
-    : employeeId;
+  const { effectiveEmployeeId } = useEffectiveEmployee();
   const [period, setPeriod] = useState<PeriodInfo | null>(null);
   const [basePay, setBasePay] = useState(0);
   const [movements, setMovements] = useState<MovementDetail[]>([]);

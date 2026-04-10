@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -68,7 +68,7 @@ function isClockOutWithinSchedule(shift: TodayShift | null): { withinSchedule: b
 }
 
 export default function PortalClock() {
-  const { employeeId } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

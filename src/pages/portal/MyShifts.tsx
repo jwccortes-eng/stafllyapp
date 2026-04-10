@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import {
   CalendarDays, Clock, MapPin, HandMetal, Loader2, LayoutList, LayoutGrid,
 } from "lucide-react";
@@ -56,7 +56,7 @@ type TabFilter = "hoy" | "proximos" | "semana" | "historial";
 type StatusFilter = "todos" | "pendientes" | "confirmados" | "cancelados";
 
 export default function MyShifts() {
-  const { employeeId } = useAuth();
+  const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [claimable, setClaimable] = useState<ClaimableShift[]>([]);
