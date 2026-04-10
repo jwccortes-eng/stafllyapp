@@ -32,6 +32,7 @@ const STATUS_MAP: Record<string, { label: string; icon: typeof CheckCircle2; col
   confirmed: { label: "Confirmado", icon: CheckCircle2, color: "text-[hsl(var(--status-confirmed))]", bg: "bg-[hsl(var(--status-confirmed)/0.08)]" },
   accepted: { label: "Aceptado", icon: CheckCircle2, color: "text-[hsl(var(--status-confirmed))]", bg: "bg-[hsl(var(--status-confirmed)/0.08)]" },
   pending: { label: "Pendiente", icon: AlertCircle, color: "text-[hsl(var(--status-pending))]", bg: "bg-[hsl(var(--status-pending)/0.08)]" },
+  needs_reacceptance: { label: "Requiere nueva aceptación", icon: AlertCircle, color: "text-[hsl(var(--status-pending))]", bg: "bg-[hsl(var(--status-pending)/0.08)]" },
   rejected: { label: "Rechazado", icon: XCircle, color: "text-[hsl(var(--status-cancelled))]", bg: "bg-[hsl(var(--status-cancelled)/0.08)]" },
 };
 
@@ -76,7 +77,7 @@ export function PortalShiftCard({
   const isTodayShift = isToday(parseISO(shift.date));
   const isTomorrowShift = isTomorrow(parseISO(shift.date));
   const countdown = isTodayShift ? getCountdown(shift.date, shift.start_time) : null;
-  const isPending = shift.status === "pending";
+  const isPending = shift.status === "pending" || shift.status === "needs_reacceptance";
   const isConfirmed = shift.status === "confirmed" || shift.status === "accepted";
   const duration = calcDuration(shift.start_time, shift.end_time);
 
@@ -202,16 +203,23 @@ export function PortalShiftCard({
           </div>
         </div>
 
-        {/* Actions: Pending */}
+        {/* Actions: Pending / Re-acceptance */}
         {isPending && (onAccept || onReject) && (
-          <div className="flex items-center gap-2 pt-0.5" onClick={e => e.stopPropagation()}>
-            <Button size="sm" className="flex-1 h-10 text-xs gap-1.5 font-bold rounded-xl" onClick={onAccept} disabled={responding}>
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Confirmar
-            </Button>
-            <Button variant="outline" size="sm" className="h-10 px-4 text-xs text-destructive hover:text-destructive rounded-xl" onClick={onReject} disabled={responding}>
-              Rechazar
-            </Button>
+          <div className="space-y-2 pt-0.5" onClick={e => e.stopPropagation()}>
+            {shift.status === "needs_reacceptance" && (
+              <p className="text-[10px] text-[hsl(var(--status-pending))] font-semibold">
+                ⚠️ Este turno fue modificado. Debes aceptarlo o rechazarlo nuevamente.
+              </p>
+            )}
+            <div className="flex items-center gap-2">
+              <Button size="sm" className="flex-1 h-10 text-xs gap-1.5 font-bold rounded-xl" onClick={onAccept} disabled={responding}>
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {shift.status === "needs_reacceptance" ? "Aceptar cambios" : "Confirmar"}
+              </Button>
+              <Button variant="outline" size="sm" className="h-10 px-4 text-xs text-destructive hover:text-destructive rounded-xl" onClick={onReject} disabled={responding}>
+                Rechazar
+              </Button>
+            </div>
           </div>
         )}
 

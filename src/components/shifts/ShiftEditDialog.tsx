@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Loader2, Save, CalendarIcon, Clock, Building2, MapPin, Users,
   StickyNote, CreditCard, Compass, FileText, X, Car, QrCode,
-  ChevronDown, Settings2,
+  ChevronDown, Settings2, AlertCircle,
 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -125,6 +125,25 @@ export function ShiftEditDialog({
   const shiftAssignedIds = shift ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id) : [];
   const adminIsAssigned = !shiftAdminId || shiftAssignedIds.includes(shiftAdminId);
   const adminMissing = !shiftAdminId && shiftAssignedIds.length > 0;
+
+  // Detect material changes that would require re-acceptance
+  const hasMaterialChange = (() => {
+    if (!shift) return false;
+    const s = shift as any;
+    return (
+      date !== s.date ||
+      startTime !== s.start_time?.slice(0, 5) ||
+      endTime !== s.end_time?.slice(0, 5) ||
+      locationId !== (s.location_id || "") ||
+      title.trim() !== (s.title || "") ||
+      meetingPoint.trim() !== (s.meeting_point || "") ||
+      notes.trim() !== (s.notes || "") ||
+      specialInstructions.trim() !== (s.special_instructions || "") ||
+      payType !== (s.pay_type || "hourly")
+    );
+  })();
+
+  const hasAcceptedAssignments = shiftAssignedIds.length > 0;
 
   const handleSave = async () => {
     if (!date) return;
@@ -417,7 +436,15 @@ export function ShiftEditDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
+        <div className="px-4 py-3 border-t border-border/30 bg-muted/10 space-y-2">
+          {hasMaterialChange && hasAcceptedAssignments && (
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-[hsl(var(--status-pending)/0.08)] border border-[hsl(var(--status-pending)/0.2)]">
+              <AlertCircle className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0 mt-0.5" />
+              <p className="text-[11px] text-[hsl(var(--status-pending))] font-medium leading-snug">
+                Este cambio requerirá nueva aceptación de los {shiftAssignedIds.length} empleado{shiftAssignedIds.length > 1 ? "s" : ""} asignado{shiftAssignedIds.length > 1 ? "s" : ""}.
+              </p>
+            </div>
+          )}
           <Button onClick={handleSave} disabled={saving || !date || (shiftAssignedIds.length > 0 && (!shiftAdminId || !adminIsAssigned))} className="w-full h-10 text-sm gap-2 rounded-xl font-semibold">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Guardar cambios

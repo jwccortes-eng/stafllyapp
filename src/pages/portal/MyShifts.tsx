@@ -21,6 +21,8 @@ import { PortalShiftCard, type PortalShiftData } from "@/components/portal/Porta
 interface ShiftAssignment {
   id: string;
   status: string;
+  response_status: string;
+  accepted_shift_version: number | null;
   shift: {
     id: string;
     title: string;
@@ -34,6 +36,7 @@ interface ShiftAssignment {
     meeting_point?: string | null;
     special_instructions?: string | null;
     company_id?: string;
+    operational_version?: number;
     location?: { name: string } | null;
     client?: { name: string } | null;
   };
@@ -80,13 +83,15 @@ export default function MyShifts() {
 
     const { data: assignData } = await supabase
       .from("shift_assignments")
-      .select(`id, status, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions, company_id, locations (name), clients (name))`)
+      .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions, company_id, operational_version, locations (name), clients (name))`)
       .eq("employee_id", employeeId)
       .order("created_at", { ascending: false });
 
     const mapped: ShiftAssignment[] = (assignData ?? []).map((a: any) => ({
       id: a.id,
       status: a.status,
+      response_status: a.response_status ?? "pending",
+      accepted_shift_version: a.accepted_shift_version,
       shift: {
         id: a.scheduled_shifts.id, title: a.scheduled_shifts.title,
         date: a.scheduled_shifts.date, start_time: a.scheduled_shifts.start_time,
@@ -95,6 +100,7 @@ export default function MyShifts() {
         shift_code: a.scheduled_shifts.shift_code, meeting_point: a.scheduled_shifts.meeting_point,
         special_instructions: a.scheduled_shifts.special_instructions,
         company_id: a.scheduled_shifts.company_id,
+        operational_version: a.scheduled_shifts.operational_version,
         location: a.scheduled_shifts.locations, client: a.scheduled_shifts.clients,
       },
     }));
@@ -205,7 +211,16 @@ export default function MyShifts() {
 
   const acceptAssignment = async (assignmentId: string) => {
     setResponding(assignmentId);
-    const { error } = await supabase.from("shift_assignments").update({ status: "confirmed", responded_at: new Date().toISOString() } as any).eq("id", assignmentId);
+    const assignment = assignments.find(a => a.id === assignmentId);
+    const version = assignment?.shift?.operational_version ?? 1;
+    const { error } = await supabase.from("shift_assignments").update({
+      status: "confirmed",
+      responded_at: new Date().toISOString(),
+      response_status: "accepted",
+      response_required: false,
+      accepted_at: new Date().toISOString(),
+      accepted_shift_version: version,
+    } as any).eq("id", assignmentId);
     if (error) toast.error("Error", { description: error.message });
     else { toast.success("¡Turno confirmado!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
     setResponding(null);
@@ -214,7 +229,14 @@ export default function MyShifts() {
   const rejectAssignment = async () => {
     if (!rejectDialogId) return;
     setResponding(rejectDialogId);
-    const { error } = await supabase.from("shift_assignments").update({ status: "rejected", responded_at: new Date().toISOString(), rejection_reason: rejectReason.trim() || null } as any).eq("id", rejectDialogId);
+    const { error } = await supabase.from("shift_assignments").update({
+      status: "rejected",
+      responded_at: new Date().toISOString(),
+      rejection_reason: rejectReason.trim() || null,
+      response_status: "rejected",
+      response_required: false,
+      rejected_at: new Date().toISOString(),
+    } as any).eq("id", rejectDialogId);
     if (error) toast.error("Error", { description: error.message });
     else { toast.success("Turno rechazado"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
     setResponding(null); setRejectDialogId(null); setRejectReason("");
@@ -232,9 +254,12 @@ export default function MyShifts() {
       case "historial": list = list.filter(a => isBefore(parseISO(a.shift.date), today)); break;
     }
     switch (statusFilter) {
-      case "pendientes": list = list.filter(a => a.status === "pending"); break;
-      case "confirmados": list = list.filter(a => a.status === "confirmed" || a.status === "accepted"); break;
-      case "cancelados": list = list.filter(a => a.status === "rejected"); break;
+      case "pendientes": list = list.filter(a => {
+        const ds = getDisplayStatus(a);
+        return ds === "pending" || ds === "needs_reacceptance";
+      }); break;
+      case "confirmados": list = list.filter(a => getDisplayStatus(a) === "confirmed"); break;
+      case "cancelados": list = list.filter(a => getDisplayStatus(a) === "rejected"); break;
     }
     list.sort((a, b) => {
       if (activeTab === "historial") return parseISO(b.shift.date).getTime() - parseISO(a.shift.date).getTime();
@@ -278,6 +303,14 @@ export default function MyShifts() {
     );
   }
 
+  // Use response_status for display; fall back to assignment status for backwards compat
+  const getDisplayStatus = (a: ShiftAssignment): string => {
+    if (a.response_status === "needs_reacceptance") return "needs_reacceptance";
+    if (a.response_status === "accepted" || a.status === "confirmed" || a.status === "accepted") return "confirmed";
+    if (a.response_status === "rejected" || a.status === "rejected") return "rejected";
+    return "pending";
+  };
+
   const toCardData = (a: ShiftAssignment): PortalShiftData => ({
     id: a.shift.id,
     assignmentId: a.id,
@@ -285,7 +318,7 @@ export default function MyShifts() {
     date: a.shift.date,
     start_time: a.shift.start_time,
     end_time: a.shift.end_time,
-    status: a.status,
+    status: getDisplayStatus(a),
     location_name: a.shift.location?.name,
     client_name: a.shift.client?.name,
     meeting_point: a.shift.meeting_point,
