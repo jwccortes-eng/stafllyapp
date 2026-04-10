@@ -13,6 +13,7 @@ import { es } from "date-fns/locale";
 const TYPE_ROUTES: Record<string, string> = {
   shift_request_new: "/app/requests",
   shift_assigned: "/portal/shifts",
+  shift_published: "/portal/shifts",
   shift_available: "/portal/shifts",
   shift_updated: "/portal/shifts",
   shift_confirmed: "/app/shifts",
@@ -43,6 +44,7 @@ function getNotificationRoute(n: { type: string; metadata: Record<string, any> |
 const TYPE_COLORS: Record<string, string> = {
   shift_request_new: "bg-amber-500",
   shift_assigned: "bg-primary",
+  shift_published: "bg-primary",
   shift_available: "bg-emerald-500",
   shift_updated: "bg-sky-500",
   clock_request: "bg-orange-500",
@@ -68,7 +70,7 @@ type FilterTab = "all" | "shifts" | "clock" | "people" | "other";
 
 const FILTER_GROUPS: Record<FilterTab, string[] | null> = {
   all: null,
-  shifts: ["shift_request_new", "shift_assigned", "shift_available", "shift_updated", "shift_confirmed", "shift_rejected", "shift_reminder", "shift_reminder_24h", "shift_reminder_1h", "shift_confirm_reminder", "shift_confirm_urgent"],
+  shifts: ["shift_request_new", "shift_assigned", "shift_published", "shift_available", "shift_updated", "shift_confirmed", "shift_rejected", "shift_reminder", "shift_reminder_24h", "shift_reminder_1h", "shift_confirm_reminder", "shift_confirm_urgent"],
   clock: ["clock_request", "no_clock", "no_clockin_alert", "no_show_alert"],
   people: ["new_application", "invitation_accepted", "invitation_expired", "review_pending"],
   other: ["announcement", "payment_ready", "period_closed", "payroll_email"],
@@ -93,6 +95,7 @@ const FILTER_LABELS: Record<FilterTab, string> = {
 const TYPE_LABELS: Record<string, string> = {
   shift_request_new: "Solicitud",
   shift_assigned: "Asignación",
+  shift_published: "Publicado",
   shift_available: "Disponible",
   shift_updated: "Actualización",
   shift_confirmed: "Confirmado",
