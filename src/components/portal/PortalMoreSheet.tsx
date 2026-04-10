@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { X, LogOut, Moon, Sun, CalendarCheck, Megaphone, FileText, BookOpen, ChevronRight, Wallet, Shield } from "lucide-react";
+import { X, LogOut, Moon, Sun, CalendarCheck, Megaphone, FileText, BookOpen, ChevronRight, Wallet, Shield, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -27,6 +27,7 @@ interface PortalMoreSheetProps {
 }
 
 const ALL_MORE_ITEMS: (MoreItem & { moduleKey?: string })[] = [
+  { id: "parceros", to: "/parceros", icon: Users, label: "Parceros", description: "Comunidad, oportunidades y Flash Jobs" },
   { id: "payments", to: "/portal/payments", icon: Wallet, label: "Pagos", description: "Historial de pagos", moduleKey: "my_payments" },
   { id: "availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", description: "Gestiona tu horario", moduleKey: "my_availability" },
   { id: "announcements", to: "/portal/announcements", icon: Megaphone, label: "Anuncios", description: "Noticias de la empresa", moduleKey: "my_announcements" },
