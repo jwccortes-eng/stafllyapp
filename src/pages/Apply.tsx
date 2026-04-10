@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { StaflyMark } from "@/components/brand/StaflyBrand";
 import { Button } from "@/components/ui/button";
@@ -15,16 +15,26 @@ import {
   ChevronRight, ChevronLeft, CheckCircle2, Loader2,
   UtensilsCrossed, Car, SprayCan, Briefcase, ChefHat,
   MapPin, Clock, Upload, Shield, FileText, AlertTriangle,
-  Phone, Mail, User, Globe,
+  Phone, Mail, User, Globe, LogIn, UserCheck, RefreshCw, KeyRound,
 } from "lucide-react";
 
 /* ─── Helpers ─── */
 function normalizePhone(raw: string): string {
   if (!raw) return "";
   let digits = raw.replace(/\D/g, "");
-  // US numbers: strip leading 1 if 11 digits
   if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
   return digits;
+}
+
+/* ─── Identity Resolution Types ─── */
+interface IdentityResolution {
+  scenario: "new" | "existing_active" | "existing_inactive" | "existing_no_portal" | "pending_application" | "no_rehire";
+  message: string;
+  employee_name?: string;
+  has_portal?: boolean;
+  employee_id?: string;
+  no_rehire?: boolean;
+  reference_code?: string;
 }
 
 /* ─── Constants ─── */
@@ -72,6 +82,7 @@ const DEFAULT_CONFIG: AppConfig = {
 export default function Apply() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
@@ -82,6 +93,10 @@ export default function Apply() {
   
   const [consent, setConsent] = useState(false);
   const [applicationDisabledCompany, setApplicationDisabledCompany] = useState<string | null>(null);
+
+  // Identity resolution state
+  const [identityResolution, setIdentityResolution] = useState<IdentityResolution | null>(null);
+  const [resolving, setResolving] = useState(false);
 
   // Form
   const [firstName, setFirstName] = useState("");
@@ -108,9 +123,7 @@ export default function Apply() {
   // Load company + config
   useEffect(() => {
     const loadCompany = async () => {
-      console.log("[apply] slug:", slug);
       if (!slug) {
-        console.error("[apply] missing slug");
         setCompany(null);
         setApplicationDisabledCompany(null);
         setError("Falta el slug de la empresa en el enlace.");
@@ -128,10 +141,7 @@ export default function Apply() {
         .eq("slug", normalizedSlug)
         .maybeSingle();
 
-      console.log("[apply] company result:", coCheck, error);
-
       if (error) {
-        console.error("[apply] error:", error);
         setCompany(null);
         setError(error.message);
         setLoading(false);
@@ -139,8 +149,6 @@ export default function Apply() {
       }
 
       if (!coCheck) {
-        console.warn("[apply] no company found for slug:", normalizedSlug);
-        // Try case-insensitive / partial match as fallback
         const { data: fuzzy } = await supabase
           .from("companies")
           .select("id, name, slug, is_active, application_enabled")
@@ -149,7 +157,6 @@ export default function Apply() {
           .limit(1)
           .maybeSingle();
         if (fuzzy && fuzzy.application_enabled) {
-          console.log("[apply] fuzzy match found, redirecting to:", fuzzy.slug);
           window.location.replace(`/apply/${fuzzy.slug}`);
           return;
         }
@@ -202,7 +209,7 @@ export default function Apply() {
             if (d.emergencyContact) setEmergencyContact(d.emergencyContact);
             if (d.experienceSummary) setExperienceSummary(d.experienceSummary);
             if (d.languages) setLanguages(d.languages);
-            if (d.step && d.step > 0 && d.step < 5) setStep(d.step);
+            // Don't restore step — always start from beginning for identity check
           }
         } catch { /* ignore */ }
       }
@@ -225,22 +232,33 @@ export default function Apply() {
     return () => clearTimeout(autosaveTimer.current);
   }, [firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, step, draftKey, address]);
 
-  // Duplicate check
-  // Duplicate check — uses normalized phone; returns specific message or null
-  const checkDuplicate = useCallback(async (): Promise<string | null> => {
-    if (!company) return null;
-    const norm = normalizePhone(phone);
-    const trimmedEmail = email.trim().toLowerCase();
-
-    // We cannot SELECT job_applications as anon, so duplicate detection
-    // is enforced server-side via unique constraint. We'll catch 23505 on submit.
-    // But we CAN check employees table (which has public select for active companies).
-    // For now, return null and let the server-side constraint handle it.
-    return null;
-  }, [company, phone, email]);
-
   const progressPercent = Math.round((step / (STEP_LABELS.length - 1)) * 100);
   const visibleTypes = DEFAULT_WORKER_TYPES.filter((t) => config.visible_worker_types.includes(t.value));
+
+  /* ─── Identity Resolution ─── */
+  const resolveIdentity = async (): Promise<IdentityResolution | null> => {
+    if (!company) return null;
+    setResolving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("resolve-applicant-identity", {
+        body: {
+          company_id: company.id,
+          phone: normalizePhone(phone),
+          email: email.trim().toLowerCase() || undefined,
+        },
+      });
+      if (error) {
+        console.error("[apply] identity resolution error:", error);
+        return null; // Proceed as new if resolution fails
+      }
+      return data as IdentityResolution;
+    } catch (err) {
+      console.error("[apply] identity resolution error:", err);
+      return null;
+    } finally {
+      setResolving(false);
+    }
+  };
 
   /* ─── Validation ─── */
   const validateBasicInfo = () => {
@@ -263,12 +281,33 @@ export default function Apply() {
   const handleNext = async () => {
     if (step === 1) {
       if (!validateBasicInfo()) return;
+      
+      // Run identity resolution before proceeding
+      const resolution = await resolveIdentity();
+      if (resolution && resolution.scenario !== "new") {
+        setIdentityResolution(resolution);
+        return; // Show resolution screen instead of advancing
+      }
+      // If new or resolution failed, clear any previous resolution and proceed
+      setIdentityResolution(null);
     }
     if (step === 2 && !validateWorkerType()) return;
     setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
   };
 
-  const handleBack = () => setStep((s) => Math.max(s - 1, 0));
+  const handleContinueAsNew = () => {
+    // User explicitly wants to create a new application despite resolution
+    setIdentityResolution(null);
+    setStep(2);
+  };
+
+  const handleBack = () => {
+    if (identityResolution) {
+      setIdentityResolution(null);
+      return;
+    }
+    setStep((s) => Math.max(s - 1, 0));
+  };
   const goToStep = (s: number) => { if (s < step) setStep(s); };
 
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -285,13 +324,11 @@ export default function Apply() {
         const path = `${company.id}/${Date.now()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("application-documents").upload(path, documentFile);
         if (uploadErr) {
-          console.error("[apply] upload error:", uploadErr);
           throw new Error("No se pudo subir el documento. Intenta de nuevo.");
         }
         documentUrl = path;
       }
 
-      // Normalize phone for consistent storage across devices/browsers
       const normalizedPhoneValue = normalizePhone(phone);
 
       const payload = {
@@ -320,22 +357,15 @@ export default function Apply() {
         formatted_address: [address.address_line, address.address_city, address.address_state, address.address_zip].filter(Boolean).join(", ") || null,
       };
 
-      console.log("[apply] submitting payload:", JSON.stringify(payload, null, 2));
-
-      // Generate a client-side ID so we can reference it for audit/docs without needing SELECT back
       const applicationId = crypto.randomUUID();
 
       const { error } = await supabase
         .from("job_applications")
         .insert({ id: applicationId, ...payload });
 
-      console.log("[apply] insert result:", { applicationId, error });
-
       if (error) {
-        console.error("[apply] supabase error:", error);
         const msg = error.message ?? "";
         if (error.code === "23505") {
-          // Determine which field caused the duplicate
           if (msg.includes("phone")) {
             throw new Error("Este teléfono ya está registrado. Si ya aplicaste, contacta a la empresa para seguimiento.");
           } else if (msg.includes("email")) {
@@ -357,7 +387,6 @@ export default function Apply() {
         event_data: { source, device: navigator.userAgent.slice(0, 100) },
       }).then(r => { if (r.error) console.warn("[apply] event insert error:", r.error); });
 
-      // Upload document record (non-blocking)
       if (documentUrl) {
         supabase.from("application_documents").insert({
           application_id: applicationId,
@@ -367,12 +396,10 @@ export default function Apply() {
         }).then(r => { if (r.error) console.warn("[apply] doc record error:", r.error); });
       }
 
-      // Use first 8 chars of the generated ID as confirmation code
       setReferenceCode(applicationId.slice(0, 8).toUpperCase());
       setStep(6);
       if (draftKey) localStorage.removeItem(draftKey);
     } catch (err: any) {
-      console.error("[apply] submit error:", err);
       setSubmitError(err?.message ?? "Ocurrió un error al enviar tu solicitud. Intenta de nuevo.");
     } finally {
       setSubmitting(false);
@@ -416,6 +443,9 @@ export default function Apply() {
 
   const coverImage = config.cover_image_url ?? company.application_cover_url;
 
+  // Show identity resolution screen if we have a non-new resolution
+  const showResolutionScreen = identityResolution && identityResolution.scenario !== "new";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -427,7 +457,7 @@ export default function Apply() {
             <StaflyMark size={32} />
           )}
           <span className="font-heading font-bold text-sm text-foreground truncate">{company.name}</span>
-          {step > 0 && step < 6 && (
+          {step > 0 && step < 6 && !showResolutionScreen && (
             <span className="ml-auto text-[10px] font-semibold text-primary tabular-nums bg-primary/10 px-2 py-0.5 rounded-full">
               {step}/{STEP_LABELS.length - 1}
             </span>
@@ -436,7 +466,7 @@ export default function Apply() {
       </header>
 
       {/* Progress */}
-      {step > 0 && step < 6 && (
+      {step > 0 && step < 6 && !showResolutionScreen && (
         <div className="px-4 pt-3 max-w-lg mx-auto w-full">
           <Progress
             value={progressPercent}
@@ -459,50 +489,203 @@ export default function Apply() {
         </div>
       )}
 
-
       {/* Content */}
       <main className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-6">
-        {step === 0 && <StepWelcome companyName={company.name} introText={config.intro_text ?? company.application_intro} coverImage={coverImage} onStart={handleNext} />}
-        {step === 1 && <StepBasicInfo {...{ firstName, setFirstName, lastName, setLastName, phone, setPhone, email, setEmail, errors, requireEmail: config.require_email }} />}
-        {step === 2 && <StepWorkerType selected={workerType} onSelect={setWorkerType} error={errors.workerType} types={visibleTypes} />}
-        {step === 3 && <StepLocation {...{ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel, address, setAddress }} />}
-        {step === 4 && <StepVerification {...{ documentFile, setDocumentFile, emergencyContact, setEmergencyContact, experienceSummary, setExperienceSummary, languages, setLanguages, config }} />}
-        {step === 5 && (
-          <StepReview
-            data={{ firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, address }}
-            consent={consent}
-            setConsent={setConsent}
-            onEdit={goToStep}
+        {/* Identity Resolution Screen */}
+        {showResolutionScreen ? (
+          <IdentityResolutionScreen
+            resolution={identityResolution!}
+            companyName={company.name}
+            onContinueAsNew={handleContinueAsNew}
+            onGoToPortal={() => navigate("/portal")}
+            onBack={handleBack}
           />
-        )}
-        {step === 6 && <StepConfirmation referenceCode={referenceCode} companyName={company.name} />}
-
-        {/* Submit error */}
-        {submitError && step === 5 && (
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/30 mt-3">
-            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-            <p className="text-xs text-destructive">{submitError}</p>
-          </div>
-        )}
-
-        {/* Navigation */}
-        {step > 0 && step < 6 && (
-          <div className="flex gap-3 mt-auto pt-6 pb-safe">
-            <Button variant="outline" onClick={handleBack} className="flex-1 h-12 rounded-xl">
-              <ChevronLeft className="h-4 w-4 mr-1" /> Atrás
-            </Button>
-            {step < 5 ? (
-              <Button onClick={handleNext} className="flex-1 h-12 rounded-xl text-primary-foreground">
-                Continuar <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            ) : (
-              <Button onClick={handleSubmit} disabled={submitting || !consent} className="flex-1 h-12 rounded-xl text-primary-foreground">
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar solicitud"}
-              </Button>
+        ) : (
+          <>
+            {step === 0 && <StepWelcome companyName={company.name} introText={config.intro_text ?? company.application_intro} coverImage={coverImage} onStart={handleNext} />}
+            {step === 1 && <StepBasicInfo {...{ firstName, setFirstName, lastName, setLastName, phone, setPhone, email, setEmail, errors, requireEmail: config.require_email }} />}
+            {step === 2 && <StepWorkerType selected={workerType} onSelect={setWorkerType} error={errors.workerType} types={visibleTypes} />}
+            {step === 3 && <StepLocation {...{ city, setCity, availability, setAvailability, hasCar, setHasCar, canTravel, setCanTravel, address, setAddress }} />}
+            {step === 4 && <StepVerification {...{ documentFile, setDocumentFile, emergencyContact, setEmergencyContact, experienceSummary, setExperienceSummary, languages, setLanguages, config }} />}
+            {step === 5 && (
+              <StepReview
+                data={{ firstName, lastName, phone, email, workerType, city, availability, hasCar, canTravel, emergencyContact, experienceSummary, languages, address }}
+                consent={consent}
+                setConsent={setConsent}
+                onEdit={goToStep}
+              />
             )}
-          </div>
+            {step === 6 && <StepConfirmation referenceCode={referenceCode} companyName={company.name} />}
+
+            {/* Submit error */}
+            {submitError && step === 5 && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/30 mt-3">
+                <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                <p className="text-xs text-destructive">{submitError}</p>
+              </div>
+            )}
+
+            {/* Navigation */}
+            {step > 0 && step < 6 && (
+              <div className="flex gap-3 mt-auto pt-6 pb-safe">
+                <Button variant="outline" onClick={handleBack} className="flex-1 h-12 rounded-xl">
+                  <ChevronLeft className="h-4 w-4 mr-1" /> Atrás
+                </Button>
+                {step < 5 ? (
+                  <Button onClick={handleNext} disabled={resolving} className="flex-1 h-12 rounded-xl text-primary-foreground">
+                    {resolving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                    {resolving ? "Verificando..." : "Continuar"} {!resolving && <ChevronRight className="h-4 w-4 ml-1" />}
+                  </Button>
+                ) : (
+                  <Button onClick={handleSubmit} disabled={submitting || !consent} className="flex-1 h-12 rounded-xl text-primary-foreground">
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar solicitud"}
+                  </Button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </main>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/*  IDENTITY RESOLUTION SCREEN                               */
+/* ═══════════════════════════════════════════════════════════ */
+
+function IdentityResolutionScreen({
+  resolution,
+  companyName,
+  onContinueAsNew,
+  onGoToPortal,
+  onBack,
+}: {
+  resolution: IdentityResolution;
+  companyName: string;
+  onContinueAsNew: () => void;
+  onGoToPortal: () => void;
+  onBack: () => void;
+}) {
+  const scenarioConfig = {
+    existing_active: {
+      icon: UserCheck,
+      iconBg: "bg-gradient-to-br from-earning to-status-confirmed",
+      title: "¡Encontramos tu perfil!",
+      subtitle: `Ya tienes una cuenta activa con ${companyName}.`,
+    },
+    existing_inactive: {
+      icon: RefreshCw,
+      iconBg: "bg-gradient-to-br from-amber-400 to-orange-500",
+      title: "¡Te reconocemos!",
+      subtitle: "Tu perfil anterior está inactivo. Podemos reactivarte.",
+    },
+    existing_no_portal: {
+      icon: KeyRound,
+      iconBg: "bg-gradient-to-br from-primary to-primary-dark",
+      title: "¡Encontramos tu perfil!",
+      subtitle: "Solo falta activar tu acceso al portal.",
+    },
+    pending_application: {
+      icon: Clock,
+      iconBg: "bg-gradient-to-br from-blue-400 to-blue-600",
+      title: "Solicitud en proceso",
+      subtitle: "Ya tienes una solicitud pendiente de revisión.",
+    },
+    no_rehire: {
+      icon: AlertTriangle,
+      iconBg: "bg-gradient-to-br from-destructive to-red-600",
+      title: "No es posible continuar",
+      subtitle: "Tu perfil no es elegible para reingreso en este momento.",
+    },
+  };
+
+  const cfg = scenarioConfig[resolution.scenario as keyof typeof scenarioConfig];
+  if (!cfg) return null;
+
+  const Icon = cfg.icon;
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-center gap-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
+      <div className={cn("h-20 w-20 rounded-2xl flex items-center justify-center shadow-lg", cfg.iconBg)}>
+        <Icon className="h-10 w-10 text-white" />
+      </div>
+      
+      <div className="space-y-2">
+        <h1 className="text-2xl font-heading font-bold text-foreground">{cfg.title}</h1>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto">{cfg.subtitle}</p>
+      </div>
+
+      {resolution.employee_name && (
+        <div className="bg-card border border-border/60 rounded-xl px-6 py-4 w-full max-w-xs">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Perfil encontrado</p>
+          <p className="text-lg font-heading font-bold text-foreground mt-1">{resolution.employee_name}</p>
+        </div>
+      )}
+
+      {resolution.scenario === "pending_application" && resolution.reference_code && (
+        <div className="bg-card border border-border/60 rounded-xl px-6 py-4 w-full max-w-xs">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Número de solicitud</p>
+          <p className="text-xl font-heading font-bold text-primary mt-1 tracking-wider">{resolution.reference_code}</p>
+        </div>
+      )}
+
+      <div className="bg-muted/30 border border-border/40 rounded-xl px-4 py-3 w-full max-w-xs">
+        <p className="text-xs text-muted-foreground">{resolution.message}</p>
+      </div>
+
+      {/* Action buttons based on scenario */}
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        {resolution.scenario === "existing_active" && (
+          <>
+            <Button onClick={onGoToPortal} className="h-12 rounded-xl text-primary-foreground w-full">
+              <LogIn className="h-4 w-4 mr-2" /> Ir al portal
+            </Button>
+            <Button variant="outline" onClick={onBack} className="h-12 rounded-xl w-full">
+              <ChevronLeft className="h-4 w-4 mr-1" /> Usar otro número
+            </Button>
+          </>
+        )}
+
+        {resolution.scenario === "existing_inactive" && (
+          <>
+            <Button onClick={onContinueAsNew} className="h-12 rounded-xl text-primary-foreground w-full">
+              <RefreshCw className="h-4 w-4 mr-2" /> Actualizar mi información
+            </Button>
+            <Button variant="outline" onClick={onBack} className="h-12 rounded-xl w-full">
+              <ChevronLeft className="h-4 w-4 mr-1" /> Usar otro número
+            </Button>
+          </>
+        )}
+
+        {resolution.scenario === "existing_no_portal" && (
+          <>
+            <Button onClick={onGoToPortal} className="h-12 rounded-xl text-primary-foreground w-full">
+              <KeyRound className="h-4 w-4 mr-2" /> Activar mi portal
+            </Button>
+            <Button variant="outline" onClick={onContinueAsNew} className="h-12 rounded-xl w-full">
+              Continuar con solicitud
+            </Button>
+            <Button variant="ghost" onClick={onBack} className="h-10 rounded-xl w-full text-xs">
+              <ChevronLeft className="h-3 w-3 mr-1" /> Usar otro número
+            </Button>
+          </>
+        )}
+
+        {resolution.scenario === "pending_application" && (
+          <>
+            <Button variant="outline" onClick={onBack} className="h-12 rounded-xl w-full">
+              <ChevronLeft className="h-4 w-4 mr-1" /> Volver
+            </Button>
+          </>
+        )}
+
+        {resolution.scenario === "no_rehire" && (
+          <Button variant="outline" onClick={onBack} className="h-12 rounded-xl w-full">
+            <ChevronLeft className="h-4 w-4 mr-1" /> Volver
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
