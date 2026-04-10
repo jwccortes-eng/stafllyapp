@@ -2,9 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useCompany } from "@/hooks/useCompany";
-import {
-  ArrowLeft, DollarSign, TrendingUp, TrendingDown, Wallet, FileText,
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -21,10 +19,7 @@ interface MovementDetail {
 export default function WeekDetail() {
   const { periodId } = useParams();
   const { employeeId, resolveEmployeeForCompany } = useAuth();
-  const { selectedCompanyId } = useCompany();
-  const effectiveEmployeeId = selectedCompanyId
-    ? resolveEmployeeForCompany(selectedCompanyId) ?? employeeId
-    : employeeId;
+  const { effectiveEmployeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
   const [basePay, setBasePay] = useState(0);
   const [movements, setMovements] = useState<MovementDetail[]>([]);
