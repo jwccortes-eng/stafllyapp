@@ -474,6 +474,101 @@ export type Database = {
           },
         ]
       }
+      channel_members: {
+        Row: {
+          channel_id: string
+          id: string
+          is_muted: boolean
+          joined_at: string
+          last_read_at: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          id?: string
+          is_muted?: boolean
+          joined_at?: string
+          last_read_at?: string | null
+          role?: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          id?: string
+          is_muted?: boolean
+          joined_at?: string
+          last_read_at?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_members_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "community_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      channel_messages: {
+        Row: {
+          channel_id: string
+          content: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          is_pinned: boolean
+          message_type: string
+          metadata: Json | null
+          reactions: Json | null
+          reply_to: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          message_type?: string
+          metadata?: Json | null
+          reactions?: Json | null
+          reply_to?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          message_type?: string
+          metadata?: Json | null
+          reactions?: Json | null
+          reply_to?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "community_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_messages_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "channel_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
@@ -777,6 +872,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      community_channels: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          member_count: number
+          name: string
+          pinned_message_ids: string[] | null
+          updated_at: string
+          zone: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          member_count?: number
+          name: string
+          pinned_message_ids?: string[] | null
+          updated_at?: string
+          zone: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          member_count?: number
+          name?: string
+          pinned_message_ids?: string[] | null
+          updated_at?: string
+          zone?: string
+        }
+        Relationships: []
       }
       companies: {
         Row: {
@@ -3112,6 +3252,137 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flash_job_responses: {
+        Row: {
+          flash_job_id: string
+          id: string
+          message: string | null
+          responded_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          flash_job_id: string
+          id?: string
+          message?: string | null
+          responded_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          flash_job_id?: string
+          id?: string
+          message?: string | null
+          responded_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_job_responses_flash_job_id_fkey"
+            columns: ["flash_job_id"]
+            isOneToOne: false
+            referencedRelation: "flash_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flash_jobs: {
+        Row: {
+          category: string
+          channel_id: string | null
+          company_id: string | null
+          created_at: string
+          description: string | null
+          end_time: string | null
+          expires_at: string
+          id: string
+          job_date: string
+          location: string | null
+          pay_amount: number | null
+          pay_type: string
+          posted_by: string
+          requirements: string[] | null
+          slots_filled: number
+          slots_total: number
+          start_time: string | null
+          status: string
+          title: string
+          updated_at: string
+          urgency_level: string
+          zone: string | null
+        }
+        Insert: {
+          category?: string
+          channel_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          expires_at: string
+          id?: string
+          job_date: string
+          location?: string | null
+          pay_amount?: number | null
+          pay_type?: string
+          posted_by: string
+          requirements?: string[] | null
+          slots_filled?: number
+          slots_total?: number
+          start_time?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          urgency_level?: string
+          zone?: string | null
+        }
+        Update: {
+          category?: string
+          channel_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          expires_at?: string
+          id?: string
+          job_date?: string
+          location?: string | null
+          pay_amount?: number | null
+          pay_type?: string
+          posted_by?: string
+          requirements?: string[] | null
+          slots_filled?: number
+          slots_total?: number
+          start_time?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          urgency_level?: string
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_jobs_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "community_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flash_jobs_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
