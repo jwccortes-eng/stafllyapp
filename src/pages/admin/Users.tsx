@@ -34,6 +34,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import { useSubscription, PLAN_LIMITS, type PlanId } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
@@ -317,6 +318,7 @@ function UserRow({ u, onEdit, onResetPw, onDelete }: {
 /* ── Main Page ── */
 export default function UsersPage() {
   const { role: currentRole, user } = useAuth();
+  const { selectedCompanyId, isGlobalMode } = useCompany();
   const { canAddAdmins, limits } = useSubscription();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [search, setSearch] = useState("");
@@ -354,26 +356,68 @@ export default function UsersPage() {
   const atAdminLimit = !canAddAdmins(adminCount);
 
   const fetchUsers = async () => {
-    const [profilesRes, rolesRes, permsRes, companyUsersRes, subsRes, modulesRes, redemptionsRes, promoCodesRes, employeesRes] = await Promise.all([
-      supabase.from("profiles").select("user_id, email, full_name"),
-      supabase.from("user_roles").select("user_id, role"),
-      supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete"),
-      supabase.from("company_users").select("user_id, company_id, role, companies(id, name)"),
-      supabase.from("subscriptions").select("company_id, plan, status"),
-      supabase.from("company_modules").select("company_id, module, is_active"),
-      supabase.from("promo_redemptions").select("company_id, promo_codes(code, modules)"),
+    // Build company-scoped queries when a company is selected
+    let companyUsersQuery = supabase.from("company_users").select("user_id, company_id, role, companies(id, name)");
+    let employeesQuery = supabase.from("employees").select("id, user_id, first_name, last_name, is_active");
+    let subsQuery = supabase.from("subscriptions").select("company_id, plan, status");
+    let modulesQuery = supabase.from("company_modules").select("company_id, module, is_active");
+    let redemptionsQuery = supabase.from("promo_redemptions").select("company_id, promo_codes(code, modules)");
+
+    if (selectedCompanyId) {
+      companyUsersQuery = companyUsersQuery.eq("company_id", selectedCompanyId);
+      employeesQuery = employeesQuery.eq("company_id", selectedCompanyId);
+      subsQuery = subsQuery.eq("company_id", selectedCompanyId);
+      modulesQuery = modulesQuery.eq("company_id", selectedCompanyId);
+      redemptionsQuery = redemptionsQuery.eq("company_id", selectedCompanyId);
+    }
+
+    const [companyUsersRes, employeesRes, subsRes, modulesRes, redemptionsRes, promoCodesRes] = await Promise.all([
+      companyUsersQuery,
+      employeesQuery,
+      subsQuery,
+      modulesQuery,
+      redemptionsQuery,
       supabase.from("promo_codes").select("*").order("created_at", { ascending: false }),
-      supabase.from("employees").select("id, user_id, first_name, last_name, is_active"),
+    ]);
+
+    const companyUsers = companyUsersRes.data ?? [];
+    const employees = employeesRes.data ?? [];
+
+    // Derive the set of user_ids that belong to this company context
+    const relevantUserIds = new Set(companyUsers.map(cu => cu.user_id));
+    // Also include user_ids from employees (some may not have company_users entries)
+    employees.forEach(e => { if (e.user_id) relevantUserIds.add(e.user_id); });
+
+    // Now fetch only the profiles/roles/perms for these users
+    const userIdArray = Array.from(relevantUserIds);
+    if (userIdArray.length === 0 && selectedCompanyId) {
+      setUsers([]);
+      setPromoCodes((promoCodesRes.data ?? []) as unknown as PromoCode[]);
+      return;
+    }
+
+    let profilesQuery = supabase.from("profiles").select("user_id, email, full_name");
+    let rolesQuery = supabase.from("user_roles").select("user_id, role");
+    let permsQuery = supabase.from("module_permissions").select("user_id, module, can_view, can_edit, can_delete");
+
+    if (selectedCompanyId && userIdArray.length > 0) {
+      profilesQuery = profilesQuery.in("user_id", userIdArray);
+      rolesQuery = rolesQuery.in("user_id", userIdArray);
+      permsQuery = permsQuery.in("user_id", userIdArray);
+    }
+
+    const [profilesRes, rolesRes, permsRes] = await Promise.all([
+      profilesQuery,
+      rolesQuery,
+      permsQuery,
     ]);
 
     const profiles = profilesRes.data ?? [];
     const roles = rolesRes.data ?? [];
     const perms = permsRes.data ?? [];
-    const companyUsers = companyUsersRes.data ?? [];
     const subs = subsRes.data ?? [];
     const modules = modulesRes.data ?? [];
     const redemptions = redemptionsRes.data ?? [];
-    const employees = employeesRes.data ?? [];
 
     setPromoCodes((promoCodesRes.data ?? []) as unknown as PromoCode[]);
 
@@ -429,7 +473,7 @@ export default function UsersPage() {
     setUsers(userList);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { fetchUsers(); }, [selectedCompanyId]);
 
   /* ── Edit handlers (same logic as before) ── */
   const openEditUser = (u: UserRecord) => {
