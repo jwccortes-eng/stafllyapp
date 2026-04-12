@@ -20,7 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
 import { format, parseISO, formatDistanceToNow, startOfWeek, addDays } from "date-fns";
-import { es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
@@ -237,7 +237,7 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
             {dayData.map(d => (
               <div key={d.dateStr} className="text-center pb-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">
-                  {format(d.date, "EEE", { locale: es })}
+                  {format(d.date, "EEE", { locale: enUS })}
                 </p>
                 <p className="text-sm font-bold text-foreground mt-0.5">{format(d.date, "d")}</p>
               </div>
@@ -266,7 +266,7 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
                 )}
                 {d.assigns.length > 4 && (
                   <p className="text-[10px] text-muted-foreground/50 text-center font-medium pt-0.5">
-                    +{d.assigns.length - 4} más
+                    +{d.assigns.length - 4} more
                   </p>
                 )}
               </div>
@@ -302,13 +302,13 @@ function QuickAction({ label, description, icon: Icon, to, accent, navigate }: {
 /* ─── Activity Item ─── */
 function ActivityRow({ item }: { item: any }) {
   const actionLabels: Record<string, string> = {
-    create: "creó", update: "actualizó", delete: "eliminó",
-    insert: "agregó", import: "importó", publish: "publicó",
+    create: "created", update: "updated", delete: "deleted",
+    insert: "added", import: "imported", publish: "published",
   };
   const entityLabels: Record<string, string> = {
-    employee: "empleado", movement: "novedad", period: "periodo",
-    concept: "concepto", shift: "turno", announcement: "anuncio",
-    import: "importación", client: "cliente", location: "ubicación",
+    employee: "employee", movement: "adjustment", period: "period",
+    concept: "concept", shift: "shift", announcement: "announcement",
+    import: "import", client: "client", location: "location",
   };
   const iconMap: Record<string, any> = {
     employee: Users, movement: DollarSign, period: CalendarDays,
@@ -326,11 +326,11 @@ function ActivityRow({ item }: { item: any }) {
         <div className="min-w-0 flex-1">
           <p className="text-[11px] text-foreground leading-relaxed">
             <span className="font-semibold capitalize">{actionLabels[item.action] || item.action}</span>
-            {" "}un{" "}
+            {" "}a{" "}
             <span className="font-medium">{entityLabels[item.entity_type] || item.entity_type}</span>
           </p>
           <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-            {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}
+            {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: enUS })}
           </p>
         </div>
       </div>
@@ -405,7 +405,7 @@ export default function AdminDashboard() {
           if (pTotal > 0) {
             periodTotal = pTotal;
             hours = pHours;
-            heroLabel = period.status === "open" ? "" : `(${format(parseISO(period.start_date), "dd MMM", { locale: es })})`;
+            heroLabel = period.status === "open" ? "" : `(${format(parseISO(period.start_date), "dd MMM", { locale: enUS })})`;
             break;
           }
         }
@@ -608,7 +608,7 @@ export default function AdminDashboard() {
             const hasMov = extrasTotal > 0 || deducciones > 0;
             const pending = base === 0 && hasMov;
             return {
-              label: format(parseISO(p.start_date), "dd MMM", { locale: es }),
+              label: format(parseISO(p.start_date), "dd MMM", { locale: enUS }),
               base: Math.round(base),
               extras: Math.round(extrasTotal),
               deducciones: Math.round(deducciones),
@@ -667,22 +667,22 @@ export default function AdminDashboard() {
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
-    if (h < 12) return "Buenos días";
-    if (h < 18) return "Buenas tardes";
-    return "Buenas noches";
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
   }, []);
 
   const quickActions = [
-    { label: "Importar horas", icon: Upload, to: "/app/import", module: "import", description: "Sube el archivo de Connecteam", accent: "from-primary to-primary/70" },
-    { label: "Agregar novedad", icon: DollarSign, to: "/app/movements", module: "movements", description: "Extras, deducciones y ajustes", accent: "from-warning to-warning/70" },
-    { label: "Ver resumen", icon: FileSpreadsheet, to: "/app/summary", module: "summary", description: "Resumen del periodo actual", accent: "from-earning to-earning/70" },
-    { label: "Empleados", icon: Users, to: "/app/employees", module: "employees", description: "Gestión de empleados", accent: "from-primary to-primary/70" },
-    { label: "Conceptos", icon: Tags, to: "/app/concepts", module: "concepts", description: "Configura conceptos de pago", accent: "from-deduction to-deduction/70" },
-    { label: "Reportes", icon: BarChart3, to: "/app/reports", module: "reports", description: "Genera y guarda reportes", accent: "from-primary to-primary/70" },
+    { label: "Import Hours", icon: Upload, to: "/app/import", module: "import", description: "Upload time clock file", accent: "from-primary to-primary/70" },
+    { label: "Add Adjustment", icon: DollarSign, to: "/app/movements", module: "movements", description: "Extras, deductions and adjustments", accent: "from-warning to-warning/70" },
+    { label: "View Summary", icon: FileSpreadsheet, to: "/app/summary", module: "summary", description: "Current period summary", accent: "from-earning to-earning/70" },
+    { label: "Employees", icon: Users, to: "/app/employees", module: "employees", description: "Manage employees", accent: "from-primary to-primary/70" },
+    { label: "Concepts", icon: Tags, to: "/app/concepts", module: "concepts", description: "Configure pay concepts", accent: "from-deduction to-deduction/70" },
+    { label: "Reports", icon: BarChart3, to: "/app/reports", module: "reports", description: "Generate and save reports", accent: "from-primary to-primary/70" },
   ].filter(a => canAccess(a.module));
 
   const statusColor = stats.periodStatus === 'open' ? 'earning' : stats.periodStatus === 'closed' ? 'warning' : 'primary';
-  const statusLabel = stats.periodStatus === 'open' ? 'Abierto' : stats.periodStatus === 'closed' ? 'Cerrado' : 'Publicado';
+  const statusLabel = stats.periodStatus === 'open' ? 'Open' : stats.periodStatus === 'closed' ? 'Closed' : 'Published';
 
   /* ─── Widget renderers ─── */
   const isWidgetEnabled = (id: string) => enabledWidgets.some(w => w.id === id);
@@ -708,21 +708,21 @@ export default function AdminDashboard() {
         {/* Hero KPI row — 3 large cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <HeroKpiCard
-            label="Horas Trabajadas"
+            label="Hours Worked"
             value={animHours || animEmployees}
             icon={Clock}
             color="primary"
             onClick={() => navigate("/app/timeclock")}
           />
           <HeroKpiCard
-            label="Empleados Programados"
+            label="Scheduled Employees"
             value={`${animEmployees}`}
             icon={Users}
             color="earning"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="Total Nómina"
+            label="Total Payroll"
             value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
             icon={DollarSign}
             color="warning"
@@ -738,7 +738,7 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Zap className="h-3.5 w-3.5 text-warning" />
-          <h2 className="text-sm font-semibold font-heading text-foreground">Accesos rápidos</h2>
+          <h2 className="text-sm font-semibold font-heading text-foreground">Quick Actions</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {quickActions.map((action) => (
@@ -750,11 +750,11 @@ export default function AdminDashboard() {
     pending_requests: () => {
       const totalPending = pendingCounts.shiftRequests + pendingCounts.pendingMovements + pendingCounts.openTickets + pendingCounts.pendingAttendance + missingPhotoCount;
       const items = [
-        { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
-        { label: "Novedades pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
-        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
-        { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
-        { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
+        { label: "Shift requests", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
+        { label: "Pending adjustments", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
+        { label: "Open tickets", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
+        { label: "Unconfirmed attendance", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
+        { label: "Missing profile photo", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
       ];
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
@@ -764,7 +764,7 @@ export default function AdminDashboard() {
                 <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
                   <Inbox className="h-3.5 w-3.5 text-warning" />
                 </div>
-                <CardTitle className="text-sm font-semibold font-heading">Pendientes</CardTitle>
+                <CardTitle className="text-sm font-semibold font-heading">Pending</CardTitle>
                 {totalPending > 0 && (
                   <Badge variant="warning" className="text-[10px] h-5 px-1.5 rounded-full">
                     {totalPending}
@@ -779,8 +779,8 @@ export default function AdminDashboard() {
                 <div className="h-10 w-10 rounded-xl bg-earning/[0.08] flex items-center justify-center mx-auto mb-2">
                   <CheckCircle2 className="h-4 w-4 text-earning" />
                 </div>
-                <p className="text-xs font-medium text-earning">¡Todo al día!</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">No hay solicitudes pendientes</p>
+                <p className="text-xs font-medium text-earning">All caught up!</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">No pending requests</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -812,18 +812,18 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Briefcase className="h-3.5 w-3.5 text-primary" />
-          <h2 className="text-sm font-semibold font-heading text-foreground">Comercial</h2>
+          <h2 className="text-sm font-semibold font-heading text-foreground">Commercial</h2>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiStatCard label="Clientes activos" value={commercialKpis.activeClients} subtitle="empresas operando" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
-          <KpiStatCard label="Solicitudes abiertas" value={commercialKpis.openRequests} subtitle="en pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
-          <KpiStatCard label="Por cobrar" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} facturas`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
-          <KpiStatCard label="Vencido" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} facturas`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Active clients" value={commercialKpis.activeClients} subtitle="operating" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
+          <KpiStatCard label="Open requests" value={commercialKpis.openRequests} subtitle="in pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
+          <KpiStatCard label="Receivable" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} invoices`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Overdue" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} invoices`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
         </div>
       </div>
     ),
     today_summary: () => {
-      const todayStr = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
+      const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" });
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
           <CardHeader className="pb-3 px-5 pt-5">
@@ -833,12 +833,12 @@ export default function AdminDashboard() {
                    <Calendar className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-semibold font-heading">Hoy</CardTitle>
+                  <CardTitle className="text-sm font-semibold font-heading">Today</CardTitle>
                   <p className="text-[10px] text-muted-foreground/60 capitalize">{todayStr}</p>
                 </div>
               </div>
               <Link to="/app/today" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-                Ver detalle <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                View detail <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           </CardHeader>
@@ -847,17 +847,17 @@ export default function AdminDashboard() {
               <div className="flex flex-col items-center p-3 rounded-xl bg-primary/[0.04] border border-border/30">
                 <Clock className="h-4 w-4 text-primary mb-1.5" />
                 <p className="text-xl font-bold text-primary tabular-nums">{todaySummary.shiftsToday}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Turnos</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Shifts</p>
               </div>
               <div className="flex flex-col items-center p-3 rounded-xl bg-earning/[0.04] border border-border/30">
                 <UserCheck className="h-4 w-4 text-earning mb-1.5" />
                 <p className="text-xl font-bold text-earning tabular-nums">{todaySummary.assignedToday}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Asignados</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Assigned</p>
               </div>
               <div className="flex flex-col items-center p-3 rounded-xl bg-warning/[0.04] border border-border/30">
                 <Timer className="h-4 w-4 text-warning mb-1.5" />
                 <p className="text-xl font-bold text-warning tabular-nums">{todaySummary.openEntries}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Fichados</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Clocked In</p>
               </div>
             </div>
           </CardContent>
