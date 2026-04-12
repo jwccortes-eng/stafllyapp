@@ -45,7 +45,7 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "Main" },
   { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Main" },
   { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Main" },
-  { to: "/app/quality", icon: Star, label: "Quality", module: null, section: "Main" },
+  { to: "/app/quality", icon: Star, label: "Reviews", module: null, section: "Main" },
 
   // PAYROLL — payroll & finance
   { to: "/app/periods", icon: CalendarDays, label: "Periods", module: "periods", section: "Payroll" },
