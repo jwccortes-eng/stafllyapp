@@ -39,10 +39,10 @@ export function ModeSwitcher({ compact = false }: { compact?: boolean }) {
             ? "text-primary bg-primary/5"
             : "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/30"
         )}
-        title={`Cambiar a modo ${isAdmin ? 'Empleado' : 'Admin'}`}
+        title={`Switch to ${isAdmin ? 'Employee' : 'Admin'} mode`}
       >
         <ArrowLeftRight className="h-3 w-3" />
-        <span className="hidden sm:inline">{isAdmin ? 'Mi Portal' : 'Admin'}</span>
+        <span className="hidden sm:inline">{isAdmin ? 'My Portal' : 'Admin'}</span>
       </button>
     );
   }
@@ -64,7 +64,7 @@ export function ModeSwitcher({ compact = false }: { compact?: boolean }) {
           ) : (
             <User className="h-3.5 w-3.5" />
           )}
-          <span>{isAdmin ? 'Admin' : 'Empleado'}</span>
+          <span>{isAdmin ? 'Admin' : 'Employee'}</span>
           <ArrowLeftRight className="h-3 w-3 opacity-50" />
         </button>
       </DropdownMenuTrigger>
@@ -75,11 +75,11 @@ export function ModeSwitcher({ compact = false }: { compact?: boolean }) {
         >
           <LayoutDashboard className="h-4 w-4 text-primary" />
           <div className="flex-1">
-            <p className="text-xs font-semibold">Panel Admin</p>
-            <p className="text-[10px] text-muted-foreground">Gestión y operaciones</p>
+            <p className="text-xs font-semibold">Admin Panel</p>
+            <p className="text-[10px] text-muted-foreground">Management & operations</p>
           </div>
           {activeMode === 'admin' && (
-            <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Activo</span>
+            <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Active</span>
           )}
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -88,11 +88,11 @@ export function ModeSwitcher({ compact = false }: { compact?: boolean }) {
         >
           <User className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           <div className="flex-1">
-            <p className="text-xs font-semibold">Mi Portal</p>
-            <p className="text-[10px] text-muted-foreground">Turnos, horas y pagos</p>
+            <p className="text-xs font-semibold">My Portal</p>
+            <p className="text-[10px] text-muted-foreground">Shifts, hours & payments</p>
           </div>
           {activeMode === 'employee' && (
-            <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full">Activo</span>
+            <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full">Active</span>
           )}
         </DropdownMenuItem>
       </DropdownMenuContent>

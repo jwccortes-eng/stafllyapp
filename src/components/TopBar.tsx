@@ -18,10 +18,10 @@ import {
 import { Button } from "@/components/ui/button";
 
 const CREATE_OPTIONS = [
-  { label: "Nuevo Turno", icon: CalendarDays, route: "/app/shifts?create=1" },
-  { label: "Nuevo Trabajador", icon: Users, route: "/app/employees?create=1" },
-  { label: "Nueva Empresa", icon: Building2, route: "/app/clients?create=1" },
-  { label: "Nueva Ubicación", icon: MapPin, route: "/app/locations?create=1" },
+  { label: "New Shift", icon: CalendarDays, route: "/app/shifts?create=1" },
+  { label: "New Worker", icon: Users, route: "/app/employees?create=1" },
+  { label: "New Client", icon: Building2, route: "/app/clients?create=1" },
+  { label: "New Location", icon: MapPin, route: "/app/locations?create=1" },
 ];
 
 export default function TopBar({ collapsed }: { collapsed: boolean }) {
@@ -52,8 +52,8 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
               <Globe className="h-4 w-4 text-accent-foreground" />
             </div>
             <div className="hidden sm:flex flex-col min-w-0">
-              <span className="text-[13px] font-semibold text-foreground leading-tight">Vista Global</span>
-              <span className="text-[10px] text-muted-foreground/60 leading-tight">{companies.length} empresas</span>
+              <span className="text-[13px] font-semibold text-foreground leading-tight">Global View</span>
+              <span className="text-[10px] text-muted-foreground/60 leading-tight">{companies.length} companies</span>
             </div>
           </div>
         ) : selectedCompany ? (
@@ -87,7 +87,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
             <DropdownMenuTrigger asChild>
               <Button size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold">
                 <Plus className="h-3.5 w-3.5" />
-                Crear
+                Create
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -122,24 +122,24 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:block text-left min-w-0">
-                <p className="text-[12px] font-semibold text-foreground truncate leading-tight max-w-[120px]">{fullName || "Usuario"}</p>
+                <p className="text-[12px] font-semibold text-foreground truncate leading-tight max-w-[120px]">{fullName || "User"}</p>
                 <p className="text-[10px] text-muted-foreground/60 leading-tight">{roleLabel}</p>
               </div>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={() => navigate("/app/settings")} className="text-[13px]">
-              Cuenta
+              Account
             </DropdownMenuItem>
             {isOwner && (
               <DropdownMenuItem onClick={() => navigate("/app/admin")} className="text-[13px]">
-                Administración
+                Administration
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <LogoutConfirmDialog onConfirm={signOut}>
               <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive text-[13px]">
-                Cerrar sesión
+                Sign out
               </DropdownMenuItem>
             </LogoutConfirmDialog>
           </DropdownMenuContent>
