@@ -874,20 +874,20 @@ export default function AdminDashboard() {
           <div className="rounded-xl border border-border/50 bg-card px-3.5 py-2.5 text-xs shadow-xl min-w-[190px]">
             <p className="font-semibold text-foreground mb-1.5">{label}{item?.pending ? " ⚠ Base pendiente" : ""}</p>
             <div className="space-y-1">
-              <div className="flex justify-between gap-4"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--primary))"}}/>Nómina Base</span><span className="font-mono font-semibold">${(item?.base||0).toLocaleString()}</span></div>
+              <div className="flex justify-between gap-4"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--primary))"}}/>Base Payroll</span><span className="font-mono font-semibold">${(item?.base||0).toLocaleString()}</span></div>
               {(item?.extras||0)>0&&(<>
-                <div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--earning))"}}/>Compensación Adicional</span><span className="font-mono font-semibold">${(item?.extras||0).toLocaleString()}</span></div>
+                <div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--earning))"}}/>Additional Compensation</span><span className="font-mono font-semibold">${(item?.extras||0).toLocaleString()}</span></div>
                 <div className="pl-4 space-y-0.5 text-muted-foreground">
-                  {item?._turnos>0&&<div className="flex justify-between"><span>Turnos / Daily Pay</span><span className="font-mono">${item._turnos.toLocaleString()}</span></div>}
-                  {item?._transporte>0&&<div className="flex justify-between"><span>Transporte / Ryde</span><span className="font-mono">${item._transporte.toLocaleString()}</span></div>}
-                  {item?._propinas>0&&<div className="flex justify-between"><span>Propinas</span><span className="font-mono">${item._propinas.toLocaleString()}</span></div>}
-                  {item?._reintegros>0&&<div className="flex justify-between"><span>Reintegros</span><span className="font-mono">${item._reintegros.toLocaleString()}</span></div>}
-                  {item?._viaje>0&&<div className="flex justify-between"><span>Horas de viaje</span><span className="font-mono">${item._viaje.toLocaleString()}</span></div>}
-                  {item?._otros>0&&<div className="flex justify-between"><span>Otros ajustes</span><span className="font-mono">${item._otros.toLocaleString()}</span></div>}
+                  {item?._turnos>0&&<div className="flex justify-between"><span>Shifts / Daily Pay</span><span className="font-mono">${item._turnos.toLocaleString()}</span></div>}
+                  {item?._transporte>0&&<div className="flex justify-between"><span>Transport / Ride</span><span className="font-mono">${item._transporte.toLocaleString()}</span></div>}
+                  {item?._propinas>0&&<div className="flex justify-between"><span>Tips</span><span className="font-mono">${item._propinas.toLocaleString()}</span></div>}
+                  {item?._reintegros>0&&<div className="flex justify-between"><span>Reimbursements</span><span className="font-mono">${item._reintegros.toLocaleString()}</span></div>}
+                  {item?._viaje>0&&<div className="flex justify-between"><span>Travel Hours</span><span className="font-mono">${item._viaje.toLocaleString()}</span></div>}
+                  {item?._otros>0&&<div className="flex justify-between"><span>Other Adjustments</span><span className="font-mono">${item._otros.toLocaleString()}</span></div>}
                 </div>
               </>)}
-              {(item?.deducciones||0)>0&&(<div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--destructive))"}}/>Deducciones</span><span className="font-mono font-semibold">−${(item?.deducciones||0).toLocaleString()}</span></div>)}
-              <div className="flex justify-between gap-4 pt-1.5 border-t border-border font-semibold text-foreground"><span>Total Neto</span><span className="font-mono">${((item?.base||0)+(item?.extras||0)-(item?.deducciones||0)).toLocaleString()}</span></div>
+              {(item?.deducciones||0)>0&&(<div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--destructive))"}}/>Deductions</span><span className="font-mono font-semibold">−${(item?.deducciones||0).toLocaleString()}</span></div>)}
+              <div className="flex justify-between gap-4 pt-1.5 border-t border-border font-semibold text-foreground"><span>Net Total</span><span className="font-mono">${((item?.base||0)+(item?.extras||0)-(item?.deducciones||0)).toLocaleString()}</span></div>
             </div>
           </div>
         );
@@ -900,11 +900,11 @@ export default function AdminDashboard() {
                 <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
-                <CardTitle className="text-sm font-semibold font-heading">Tendencia de pagos</CardTitle>
+                <CardTitle className="text-sm font-semibold font-heading">Payment Trends</CardTitle>
               </div>
               {hasPendingPeriods && (
                 <Badge variant="warning" className="text-[10px] gap-1">
-                  <AlertTriangle className="h-2.5 w-2.5" /> Periodos sin nómina base calculada
+                  <AlertTriangle className="h-2.5 w-2.5" /> Periods without base payroll
                 </Badge>
               )}
             </div>
@@ -917,7 +917,7 @@ export default function AdminDashboard() {
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} className="fill-muted-foreground" axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} axisLine={false} tickLine={false} />
                   <RechartsTooltip content={<ChartTip />} />
-                  <Legend formatter={(value: string) => { const l: Record<string,string> = { base: "Nómina Base", extras: "Comp. Adicional", deducciones: "Deducciones" }; return <span className="text-[10px]">{l[value]||value}</span>; }} iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                  <Legend formatter={(value: string) => { const l: Record<string,string> = { base: "Base Payroll", extras: "Additional Comp.", deducciones: "Deductions" }; return <span className="text-[10px]">{l[value]||value}</span>; }} iconSize={8} wrapperStyle={{ fontSize: 10 }} />
                   <Bar dataKey="base" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} name="base" />
                   <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[6, 6, 0, 0]} name="extras" />
                   <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} name="deducciones" />
@@ -935,10 +935,10 @@ export default function AdminDashboard() {
              <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
                <Megaphone className="h-3.5 w-3.5 text-primary" />
             </div>
-            <h2 className="text-sm font-semibold font-heading">Comunicados</h2>
+            <h2 className="text-sm font-semibold font-heading">Announcements</h2>
           </div>
           <Link to="/app/announcements" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            Ver todos <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         {feedAnnouncements.length === 0 ? (
@@ -947,8 +947,8 @@ export default function AdminDashboard() {
               <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
                 <Megaphone className="h-5 w-5 opacity-30" />
               </div>
-              <p className="text-xs font-medium">No hay comunicados publicados</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Los comunicados aparecerán aquí</p>
+              <p className="text-xs font-medium">No announcements published</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Announcements will appear here</p>
             </CardContent>
           </Card>
         ) : (
@@ -963,7 +963,7 @@ export default function AdminDashboard() {
                 {a.priority === "urgent" && (
                   <div className="bg-warning/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-warning/10">
                     <AlertTriangle className="h-3 w-3 text-warning" />
-                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgente</span>
+                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgent</span>
                     </div>
                   )}
                   <CardContent className="p-4 space-y-2">
@@ -996,7 +996,7 @@ export default function AdminDashboard() {
                     {a.reaction_count > 0 && (
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 pt-0.5">
                         <ThumbsUp className="h-2.5 w-2.5" />
-                        {a.reaction_count} reacciones
+                        {a.reaction_count} reactions
                       </div>
                     )}
                   </CardContent>
@@ -1014,10 +1014,10 @@ export default function AdminDashboard() {
              <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
                <Activity className="h-3.5 w-3.5 text-warning" />
             </div>
-            <h2 className="text-sm font-semibold font-heading">Actividad reciente</h2>
+            <h2 className="text-sm font-semibold font-heading">Recent Activity</h2>
           </div>
           <Link to="/app/activity" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         <Card className="rounded-2xl shadow-sm border-border/40">
@@ -1027,7 +1027,7 @@ export default function AdminDashboard() {
                 <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
                   <Activity className="h-4 w-4 opacity-30" />
                 </div>
-                <p className="text-[11px] font-medium">Sin actividad reciente</p>
+                <p className="text-[11px] font-medium">No recent activity</p>
               </div>
             ) : (
               <div className="divide-y divide-border/30">
@@ -1047,17 +1047,17 @@ export default function AdminDashboard() {
             <div className="h-7 w-7 rounded-lg bg-earning/[0.08] flex items-center justify-center">
               <DollarSign className="h-3.5 w-3.5 text-earning" />
             </div>
-            <h2 className="text-sm font-semibold font-heading text-foreground">Compensación</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Compensation</h2>
           </div>
           <Link to="/app/payroll-settings" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiStatCard label="Cambios de tarifa" value={compKpis.rateChanges} subtitle="este mes" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Pago diario" value={compKpis.dailyPatterns} subtitle="empleados detectados" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Pagos ride" value={compKpis.ridePayments} subtitle="empleados con ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Alertas" value={compKpis.warnings} subtitle="requieren atención" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Rate changes" value={compKpis.rateChanges} subtitle="this month" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Daily pay" value={compKpis.dailyPatterns} subtitle="employees detected" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Ride payments" value={compKpis.ridePayments} subtitle="employees with ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Alerts" value={compKpis.warnings} subtitle="need attention" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/payroll-settings")} />
         </div>
       </div>
     ),
@@ -1071,7 +1071,7 @@ export default function AdminDashboard() {
   }
 
   if (fetchError) {
-    return <ErrorBlock title="Error al cargar el dashboard" message="No pudimos cargar los datos. Verifica tu conexión e intenta de nuevo." onRetry={() => window.location.reload()} />;
+    return <ErrorBlock title="Error loading dashboard" message="Could not load data. Check your connection and try again." onRetry={() => window.location.reload()} />;
   }
 
   /* ── Global Mode: Platform Overview ── */
@@ -1086,14 +1086,14 @@ export default function AdminDashboard() {
           <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
             {fullName || "Dashboard"}
           </h1>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">Vista Global — {companies.length} empresas</p>
+          <p className="text-xs text-muted-foreground/70 mt-0.5">Global View — {companies.length} companies</p>
         </div>
 
         {/* Company grid */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-4 w-4 text-warning" />
-            <h2 className="text-sm font-semibold font-heading text-foreground">Selecciona una empresa para operar</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Select a company to operate</h2>
             <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1114,7 +1114,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
                   <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
-                    {c.is_active ? "● Activa" : "○ Inactiva"}
+                    {c.is_active ? "● Active" : "○ Inactive"}
                   </span>
                   <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
                 </div>
@@ -1139,7 +1139,7 @@ export default function AdminDashboard() {
             {fullName || "Dashboard"}
           </h1>
           <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5">
-            <span>{selectedCompany?.name ?? "Selecciona una empresa"}</span>
+            <span>{selectedCompany?.name ?? "Select a company"}</span>
             {stats.activePeriod && (
               <>
                 <span className="text-border">·</span>
@@ -1158,7 +1158,7 @@ export default function AdminDashboard() {
           {stats.activePeriod && (
             <div className="hidden md:flex flex-col gap-2 min-w-[200px] p-3.5 rounded-xl border border-border/40 bg-card shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Periodo</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Period</span>
                 <span className={cn(
                   "text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1",
                   statusColor === 'earning' && "bg-earning/10 text-earning",
@@ -1193,7 +1193,7 @@ export default function AdminDashboard() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-4 w-4 text-warning" />
-            <h2 className="text-sm font-semibold font-heading text-foreground">Empresas</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Companies</h2>
             <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1224,12 +1224,12 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     {isSelected && (
-                      <span className="text-[9px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Activa</span>
+                      <span className="text-[9px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Active</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
                     <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
-                      {c.is_active ? "● Activa" : "○ Inactiva"}
+                      {c.is_active ? "● Active" : "○ Inactive"}
                     </span>
                     <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
                   </div>
