@@ -8,9 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 
 function getStatusMeta(status: "active" | "blocked" | "disabled") {
-  if (status === "active") return { label: "Activo", variant: "success" as const, Icon: Volume2 };
-  if (status === "blocked") return { label: "Bloqueado", variant: "warning" as const, Icon: AlertTriangle };
-  return { label: "Desactivado", variant: "secondary" as const, Icon: VolumeX };
+  if (status === "active") return { label: "Active", dot: "bg-emerald-500", variant: "success" as const, Icon: Volume2 };
+  if (status === "blocked") return { label: "Blocked", dot: "bg-amber-500", variant: "warning" as const, Icon: AlertTriangle };
+  return { label: "Disabled", dot: "bg-muted-foreground/40", variant: "secondary" as const, Icon: VolumeX };
 }
 
 export function SoundStatusControl({ compact = false }: { compact?: boolean }) {
