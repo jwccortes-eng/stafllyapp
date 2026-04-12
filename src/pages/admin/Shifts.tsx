@@ -504,7 +504,7 @@ export default function Shifts() {
       if (!copyAssign) setSelectedEmployees([]);
 
       for (const repeatDate of repeatDates) {
-        await createSingleShift(repeatDate, true);
+        await createSingleShift(repeatDate, true, true);
       }
 
       if (!copyAssign) setSelectedEmployees(savedEmployees);
