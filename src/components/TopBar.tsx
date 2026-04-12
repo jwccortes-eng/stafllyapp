@@ -87,7 +87,7 @@ export default function TopBar({ collapsed }: { collapsed: boolean }) {
             <DropdownMenuTrigger asChild>
               <Button size="sm" className="h-8 gap-1.5 rounded-lg text-xs font-semibold">
                 <Plus className="h-3.5 w-3.5" />
-                Crear
+                Create
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
