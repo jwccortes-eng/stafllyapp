@@ -11,11 +11,11 @@ interface TabItem {
 }
 
 const TABS: TabItem[] = [
-  { id: "home", to: "/portal", icon: Home, label: "Inicio", end: true },
-  { id: "shifts", to: "/portal/shifts", icon: CalendarDays, label: "Turnos" },
-  { id: "clock", to: "/portal/clock", icon: Clock, label: "Reloj" },
-  { id: "earnings", to: "/portal/payments", icon: Wallet, label: "Pagos" },
-  { id: "profile", to: "/portal/profile", icon: User, label: "Perfil" },
+  { id: "home", to: "/portal", icon: Home, label: "Home", end: true },
+  { id: "shifts", to: "/portal/shifts", icon: CalendarDays, label: "Shifts" },
+  { id: "clock", to: "/portal/clock", icon: Clock, label: "Clock" },
+  { id: "earnings", to: "/portal/payments", icon: Wallet, label: "Payments" },
+  { id: "profile", to: "/portal/profile", icon: User, label: "Profile" },
 ];
 
 export function PortalBottomNav() {
