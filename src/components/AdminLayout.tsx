@@ -101,20 +101,20 @@ export default function AdminLayout() {
     return (
       <div className="min-h-screen bg-background pb-20">
         <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-xl border-b border-border/40">
-          <div className="flex items-center justify-between px-4 h-13">
-            <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-between px-3 h-13">
+            <div className="flex items-center gap-2 min-w-0">
               <StaflyLogo size={22} markOnly />
               <MobilePageTitle items={visibleItems} />
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 shrink-0">
               <ModeSwitcher compact />
               <SoundStatusControl compact />
+              <NotificationBell />
               {companies.length > 1 && (
-                <div className="max-w-[140px]">
-                  <CompanySwitcher collapsed={false} />
+                <div className="ml-0.5">
+                  <CompanySwitcher collapsed />
                 </div>
               )}
-              <NotificationBell />
             </div>
           </div>
         </header>
