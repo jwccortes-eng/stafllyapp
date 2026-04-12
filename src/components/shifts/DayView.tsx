@@ -6,8 +6,14 @@ import { cn } from "@/lib/utils";
 import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
 import { buildPastelMap, SHIFT_STATUS_CONFIG } from "./pastel-utils";
 import { getClientColor } from "./types";
+import { QuickCreatePopover } from "./QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 import type { AssignedEmployee } from "./ShiftCard";
+
+interface QuickCreateData {
+  title: string; date: string; start_time: string; end_time: string;
+  client_id: string; location_id: string; slots: number;
+}
 
 interface DayViewProps {
   currentDay: Date;
@@ -20,6 +26,8 @@ interface DayViewProps {
   onDropOnShift: (shiftId: string, data: string) => void;
   onDuplicateToDay?: (shiftData: any, targetDate: string) => void;
   onAddShift?: (date: string) => void;
+  onQuickCreate?: (data: QuickCreateData) => Promise<void>;
+  onOpenFull?: (data: QuickCreateData) => void;
 }
 
 const TIME_GROUP_ICONS: Record<string, React.ReactNode> = {
