@@ -294,6 +294,7 @@ export default function Shifts() {
     setDayType("full_day"); setShiftAdminId("");
     setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
+    setRepeatConfig(DEFAULT_REPEAT);
   };
 
   // Quick-add client inline
