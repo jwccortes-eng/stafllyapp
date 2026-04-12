@@ -38,47 +38,47 @@ interface LinkDef {
 
 /* ── Company-scoped links ── */
 const COMPANY_LINKS: LinkDef[] = [
-  // PRINCIPAL — core daily operations
-  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Principal" },
-  { to: "/app/shifts", icon: CalendarDays, label: "Turnos", module: "shifts", section: "Principal" },
-  { to: "/app/timeclock", icon: Clock, label: "Reloj", module: "shifts", section: "Principal" },
-  { to: "/app/employees", icon: Users, label: "Trabajadores", module: "employees", section: "Principal" },
-  { to: "/app/clients", icon: Building2, label: "Clientes", module: "clients", section: "Principal" },
-  { to: "/app/locations", icon: MapPin, label: "Ubicaciones", module: "locations", section: "Principal" },
-  { to: "/app/quality", icon: Star, label: "Calidad", module: null, section: "Principal" },
+  // MAIN — core daily operations
+  { to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Main" },
+  { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Main" },
+  { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Main" },
+  { to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "Main" },
+  { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Main" },
+  { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Main" },
+  { to: "/app/quality", icon: Star, label: "Quality", module: null, section: "Main" },
 
-  // NÓMINA — payroll & finance
-  { to: "/app/periods", icon: CalendarDays, label: "Periodos", module: "periods", section: "Nómina" },
-  { to: "/app/compensation-validation", icon: Receipt, label: "Compensación", module: null, section: "Nómina" },
-  { to: "/app/movements", icon: DollarSign, label: "Novedades", module: "movements", section: "Nómina" },
-  { to: "/app/concepts", icon: Tags, label: "Conceptos", module: "concepts", section: "Nómina" },
-  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliación", module: null, section: "Nómina" },
-  { to: "/app/summary", icon: FileSpreadsheet, label: "Reportes", module: "summary", section: "Nómina" },
+  // PAYROLL — payroll & finance
+  { to: "/app/periods", icon: CalendarDays, label: "Periods", module: "periods", section: "Payroll" },
+  { to: "/app/compensation-validation", icon: Receipt, label: "Compensation", module: null, section: "Payroll" },
+  { to: "/app/movements", icon: DollarSign, label: "Adjustments", module: "movements", section: "Payroll" },
+  { to: "/app/concepts", icon: Tags, label: "Concepts", module: "concepts", section: "Payroll" },
+  { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll" },
+  { to: "/app/summary", icon: FileSpreadsheet, label: "Reports", module: "summary", section: "Payroll" },
 
-  // MÁS — communication, monitoring & config
-  { to: "/app/announcements", icon: Megaphone, label: "Anuncios", module: "announcements", section: "Más" },
-  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "Más" },
-  { to: "/app/live-map", icon: MapIcon, label: "Mapa en Vivo", module: null, section: "Más" },
-  { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Más" },
-  { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "Más", badge: "tickets" },
-  { to: "/app/payroll-settings", icon: Settings2, label: "Configuración", module: null, section: "Más" },
-  { to: "/app/migration", icon: ArrowLeftRight, label: "Migración", module: null, section: "Más", roles: ["developer", "owner"] },
+  // MORE — communication, monitoring & config
+  { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "More" },
+  { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "More" },
+  { to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "More" },
+  { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "More" },
+  { to: "/app/requests", icon: Inbox, label: "Tickets", module: null, section: "More", badge: "tickets" },
+  { to: "/app/payroll-settings", icon: Settings2, label: "Settings", module: null, section: "More" },
+  { to: "/app/migration", icon: ArrowLeftRight, label: "Migration", module: null, section: "More", roles: ["developer", "owner"] },
 ];
 
 /* ── Global/Platform-level links (developer/owner only) ── */
 const GLOBAL_LINKS: LinkDef[] = [
-  { to: "/app", icon: LayoutDashboard, label: "Panel Global", module: null, end: true, section: "Plataforma" },
-  { to: "/app/companies", icon: Building2, label: "Empresas", module: null, section: "Plataforma" },
-  { to: "/app/directory", icon: Users, label: "Directorio", module: null, section: "Plataforma" },
-  { to: "/app/activity", icon: FileText, label: "Actividad", module: null, section: "Plataforma" },
-  { to: "/app/notifications", icon: Bell, label: "Notificaciones", module: null, section: "Plataforma" },
-  { to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "Herramientas" },
-  { to: "/app/billing", icon: Receipt, label: "Facturación", module: null, section: "Herramientas" },
-  { to: "/app/system-health", icon: BarChart3, label: "Sistema", module: null, section: "Herramientas" },
+  { to: "/app", icon: LayoutDashboard, label: "Global Panel", module: null, end: true, section: "Platform" },
+  { to: "/app/companies", icon: Building2, label: "Companies", module: null, section: "Platform" },
+  { to: "/app/directory", icon: Users, label: "Directory", module: null, section: "Platform" },
+  { to: "/app/activity", icon: FileText, label: "Activity", module: null, section: "Platform" },
+  { to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Platform" },
+  { to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "Tools" },
+  { to: "/app/billing", icon: Receipt, label: "Billing", module: null, section: "Tools" },
+  { to: "/app/system-health", icon: BarChart3, label: "System", module: null, section: "Tools" },
 ];
 
-const COMPANY_SECTION_ORDER = ["Principal", "Nómina", "Más"];
-const GLOBAL_SECTION_ORDER = ["Plataforma", "Herramientas"];
+const COMPANY_SECTION_ORDER = ["Main", "Payroll", "More"];
+const GLOBAL_SECTION_ORDER = ["Platform", "Tools"];
 
 export default function AdminSidebar() {
   const { signOut, role, hasModuleAccess, user, fullName } = useAuth();
@@ -307,10 +307,10 @@ export default function AdminSidebar() {
         <div className="mx-3 mt-3 rounded-xl border border-accent bg-accent/30 px-3 py-2 shrink-0">
           <div className="flex items-center gap-2">
             <Globe className="h-3.5 w-3.5 text-accent-foreground" />
-            <span className="text-[11px] font-bold text-accent-foreground">Modo Global</span>
+            <span className="text-[11px] font-bold text-accent-foreground">Global Mode</span>
           </div>
           <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-            Selecciona una empresa para operar en contexto.
+            Select a company to operate in context.
           </p>
         </div>
       )}
@@ -323,7 +323,7 @@ export default function AdminSidebar() {
         {!isGlobalMode && isOwner && (
           <>
             <div className="border-t border-border/20 my-2.5" />
-            {renderLink({ to: "/app/admin", icon: Wrench, label: "Administración", module: null, section: "", end: true })}
+            {renderLink({ to: "/app/admin", icon: Wrench, label: "Administration", module: null, section: "", end: true })}
           </>
         )}
       </nav>
@@ -333,18 +333,18 @@ export default function AdminSidebar() {
         <div className="mx-3 mb-2 rounded-xl border border-primary/15 bg-primary/[0.05] px-3 py-2.5 shrink-0">
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
-            <span className="text-[11px] font-bold text-primary">Prueba Pro</span>
+            <span className="text-[11px] font-bold text-primary">Pro Trial</span>
           </div>
           <p className="text-[10px] text-muted-foreground leading-tight">
             {trialDaysLeft > 0
-              ? `Te quedan ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''} de prueba.`
-              : 'Tu prueba ha expirado.'}
+              ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? 's' : ''} left in trial.`
+              : 'Your trial has expired.'}
           </p>
           <button
             onClick={() => navigate("/app/pricing")}
             className="mt-1.5 text-[10px] font-semibold text-primary hover:underline"
           >
-            Ver planes →
+            View plans →
           </button>
         </div>
       )}
@@ -361,11 +361,11 @@ export default function AdminSidebar() {
               )}
             >
               {collapsed ? <PanelLeft className="h-[15px] w-[15px]" /> : <PanelLeftClose className="h-[15px] w-[15px]" />}
-              {!collapsed && <span className="text-[12px]">Colapsar</span>}
+              {!collapsed && <span className="text-[12px]">Collapse</span>}
             </button>
           </TooltipTrigger>
           {collapsed && (
-            <TooltipContent side="right" className="text-xs">Expandir</TooltipContent>
+            <TooltipContent side="right" className="text-xs">Expand</TooltipContent>
           )}
         </Tooltip>
       </div>
