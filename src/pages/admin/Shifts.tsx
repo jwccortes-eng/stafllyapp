@@ -1140,6 +1140,8 @@ export default function Shifts() {
               onDropOnShift={handleDropOnShift}
               onDuplicateToDay={handleDuplicateToDay}
               onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
+              onQuickCreate={canEdit ? handleQuickCreate : undefined}
+              onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
             />
           )
         ) : viewMode === "month" ? (
@@ -1153,6 +1155,8 @@ export default function Shifts() {
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
+            onQuickCreate={canEdit ? handleQuickCreate : undefined}
+            onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
             availabilityConfigs={availConfigs}
             availabilityOverrides={availOverrides}
           />
