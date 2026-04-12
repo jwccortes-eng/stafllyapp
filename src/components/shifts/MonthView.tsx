@@ -295,12 +295,26 @@ export function MonthView({
                         </button>
                       )}
                       {onAddShift && inMonth && allCards.length === 0 && (
-                        <button
-                          onClick={() => onAddShift(format(day, "yyyy-MM-dd"))}
-                          className="w-full flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-md py-0.5 transition-colors"
-                        >
-                          <Plus className="h-2.5 w-2.5" />
-                        </button>
+                        onQuickCreate && onOpenFull ? (
+                          <QuickCreatePopover
+                            date={format(day, "yyyy-MM-dd")}
+                            clients={clients}
+                            locations={locations as any}
+                            onQuickCreate={onQuickCreate}
+                            onOpenFull={onOpenFull}
+                          >
+                            <button className="w-full flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-md py-0.5 transition-colors">
+                              <Plus className="h-2.5 w-2.5" />
+                            </button>
+                          </QuickCreatePopover>
+                        ) : (
+                          <button
+                            onClick={() => onAddShift(format(day, "yyyy-MM-dd"))}
+                            className="w-full flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-md py-0.5 transition-colors"
+                          >
+                            <Plus className="h-2.5 w-2.5" />
+                          </button>
+                        )
                       )}
                     </div>
                   </div>
