@@ -7,9 +7,15 @@ import { Users, Plus, UserX, Search, ChevronDown, ChevronUp } from "lucide-react
 import { Input } from "@/components/ui/input";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { getClientColor, CLIENT_COLORS } from "./types";
+import { QuickCreatePopover } from "./QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { isEmployeeAvailable } from "@/hooks/useEmployeeAvailability";
+
+interface QuickCreateData {
+  title: string; date: string; start_time: string; end_time: string;
+  client_id: string; location_id: string; slots: number;
+}
 
 interface MonthViewProps {
   currentMonth: Date;
@@ -21,6 +27,8 @@ interface MonthViewProps {
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
   onAddShift?: (date: string) => void;
+  onQuickCreate?: (data: QuickCreateData) => Promise<void>;
+  onOpenFull?: (data: QuickCreateData) => void;
   availabilityConfigs?: AvailabilityConfig[];
   availabilityOverrides?: AvailabilityOverride[];
 }
@@ -28,6 +36,7 @@ interface MonthViewProps {
 export function MonthView({
   currentMonth, shifts, assignments, locations, clients, employees,
   onShiftClick, onDropOnShift, onAddShift,
+  onQuickCreate, onOpenFull,
   availabilityConfigs = [], availabilityOverrides = [],
 }: MonthViewProps) {
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
