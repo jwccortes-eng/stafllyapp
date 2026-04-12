@@ -373,10 +373,10 @@ export default function Implementations() {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Empresa afectada</label>
-          <Select value={form.affected_company ?? ""} onValueChange={v => setForm({ ...form, affected_company: v })}>
+          <Select value={form.affected_company || "__none__"} onValueChange={v => setForm({ ...form, affected_company: v === "__none__" ? "" : v })}>
             <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="" className="text-xs">— Ninguna —</SelectItem>
+              <SelectItem value="__none__" className="text-xs">— Ninguna —</SelectItem>
               {COMPANIES.filter(Boolean).map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
             </SelectContent>
           </Select>
