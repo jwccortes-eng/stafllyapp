@@ -55,9 +55,9 @@ export function AppLauncher({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <div>
-            <h2 className="text-base font-bold font-heading">Todas las apps</h2>
+            <h2 className="text-base font-bold font-heading">All Apps</h2>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              Toca <Pin className="inline h-3 w-3 -mt-0.5" /> para fijar en tu dock ({pinnedIds.length}/{maxPins})
+              Tap <Pin className="inline h-3 w-3 -mt-0.5" /> to pin to your dock ({pinnedIds.length}/{maxPins})
             </p>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={onClose}>
@@ -134,12 +134,12 @@ export function AppLauncher({
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-lg hover:bg-muted/30"
           >
             {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            {theme === "dark" ? "Claro" : "Oscuro"}
+            {theme === "dark" ? "Light" : "Dark"}
           </button>
           <LogoutConfirmDialog onConfirm={() => { onSignOut(); onClose(); }}>
             <button className="flex items-center gap-2 text-xs text-destructive/70 hover:text-destructive transition-colors px-2 py-1.5 rounded-lg hover:bg-destructive/[0.08]">
               <LogOut className="h-3.5 w-3.5" />
-              Cerrar sesión
+              Sign out
             </button>
           </LogoutConfirmDialog>
         </div>

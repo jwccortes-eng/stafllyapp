@@ -79,7 +79,7 @@ export function FloatingDock({ items, pinnedIds, onOpenLauncher, className, vari
             </button>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs font-medium">
-            Todas las apps
+            All apps
           </TooltipContent>
         </Tooltip>
       </div>

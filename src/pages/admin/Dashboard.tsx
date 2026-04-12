@@ -20,7 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
 import { format, parseISO, formatDistanceToNow, startOfWeek, addDays } from "date-fns";
-import { es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
@@ -237,7 +237,7 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
             {dayData.map(d => (
               <div key={d.dateStr} className="text-center pb-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">
-                  {format(d.date, "EEE", { locale: es })}
+                  {format(d.date, "EEE", { locale: enUS })}
                 </p>
                 <p className="text-sm font-bold text-foreground mt-0.5">{format(d.date, "d")}</p>
               </div>
@@ -266,7 +266,7 @@ function WeeklyShiftPreview({ companyId, navigate }: { companyId: string; naviga
                 )}
                 {d.assigns.length > 4 && (
                   <p className="text-[10px] text-muted-foreground/50 text-center font-medium pt-0.5">
-                    +{d.assigns.length - 4} más
+                    +{d.assigns.length - 4} more
                   </p>
                 )}
               </div>
@@ -302,13 +302,13 @@ function QuickAction({ label, description, icon: Icon, to, accent, navigate }: {
 /* ─── Activity Item ─── */
 function ActivityRow({ item }: { item: any }) {
   const actionLabels: Record<string, string> = {
-    create: "creó", update: "actualizó", delete: "eliminó",
-    insert: "agregó", import: "importó", publish: "publicó",
+    create: "created", update: "updated", delete: "deleted",
+    insert: "added", import: "imported", publish: "published",
   };
   const entityLabels: Record<string, string> = {
-    employee: "empleado", movement: "novedad", period: "periodo",
-    concept: "concepto", shift: "turno", announcement: "anuncio",
-    import: "importación", client: "cliente", location: "ubicación",
+    employee: "employee", movement: "adjustment", period: "period",
+    concept: "concept", shift: "shift", announcement: "announcement",
+    import: "import", client: "client", location: "location",
   };
   const iconMap: Record<string, any> = {
     employee: Users, movement: DollarSign, period: CalendarDays,
@@ -326,11 +326,11 @@ function ActivityRow({ item }: { item: any }) {
         <div className="min-w-0 flex-1">
           <p className="text-[11px] text-foreground leading-relaxed">
             <span className="font-semibold capitalize">{actionLabels[item.action] || item.action}</span>
-            {" "}un{" "}
+            {" "}a{" "}
             <span className="font-medium">{entityLabels[item.entity_type] || item.entity_type}</span>
           </p>
           <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-            {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: es })}
+            {formatDistanceToNow(parseISO(item.created_at), { addSuffix: true, locale: enUS })}
           </p>
         </div>
       </div>
@@ -405,7 +405,7 @@ export default function AdminDashboard() {
           if (pTotal > 0) {
             periodTotal = pTotal;
             hours = pHours;
-            heroLabel = period.status === "open" ? "" : `(${format(parseISO(period.start_date), "dd MMM", { locale: es })})`;
+            heroLabel = period.status === "open" ? "" : `(${format(parseISO(period.start_date), "dd MMM", { locale: enUS })})`;
             break;
           }
         }
@@ -608,7 +608,7 @@ export default function AdminDashboard() {
             const hasMov = extrasTotal > 0 || deducciones > 0;
             const pending = base === 0 && hasMov;
             return {
-              label: format(parseISO(p.start_date), "dd MMM", { locale: es }),
+              label: format(parseISO(p.start_date), "dd MMM", { locale: enUS }),
               base: Math.round(base),
               extras: Math.round(extrasTotal),
               deducciones: Math.round(deducciones),
@@ -667,22 +667,22 @@ export default function AdminDashboard() {
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
-    if (h < 12) return "Buenos días";
-    if (h < 18) return "Buenas tardes";
-    return "Buenas noches";
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
   }, []);
 
   const quickActions = [
-    { label: "Importar horas", icon: Upload, to: "/app/import", module: "import", description: "Sube el archivo de Connecteam", accent: "from-primary to-primary/70" },
-    { label: "Agregar novedad", icon: DollarSign, to: "/app/movements", module: "movements", description: "Extras, deducciones y ajustes", accent: "from-warning to-warning/70" },
-    { label: "Ver resumen", icon: FileSpreadsheet, to: "/app/summary", module: "summary", description: "Resumen del periodo actual", accent: "from-earning to-earning/70" },
-    { label: "Empleados", icon: Users, to: "/app/employees", module: "employees", description: "Gestión de empleados", accent: "from-primary to-primary/70" },
-    { label: "Conceptos", icon: Tags, to: "/app/concepts", module: "concepts", description: "Configura conceptos de pago", accent: "from-deduction to-deduction/70" },
-    { label: "Reportes", icon: BarChart3, to: "/app/reports", module: "reports", description: "Genera y guarda reportes", accent: "from-primary to-primary/70" },
+    { label: "Import Hours", icon: Upload, to: "/app/import", module: "import", description: "Upload time clock file", accent: "from-primary to-primary/70" },
+    { label: "Add Adjustment", icon: DollarSign, to: "/app/movements", module: "movements", description: "Extras, deductions and adjustments", accent: "from-warning to-warning/70" },
+    { label: "View Summary", icon: FileSpreadsheet, to: "/app/summary", module: "summary", description: "Current period summary", accent: "from-earning to-earning/70" },
+    { label: "Employees", icon: Users, to: "/app/employees", module: "employees", description: "Manage employees", accent: "from-primary to-primary/70" },
+    { label: "Concepts", icon: Tags, to: "/app/concepts", module: "concepts", description: "Configure pay concepts", accent: "from-deduction to-deduction/70" },
+    { label: "Reports", icon: BarChart3, to: "/app/reports", module: "reports", description: "Generate and save reports", accent: "from-primary to-primary/70" },
   ].filter(a => canAccess(a.module));
 
   const statusColor = stats.periodStatus === 'open' ? 'earning' : stats.periodStatus === 'closed' ? 'warning' : 'primary';
-  const statusLabel = stats.periodStatus === 'open' ? 'Abierto' : stats.periodStatus === 'closed' ? 'Cerrado' : 'Publicado';
+  const statusLabel = stats.periodStatus === 'open' ? 'Open' : stats.periodStatus === 'closed' ? 'Closed' : 'Published';
 
   /* ─── Widget renderers ─── */
   const isWidgetEnabled = (id: string) => enabledWidgets.some(w => w.id === id);
@@ -708,21 +708,21 @@ export default function AdminDashboard() {
         {/* Hero KPI row — 3 large cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <HeroKpiCard
-            label="Horas Trabajadas"
+            label="Hours Worked"
             value={animHours || animEmployees}
             icon={Clock}
             color="primary"
             onClick={() => navigate("/app/timeclock")}
           />
           <HeroKpiCard
-            label="Empleados Programados"
+            label="Scheduled Employees"
             value={`${animEmployees}`}
             icon={Users}
             color="earning"
             onClick={() => navigate("/app/employees")}
           />
           <HeroKpiCard
-            label="Total Nómina"
+            label="Total Payroll"
             value={`$${stats.periodTotal.toLocaleString("en-US", { minimumFractionDigits: 0 })}`}
             icon={DollarSign}
             color="warning"
@@ -738,7 +738,7 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Zap className="h-3.5 w-3.5 text-warning" />
-          <h2 className="text-sm font-semibold font-heading text-foreground">Accesos rápidos</h2>
+          <h2 className="text-sm font-semibold font-heading text-foreground">Quick Actions</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {quickActions.map((action) => (
@@ -750,11 +750,11 @@ export default function AdminDashboard() {
     pending_requests: () => {
       const totalPending = pendingCounts.shiftRequests + pendingCounts.pendingMovements + pendingCounts.openTickets + pendingCounts.pendingAttendance + missingPhotoCount;
       const items = [
-        { label: "Solicitudes de turno", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
-        { label: "Novedades pendientes", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
-        { label: "Tickets abiertos", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
-        { label: "Asistencia sin confirmar", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
-        { label: "Sin foto de perfil", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
+        { label: "Shift requests", count: pendingCounts.shiftRequests, icon: ClipboardList, color: "text-primary", bg: "bg-primary/[0.08]", to: "/app/shift-requests" },
+        { label: "Pending adjustments", count: pendingCounts.pendingMovements, icon: DollarSign, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/movements" },
+        { label: "Open tickets", count: pendingCounts.openTickets, icon: AlertCircle, color: "text-warning", bg: "bg-warning/[0.08]", to: "/app/requests" },
+        { label: "Unconfirmed attendance", count: pendingCounts.pendingAttendance, icon: UserCheck, color: "text-earning", bg: "bg-earning/[0.08]", to: "/app/shifts" },
+        { label: "Missing profile photo", count: missingPhotoCount, icon: Camera, color: "text-muted-foreground", bg: "bg-muted/50", to: "/app/employees" },
       ];
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
@@ -764,7 +764,7 @@ export default function AdminDashboard() {
                 <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
                   <Inbox className="h-3.5 w-3.5 text-warning" />
                 </div>
-                <CardTitle className="text-sm font-semibold font-heading">Pendientes</CardTitle>
+                <CardTitle className="text-sm font-semibold font-heading">Pending</CardTitle>
                 {totalPending > 0 && (
                   <Badge variant="warning" className="text-[10px] h-5 px-1.5 rounded-full">
                     {totalPending}
@@ -779,8 +779,8 @@ export default function AdminDashboard() {
                 <div className="h-10 w-10 rounded-xl bg-earning/[0.08] flex items-center justify-center mx-auto mb-2">
                   <CheckCircle2 className="h-4 w-4 text-earning" />
                 </div>
-                <p className="text-xs font-medium text-earning">¡Todo al día!</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">No hay solicitudes pendientes</p>
+                <p className="text-xs font-medium text-earning">All caught up!</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">No pending requests</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -812,18 +812,18 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Briefcase className="h-3.5 w-3.5 text-primary" />
-          <h2 className="text-sm font-semibold font-heading text-foreground">Comercial</h2>
+          <h2 className="text-sm font-semibold font-heading text-foreground">Commercial</h2>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiStatCard label="Clientes activos" value={commercialKpis.activeClients} subtitle="empresas operando" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
-          <KpiStatCard label="Solicitudes abiertas" value={commercialKpis.openRequests} subtitle="en pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
-          <KpiStatCard label="Por cobrar" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} facturas`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
-          <KpiStatCard label="Vencido" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} facturas`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Active clients" value={commercialKpis.activeClients} subtitle="operating" icon={Building2} color="primary" onClick={() => navigate("/app/clients")} />
+          <KpiStatCard label="Open requests" value={commercialKpis.openRequests} subtitle="in pipeline" icon={ClipboardList} color="warning" onClick={() => navigate("/app/staffing-requests")} />
+          <KpiStatCard label="Receivable" value={`$${commercialKpis.unpaidTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.unpaidInvoices} invoices`} icon={Receipt} color="earning" onClick={() => navigate("/app/invoices")} />
+          <KpiStatCard label="Overdue" value={`$${commercialKpis.overdueTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`} subtitle={`${commercialKpis.overdueInvoices} invoices`} icon={AlertTriangle} color="deduction" onClick={() => navigate("/app/invoices")} />
         </div>
       </div>
     ),
     today_summary: () => {
-      const todayStr = new Date().toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
+      const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" });
       return (
         <Card className="rounded-2xl shadow-sm border-border/40 overflow-hidden">
           <CardHeader className="pb-3 px-5 pt-5">
@@ -833,12 +833,12 @@ export default function AdminDashboard() {
                    <Calendar className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-semibold font-heading">Hoy</CardTitle>
+                  <CardTitle className="text-sm font-semibold font-heading">Today</CardTitle>
                   <p className="text-[10px] text-muted-foreground/60 capitalize">{todayStr}</p>
                 </div>
               </div>
               <Link to="/app/today" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-                Ver detalle <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                View detail <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           </CardHeader>
@@ -847,17 +847,17 @@ export default function AdminDashboard() {
               <div className="flex flex-col items-center p-3 rounded-xl bg-primary/[0.04] border border-border/30">
                 <Clock className="h-4 w-4 text-primary mb-1.5" />
                 <p className="text-xl font-bold text-primary tabular-nums">{todaySummary.shiftsToday}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Turnos</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Shifts</p>
               </div>
               <div className="flex flex-col items-center p-3 rounded-xl bg-earning/[0.04] border border-border/30">
                 <UserCheck className="h-4 w-4 text-earning mb-1.5" />
                 <p className="text-xl font-bold text-earning tabular-nums">{todaySummary.assignedToday}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Asignados</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Assigned</p>
               </div>
               <div className="flex flex-col items-center p-3 rounded-xl bg-warning/[0.04] border border-border/30">
                 <Timer className="h-4 w-4 text-warning mb-1.5" />
                 <p className="text-xl font-bold text-warning tabular-nums">{todaySummary.openEntries}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Fichados</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Clocked In</p>
               </div>
             </div>
           </CardContent>
@@ -872,22 +872,22 @@ export default function AdminDashboard() {
         const item = chartData.find((d: any) => d.label === label);
         return (
           <div className="rounded-xl border border-border/50 bg-card px-3.5 py-2.5 text-xs shadow-xl min-w-[190px]">
-            <p className="font-semibold text-foreground mb-1.5">{label}{item?.pending ? " ⚠ Base pendiente" : ""}</p>
+            <p className="font-semibold text-foreground mb-1.5">{label}{item?.pending ? " ⚠ Base pending" : ""}</p>
             <div className="space-y-1">
-              <div className="flex justify-between gap-4"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--primary))"}}/>Nómina Base</span><span className="font-mono font-semibold">${(item?.base||0).toLocaleString()}</span></div>
+              <div className="flex justify-between gap-4"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--primary))"}}/>Base Payroll</span><span className="font-mono font-semibold">${(item?.base||0).toLocaleString()}</span></div>
               {(item?.extras||0)>0&&(<>
-                <div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--earning))"}}/>Compensación Adicional</span><span className="font-mono font-semibold">${(item?.extras||0).toLocaleString()}</span></div>
+                <div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--earning))"}}/>Additional Compensation</span><span className="font-mono font-semibold">${(item?.extras||0).toLocaleString()}</span></div>
                 <div className="pl-4 space-y-0.5 text-muted-foreground">
-                  {item?._turnos>0&&<div className="flex justify-between"><span>Turnos / Daily Pay</span><span className="font-mono">${item._turnos.toLocaleString()}</span></div>}
-                  {item?._transporte>0&&<div className="flex justify-between"><span>Transporte / Ryde</span><span className="font-mono">${item._transporte.toLocaleString()}</span></div>}
-                  {item?._propinas>0&&<div className="flex justify-between"><span>Propinas</span><span className="font-mono">${item._propinas.toLocaleString()}</span></div>}
-                  {item?._reintegros>0&&<div className="flex justify-between"><span>Reintegros</span><span className="font-mono">${item._reintegros.toLocaleString()}</span></div>}
-                  {item?._viaje>0&&<div className="flex justify-between"><span>Horas de viaje</span><span className="font-mono">${item._viaje.toLocaleString()}</span></div>}
-                  {item?._otros>0&&<div className="flex justify-between"><span>Otros ajustes</span><span className="font-mono">${item._otros.toLocaleString()}</span></div>}
+                  {item?._turnos>0&&<div className="flex justify-between"><span>Shifts / Daily Pay</span><span className="font-mono">${item._turnos.toLocaleString()}</span></div>}
+                  {item?._transporte>0&&<div className="flex justify-between"><span>Transport / Ride</span><span className="font-mono">${item._transporte.toLocaleString()}</span></div>}
+                  {item?._propinas>0&&<div className="flex justify-between"><span>Tips</span><span className="font-mono">${item._propinas.toLocaleString()}</span></div>}
+                  {item?._reintegros>0&&<div className="flex justify-between"><span>Reimbursements</span><span className="font-mono">${item._reintegros.toLocaleString()}</span></div>}
+                  {item?._viaje>0&&<div className="flex justify-between"><span>Travel Hours</span><span className="font-mono">${item._viaje.toLocaleString()}</span></div>}
+                  {item?._otros>0&&<div className="flex justify-between"><span>Other Adjustments</span><span className="font-mono">${item._otros.toLocaleString()}</span></div>}
                 </div>
               </>)}
-              {(item?.deducciones||0)>0&&(<div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--destructive))"}}/>Deducciones</span><span className="font-mono font-semibold">−${(item?.deducciones||0).toLocaleString()}</span></div>)}
-              <div className="flex justify-between gap-4 pt-1.5 border-t border-border font-semibold text-foreground"><span>Total Neto</span><span className="font-mono">${((item?.base||0)+(item?.extras||0)-(item?.deducciones||0)).toLocaleString()}</span></div>
+              {(item?.deducciones||0)>0&&(<div className="flex justify-between gap-4 pt-1 border-t border-border/30"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--destructive))"}}/>Deductions</span><span className="font-mono font-semibold">−${(item?.deducciones||0).toLocaleString()}</span></div>)}
+              <div className="flex justify-between gap-4 pt-1.5 border-t border-border font-semibold text-foreground"><span>Net Total</span><span className="font-mono">${((item?.base||0)+(item?.extras||0)-(item?.deducciones||0)).toLocaleString()}</span></div>
             </div>
           </div>
         );
@@ -900,11 +900,11 @@ export default function AdminDashboard() {
                 <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
-                <CardTitle className="text-sm font-semibold font-heading">Tendencia de pagos</CardTitle>
+                <CardTitle className="text-sm font-semibold font-heading">Payment Trends</CardTitle>
               </div>
               {hasPendingPeriods && (
                 <Badge variant="warning" className="text-[10px] gap-1">
-                  <AlertTriangle className="h-2.5 w-2.5" /> Periodos sin nómina base calculada
+                  <AlertTriangle className="h-2.5 w-2.5" /> Periods without base payroll
                 </Badge>
               )}
             </div>
@@ -917,7 +917,7 @@ export default function AdminDashboard() {
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} className="fill-muted-foreground" axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => `$${v.toLocaleString()}`} axisLine={false} tickLine={false} />
                   <RechartsTooltip content={<ChartTip />} />
-                  <Legend formatter={(value: string) => { const l: Record<string,string> = { base: "Nómina Base", extras: "Comp. Adicional", deducciones: "Deducciones" }; return <span className="text-[10px]">{l[value]||value}</span>; }} iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                  <Legend formatter={(value: string) => { const l: Record<string,string> = { base: "Base Payroll", extras: "Additional Comp.", deducciones: "Deductions" }; return <span className="text-[10px]">{l[value]||value}</span>; }} iconSize={8} wrapperStyle={{ fontSize: 10 }} />
                   <Bar dataKey="base" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} name="base" />
                   <Bar dataKey="extras" fill="hsl(var(--earning))" radius={[6, 6, 0, 0]} name="extras" />
                   <Bar dataKey="deducciones" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} name="deducciones" />
@@ -935,10 +935,10 @@ export default function AdminDashboard() {
              <div className="h-7 w-7 rounded-lg bg-primary/[0.08] flex items-center justify-center">
                <Megaphone className="h-3.5 w-3.5 text-primary" />
             </div>
-            <h2 className="text-sm font-semibold font-heading">Comunicados</h2>
+            <h2 className="text-sm font-semibold font-heading">Announcements</h2>
           </div>
           <Link to="/app/announcements" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            Ver todos <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         {feedAnnouncements.length === 0 ? (
@@ -947,8 +947,8 @@ export default function AdminDashboard() {
               <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
                 <Megaphone className="h-5 w-5 opacity-30" />
               </div>
-              <p className="text-xs font-medium">No hay comunicados publicados</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Los comunicados aparecerán aquí</p>
+              <p className="text-xs font-medium">No announcements published</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Announcements will appear here</p>
             </CardContent>
           </Card>
         ) : (
@@ -963,7 +963,7 @@ export default function AdminDashboard() {
                 {a.priority === "urgent" && (
                   <div className="bg-warning/[0.06] px-4 py-1.5 flex items-center gap-1.5 border-b border-warning/10">
                     <AlertTriangle className="h-3 w-3 text-warning" />
-                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgente</span>
+                    <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Urgent</span>
                     </div>
                   )}
                   <CardContent className="p-4 space-y-2">
@@ -974,7 +974,7 @@ export default function AdminDashboard() {
                           <h3 className="text-[13px] font-semibold text-foreground leading-snug">{a.title}</h3>
                         </div>
                         <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                          {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: es })}
+                          {formatDistanceToNow(parseISO(a.published_at), { addSuffix: true, locale: enUS })}
                         </p>
                       </div>
                     </div>
@@ -996,7 +996,7 @@ export default function AdminDashboard() {
                     {a.reaction_count > 0 && (
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 pt-0.5">
                         <ThumbsUp className="h-2.5 w-2.5" />
-                        {a.reaction_count} reacciones
+                        {a.reaction_count} reactions
                       </div>
                     )}
                   </CardContent>
@@ -1014,10 +1014,10 @@ export default function AdminDashboard() {
              <div className="h-7 w-7 rounded-lg bg-warning/[0.08] flex items-center justify-center">
                <Activity className="h-3.5 w-3.5 text-warning" />
             </div>
-            <h2 className="text-sm font-semibold font-heading">Actividad reciente</h2>
+            <h2 className="text-sm font-semibold font-heading">Recent Activity</h2>
           </div>
           <Link to="/app/activity" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         <Card className="rounded-2xl shadow-sm border-border/40">
@@ -1027,7 +1027,7 @@ export default function AdminDashboard() {
                 <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
                   <Activity className="h-4 w-4 opacity-30" />
                 </div>
-                <p className="text-[11px] font-medium">Sin actividad reciente</p>
+                <p className="text-[11px] font-medium">No recent activity</p>
               </div>
             ) : (
               <div className="divide-y divide-border/30">
@@ -1047,17 +1047,17 @@ export default function AdminDashboard() {
             <div className="h-7 w-7 rounded-lg bg-earning/[0.08] flex items-center justify-center">
               <DollarSign className="h-3.5 w-3.5 text-earning" />
             </div>
-            <h2 className="text-sm font-semibold font-heading text-foreground">Compensación</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Compensation</h2>
           </div>
           <Link to="/app/payroll-settings" className="text-[11px] text-primary font-medium hover:underline flex items-center gap-0.5 group">
-            Ver todo <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            View all <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiStatCard label="Cambios de tarifa" value={compKpis.rateChanges} subtitle="este mes" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Pago diario" value={compKpis.dailyPatterns} subtitle="empleados detectados" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Pagos ride" value={compKpis.ridePayments} subtitle="empleados con ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
-          <KpiStatCard label="Alertas" value={compKpis.warnings} subtitle="requieren atención" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Rate changes" value={compKpis.rateChanges} subtitle="this month" icon={TrendingUp} color="warning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Daily pay" value={compKpis.dailyPatterns} subtitle="employees detected" icon={CalendarDays} color="primary" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Ride payments" value={compKpis.ridePayments} subtitle="employees with ride" icon={MapPin} color="earning" onClick={() => navigate("/app/payroll-settings")} />
+          <KpiStatCard label="Alerts" value={compKpis.warnings} subtitle="need attention" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/payroll-settings")} />
         </div>
       </div>
     ),
@@ -1071,7 +1071,7 @@ export default function AdminDashboard() {
   }
 
   if (fetchError) {
-    return <ErrorBlock title="Error al cargar el dashboard" message="No pudimos cargar los datos. Verifica tu conexión e intenta de nuevo." onRetry={() => window.location.reload()} />;
+    return <ErrorBlock title="Error loading dashboard" message="Could not load data. Check your connection and try again." onRetry={() => window.location.reload()} />;
   }
 
   /* ── Global Mode: Platform Overview ── */
@@ -1086,14 +1086,14 @@ export default function AdminDashboard() {
           <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">
             {fullName || "Dashboard"}
           </h1>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">Vista Global — {companies.length} empresas</p>
+          <p className="text-xs text-muted-foreground/70 mt-0.5">Global View — {companies.length} companies</p>
         </div>
 
         {/* Company grid */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-4 w-4 text-warning" />
-            <h2 className="text-sm font-semibold font-heading text-foreground">Selecciona una empresa para operar</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Select a company to operate</h2>
             <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1114,7 +1114,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
                   <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
-                    {c.is_active ? "● Activa" : "○ Inactiva"}
+                    {c.is_active ? "● Active" : "○ Inactive"}
                   </span>
                   <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
                 </div>
@@ -1139,7 +1139,7 @@ export default function AdminDashboard() {
             {fullName || "Dashboard"}
           </h1>
           <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5">
-            <span>{selectedCompany?.name ?? "Selecciona una empresa"}</span>
+            <span>{selectedCompany?.name ?? "Select a company"}</span>
             {stats.activePeriod && (
               <>
                 <span className="text-border">·</span>
@@ -1158,7 +1158,7 @@ export default function AdminDashboard() {
           {stats.activePeriod && (
             <div className="hidden md:flex flex-col gap-2 min-w-[200px] p-3.5 rounded-xl border border-border/40 bg-card shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Periodo</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Period</span>
                 <span className={cn(
                   "text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1",
                   statusColor === 'earning' && "bg-earning/10 text-earning",
@@ -1193,7 +1193,7 @@ export default function AdminDashboard() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-4 w-4 text-warning" />
-            <h2 className="text-sm font-semibold font-heading text-foreground">Empresas</h2>
+            <h2 className="text-sm font-semibold font-heading text-foreground">Companies</h2>
             <Badge variant="outline" className="text-[10px] ml-1">{companies.length}</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1224,12 +1224,12 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     {isSelected && (
-                      <span className="text-[9px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Activa</span>
+                      <span className="text-[9px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Active</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
                     <span className={cn("text-[10px] font-medium", c.is_active ? "text-earning" : "text-muted-foreground")}>
-                      {c.is_active ? "● Activa" : "○ Inactiva"}
+                      {c.is_active ? "● Active" : "○ Inactive"}
                     </span>
                     <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto transition-colors" />
                   </div>
