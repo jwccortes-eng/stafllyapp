@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Star, AlertTriangle, TrendingUp, TrendingDown, Minus, CheckCircle2, Clock, MessageSquare, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, subDays } from "date-fns";
-import { es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { ReviewFormDialog } from "@/components/reviews/ReviewFormDialog";
 import { toast } from "sonner";
 
@@ -48,10 +48,10 @@ interface EntityScore {
 }
 
 const FORM_TYPE_LABELS: Record<string, string> = {
-  captain_to_employee: "Líder → Trabajador",
-  employee_to_captain: "Trabajador → Líder",
-  employee_to_shift: "Experiencia del turno",
-  admin_to_employee: "Admin → Trabajador",
+  captain_to_employee: "Lead → Worker",
+  employee_to_captain: "Worker → Lead",
+  employee_to_shift: "Shift Experience",
+  admin_to_employee: "Admin → Worker",
 };
 
 const SEVERITY_STYLES: Record<string, string> = {
@@ -91,7 +91,6 @@ export default function QualityDashboard() {
       setPendingCount(pendRes.count ?? 0);
       setLoading(false);
 
-      // Fetch employee names for entity IDs
       const entityIds = [...new Set([
         ...((subRes.data ?? []) as any[]).map((s: any) => s.evaluated_entity_id),
         ...((scoreRes.data ?? []) as any[]).map((s: any) => s.entity_id),
@@ -123,14 +122,14 @@ export default function QualityDashboard() {
       .eq("id", flagId);
     if (!error) {
       setFlags(prev => prev.map(f => f.id === flagId ? { ...f, status: "resolved" } : f));
-      toast.success("Alerta resuelta");
+      toast.success("Alert resolved");
     }
   };
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Calidad y Evaluaciones" subtitle="Motor de evaluaciones bidireccionales con muestreo inteligente" />
+        <PageHeader title="Reviews" subtitle="Bidirectional review engine with smart sampling" />
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-24 rounded-xl bg-muted/30 animate-pulse" />
@@ -142,29 +141,29 @@ export default function QualityDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Calidad y Evaluaciones" subtitle="Motor de evaluaciones bidireccionales con muestreo inteligente" />
+      <PageHeader title="Reviews" subtitle="Bidirectional review engine with smart sampling" />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard label="Total Evaluaciones" value={stats.total} icon={<Star className="h-4 w-4" />} />
-        <KpiCard label="Rating Promedio" value={stats.avgRating} icon={<Star className="h-4 w-4" />} />
-        <KpiCard label="Últimos 7 días" value={stats.last7Days} icon={<Clock className="h-4 w-4" />} />
-        <KpiCard label="Ratings Bajos" value={stats.lowCount} icon={<AlertTriangle className="h-4 w-4" />} />
-        <KpiCard label="Alertas Abiertas" value={stats.openFlags} icon={<Flag className="h-4 w-4" />} />
+        <KpiCard label="Total Reviews" value={stats.total} icon={<Star className="h-4 w-4" />} />
+        <KpiCard label="Average Rating" value={stats.avgRating} icon={<Star className="h-4 w-4" />} />
+        <KpiCard label="Last 7 Days" value={stats.last7Days} icon={<Clock className="h-4 w-4" />} />
+        <KpiCard label="Low Ratings" value={stats.lowCount} icon={<AlertTriangle className="h-4 w-4" />} />
+        <KpiCard label="Open Alerts" value={stats.openFlags} icon={<Flag className="h-4 w-4" />} />
       </div>
 
       <Tabs defaultValue="flags" className="space-y-4">
         <TabsList>
           <TabsTrigger value="flags" className="gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5" />
-            Alertas
+            Alerts
             {stats.openFlags > 0 && (
               <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{stats.openFlags}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="recent" className="gap-1.5">
             <MessageSquare className="h-3.5 w-3.5" />
-            Recientes
+            Recent
           </TabsTrigger>
           <TabsTrigger value="scores" className="gap-1.5">
             <TrendingUp className="h-3.5 w-3.5" />
@@ -176,11 +175,11 @@ export default function QualityDashboard() {
         <TabsContent value="flags">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Alertas de Calidad</CardTitle>
+              <CardTitle className="text-sm">Review Alerts</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {flags.filter(f => f.status === "open").length === 0 ? (
-                <p className="text-sm text-muted-foreground/50 text-center py-8">Sin alertas abiertas 🎉</p>
+                <p className="text-sm text-muted-foreground/50 text-center py-8">No open alerts 🎉</p>
               ) : (
                 flags.filter(f => f.status === "open").map(flag => {
                   const sub = submissions.find(s => s.id === flag.submission_id);
@@ -189,18 +188,18 @@ export default function QualityDashboard() {
                     <div key={flag.id} className={cn("flex items-center gap-3 rounded-lg border p-3", SEVERITY_STYLES[flag.severity] || SEVERITY_STYLES.low)}>
                       <AlertTriangle className="h-4 w-4 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold">{flag.flag_type.replace(/_/g, " ")} — {name || "Entidad"}</p>
+                        <p className="text-xs font-semibold">{flag.flag_type.replace(/_/g, " ")} — {name || "Entity"}</p>
                         {sub && (
                           <p className="text-[11px] opacity-70 mt-0.5">
                             Rating: {sub.overall_rating}/5 · {FORM_TYPE_LABELS[sub.review_form_type] || sub.review_form_type}
                             {sub.comment && ` · "${sub.comment.slice(0, 60)}${sub.comment.length > 60 ? "..." : ""}"`}
                           </p>
                         )}
-                        <p className="text-[10px] opacity-50 mt-0.5">{format(new Date(flag.created_at), "dd MMM yyyy HH:mm", { locale: es })}</p>
+                        <p className="text-[10px] opacity-50 mt-0.5">{format(new Date(flag.created_at), "dd MMM yyyy HH:mm", { locale: enUS })}</p>
                       </div>
                       <Button size="sm" variant="ghost" className="text-xs shrink-0" onClick={() => handleResolveFlag(flag.id)}>
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                        Resolver
+                        Resolve
                       </Button>
                     </div>
                   );
@@ -214,11 +213,11 @@ export default function QualityDashboard() {
         <TabsContent value="recent">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Evaluaciones Recientes</CardTitle>
+              <CardTitle className="text-sm">Recent Reviews</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {submissions.length === 0 ? (
-                <p className="text-sm text-muted-foreground/50 text-center py-8">Aún no hay evaluaciones</p>
+                <p className="text-sm text-muted-foreground/50 text-center py-8">No reviews yet</p>
               ) : (
                 submissions.slice(0, 20).map(sub => (
                   <div key={sub.id} className="flex items-center gap-3 rounded-lg border border-border/40 p-3 hover:bg-accent/20 transition-colors">
@@ -237,7 +236,7 @@ export default function QualityDashboard() {
                       )}
                     </div>
                     <span className="text-[10px] text-muted-foreground/40 shrink-0">
-                      {format(new Date(sub.submitted_at), "dd MMM", { locale: es })}
+                      {format(new Date(sub.submitted_at), "dd MMM", { locale: enUS })}
                     </span>
                   </div>
                 ))
@@ -250,18 +249,18 @@ export default function QualityDashboard() {
         <TabsContent value="scores">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Rankings por Puntuación</CardTitle>
+              <CardTitle className="text-sm">Score Rankings</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {scores.length === 0 ? (
-                <p className="text-sm text-muted-foreground/50 text-center py-8">Sin datos suficientes aún</p>
+                <p className="text-sm text-muted-foreground/50 text-center py-8">Not enough data yet</p>
               ) : (
                 scores.map((score, i) => (
                   <div key={score.entity_id + score.score_type} className="flex items-center gap-3 rounded-lg border border-border/40 p-3">
                     <span className="text-xs font-bold text-muted-foreground w-6 text-center">{i + 1}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{employeeNames[score.entity_id] || score.entity_id.slice(0, 8)}</p>
-                      <p className="text-[10px] text-muted-foreground/50">{score.score_count} evaluaciones</p>
+                      <p className="text-[10px] text-muted-foreground/50">{score.score_count} reviews</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <TrendIcon trend={score.trend} />
