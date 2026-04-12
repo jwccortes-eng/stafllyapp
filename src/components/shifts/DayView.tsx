@@ -97,14 +97,32 @@ export function DayView({ currentDay, shifts, assignments, locations, clients, e
           <span>{new Set(assignments.filter(a => dayShifts.some(s => s.id === a.shift_id)).map(a => a.employee_id)).size} trabajadores</span>
         </div>
         {onAddShift && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3 h-8 text-xs gap-1.5 rounded-full border-dashed"
-            onClick={() => onAddShift(format(currentDay, "yyyy-MM-dd"))}
-          >
-            <Plus className="h-3 w-3" /> Agregar turno
-          </Button>
+          onQuickCreate && onOpenFull ? (
+            <QuickCreatePopover
+              date={format(currentDay, "yyyy-MM-dd")}
+              clients={clients}
+              locations={locations as any}
+              onQuickCreate={onQuickCreate}
+              onOpenFull={onOpenFull}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 h-8 text-xs gap-1.5 rounded-full border-dashed"
+              >
+                <Plus className="h-3 w-3" /> Agregar turno
+              </Button>
+            </QuickCreatePopover>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 h-8 text-xs gap-1.5 rounded-full border-dashed"
+              onClick={() => onAddShift(format(currentDay, "yyyy-MM-dd"))}
+            >
+              <Plus className="h-3 w-3" /> Agregar turno
+            </Button>
+          )
         )}
       </div>
 
