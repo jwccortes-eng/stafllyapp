@@ -4,7 +4,13 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Plus, Clock, CheckCircle2 } from "lucide-react";
 import { buildPastelMap, ASSIGNMENT_STATUS_CONFIG } from "./pastel-utils";
+import { QuickCreatePopover } from "./QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
+
+interface QuickCreateData {
+  title: string; date: string; start_time: string; end_time: string;
+  client_id: string; location_id: string; slots: number;
+}
 
 interface WeekViewProps {
   weekDays: Date[];
@@ -17,6 +23,8 @@ interface WeekViewProps {
   onDropOnShift: (shiftId: string, data: string) => void;
   onDuplicateToDay?: (shiftData: any, targetDate: string) => void;
   onAddShift?: (date: string) => void;
+  onQuickCreate?: (data: QuickCreateData) => Promise<void>;
+  onOpenFull?: (data: QuickCreateData) => void;
 }
 
 const DEFAULT_MAX_PILLS = 4;
@@ -24,6 +32,7 @@ const DEFAULT_MAX_PILLS = 4;
 export function WeekView({
   weekDays, shifts, assignments, locations, clients, employees = [],
   onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift,
+  onQuickCreate, onOpenFull,
 }: WeekViewProps) {
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
