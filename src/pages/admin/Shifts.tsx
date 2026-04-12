@@ -1451,6 +1451,13 @@ export default function Shifts() {
               </div>
             </div>
 
+            {/* Section: Repeat */}
+            <ShiftRepeatSection
+              shiftDate={date}
+              config={repeatConfig}
+              onChange={setRepeatConfig}
+            />
+
             {/* Section: Employees */}
             <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
