@@ -872,7 +872,7 @@ export default function AdminDashboard() {
         const item = chartData.find((d: any) => d.label === label);
         return (
           <div className="rounded-xl border border-border/50 bg-card px-3.5 py-2.5 text-xs shadow-xl min-w-[190px]">
-            <p className="font-semibold text-foreground mb-1.5">{label}{item?.pending ? " ⚠ Base pendiente" : ""}</p>
+            <p className="font-semibold text-foreground mb-1.5">{label}{item?.pending ? " ⚠ Base pending" : ""}</p>
             <div className="space-y-1">
               <div className="flex justify-between gap-4"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm inline-block" style={{backgroundColor:"hsl(var(--primary))"}}/>Base Payroll</span><span className="font-mono font-semibold">${(item?.base||0).toLocaleString()}</span></div>
               {(item?.extras||0)>0&&(<>
