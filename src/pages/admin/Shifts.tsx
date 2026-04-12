@@ -410,9 +410,9 @@ export default function Shifts() {
     });
   };
 
-  const createSingleShift = async (shiftDate: string, skipNotifications = false) => {
+  const createSingleShift = async (shiftDate: string, skipNotifications = false, forceDraft = false) => {
     if (!selectedCompanyId) return null;
-    const { data: shift, error } = await supabase.from("scheduled_shifts").insert({
+    const insertData: any = {
       company_id: selectedCompanyId,
       title: title.trim() || "Turno",
       date: shiftDate, start_time: startTime, end_time: endTime,
@@ -431,7 +431,9 @@ export default function Shifts() {
       car_capacity: parseInt(carCapacity) || 4,
       transportation_notes: transportNotes.trim() || null,
       driver_employee_id: driverEmployeeId || null,
-    } as any).select("id, shift_code").single();
+    };
+    if (forceDraft) insertData.status = "draft";
+    const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); return null; }
 
