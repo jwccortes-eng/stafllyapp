@@ -7,9 +7,15 @@ import { Users, Plus, UserX, Search, ChevronDown, ChevronUp } from "lucide-react
 import { Input } from "@/components/ui/input";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { getClientColor, CLIENT_COLORS } from "./types";
+import { QuickCreatePopover } from "./QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { isEmployeeAvailable } from "@/hooks/useEmployeeAvailability";
+
+interface QuickCreateData {
+  title: string; date: string; start_time: string; end_time: string;
+  client_id: string; location_id: string; slots: number;
+}
 
 interface MonthViewProps {
   currentMonth: Date;
@@ -21,6 +27,8 @@ interface MonthViewProps {
   onShiftClick: (shift: Shift) => void;
   onDropOnShift: (shiftId: string, data: string) => void;
   onAddShift?: (date: string) => void;
+  onQuickCreate?: (data: QuickCreateData) => Promise<void>;
+  onOpenFull?: (data: QuickCreateData) => void;
   availabilityConfigs?: AvailabilityConfig[];
   availabilityOverrides?: AvailabilityOverride[];
 }
@@ -28,6 +36,7 @@ interface MonthViewProps {
 export function MonthView({
   currentMonth, shifts, assignments, locations, clients, employees,
   onShiftClick, onDropOnShift, onAddShift,
+  onQuickCreate, onOpenFull,
   availabilityConfigs = [], availabilityOverrides = [],
 }: MonthViewProps) {
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
@@ -286,12 +295,26 @@ export function MonthView({
                         </button>
                       )}
                       {onAddShift && inMonth && allCards.length === 0 && (
-                        <button
-                          onClick={() => onAddShift(format(day, "yyyy-MM-dd"))}
-                          className="w-full flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-md py-0.5 transition-colors"
-                        >
-                          <Plus className="h-2.5 w-2.5" />
-                        </button>
+                        onQuickCreate && onOpenFull ? (
+                          <QuickCreatePopover
+                            date={format(day, "yyyy-MM-dd")}
+                            clients={clients}
+                            locations={locations as any}
+                            onQuickCreate={onQuickCreate}
+                            onOpenFull={onOpenFull}
+                          >
+                            <button className="w-full flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-md py-0.5 transition-colors">
+                              <Plus className="h-2.5 w-2.5" />
+                            </button>
+                          </QuickCreatePopover>
+                        ) : (
+                          <button
+                            onClick={() => onAddShift(format(day, "yyyy-MM-dd"))}
+                            className="w-full flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-md py-0.5 transition-colors"
+                          >
+                            <Plus className="h-2.5 w-2.5" />
+                          </button>
+                        )
                       )}
                     </div>
                   </div>

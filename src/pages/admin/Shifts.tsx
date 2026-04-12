@@ -39,6 +39,8 @@ import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
 import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
 import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
+import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
+import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 
 // Fields that affect ALL assigned employees (broadcast notification)
@@ -163,6 +165,7 @@ export default function Shifts() {
   const [carCapacity, setCarCapacity] = useState("4");
   const [transportNotes, setTransportNotes] = useState("");
   const [driverEmployeeId, setDriverEmployeeId] = useState("");
+  const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
@@ -291,6 +294,7 @@ export default function Shifts() {
     setDayType("full_day"); setShiftAdminId("");
     setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
+    setRepeatConfig(DEFAULT_REPEAT);
   };
 
   // Quick-add client inline
@@ -406,13 +410,12 @@ export default function Shifts() {
     });
   };
 
-  const handleCreate = async () => {
-    if (!date || !selectedCompanyId) return;
-    setSaving(true);
+  const createSingleShift = async (shiftDate: string, skipNotifications = false) => {
+    if (!selectedCompanyId) return null;
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert({
       company_id: selectedCompanyId,
       title: title.trim() || "Turno",
-      date, start_time: startTime, end_time: endTime,
+      date: shiftDate, start_time: startTime, end_time: endTime,
       slots: parseInt(slots) || 1,
       client_id: clientId || null,
       location_id: locationId || null,
@@ -430,9 +433,8 @@ export default function Shifts() {
       driver_employee_id: driverEmployeeId || null,
     } as any).select("id, shift_code").single();
 
-    if (error) { toast.error(error.message); setSaving(false); return; }
+    if (error) { toast.error(error.message); return null; }
 
-    // Update title to include the auto-generated shift code
     if (shift?.shift_code) {
       const code = String(shift.shift_code).padStart(4, "0");
       const finalTitle = title.trim() ? `#${code} ${title.trim()}` : `#${code}`;
@@ -449,10 +451,10 @@ export default function Shifts() {
     }
 
     if (shift) {
-      await logShiftActivity("crear_turno", shift.id, null, { title: title.trim(), date, start_time: startTime, end_time: endTime });
+      await logShiftActivity("crear_turno", shift.id, null, { title: title.trim(), date: shiftDate, start_time: startTime, end_time: endTime });
 
-      // If claimable, notify ALL active employees in the company
-      if (claimable) {
+      // Notifications only for the base shift (not repeated drafts)
+      if (!skipNotifications && claimable) {
         const { data: activeEmps } = await supabase
           .from("employees")
           .select("id")
@@ -460,12 +462,11 @@ export default function Shifts() {
           .eq("is_active", true);
 
         const allEmpIds = (activeEmps ?? []).map(e => e.id);
-        // Exclude already-assigned employees
         const assignedSet = new Set(selectedEmployees);
         const claimRecipients = allEmpIds.filter(id => !assignedSet.has(id));
 
         if (claimRecipients.length > 0) {
-          const dateLabel = new Date(date + "T12:00:00").toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" });
+          const dateLabel = new Date(shiftDate + "T12:00:00").toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" });
           await sendShiftNotifications(
             shift.id,
             title.trim(),
@@ -479,8 +480,77 @@ export default function Shifts() {
       }
     }
 
-    toast.success("Turno creado");
+    return shift;
+  };
+
+  const handleCreate = async () => {
+    if (!date || !selectedCompanyId) return;
+    setSaving(true);
+
+    // Create the base shift (may notify if not repeating)
+    const repeatDates = computeRepeatDates(date, repeatConfig);
+    const isRepeating = repeatConfig.enabled && repeatDates.length > 0;
+
+    const baseShift = await createSingleShift(date, isRepeating);
+    if (!baseShift) { setSaving(false); return; }
+
+    // Create repeated shifts (all as draft, no notifications)
+    if (isRepeating) {
+      const copyAssign = repeatConfig.copyAssignments;
+      // Temporarily clear employees if not copying
+      const savedEmployees = [...selectedEmployees];
+      if (!copyAssign) setSelectedEmployees([]);
+
+      for (const repeatDate of repeatDates) {
+        await createSingleShift(repeatDate, true);
+      }
+
+      if (!copyAssign) setSelectedEmployees(savedEmployees);
+      toast.success(`${repeatDates.length + 1} turnos creados (${repeatDates.length} repetidos en borrador)`);
+    } else {
+      toast.success("Turno creado");
+    }
+
     setSaving(false); setCreateOpen(false); resetForm(); loadData();
+  };
+
+  // Quick create: minimal shift from popover
+  const handleQuickCreate = async (data: { title: string; date: string; start_time: string; end_time: string; client_id: string; location_id: string; slots: number }) => {
+    if (!selectedCompanyId) return;
+    const { data: shift, error } = await supabase.from("scheduled_shifts").insert({
+      company_id: selectedCompanyId,
+      title: data.title,
+      date: data.date,
+      start_time: data.start_time,
+      end_time: data.end_time,
+      slots: data.slots,
+      client_id: data.client_id || null,
+      location_id: data.location_id || null,
+      status: "draft",
+      created_by: user?.id,
+    } as any).select("id, shift_code").single();
+
+    if (error) { toast.error(error.message); return; }
+    if (shift?.shift_code) {
+      const code = String(shift.shift_code).padStart(4, "0");
+      const finalTitle = data.title ? `#${code} ${data.title}` : `#${code}`;
+      await supabase.from("scheduled_shifts").update({ title: finalTitle } as any).eq("id", shift.id);
+    }
+    if (shift) await logShiftActivity("crear_turno", shift.id, null, { title: data.title, date: data.date, quick: true });
+    toast.success("Turno borrador creado");
+    loadData();
+  };
+
+  const handleOpenFullWithPrefill = (data: { title: string; date: string; start_time: string; end_time: string; client_id: string; location_id: string; slots: number }) => {
+    resetForm();
+    setTitle(data.title === "Turno" ? "" : data.title);
+    setDate(data.date);
+    setStartTime(data.start_time);
+    setEndTime(data.end_time);
+    setClientId(data.client_id);
+    setLocationId(data.location_id);
+    setSlots(String(data.slots));
+    setCreateOpen(true);
   };
 
   const handleEditShift = async (shiftId: string, updates: Partial<Shift>, oldShift: Shift) => {
@@ -1025,10 +1095,13 @@ export default function Shifts() {
             assignments={assignments}
             locations={locations}
             clients={clients}
+            employees={employees}
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
             onDuplicateToDay={handleDuplicateToDay}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
+            onQuickCreate={canEdit ? handleQuickCreate : undefined}
+            onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
           />
         ) : viewMode === "week" ? (
           weekViewMode === "job" ? (
@@ -1067,6 +1140,8 @@ export default function Shifts() {
               onDropOnShift={handleDropOnShift}
               onDuplicateToDay={handleDuplicateToDay}
               onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
+              onQuickCreate={canEdit ? handleQuickCreate : undefined}
+              onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
             />
           )
         ) : viewMode === "month" ? (
@@ -1080,6 +1155,8 @@ export default function Shifts() {
             onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
             onDropOnShift={handleDropOnShift}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
+            onQuickCreate={canEdit ? handleQuickCreate : undefined}
+            onOpenFull={canEdit ? handleOpenFullWithPrefill : undefined}
             availabilityConfigs={availConfigs}
             availabilityOverrides={availOverrides}
           />
@@ -1373,6 +1450,13 @@ export default function Shifts() {
                 </div>
               </div>
             </div>
+
+            {/* Section: Repeat */}
+            <ShiftRepeatSection
+              shiftDate={date}
+              config={repeatConfig}
+              onChange={setRepeatConfig}
+            />
 
             {/* Section: Employees */}
             <div className="rounded-xl border border-border/30 bg-card overflow-hidden">

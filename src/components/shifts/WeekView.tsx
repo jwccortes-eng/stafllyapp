@@ -4,7 +4,13 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Plus, Clock, CheckCircle2 } from "lucide-react";
 import { buildPastelMap, ASSIGNMENT_STATUS_CONFIG } from "./pastel-utils";
+import { QuickCreatePopover } from "./QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
+
+interface QuickCreateData {
+  title: string; date: string; start_time: string; end_time: string;
+  client_id: string; location_id: string; slots: number;
+}
 
 interface WeekViewProps {
   weekDays: Date[];
@@ -17,6 +23,8 @@ interface WeekViewProps {
   onDropOnShift: (shiftId: string, data: string) => void;
   onDuplicateToDay?: (shiftData: any, targetDate: string) => void;
   onAddShift?: (date: string) => void;
+  onQuickCreate?: (data: QuickCreateData) => Promise<void>;
+  onOpenFull?: (data: QuickCreateData) => void;
 }
 
 const DEFAULT_MAX_PILLS = 4;
@@ -24,6 +32,7 @@ const DEFAULT_MAX_PILLS = 4;
 export function WeekView({
   weekDays, shifts, assignments, locations, clients, employees = [],
   onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift,
+  onQuickCreate, onOpenFull,
 }: WeekViewProps) {
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
@@ -120,12 +129,26 @@ export function WeekView({
             >
               {d.assigns.length === 0 && d.shifts.length === 0 ? (
                 onAddShift ? (
-                  <button
-                    onClick={() => onAddShift(d.dateStr)}
-                    className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-lg py-6 transition-all"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
+                  onQuickCreate && onOpenFull ? (
+                    <QuickCreatePopover
+                      date={d.dateStr}
+                      clients={clients}
+                      locations={locations as any}
+                      onQuickCreate={onQuickCreate}
+                      onOpenFull={onOpenFull}
+                    >
+                      <button className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-lg py-6 transition-all">
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </QuickCreatePopover>
+                  ) : (
+                    <button
+                      onClick={() => onAddShift(d.dateStr)}
+                      className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-lg py-6 transition-all"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  )
                 ) : (
                   <div className="h-full" />
                 )
@@ -167,12 +190,26 @@ export function WeekView({
                 </button>
               )}
               {onAddShift && d.assigns.length > 0 && (
-                <button
-                  onClick={() => onAddShift(d.dateStr)}
-                  className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all"
-                >
-                  <Plus className="h-2.5 w-2.5" />
-                </button>
+                onQuickCreate && onOpenFull ? (
+                  <QuickCreatePopover
+                    date={d.dateStr}
+                    clients={clients}
+                    locations={locations as any}
+                    onQuickCreate={onQuickCreate}
+                    onOpenFull={onOpenFull}
+                  >
+                    <button className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all">
+                      <Plus className="h-2.5 w-2.5" />
+                    </button>
+                  </QuickCreatePopover>
+                ) : (
+                  <button
+                    onClick={() => onAddShift(d.dateStr)}
+                    className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all"
+                  >
+                    <Plus className="h-2.5 w-2.5" />
+                  </button>
+                )
               )}
             </div>
           );

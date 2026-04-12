@@ -6,8 +6,14 @@ import { cn } from "@/lib/utils";
 import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
 import { buildPastelMap, SHIFT_STATUS_CONFIG } from "./pastel-utils";
 import { getClientColor } from "./types";
+import { QuickCreatePopover } from "./QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 import type { AssignedEmployee } from "./ShiftCard";
+
+interface QuickCreateData {
+  title: string; date: string; start_time: string; end_time: string;
+  client_id: string; location_id: string; slots: number;
+}
 
 interface DayViewProps {
   currentDay: Date;
@@ -20,6 +26,8 @@ interface DayViewProps {
   onDropOnShift: (shiftId: string, data: string) => void;
   onDuplicateToDay?: (shiftData: any, targetDate: string) => void;
   onAddShift?: (date: string) => void;
+  onQuickCreate?: (data: QuickCreateData) => Promise<void>;
+  onOpenFull?: (data: QuickCreateData) => void;
 }
 
 const TIME_GROUP_ICONS: Record<string, React.ReactNode> = {
@@ -28,7 +36,7 @@ const TIME_GROUP_ICONS: Record<string, React.ReactNode> = {
   "Noche": <Moon className="h-3.5 w-3.5 text-indigo-400" />,
 };
 
-export function DayView({ currentDay, shifts, assignments, locations, clients, employees = [], onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift }: DayViewProps) {
+export function DayView({ currentDay, shifts, assignments, locations, clients, employees = [], onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift, onQuickCreate, onOpenFull }: DayViewProps) {
   const dayShifts = shifts
     .filter(s => isSameDay(new Date(s.date + "T00:00:00"), currentDay))
     .sort((a, b) => a.start_time.localeCompare(b.start_time));
@@ -89,14 +97,32 @@ export function DayView({ currentDay, shifts, assignments, locations, clients, e
           <span>{new Set(assignments.filter(a => dayShifts.some(s => s.id === a.shift_id)).map(a => a.employee_id)).size} trabajadores</span>
         </div>
         {onAddShift && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3 h-8 text-xs gap-1.5 rounded-full border-dashed"
-            onClick={() => onAddShift(format(currentDay, "yyyy-MM-dd"))}
-          >
-            <Plus className="h-3 w-3" /> Agregar turno
-          </Button>
+          onQuickCreate && onOpenFull ? (
+            <QuickCreatePopover
+              date={format(currentDay, "yyyy-MM-dd")}
+              clients={clients}
+              locations={locations as any}
+              onQuickCreate={onQuickCreate}
+              onOpenFull={onOpenFull}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 h-8 text-xs gap-1.5 rounded-full border-dashed"
+              >
+                <Plus className="h-3 w-3" /> Agregar turno
+              </Button>
+            </QuickCreatePopover>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 h-8 text-xs gap-1.5 rounded-full border-dashed"
+              onClick={() => onAddShift(format(currentDay, "yyyy-MM-dd"))}
+            >
+              <Plus className="h-3 w-3" /> Agregar turno
+            </Button>
+          )
         )}
       </div>
 
