@@ -129,12 +129,26 @@ export function WeekView({
             >
               {d.assigns.length === 0 && d.shifts.length === 0 ? (
                 onAddShift ? (
-                  <button
-                    onClick={() => onAddShift(d.dateStr)}
-                    className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-lg py-6 transition-all"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
+                  onQuickCreate && onOpenFull ? (
+                    <QuickCreatePopover
+                      date={d.dateStr}
+                      clients={clients}
+                      locations={locations as any}
+                      onQuickCreate={onQuickCreate}
+                      onOpenFull={onOpenFull}
+                    >
+                      <button className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-lg py-6 transition-all">
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </QuickCreatePopover>
+                  ) : (
+                    <button
+                      onClick={() => onAddShift(d.dateStr)}
+                      className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-lg py-6 transition-all"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  )
                 ) : (
                   <div className="h-full" />
                 )
@@ -176,12 +190,26 @@ export function WeekView({
                 </button>
               )}
               {onAddShift && d.assigns.length > 0 && (
-                <button
-                  onClick={() => onAddShift(d.dateStr)}
-                  className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all"
-                >
-                  <Plus className="h-2.5 w-2.5" />
-                </button>
+                onQuickCreate && onOpenFull ? (
+                  <QuickCreatePopover
+                    date={d.dateStr}
+                    clients={clients}
+                    locations={locations as any}
+                    onQuickCreate={onQuickCreate}
+                    onOpenFull={onOpenFull}
+                  >
+                    <button className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all">
+                      <Plus className="h-2.5 w-2.5" />
+                    </button>
+                  </QuickCreatePopover>
+                ) : (
+                  <button
+                    onClick={() => onAddShift(d.dateStr)}
+                    className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/25 hover:text-primary hover:bg-primary/5 rounded-lg py-1 mt-0.5 transition-all"
+                  >
+                    <Plus className="h-2.5 w-2.5" />
+                  </button>
+                )
               )}
             </div>
           );
