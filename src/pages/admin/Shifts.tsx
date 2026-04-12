@@ -39,6 +39,8 @@ import { ShiftEditDialog } from "@/components/shifts/ShiftEditDialog";
 import { ShiftFilters, EMPTY_FILTERS, type ShiftFilterState } from "@/components/shifts/ShiftFilters";
 import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
 import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
+import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
+import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 
 // Fields that affect ALL assigned employees (broadcast notification)
@@ -163,6 +165,7 @@ export default function Shifts() {
   const [carCapacity, setCarCapacity] = useState("4");
   const [transportNotes, setTransportNotes] = useState("");
   const [driverEmployeeId, setDriverEmployeeId] = useState("");
+  const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
