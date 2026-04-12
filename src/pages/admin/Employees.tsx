@@ -52,7 +52,7 @@ import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
-import { es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
 import { ColumnPreferencesDialog, useColumnPreferences, EMPLOYEE_COLUMNS } from "@/components/employee/ColumnPreferencesDialog";
 
@@ -62,30 +62,30 @@ const SENSITIVE_FIELD_KEYS = new Set([
 ]);
 
 const CONNECTEAM_FIELDS: { key: string; label: string; fileCol: string[]; required?: boolean; hidden?: boolean }[] = [
-  { key: "first_name", label: "Nombre", fileCol: ["First name"], required: true },
-  { key: "last_name", label: "Apellido", fileCol: ["Last name"], required: true },
-  { key: "phone_number", label: "Teléfono", fileCol: ["Mobile phone", "Phone"] },
-  { key: "country_code", label: "Código país", fileCol: ["Country code"] },
+  { key: "first_name", label: "First Name", fileCol: ["First name"], required: true },
+  { key: "last_name", label: "Last Name", fileCol: ["Last name"], required: true },
+  { key: "phone_number", label: "Phone", fileCol: ["Mobile phone", "Phone"] },
+  { key: "country_code", label: "Country Code", fileCol: ["Country code"] },
   { key: "email", label: "Email", fileCol: ["Email"] },
-  { key: "birthday", label: "Cumpleaños", fileCol: ["Birthday", "Date of Birth"] },
-  { key: "address", label: "Dirección", fileCol: ["Address"] },
-  { key: "county", label: "Condado", fileCol: ["County"] },
-  { key: "access_pin", label: "PIN de acceso", fileCol: [], hidden: true },
-  { key: "start_date", label: "Fecha inicio", fileCol: ["Start Date"] },
-  { key: "english_level", label: "Nivel inglés", fileCol: ["English Level"] },
-  { key: "employee_role", label: "Rol", fileCol: ["Role"] },
-  { key: "qualify", label: "Calificación", fileCol: ["Qualify"] },
-  { key: "recommended_by", label: "Recomendado por", fileCol: ["Recommended by?"] },
-  { key: "direct_manager", label: "Manager directo", fileCol: ["Direct manager"] },
-  { key: "has_car", label: "¿Tiene carro?", fileCol: ["You have car?"] },
-  { key: "driver_licence", label: "Licencia", fileCol: ["Driver Licence"] },
-  { key: "end_date", label: "Fecha fin", fileCol: ["End Date"] },
-  { key: "date_added", label: "Fecha agregado", fileCol: ["Date added"] },
-  { key: "last_login", label: "Último login", fileCol: ["Last login"] },
+  { key: "birthday", label: "Birthday", fileCol: ["Birthday", "Date of Birth"] },
+  { key: "address", label: "Address", fileCol: ["Address"] },
+  { key: "county", label: "County", fileCol: ["County"] },
+  { key: "access_pin", label: "Access PIN", fileCol: [], hidden: true },
+  { key: "start_date", label: "Start Date", fileCol: ["Start Date"] },
+  { key: "english_level", label: "English Level", fileCol: ["English Level"] },
+  { key: "employee_role", label: "Role", fileCol: ["Role"] },
+  { key: "qualify", label: "Qualification", fileCol: ["Qualify"] },
+  { key: "recommended_by", label: "Recommended By", fileCol: ["Recommended by?"] },
+  { key: "direct_manager", label: "Direct Manager", fileCol: ["Direct manager"] },
+  { key: "has_car", label: "Has Car?", fileCol: ["You have car?"] },
+  { key: "driver_licence", label: "License", fileCol: ["Driver Licence"] },
+  { key: "end_date", label: "End Date", fileCol: ["End Date"] },
+  { key: "date_added", label: "Date Added", fileCol: ["Date added"] },
+  { key: "last_login", label: "Last Login", fileCol: ["Last login"] },
   { key: "connecteam_employee_id", label: "Connecteam ID", fileCol: ["Connecteam User ID"] },
-  { key: "added_via", label: "Agregado vía", fileCol: ["Added via"] },
-  { key: "added_by", label: "Agregado por", fileCol: ["Added by"] },
-  { key: "groups", label: "Grupos", fileCol: ["Groups"] },
+  { key: "added_via", label: "Added Via", fileCol: ["Added via"] },
+  { key: "added_by", label: "Added By", fileCol: ["Added by"] },
+  { key: "groups", label: "Groups", fileCol: ["Groups"] },
   { key: "tags", label: "Tags", fileCol: ["Tags"] },
 ];
 
@@ -136,7 +136,7 @@ function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }:
           {BOOLEAN_FIELDS.has(f.key) ? (
             <div className="flex items-center gap-2 h-8">
               <Checkbox id={`emp-${f.key}`} checked={form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí"} onCheckedChange={c => setForm(prev => ({ ...prev, [f.key]: c ? "Yes" : "No" }))} />
-              <Label htmlFor={`emp-${f.key}`} className="text-xs font-normal cursor-pointer">{form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí" ? "Sí" : "No"}</Label>
+              <Label htmlFor={`emp-${f.key}`} className="text-xs font-normal cursor-pointer">{form[f.key] === "Yes" || form[f.key] === "true" || form[f.key] === "Sí" ? "Yes" : "No"}</Label>
             </div>
           ) : (
             <Input id={`emp-${f.key}`} value={form[f.key] ?? ""} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} required={f.required} className="h-8 text-sm" />
@@ -205,7 +205,7 @@ export default function Employees() {
       });
       fetchEmployees();
     } catch (e: any) {
-      toast({ title: "Error", description: e?.message || "Error de conexión", variant: "destructive" });
+      toast({ title: "Error", description: e?.message || "Connection error", variant: "destructive" });
     } finally {
       setBulkInviting(false);
     }
@@ -257,7 +257,7 @@ export default function Employees() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (atEmployeeLimit) {
-      toast({ title: "Límite alcanzado", description: `Tu plan ${limits.label} permite máximo ${limits.maxEmployees} empleados activos. Actualiza tu plan para agregar más.`, variant: "destructive" });
+      toast({ title: "Limit reached", description: `Your ${limits.label} plan allows up to ${limits.maxEmployees} active employees. Upgrade your plan to add more.`, variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -265,7 +265,7 @@ export default function Employees() {
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado creado" });
+      toast({ title: "Employee created" });
       setOpen(false);
       setForm(emptyForm());
       fetchEmployees();
@@ -554,8 +554,8 @@ export default function Employees() {
       {/* ─── Header ─── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold font-heading tracking-tight">Empleados</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{employees.length} registrados · {statusCounts.active} activos · {statusCounts.invited > 0 ? <span className="text-primary font-medium">{statusCounts.invited} invitados</span> : null}{statusCounts.invited > 0 && statusCounts.pending > 0 ? " · " : ""}{statusCounts.pending > 0 ? <span className="text-warning font-medium">{statusCounts.pending} sin portal</span> : null}</p>
+           <h1 className="text-xl font-bold font-heading tracking-tight">Employees</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{employees.length} registered · {statusCounts.active} active · {statusCounts.invited > 0 ? <span className="text-primary font-medium">{statusCounts.invited} invited</span> : null}{statusCounts.invited > 0 && statusCounts.pending > 0 ? " · " : ""}{statusCounts.pending > 0 ? <span className="text-warning font-medium">{statusCounts.pending} no portal</span> : null}</p>
           {/* ─── DEBUG: Company context badge (temporary migration tool) ─── */}
           {selectedCompany && (
             <div className="mt-1 inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[9px] font-mono text-muted-foreground">
@@ -630,41 +630,41 @@ export default function Employees() {
                           </div>
                         ))}
                       </div>
-                      <div className="flex gap-2"><Button variant="outline" onClick={resetUpdate}>Cancelar</Button><Button onClick={executeUpdateDiffs} disabled={updating || updateDiffs.every(d => !d.selected)}>{updating ? "Procesando..." : `Aplicar a ${updateDiffs.filter(d => d.selected).length}`}</Button></div>
+                      <div className="flex gap-2"><Button variant="outline" onClick={resetUpdate}>Cancel</Button><Button onClick={executeUpdateDiffs} disabled={updating || updateDiffs.every(d => !d.selected)}>{updating ? "Processing..." : `Apply to ${updateDiffs.filter(d => d.selected).length}`}</Button></div>
                     </>
                   )}
                 </div>
               )}
               {updateStep === "done" && updateResult && (
-                <div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{updateResult.updated > 0 && `${updateResult.updated} actualizados`}{updateResult.created && updateResult.created > 0 && ` · ${updateResult.created} creados`}</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Cerrar</Button></div>
+                <div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{updateResult.updated > 0 && `${updateResult.updated} updated`}{updateResult.created && updateResult.created > 0 && ` · ${updateResult.created} created`}</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Close</Button></div>
               )}
             </DialogContent>
           </Dialog>
           {/* Import Dialog */}
           <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImport(); }}>
-            <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs"><Upload className="h-3.5 w-3.5 mr-1.5" />Importar</Button></DialogTrigger>
+            <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs"><Upload className="h-3.5 w-3.5 mr-1.5" />Import</Button></DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Importar empleados</DialogTitle><DialogDescription>Solo crea nuevos, no actualiza existentes</DialogDescription></DialogHeader>
+              <DialogHeader><DialogTitle>Import Employees</DialogTitle><DialogDescription>Only creates new records, does not update existing ones</DialogDescription></DialogHeader>
               {importStep === "upload" && (
                 <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
                   <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-sm text-muted-foreground mb-3">Sube el archivo exportado (Excel o CSV)</p>
+                  <p className="text-sm text-muted-foreground mb-3">Upload the exported file (Excel or CSV)</p>
                   <input type="file" accept=".xls,.xlsx,.csv,.txt" onChange={handleImportFile} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
                 </div>
               )}
               {importStep === "preview" && (
                 <div className="space-y-4">
-                  <div className="flex gap-3 text-sm"><span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">{importPreview.filter(r => !r.exists).length} nuevos</span><span className="bg-muted text-muted-foreground px-3 py-1 rounded-full font-medium">{importPreview.filter(r => r.exists).length} ya existen</span></div>
-                  <div className="max-h-60 overflow-y-auto border rounded-lg"><Table><TableHeader><TableRow><TableHead className="text-xs">Nombre</TableHead><TableHead className="text-xs">Teléfono</TableHead><TableHead className="text-xs">Estado</TableHead></TableRow></TableHeader><TableBody>{importPreview.map((r, i) => (<TableRow key={i} className={r.exists ? "opacity-50" : ""}><TableCell className="text-xs font-medium">{r.first_name} {r.last_name}</TableCell><TableCell className="text-xs">{r.phone_number || "—"}</TableCell><TableCell><span className={`text-xs px-2 py-0.5 rounded-full ${r.exists ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>{r.exists ? "Existe" : "Nuevo"}</span></TableCell></TableRow>))}</TableBody></Table></div>
-                  <div className="flex gap-2"><Button variant="outline" onClick={resetImport}>Cancelar</Button><Button onClick={executeImport} disabled={importing || importPreview.every(r => r.exists)}>{importing ? "Importando..." : `Importar ${importPreview.filter(r => !r.exists).length}`}</Button></div>
+                   <div className="flex gap-3 text-sm"><span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">{importPreview.filter(r => !r.exists).length} new</span><span className="bg-muted text-muted-foreground px-3 py-1 rounded-full font-medium">{importPreview.filter(r => r.exists).length} already exist</span></div>
+                  <div className="max-h-60 overflow-y-auto border rounded-lg"><Table><TableHeader><TableRow><TableHead className="text-xs">Name</TableHead><TableHead className="text-xs">Phone</TableHead><TableHead className="text-xs">Status</TableHead></TableRow></TableHeader><TableBody>{importPreview.map((r, i) => (<TableRow key={i} className={r.exists ? "opacity-50" : ""}><TableCell className="text-xs font-medium">{r.first_name} {r.last_name}</TableCell><TableCell className="text-xs">{r.phone_number || "—"}</TableCell><TableCell><span className={`text-xs px-2 py-0.5 rounded-full ${r.exists ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>{r.exists ? "Exists" : "New"}</span></TableCell></TableRow>))}</TableBody></Table></div>
+                  <div className="flex gap-2"><Button variant="outline" onClick={resetImport}>Cancel</Button><Button onClick={executeImport} disabled={importing || importPreview.every(r => r.exists)}>{importing ? "Importing..." : `Import ${importPreview.filter(r => !r.exists).length}`}</Button></div>
                 </div>
               )}
-              {importStep === "done" && importResult && (<div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{importResult.created} empleados creados</p><Button className="mt-4" onClick={() => { setImportOpen(false); resetImport(); }}>Cerrar</Button></div>)}
+              {importStep === "done" && importResult && (<div className="text-center py-6"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">{importResult.created} employees created</p><Button className="mt-4" onClick={() => { setImportOpen(false); resetImport(); }}>Close</Button></div>)}
             </DialogContent>
           </Dialog>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
-            <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />Nuevo</Button></DialogTrigger>
-            <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Nuevo empleado</DialogTitle><DialogDescription>Ingresa los datos del nuevo empleado</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Límite de ${limits.maxEmployees} empleados`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Crear" />}</DialogContent>
+            <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />New</Button></DialogTrigger>
+            <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter the new employee's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} employees`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
           </Dialog>
         </div>
       </div>
@@ -702,21 +702,21 @@ export default function Employees() {
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre, email, teléfono…" className="pl-8 h-8 text-xs" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, phone…" className="pl-8 h-8 text-xs" />
         </div>
         {uniqueRoles.length > 0 && (
           <Select value={filterRole} onValueChange={setFilterRole}>
-            <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Rol" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">Todos los roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
+             <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
+            <SelectContent><SelectItem value="all">All roles</SelectItem>{uniqueRoles.map(r => (<SelectItem key={r} value={r}>{formatDisplayText(r, "label")}</SelectItem>))}</SelectContent>
           </Select>
         )}
         {uniqueGroups.length > 0 && (
           <Select value={filterGroup} onValueChange={setFilterGroup}>
-            <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Grupo" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">Todos los grupos</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
+             <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
+            <SelectContent><SelectItem value="all">All groups</SelectItem>{uniqueGroups.map(g => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
           </Select>
         )}
-        {activeFilterCount > 0 && <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground px-2" onClick={clearFilters}><X className="h-3 w-3 mr-1" />Limpiar</Button>}
+        {activeFilterCount > 0 && <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground px-2" onClick={clearFilters}><X className="h-3 w-3 mr-1" />Clear</Button>}
         <div className="ml-auto flex items-center gap-1.5">
           <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setColPrefsOpen(true)}>
             <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -735,7 +735,7 @@ export default function Employees() {
       ) : fetchError ? (
         <ErrorBlock compact onRetry={fetchEmployees} />
       ) : filtered.length === 0 ? (
-        <EmptyState icon={Users} title="No hay empleados" description={search ? "Intenta con otro término" : "Agrega tu primer empleado"} />
+        <EmptyState icon={Users} title="No employees" description={search ? "Try a different term" : "Add your first employee"} />
       ) : viewMode === "grid" ? (
         /* ─── Grid View ─── */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
@@ -949,13 +949,13 @@ export default function Employees() {
             {/* Actions bar */}
             <div className="flex items-center gap-1.5 mt-3">
               <Button variant={isEditing ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => { if (isEditing) handleSaveFromSheet(); else setIsEditing(true); }} disabled={loading}>
-                {isEditing ? (loading ? "Guardando…" : "✓ Guardar") : <><Pencil className="h-3 w-3 mr-1" />Editar</>}
+                 {isEditing ? (loading ? "Saving…" : "✓ Save") : <><Pencil className="h-3 w-3 mr-1" />Edit</>}
               </Button>
-              {isEditing && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsEditing(false)}>Cancelar</Button>}
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setInviteOpen(true)}><Send className="h-3 w-3 mr-1" />Invitar</Button>
+              {isEditing && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsEditing(false)}>Cancel</Button>}
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setInviteOpen(true)}><Send className="h-3 w-3 mr-1" />Invite</Button>
               <div className="ml-auto flex items-center gap-0.5">
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
-                  {viewEmployee?.is_active ? <><Archive className="h-3 w-3 mr-1" />Archivar</> : <><UserCheck className="h-3 w-3 mr-1" />Activar</>}
+                  {viewEmployee?.is_active ? <><Archive className="h-3 w-3 mr-1" />Archive</> : <><UserCheck className="h-3 w-3 mr-1" />Activate</>}
                 </Button>
                 <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => { if (viewEmployee) { setDeleteTarget(viewEmployee); setPasswordOpen(true); setViewEmployee(null); } }}>
                   <Trash2 className="h-3 w-3" />
