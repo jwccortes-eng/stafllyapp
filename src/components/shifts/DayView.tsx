@@ -36,7 +36,7 @@ const TIME_GROUP_ICONS: Record<string, React.ReactNode> = {
   "Noche": <Moon className="h-3.5 w-3.5 text-indigo-400" />,
 };
 
-export function DayView({ currentDay, shifts, assignments, locations, clients, employees = [], onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift }: DayViewProps) {
+export function DayView({ currentDay, shifts, assignments, locations, clients, employees = [], onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift, onQuickCreate, onOpenFull }: DayViewProps) {
   const dayShifts = shifts
     .filter(s => isSameDay(new Date(s.date + "T00:00:00"), currentDay))
     .sort((a, b) => a.start_time.localeCompare(b.start_time));
