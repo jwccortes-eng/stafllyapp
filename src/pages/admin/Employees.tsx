@@ -894,7 +894,7 @@ export default function Employees() {
                         if (!e.last_login) return <span className="text-[10px] text-muted-foreground/25">—</span>;
                         const d = parseISO(e.last_login);
                         return isValid(d)
-                          ? <span className="text-[10px] text-muted-foreground/60">{formatDistanceToNow(d, { addSuffix: true, locale: es })}</span>
+                          ? <span className="text-[10px] text-muted-foreground/60">{formatDistanceToNow(d, { addSuffix: true, locale: enUS })}</span>
                           : <span className="text-[10px] text-muted-foreground/25">—</span>;
                       })()}
                     </TableCell>
