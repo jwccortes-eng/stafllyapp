@@ -177,7 +177,9 @@ export function BulkActivationCampaignDialog({ open, onOpenChange, employees, on
   };
 
   const sentCount = results.filter(r => r.status === "sent").length;
+  const emailFailedCount = results.filter(r => r.status === "email_failed").length;
   const failedCount = results.filter(r => r.status === "failed").length;
+  const activatedCount = sentCount + emailFailedCount; // portal activated even if email bounced
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
