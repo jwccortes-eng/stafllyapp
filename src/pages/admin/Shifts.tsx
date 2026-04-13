@@ -75,8 +75,41 @@ export default function Shifts() {
   const { role, hasModuleAccess, user } = useAuth();
   const { selectedCompanyId } = useCompany();
   const { config: payrollConfig } = usePayrollConfig();
+  const { config: shiftsConfig, updateConfig: updateShiftsConfig, loading: shiftsConfigLoading } = useShiftsConfig();
   const payrollWeekStart = payrollConfig.payroll_week_start_day as 0 | 1 | 2 | 3 | 4 | 5 | 6;
   const canEdit = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const shiftSettingsSections: SettingsSection[] = [
+    {
+      title: "Defaults",
+      description: "Pre-fill values when creating new shifts",
+      fields: [
+        { key: "default_start_time", label: "Default start time", type: "time" },
+        { key: "default_end_time", label: "Default end time", type: "time" },
+        { key: "default_slots", label: "Default slots", type: "number", min: 1, max: 50 },
+      ],
+    },
+    {
+      title: "Validation Rules",
+      description: "Requirements before a shift can be created or published",
+      fields: [
+        { key: "require_client", label: "Require client", type: "toggle", description: "Block shift creation without a client assigned" },
+        { key: "require_location", label: "Require location", type: "toggle", description: "Block shift creation without a location assigned" },
+        { key: "max_shift_hours", label: "Max shift duration", type: "number", min: 1, max: 24, suffix: "hours" },
+        { key: "require_shift_admin", label: "Require shift lead", type: "toggle", description: "Must assign a shift admin before publishing" },
+      ],
+    },
+    {
+      title: "Behavior",
+      description: "How shifts behave during creation and scheduling",
+      fields: [
+        { key: "auto_publish", label: "Auto-publish on create", type: "toggle", description: "Skip draft status — publish immediately" },
+        { key: "allow_claims", label: "Allow employee claims", type: "toggle", description: "Enable claimable shifts for workers" },
+        { key: "copy_week_assignments", label: "Copy assignments on week copy", type: "toggle", description: "Include worker assignments when copying a week" },
+      ],
+    },
+  ];
 
   const [searchParams, setSearchParams] = useSearchParams();
   const isInitialized = useRef(false);
