@@ -114,11 +114,11 @@ export default function PortalClock() {
     if (emp) {
       setCompanyId(emp.company_id);
       setHasProfilePhoto(!!emp.avatar_url);
-      const { data: clockPhotoSetting } = await supabase
-        .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_photo").maybeSingle();
-      setClockPhotoRequired(
-        clockPhotoSetting?.value != null && typeof clockPhotoSetting.value === "object" && (clockPhotoSetting.value as any)?.required === true
-      );
+      // Read clock_config (consolidated namespace)
+      const { data: clockCfgRow } = await supabase
+        .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_config").maybeSingle();
+      const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
+      setClockPhotoRequired(clockCfg.require_photo === true);
     }
 
     const today = new Date();
