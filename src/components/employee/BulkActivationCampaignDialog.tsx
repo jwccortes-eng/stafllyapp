@@ -31,7 +31,7 @@ interface SendResult {
   employee_id: string;
   name: string;
   email: string;
-  status: "sent" | "failed" | "skipped";
+  status: "sent" | "email_failed" | "failed" | "skipped";
   error?: string;
 }
 
