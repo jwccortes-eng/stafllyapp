@@ -35,7 +35,6 @@ export default function Auth() {
     if (authLoading || !user || settingUp) return;
 
     const autoSetup = async () => {
-      // Check if this is a self-service signup that needs company setup
       const metaCompanyName = user.user_metadata?.company_name;
       if (metaCompanyName && !needsSetupChecked) {
         setNeedsSetupChecked(true);
@@ -51,28 +50,25 @@ export default function Auth() {
             console.log("[Auth] Company already exists, redirecting...");
           } else if (data?.success) {
             console.log("[Auth] Company created:", data.company_id);
-            toast({ title: "¡Empresa creada!", description: `${metaCompanyName} está lista. Tienes 14 días de prueba Pro.` });
+            toast({ title: "Company created!", description: `${metaCompanyName} is ready. You have a 14-day Pro trial.` });
           }
           window.location.reload();
           return;
         } catch (err: any) {
           console.error("[Auth] Auto-setup error:", err?.message, JSON.stringify(err));
-          toast({ title: "Error configurando empresa", description: err?.message || "Intenta recargar la página.", variant: "destructive" });
+          toast({ title: "Setup error", description: err?.message || "Please try reloading the page.", variant: "destructive" });
         } finally {
           setSettingUp(false);
         }
       }
 
-      // Smart redirect based on access + preferred mode
       if (canAccessAdmin && canAccessPortal) {
-        // Dual access — go to preferred mode
         navigate(activeMode === 'employee' ? "/portal" : "/app");
       } else if (canAccessAdmin) {
         navigate("/app");
       } else if (canAccessPortal) {
         navigate("/portal");
       }
-      // else: user has no access yet — stay on auth
     };
     autoSetup();
   }, [user, role, authLoading, navigate, settingUp, canAccessAdmin, canAccessPortal, activeMode]);
@@ -90,7 +86,7 @@ export default function Auth() {
       }
     } else {
       if (!companyName.trim()) {
-        toast({ title: "Error", description: "Ingresa el nombre de tu empresa", variant: "destructive" });
+        toast({ title: "Error", description: "Enter your company name", variant: "destructive" });
         setLoading(false);
         return;
       }
@@ -105,23 +101,20 @@ export default function Auth() {
       });
       if (error) {
         console.error("[Auth] Signup error:", error.message, error.status, JSON.stringify(error));
-        // Show specific message for "already registered"
         if (error.message?.includes('already registered') || (error as any).status === 422) {
-          toast({ title: "Email ya registrado", description: "Este email ya tiene una cuenta. Intenta iniciar sesión o recupera tu contraseña.", variant: "destructive" });
+          toast({ title: "Email already registered", description: "This email already has an account. Try signing in or reset your password.", variant: "destructive" });
         } else {
-          toast({ title: "Error al registrarse", description: getUserFriendlyError(error), variant: "destructive" });
+          toast({ title: "Signup error", description: getUserFriendlyError(error), variant: "destructive" });
         }
       } else {
         console.log("[Auth] Signup success:", signUpData?.user?.id, "confirmation pending:", !signUpData?.user?.email_confirmed_at);
-        toast({ title: "Cuenta creada", description: "Revisa tu email para confirmar tu cuenta." });
+        toast({ title: "Account created", description: "Check your email to confirm your account." });
       }
     }
     setLoading(false);
   };
 
   const handlePhoneSessionReady = () => {
-    // After phone auth, redirect will happen via the useEffect above
-    // Force a small delay so useAuth can reload
     window.location.reload();
   };
 
@@ -140,14 +133,14 @@ export default function Auth() {
             <ShieldCheck className="h-12 w-12 text-primary/60" />
           </div>
           <h2 className="text-2xl font-bold font-heading text-foreground mb-3 leading-tight tracking-tight">
-            Una cuenta, todo el control.
+            One account, full control.
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
-            Administra tu equipo, revisa tus turnos, ficha y consulta tu nómina. Todo desde una misma cuenta.
+            Manage your team, review shifts, clock in/out, and check payroll — all from a single account.
           </p>
 
           <div className="flex items-center gap-6 mt-8">
-            {["Turnos", "Nómina", "Fichajes", "Multi-empresa"].map((feature) => (
+            {["Shifts", "Payroll", "Time Clock", "Multi-company"].map((feature) => (
               <div key={feature} className="flex items-center gap-1.5">
                 <ShieldCheck className="h-3.5 w-3.5 text-primary/60" />
                 <span className="text-xs text-muted-foreground/70 font-medium">{feature}</span>
@@ -159,7 +152,7 @@ export default function Auth() {
 
       {/* Right — Auth forms */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10">
-        {/* Method toggle — unified, not admin/employee */}
+        {/* Method toggle */}
         <div className="w-full max-w-[400px] mb-6">
           <div className="flex bg-muted/50 rounded-xl p-1 border border-border/40">
             <button
@@ -182,7 +175,7 @@ export default function Auth() {
               }`}
             >
               <Phone className="h-3.5 w-3.5" />
-              Teléfono + PIN
+              Phone + PIN
             </button>
           </div>
         </div>
@@ -202,8 +195,8 @@ export default function Auth() {
             {settingUp && (
               <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-12 text-center space-y-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                <h2 className="text-lg font-semibold font-heading text-foreground">Configurando tu empresa...</h2>
-                <p className="text-sm text-muted-foreground">Estamos preparando todo para que puedas comenzar.</p>
+                <h2 className="text-lg font-semibold font-heading text-foreground">Setting up your company...</h2>
+                <p className="text-sm text-muted-foreground">We're getting everything ready for you.</p>
               </div>
             )}
 
@@ -211,18 +204,18 @@ export default function Auth() {
               <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
                 <div className="text-center space-y-1">
                   <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-                    {isLogin ? "Bienvenido de vuelta" : "Crear cuenta"}
+                    {isLogin ? "Welcome back" : "Create account"}
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    {isLogin ? "Inicia sesión con tu email" : "Completa los datos para registrarte"}
+                    {isLogin ? "Sign in with your email" : "Fill in your details to get started"}
                   </p>
                   {!isLogin && (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full mt-1">
-                      <Sparkles className="h-3 w-3" /> 14 días de prueba Pro gratis
+                      <Sparkles className="h-3 w-3" /> 14-day free Pro trial
                     </span>
                   )}
                   <p className="text-[10px] text-muted-foreground/60 flex items-center justify-center gap-1">
-                    <ShieldCheck className="h-3 w-3" /> Una cuenta · Múltiples roles
+                    <ShieldCheck className="h-3 w-3" /> One account · Multiple roles
                   </p>
                 </div>
 
@@ -230,17 +223,17 @@ export default function Auth() {
                   {!isLogin && (
                     <>
                       <div className="space-y-1.5">
-                        <Label htmlFor="fullName" className="text-xs font-semibold text-foreground/80">Nombre completo</Label>
+                        <Label htmlFor="fullName" className="text-xs font-semibold text-foreground/80">Full name</Label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                          <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre completo" className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors" required />
+                          <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors" required />
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="companyName" className="text-xs font-semibold text-foreground/80">Nombre de tu empresa</Label>
+                        <Label htmlFor="companyName" className="text-xs font-semibold text-foreground/80">Company name</Label>
                         <div className="relative">
                           <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                          <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Mi Empresa LLC" className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors" required />
+                          <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="My Company LLC" className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors" required />
                         </div>
                       </div>
                     </>
@@ -250,12 +243,12 @@ export default function Auth() {
                     <Label htmlFor="email" className="text-xs font-semibold text-foreground/80">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                      <Input id="email" type="email" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="tu@email.com" className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors" required />
+                      <Input id="email" type="email" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="you@email.com" className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors" required />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="password" className="text-xs font-semibold text-foreground/80">Contraseña</Label>
+                    <Label htmlFor="password" className="text-xs font-semibold text-foreground/80">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                       <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors" required minLength={6} />
@@ -266,7 +259,7 @@ export default function Auth() {
                   </div>
 
                   <Button type="submit" className="w-full h-11 text-sm font-semibold rounded-xl shadow-sm mt-2" disabled={loading}>
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : isLogin ? "Iniciar sesión" : "Crear cuenta"}
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : isLogin ? "Sign in" : "Create account"}
                   </Button>
                 </form>
 
@@ -276,7 +269,7 @@ export default function Auth() {
                       type="button"
                       onClick={async () => {
                         if (!identifier.trim()) {
-                          toast({ title: "Email requerido", description: "Ingresa tu email para recuperar tu contraseña", variant: "destructive" });
+                          toast({ title: "Email required", description: "Enter your email to reset your password", variant: "destructive" });
                           return;
                         }
                         setLoading(true);
@@ -285,18 +278,18 @@ export default function Auth() {
                         });
                         setLoading(false);
                         if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-                        else toast({ title: "Email enviado", description: "Revisa tu bandeja de entrada para restablecer tu contraseña." });
+                        else toast({ title: "Email sent", description: "Check your inbox to reset your password." });
                       }}
                       className="text-xs text-muted-foreground hover:text-primary font-medium transition-colors"
                     >
-                      ¿Olvidaste tu contraseña?
+                      Forgot your password?
                     </button>
                   </div>
                 )}
 
                 <div className="text-center pt-1">
                   <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-sm text-primary hover:text-primary/80 font-medium transition-colors">
-                    {isLogin ? "¿No tienes cuenta? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}
+                    {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
                   </button>
                 </div>
               </div>
@@ -304,7 +297,7 @@ export default function Auth() {
 
             <div className="flex items-center justify-center gap-1.5 mt-8 text-muted-foreground/40">
               <Lock className="h-3 w-3" />
-              <span className="text-[11px]">Acceso seguro · staflyapps.com</span>
+              <span className="text-[11px]">Secure access · staflyapps.com</span>
             </div>
           </div>
         )}
