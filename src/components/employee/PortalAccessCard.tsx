@@ -35,7 +35,7 @@ export function PortalAccessCard({ employee, companyName, invitation, onInvite }
           <PortalAccessBadge employee={employee} invitation={invitation} />
         </div>
 
-        {/* Details row */}
+        {/* Details grid */}
         <div className="grid grid-cols-2 gap-2 text-[10px]">
           <div className="bg-muted/30 rounded-lg px-2.5 py-1.5">
             <span className="text-muted-foreground">Teléfono</span>
@@ -47,6 +47,18 @@ export function PortalAccessCard({ employee, companyName, invitation, onInvite }
             <span className="text-muted-foreground">PIN</span>
             <p className={cn("font-medium mt-0.5 font-mono tracking-wider", employee.access_pin ? "text-foreground" : "text-warning")}>
               {employee.access_pin || "Sin PIN"}
+            </p>
+          </div>
+          <div className="bg-muted/30 rounded-lg px-2.5 py-1.5">
+            <span className="text-muted-foreground">Email</span>
+            <p className={cn("font-medium mt-0.5 truncate", employee.email ? "text-foreground" : "text-muted-foreground/50")}>
+              {employee.email || "Sin email"}
+            </p>
+          </div>
+          <div className="bg-muted/30 rounded-lg px-2.5 py-1.5">
+            <span className="text-muted-foreground">Cuenta portal</span>
+            <p className={cn("font-medium mt-0.5", employee.user_id ? "text-[hsl(var(--earning))]" : "text-muted-foreground/50")}>
+              {employee.user_id ? "✓ Vinculada" : "Sin cuenta"}
             </p>
           </div>
         </div>
