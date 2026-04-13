@@ -681,7 +681,7 @@ export default function Employees() {
             <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter the new employee's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} employees`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
           </Dialog>
           <Button size="sm" variant="outline" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
-            <UserPlus className="h-3.5 w-3.5 mr-1.5" />Agregar e invitar
+            <UserPlus className="h-3.5 w-3.5 mr-1.5" />Add & Invite
           </Button>
           <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={fetchEmployees} />
         </div>
@@ -690,11 +690,11 @@ export default function Employees() {
       {/* ─── Status Tabs ─── */}
       <div className="flex items-center gap-0.5 border-b border-border/40">
         {([
-          { key: "active" as const, label: "Portal activo", count: statusCounts.active },
-          { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
-          { key: "pending" as const, label: "Sin portal", count: statusCounts.pending },
-          { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
-          { key: "all" as const, label: "Todos", count: statusCounts.all },
+          { key: "active" as const, label: "Portal active", count: statusCounts.active },
+          { key: "invited" as const, label: "Invited", count: statusCounts.invited },
+          { key: "pending" as const, label: "No portal", count: statusCounts.pending },
+          { key: "inactive" as const, label: "Inactive", count: statusCounts.inactive },
+          { key: "all" as const, label: "All", count: statusCounts.all },
         ]).map(tab => (
           <button
             key={tab.key}
