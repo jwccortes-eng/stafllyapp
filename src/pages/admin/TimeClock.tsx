@@ -208,6 +208,17 @@ export default function TimeClock() {
           compact
         />
       </div>
+
+      <ModuleSettingsSheet
+        open={clockSettingsOpen}
+        onOpenChange={setClockSettingsOpen}
+        title="Configuración de Fichajes"
+        icon={Clock}
+        sections={CLOCK_SETTINGS_SECTIONS}
+        config={clockConfig as unknown as Record<string, unknown>}
+        onUpdate={updateClockConfig}
+        loading={clockConfigLoading}
+      />
     </div>
   );
 }
