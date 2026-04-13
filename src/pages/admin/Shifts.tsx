@@ -902,7 +902,77 @@ export default function Shifts() {
     loadData();
   };
 
-  const toggleEmployee = (id: string) => {
+  const handleCopyWeek = async () => {
+    if (!canEdit || !selectedCompanyId) return;
+    setCopyingWeek(true);
+    const nextWeekStart = addDays(weekStart, 7);
+    const currentWeekShifts = shifts.filter(s => {
+      const sd = new Date(s.date + "T00:00:00");
+      return sd >= weekStart && sd <= addDays(weekStart, 6);
+    });
+    if (currentWeekShifts.length === 0) {
+      toast.error("No shifts to copy in the current week");
+      setCopyingWeek(false);
+      return;
+    }
+    let created = 0;
+    for (const s of currentWeekShifts) {
+      const dayOfWeek = new Date(s.date + "T00:00:00").getDay();
+      const wsDay = weekStart.getDay();
+      const offset = ((dayOfWeek - wsDay) + 7) % 7;
+      const targetDate = format(addDays(nextWeekStart, offset), "yyyy-MM-dd");
+      const { data: newShift, error } = await supabase.from("scheduled_shifts").insert({
+        company_id: selectedCompanyId,
+        title: s.title,
+        date: targetDate,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        slots: s.slots ?? 1,
+        client_id: s.client_id || null,
+        location_id: s.location_id || null,
+        notes: s.notes || null,
+        claimable: s.claimable ?? false,
+        status: "draft",
+        created_by: user?.id,
+        pay_type: s.pay_type || "hourly",
+        meeting_point: s.meeting_point || null,
+        special_instructions: s.special_instructions || null,
+        transportation_required: s.transportation_required ?? false,
+        car_capacity: s.car_capacity ?? 4,
+        transportation_notes: s.transportation_notes || null,
+      } as any).select("id, shift_code").single();
+      if (error) continue;
+      if (newShift?.shift_code) {
+        const originalTitle = s.title.replace(/^#\d{4}\s*/, "");
+        const code = String(newShift.shift_code).padStart(4, "0");
+        await supabase.from("scheduled_shifts")
+          .update({ title: `#${code} ${originalTitle}` } as any)
+          .eq("id", newShift.id);
+      }
+      // Copy assignments
+      const shiftAssigns = assignments.filter(a => a.shift_id === s.id);
+      if (shiftAssigns.length > 0 && newShift) {
+        const newAssigns = shiftAssigns.map(a => ({
+          company_id: selectedCompanyId,
+          shift_id: newShift.id,
+          employee_id: a.employee_id,
+          status: "pending",
+        }));
+        await supabase.from("shift_assignments").insert(newAssigns as any);
+      }
+      if (newShift) {
+        await logShiftActivity("copiar_semana", newShift.id, null, {
+          source_shift: s.id, source_date: s.date, target_date: targetDate,
+        });
+      }
+      created++;
+    }
+    const weekLabel = `${format(nextWeekStart, "MMM d")}–${format(addDays(nextWeekStart, 6), "MMM d")}`;
+    toast.success(`${created} shifts copied to ${weekLabel} as drafts`);
+    setCopyingWeek(false);
+    loadData();
+  };
+
     setSelectedEmployees(prev =>
       prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
     );
