@@ -142,10 +142,20 @@ Deno.serve(async (req) => {
       results.confirm_reminders++;
     }
 
-    // ─── NEW: No clock-in alerts (15 min after shift start) ───
+    // ─── No clock-in alerts (grace_period_minutes after shift start) ───
+    // Read company clock_config for grace period
+    const { data: clockCfgRow } = await supabase
+      .from("company_settings")
+      .select("value")
+      .eq("company_id", company.id)
+      .eq("key", "clock_config")
+      .maybeSingle();
+    const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
+    const gracePeriod = typeof clockCfg.grace_period_minutes === "number" ? clockCfg.grace_period_minutes : 15;
+
     const nowHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00`;
-    const mins15ago = new Date(now.getTime() - 15 * 60000);
-    const t15 = `${String(mins15ago.getHours()).padStart(2, "0")}:${String(mins15ago.getMinutes()).padStart(2, "0")}:00`;
+    const minsAgo = new Date(now.getTime() - gracePeriod * 60000);
+    const tGrace = `${String(minsAgo.getHours()).padStart(2, "0")}:${String(minsAgo.getMinutes()).padStart(2, "0")}:00`;
 
     const { data: startedAssignments } = await supabase
       .from("shift_assignments")
@@ -153,7 +163,7 @@ Deno.serve(async (req) => {
       .in("status", ["confirmed", "accepted", "pending"])
       .eq("scheduled_shifts.date", todayStr)
       .lte("scheduled_shifts.start_time", nowHHMM)
-      .gte("scheduled_shifts.start_time", t15)
+      .gte("scheduled_shifts.start_time", tGrace)
       .is("scheduled_shifts.deleted_at", null) as any;
 
     for (const sa of startedAssignments ?? []) {
