@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { UserPlus, ArrowRight, Loader2, CheckCircle2, Phone, Mail, User, KeyRound } from "lucide-react";
 import { EmployeeInviteDialog } from "./EmployeeInviteDialog";
@@ -22,6 +23,7 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
   const { toast } = useToast();
   const { user } = useAuth();
   const { selectedCompanyId, companies } = useCompany();
+  const { config: onboardingConfig } = useOnboardingConfig();
   const companyName = companies.find(c => c.id === selectedCompanyId)?.name ?? "the company";
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -60,6 +62,11 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     }
     if (!phone.trim()) {
       toast({ title: "Phone required", description: "Required for portal access", variant: "destructive" });
+      return;
+    }
+    // Configurable: require email
+    if (onboardingConfig.require_email && !email.trim()) {
+      toast({ title: "Email required", description: "Your company requires an email for all employees", variant: "destructive" });
       return;
     }
 
