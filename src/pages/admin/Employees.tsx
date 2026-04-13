@@ -593,23 +593,23 @@ export default function Employees() {
           {/* Update Dialog */}
           <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Actualizar</Button>
+              <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Update</Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Actualizar datos de empleados</DialogTitle>
-                <DialogDescription>Sube un archivo Excel o CSV para actualizar la información</DialogDescription>
+                <DialogTitle>Update employee data</DialogTitle>
+                <DialogDescription>Upload an Excel or CSV file to update information</DialogDescription>
               </DialogHeader>
               {updateStep === "upload" && (
                 <div className="space-y-4">
                   <Tabs defaultValue="full" onValueChange={(v) => setUpdateMode(v as "diff" | "full")}>
-                    <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="full">Reemplazo completo</TabsTrigger><TabsTrigger value="diff">Solo cambios</TabsTrigger></TabsList>
-                    <TabsContent value="full"><p className="text-sm text-muted-foreground mb-3">Reemplaza <strong>todos los campos</strong> del empleado con los datos del archivo.</p></TabsContent>
-                    <TabsContent value="diff"><p className="text-sm text-muted-foreground mb-3">Solo actualiza los campos que sean <strong>diferentes</strong>.</p></TabsContent>
+                     <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="full">Full replace</TabsTrigger><TabsTrigger value="diff">Changes only</TabsTrigger></TabsList>
+                    <TabsContent value="full"><p className="text-sm text-muted-foreground mb-3">Replaces <strong>all fields</strong> of the employee with the file data.</p></TabsContent>
+                    <TabsContent value="diff"><p className="text-sm text-muted-foreground mb-3">Only updates fields that are <strong>different</strong>.</p></TabsContent>
                   </Tabs>
                   <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
                     <RefreshCw className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-sm text-muted-foreground mb-3">Sube el archivo con los datos actualizados</p>
+                    <p className="text-sm text-muted-foreground mb-3">Upload the file with updated data</p>
                     <input type="file" accept=".xls,.xlsx,.csv,.txt" onChange={handleUpdateFile} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
                   </div>
                 </div>
@@ -617,12 +617,12 @@ export default function Employees() {
               {updateStep === "preview" && (
                 <div className="space-y-4">
                   {updateDiffs.length === 0 ? (
-                    <div className="text-center py-8"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">No hay cambios</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Cerrar</Button></div>
+                    <div className="text-center py-8"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">No changes found</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Close</Button></div>
                   ) : (
                     <>
                       <div className="flex gap-2 text-sm items-center flex-wrap">
-                        <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">{updateDiffs.filter(d => !d.employeeId.startsWith("__new__")).length} a actualizar</Badge>
-                        {updateDiffs.some(d => d.employeeId.startsWith("__new__")) && <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{updateDiffs.filter(d => d.employeeId.startsWith("__new__")).length} nuevos</Badge>}
+                        <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">{updateDiffs.filter(d => !d.employeeId.startsWith("__new__")).length} to update</Badge>
+                        {updateDiffs.some(d => d.employeeId.startsWith("__new__")) && <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{updateDiffs.filter(d => d.employeeId.startsWith("__new__")).length} new</Badge>}
                       </div>
                       <div className="max-h-[50vh] overflow-y-auto space-y-3">
                         {updateDiffs.map((diff, idx) => (
@@ -630,7 +630,7 @@ export default function Employees() {
                             <div className="flex items-center gap-3 mb-2">
                               <Checkbox checked={diff.selected} onCheckedChange={() => toggleDiffSelected(idx)} />
                               <span className="font-medium text-sm">{diff.name}</span>
-                              <Badge variant="secondary" className="text-xs">{diff.changes.length} campos</Badge>
+                              <Badge variant="secondary" className="text-xs">{diff.changes.length} fields</Badge>
                             </div>
                             <div className="ml-7 space-y-1 max-h-32 overflow-y-auto">
                               {diff.changes.map(c => (
