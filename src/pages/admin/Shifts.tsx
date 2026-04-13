@@ -921,6 +921,7 @@ export default function Shifts() {
       const wsDay = weekStart.getDay();
       const offset = ((dayOfWeek - wsDay) + 7) % 7;
       const targetDate = format(addDays(nextWeekStart, offset), "yyyy-MM-dd");
+      const raw = s as any;
       const { data: newShift, error } = await supabase.from("scheduled_shifts").insert({
         company_id: selectedCompanyId,
         title: s.title,
@@ -934,12 +935,12 @@ export default function Shifts() {
         claimable: s.claimable ?? false,
         status: "draft",
         created_by: user?.id,
-        pay_type: s.pay_type || "hourly",
-        meeting_point: s.meeting_point || null,
-        special_instructions: s.special_instructions || null,
-        transportation_required: s.transportation_required ?? false,
-        car_capacity: s.car_capacity ?? 4,
-        transportation_notes: s.transportation_notes || null,
+        pay_type: raw.pay_type || "hourly",
+        meeting_point: raw.meeting_point || null,
+        special_instructions: raw.special_instructions || null,
+        transportation_required: raw.transportation_required ?? false,
+        car_capacity: raw.car_capacity ?? 4,
+        transportation_notes: raw.transportation_notes || null,
       } as any).select("id, shift_code").single();
       if (error) continue;
       if (newShift?.shift_code) {
