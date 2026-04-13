@@ -794,21 +794,21 @@ export default function Employees() {
             <TableHeader>
               <TableRow className="bg-muted/30 h-8">
                 <TableHead className="w-8 pl-3 pr-0"></TableHead>
-                <TableHead className="text-[10px]">Nombre</TableHead>
+                <TableHead className="text-[10px]">Name</TableHead>
                 {visibleColumns.includes("employer_identification") && <TableHead className="text-[10px] w-[70px]">ID</TableHead>}
-                {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Teléfono</TableHead>}
+                {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Phone</TableHead>}
                 {visibleColumns.includes("email") && <TableHead className="hidden md:table-cell text-[10px]">Email</TableHead>}
-                {visibleColumns.includes("employee_role") && <TableHead className="hidden lg:table-cell text-[10px]">Rol</TableHead>}
-                {visibleColumns.includes("groups") && <TableHead className="hidden xl:table-cell text-[10px]">Grupo</TableHead>}
+                {visibleColumns.includes("employee_role") && <TableHead className="hidden lg:table-cell text-[10px]">Role</TableHead>}
+                {visibleColumns.includes("groups") && <TableHead className="hidden xl:table-cell text-[10px]">Group</TableHead>}
                 {visibleColumns.includes("onboarding_status") && <TableHead className="hidden lg:table-cell text-[10px]">Onboarding</TableHead>}
-                {visibleColumns.includes("address_city") && <TableHead className="hidden xl:table-cell text-[10px]">Ciudad</TableHead>}
-                {visibleColumns.includes("address_state") && <TableHead className="hidden xl:table-cell text-[10px]">Estado</TableHead>}
-                {visibleColumns.includes("can_drive") && <TableHead className="hidden xl:table-cell text-[10px]">Conduce</TableHead>}
-                {visibleColumns.includes("has_vehicle") && <TableHead className="hidden xl:table-cell text-[10px]">Vehículo</TableHead>}
-                {visibleColumns.includes("english_level") && <TableHead className="hidden xl:table-cell text-[10px]">Inglés</TableHead>}
-                {visibleColumns.includes("start_date") && <TableHead className="hidden xl:table-cell text-[10px]">Inicio</TableHead>}
-                {visibleColumns.includes("status") && <TableHead className="text-[10px] w-[80px]">Estado</TableHead>}
-                {visibleColumns.includes("last_login") && <TableHead className="hidden lg:table-cell text-[10px] w-[80px]">Último login</TableHead>}
+                {visibleColumns.includes("address_city") && <TableHead className="hidden xl:table-cell text-[10px]">City</TableHead>}
+                {visibleColumns.includes("address_state") && <TableHead className="hidden xl:table-cell text-[10px]">State</TableHead>}
+                {visibleColumns.includes("can_drive") && <TableHead className="hidden xl:table-cell text-[10px]">Drives</TableHead>}
+                {visibleColumns.includes("has_vehicle") && <TableHead className="hidden xl:table-cell text-[10px]">Vehicle</TableHead>}
+                {visibleColumns.includes("english_level") && <TableHead className="hidden xl:table-cell text-[10px]">English</TableHead>}
+                {visibleColumns.includes("start_date") && <TableHead className="hidden xl:table-cell text-[10px]">Start</TableHead>}
+                {visibleColumns.includes("status") && <TableHead className="text-[10px] w-[80px]">Status</TableHead>}
+                {visibleColumns.includes("last_login") && <TableHead className="hidden lg:table-cell text-[10px] w-[80px]">Last login</TableHead>}
                 <TableHead className="w-8 pr-3"></TableHead>
               </TableRow>
             </TableHeader>
@@ -867,7 +867,7 @@ export default function Employees() {
                   {visibleColumns.includes("onboarding_status") && (
                     <TableCell className="hidden lg:table-cell py-1">
                       <Badge variant={e.onboarding_status === "complete" ? "default" : "secondary"} className="text-[9px] py-0">
-                        {e.onboarding_status === "complete" ? "Completo" : e.onboarding_status === "incomplete" ? "Incompleto" : "Pendiente"}
+                        {e.onboarding_status === "complete" ? "Complete" : e.onboarding_status === "incomplete" ? "Incomplete" : "Pending"}
                       </Badge>
                     </TableCell>
                   )}
@@ -925,13 +925,13 @@ export default function Employees() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem onClick={() => openDetailSheet(e)} className="text-xs"><Eye className="h-3.5 w-3.5 mr-2" />Ver detalle</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setViewEmployee(e); setInviteOpen(true); }} className="text-xs"><Send className="h-3.5 w-3.5 mr-2" />Invitar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openDetailSheet(e)} className="text-xs"><Eye className="h-3.5 w-3.5 mr-2" />View details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setViewEmployee(e); setInviteOpen(true); }} className="text-xs"><Send className="h-3.5 w-3.5 mr-2" />Invite</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => toggleActive(e)} className="text-xs">
-                          {e.is_active ? <><Archive className="h-3.5 w-3.5 mr-2" />Archivar</> : <><UserCheck className="h-3.5 w-3.5 mr-2" />Activar</>}
+                          {e.is_active ? <><Archive className="h-3.5 w-3.5 mr-2" />Archive</> : <><UserCheck className="h-3.5 w-3.5 mr-2" />Activate</>}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive text-xs" onClick={() => { setDeleteTarget(e); setPasswordOpen(true); }}><Trash2 className="h-3.5 w-3.5 mr-2" />Eliminar</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive text-xs" onClick={() => { setDeleteTarget(e); setPasswordOpen(true); }}><Trash2 className="h-3.5 w-3.5 mr-2" />Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
