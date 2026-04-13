@@ -12,6 +12,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
 import { APP_BASE_URL } from "@/lib/app-url";
 import { Button } from "@/components/ui/button";
+import { useClockConfig } from "@/hooks/useClockConfig";
+import { ModuleSettingsSheet, type SettingsSection } from "@/components/settings/ModuleSettingsSheet";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   DropdownMenuSeparator, DropdownMenuLabel,
@@ -22,10 +24,40 @@ import TodayView from "./TodayView";
 import { TimesheetView } from "@/components/timeclock/TimesheetView";
 import { MonthClockView } from "@/components/timeclock/MonthClockView";
 
+const CLOCK_SETTINGS_SECTIONS: SettingsSection[] = [
+  {
+    title: "Métodos de fichaje",
+    description: "Controla cómo los empleados pueden registrar su asistencia",
+    fields: [
+      { key: "require_photo", label: "Requerir foto al fichar", description: "Solicitar foto en cada clock-in/out", type: "toggle" },
+    ],
+  },
+  {
+    title: "Geolocalización",
+    description: "Controla la verificación GPS al fichar",
+    fields: [
+      { key: "gps_enforcement", label: "Modo de geocerca", description: "none = sin verificación, warn = alerta, block = bloquear fichaje", type: "select", options: [
+        { value: "none", label: "Sin verificación" },
+        { value: "warn", label: "Solo alerta" },
+        { value: "block", label: "Bloquear fichaje" },
+      ]},
+      { key: "gps_radius_meters", label: "Radio GPS", description: "Distancia máxima permitida al punto de trabajo", type: "number", min: 50, max: 5000, suffix: "metros" },
+    ],
+  },
+  {
+    title: "Tolerancias",
+    fields: [
+      { key: "grace_period_minutes", label: "Período de gracia", description: "Minutos después del inicio del turno antes de marcar como tardanza", type: "number", min: 0, max: 60, suffix: "minutos" },
+    ],
+  },
+];
+
 export default function TimeClock() {
   usePageView("Time Clock");
   const [activeTab, setActiveTab] = useState("today");
   const [timesheetMode, setTimesheetMode] = useState<"list" | "calendar">("list");
+  const [clockSettingsOpen, setClockSettingsOpen] = useState(false);
+  const { config: clockConfig, updateConfig: updateClockConfig, loading: clockConfigLoading } = useClockConfig();
   const navigate = useNavigate();
 
   return (
