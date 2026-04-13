@@ -233,7 +233,10 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
                   <div className="space-y-1.5">
                     <Label className="text-xs flex items-center gap-1">
                       <Mail className="h-3 w-3" /> Email
-                      <Badge variant="outline" className="text-[8px] ml-1">Optional</Badge>
+                      {onboardingConfig.require_email
+                        ? <span className="text-destructive ml-0.5">*</span>
+                        : <Badge variant="outline" className="text-[8px] ml-1">Optional</Badge>
+                      }
                     </Label>
                     <Input
                       type="email"
