@@ -146,13 +146,13 @@ function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }:
           )}
         </FormField>
       ))}
-      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
+      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Saving..." : submitLabel}</Button>
     </form>
   );
 }
 
 export default function Employees() {
-  usePageView("Empleados");
+  usePageView("Employees");
   const { selectedCompanyId, selectedCompany } = useCompany();
   const { role } = useAuth();
   const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
@@ -211,11 +211,11 @@ export default function Employees() {
       const { data, error } = await supabase.functions.invoke("bulk-portal-invite", {
         body: { company_id: selectedCompanyId },
       });
-      if (error) { toast({ title: "Error", description: "Error al enviar invitaciones", variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: "Failed to send invitations", variant: "destructive" }); return; }
       if (data?.error) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
       toast({
-        title: "Invitaciones enviadas ✅",
-        description: `${data.processed} empleados activados, ${data.emails_sent} emails enviados${data.skipped > 0 ? `, ${data.skipped} omitidos` : ""}`,
+        title: "Invitations sent ✅",
+        description: `${data.processed} employees activated, ${data.emails_sent} emails sent${data.skipped > 0 ? `, ${data.skipped} skipped` : ""}`,
       });
       fetchEmployees();
     } catch (e: any) {
@@ -303,7 +303,7 @@ export default function Employees() {
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado actualizado" });
+      toast({ title: "Employee updated" });
       setEditOpen(false);
       setEditingEmployee(null);
       setForm(emptyForm());
@@ -316,9 +316,9 @@ export default function Employees() {
     if (!deleteTarget) return;
     const { error } = await supabase.from("employees").delete().eq("id", deleteTarget.id);
     if (error) {
-      toast({ title: "Error al eliminar", description: getUserFriendlyError(error), variant: "destructive" });
+      toast({ title: "Delete error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado eliminado" });
+      toast({ title: "Employee deleted" });
       fetchEmployees();
     }
     setDeleteTarget(null);
@@ -340,7 +340,7 @@ export default function Employees() {
 
     if (archiveRec && archiveRec.eligible_for_rehire === false) {
       const proceed = window.confirm(
-        `⚠️ ALERTA: ${emp.first_name} ${emp.last_name} fue marcado como NO RECONTRATABLE.\n\nMotivo: ${archiveRec.reason}\n${archiveRec.notes ? `Notas: ${archiveRec.notes}` : ""}\n\n¿Deseas reactivar de todos modos?`
+        `⚠️ WARNING: ${emp.first_name} ${emp.last_name} was marked as NOT ELIGIBLE FOR REHIRE.\n\nReason: ${archiveRec.reason}\n${archiveRec.notes ? `Notes: ${archiveRec.notes}` : ""}\n\nDo you want to reactivate anyway?`
       );
       if (!proceed) return;
     }
@@ -349,7 +349,7 @@ export default function Employees() {
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado reactivado" });
+      toast({ title: "Employee reactivated" });
       fetchEmployees();
     }
   };
@@ -449,7 +449,7 @@ export default function Employees() {
       if (!existing) {
         if (updateMode === "full") {
           const allChanges = CONNECTEAM_FIELDS.filter(field => row[field.key]?.trim()).map(field => ({ field: field.key, label: field.label, oldVal: "—", newVal: row[field.key] ?? "" }));
-          if (allChanges.length > 0) diffs.push({ employeeId: "__new__" + (row.connecteam_employee_id || row.phone_number || `${row.first_name}_${row.last_name}`), name: `${row.first_name ?? ""} ${row.last_name ?? ""} (NUEVO)`, changes: allChanges, selected: true });
+          if (allChanges.length > 0) diffs.push({ employeeId: "__new__" + (row.connecteam_employee_id || row.phone_number || `${row.first_name}_${row.last_name}`), name: `${row.first_name ?? ""} ${row.last_name ?? ""} (NEW)`, changes: allChanges, selected: true });
         }
         continue;
       }
@@ -500,11 +500,11 @@ export default function Employees() {
     const rows = filtered.map(emp => {
       const row: Record<string, string> = {};
       exportFields.forEach(f => { row[f.label] = emp[f.key] ?? ""; });
-      row["Estado"] = emp.is_active ? "Activo" : "Inactivo";
+      row["Status"] = emp.is_active ? "Active" : "Inactive";
       return row;
     });
-    await writeExcelFile(rows, "Empleados", `empleados_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    toast({ title: "Exportado", description: `${rows.length} empleados exportados a Excel` });
+    await writeExcelFile(rows, "Employees", `employees_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast({ title: "Exported", description: `${rows.length} employees exported to Excel` });
   };
 
   const uniqueRoles = [...new Set(employees.map(e => e.employee_role).filter(Boolean))];
@@ -553,7 +553,7 @@ export default function Employees() {
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado actualizado" });
+      toast({ title: "Employee updated" });
       setIsEditing(false);
       fetchEmployees();
       setViewEmployee(prev => prev ? { ...prev, ...buildInsertData(form) } : prev);
@@ -588,28 +588,28 @@ export default function Employees() {
           )}
           <BulkRateAssignment />
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />Exportar
+            <Download className="h-3.5 w-3.5 mr-1.5" />Export
           </Button>
           {/* Update Dialog */}
           <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Actualizar</Button>
+              <Button variant="outline" size="sm" className="h-8 text-xs"><ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />Update</Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Actualizar datos de empleados</DialogTitle>
-                <DialogDescription>Sube un archivo Excel o CSV para actualizar la información</DialogDescription>
+                <DialogTitle>Update employee data</DialogTitle>
+                <DialogDescription>Upload an Excel or CSV file to update information</DialogDescription>
               </DialogHeader>
               {updateStep === "upload" && (
                 <div className="space-y-4">
                   <Tabs defaultValue="full" onValueChange={(v) => setUpdateMode(v as "diff" | "full")}>
-                    <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="full">Reemplazo completo</TabsTrigger><TabsTrigger value="diff">Solo cambios</TabsTrigger></TabsList>
-                    <TabsContent value="full"><p className="text-sm text-muted-foreground mb-3">Reemplaza <strong>todos los campos</strong> del empleado con los datos del archivo.</p></TabsContent>
-                    <TabsContent value="diff"><p className="text-sm text-muted-foreground mb-3">Solo actualiza los campos que sean <strong>diferentes</strong>.</p></TabsContent>
+                     <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="full">Full replace</TabsTrigger><TabsTrigger value="diff">Changes only</TabsTrigger></TabsList>
+                    <TabsContent value="full"><p className="text-sm text-muted-foreground mb-3">Replaces <strong>all fields</strong> of the employee with the file data.</p></TabsContent>
+                    <TabsContent value="diff"><p className="text-sm text-muted-foreground mb-3">Only updates fields that are <strong>different</strong>.</p></TabsContent>
                   </Tabs>
                   <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
                     <RefreshCw className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-sm text-muted-foreground mb-3">Sube el archivo con los datos actualizados</p>
+                    <p className="text-sm text-muted-foreground mb-3">Upload the file with updated data</p>
                     <input type="file" accept=".xls,.xlsx,.csv,.txt" onChange={handleUpdateFile} className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:font-medium hover:file:bg-primary/90 cursor-pointer" />
                   </div>
                 </div>
@@ -617,12 +617,12 @@ export default function Employees() {
               {updateStep === "preview" && (
                 <div className="space-y-4">
                   {updateDiffs.length === 0 ? (
-                    <div className="text-center py-8"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">No hay cambios</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Cerrar</Button></div>
+                    <div className="text-center py-8"><CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" /><p className="text-lg font-medium">No changes found</p><Button className="mt-4" onClick={() => { setUpdateOpen(false); resetUpdate(); }}>Close</Button></div>
                   ) : (
                     <>
                       <div className="flex gap-2 text-sm items-center flex-wrap">
-                        <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">{updateDiffs.filter(d => !d.employeeId.startsWith("__new__")).length} a actualizar</Badge>
-                        {updateDiffs.some(d => d.employeeId.startsWith("__new__")) && <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{updateDiffs.filter(d => d.employeeId.startsWith("__new__")).length} nuevos</Badge>}
+                        <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">{updateDiffs.filter(d => !d.employeeId.startsWith("__new__")).length} to update</Badge>
+                        {updateDiffs.some(d => d.employeeId.startsWith("__new__")) && <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{updateDiffs.filter(d => d.employeeId.startsWith("__new__")).length} new</Badge>}
                       </div>
                       <div className="max-h-[50vh] overflow-y-auto space-y-3">
                         {updateDiffs.map((diff, idx) => (
@@ -630,7 +630,7 @@ export default function Employees() {
                             <div className="flex items-center gap-3 mb-2">
                               <Checkbox checked={diff.selected} onCheckedChange={() => toggleDiffSelected(idx)} />
                               <span className="font-medium text-sm">{diff.name}</span>
-                              <Badge variant="secondary" className="text-xs">{diff.changes.length} campos</Badge>
+                              <Badge variant="secondary" className="text-xs">{diff.changes.length} fields</Badge>
                             </div>
                             <div className="ml-7 space-y-1 max-h-32 overflow-y-auto">
                               {diff.changes.map(c => (
@@ -681,7 +681,7 @@ export default function Employees() {
             <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter the new employee's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} employees`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
           </Dialog>
           <Button size="sm" variant="outline" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
-            <UserPlus className="h-3.5 w-3.5 mr-1.5" />Agregar e invitar
+            <UserPlus className="h-3.5 w-3.5 mr-1.5" />Add & Invite
           </Button>
           <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={fetchEmployees} />
         </div>
@@ -690,11 +690,11 @@ export default function Employees() {
       {/* ─── Status Tabs ─── */}
       <div className="flex items-center gap-0.5 border-b border-border/40">
         {([
-          { key: "active" as const, label: "Portal activo", count: statusCounts.active },
-          { key: "invited" as const, label: "Invitados", count: statusCounts.invited },
-          { key: "pending" as const, label: "Sin portal", count: statusCounts.pending },
-          { key: "inactive" as const, label: "Inactivos", count: statusCounts.inactive },
-          { key: "all" as const, label: "Todos", count: statusCounts.all },
+          { key: "active" as const, label: "Portal active", count: statusCounts.active },
+          { key: "invited" as const, label: "Invited", count: statusCounts.invited },
+          { key: "pending" as const, label: "No portal", count: statusCounts.pending },
+          { key: "inactive" as const, label: "Inactive", count: statusCounts.inactive },
+          { key: "all" as const, label: "All", count: statusCounts.all },
         ]).map(tab => (
           <button
             key={tab.key}
@@ -794,21 +794,21 @@ export default function Employees() {
             <TableHeader>
               <TableRow className="bg-muted/30 h-8">
                 <TableHead className="w-8 pl-3 pr-0"></TableHead>
-                <TableHead className="text-[10px]">Nombre</TableHead>
+                <TableHead className="text-[10px]">Name</TableHead>
                 {visibleColumns.includes("employer_identification") && <TableHead className="text-[10px] w-[70px]">ID</TableHead>}
-                {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Teléfono</TableHead>}
+                {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Phone</TableHead>}
                 {visibleColumns.includes("email") && <TableHead className="hidden md:table-cell text-[10px]">Email</TableHead>}
-                {visibleColumns.includes("employee_role") && <TableHead className="hidden lg:table-cell text-[10px]">Rol</TableHead>}
-                {visibleColumns.includes("groups") && <TableHead className="hidden xl:table-cell text-[10px]">Grupo</TableHead>}
+                {visibleColumns.includes("employee_role") && <TableHead className="hidden lg:table-cell text-[10px]">Role</TableHead>}
+                {visibleColumns.includes("groups") && <TableHead className="hidden xl:table-cell text-[10px]">Group</TableHead>}
                 {visibleColumns.includes("onboarding_status") && <TableHead className="hidden lg:table-cell text-[10px]">Onboarding</TableHead>}
-                {visibleColumns.includes("address_city") && <TableHead className="hidden xl:table-cell text-[10px]">Ciudad</TableHead>}
-                {visibleColumns.includes("address_state") && <TableHead className="hidden xl:table-cell text-[10px]">Estado</TableHead>}
-                {visibleColumns.includes("can_drive") && <TableHead className="hidden xl:table-cell text-[10px]">Conduce</TableHead>}
-                {visibleColumns.includes("has_vehicle") && <TableHead className="hidden xl:table-cell text-[10px]">Vehículo</TableHead>}
-                {visibleColumns.includes("english_level") && <TableHead className="hidden xl:table-cell text-[10px]">Inglés</TableHead>}
-                {visibleColumns.includes("start_date") && <TableHead className="hidden xl:table-cell text-[10px]">Inicio</TableHead>}
-                {visibleColumns.includes("status") && <TableHead className="text-[10px] w-[80px]">Estado</TableHead>}
-                {visibleColumns.includes("last_login") && <TableHead className="hidden lg:table-cell text-[10px] w-[80px]">Último login</TableHead>}
+                {visibleColumns.includes("address_city") && <TableHead className="hidden xl:table-cell text-[10px]">City</TableHead>}
+                {visibleColumns.includes("address_state") && <TableHead className="hidden xl:table-cell text-[10px]">State</TableHead>}
+                {visibleColumns.includes("can_drive") && <TableHead className="hidden xl:table-cell text-[10px]">Drives</TableHead>}
+                {visibleColumns.includes("has_vehicle") && <TableHead className="hidden xl:table-cell text-[10px]">Vehicle</TableHead>}
+                {visibleColumns.includes("english_level") && <TableHead className="hidden xl:table-cell text-[10px]">English</TableHead>}
+                {visibleColumns.includes("start_date") && <TableHead className="hidden xl:table-cell text-[10px]">Start</TableHead>}
+                {visibleColumns.includes("status") && <TableHead className="text-[10px] w-[80px]">Status</TableHead>}
+                {visibleColumns.includes("last_login") && <TableHead className="hidden lg:table-cell text-[10px] w-[80px]">Last login</TableHead>}
                 <TableHead className="w-8 pr-3"></TableHead>
               </TableRow>
             </TableHeader>
@@ -867,7 +867,7 @@ export default function Employees() {
                   {visibleColumns.includes("onboarding_status") && (
                     <TableCell className="hidden lg:table-cell py-1">
                       <Badge variant={e.onboarding_status === "complete" ? "default" : "secondary"} className="text-[9px] py-0">
-                        {e.onboarding_status === "complete" ? "Completo" : e.onboarding_status === "incomplete" ? "Incompleto" : "Pendiente"}
+                        {e.onboarding_status === "complete" ? "Complete" : e.onboarding_status === "incomplete" ? "Incomplete" : "Pending"}
                       </Badge>
                     </TableCell>
                   )}
@@ -925,13 +925,13 @@ export default function Employees() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem onClick={() => openDetailSheet(e)} className="text-xs"><Eye className="h-3.5 w-3.5 mr-2" />Ver detalle</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setViewEmployee(e); setInviteOpen(true); }} className="text-xs"><Send className="h-3.5 w-3.5 mr-2" />Invitar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openDetailSheet(e)} className="text-xs"><Eye className="h-3.5 w-3.5 mr-2" />View details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setViewEmployee(e); setInviteOpen(true); }} className="text-xs"><Send className="h-3.5 w-3.5 mr-2" />Invite</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => toggleActive(e)} className="text-xs">
-                          {e.is_active ? <><Archive className="h-3.5 w-3.5 mr-2" />Archivar</> : <><UserCheck className="h-3.5 w-3.5 mr-2" />Activar</>}
+                          {e.is_active ? <><Archive className="h-3.5 w-3.5 mr-2" />Archive</> : <><UserCheck className="h-3.5 w-3.5 mr-2" />Activate</>}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive text-xs" onClick={() => { setDeleteTarget(e); setPasswordOpen(true); }}><Trash2 className="h-3.5 w-3.5 mr-2" />Eliminar</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive text-xs" onClick={() => { setDeleteTarget(e); setPasswordOpen(true); }}><Trash2 className="h-3.5 w-3.5 mr-2" />Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -994,15 +994,15 @@ export default function Employees() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
-        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Editar empleado</DialogTitle><DialogDescription>Modifica los datos del empleado</DialogDescription></DialogHeader><EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Guardar cambios" /></DialogContent>
+        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Edit employee</DialogTitle><DialogDescription>Update employee information</DialogDescription></DialogHeader><EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Save changes" /></DialogContent>
       </Dialog>
 
       {/* Delete Confirmation */}
       <PasswordConfirmDialog
         open={passwordOpen}
         onOpenChange={(v) => { setPasswordOpen(v); if (!v) setDeleteTarget(null); }}
-        title="Eliminar empleado"
-        description={`Se eliminará permanentemente a ${deleteTarget?.first_name} ${deleteTarget?.last_name}.`}
+        title="Delete employee"
+        description={`${deleteTarget?.first_name} ${deleteTarget?.last_name} will be permanently deleted.`}
         onConfirm={handleDelete}
       />
 
