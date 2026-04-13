@@ -254,7 +254,7 @@ export function MonthView({
                 const allCards: React.ReactNode[] = [];
                 dayShifts.forEach(shift => {
                   const cards = renderShiftCard(shift);
-                  if (!cards) return; // skip unassigned
+                  if (!cards) return;
                   if (Array.isArray(cards)) allCards.push(...cards);
                   else allCards.push(cards);
                 });
