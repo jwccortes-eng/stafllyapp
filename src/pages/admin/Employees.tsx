@@ -58,6 +58,9 @@ import { enUS } from "date-fns/locale";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
 import { ColumnPreferencesDialog, useColumnPreferences, EMPLOYEE_COLUMNS } from "@/components/employee/ColumnPreferencesDialog";
 import { BulkActivationCampaignDialog } from "@/components/employee/BulkActivationCampaignDialog";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
+import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
+import type { SettingsSection } from "@/components/settings/ModuleSettingsSheet";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -157,8 +160,10 @@ export default function Employees() {
   const { role } = useAuth();
   const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
   const { canAddEmployees, limits, plan } = useSubscription();
+  const { config: onboardingConfig, updateConfig: updateOnboardingConfig, loading: onboardingConfigLoading } = useOnboardingConfig();
   const { invitations, logInvitation, refetch: refetchInvitations } = useEmployeeInvitations(selectedCompanyId ?? null);
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
+  const [onboardingSettingsOpen, setOnboardingSettingsOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [search, setSearch] = useState("");
@@ -684,6 +689,9 @@ export default function Employees() {
             <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
           </Button>
           <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={() => fetchEmployees()} />
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Onboarding settings">
+            <Settings2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -1036,6 +1044,41 @@ export default function Employees() {
       <div className="mt-6">
         <AuditPanel entityType="employee" title="Employee activity" hideViews compact />
       </div>
+
+      {/* Onboarding Settings Sheet */}
+      <ModuleSettingsSheet
+        open={onboardingSettingsOpen}
+        onOpenChange={setOnboardingSettingsOpen}
+        title="Onboarding Settings"
+        icon={Settings2}
+        sections={[
+          {
+            title: "Employee Creation",
+            description: "Requirements when adding new employees",
+            fields: [
+              { key: "require_email", label: "Require email", type: "toggle", description: "Block employee creation without an email address" },
+              { key: "auto_send_invite_on_create", label: "Auto-invite on create", type: "toggle", description: "Automatically open invite dialog after creating an employee" },
+            ],
+          },
+          {
+            title: "Invitations",
+            description: "How employee invitations behave",
+            fields: [
+              { key: "invite_expiry_days", label: "Invitation expiry", type: "number", min: 1, max: 90, suffix: "days" },
+            ],
+          },
+          {
+            title: "Portal",
+            description: "Employee portal experience",
+            fields: [
+              { key: "welcome_message", label: "Welcome message", type: "text", placeholder: "Shown on first portal login" },
+            ],
+          },
+        ] as SettingsSection[]}
+        config={onboardingConfig as any}
+        onUpdate={(partial) => updateOnboardingConfig(partial as any)}
+        loading={onboardingConfigLoading}
+      />
     </div>
   );
 }

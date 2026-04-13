@@ -9,10 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { addDays } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -39,6 +41,7 @@ const STATUS_CONFIG: Record<InviteStatus, { label: string; color: string; icon: 
 export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken: initialToken }: Props) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { config: onboardingConfig } = useOnboardingConfig();
   const { companies, selectedCompanyId } = useCompany();
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -144,6 +147,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
           status: "created" as const,
           sent_by: user.id,
           sent_at: new Date().toISOString(),
+          expires_at: addDays(new Date(), onboardingConfig.invite_expiry_days).toISOString(),
         })
         .select("id, invite_token, status, sent_at, channel")
         .single() as any;
@@ -190,6 +194,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         status: "created" as const,
         sent_by: user.id,
         sent_at: new Date().toISOString(),
+        expires_at: addDays(new Date(), onboardingConfig.invite_expiry_days).toISOString(),
       })
       .select("id, invite_token, status, sent_at, channel")
       .single() as any;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { getUserFriendlyError } from "@/lib/error-helpers";
 import { UserPlus, ArrowRight, Loader2, CheckCircle2, Phone, Mail, User, KeyRound } from "lucide-react";
 import { EmployeeInviteDialog } from "./EmployeeInviteDialog";
@@ -22,6 +23,7 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
   const { toast } = useToast();
   const { user } = useAuth();
   const { selectedCompanyId, companies } = useCompany();
+  const { config: onboardingConfig } = useOnboardingConfig();
   const companyName = companies.find(c => c.id === selectedCompanyId)?.name ?? "the company";
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -52,15 +54,20 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     onOpenChange(v);
   };
 
-  const createEmployee = async () => {
-    if (!selectedCompanyId || !user?.id) return;
+  const createEmployee = async (): Promise<boolean> => {
+    if (!selectedCompanyId || !user?.id) return false;
     if (!firstName.trim()) {
       toast({ title: "Name required", variant: "destructive" });
-      return;
+      return false;
     }
     if (!phone.trim()) {
       toast({ title: "Phone required", description: "Required for portal access", variant: "destructive" });
-      return;
+      return false;
+    }
+    // Configurable: require email
+    if (onboardingConfig.require_email && !email.trim()) {
+      toast({ title: "Email required", description: "Your company requires an email for all employees", variant: "destructive" });
+      return false;
     }
 
     setSaving(true);
@@ -88,7 +95,7 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     if (error) {
       toast({ title: "Error creating employee", description: getUserFriendlyError(error), variant: "destructive" });
       setSaving(false);
-      return;
+      return false;
     }
 
     const emp = data as Record<string, any>;
@@ -96,54 +103,22 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     onEmployeeCreated?.(emp);
     setStep(2);
     setSaving(false);
+    return true;
   };
 
   const handleCreateOnly = async () => {
-    await createEmployee();
+    const success = await createEmployee();
+    // If auto_send_invite_on_create is enabled, auto-open invite after creation
+    if (success && onboardingConfig.auto_send_invite_on_create) {
+      setTimeout(() => setInviteOpen(true), 150);
+    }
   };
 
   const handleCreateAndInvite = async () => {
-    // createEmployee sets step to 2, then we auto-open invite
-    if (!selectedCompanyId || !user?.id) return;
-    if (!firstName.trim() || !phone.trim()) {
-      // Trigger validation via createEmployee
-      await createEmployee();
-      return;
+    const success = await createEmployee();
+    if (success) {
+      setTimeout(() => setInviteOpen(true), 150);
     }
-
-    setSaving(true);
-    const digits = phone.replace(/\D/g, "");
-    const autoPin = digits.length >= 4 ? digits.slice(-4) : String(Math.floor(1000 + Math.random() * 9000));
-
-    const insertData: Record<string, any> = {
-      company_id: selectedCompanyId,
-      first_name: firstName.trim(),
-      last_name: lastName.trim() || null,
-      phone_number: digits,
-      email: email.trim() || null,
-      access_pin: autoPin,
-      is_active: true,
-    };
-
-    const { data, error } = await supabase
-      .from("employees")
-      .insert(insertData as any)
-      .select("id, first_name, last_name, phone_number, email, access_pin, company_id, avatar_url, gender, user_id")
-      .single();
-
-    if (error) {
-      toast({ title: "Error creating employee", description: getUserFriendlyError(error), variant: "destructive" });
-      setSaving(false);
-      return;
-    }
-
-    const emp = data as Record<string, any>;
-    setCreatedEmployee(emp);
-    onEmployeeCreated?.(emp);
-    setStep(2);
-    setSaving(false);
-    // Auto-open invite dialog
-    setTimeout(() => setInviteOpen(true), 150);
   };
 
   const openInviteDialog = () => {
@@ -226,7 +201,10 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
                   <div className="space-y-1.5">
                     <Label className="text-xs flex items-center gap-1">
                       <Mail className="h-3 w-3" /> Email
-                      <Badge variant="outline" className="text-[8px] ml-1">Optional</Badge>
+                      {onboardingConfig.require_email
+                        ? <span className="text-destructive ml-0.5">*</span>
+                        : <Badge variant="outline" className="text-[8px] ml-1">Optional</Badge>
+                      }
                     </Label>
                     <Input
                       type="email"
