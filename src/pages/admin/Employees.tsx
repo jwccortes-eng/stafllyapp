@@ -1044,6 +1044,41 @@ export default function Employees() {
       <div className="mt-6">
         <AuditPanel entityType="employee" title="Employee activity" hideViews compact />
       </div>
+
+      {/* Onboarding Settings Sheet */}
+      <ModuleSettingsSheet
+        open={onboardingSettingsOpen}
+        onOpenChange={setOnboardingSettingsOpen}
+        title="Onboarding Settings"
+        icon={Settings2}
+        sections={[
+          {
+            title: "Employee Creation",
+            description: "Requirements when adding new employees",
+            fields: [
+              { key: "require_email", label: "Require email", type: "toggle", description: "Block employee creation without an email address" },
+              { key: "auto_send_invite_on_create", label: "Auto-invite on create", type: "toggle", description: "Automatically open invite dialog after creating an employee" },
+            ],
+          },
+          {
+            title: "Invitations",
+            description: "How employee invitations behave",
+            fields: [
+              { key: "invite_expiry_days", label: "Invitation expiry", type: "number", min: 1, max: 90, suffix: "days" },
+            ],
+          },
+          {
+            title: "Portal",
+            description: "Employee portal experience",
+            fields: [
+              { key: "welcome_message", label: "Welcome message", type: "text", placeholder: "Shown on first portal login" },
+            ],
+          },
+        ] as SettingsSection[]}
+        config={onboardingConfig as any}
+        onUpdate={(partial) => updateOnboardingConfig(partial as any)}
+        loading={onboardingConfigLoading}
+      />
     </div>
   );
 }
