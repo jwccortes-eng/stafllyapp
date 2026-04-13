@@ -689,6 +689,9 @@ export default function Employees() {
             <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
           </Button>
           <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={() => fetchEmployees()} />
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOnboardingSettingsOpen(true)} title="Onboarding settings">
+            <Settings2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
