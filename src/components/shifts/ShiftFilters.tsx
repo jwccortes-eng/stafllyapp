@@ -20,6 +20,8 @@ interface ShiftFiltersProps {
   onChange: (filters: ShiftFilterState) => void;
   clients: SelectOption[];
   locations?: SelectOption[];
+  /** When false, hides the claimable filter chip */
+  allowClaims?: boolean;
 }
 
 export const EMPTY_FILTERS: ShiftFilterState = {
@@ -31,7 +33,7 @@ export const EMPTY_FILTERS: ShiftFilterState = {
   claimableOnly: false,
 };
 
-export function ShiftFilters({ filters, onChange, clients, locations = [] }: ShiftFiltersProps) {
+export function ShiftFilters({ filters, onChange, clients, locations = [], allowClaims = true }: ShiftFiltersProps) {
   const activeCount = [
     filters.search, filters.clientId, filters.locationId,
     filters.assignedStatus, filters.publishStatus,
@@ -105,20 +107,22 @@ export function ShiftFilters({ filters, onChange, clients, locations = [] }: Shi
         Bloqueado
       </Button>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "h-7 text-[10px] px-2.5 gap-1 rounded-lg transition-all",
-          filters.claimableOnly
-            ? "bg-violet-100 text-violet-600 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-400"
-            : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
-        )}
-        onClick={() => update({ claimableOnly: !filters.claimableOnly })}
-      >
-        <Hand className="h-3 w-3" />
-        Reclamable
-      </Button>
+      {allowClaims && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-7 text-[10px] px-2.5 gap-1 rounded-lg transition-all",
+            filters.claimableOnly
+              ? "bg-violet-100 text-violet-600 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-400"
+              : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
+          )}
+          onClick={() => update({ claimableOnly: !filters.claimableOnly })}
+        >
+          <Hand className="h-3 w-3" />
+          Reclamable
+        </Button>
+      )}
 
       <div className="h-4 w-px bg-border/20 mx-0.5" />
 

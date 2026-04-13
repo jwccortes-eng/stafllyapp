@@ -36,6 +36,8 @@ interface ShiftEditDialogProps {
   employees?: Employee[];
   assignments?: { shift_id: string; employee_id: string; status: string }[];
   onSave: (shiftId: string, updates: Partial<Shift> & Record<string, any>, oldShift: Shift) => Promise<void>;
+  /** When false, hides the claimable checkbox */
+  allowClaims?: boolean;
 }
 
 function SectionCard({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) {
@@ -53,7 +55,7 @@ function SectionCard({ icon: Icon, title, children }: { icon: any; title: string
 }
 
 export function ShiftEditDialog({
-  shift, open, onOpenChange, clients, locations, employees = [], assignments = [], onSave,
+  shift, open, onOpenChange, clients, locations, employees = [], assignments = [], onSave, allowClaims = true,
 }: ShiftEditDialogProps) {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
@@ -270,10 +272,12 @@ export function ShiftEditDialog({
                 <Label className="text-[11px] text-muted-foreground font-medium">Plazas disponibles</Label>
                 <Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm mt-1" />
               </div>
-              <div className="flex items-center gap-2 h-9">
-                <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="edit-claimable" />
-                <Label htmlFor="edit-claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
-              </div>
+              {allowClaims && (
+                <div className="flex items-center gap-2 h-9">
+                  <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="edit-claimable" />
+                  <Label htmlFor="edit-claimable" className="text-xs font-normal cursor-pointer">Permitir reclamo</Label>
+                </div>
+              )}
             </div>
             <div>
               <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
