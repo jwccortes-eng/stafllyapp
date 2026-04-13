@@ -90,6 +90,7 @@ const MODULES = [
   "Automations",
   "Reports / Analytics",
   "UI / UX / Operational Polish",
+  "Product Architecture / Forms / Operations",
 ];
 
 const SPRINTS = [
@@ -102,7 +103,7 @@ const SPRINTS = [
 
 const ORIGINS = ["Connecteam parity", "bug detectado", "mejora interna"];
 
-const COMPANIES = ["JKITCHEN STAFF", "Quality Staff by Keury", "My Staff Solution LLC", "Todas", ""];
+const COMPANIES = ["JKITCHEN STAFF", "Quality Staff by Keury", "My Staff Solution LLC", "Todas", "Multicompany", ""];
 
 // ── Helpers ────────────────────────────────────────────
 type GroupKey = "status" | "sprint" | "priority" | "module" | "affected_company" | "item_type";
