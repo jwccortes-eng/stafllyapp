@@ -91,6 +91,7 @@ export default function PortalClock() {
   const [clockPhotoRequired, setClockPhotoRequired] = useState(false);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [shiftQrModes, setShiftQrModes] = useState<Record<string, string>>({});
+  const [allowedMethods, setAllowedMethods] = useState<string[]>(["manual", "gps", "qr", "kiosk"]);
   const [successState, setSuccessState] = useState<{ type: "in" | "out"; time: string; shift: string } | null>(null);
   const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(false);
 
@@ -119,6 +120,9 @@ export default function PortalClock() {
         .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_config").maybeSingle();
       const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
       setClockPhotoRequired(clockCfg.require_photo === true);
+      if (Array.isArray(clockCfg.allowed_methods) && clockCfg.allowed_methods.length > 0) {
+        setAllowedMethods(clockCfg.allowed_methods as string[]);
+      }
     }
 
     const today = new Date();
@@ -365,7 +369,9 @@ export default function PortalClock() {
   }
 
   const isClockedIn = !!activeEntry;
-  const hasQrShifts = Object.values(shiftQrModes).some(m => m !== "disabled" && m !== "");
+  const hasQrShifts = allowedMethods.includes("qr") && Object.values(shiftQrModes).some(m => m !== "disabled" && m !== "");
+  const allowManual = allowedMethods.includes("manual");
+  const allowGps = allowedMethods.includes("gps");
 
   return (
     <div className="space-y-4 animate-fade-in pb-24">
@@ -535,7 +541,7 @@ export default function PortalClock() {
             Scan QR
           </Button>
         )}
-        {!isClockedIn && (
+        {!isClockedIn && allowManual && (
           <Button variant="ghost" size="sm" className={cn("h-11 text-xs text-muted-foreground gap-1.5", hasQrShifts ? "flex-1" : "w-full")} onClick={() => setRequestOpen(true)}>
             <FileText className="h-3.5 w-3.5" /> Report time
           </Button>
