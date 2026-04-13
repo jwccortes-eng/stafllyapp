@@ -753,21 +753,7 @@ export default function Employees() {
       ) : fetchError ? (
         <ErrorBlock compact onRetry={fetchEmployees} />
       ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="No employees"
-          description={search ? "Try a different term" : "Add your first employee to get started"}
-          action={!search ? (
-            <div className="flex gap-2 mt-2">
-              <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" />New (full form)
-              </Button>
-              <Button size="sm" onClick={() => setQuickAddOpen(true)}>
-                <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
-              </Button>
-            </div>
-          ) : undefined}
-        />
+        <EmptyState icon={Users} title="No employees" description={search ? "Try a different term" : "Use 'Quick add' to create and optionally invite your first employee"} actionLabel={!search ? "Quick add" : undefined} onAction={!search ? () => setQuickAddOpen(true) : undefined} />
       ) : viewMode === "grid" ? (
         /* ─── Grid View ─── */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
