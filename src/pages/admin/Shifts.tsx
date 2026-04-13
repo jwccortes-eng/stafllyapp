@@ -7,6 +7,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { useEmployeeAvailability } from "@/hooks/useEmployeeAvailability";
 import { usePayrollConfig } from "@/hooks/usePayrollConfig";
+import { useShiftsConfig } from "@/hooks/useShiftsConfig";
+import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
+import type { SettingsSection } from "@/components/settings/ModuleSettingsSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +23,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, Copy } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, Copy, Settings2 } from "lucide-react";
 import { formatDisplayText } from "@/lib/format-helpers";
 // PageHeader not used — custom header with KPI cards
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
@@ -72,8 +75,41 @@ export default function Shifts() {
   const { role, hasModuleAccess, user } = useAuth();
   const { selectedCompanyId } = useCompany();
   const { config: payrollConfig } = usePayrollConfig();
+  const { config: shiftsConfig, updateConfig: updateShiftsConfig, loading: shiftsConfigLoading } = useShiftsConfig();
   const payrollWeekStart = payrollConfig.payroll_week_start_day as 0 | 1 | 2 | 3 | 4 | 5 | 6;
   const canEdit = role === "owner" || role === "admin" || hasModuleAccess("shifts", "edit");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const shiftSettingsSections: SettingsSection[] = [
+    {
+      title: "Defaults",
+      description: "Pre-fill values when creating new shifts",
+      fields: [
+        { key: "default_start_time", label: "Default start time", type: "time" },
+        { key: "default_end_time", label: "Default end time", type: "time" },
+        { key: "default_slots", label: "Default slots", type: "number", min: 1, max: 50 },
+      ],
+    },
+    {
+      title: "Validation Rules",
+      description: "Requirements before a shift can be created or published",
+      fields: [
+        { key: "require_client", label: "Require client", type: "toggle", description: "Block shift creation without a client assigned" },
+        { key: "require_location", label: "Require location", type: "toggle", description: "Block shift creation without a location assigned" },
+        { key: "max_shift_hours", label: "Max shift duration", type: "number", min: 1, max: 24, suffix: "hours" },
+        { key: "require_shift_admin", label: "Require shift lead", type: "toggle", description: "Must assign a shift admin before publishing" },
+      ],
+    },
+    {
+      title: "Behavior",
+      description: "How shifts behave during creation and scheduling",
+      fields: [
+        { key: "auto_publish", label: "Auto-publish on create", type: "toggle", description: "Skip draft status — publish immediately" },
+        { key: "allow_claims", label: "Allow employee claims", type: "toggle", description: "Enable claimable shifts for workers" },
+        { key: "copy_week_assignments", label: "Copy assignments on week copy", type: "toggle", description: "Include worker assignments when copying a week" },
+      ],
+    },
+  ];
 
   const [searchParams, setSearchParams] = useSearchParams();
   const isInitialized = useRef(false);
@@ -298,8 +334,11 @@ export default function Shifts() {
   });
 
   const resetForm = () => {
-    setTitle(""); setDate(""); setStartTime("08:00"); setEndTime("17:00");
-    setSlots("1"); setClientId(""); setLocationId(""); setNotes("");
+    setTitle(""); setDate("");
+    setStartTime(shiftsConfig.default_start_time);
+    setEndTime(shiftsConfig.default_end_time);
+    setSlots(String(shiftsConfig.default_slots));
+    setClientId(""); setLocationId(""); setNotes("");
     setClaimable(false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
     setDayType("full_day"); setShiftAdminId("");
@@ -498,6 +537,26 @@ export default function Shifts() {
 
   const handleCreate = async () => {
     if (!date || !selectedCompanyId) return;
+
+    // Configurable validation rules
+    if (shiftsConfig.require_client && !clientId) {
+      toast.error("A client is required to create a shift");
+      return;
+    }
+    if (shiftsConfig.require_location && !locationId) {
+      toast.error("A location is required to create a shift");
+      return;
+    }
+    // Validate max shift hours
+    const [sh, sm] = startTime.split(":").map(Number);
+    const [eh, em] = endTime.split(":").map(Number);
+    let durationMin = (eh * 60 + em) - (sh * 60 + sm);
+    if (durationMin < 0) durationMin += 24 * 60;
+    if (durationMin / 60 > shiftsConfig.max_shift_hours) {
+      toast.error(`Shift duration exceeds the ${shiftsConfig.max_shift_hours}h maximum`);
+      return;
+    }
+
     setSaving(true);
 
     // Create the base shift (may notify if not repeating)
@@ -950,16 +1009,18 @@ export default function Shifts() {
           .update({ title: `#${code} ${originalTitle}` } as any)
           .eq("id", newShift.id);
       }
-      // Copy assignments
-      const shiftAssigns = assignments.filter(a => a.shift_id === s.id);
-      if (shiftAssigns.length > 0 && newShift) {
-        const newAssigns = shiftAssigns.map(a => ({
-          company_id: selectedCompanyId,
-          shift_id: newShift.id,
-          employee_id: a.employee_id,
-          status: "pending",
-        }));
-        await supabase.from("shift_assignments").insert(newAssigns as any);
+      // Copy assignments (respects shifts_config.copy_week_assignments)
+      if (shiftsConfig.copy_week_assignments && newShift) {
+        const shiftAssigns = assignments.filter(a => a.shift_id === s.id);
+        if (shiftAssigns.length > 0) {
+          const newAssigns = shiftAssigns.map(a => ({
+            company_id: selectedCompanyId,
+            shift_id: newShift.id,
+            employee_id: a.employee_id,
+            status: "pending",
+          }));
+          await supabase.from("shift_assignments").insert(newAssigns as any);
+        }
       }
       if (newShift) {
         await logShiftActivity("copiar_semana", newShift.id, null, {
@@ -1021,6 +1082,11 @@ export default function Shifts() {
             <p className="text-xs text-muted-foreground mt-0.5">Programa y gestiona turnos de trabajo</p>
           </div>
           <div className="flex items-center gap-2">
+            {canEdit && (
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Shift settings">
+                <Settings2 className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline" className="h-8 text-xs">
@@ -1712,6 +1778,18 @@ export default function Shifts() {
             setSelectedEmployees(prev => [...prev, newEmp.id]);
           }
         }}
+      />
+
+      {/* Module Settings Sheet */}
+      <ModuleSettingsSheet
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        title="Shift Settings"
+        icon={Settings2}
+        sections={shiftSettingsSections}
+        config={shiftsConfig as any}
+        onUpdate={(partial) => updateShiftsConfig(partial as any)}
+        loading={shiftsConfigLoading}
       />
     </div>
   );
