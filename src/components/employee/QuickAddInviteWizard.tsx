@@ -54,20 +54,20 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     onOpenChange(v);
   };
 
-  const createEmployee = async () => {
-    if (!selectedCompanyId || !user?.id) return;
+  const createEmployee = async (): Promise<boolean> => {
+    if (!selectedCompanyId || !user?.id) return false;
     if (!firstName.trim()) {
       toast({ title: "Name required", variant: "destructive" });
-      return;
+      return false;
     }
     if (!phone.trim()) {
       toast({ title: "Phone required", description: "Required for portal access", variant: "destructive" });
-      return;
+      return false;
     }
     // Configurable: require email
     if (onboardingConfig.require_email && !email.trim()) {
       toast({ title: "Email required", description: "Your company requires an email for all employees", variant: "destructive" });
-      return;
+      return false;
     }
 
     setSaving(true);
@@ -95,7 +95,7 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     if (error) {
       toast({ title: "Error creating employee", description: getUserFriendlyError(error), variant: "destructive" });
       setSaving(false);
-      return;
+      return false;
     }
 
     const emp = data as Record<string, any>;
@@ -103,10 +103,15 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     onEmployeeCreated?.(emp);
     setStep(2);
     setSaving(false);
+    return true;
   };
 
   const handleCreateOnly = async () => {
-    await createEmployee();
+    const success = await createEmployee();
+    // If auto_send_invite_on_create is enabled, auto-open invite after creation
+    if (success && onboardingConfig.auto_send_invite_on_create) {
+      setTimeout(() => setInviteOpen(true), 150);
+    }
   };
 
   const handleCreateAndInvite = async () => {
