@@ -58,6 +58,9 @@ import { enUS } from "date-fns/locale";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
 import { ColumnPreferencesDialog, useColumnPreferences, EMPLOYEE_COLUMNS } from "@/components/employee/ColumnPreferencesDialog";
 import { BulkActivationCampaignDialog } from "@/components/employee/BulkActivationCampaignDialog";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
+import { ModuleSettingsSheet } from "@/components/settings/ModuleSettingsSheet";
+import type { SettingsSection } from "@/components/settings/ModuleSettingsSheet";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -157,8 +160,10 @@ export default function Employees() {
   const { role } = useAuth();
   const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
   const { canAddEmployees, limits, plan } = useSubscription();
+  const { config: onboardingConfig, updateConfig: updateOnboardingConfig, loading: onboardingConfigLoading } = useOnboardingConfig();
   const { invitations, logInvitation, refetch: refetchInvitations } = useEmployeeInvitations(selectedCompanyId ?? null);
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
+  const [onboardingSettingsOpen, setOnboardingSettingsOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [search, setSearch] = useState("");
