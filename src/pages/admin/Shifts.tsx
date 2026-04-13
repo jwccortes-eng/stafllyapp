@@ -973,6 +973,7 @@ export default function Shifts() {
     loadData();
   };
 
+  const toggleEmployee = (id: string) => {
     setSelectedEmployees(prev =>
       prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
     );
