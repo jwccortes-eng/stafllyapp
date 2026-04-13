@@ -203,7 +203,7 @@ export function EmployeeCombobox({
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <Input
           value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar trabajador..."
+          placeholder="Search worker..."
           className="h-7 text-xs pl-8 pr-8"
         />
         {search && (
@@ -216,8 +216,8 @@ export function EmployeeCombobox({
       {/* Filters + bulk row */}
       <div className="flex items-center gap-1 flex-wrap">
         {([
-          { key: "all" as QuickFilter, label: "Todos", count: employees.length },
-          { key: "available" as QuickFilter, label: "Listos", count: readyCount },
+          { key: "all" as QuickFilter, label: "All", count: employees.length },
+          { key: "available" as QuickFilter, label: "Ready", count: readyCount },
           { key: "drivers" as QuickFilter, label: "Drivers", count: driverCount },
         ]).map(f => (
           <button
@@ -240,7 +240,7 @@ export function EmployeeCombobox({
                 onClick={selectAllReady}
                 className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-earning/15 text-earning hover:bg-earning/25 transition-all flex items-center gap-0.5"
               >
-                <Zap className="h-2.5 w-2.5" /> Llenar {remainingSlots != null ? `(${remainingSlots})` : ""}
+                <Zap className="h-2.5 w-2.5" /> Fill {remainingSlots != null ? `(${remainingSlots})` : ""}
               </button>
             )}
             {requiresDriver && (
