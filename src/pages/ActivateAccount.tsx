@@ -451,7 +451,7 @@ export default function ActivateAccount() {
             {invite && (
               <div className="w-full mt-2 rounded-lg border border-border/40 bg-muted/30 px-3 py-2 text-[9px] font-mono space-y-0.5">
                 <div className="flex items-center gap-1.5 font-semibold text-[10px] text-muted-foreground mb-1">
-                  <Shield className="h-3 w-3" /> Validación de empresa
+                  <Shield className="h-3 w-3" /> Company validation
                 </div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Inv. company_id</span><span className="text-foreground">{invite.company_id?.slice(0, 8)}…</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Company name</span><span className="text-foreground font-semibold">{invite.company_name}</span></div>
@@ -470,7 +470,7 @@ export default function ActivateAccount() {
                   <div key={s} className={cn("h-1 rounded-full flex-1 transition-all duration-500", i <= stepIndex ? "bg-primary" : "bg-border")} />
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">Paso {stepIndex + 1} de {totalVisibleSteps}</p>
+              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">Step {stepIndex + 1} of {totalVisibleSteps}</p>
             </div>
           )}
 
@@ -482,41 +482,41 @@ export default function ActivateAccount() {
                   <div className="text-center space-y-2">
                     <Sparkles className="h-6 w-6 text-primary mx-auto" />
                     <h2 className="text-xl font-bold text-foreground">
-                      ¡Hola{invite.employee_first_name ? `, ${invite.employee_first_name}` : ""}!
+                      Hello{invite.employee_first_name ? `, ${invite.employee_first_name}` : ""}!
                     </h2>
-                    <p className="text-sm text-muted-foreground">Completa tu perfil para activar tu portal de empleado</p>
+                    <p className="text-sm text-muted-foreground">Complete your profile to activate your employee portal</p>
                   </div>
 
                   <div className="rounded-xl border border-border/50 bg-muted/20 divide-y divide-border/30">
                     <div className="flex items-center gap-3 px-4 py-3">
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-muted-foreground">Empresa</p>
+                        <p className="text-[10px] text-muted-foreground">Company</p>
                         <p className="text-sm font-semibold text-foreground truncate">{invite.company_name}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 px-4 py-3">
                       <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-muted-foreground">Tu teléfono</p>
+                        <p className="text-[10px] text-muted-foreground">Your phone</p>
                         <p className="text-sm font-semibold text-foreground">{maskedPhone}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 px-4 py-3">
                       <KeyRound className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-muted-foreground">Pasos requeridos</p>
-                        <p className="text-sm font-medium text-foreground">PIN → Perfil → Dirección → Detalles → Foto</p>
+                        <p className="text-[10px] text-muted-foreground">Required steps</p>
+                        <p className="text-sm font-medium text-foreground">PIN → Profile → Address → Details → Photo</p>
                       </div>
                     </div>
                   </div>
 
                   <Button onClick={() => setWizardStep("pin")} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
-                    Comenzar activación <ArrowRight className="h-4 w-4" />
+                    Start activation <ArrowRight className="h-4 w-4" />
                   </Button>
                   <div className="flex items-center gap-1.5 justify-center">
                     <Shield className="h-3 w-3 text-muted-foreground/40" />
-                    <p className="text-[10px] text-muted-foreground/50">Tu información está protegida</p>
+                    <p className="text-[10px] text-muted-foreground/50">Your information is protected</p>
                   </div>
                 </div>
               )}
@@ -526,10 +526,10 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <h2 className="text-lg font-bold text-foreground">
-                      {pinPhase === "create" ? "Crea tu PIN" : "Confirma tu PIN"}
+                      {pinPhase === "create" ? "Create your PIN" : "Confirm your PIN"}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      {pinPhase === "create" ? "Elige un PIN de 4 dígitos para acceder" : "Ingresa el mismo PIN para confirmar"}
+                      {pinPhase === "create" ? "Choose a 4-digit PIN to access your portal" : "Enter the same PIN to confirm"}
                     </p>
                   </div>
                   <div className="flex items-center justify-center gap-2">
@@ -550,8 +550,8 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <User className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Información personal</h2>
-                    <p className="text-xs text-muted-foreground">Datos básicos requeridos</p>
+                    <h2 className="text-lg font-bold">Personal information</h2>
+                    <p className="text-xs text-muted-foreground">Required basic details</p>
                   </div>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
