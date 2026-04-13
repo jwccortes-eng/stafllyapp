@@ -162,31 +162,80 @@ Deno.serve(async (req) => {
 
     for (const emp of employees) {
       try {
-        const pin = extractLast4Digits(emp.phone_number);
-        if (!pin) { skipped++; continue; }
+        // ─── SAFETY: Determine employee state and act accordingly ───
+        const hasActivePortal = !!emp.user_id;
+        const hasPin = !!emp.access_pin;
 
-        // Update employee record with PIN and portal access
-        const { error: updateErr } = await adminClient
-          .from("employees")
-          .update({
-            access_pin: pin,
-            must_change_pin: true,
-            portal_access_enabled: true,
-          })
-          .eq("id", emp.id);
+        // Determine the PIN to use/send
+        let pin: string;
 
-        if (updateErr) {
-          errors.push(`${emp.first_name} ${emp.last_name}: ${updateErr.message}`);
-          skipped++;
-          continue;
-        }
+        if (hasActivePortal) {
+          // CASE 3: Already active portal — DO NOT touch auth or PIN
+          // Only resend the email with their existing PIN
+          pin = emp.access_pin || extractLast4Digits(emp.phone_number) || "0000";
+          // Do NOT update employee record or auth user
+          console.log(`[RESEND] ${emp.first_name} ${emp.last_name} — already active, email-only resend`);
+        } else if (hasPin) {
+          // CASE 2: Previously invited (has PIN) but no user_id — create auth user with existing PIN
+          pin = emp.access_pin;
+          const cleanPhone = emp.phone_number.replace(/[^\d+]/g, "");
+          const empEmail = `emp_${cleanPhone}@employee.internal`;
+          const pwd = AUTH_PWD_PREFIX + pin;
 
-        // Create/update auth user
-        const cleanPhone = emp.phone_number.replace(/[^\d+]/g, "");
-        const empEmail = `emp_${cleanPhone}@employee.internal`;
-        const pwd = AUTH_PWD_PREFIX + pin;
+          const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
+            email: empEmail,
+            password: pwd,
+            email_confirm: true,
+            user_metadata: { full_name: `${emp.first_name} ${emp.last_name}` },
+          });
 
-        if (!emp.user_id) {
+          if (createErr) {
+            // User may already exist — find and link
+            const { data: { users } } = await adminClient.auth.admin.listUsers();
+            const existing = users?.find((u: any) => u.email === empEmail);
+            if (existing) {
+              await adminClient.auth.admin.updateUserById(existing.id, { password: pwd });
+              await adminClient.from("employees").update({ user_id: existing.id }).eq("id", emp.id);
+              const { data: roles } = await adminClient.from("user_roles").select("role").eq("user_id", existing.id).limit(1);
+              if (!roles || roles.length === 0) {
+                await adminClient.from("user_roles").insert({ user_id: existing.id, role: "employee" });
+              }
+            }
+          } else if (newUser?.user) {
+            await adminClient.from("employees").update({ user_id: newUser.user.id }).eq("id", emp.id);
+            const { data: roles } = await adminClient.from("user_roles").select("role").eq("user_id", newUser.user.id).limit(1);
+            if (!roles || roles.length === 0) {
+              await adminClient.from("user_roles").insert({ user_id: newUser.user.id, role: "employee" });
+            }
+          }
+          console.log(`[ACTIVATE-EXISTING-PIN] ${emp.first_name} ${emp.last_name}`);
+        } else {
+          // CASE 1: New employee — generate PIN and create auth user
+          const newPin = extractLast4Digits(emp.phone_number);
+          if (!newPin) { skipped++; continue; }
+          pin = newPin;
+
+          // Set PIN on employee record
+          const { error: updateErr } = await adminClient
+            .from("employees")
+            .update({
+              access_pin: pin,
+              must_change_pin: true,
+              portal_access_enabled: true,
+            })
+            .eq("id", emp.id);
+
+          if (updateErr) {
+            errors.push(`${emp.first_name} ${emp.last_name}: ${updateErr.message}`);
+            skipped++;
+            continue;
+          }
+
+          // Create auth user
+          const cleanPhone = emp.phone_number.replace(/[^\d+]/g, "");
+          const empEmail = `emp_${cleanPhone}@employee.internal`;
+          const pwd = AUTH_PWD_PREFIX + pin;
+
           const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
             email: empEmail,
             password: pwd,
@@ -212,8 +261,7 @@ Deno.serve(async (req) => {
               await adminClient.from("user_roles").insert({ user_id: newUser.user.id, role: "employee" });
             }
           }
-        } else {
-          await adminClient.auth.admin.updateUserById(emp.user_id, { password: pwd });
+          console.log(`[NEW-ACTIVATION] ${emp.first_name} ${emp.last_name}`);
         }
 
         processed++;
@@ -246,14 +294,15 @@ Deno.serve(async (req) => {
 
         // Log the invitation
         try {
+          const inviteStatus = hasActivePortal ? "resent" : "sent";
           await adminClient.from("employee_invitations").insert({
             company_id,
             employee_id: emp.id,
             channel: "email",
-            status: "sent",
+            status: inviteStatus,
             sent_by: caller.id,
             sent_at: new Date().toISOString(),
-            notes: `Bulk activation campaign — ${companyName}`,
+            notes: `Bulk activation campaign — ${companyName}${hasActivePortal ? " (resend)" : ""}`,
           });
         } catch (_) { /* non-critical */ }
       } catch (empErr: any) {
