@@ -704,8 +704,8 @@ export default function ActivateAccount() {
                     )}
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
-                    <Button onClick={goNext} disabled={!isDetailsValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
+                    <Button onClick={goNext} disabled={!isDetailsValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -715,15 +715,15 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <FileText className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Documentos requeridos</h2>
-                    <p className="text-xs text-muted-foreground">Sube tu licencia y registro de vehículo</p>
+                    <h2 className="text-lg font-bold">Required documents</h2>
+                    <p className="text-xs text-muted-foreground">Upload your license and vehicle registration</p>
                   </div>
 
                   <div className="space-y-3">
                     {/* Driver License */}
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
-                        Licencia de conducir <span className="text-destructive">*</span>
+                        Driver's license <span className="text-destructive">*</span>
                         {driverLicenseFile && <CheckCircle2 className="h-3.5 w-3.5 text-earning" />}
                       </Label>
                       <input ref={driverLicenseRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "license")} className="hidden" />
@@ -743,8 +743,8 @@ export default function ActivateAccount() {
                           </div>
                         ) : (
                           <>
-                            <Upload className="h-6 w-6 text-muted-foreground/50" />
-                            <span className="text-xs text-muted-foreground">Toca para subir foto o PDF</span>
+                             <Upload className="h-6 w-6 text-muted-foreground/50" />
+                            <span className="text-xs text-muted-foreground">Tap to upload photo or PDF</span>
                           </>
                         )}
                       </button>
@@ -753,7 +753,7 @@ export default function ActivateAccount() {
                     {/* Vehicle Registration */}
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
-                        Registration del vehículo <span className="text-destructive">*</span>
+                        Vehicle registration <span className="text-destructive">*</span>
                         {vehicleRegFile && <CheckCircle2 className="h-3.5 w-3.5 text-earning" />}
                       </Label>
                       <input ref={vehicleRegRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "registration")} className="hidden" />
@@ -774,7 +774,7 @@ export default function ActivateAccount() {
                         ) : (
                           <>
                             <Upload className="h-6 w-6 text-muted-foreground/50" />
-                            <span className="text-xs text-muted-foreground">Toca para subir foto o PDF</span>
+                            <span className="text-xs text-muted-foreground">Tap to upload photo or PDF</span>
                           </>
                         )}
                       </button>
@@ -784,8 +784,8 @@ export default function ActivateAccount() {
                   {error && <p className="text-xs text-destructive text-center">{error}</p>}
 
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
-                    <Button onClick={goNext} disabled={!isDocsValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
+                    <Button onClick={goNext} disabled={!isDocsValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -794,8 +794,8 @@ export default function ActivateAccount() {
               {wizardStep === "photo" && (
                 <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
-                    <h2 className="text-lg font-bold text-foreground">Foto de perfil</h2>
-                    <p className="text-sm text-muted-foreground">Sube una foto clara de tu rostro para identificarte</p>
+                    <h2 className="text-lg font-bold text-foreground">Profile photo</h2>
+                    <p className="text-sm text-muted-foreground">Upload a clear photo of your face for identification</p>
                   </div>
 
                   <input ref={fileRef} type="file" accept="image/*" capture="user" onChange={handlePhotoSelect} className="hidden" />
@@ -816,16 +816,16 @@ export default function ActivateAccount() {
                   {error && <p className="text-xs text-destructive text-center">{error}</p>}
 
                   <div className="text-[10px] text-muted-foreground bg-muted/20 rounded-xl p-3 space-y-0.5">
-                    <p className="font-semibold text-foreground text-xs mb-1">Requisitos:</p>
-                    <p>✓ Foto clara de tu rostro</p>
-                    <p>✓ Sin lentes de sol ni mascarilla</p>
-                    <p>✓ Buena iluminación</p>
+                     <p className="font-semibold text-foreground text-xs mb-1">Requirements:</p>
+                    <p>✓ Clear photo of your face</p>
+                    <p>✓ No sunglasses or masks</p>
+                    <p>✓ Good lighting</p>
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
                     <Button onClick={handleActivate} disabled={!avatarPreview || busy} className="flex-1 h-12 rounded-xl text-base font-semibold gap-2">
-                      {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Activando...</> : <>Activar mi cuenta <ArrowRight className="h-4 w-4" /></>}
+                      {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Activating...</> : <>Activate my account <ArrowRight className="h-4 w-4" /></>}
                     </Button>
                   </div>
                 </div>
