@@ -607,13 +607,13 @@ export default function ActivateAccount() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Ciudad <span className="text-destructive">*</span></Label>
+                        <Label className="text-xs">City <span className="text-destructive">*</span></Label>
                         <Input value={profileForm.address_city} onChange={e => updateForm("address_city", e.target.value)} placeholder="Miami" className="h-9 text-sm" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Estado <span className="text-destructive">*</span></Label>
+                        <Label className="text-xs">State <span className="text-destructive">*</span></Label>
                         <Select value={profileForm.address_state} onValueChange={v => updateForm("address_state", v)}>
-                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Estado" /></SelectTrigger>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="State" /></SelectTrigger>
                           <SelectContent>{US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
@@ -624,8 +624,8 @@ export default function ActivateAccount() {
                     </div>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
-                    <Button onClick={goNext} disabled={!isAddressValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
+                    <Button onClick={goNext} disabled={!isAddressValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -635,22 +635,22 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <Heart className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Detalles adicionales</h2>
-                    <p className="text-xs text-muted-foreground">Contacto de emergencia y disponibilidad</p>
+                    <h2 className="text-lg font-bold">Additional details</h2>
+                    <p className="text-xs text-muted-foreground">Emergency contact and availability</p>
                   </div>
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Contacto de emergencia <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.emergency_contact_name} onChange={e => updateForm("emergency_contact_name", e.target.value)} placeholder="Nombre del contacto" className="h-9 text-sm" />
+                      <Label className="text-xs">Emergency contact <span className="text-destructive">*</span></Label>
+                      <Input value={profileForm.emergency_contact_name} onChange={e => updateForm("emergency_contact_name", e.target.value)} placeholder="Contact name" className="h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Teléfono de emergencia <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">Emergency phone <span className="text-destructive">*</span></Label>
                       <Input value={profileForm.emergency_contact_phone} onChange={e => updateForm("emergency_contact_phone", e.target.value)} placeholder="+1 (305) 555-0123" className="h-9 text-sm" />
                     </div>
 
                     {/* Languages */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Idiomas</Label>
+                      <Label className="text-xs">Languages</Label>
                       <div className="flex flex-wrap gap-1.5">
                         {LANGUAGES.map(lang => (
                           <button
@@ -681,14 +681,14 @@ export default function ActivateAccount() {
                       <div className="flex items-center justify-between px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Car className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">¿Puedes conducir?</span>
+                          <span className="text-sm">Can you drive?</span>
                         </div>
                         <Switch checked={profileForm.can_drive} onCheckedChange={v => updateForm("can_drive", v)} />
                       </div>
                       <div className="flex items-center justify-between px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Car className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">¿Tienes vehículo?</span>
+                          <span className="text-sm">Do you have a vehicle?</span>
                         </div>
                         <Switch checked={profileForm.has_vehicle} onCheckedChange={v => updateForm("has_vehicle", v)} />
                       </div>
@@ -698,7 +698,7 @@ export default function ActivateAccount() {
                       <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/20 p-3">
                         <AlertTriangle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                         <p className="text-xs text-primary">
-                          Como tienes vehículo, en el siguiente paso necesitarás subir tu <strong>licencia de conducir</strong> y el <strong>registration del vehículo</strong>.
+                          Since you have a vehicle, you'll need to upload your <strong>driver's license</strong> and <strong>vehicle registration</strong> in the next step.
                         </p>
                       </div>
                     )}
