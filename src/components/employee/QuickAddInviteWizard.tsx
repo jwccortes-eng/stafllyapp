@@ -107,10 +107,6 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
 
   const handleCreateOnly = async () => {
     await createEmployee();
-    // If auto_send_invite_on_create is enabled, auto-open invite after creation
-    if (onboardingConfig.auto_send_invite_on_create && createdEmployee) {
-      setTimeout(() => setInviteOpen(true), 150);
-    }
   };
 
   const handleCreateAndInvite = async () => {
