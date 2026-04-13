@@ -11778,6 +11778,17 @@ export type Database = {
         Returns: number
       }
       expire_old_invitations: { Args: never; Returns: number }
+      get_employee_for_activation: {
+        Args: { _employee_id: string; _invite_token: string }
+        Returns: {
+          avatar_url: string
+          company_id: string
+          email: string
+          first_name: string
+          last_name: string
+          phone_number: string
+        }[]
+      }
       has_action_permission: {
         Args: { _action: string; _company_id: string; _user_id: string }
         Returns: boolean
