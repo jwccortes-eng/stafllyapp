@@ -29,6 +29,8 @@ interface EmployeeComboboxProps {
   requiresDriver?: boolean;
   /** Shift's group/area for same-group prioritization */
   shiftGroup?: string | null;
+  /** Show "+ Add new employee" option and callback when selected */
+  onAddNewEmployee?: () => void;
 }
 
 interface ConflictInfo { shiftTitle: string; time: string; }

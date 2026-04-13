@@ -15,14 +15,14 @@ import { EmployeeInviteDialog } from "./EmployeeInviteDialog";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEmployeeCreated?: () => void;
+  onEmployeeCreated?: (employee: Record<string, any>) => void;
 }
 
 export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: Props) {
   const { toast } = useToast();
   const { user } = useAuth();
   const { selectedCompanyId, companies } = useCompany();
-  const companyName = companies.find(c => c.id === selectedCompanyId)?.name ?? "la empresa";
+  const companyName = companies.find(c => c.id === selectedCompanyId)?.name ?? "the company";
 
   const [step, setStep] = useState<1 | 2>(1);
   const [saving, setSaving] = useState(false);
@@ -52,14 +52,14 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     onOpenChange(v);
   };
 
-  const handleCreateAndInvite = async () => {
+  const createEmployee = async () => {
     if (!selectedCompanyId || !user?.id) return;
     if (!firstName.trim()) {
-      toast({ title: "Nombre requerido", variant: "destructive" });
+      toast({ title: "Name required", variant: "destructive" });
       return;
     }
     if (!phone.trim()) {
-      toast({ title: "Teléfono requerido", description: "Se necesita para el acceso al portal", variant: "destructive" });
+      toast({ title: "Phone required", description: "Required for portal access", variant: "destructive" });
       return;
     }
 
@@ -86,15 +86,64 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
       .single();
 
     if (error) {
-      toast({ title: "Error al crear empleado", description: getUserFriendlyError(error), variant: "destructive" });
+      toast({ title: "Error creating employee", description: getUserFriendlyError(error), variant: "destructive" });
       setSaving(false);
       return;
     }
 
-    setCreatedEmployee(data as Record<string, any>);
-    onEmployeeCreated?.();
+    const emp = data as Record<string, any>;
+    setCreatedEmployee(emp);
+    onEmployeeCreated?.(emp);
     setStep(2);
     setSaving(false);
+  };
+
+  const handleCreateOnly = async () => {
+    await createEmployee();
+  };
+
+  const handleCreateAndInvite = async () => {
+    // createEmployee sets step to 2, then we auto-open invite
+    if (!selectedCompanyId || !user?.id) return;
+    if (!firstName.trim() || !phone.trim()) {
+      // Trigger validation via createEmployee
+      await createEmployee();
+      return;
+    }
+
+    setSaving(true);
+    const digits = phone.replace(/\D/g, "");
+    const autoPin = digits.length >= 4 ? digits.slice(-4) : String(Math.floor(1000 + Math.random() * 9000));
+
+    const insertData: Record<string, any> = {
+      company_id: selectedCompanyId,
+      first_name: firstName.trim(),
+      last_name: lastName.trim() || null,
+      phone_number: digits,
+      email: email.trim() || null,
+      access_pin: autoPin,
+      is_active: true,
+    };
+
+    const { data, error } = await supabase
+      .from("employees")
+      .insert(insertData as any)
+      .select("id, first_name, last_name, phone_number, email, access_pin, company_id, avatar_url, gender, user_id")
+      .single();
+
+    if (error) {
+      toast({ title: "Error creating employee", description: getUserFriendlyError(error), variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+
+    const emp = data as Record<string, any>;
+    setCreatedEmployee(emp);
+    onEmployeeCreated?.(emp);
+    setStep(2);
+    setSaving(false);
+    // Auto-open invite dialog
+    setTimeout(() => setInviteOpen(true), 150);
   };
 
   const openInviteDialog = () => {
@@ -114,12 +163,12 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
             <DialogHeader className="space-y-1">
               <DialogTitle className="text-base font-bold flex items-center gap-2">
                 <UserPlus className="h-4.5 w-4.5 text-primary" />
-                {step === 1 ? "Agregar e invitar empleado" : "Empleado creado"}
+                {step === 1 ? "Add new employee" : "Employee created"}
               </DialogTitle>
               <DialogDescription className="text-[11px]">
                 {step === 1
-                  ? "Crea un perfil mínimo y envía la invitación al portal"
-                  : "Ahora puedes enviar las credenciales de acceso"}
+                  ? "Create a minimal profile. You can invite them now or later."
+                  : "You can send access credentials now or close and do it later."}
               </DialogDescription>
             </DialogHeader>
             {/* Step dots */}
@@ -136,22 +185,22 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs flex items-center gap-1">
-                        <User className="h-3 w-3" /> Nombre *
+                        <User className="h-3 w-3" /> First name *
                       </Label>
                       <Input
                         value={firstName}
                         onChange={e => setFirstName(e.target.value)}
-                        placeholder="Nombre"
+                        placeholder="First name"
                         className="h-9 text-sm"
                         autoFocus
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Apellido</Label>
+                      <Label className="text-xs">Last name</Label>
                       <Input
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
-                        placeholder="Apellido"
+                        placeholder="Last name"
                         className="h-9 text-sm"
                       />
                     </div>
@@ -159,31 +208,31 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
 
                   <div className="space-y-1.5">
                     <Label className="text-xs flex items-center gap-1">
-                      <Phone className="h-3 w-3" /> Teléfono *
+                      <Phone className="h-3 w-3" /> Phone *
                     </Label>
                     <Input
                       type="tel"
                       inputMode="numeric"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
-                      placeholder="Número de teléfono"
+                      placeholder="Phone number"
                       className="h-9 text-sm"
                     />
                     <p className="text-[10px] text-muted-foreground">
-                      Se usará para login. El PIN se generará automáticamente con los últimos 4 dígitos.
+                      Used for portal login. PIN will be auto-generated from last 4 digits.
                     </p>
                   </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-xs flex items-center gap-1">
                       <Mail className="h-3 w-3" /> Email
-                      <Badge variant="outline" className="text-[8px] ml-1">Opcional</Badge>
+                      <Badge variant="outline" className="text-[8px] ml-1">Optional</Badge>
                     </Label>
                     <Input
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      placeholder="correo@ejemplo.com"
+                      placeholder="email@example.com"
                       className="h-9 text-sm"
                     />
                   </div>
@@ -191,21 +240,36 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
 
                 <div className="rounded-lg border border-border/40 bg-muted/30 px-3 py-2 text-[10px] text-muted-foreground">
                   <KeyRound className="h-3 w-3 inline mr-1" />
-                  El PIN de acceso se generará automáticamente. Podrás cambiarlo después desde la pestaña Acceso.
+                  Access PIN will be auto-generated. You can change it later from the Access tab.
                 </div>
 
-                <Button
-                  className="w-full"
-                  onClick={handleCreateAndInvite}
-                  disabled={saving || !firstName.trim() || !phone.trim()}
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                  )}
-                  {saving ? "Creando..." : "Crear e invitar"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleCreateOnly}
+                    disabled={saving || !firstName.trim() || !phone.trim()}
+                  >
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 mr-2" />
+                    )}
+                    Create only
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleCreateAndInvite}
+                    disabled={saving || !firstName.trim() || !phone.trim()}
+                  >
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                    )}
+                    Create & invite
+                  </Button>
+                </div>
               </>
             )}
 
@@ -219,13 +283,13 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
                     <h3 className="text-lg font-bold text-foreground">
                       {createdEmployee.first_name} {createdEmployee.last_name}
                     </h3>
-                    <p className="text-sm text-muted-foreground">Empleado creado en {companyName}</p>
+                    <p className="text-sm text-muted-foreground">Employee created in {companyName}</p>
                   </div>
                 </div>
 
                 <div className="rounded-lg border bg-muted/30 p-3 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground text-xs">Teléfono</span>
+                    <span className="text-muted-foreground text-xs">Phone</span>
                     <span className="font-mono text-xs">{createdEmployee.phone_number}</span>
                   </div>
                   <div className="flex justify-between">
@@ -242,11 +306,11 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
 
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1" onClick={handleFinish}>
-                    Cerrar
+                    Done
                   </Button>
                   <Button className="flex-1" onClick={openInviteDialog}>
                     <ArrowRight className="h-4 w-4 mr-2" />
-                    Enviar invitación
+                    Send invitation
                   </Button>
                 </div>
               </>
@@ -265,7 +329,7 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
           }}
           employee={createdEmployee}
           onInviteSent={() => {
-            toast({ title: "Invitación enviada ✅" });
+            toast({ title: "Invitation sent ✅" });
           }}
         />
       )}
