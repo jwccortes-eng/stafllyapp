@@ -1490,6 +1490,7 @@ export default function Shifts() {
                   availabilityConfigs={availConfigs}
                   availabilityOverrides={availOverrides}
                   availabilityBlockMode="warning"
+                  onAddNewEmployee={() => setQuickAddOpen(true)}
                 />
               </div>
             </div>
