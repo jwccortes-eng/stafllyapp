@@ -327,12 +327,19 @@ export function BulkActivationCampaignDialog({ open, onOpenChange, employees, on
         {/* ─── Step: Results ─── */}
         {step === "results" && (
           <div className="space-y-3 flex-1 min-h-0">
-            <div className="grid grid-cols-2 gap-3">
+            <div className={cn("grid gap-3", failedCount > 0 || emailFailedCount > 0 ? "grid-cols-3" : "grid-cols-1")}>
               <div className="rounded-lg border border-[hsl(var(--earning))]/30 bg-[hsl(var(--earning))]/5 p-3 text-center">
                 <CheckCircle2 className="h-5 w-5 text-[hsl(var(--earning))] mx-auto" />
-                <div className="text-xl font-bold text-[hsl(var(--earning))] mt-1">{sentCount}</div>
-                <div className="text-[10px] text-muted-foreground">Sent successfully</div>
+                <div className="text-xl font-bold text-[hsl(var(--earning))] mt-1">{activatedCount}</div>
+                <div className="text-[10px] text-muted-foreground">Portal activated</div>
               </div>
+              {emailFailedCount > 0 && (
+                <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-center">
+                  <AlertTriangle className="h-5 w-5 text-warning mx-auto" />
+                  <div className="text-xl font-bold text-warning mt-1">{emailFailedCount}</div>
+                  <div className="text-[10px] text-muted-foreground">Email failed</div>
+                </div>
+              )}
               {failedCount > 0 && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-center">
                   <XCircle className="h-5 w-5 text-destructive mx-auto" />
@@ -348,15 +355,20 @@ export function BulkActivationCampaignDialog({ open, onOpenChange, employees, on
                   <div key={r.employee_id} className="flex items-center gap-3 px-3 py-2">
                     {r.status === "sent" ? (
                       <CheckCircle2 className="h-4 w-4 text-[hsl(var(--earning))] shrink-0" />
+                    ) : r.status === "email_failed" ? (
+                      <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
                     ) : (
                       <XCircle className="h-4 w-4 text-destructive shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{r.name}</p>
                       <p className="text-[10px] text-muted-foreground truncate">{r.email}</p>
+                      {r.error && r.status === "email_failed" && (
+                        <p className="text-[9px] text-warning truncate">Portal activated · email retry needed</p>
+                      )}
                     </div>
                     <Badge
-                      variant={r.status === "sent" ? "default" : "destructive"}
+                      variant={r.status === "sent" ? "default" : r.status === "email_failed" ? "outline" : "destructive"}
                       className="text-[9px]"
                     >
                       {r.status === "sent" ? "Sent" : "Failed"}
