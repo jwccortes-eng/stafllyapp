@@ -188,6 +188,7 @@ export default function Employees() {
   const [bulkInviting, setBulkInviting] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<EmployeeRecord | null>(null);
   const [colPrefsOpen, setColPrefsOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const { visibleColumns, savePreferences } = useColumnPreferences("employees");
   const { toast } = useToast();
 
