@@ -164,8 +164,16 @@ export default function Employees() {
   const [statusTab, setStatusTab] = useState<"active" | "invited" | "inactive" | "pending" | "all">("active");
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterGroup, setFilterGroup] = useState<string>("all");
-  const [searchParams] = useSearchParams();
-  const [open, setOpen] = useState(() => searchParams.get("create") === "1");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [open, setOpen] = useState(false);
+
+  // Open create dialog when navigated with ?create=1
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setOpen(true);
+      setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete("create"); return p; }, { replace: true });
+    }
+  }, [searchParams]);
   const [importOpen, setImportOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
