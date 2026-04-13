@@ -556,12 +556,12 @@ export default function ActivateAccount() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Nombre <span className="text-destructive">*</span></Label>
-                        <Input value={profileForm.first_name} onChange={e => updateForm("first_name", e.target.value)} placeholder="Juan" className="h-9 text-sm" />
+                        <Label className="text-xs">First name <span className="text-destructive">*</span></Label>
+                        <Input value={profileForm.first_name} onChange={e => updateForm("first_name", e.target.value)} placeholder="John" className="h-9 text-sm" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Apellido <span className="text-destructive">*</span></Label>
-                        <Input value={profileForm.last_name} onChange={e => updateForm("last_name", e.target.value)} placeholder="García" className="h-9 text-sm" />
+                        <Label className="text-xs">Last name <span className="text-destructive">*</span></Label>
+                        <Input value={profileForm.last_name} onChange={e => updateForm("last_name", e.target.value)} placeholder="Doe" className="h-9 text-sm" />
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -569,25 +569,25 @@ export default function ActivateAccount() {
                       <Input type="email" value={profileForm.email} onChange={e => updateForm("email", e.target.value)} placeholder="juan@email.com" className="h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Fecha de nacimiento <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">Date of birth <span className="text-destructive">*</span></Label>
                       <Input type="date" value={profileForm.date_of_birth} onChange={e => updateForm("date_of_birth", e.target.value)} className="h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">SSN (últimos 4 dígitos mínimo) <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">SSN (last 4 digits minimum) <span className="text-destructive">*</span></Label>
                       <Input
                         type="password"
                         value={profileForm.ssn}
                         onChange={e => updateForm("ssn", e.target.value.replace(/[^0-9-]/g, ""))}
-                        placeholder="XXX-XX-XXXX o últimos 4 dígitos"
+                        placeholder="XXX-XX-XXXX or last 4 digits"
                         maxLength={11}
                         className="h-9 text-sm font-mono"
                       />
-                      <p className="text-[9px] text-muted-foreground/60">Solo se guardan los últimos 4 dígitos. Tu información está protegida.</p>
+                      <p className="text-[9px] text-muted-foreground/60">Only the last 4 digits are stored. Your information is protected.</p>
                     </div>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
-                    <Button onClick={goNext} disabled={!isPersonalValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
+                    <Button onClick={goNext} disabled={!isPersonalValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -597,12 +597,12 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <MapPin className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Dirección</h2>
-                    <p className="text-xs text-muted-foreground">Dirección completa requerida</p>
+                    <h2 className="text-lg font-bold">Address</h2>
+                    <p className="text-xs text-muted-foreground">Full address required</p>
                   </div>
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Dirección <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">Address <span className="text-destructive">*</span></Label>
                       <Input value={profileForm.address_line} onChange={e => updateForm("address_line", e.target.value)} placeholder="123 Main St, Apt 4" className="h-9 text-sm" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
