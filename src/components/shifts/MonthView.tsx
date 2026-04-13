@@ -108,7 +108,7 @@ export function MonthView({
     return map;
   }, [assignments, shifts]);
 
-  const dayHeaders = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const dayHeaders = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const MAX_VISIBLE = 5;
 
   const renderShiftCard = (shift: Shift) => {
@@ -183,7 +183,7 @@ export function MonthView({
           <Input
             value={empSearch}
             onChange={e => setEmpSearch(e.target.value)}
-            placeholder="Buscar empleado..."
+            placeholder="Search employee..."
             className="pl-7 h-7 text-xs"
           />
         </div>
@@ -196,7 +196,7 @@ export function MonthView({
             )}
             onClick={() => setSelectedEmpId(null)}
           >
-            Todos ({employees.length})
+            All ({employees.length})
           </button>
           {filteredEmps.map(emp => (
             <button
@@ -308,11 +308,11 @@ export function MonthView({
                           {isExpanded ? (
                             <>
                               <ChevronUp className="h-2.5 w-2.5" />
-                              Menos
+                              Less
                             </>
                           ) : (
                             <>
-                              +{remainingCount} más
+                              +{remainingCount} more
                               <ChevronDown className="h-2.5 w-2.5" />
                             </>
                           )}
