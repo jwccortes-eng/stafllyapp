@@ -340,26 +340,18 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         </div>
 
         <div className="px-5 pb-5 space-y-4">
-          {/* ─── DEBUG: Company Scoping Validation (temporary migration tool) ─── */}
-          <div className={cn(
-            "rounded-lg border px-3 py-2 text-[9px] font-mono space-y-0.5",
-            companyMismatch ? "border-destructive/40 bg-destructive/5" : "border-border/40 bg-muted/30"
-          )}>
-            <div className="flex items-center gap-1.5 font-semibold text-[10px] text-muted-foreground mb-1">
-              <Shield className="h-3 w-3" /> Validación de empresa
+          {/* Company context indicator */}
+          {companyMismatch ? (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-[10px] flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+              <span className="text-destructive font-medium">Este empleado no pertenece a la empresa seleccionada ({companyName})</span>
             </div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Empresa seleccionada</span><span className="text-foreground font-semibold">{companyName}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">selectedCompanyId</span><span className="text-foreground">{selectedCompanyId?.slice(0, 8)}…</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">employee.company_id</span><span className="text-foreground">{employee.company_id?.slice(0, 8) ?? "N/A"}…</span></div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Validation</span>
-              {companyMismatch ? (
-                <span className="flex items-center gap-1 text-destructive font-bold"><AlertTriangle className="h-3 w-3" /> Mismatch ❌</span>
-              ) : (
-                <span className="flex items-center gap-1 text-[hsl(var(--earning))] font-bold"><CheckCircle2 className="h-3 w-3" /> Match ✅</span>
-              )}
+          ) : (
+            <div className="rounded-lg border border-border/40 bg-muted/30 px-3 py-1.5 text-[10px] flex items-center gap-2">
+              <Shield className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+              <span className="text-muted-foreground">Empresa: <span className="font-semibold text-foreground">{companyName}</span></span>
             </div>
-          </div>
+          )}
 
           {/* SECURITY: Company mismatch block */}
           {companyMismatch && (
