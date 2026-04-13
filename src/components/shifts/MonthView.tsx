@@ -114,10 +114,34 @@ export function MonthView({
   const renderShiftCard = (shift: Shift) => {
     const shiftAssigns = getAssignmentsForShift(shift.id);
 
-    // Skip unassigned shifts entirely — don't show "Vacante"
-    if (shiftAssigns.length === 0) return null;
-
     const color = getClientColor(shift.client_id, clientIds);
+
+    // Unassigned shift — show as vacant card
+    if (shiftAssigns.length === 0) {
+      return [(
+        <div
+          key={shift.id}
+          className={cn(
+            "rounded-md px-1.5 py-[3px] text-[10px] leading-tight cursor-pointer truncate transition-all hover:shadow-sm border-l-2 border-dashed",
+            "bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-700",
+          )}
+          onClick={() => onShiftClick(shift)}
+          onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-1", "ring-primary/30"); }}
+          onDragLeave={e => { e.currentTarget.classList.remove("ring-1", "ring-primary/30"); }}
+          onDrop={e => {
+            e.preventDefault();
+            e.currentTarget.classList.remove("ring-1", "ring-primary/30");
+            const data = e.dataTransfer.getData("application/assignment");
+            if (data) onDropOnShift(shift.id, data);
+          }}
+        >
+          <span className="font-semibold text-rose-500 dark:text-rose-400 truncate">Vacant</span>
+          <span className="ml-1 text-[9px] text-rose-400 dark:text-rose-500">
+            {shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)}
+          </span>
+        </div>
+      )];
+    }
 
     return shiftAssigns.map(assign => {
       const emp = employees.find(e => e.id === assign.employee_id);
