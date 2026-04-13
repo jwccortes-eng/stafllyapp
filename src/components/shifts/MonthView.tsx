@@ -108,16 +108,40 @@ export function MonthView({
     return map;
   }, [assignments, shifts]);
 
-  const dayHeaders = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const dayHeaders = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const MAX_VISIBLE = 5;
 
   const renderShiftCard = (shift: Shift) => {
     const shiftAssigns = getAssignmentsForShift(shift.id);
 
-    // Skip unassigned shifts entirely — don't show "Vacante"
-    if (shiftAssigns.length === 0) return null;
-
     const color = getClientColor(shift.client_id, clientIds);
+
+    // Unassigned shift — show as vacant card
+    if (shiftAssigns.length === 0) {
+      return [(
+        <div
+          key={shift.id}
+          className={cn(
+            "rounded-md px-1.5 py-[3px] text-[10px] leading-tight cursor-pointer truncate transition-all hover:shadow-sm border-l-2 border-dashed",
+            "bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-700",
+          )}
+          onClick={() => onShiftClick(shift)}
+          onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("ring-1", "ring-primary/30"); }}
+          onDragLeave={e => { e.currentTarget.classList.remove("ring-1", "ring-primary/30"); }}
+          onDrop={e => {
+            e.preventDefault();
+            e.currentTarget.classList.remove("ring-1", "ring-primary/30");
+            const data = e.dataTransfer.getData("application/assignment");
+            if (data) onDropOnShift(shift.id, data);
+          }}
+        >
+          <span className="font-semibold text-rose-500 dark:text-rose-400 truncate">Vacant</span>
+          <span className="ml-1 text-[9px] text-rose-400 dark:text-rose-500">
+            {shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)}
+          </span>
+        </div>
+      )];
+    }
 
     return shiftAssigns.map(assign => {
       const emp = employees.find(e => e.id === assign.employee_id);
@@ -159,7 +183,7 @@ export function MonthView({
           <Input
             value={empSearch}
             onChange={e => setEmpSearch(e.target.value)}
-            placeholder="Buscar empleado..."
+            placeholder="Search employee..."
             className="pl-7 h-7 text-xs"
           />
         </div>
@@ -172,7 +196,7 @@ export function MonthView({
             )}
             onClick={() => setSelectedEmpId(null)}
           >
-            Todos ({employees.length})
+            All ({employees.length})
           </button>
           {filteredEmps.map(emp => (
             <button
@@ -230,7 +254,7 @@ export function MonthView({
                 const allCards: React.ReactNode[] = [];
                 dayShifts.forEach(shift => {
                   const cards = renderShiftCard(shift);
-                  if (!cards) return; // skip unassigned
+                  if (!cards) return;
                   if (Array.isArray(cards)) allCards.push(...cards);
                   else allCards.push(cards);
                 });
@@ -284,11 +308,11 @@ export function MonthView({
                           {isExpanded ? (
                             <>
                               <ChevronUp className="h-2.5 w-2.5" />
-                              Menos
+                              Less
                             </>
                           ) : (
                             <>
-                              +{remainingCount} más
+                              +{remainingCount} more
                               <ChevronDown className="h-2.5 w-2.5" />
                             </>
                           )}

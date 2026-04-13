@@ -20,7 +20,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, Copy } from "lucide-react";
 import { formatDisplayText } from "@/lib/format-helpers";
 // PageHeader not used — custom header with KPI cards
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
@@ -176,6 +176,7 @@ export default function Shifts() {
   const [driverEmployeeId, setDriverEmployeeId] = useState("");
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [copyingWeek, setCopyingWeek] = useState(false);
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
@@ -901,6 +902,78 @@ export default function Shifts() {
     loadData();
   };
 
+  const handleCopyWeek = async () => {
+    if (!canEdit || !selectedCompanyId) return;
+    setCopyingWeek(true);
+    const nextWeekStart = addDays(weekStart, 7);
+    const currentWeekShifts = shifts.filter(s => {
+      const sd = new Date(s.date + "T00:00:00");
+      return sd >= weekStart && sd <= addDays(weekStart, 6);
+    });
+    if (currentWeekShifts.length === 0) {
+      toast.error("No shifts to copy in the current week");
+      setCopyingWeek(false);
+      return;
+    }
+    let created = 0;
+    for (const s of currentWeekShifts) {
+      const dayOfWeek = new Date(s.date + "T00:00:00").getDay();
+      const wsDay = weekStart.getDay();
+      const offset = ((dayOfWeek - wsDay) + 7) % 7;
+      const targetDate = format(addDays(nextWeekStart, offset), "yyyy-MM-dd");
+      const raw = s as any;
+      const { data: newShift, error } = await supabase.from("scheduled_shifts").insert({
+        company_id: selectedCompanyId,
+        title: s.title,
+        date: targetDate,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        slots: s.slots ?? 1,
+        client_id: s.client_id || null,
+        location_id: s.location_id || null,
+        notes: s.notes || null,
+        claimable: s.claimable ?? false,
+        status: "draft",
+        created_by: user?.id,
+        pay_type: raw.pay_type || "hourly",
+        meeting_point: raw.meeting_point || null,
+        special_instructions: raw.special_instructions || null,
+        transportation_required: raw.transportation_required ?? false,
+        car_capacity: raw.car_capacity ?? 4,
+        transportation_notes: raw.transportation_notes || null,
+      } as any).select("id, shift_code").single();
+      if (error) continue;
+      if (newShift?.shift_code) {
+        const originalTitle = s.title.replace(/^#\d{4}\s*/, "");
+        const code = String(newShift.shift_code).padStart(4, "0");
+        await supabase.from("scheduled_shifts")
+          .update({ title: `#${code} ${originalTitle}` } as any)
+          .eq("id", newShift.id);
+      }
+      // Copy assignments
+      const shiftAssigns = assignments.filter(a => a.shift_id === s.id);
+      if (shiftAssigns.length > 0 && newShift) {
+        const newAssigns = shiftAssigns.map(a => ({
+          company_id: selectedCompanyId,
+          shift_id: newShift.id,
+          employee_id: a.employee_id,
+          status: "pending",
+        }));
+        await supabase.from("shift_assignments").insert(newAssigns as any);
+      }
+      if (newShift) {
+        await logShiftActivity("copiar_semana", newShift.id, null, {
+          source_shift: s.id, source_date: s.date, target_date: targetDate,
+        });
+      }
+      created++;
+    }
+    const weekLabel = `${format(nextWeekStart, "MMM d")}–${format(addDays(nextWeekStart, 6), "MMM d")}`;
+    toast.success(`${created} shifts copied to ${weekLabel} as drafts`);
+    setCopyingWeek(false);
+    loadData();
+  };
+
   const toggleEmployee = (id: string) => {
     setSelectedEmployees(prev =>
       prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
@@ -1072,6 +1145,11 @@ export default function Shifts() {
                   </button>
                 ))}
               </div>
+            )}
+            {viewMode === "week" && (
+              <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl" onClick={handleCopyWeek} disabled={copyingWeek}>
+                {copyingWeek ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />} Copy week
+              </Button>
             )}
             <Button variant="outline" size="sm" className="h-8 text-[11px] px-3 gap-1.5 rounded-xl" onClick={handlePublishAll} disabled={bulkPublishing}>
               {bulkPublishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Publicar
