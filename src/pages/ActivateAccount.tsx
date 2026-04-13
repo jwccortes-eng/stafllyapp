@@ -197,7 +197,7 @@ export default function ActivateAccount() {
 
   const handlePinConfirm = (p: string) => {
     if (p !== pin) {
-      setError("Los PINs no coinciden. Intenta de nuevo.");
+      setError("PINs don't match. Try again.");
       setPinPhase("create");
       setPin("");
       setConfirmPin("");
@@ -212,7 +212,7 @@ export default function ActivateAccount() {
     const f = e.target.files?.[0];
     if (!f) return;
     if (!f.type.startsWith("image/")) return;
-    if (f.size > 5 * 1024 * 1024) { setError("Imagen demasiado grande. Máximo 5 MB."); return; }
+    if (f.size > 5 * 1024 * 1024) { setError("Image too large. Max 5 MB."); return; }
     setAvatarFile(f);
     setAvatarPreview(URL.createObjectURL(f));
     setError("");
@@ -221,7 +221,7 @@ export default function ActivateAccount() {
   const handleDocSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "license" | "registration") => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > 10 * 1024 * 1024) { setError("Archivo demasiado grande. Máximo 10 MB."); return; }
+    if (f.size > 10 * 1024 * 1024) { setError("File too large. Max 10 MB."); return; }
     const preview = f.type.startsWith("image/") ? URL.createObjectURL(f) : f.name;
     if (type === "license") { setDriverLicenseFile(f); setDriverLicensePreview(preview); }
     else { setVehicleRegFile(f); setVehicleRegPreview(preview); }
@@ -296,7 +296,7 @@ export default function ActivateAccount() {
       }
       return true;
     } catch (err: any) {
-      setError("Error al subir documentos: " + (err?.message || "Intenta de nuevo."));
+      setError("Error uploading documents: " + (err?.message || "Please try again."));
       return false;
     }
   };
@@ -334,7 +334,7 @@ export default function ActivateAccount() {
       });
 
       if (fnErr || data?.error) {
-        setError(data?.error || "Error al activar. Intenta de nuevo.");
+        setError(data?.error || "Activation error. Please try again.");
         setBusy(false);
         return;
       }
@@ -360,7 +360,7 @@ export default function ActivateAccount() {
 
       setWizardStep("ready");
     } catch (err: any) {
-      setError(err?.message || "Error inesperado.");
+      setError(err?.message || "Unexpected error.");
     } finally {
       setBusy(false);
     }
@@ -388,18 +388,18 @@ export default function ActivateAccount() {
     const configs: Record<string, { icon: React.ReactNode; title: string; desc: string }> = {
       invalid: {
         icon: <XCircle className="h-8 w-8 text-destructive" />,
-        title: "Enlace inválido",
-        desc: "Este enlace de activación no es válido. Solicita uno nuevo a tu administrador.",
+        title: "Invalid link",
+        desc: "This activation link is not valid. Please request a new one from your administrator.",
       },
       expired: {
         icon: <Clock className="h-8 w-8 text-warning" />,
-        title: "Enlace expirado",
-        desc: "Este enlace ha expirado. Pide a tu administrador que te envíe uno nuevo.",
+        title: "Link expired",
+        desc: "This link has expired. Ask your administrator to send a new one.",
       },
       used: {
         icon: <CheckCircle2 className="h-8 w-8 text-earning" />,
-        title: "Cuenta ya activada",
-        desc: "Tu cuenta ya fue activada. Inicia sesión con tu teléfono y PIN.",
+        title: "Account already activated",
+        desc: "Your account has already been activated. Sign in with your phone and PIN.",
       },
     };
     const cfg = configs[pageState] ?? configs.invalid;
@@ -413,7 +413,7 @@ export default function ActivateAccount() {
               <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center">{cfg.icon}</div>
               <h2 className="text-xl font-bold text-foreground">{cfg.title}</h2>
               <p className="text-sm text-muted-foreground max-w-[280px]">{cfg.desc}</p>
-              <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl mt-2">Ir a iniciar sesión</Button>
+              <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl mt-2">Go to sign in</Button>
             </div>
           </div>
         </div>
@@ -426,7 +426,7 @@ export default function ActivateAccount() {
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background gap-4">
         <StaflyLogo size={32} />
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Verificando invitación...</p>
+        <p className="text-sm text-muted-foreground">Verifying invitation...</p>
       </div>
     );
   }
