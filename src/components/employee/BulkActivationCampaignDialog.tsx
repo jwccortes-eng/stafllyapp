@@ -371,7 +371,7 @@ export function BulkActivationCampaignDialog({ open, onOpenChange, employees, on
                       variant={r.status === "sent" ? "default" : r.status === "email_failed" ? "outline" : "destructive"}
                       className="text-[9px]"
                     >
-                      {r.status === "sent" ? "Sent" : "Failed"}
+                      {r.status === "sent" ? "Sent" : r.status === "email_failed" ? "Activated" : "Failed"}
                     </Badge>
                   </div>
                 ))}
