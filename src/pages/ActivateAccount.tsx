@@ -197,7 +197,7 @@ export default function ActivateAccount() {
 
   const handlePinConfirm = (p: string) => {
     if (p !== pin) {
-      setError("Los PINs no coinciden. Intenta de nuevo.");
+      setError("PINs don't match. Try again.");
       setPinPhase("create");
       setPin("");
       setConfirmPin("");
@@ -212,7 +212,7 @@ export default function ActivateAccount() {
     const f = e.target.files?.[0];
     if (!f) return;
     if (!f.type.startsWith("image/")) return;
-    if (f.size > 5 * 1024 * 1024) { setError("Imagen demasiado grande. Máximo 5 MB."); return; }
+    if (f.size > 5 * 1024 * 1024) { setError("Image too large. Max 5 MB."); return; }
     setAvatarFile(f);
     setAvatarPreview(URL.createObjectURL(f));
     setError("");
@@ -221,7 +221,7 @@ export default function ActivateAccount() {
   const handleDocSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "license" | "registration") => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > 10 * 1024 * 1024) { setError("Archivo demasiado grande. Máximo 10 MB."); return; }
+    if (f.size > 10 * 1024 * 1024) { setError("File too large. Max 10 MB."); return; }
     const preview = f.type.startsWith("image/") ? URL.createObjectURL(f) : f.name;
     if (type === "license") { setDriverLicenseFile(f); setDriverLicensePreview(preview); }
     else { setVehicleRegFile(f); setVehicleRegPreview(preview); }
@@ -296,7 +296,7 @@ export default function ActivateAccount() {
       }
       return true;
     } catch (err: any) {
-      setError("Error al subir documentos: " + (err?.message || "Intenta de nuevo."));
+      setError("Error uploading documents: " + (err?.message || "Please try again."));
       return false;
     }
   };
@@ -334,7 +334,7 @@ export default function ActivateAccount() {
       });
 
       if (fnErr || data?.error) {
-        setError(data?.error || "Error al activar. Intenta de nuevo.");
+        setError(data?.error || "Activation error. Please try again.");
         setBusy(false);
         return;
       }
@@ -360,7 +360,7 @@ export default function ActivateAccount() {
 
       setWizardStep("ready");
     } catch (err: any) {
-      setError(err?.message || "Error inesperado.");
+      setError(err?.message || "Unexpected error.");
     } finally {
       setBusy(false);
     }
@@ -388,18 +388,18 @@ export default function ActivateAccount() {
     const configs: Record<string, { icon: React.ReactNode; title: string; desc: string }> = {
       invalid: {
         icon: <XCircle className="h-8 w-8 text-destructive" />,
-        title: "Enlace inválido",
-        desc: "Este enlace de activación no es válido. Solicita uno nuevo a tu administrador.",
+        title: "Invalid link",
+        desc: "This activation link is not valid. Please request a new one from your administrator.",
       },
       expired: {
         icon: <Clock className="h-8 w-8 text-warning" />,
-        title: "Enlace expirado",
-        desc: "Este enlace ha expirado. Pide a tu administrador que te envíe uno nuevo.",
+        title: "Link expired",
+        desc: "This link has expired. Ask your administrator to send a new one.",
       },
       used: {
         icon: <CheckCircle2 className="h-8 w-8 text-earning" />,
-        title: "Cuenta ya activada",
-        desc: "Tu cuenta ya fue activada. Inicia sesión con tu teléfono y PIN.",
+        title: "Account already activated",
+        desc: "Your account has already been activated. Sign in with your phone and PIN.",
       },
     };
     const cfg = configs[pageState] ?? configs.invalid;
@@ -413,7 +413,7 @@ export default function ActivateAccount() {
               <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center">{cfg.icon}</div>
               <h2 className="text-xl font-bold text-foreground">{cfg.title}</h2>
               <p className="text-sm text-muted-foreground max-w-[280px]">{cfg.desc}</p>
-              <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl mt-2">Ir a iniciar sesión</Button>
+              <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl mt-2">Go to sign in</Button>
             </div>
           </div>
         </div>
@@ -426,7 +426,7 @@ export default function ActivateAccount() {
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background gap-4">
         <StaflyLogo size={32} />
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Verificando invitación...</p>
+        <p className="text-sm text-muted-foreground">Verifying invitation...</p>
       </div>
     );
   }
@@ -451,7 +451,7 @@ export default function ActivateAccount() {
             {invite && (
               <div className="w-full mt-2 rounded-lg border border-border/40 bg-muted/30 px-3 py-2 text-[9px] font-mono space-y-0.5">
                 <div className="flex items-center gap-1.5 font-semibold text-[10px] text-muted-foreground mb-1">
-                  <Shield className="h-3 w-3" /> Validación de empresa
+                  <Shield className="h-3 w-3" /> Company validation
                 </div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Inv. company_id</span><span className="text-foreground">{invite.company_id?.slice(0, 8)}…</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Company name</span><span className="text-foreground font-semibold">{invite.company_name}</span></div>
@@ -470,7 +470,7 @@ export default function ActivateAccount() {
                   <div key={s} className={cn("h-1 rounded-full flex-1 transition-all duration-500", i <= stepIndex ? "bg-primary" : "bg-border")} />
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">Paso {stepIndex + 1} de {totalVisibleSteps}</p>
+              <p className="text-[10px] text-muted-foreground mt-1.5 text-right">Step {stepIndex + 1} of {totalVisibleSteps}</p>
             </div>
           )}
 
@@ -482,41 +482,41 @@ export default function ActivateAccount() {
                   <div className="text-center space-y-2">
                     <Sparkles className="h-6 w-6 text-primary mx-auto" />
                     <h2 className="text-xl font-bold text-foreground">
-                      ¡Hola{invite.employee_first_name ? `, ${invite.employee_first_name}` : ""}!
+                      Hello{invite.employee_first_name ? `, ${invite.employee_first_name}` : ""}!
                     </h2>
-                    <p className="text-sm text-muted-foreground">Completa tu perfil para activar tu portal de empleado</p>
+                    <p className="text-sm text-muted-foreground">Complete your profile to activate your employee portal</p>
                   </div>
 
                   <div className="rounded-xl border border-border/50 bg-muted/20 divide-y divide-border/30">
                     <div className="flex items-center gap-3 px-4 py-3">
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-muted-foreground">Empresa</p>
+                        <p className="text-[10px] text-muted-foreground">Company</p>
                         <p className="text-sm font-semibold text-foreground truncate">{invite.company_name}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 px-4 py-3">
                       <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-muted-foreground">Tu teléfono</p>
+                        <p className="text-[10px] text-muted-foreground">Your phone</p>
                         <p className="text-sm font-semibold text-foreground">{maskedPhone}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 px-4 py-3">
                       <KeyRound className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-muted-foreground">Pasos requeridos</p>
-                        <p className="text-sm font-medium text-foreground">PIN → Perfil → Dirección → Detalles → Foto</p>
+                        <p className="text-[10px] text-muted-foreground">Required steps</p>
+                        <p className="text-sm font-medium text-foreground">PIN → Profile → Address → Details → Photo</p>
                       </div>
                     </div>
                   </div>
 
                   <Button onClick={() => setWizardStep("pin")} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
-                    Comenzar activación <ArrowRight className="h-4 w-4" />
+                    Start activation <ArrowRight className="h-4 w-4" />
                   </Button>
                   <div className="flex items-center gap-1.5 justify-center">
                     <Shield className="h-3 w-3 text-muted-foreground/40" />
-                    <p className="text-[10px] text-muted-foreground/50">Tu información está protegida</p>
+                    <p className="text-[10px] text-muted-foreground/50">Your information is protected</p>
                   </div>
                 </div>
               )}
@@ -526,10 +526,10 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <h2 className="text-lg font-bold text-foreground">
-                      {pinPhase === "create" ? "Crea tu PIN" : "Confirma tu PIN"}
+                      {pinPhase === "create" ? "Create your PIN" : "Confirm your PIN"}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      {pinPhase === "create" ? "Elige un PIN de 4 dígitos para acceder" : "Ingresa el mismo PIN para confirmar"}
+                      {pinPhase === "create" ? "Choose a 4-digit PIN to access your portal" : "Enter the same PIN to confirm"}
                     </p>
                   </div>
                   <div className="flex items-center justify-center gap-2">
@@ -550,18 +550,18 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <User className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Información personal</h2>
-                    <p className="text-xs text-muted-foreground">Datos básicos requeridos</p>
+                    <h2 className="text-lg font-bold">Personal information</h2>
+                    <p className="text-xs text-muted-foreground">Required basic details</p>
                   </div>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Nombre <span className="text-destructive">*</span></Label>
-                        <Input value={profileForm.first_name} onChange={e => updateForm("first_name", e.target.value)} placeholder="Juan" className="h-9 text-sm" />
+                        <Label className="text-xs">First name <span className="text-destructive">*</span></Label>
+                        <Input value={profileForm.first_name} onChange={e => updateForm("first_name", e.target.value)} placeholder="John" className="h-9 text-sm" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Apellido <span className="text-destructive">*</span></Label>
-                        <Input value={profileForm.last_name} onChange={e => updateForm("last_name", e.target.value)} placeholder="García" className="h-9 text-sm" />
+                        <Label className="text-xs">Last name <span className="text-destructive">*</span></Label>
+                        <Input value={profileForm.last_name} onChange={e => updateForm("last_name", e.target.value)} placeholder="Doe" className="h-9 text-sm" />
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -569,25 +569,25 @@ export default function ActivateAccount() {
                       <Input type="email" value={profileForm.email} onChange={e => updateForm("email", e.target.value)} placeholder="juan@email.com" className="h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Fecha de nacimiento <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">Date of birth <span className="text-destructive">*</span></Label>
                       <Input type="date" value={profileForm.date_of_birth} onChange={e => updateForm("date_of_birth", e.target.value)} className="h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">SSN (últimos 4 dígitos mínimo) <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">SSN (last 4 digits minimum) <span className="text-destructive">*</span></Label>
                       <Input
                         type="password"
                         value={profileForm.ssn}
                         onChange={e => updateForm("ssn", e.target.value.replace(/[^0-9-]/g, ""))}
-                        placeholder="XXX-XX-XXXX o últimos 4 dígitos"
+                        placeholder="XXX-XX-XXXX or last 4 digits"
                         maxLength={11}
                         className="h-9 text-sm font-mono"
                       />
-                      <p className="text-[9px] text-muted-foreground/60">Solo se guardan los últimos 4 dígitos. Tu información está protegida.</p>
+                      <p className="text-[9px] text-muted-foreground/60">Only the last 4 digits are stored. Your information is protected.</p>
                     </div>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
-                    <Button onClick={goNext} disabled={!isPersonalValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
+                    <Button onClick={goNext} disabled={!isPersonalValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -597,23 +597,23 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <MapPin className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Dirección</h2>
-                    <p className="text-xs text-muted-foreground">Dirección completa requerida</p>
+                    <h2 className="text-lg font-bold">Address</h2>
+                    <p className="text-xs text-muted-foreground">Full address required</p>
                   </div>
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Dirección <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">Address <span className="text-destructive">*</span></Label>
                       <Input value={profileForm.address_line} onChange={e => updateForm("address_line", e.target.value)} placeholder="123 Main St, Apt 4" className="h-9 text-sm" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Ciudad <span className="text-destructive">*</span></Label>
+                        <Label className="text-xs">City <span className="text-destructive">*</span></Label>
                         <Input value={profileForm.address_city} onChange={e => updateForm("address_city", e.target.value)} placeholder="Miami" className="h-9 text-sm" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Estado <span className="text-destructive">*</span></Label>
+                        <Label className="text-xs">State <span className="text-destructive">*</span></Label>
                         <Select value={profileForm.address_state} onValueChange={v => updateForm("address_state", v)}>
-                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Estado" /></SelectTrigger>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="State" /></SelectTrigger>
                           <SelectContent>{US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
@@ -624,8 +624,8 @@ export default function ActivateAccount() {
                     </div>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
-                    <Button onClick={goNext} disabled={!isAddressValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
+                    <Button onClick={goNext} disabled={!isAddressValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -635,22 +635,22 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <Heart className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Detalles adicionales</h2>
-                    <p className="text-xs text-muted-foreground">Contacto de emergencia y disponibilidad</p>
+                    <h2 className="text-lg font-bold">Additional details</h2>
+                    <p className="text-xs text-muted-foreground">Emergency contact and availability</p>
                   </div>
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Contacto de emergencia <span className="text-destructive">*</span></Label>
-                      <Input value={profileForm.emergency_contact_name} onChange={e => updateForm("emergency_contact_name", e.target.value)} placeholder="Nombre del contacto" className="h-9 text-sm" />
+                      <Label className="text-xs">Emergency contact <span className="text-destructive">*</span></Label>
+                      <Input value={profileForm.emergency_contact_name} onChange={e => updateForm("emergency_contact_name", e.target.value)} placeholder="Contact name" className="h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Teléfono de emergencia <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">Emergency phone <span className="text-destructive">*</span></Label>
                       <Input value={profileForm.emergency_contact_phone} onChange={e => updateForm("emergency_contact_phone", e.target.value)} placeholder="+1 (305) 555-0123" className="h-9 text-sm" />
                     </div>
 
                     {/* Languages */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Idiomas</Label>
+                      <Label className="text-xs">Languages</Label>
                       <div className="flex flex-wrap gap-1.5">
                         {LANGUAGES.map(lang => (
                           <button
@@ -681,14 +681,14 @@ export default function ActivateAccount() {
                       <div className="flex items-center justify-between px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Car className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">¿Puedes conducir?</span>
+                          <span className="text-sm">Can you drive?</span>
                         </div>
                         <Switch checked={profileForm.can_drive} onCheckedChange={v => updateForm("can_drive", v)} />
                       </div>
                       <div className="flex items-center justify-between px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Car className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">¿Tienes vehículo?</span>
+                          <span className="text-sm">Do you have a vehicle?</span>
                         </div>
                         <Switch checked={profileForm.has_vehicle} onCheckedChange={v => updateForm("has_vehicle", v)} />
                       </div>
@@ -698,14 +698,14 @@ export default function ActivateAccount() {
                       <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/20 p-3">
                         <AlertTriangle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                         <p className="text-xs text-primary">
-                          Como tienes vehículo, en el siguiente paso necesitarás subir tu <strong>licencia de conducir</strong> y el <strong>registration del vehículo</strong>.
+                          Since you have a vehicle, you'll need to upload your <strong>driver's license</strong> and <strong>vehicle registration</strong> in the next step.
                         </p>
                       </div>
                     )}
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
-                    <Button onClick={goNext} disabled={!isDetailsValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
+                    <Button onClick={goNext} disabled={!isDetailsValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -715,15 +715,15 @@ export default function ActivateAccount() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
                     <FileText className="h-5 w-5 text-primary mx-auto" />
-                    <h2 className="text-lg font-bold">Documentos requeridos</h2>
-                    <p className="text-xs text-muted-foreground">Sube tu licencia y registro de vehículo</p>
+                    <h2 className="text-lg font-bold">Required documents</h2>
+                    <p className="text-xs text-muted-foreground">Upload your license and vehicle registration</p>
                   </div>
 
                   <div className="space-y-3">
                     {/* Driver License */}
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
-                        Licencia de conducir <span className="text-destructive">*</span>
+                        Driver's license <span className="text-destructive">*</span>
                         {driverLicenseFile && <CheckCircle2 className="h-3.5 w-3.5 text-earning" />}
                       </Label>
                       <input ref={driverLicenseRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "license")} className="hidden" />
@@ -743,8 +743,8 @@ export default function ActivateAccount() {
                           </div>
                         ) : (
                           <>
-                            <Upload className="h-6 w-6 text-muted-foreground/50" />
-                            <span className="text-xs text-muted-foreground">Toca para subir foto o PDF</span>
+                             <Upload className="h-6 w-6 text-muted-foreground/50" />
+                            <span className="text-xs text-muted-foreground">Tap to upload photo or PDF</span>
                           </>
                         )}
                       </button>
@@ -753,7 +753,7 @@ export default function ActivateAccount() {
                     {/* Vehicle Registration */}
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
-                        Registration del vehículo <span className="text-destructive">*</span>
+                        Vehicle registration <span className="text-destructive">*</span>
                         {vehicleRegFile && <CheckCircle2 className="h-3.5 w-3.5 text-earning" />}
                       </Label>
                       <input ref={vehicleRegRef} type="file" accept="image/*,.pdf" onChange={e => handleDocSelect(e, "registration")} className="hidden" />
@@ -774,7 +774,7 @@ export default function ActivateAccount() {
                         ) : (
                           <>
                             <Upload className="h-6 w-6 text-muted-foreground/50" />
-                            <span className="text-xs text-muted-foreground">Toca para subir foto o PDF</span>
+                            <span className="text-xs text-muted-foreground">Tap to upload photo or PDF</span>
                           </>
                         )}
                       </button>
@@ -784,8 +784,8 @@ export default function ActivateAccount() {
                   {error && <p className="text-xs text-destructive text-center">{error}</p>}
 
                   <div className="flex gap-2 pt-1">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
-                    <Button onClick={goNext} disabled={!isDocsValid} className="flex-1 h-10 rounded-xl gap-1">Siguiente <ArrowRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
+                    <Button onClick={goNext} disabled={!isDocsValid} className="flex-1 h-10 rounded-xl gap-1">Next <ArrowRight className="h-4 w-4" /></Button>
                   </div>
                 </div>
               )}
@@ -794,8 +794,8 @@ export default function ActivateAccount() {
               {wizardStep === "photo" && (
                 <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="text-center space-y-1">
-                    <h2 className="text-lg font-bold text-foreground">Foto de perfil</h2>
-                    <p className="text-sm text-muted-foreground">Sube una foto clara de tu rostro para identificarte</p>
+                    <h2 className="text-lg font-bold text-foreground">Profile photo</h2>
+                    <p className="text-sm text-muted-foreground">Upload a clear photo of your face for identification</p>
                   </div>
 
                   <input ref={fileRef} type="file" accept="image/*" capture="user" onChange={handlePhotoSelect} className="hidden" />
@@ -816,16 +816,16 @@ export default function ActivateAccount() {
                   {error && <p className="text-xs text-destructive text-center">{error}</p>}
 
                   <div className="text-[10px] text-muted-foreground bg-muted/20 rounded-xl p-3 space-y-0.5">
-                    <p className="font-semibold text-foreground text-xs mb-1">Requisitos:</p>
-                    <p>✓ Foto clara de tu rostro</p>
-                    <p>✓ Sin lentes de sol ni mascarilla</p>
-                    <p>✓ Buena iluminación</p>
+                     <p className="font-semibold text-foreground text-xs mb-1">Requirements:</p>
+                    <p>✓ Clear photo of your face</p>
+                    <p>✓ No sunglasses or masks</p>
+                    <p>✓ Good lighting</p>
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Atrás</Button>
+                    <Button variant="outline" onClick={goBack} className="h-10 rounded-xl gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
                     <Button onClick={handleActivate} disabled={!avatarPreview || busy} className="flex-1 h-12 rounded-xl text-base font-semibold gap-2">
-                      {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Activando...</> : <>Activar mi cuenta <ArrowRight className="h-4 w-4" /></>}
+                      {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> Activating...</> : <>Activate my account <ArrowRight className="h-4 w-4" /></>}
                     </Button>
                   </div>
                 </div>
