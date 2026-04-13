@@ -848,6 +848,7 @@ export function ShiftDetailDialog({
                         showBulkActions
                         remainingSlots={Math.max(0, slotsNum - shiftAssignments.length)}
                         requiresDriver={!!(shift as any).transportation_required}
+                        onAddNewEmployee={onAddNewEmployee}
                       />
                       {selected.length > 0 && (
                         <Button size="sm" onClick={handleAdd} className="w-full h-7 text-[10px] rounded-lg gap-1">
