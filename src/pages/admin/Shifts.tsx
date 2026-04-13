@@ -334,8 +334,11 @@ export default function Shifts() {
   });
 
   const resetForm = () => {
-    setTitle(""); setDate(""); setStartTime("08:00"); setEndTime("17:00");
-    setSlots("1"); setClientId(""); setLocationId(""); setNotes("");
+    setTitle(""); setDate("");
+    setStartTime(shiftsConfig.default_start_time);
+    setEndTime(shiftsConfig.default_end_time);
+    setSlots(String(shiftsConfig.default_slots));
+    setClientId(""); setLocationId(""); setNotes("");
     setClaimable(false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
     setDayType("full_day"); setShiftAdminId("");
@@ -534,6 +537,26 @@ export default function Shifts() {
 
   const handleCreate = async () => {
     if (!date || !selectedCompanyId) return;
+
+    // Configurable validation rules
+    if (shiftsConfig.require_client && !clientId) {
+      toast.error("A client is required to create a shift");
+      return;
+    }
+    if (shiftsConfig.require_location && !locationId) {
+      toast.error("A location is required to create a shift");
+      return;
+    }
+    // Validate max shift hours
+    const [sh, sm] = startTime.split(":").map(Number);
+    const [eh, em] = endTime.split(":").map(Number);
+    let durationMin = (eh * 60 + em) - (sh * 60 + sm);
+    if (durationMin < 0) durationMin += 24 * 60;
+    if (durationMin / 60 > shiftsConfig.max_shift_hours) {
+      toast.error(`Shift duration exceeds the ${shiftsConfig.max_shift_hours}h maximum`);
+      return;
+    }
+
     setSaving(true);
 
     // Create the base shift (may notify if not repeating)
@@ -1748,6 +1771,18 @@ export default function Shifts() {
             setSelectedEmployees(prev => [...prev, newEmp.id]);
           }
         }}
+      />
+
+      {/* Module Settings Sheet */}
+      <ModuleSettingsSheet
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        title="Shift Settings"
+        icon={Settings2}
+        sections={shiftSettingsSections}
+        config={shiftsConfig as any}
+        onUpdate={(partial) => updateShiftsConfig(partial as any)}
+        loading={shiftsConfigLoading}
       />
     </div>
   );
