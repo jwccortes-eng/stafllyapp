@@ -41,6 +41,7 @@ import { WeeklySummaryBar } from "@/components/shifts/WeeklySummaryBar";
 import { EmployeeCombobox } from "@/components/shifts/EmployeeCombobox";
 import { ShiftRepeatSection, DEFAULT_REPEAT, computeRepeatDates, type RepeatConfig } from "@/components/shifts/ShiftRepeatSection";
 import { QuickCreatePopover } from "@/components/shifts/QuickCreatePopover";
+import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import type { Shift, Assignment, SelectOption, Employee, ViewMode } from "@/components/shifts/types";
 
 // Fields that affect ALL assigned employees (broadcast notification)
@@ -174,6 +175,7 @@ export default function Shifts() {
   const [transportNotes, setTransportNotes] = useState("");
   const [driverEmployeeId, setDriverEmployeeId] = useState("");
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
@@ -1488,6 +1490,7 @@ export default function Shifts() {
                   availabilityConfigs={availConfigs}
                   availabilityOverrides={availOverrides}
                   availabilityBlockMode="warning"
+                  onAddNewEmployee={() => setQuickAddOpen(true)}
                 />
               </div>
             </div>
@@ -1607,6 +1610,7 @@ export default function Shifts() {
         }}
         availabilityConfigs={availConfigs}
         availabilityOverrides={availOverrides}
+        onAddNewEmployee={() => setQuickAddOpen(true)}
       />
 
       <ShiftEditDialog
@@ -1618,6 +1622,18 @@ export default function Shifts() {
         employees={employees}
         assignments={assignments}
         onSave={handleEditShift}
+      />
+
+      <QuickAddInviteWizard
+        open={quickAddOpen}
+        onOpenChange={setQuickAddOpen}
+        onEmployeeCreated={(newEmp) => {
+          loadData();
+          // Auto-select the new employee in the create form if it's open
+          if (createOpen && newEmp?.id) {
+            setSelectedEmployees(prev => [...prev, newEmp.id]);
+          }
+        }}
       />
     </div>
   );

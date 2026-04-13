@@ -57,6 +57,8 @@ interface ShiftDetailDialogProps {
   onDelete?: (shift: Shift) => void;
   availabilityConfigs?: AvailabilityConfig[];
   availabilityOverrides?: AvailabilityOverride[];
+  /** Callback when user wants to add a brand-new employee from the combobox */
+  onAddNewEmployee?: () => void;
 }
 
 function calcHours(start: string, end: string): string {
@@ -107,7 +109,7 @@ export function ShiftDetailDialog({
   shift, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
   onDuplicate, onDelete,
-  availabilityConfigs = [], availabilityOverrides = [],
+  availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee,
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
   const { selectedCompanyId } = useCompany();
@@ -846,6 +848,7 @@ export function ShiftDetailDialog({
                         showBulkActions
                         remainingSlots={Math.max(0, slotsNum - shiftAssignments.length)}
                         requiresDriver={!!(shift as any).transportation_required}
+                        onAddNewEmployee={onAddNewEmployee}
                       />
                       {selected.length > 0 && (
                         <Button size="sm" onClick={handleAdd} className="w-full h-7 text-[10px] rounded-lg gap-1">
