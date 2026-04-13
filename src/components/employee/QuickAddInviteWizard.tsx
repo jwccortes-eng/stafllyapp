@@ -115,47 +115,10 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
   };
 
   const handleCreateAndInvite = async () => {
-    // createEmployee sets step to 2, then we auto-open invite
-    if (!selectedCompanyId || !user?.id) return;
-    if (!firstName.trim() || !phone.trim()) {
-      // Trigger validation via createEmployee
-      await createEmployee();
-      return;
+    const success = await createEmployee();
+    if (success) {
+      setTimeout(() => setInviteOpen(true), 150);
     }
-
-    setSaving(true);
-    const digits = phone.replace(/\D/g, "");
-    const autoPin = digits.length >= 4 ? digits.slice(-4) : String(Math.floor(1000 + Math.random() * 9000));
-
-    const insertData: Record<string, any> = {
-      company_id: selectedCompanyId,
-      first_name: firstName.trim(),
-      last_name: lastName.trim() || null,
-      phone_number: digits,
-      email: email.trim() || null,
-      access_pin: autoPin,
-      is_active: true,
-    };
-
-    const { data, error } = await supabase
-      .from("employees")
-      .insert(insertData as any)
-      .select("id, first_name, last_name, phone_number, email, access_pin, company_id, avatar_url, gender, user_id")
-      .single();
-
-    if (error) {
-      toast({ title: "Error creating employee", description: getUserFriendlyError(error), variant: "destructive" });
-      setSaving(false);
-      return;
-    }
-
-    const emp = data as Record<string, any>;
-    setCreatedEmployee(emp);
-    onEmployeeCreated?.(emp);
-    setStep(2);
-    setSaving(false);
-    // Auto-open invite dialog
-    setTimeout(() => setInviteOpen(true), 150);
   };
 
   const openInviteDialog = () => {
