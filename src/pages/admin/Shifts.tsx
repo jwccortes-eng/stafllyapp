@@ -1610,6 +1610,7 @@ export default function Shifts() {
         }}
         availabilityConfigs={availConfigs}
         availabilityOverrides={availOverrides}
+        onAddNewEmployee={() => setQuickAddOpen(true)}
       />
 
       <ShiftEditDialog
@@ -1621,6 +1622,18 @@ export default function Shifts() {
         employees={employees}
         assignments={assignments}
         onSave={handleEditShift}
+      />
+
+      <QuickAddInviteWizard
+        open={quickAddOpen}
+        onOpenChange={setQuickAddOpen}
+        onEmployeeCreated={(newEmp) => {
+          loadData();
+          // Auto-select the new employee in the create form if it's open
+          if (createOpen && newEmp?.id) {
+            setSelectedEmployees(prev => [...prev, newEmp.id]);
+          }
+        }}
       />
     </div>
   );
