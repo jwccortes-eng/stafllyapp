@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 
 interface PaymentRow {
   period_id: string;
@@ -32,16 +32,16 @@ interface MovementDetail {
 }
 
 const DATE_RANGES = [
-  { key: "recent", label: "Reciente" },
-  { key: "last4", label: "Último mes" },
-  { key: "all", label: "Todo" },
+  { key: "recent", label: "Recent" },
+  { key: "last4", label: "Last month" },
+  { key: "all", label: "All" },
 ] as const;
 
 function formatPeriodLabel(start: string, end: string): string {
   try {
     const s = parseISO(start);
     const e = parseISO(end);
-    return `${format(s, "d MMM", { locale: es })} → ${format(e, "d MMM", { locale: es })}`;
+    return `${format(s, "d MMM", { locale: enUS })} → ${format(e, "d MMM", { locale: enUS })}`;
   } catch {
     return `${start} → ${end}`;
   }
@@ -59,7 +59,7 @@ function PaymentTrendChart({ payments }: { payments: PaymentRow[] }) {
   return (
     <div className="rounded-2xl bg-card border border-border/30 p-4 space-y-3 shadow-sm">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Tendencia</p>
+        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Trend</p>
         <div className={cn(
           "flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full",
           isUp ? "text-[hsl(var(--status-confirmed))] bg-[hsl(var(--status-confirmed)/0.08)]" : "text-destructive bg-destructive/8"
@@ -193,9 +193,9 @@ export default function MyPayments() {
     <div className="space-y-5 animate-fade-in pb-24">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">Mis Pagos</h1>
+        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">My Payments</h1>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {payments.length > 0 ? `${payments.length} período${payments.length > 1 ? "s" : ""} registrado${payments.length > 1 ? "s" : ""}` : "Sin pagos publicados"}
+          {payments.length > 0 ? `${payments.length} period${payments.length > 1 ? "s" : ""} recorded` : "No published payments"}
         </p>
       </div>
 
@@ -204,7 +204,7 @@ export default function MyPayments() {
         <div className="rounded-2xl bg-card border border-border/30 p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-bold">Último período</p>
+              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-bold">Latest period</p>
               <p className="text-3xl font-bold font-heading mt-1.5 tracking-tight tabular-nums text-foreground">
                 ${latestPayment.total_final_pay.toFixed(2)}
               </p>
@@ -223,18 +223,18 @@ export default function MyPayments() {
       <div className="grid grid-cols-3 gap-2.5">
         <div className="rounded-2xl bg-card border border-border/30 p-3.5 text-center shadow-sm">
           <DollarSign className="h-4 w-4 mx-auto text-primary/40 mb-1" />
-          <p className="text-[9px] text-muted-foreground/60 font-bold uppercase tracking-widest">Acumulado</p>
+          <p className="text-[9px] text-muted-foreground/60 font-bold uppercase tracking-widest">Accumulated</p>
           <p className="text-base font-bold font-heading mt-1 tabular-nums">${accumulated.toFixed(0)}</p>
         </div>
         <div className="rounded-2xl bg-card border border-border/30 p-3.5 text-center shadow-sm">
           <CalendarDays className="h-4 w-4 mx-auto text-primary/40 mb-1" />
-          <p className="text-[9px] text-muted-foreground/60 font-bold uppercase tracking-widest">Períodos</p>
+          <p className="text-[9px] text-muted-foreground/60 font-bold uppercase tracking-widest">Periods</p>
           <p className="text-base font-bold font-heading mt-1 tabular-nums">{payments.length}</p>
         </div>
         <Link to="/portal/accumulated" className="rounded-2xl bg-card border border-border/30 p-3.5 text-center hover:bg-accent/50 transition-colors group shadow-sm">
           <BarChart3 className="h-4 w-4 mx-auto text-primary/40 mb-1 group-hover:text-primary transition-colors" />
-          <p className="text-[9px] text-muted-foreground/60 font-bold uppercase tracking-widest">Historial</p>
-          <p className="text-xs text-primary font-bold mt-1">Ver →</p>
+           <p className="text-[9px] text-muted-foreground/60 font-bold uppercase tracking-widest">History</p>
+           <p className="text-xs text-primary font-bold mt-1">View →</p>
         </Link>
       </div>
 
@@ -259,16 +259,16 @@ export default function MyPayments() {
 
       {/* Payments list */}
       <div>
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3 px-1">Historial de pagos</h2>
+        <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3 px-1">Payment history</h2>
         {payments.length === 0 ? (
           <div className="text-center py-14 space-y-3">
             <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/30 flex items-center justify-center">
               <Wallet className="h-7 w-7 text-muted-foreground/20" />
             </div>
-            <p className="text-sm font-bold text-foreground">Sin pagos publicados</p>
-            <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">
-              Tu historial de pagos aparecerá aquí cuando tu empresa publique un período.
-            </p>
+             <p className="text-sm font-bold text-foreground">No published payments</p>
+             <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">
+               Your payment history will appear here when your company publishes a period.
+             </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -305,7 +305,7 @@ export default function MyPayments() {
                         {isLoadingThis ? (
                           <div className="flex items-center justify-center py-6 text-muted-foreground">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            <span className="text-xs">Cargando detalles...</span>
+                            <span className="text-xs">Loading details...</span>
                           </div>
                         ) : (
                           <>
@@ -320,7 +320,7 @@ export default function MyPayments() {
                                 <p className="text-xs font-bold text-[hsl(var(--status-confirmed))] mt-0.5 tabular-nums">+${p.extras_total.toFixed(2)}</p>
                               </div>
                               <div className="rounded-xl bg-destructive/5 p-2.5 text-center">
-                                <p className="text-[9px] text-destructive font-bold">Deduc.</p>
+                                <p className="text-[9px] text-destructive font-bold">Deductions</p>
                                 <p className="text-xs font-bold text-destructive mt-0.5 tabular-nums">−${p.deductions_total.toFixed(2)}</p>
                               </div>
                               <div className="rounded-xl bg-primary/5 p-2.5 text-center">
@@ -347,7 +347,7 @@ export default function MyPayments() {
                             {/* Deductions */}
                             {deductions.length > 0 && (
                               <div>
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-destructive mb-1.5">Deducciones</p>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-destructive mb-1.5">Deductions</p>
                                 <div className="space-y-1">
                                   {deductions.map(m => (
                                     <div key={m.id} className="flex items-center justify-between rounded-xl bg-destructive/5 px-3 py-2">
@@ -360,15 +360,15 @@ export default function MyPayments() {
                             )}
 
                             {details && details.length === 0 && (
-                              <p className="text-xs text-muted-foreground/60 text-center py-2">Sin movimientos adicionales para este período</p>
+                              <p className="text-xs text-muted-foreground/60 text-center py-2">No additional movements for this period</p>
                             )}
 
                             <div className="flex items-center justify-center gap-5 pt-1">
-                              <Link to={`/portal/paystub/${p.period_id}`} className="text-xs font-bold text-primary hover:underline">
-                                Ver recibo →
-                              </Link>
-                              <Link to={`/portal/week/${p.period_id}`} className="text-xs font-bold text-primary hover:underline">
-                                Ver detalle →
+                               <Link to={`/portal/paystub/${p.period_id}`} className="text-xs font-bold text-primary hover:underline">
+                                 View pay stub →
+                               </Link>
+                               <Link to={`/portal/week/${p.period_id}`} className="text-xs font-bold text-primary hover:underline">
+                                 View details →
                               </Link>
                             </div>
                           </>

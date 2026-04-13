@@ -9,7 +9,7 @@ import {
   format, parseISO, isBefore, startOfDay, isToday, isTomorrow,
   endOfWeek, startOfWeek, isWithinInterval,
 } from "date-fns";
-import { es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -55,8 +55,8 @@ interface ClaimableShift {
   assignedCount: number;
 }
 
-type TabFilter = "hoy" | "proximos" | "semana" | "historial";
-type StatusFilter = "todos" | "pendientes" | "confirmados" | "cancelados";
+type TabFilter = "today" | "upcoming" | "week" | "history";
+type StatusFilter = "all" | "pending" | "confirmed" | "cancelled";
 
 export default function MyShifts() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
@@ -69,8 +69,8 @@ export default function MyShifts() {
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [selectedShift, setSelectedShift] = useState<ShiftAssignment | null>(null);
-  const [activeTab, setActiveTab] = useState<TabFilter>("hoy");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
+  const [activeTab, setActiveTab] = useState<TabFilter>("today");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [compactView, setCompactView] = useState(false);
   // toast imported from sonner at top
 
@@ -138,18 +138,18 @@ export default function MyShifts() {
 
     try {
       const { data: emp } = await supabase.from("employees").select("company_id").eq("id", employeeId).maybeSingle();
-      if (!emp) throw new Error("Empleado no encontrado");
+      if (!emp) throw new Error("Employee not found");
 
       // Check for existing request/assignment to prevent duplicates
       const { data: existing } = await supabase.from("shift_requests").select("id").eq("shift_id", shiftId).eq("employee_id", employeeId).maybeSingle();
-      if (existing) throw new Error("Ya solicitaste este turno");
+      if (existing) throw new Error("You already requested this shift");
 
       // Race condition guard: re-check slot availability
       const { data: currentShift } = await supabase.from("scheduled_shifts")
         .select("slots, shift_assignments(id)").eq("id", shiftId).maybeSingle();
       if (currentShift) {
         const filled = currentShift.shift_assignments?.length ?? 0;
-        if (currentShift.slots && filled >= currentShift.slots) throw new Error("Este turno ya está lleno");
+        if (currentShift.slots && filled >= currentShift.slots) throw new Error("This shift is already full");
       }
 
       const { error } = await supabase.from("shift_requests").insert({
@@ -173,12 +173,12 @@ export default function MyShifts() {
       } catch {}
       if (navigator.vibrate) navigator.vibrate(100);
 
-      toast.success("✅ ¡Solicitud enviada!", { description: claimedShift ? `Turno "${claimedShift.title}" solicitado exitosamente.` : "Tu solicitud fue registrada." });
+      toast.success("✅ Request sent!", { description: claimedShift ? `Shift "${claimedShift.title}" requested successfully.` : "Your request has been submitted." });
       await load();
     } catch (err: any) {
       // Rollback optimistic update
       if (claimedShift) setClaimable(prev => [...prev, claimedShift].sort((a, b) => a.date.localeCompare(b.date)));
-      toast.error("Error", { description: err.message ?? "No se pudo solicitar el turno." });
+      toast.error("Error", { description: err.message ?? "Could not request the shift." });
     } finally {
       setClaiming(null);
     }
@@ -191,18 +191,18 @@ export default function MyShifts() {
       const { data: shift } = await supabase.from("scheduled_shifts").select("title, company_id, date, start_time").eq("id", sa.shift_id).maybeSingle();
       if (!shift) return;
       const { data: emp } = await supabase.from("employees").select("first_name, last_name").eq("id", sa.employee_id).maybeSingle();
-      const empName = emp ? `${emp.first_name ?? ""} ${emp.last_name ?? ""}`.trim() : "Empleado";
+      const empName = emp ? `${emp.first_name ?? ""} ${emp.last_name ?? ""}`.trim() : "Employee";
       const { data: admins } = await supabase.from("company_users").select("user_id").eq("company_id", shift.company_id).in("role", ["admin", "company_owner", "owner"]);
       const emoji = action === "confirmed" ? "✅" : "❌";
-      const verb = action === "confirmed" ? "confirmó" : "rechazó";
+      const verb = action === "confirmed" ? "confirmed" : "rejected";
       for (const admin of admins ?? []) {
         await supabase.from("notifications").insert({
           company_id: shift.company_id,
           recipient_id: admin.user_id,
           recipient_type: "user",
           type: action === "confirmed" ? "shift_confirmed" : "shift_rejected",
-          title: `${emoji} ${empName} ${verb} turno`,
-          body: `"${shift.title}" — ${shift.date} a las ${(shift.start_time as string).slice(0, 5)}`,
+          title: `${emoji} ${empName} ${verb} shift`,
+          body: `"${shift.title}" — ${shift.date} at ${(shift.start_time as string).slice(0, 5)}`,
           metadata: { shift_id: sa.shift_id, employee_id: sa.employee_id, assignment_id: assignmentId },
         });
       }
@@ -222,7 +222,7 @@ export default function MyShifts() {
       accepted_shift_version: version,
     } as any).eq("id", assignmentId);
     if (error) toast.error("Error", { description: error.message });
-    else { toast.success("¡Turno confirmado!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
+    else { toast.success("Shift confirmed!"); notifyAdminOfResponse(assignmentId, "confirmed"); await load(); }
     setResponding(null);
   };
 
@@ -238,7 +238,7 @@ export default function MyShifts() {
       rejected_at: new Date().toISOString(),
     } as any).eq("id", rejectDialogId);
     if (error) toast.error("Error", { description: error.message });
-    else { toast.success("Turno rechazado"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
+    else { toast.success("Shift rejected"); notifyAdminOfResponse(rejectDialogId, "rejected"); await load(); }
     setResponding(null); setRejectDialogId(null); setRejectReason("");
   };
 
@@ -248,21 +248,21 @@ export default function MyShifts() {
   const getFiltered = (): ShiftAssignment[] => {
     let list = assignments;
     switch (activeTab) {
-      case "hoy": list = list.filter(a => isToday(parseISO(a.shift.date))); break;
-      case "proximos": list = list.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))); break;
-      case "semana": list = list.filter(a => isWithinInterval(parseISO(a.shift.date), weekInterval)); break;
-      case "historial": list = list.filter(a => isBefore(parseISO(a.shift.date), today)); break;
+      case "today": list = list.filter(a => isToday(parseISO(a.shift.date))); break;
+      case "upcoming": list = list.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))); break;
+      case "week": list = list.filter(a => isWithinInterval(parseISO(a.shift.date), weekInterval)); break;
+      case "history": list = list.filter(a => isBefore(parseISO(a.shift.date), today)); break;
     }
     switch (statusFilter) {
-      case "pendientes": list = list.filter(a => {
+      case "pending": list = list.filter(a => {
         const ds = getDisplayStatus(a);
         return ds === "pending" || ds === "needs_reacceptance";
       }); break;
-      case "confirmados": list = list.filter(a => getDisplayStatus(a) === "confirmed"); break;
-      case "cancelados": list = list.filter(a => getDisplayStatus(a) === "rejected"); break;
+      case "confirmed": list = list.filter(a => getDisplayStatus(a) === "confirmed"); break;
+      case "cancelled": list = list.filter(a => getDisplayStatus(a) === "rejected"); break;
     }
     list.sort((a, b) => {
-      if (activeTab === "historial") return parseISO(b.shift.date).getTime() - parseISO(a.shift.date).getTime();
+      if (activeTab === "history") return parseISO(b.shift.date).getTime() - parseISO(a.shift.date).getTime();
       return parseISO(a.shift.date).getTime() - parseISO(b.shift.date).getTime();
     });
     return list;
@@ -276,23 +276,23 @@ export default function MyShifts() {
   const pastCount = assignments.filter(a => isBefore(parseISO(a.shift.date), today)).length;
 
   const tabs: { key: TabFilter; label: string; count: number }[] = [
-    { key: "hoy", label: "Hoy", count: todayCount },
-    { key: "proximos", label: "Próximos", count: upcomingCount },
-    { key: "semana", label: "Semana", count: weekCount },
-    { key: "historial", label: "Historial", count: pastCount },
+    { key: "today", label: "Today", count: todayCount },
+    { key: "upcoming", label: "Upcoming", count: upcomingCount },
+    { key: "week", label: "Week", count: weekCount },
+    { key: "history", label: "History", count: pastCount },
   ];
 
   const statusFilters: { key: StatusFilter; label: string }[] = [
-    { key: "todos", label: "Todos" },
-    { key: "pendientes", label: "Pendientes" },
-    { key: "confirmados", label: "Confirmados" },
-    { key: "cancelados", label: "Cancelados" },
+    { key: "all", label: "All" },
+    { key: "pending", label: "Pending" },
+    { key: "confirmed", label: "Confirmed" },
+    { key: "cancelled", label: "Cancelled" },
   ];
 
   const subtitle = (() => {
-    if (todayCount > 0) return `${todayCount} turno${todayCount > 1 ? "s" : ""} hoy`;
-    if (upcomingCount > 0) return `${upcomingCount} próximo${upcomingCount > 1 ? "s" : ""}`;
-    return "Sin turnos programados";
+    if (todayCount > 0) return `${todayCount} shift${todayCount > 1 ? "s" : ""} today`;
+    if (upcomingCount > 0) return `${upcomingCount} upcoming`;
+    return "No scheduled shifts";
   })();
 
   if (loading) {
@@ -329,7 +329,7 @@ export default function MyShifts() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">
-          Mis Turnos
+          My Shifts
         </h1>
         <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
       </div>
@@ -387,11 +387,11 @@ export default function MyShifts() {
       </div>
 
       {/* Claimable shifts */}
-      {claimable.length > 0 && activeTab !== "historial" && (
+      {claimable.length > 0 && activeTab !== "history" && (
         <div>
           <h2 className="text-xs font-bold text-primary mb-2 flex items-center gap-1.5">
             <HandMetal className="h-3.5 w-3.5" />
-            Turnos disponibles · {claimable.length}
+            Available shifts · {claimable.length}
           </h2>
           <div className="space-y-2">
             {claimable.map((s) => (
@@ -400,12 +400,12 @@ export default function MyShifts() {
                   <div className="min-w-0 flex-1">
                     <p className="text-[15px] font-bold text-foreground">{s.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                      {isToday(parseISO(s.date)) ? "Hoy" : isTomorrow(parseISO(s.date)) ? "Mañana" : format(parseISO(s.date), "EEEE d MMM", { locale: es })}
+                      {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEEE d MMM", { locale: enUS })}
                     </p>
                   </div>
                   {s.slots && (
                     <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-primary/10 text-primary">
-                      {s.slots - s.assignedCount} lugar{(s.slots - s.assignedCount) !== 1 ? "es" : ""}
+                      {s.slots - s.assignedCount} spot{(s.slots - s.assignedCount) !== 1 ? "s" : ""}
                     </span>
                   )}
                 </div>
@@ -421,7 +421,7 @@ export default function MyShifts() {
                   )}
                 </div>
                 <Button size="sm" className="w-full h-10 text-xs rounded-xl font-bold" onClick={() => claimShift(s.id)} disabled={claiming === s.id}>
-                  {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Enviando...</> : <><HandMetal className="h-3.5 w-3.5 mr-1.5" />Solicitar turno</>}
+                  {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Requesting...</> : <><HandMetal className="h-3.5 w-3.5 mr-1.5" />Request shift</>}
                 </Button>
               </div>
             ))}
@@ -436,7 +436,7 @@ export default function MyShifts() {
             <PortalShiftCard
               key={a.id}
               shift={toCardData(a)}
-              compact={compactView || activeTab === "historial"}
+              compact={compactView || activeTab === "history"}
               onClick={() => setSelectedShift(a)}
               onAccept={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => acceptAssignment(a.id) : undefined}
               onReject={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
@@ -459,28 +459,28 @@ export default function MyShifts() {
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-foreground">
-              {activeTab === "hoy" && "Sin turnos hoy"}
-              {activeTab === "proximos" && "Sin turnos próximos"}
-              {activeTab === "semana" && "Sin turnos esta semana"}
-              {activeTab === "historial" && "Sin historial"}
+              {activeTab === "today" && "No shifts today"}
+              {activeTab === "upcoming" && "No upcoming shifts"}
+              {activeTab === "week" && "No shifts this week"}
+              {activeTab === "history" && "No history"}
             </p>
             <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">
-              {activeTab === "hoy"
-                ? "No tienes turnos programados para hoy."
-                : activeTab === "historial"
-                ? "Aún no tienes turnos completados."
-                : "Los turnos asignados aparecerán aquí."
+              {activeTab === "today"
+                ? "You have no shifts scheduled for today."
+                : activeTab === "history"
+                ? "You don't have any completed shifts yet."
+                : "Assigned shifts will appear here."
               }
             </p>
           </div>
         </div>
       )}
 
-      {filtered.length === 0 && claimable.length > 0 && activeTab !== "historial" && (
+      {filtered.length === 0 && claimable.length > 0 && activeTab !== "history" && (
         <div className="rounded-2xl border-2 border-dashed border-primary/20 bg-primary/[0.02] p-6 text-center space-y-2">
           <HandMetal className="h-7 w-7 text-primary mx-auto" />
-          <p className="text-sm font-bold text-foreground">¡Hay turnos disponibles!</p>
-          <p className="text-xs text-muted-foreground">Solicita los turnos abiertos de arriba.</p>
+          <p className="text-sm font-bold text-foreground">Shifts available!</p>
+          <p className="text-xs text-muted-foreground">Request the open shifts above.</p>
         </div>
       )}
 
@@ -496,17 +496,17 @@ export default function MyShifts() {
       <Dialog open={!!rejectDialogId} onOpenChange={o => { if (!o) { setRejectDialogId(null); setRejectReason(""); } }}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Rechazar turno</DialogTitle>
+            <DialogTitle className="text-base font-bold">Reject shift</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Indica opcionalmente el motivo del rechazo.</p>
-            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo (opcional)..." rows={3} className="text-sm resize-none rounded-xl" />
+            <p className="text-xs text-muted-foreground">Optionally provide a reason for rejecting.</p>
+            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Reason (optional)..." rows={3} className="text-sm resize-none rounded-xl" />
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancelar</Button>
+            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancel</Button>
             <Button variant="destructive" size="sm" className="rounded-xl" onClick={rejectAssignment} disabled={responding === rejectDialogId}>
               {responding === rejectDialogId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-              Rechazar
+              Reject
             </Button>
           </DialogFooter>
         </DialogContent>
