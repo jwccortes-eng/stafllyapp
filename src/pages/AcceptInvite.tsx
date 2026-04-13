@@ -139,7 +139,7 @@ export default function AcceptInvite() {
             {state === "loading" && (
               <div className="flex flex-col items-center gap-3 py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Validando invitación...</p>
+                <p className="text-sm text-muted-foreground">Validating invitation...</p>
               </div>
             )}
 
@@ -148,12 +148,12 @@ export default function AcceptInvite() {
                 <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
                   <XCircle className="h-7 w-7 text-destructive" />
                 </div>
-                <h2 className="text-lg font-bold text-foreground">Enlace inválido</h2>
+                <h2 className="text-lg font-bold text-foreground">Invalid link</h2>
                 <p className="text-sm text-muted-foreground max-w-[260px]">
-                  Este enlace de invitación no es válido. Solicita uno nuevo a tu administrador.
+                  This invitation link is not valid. Please request a new one from your administrator.
                 </p>
                 <Button variant="outline" onClick={() => navigate("/auth")} className="mt-2 rounded-xl">
-                  Ir al inicio de sesión
+                  Go to sign in
                 </Button>
               </div>
             )}
@@ -163,12 +163,12 @@ export default function AcceptInvite() {
                 <div className="h-14 w-14 rounded-full bg-warning/10 flex items-center justify-center">
                   <Clock className="h-7 w-7 text-warning" />
                 </div>
-                <h2 className="text-lg font-bold text-foreground">Invitación expirada</h2>
+                <h2 className="text-lg font-bold text-foreground">Invitation expired</h2>
                 <p className="text-sm text-muted-foreground max-w-[260px]">
-                  Este enlace ha expirado. Solicita uno nuevo a tu administrador.
+                  This link has expired. Please request a new one from your administrator.
                 </p>
                 <Button variant="outline" onClick={() => navigate("/auth")} className="mt-2 rounded-xl">
-                  Ir al inicio de sesión
+                  Go to sign in
                 </Button>
               </div>
             )}
@@ -178,12 +178,12 @@ export default function AcceptInvite() {
                 <div className="h-14 w-14 rounded-full bg-[hsl(var(--earning))]/10 flex items-center justify-center">
                   <CheckCircle2 className="h-7 w-7 text-[hsl(var(--earning))]" />
                 </div>
-                <h2 className="text-lg font-bold text-foreground">Cuenta ya activada</h2>
+                <h2 className="text-lg font-bold text-foreground">Account already activated</h2>
                 <p className="text-sm text-muted-foreground max-w-[260px]">
-                  Tu cuenta ya fue activada. Inicia sesión con tu teléfono y PIN.
+                  Your account has already been activated. Sign in with your phone and PIN.
                 </p>
                 <Button onClick={() => navigate("/auth")} className="mt-2 w-full rounded-xl h-11">
-                  Iniciar sesión
+                  Sign in
                 </Button>
               </div>
             )}
@@ -191,12 +191,12 @@ export default function AcceptInvite() {
             {state === "valid" && invite && !activated && (
               <>
                 <div className="text-center space-y-1">
-                  <h2 className="text-xl font-bold text-foreground">¡Bienvenido/a!</h2>
+                  <h2 className="text-xl font-bold text-foreground">Welcome!</h2>
                   {invite.employee_name && (
                     <p className="text-base font-semibold text-foreground">{invite.employee_name}</p>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    Activa tu acceso al portal de empleados
+                    Activate your employee portal access
                   </p>
                 </div>
 
@@ -205,31 +205,31 @@ export default function AcceptInvite() {
                   <div className="flex items-center gap-3 px-4 py-3">
                     <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-muted-foreground">Tu teléfono</p>
+                      <p className="text-[10px] text-muted-foreground">Your phone</p>
                       <p className="text-sm font-medium text-foreground">{maskedPhone || "—"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 px-4 py-3">
                     <KeyRound className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-muted-foreground">Acceso</p>
-                      <p className="text-sm font-medium text-foreground">Teléfono + PIN de 4 dígitos</p>
+                      <p className="text-[10px] text-muted-foreground">Access</p>
+                      <p className="text-sm font-medium text-foreground">Phone + 4-digit PIN</p>
                     </div>
                   </div>
                 </div>
 
                 <Button onClick={handleAccept} disabled={activating} className="w-full h-12 rounded-xl text-base font-semibold">
                   {activating ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Activando...</>
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Activating...</>
                   ) : (
-                    "Activar mi cuenta"
+                    "Activate my account"
                   )}
                 </Button>
 
                 <div className="flex items-center gap-2 justify-center">
                   <Shield className="h-3 w-3 text-muted-foreground/50" />
                   <p className="text-[10px] text-muted-foreground/60">
-                    Tu información está protegida
+                    Your information is protected
                   </p>
                 </div>
               </>
@@ -240,12 +240,12 @@ export default function AcceptInvite() {
                 <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[hsl(var(--earning))] to-[hsl(var(--status-confirmed))] flex items-center justify-center shadow-lg animate-in zoom-in-50 duration-500">
                   <CheckCircle2 className="h-8 w-8 text-white" />
                 </div>
-                <h2 className="text-xl font-bold text-foreground">¡Cuenta activada!</h2>
+                <h2 className="text-xl font-bold text-foreground">Account activated!</h2>
                 <p className="text-sm text-muted-foreground max-w-[260px]">
-                  Tu portal está listo. Inicia sesión con tu número de teléfono y PIN.
+                  Your portal is ready. Sign in with your phone number and PIN.
                 </p>
                 <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl text-base font-semibold mt-1">
-                  Iniciar sesión ahora
+                  Sign in now
                 </Button>
               </div>
             )}

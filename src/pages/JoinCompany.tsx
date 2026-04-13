@@ -46,7 +46,7 @@ export default function JoinCompany() {
   const totalSteps = 3;
 
   useEffect(() => {
-    if (!inviteCode) { setErrorMsg("Código de invitación no válido."); setStep("error"); return; }
+    if (!inviteCode) { setErrorMsg("Invalid invite code."); setStep("error"); return; }
     (async () => {
       const { data, error } = await supabase
         .from("companies")
@@ -54,7 +54,7 @@ export default function JoinCompany() {
         .eq("invite_code", inviteCode.toUpperCase())
         .eq("is_active", true)
         .maybeSingle();
-      if (error || !data) { setErrorMsg("El enlace de invitación no es válido o la empresa no está activa."); setStep("error"); return; }
+      if (error || !data) { setErrorMsg("The invite link is not valid or the company is inactive."); setStep("error"); return; }
       setCompany(data);
       setStep("info");
     })();
@@ -63,16 +63,16 @@ export default function JoinCompany() {
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (!f.type.startsWith("image/")) { toast({ title: "Solo imágenes", variant: "destructive" }); return; }
-    if (f.size > 5 * 1024 * 1024) { toast({ title: "Máximo 5 MB", variant: "destructive" }); return; }
+    if (!f.type.startsWith("image/")) { toast({ title: "Images only", variant: "destructive" }); return; }
+    if (f.size > 5 * 1024 * 1024) { toast({ title: "Max 5 MB", variant: "destructive" }); return; }
     setPhotoFile(f);
     setPhotoPreview(URL.createObjectURL(f));
   };
 
   const validateForm = (): boolean => {
-    if (!firstName.trim() || !lastName.trim()) { toast({ title: "Nombre requerido", description: "Ingresa nombre y apellido.", variant: "destructive" }); return false; }
-    if (!phone.trim() || phone.replace(/\D/g, "").length < 10) { toast({ title: "Teléfono requerido", description: "Ingresa un número válido (10+ dígitos).", variant: "destructive" }); return false; }
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { toast({ title: "Email inválido", variant: "destructive" }); return false; }
+    if (!firstName.trim() || !lastName.trim()) { toast({ title: "Name required", description: "Enter your first and last name.", variant: "destructive" }); return false; }
+    if (!phone.trim() || phone.replace(/\D/g, "").length < 10) { toast({ title: "Phone required", description: "Enter a valid number (10+ digits).", variant: "destructive" }); return false; }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { toast({ title: "Invalid email", variant: "destructive" }); return false; }
     return true;
   };
 
@@ -90,7 +90,7 @@ export default function JoinCompany() {
         .from("employees").select("id").eq("company_id", company.id).eq("phone_number", normalizedPhone).maybeSingle();
 
       if (existing) {
-        toast({ title: "Ya registrado", description: "Este número ya está registrado. Inicia sesión.", variant: "destructive" });
+        toast({ title: "Already registered", description: "This number is already registered. Please sign in.", variant: "destructive" });
         setStep("info"); return;
       }
 
@@ -118,7 +118,7 @@ export default function JoinCompany() {
 
       setStep("success");
     } catch (err: any) {
-      toast({ title: "Error al registrarse", description: err.message, variant: "destructive" });
+      toast({ title: "Registration error", description: err.message, variant: "destructive" });
       setStep("info");
     }
   };
@@ -129,7 +129,7 @@ export default function JoinCompany() {
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background gap-4">
         <StaflyLogo size={32} />
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Verificando enlace...</p>
+        <p className="text-sm text-muted-foreground">Verifying link...</p>
       </div>
     );
   }
@@ -145,9 +145,9 @@ export default function JoinCompany() {
               <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
                 <ShieldCheck className="h-8 w-8 text-destructive" />
               </div>
-              <h2 className="text-xl font-bold text-foreground">Enlace no válido</h2>
+              <h2 className="text-xl font-bold text-foreground">Invalid link</h2>
               <p className="text-sm text-muted-foreground">{errorMsg}</p>
-              <Button variant="outline" onClick={() => navigate("/")} className="w-full rounded-xl">Ir al inicio</Button>
+              <Button variant="outline" onClick={() => navigate("/")} className="w-full rounded-xl">Go to home</Button>
             </div>
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function JoinCompany() {
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background gap-4">
         <StaflyLogo size={32} />
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Creando tu cuenta...</p>
+        <p className="text-sm text-muted-foreground">Creating your account...</p>
       </div>
     );
   }
@@ -197,28 +197,28 @@ export default function JoinCompany() {
                 <CheckCircle2 className="h-8 w-8 text-white" />
               </div>
               <div className="text-center space-y-1">
-                <h2 className="text-xl font-bold text-foreground">¡Registro exitoso! 🎉</h2>
+                <h2 className="text-xl font-bold text-foreground">Registration complete! 🎉</h2>
                 <p className="text-sm text-muted-foreground">
-                  Ya puedes acceder al portal de <span className="font-semibold text-foreground">{company?.name}</span>
+                  You can now access the <span className="font-semibold text-foreground">{company?.name}</span> portal
                 </p>
               </div>
 
               <div className="bg-muted/20 rounded-xl p-4 space-y-2.5 border border-border/30">
-                <p className="text-xs font-semibold text-foreground">Tus credenciales:</p>
+                <p className="text-xs font-semibold text-foreground">Your credentials:</p>
                 <div className="flex items-center gap-2">
                   <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-sm font-mono">{normalizedPhone}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm">PIN temporal: <span className="font-bold font-mono text-primary">{defaultPin}</span></span>
+                  <span className="text-sm">Temporary PIN: <span className="font-bold font-mono text-primary">{defaultPin}</span></span>
                 </div>
-                <p className="text-[10px] text-muted-foreground">Se te pedirá cambiar tu PIN en el primer inicio.</p>
+                <p className="text-[10px] text-muted-foreground">You'll be asked to change your PIN on first login.</p>
               </div>
 
               <Button onClick={() => navigate("/auth")} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
                 <ArrowRight className="h-4 w-4" />
-                Iniciar sesión ahora
+                Sign in now
               </Button>
             </div>
           </div>
@@ -259,7 +259,7 @@ export default function JoinCompany() {
               ))}
             </div>
             <p className="text-[10px] text-muted-foreground mt-1.5 text-right">
-              Paso {currentStepIndex + 1} de {totalSteps}
+              Step {currentStepIndex + 1} of {totalSteps}
             </p>
           </div>
 
@@ -269,44 +269,44 @@ export default function JoinCompany() {
               <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="text-center space-y-1">
                   <Sparkles className="h-5 w-5 text-primary mx-auto" />
-                  <h1 className="text-lg font-bold text-foreground">Únete al equipo</h1>
-                  <p className="text-xs text-muted-foreground">Completa tus datos para registrarte</p>
+                  <h1 className="text-lg font-bold text-foreground">Join the team</h1>
+                  <p className="text-xs text-muted-foreground">Fill in your details to register</p>
                 </div>
 
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label htmlFor="fn" className="text-xs">Nombre *</Label>
-                      <Input id="fn" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Juan" className="h-10 rounded-xl" />
+                      <Label htmlFor="fn" className="text-xs">First name *</Label>
+                      <Input id="fn" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="John" className="h-10 rounded-xl" />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="ln" className="text-xs">Apellido *</Label>
-                      <Input id="ln" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Pérez" className="h-10 rounded-xl" />
+                      <Label htmlFor="ln" className="text-xs">Last name *</Label>
+                      <Input id="ln" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Doe" className="h-10 rounded-xl" />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="ph" className="text-xs">Teléfono *</Label>
+                    <Label htmlFor="ph" className="text-xs">Phone *</Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input id="ph" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(786) 555-1234" className="h-10 pl-9 rounded-xl" />
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Este será tu usuario para iniciar sesión</p>
+                    <p className="text-[10px] text-muted-foreground">This will be your username to sign in</p>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="em" className="text-xs">Email (opcional)</Label>
+                    <Label htmlFor="em" className="text-xs">Email (optional)</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="em" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" className="h-10 pl-9 rounded-xl" />
+                      <Input id="em" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" className="h-10 pl-9 rounded-xl" />
                     </div>
                   </div>
                 </div>
 
                 <Button onClick={goToPhoto} className="w-full h-11 rounded-xl gap-2 text-sm font-semibold">
-                  Continuar <ArrowRight className="h-4 w-4" />
+                  Continue <ArrowRight className="h-4 w-4" />
                 </Button>
 
                 <p className="text-[10px] text-center text-muted-foreground">
-                  Al registrarte aceptas los <a href="/terms" className="underline hover:text-foreground">términos</a> y la <a href="/privacy" className="underline hover:text-foreground">privacidad</a>.
+                  By registering you agree to the <a href="/terms" className="underline hover:text-foreground">terms</a> and <a href="/privacy" className="underline hover:text-foreground">privacy policy</a>.
                 </p>
               </div>
             )}
@@ -315,13 +315,13 @@ export default function JoinCompany() {
             {step === "photo" && (
               <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                 <button onClick={() => setStep("info")} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  <ArrowLeft className="h-3 w-3" /> Volver
+                  <ArrowLeft className="h-3 w-3" /> Back
                 </button>
 
                 <div className="text-center space-y-1">
                   <Camera className="h-5 w-5 text-primary mx-auto" />
-                  <h2 className="text-lg font-bold text-foreground">Foto de perfil</h2>
-                  <p className="text-xs text-muted-foreground">Una foto clara de tu rostro</p>
+                  <h2 className="text-lg font-bold text-foreground">Profile photo</h2>
+                  <p className="text-xs text-muted-foreground">A clear photo of your face</p>
                 </div>
 
                 <input ref={cameraRef} type="file" accept="image/*" capture="user" onChange={handlePhotoSelect} className="hidden" />
@@ -338,19 +338,19 @@ export default function JoinCompany() {
                 {photoPreview ? (
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1 gap-1.5 rounded-xl" onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}>
-                      <RotateCcw className="h-3.5 w-3.5" /> Otra foto
+                      <RotateCcw className="h-3.5 w-3.5" /> Retake
                     </Button>
                     <Button className="flex-1 gap-1.5 rounded-xl" onClick={handleSubmit}>
-                      <Check className="h-3.5 w-3.5" /> Completar
+                      <Check className="h-3.5 w-3.5" /> Complete
                     </Button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1 gap-1.5 rounded-xl" onClick={() => cameraRef.current?.click()}>
-                      <Camera className="h-3.5 w-3.5" /> Cámara
+                      <Camera className="h-3.5 w-3.5" /> Camera
                     </Button>
                     <Button variant="outline" className="flex-1 gap-1.5 rounded-xl" onClick={() => galleryRef.current?.click()}>
-                      <Upload className="h-3.5 w-3.5" /> Galería
+                      <Upload className="h-3.5 w-3.5" /> Gallery
                     </Button>
                   </div>
                 )}
@@ -360,8 +360,8 @@ export default function JoinCompany() {
         </div>
 
         <p className="text-center mt-4">
-          <span className="text-xs text-muted-foreground">¿Ya tienes cuenta? </span>
-          <button onClick={() => navigate("/auth")} className="text-xs text-primary font-semibold hover:underline">Inicia sesión</button>
+          <span className="text-xs text-muted-foreground">Already have an account? </span>
+          <button onClick={() => navigate("/auth")} className="text-xs text-primary font-semibold hover:underline">Sign in</button>
         </p>
         <p className="text-center text-[10px] text-muted-foreground/40 mt-2">Powered by Stafly</p>
       </div>
