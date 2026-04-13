@@ -387,11 +387,11 @@ export default function MyShifts() {
       </div>
 
       {/* Claimable shifts */}
-      {claimable.length > 0 && activeTab !== "historial" && (
+      {claimable.length > 0 && activeTab !== "history" && (
         <div>
           <h2 className="text-xs font-bold text-primary mb-2 flex items-center gap-1.5">
             <HandMetal className="h-3.5 w-3.5" />
-            Turnos disponibles · {claimable.length}
+            Available shifts · {claimable.length}
           </h2>
           <div className="space-y-2">
             {claimable.map((s) => (
@@ -400,12 +400,12 @@ export default function MyShifts() {
                   <div className="min-w-0 flex-1">
                     <p className="text-[15px] font-bold text-foreground">{s.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                      {isToday(parseISO(s.date)) ? "Hoy" : isTomorrow(parseISO(s.date)) ? "Mañana" : format(parseISO(s.date), "EEEE d MMM", { locale: es })}
+                      {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEEE d MMM", { locale: enUS })}
                     </p>
                   </div>
                   {s.slots && (
                     <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-primary/10 text-primary">
-                      {s.slots - s.assignedCount} lugar{(s.slots - s.assignedCount) !== 1 ? "es" : ""}
+                      {s.slots - s.assignedCount} spot{(s.slots - s.assignedCount) !== 1 ? "s" : ""}
                     </span>
                   )}
                 </div>
@@ -421,7 +421,7 @@ export default function MyShifts() {
                   )}
                 </div>
                 <Button size="sm" className="w-full h-10 text-xs rounded-xl font-bold" onClick={() => claimShift(s.id)} disabled={claiming === s.id}>
-                  {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Enviando...</> : <><HandMetal className="h-3.5 w-3.5 mr-1.5" />Solicitar turno</>}
+                  {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Requesting...</> : <><HandMetal className="h-3.5 w-3.5 mr-1.5" />Request shift</>}
                 </Button>
               </div>
             ))}
@@ -436,7 +436,7 @@ export default function MyShifts() {
             <PortalShiftCard
               key={a.id}
               shift={toCardData(a)}
-              compact={compactView || activeTab === "historial"}
+              compact={compactView || activeTab === "history"}
               onClick={() => setSelectedShift(a)}
               onAccept={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => acceptAssignment(a.id) : undefined}
               onReject={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
@@ -459,28 +459,28 @@ export default function MyShifts() {
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-foreground">
-              {activeTab === "hoy" && "Sin turnos hoy"}
-              {activeTab === "proximos" && "Sin turnos próximos"}
-              {activeTab === "semana" && "Sin turnos esta semana"}
-              {activeTab === "historial" && "Sin historial"}
+              {activeTab === "today" && "No shifts today"}
+              {activeTab === "upcoming" && "No upcoming shifts"}
+              {activeTab === "week" && "No shifts this week"}
+              {activeTab === "history" && "No history"}
             </p>
             <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">
-              {activeTab === "hoy"
-                ? "No tienes turnos programados para hoy."
-                : activeTab === "historial"
-                ? "Aún no tienes turnos completados."
-                : "Los turnos asignados aparecerán aquí."
+              {activeTab === "today"
+                ? "You have no shifts scheduled for today."
+                : activeTab === "history"
+                ? "You don't have any completed shifts yet."
+                : "Assigned shifts will appear here."
               }
             </p>
           </div>
         </div>
       )}
 
-      {filtered.length === 0 && claimable.length > 0 && activeTab !== "historial" && (
+      {filtered.length === 0 && claimable.length > 0 && activeTab !== "history" && (
         <div className="rounded-2xl border-2 border-dashed border-primary/20 bg-primary/[0.02] p-6 text-center space-y-2">
           <HandMetal className="h-7 w-7 text-primary mx-auto" />
-          <p className="text-sm font-bold text-foreground">¡Hay turnos disponibles!</p>
-          <p className="text-xs text-muted-foreground">Solicita los turnos abiertos de arriba.</p>
+          <p className="text-sm font-bold text-foreground">Shifts available!</p>
+          <p className="text-xs text-muted-foreground">Request the open shifts above.</p>
         </div>
       )}
 
@@ -496,17 +496,17 @@ export default function MyShifts() {
       <Dialog open={!!rejectDialogId} onOpenChange={o => { if (!o) { setRejectDialogId(null); setRejectReason(""); } }}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Rechazar turno</DialogTitle>
+            <DialogTitle className="text-base font-bold">Reject shift</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Indica opcionalmente el motivo del rechazo.</p>
-            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo (opcional)..." rows={3} className="text-sm resize-none rounded-xl" />
+            <p className="text-xs text-muted-foreground">Optionally provide a reason for rejecting.</p>
+            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Reason (optional)..." rows={3} className="text-sm resize-none rounded-xl" />
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancelar</Button>
+            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => { setRejectDialogId(null); setRejectReason(""); }}>Cancel</Button>
             <Button variant="destructive" size="sm" className="rounded-xl" onClick={rejectAssignment} disabled={responding === rejectDialogId}>
               {responding === rejectDialogId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-              Rechazar
+              Reject
             </Button>
           </DialogFooter>
         </DialogContent>
