@@ -217,19 +217,21 @@ Deno.serve(async (req) => {
       results.no_clockin_alerts++;
     }
 
-    // ─── NEW: No-show detection (30 min after shift start) ───
-    const mins30ago = new Date(now.getTime() - 30 * 60000);
-    const mins45ago = new Date(now.getTime() - 45 * 60000);
-    const t30 = `${String(mins30ago.getHours()).padStart(2, "0")}:${String(mins30ago.getMinutes()).padStart(2, "0")}:00`;
-    const t45 = `${String(mins45ago.getHours()).padStart(2, "0")}:${String(mins45ago.getMinutes()).padStart(2, "0")}:00`;
+    // ─── No-show detection (2x grace_period after shift start) ───
+    const noShowMinutes = gracePeriod * 2;
+    const noShowWindowEnd = noShowMinutes + 15; // scan window
+    const minsNoShow = new Date(now.getTime() - noShowMinutes * 60000);
+    const minsNoShowMax = new Date(now.getTime() - noShowWindowEnd * 60000);
+    const tNoShow = `${String(minsNoShow.getHours()).padStart(2, "0")}:${String(minsNoShow.getMinutes()).padStart(2, "0")}:00`;
+    const tNoShowMax = `${String(minsNoShowMax.getHours()).padStart(2, "0")}:${String(minsNoShowMax.getMinutes()).padStart(2, "0")}:00`;
 
     const { data: noShowCandidates } = await supabase
       .from("shift_assignments")
       .select(`id, employee_id, scheduled_shifts!inner (id, title, start_time, company_id)`)
       .in("status", ["confirmed", "accepted", "pending"])
       .eq("scheduled_shifts.date", todayStr)
-      .lte("scheduled_shifts.start_time", t30)
-      .gte("scheduled_shifts.start_time", t45)
+      .lte("scheduled_shifts.start_time", tNoShow)
+      .gte("scheduled_shifts.start_time", tNoShowMax)
       .is("scheduled_shifts.deleted_at", null) as any;
 
     for (const sa of noShowCandidates ?? []) {
