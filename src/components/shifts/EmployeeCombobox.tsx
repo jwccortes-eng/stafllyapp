@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { UserPlus } from "lucide-react";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,7 +56,7 @@ export function EmployeeCombobox({
   employees, selected, onToggle, shifts = [], assignments = [], shiftDate, shiftStart, shiftEnd,
   maxHeight = "220px", showChips = true, availabilityConfigs = [], availabilityOverrides = [],
   availabilityBlockMode = "warning", showBulkActions = false, remainingSlots, requiresDriver = false,
-  shiftGroup,
+  shiftGroup, onAddNewEmployee,
 }: EmployeeComboboxProps) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
