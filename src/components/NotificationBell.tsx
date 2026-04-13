@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow, format } from "date-fns";
-import { es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 
 const TYPE_ROUTES: Record<string, string> = {
   shift_request_new: "/app/requests",
@@ -87,32 +87,32 @@ const FILTER_ICONS: Record<FilterTab, React.ReactNode> = {
 };
 
 const FILTER_LABELS: Record<FilterTab, string> = {
-  all: "Todo",
-  shifts: "Turnos",
-  clock: "Fichajes",
-  people: "Personal",
-  other: "Otros",
+  all: "All",
+  shifts: "Shifts",
+  clock: "Clock",
+  people: "People",
+  other: "Other",
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  shift_request_new: "Solicitud",
-  shift_assigned: "Asignación",
-  shift_published: "Publicado",
-  shift_available: "Disponible",
-  shift_updated: "Actualización",
-  shift_confirmed: "Confirmado",
-  shift_rejected: "Rechazado",
-  clock_request: "Fichaje",
-  announcement: "Anuncio",
-  payment_ready: "Pago",
-  shift_reminder: "Recordatorio",
-  no_clock: "Sin fichaje",
-  period_closed: "Periodo",
-  payroll_email: "Nómina",
-  new_application: "Aplicación",
-  invitation_accepted: "Invitación",
-  invitation_expired: "Expirada",
-  review_pending: "Evaluación",
+  shift_request_new: "Request",
+  shift_assigned: "Assigned",
+  shift_published: "Published",
+  shift_available: "Available",
+  shift_updated: "Updated",
+  shift_confirmed: "Confirmed",
+  shift_rejected: "Rejected",
+  clock_request: "Clock",
+  announcement: "Announcement",
+  payment_ready: "Payment",
+  shift_reminder: "Reminder",
+  no_clock: "No clock",
+  period_closed: "Period",
+  payroll_email: "Payroll",
+  new_application: "Application",
+  invitation_accepted: "Invitation",
+  invitation_expired: "Expired",
+  review_pending: "Review",
 };
 
 export default function NotificationBell() {
@@ -157,7 +157,7 @@ export default function NotificationBell() {
       <PopoverContent align="end" className="w-[380px] p-0 rounded-2xl shadow-xl border-border/50" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
-          <h3 className="text-sm font-heading font-bold">Notificaciones</h3>
+          <h3 className="text-sm font-heading font-bold">Notifications</h3>
           <div className="flex items-center gap-3">
             {unreadCount > 0 && (
               <button
@@ -165,14 +165,14 @@ export default function NotificationBell() {
                 className="flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
-                Marcar todo leído
+                Mark all read
               </button>
             )}
             <button
               onClick={() => { setOpen(false); navigate("/app/notifications"); }}
               className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
             >
-              Ver todas
+              View all
             </button>
           </div>
         </div>
@@ -210,7 +210,7 @@ export default function NotificationBell() {
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Bell className="h-8 w-8 text-muted-foreground/30 mb-2" />
               <p className="text-sm text-muted-foreground/60">
-                {filter === "all" ? "Sin notificaciones" : "Sin notificaciones en esta categoría"}
+                {filter === "all" ? "No notifications" : "No notifications in this category"}
               </p>
             </div>
           ) : (
@@ -248,11 +248,11 @@ export default function NotificationBell() {
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <p className="text-[10px] text-muted-foreground/40">
-                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es })}
+                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: enUS })}
                       </p>
                       <span className="text-[10px] text-muted-foreground/25">·</span>
                       <p className="text-[10px] text-muted-foreground/30 tabular-nums">
-                        {format(new Date(n.created_at), "dd MMM, HH:mm", { locale: es })}
+                        {format(new Date(n.created_at), "dd MMM, HH:mm", { locale: enUS })}
                       </p>
                     </div>
                   </div>
