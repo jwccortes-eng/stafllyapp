@@ -369,7 +369,9 @@ export default function PortalClock() {
   }
 
   const isClockedIn = !!activeEntry;
-  const hasQrShifts = Object.values(shiftQrModes).some(m => m !== "disabled" && m !== "");
+  const hasQrShifts = allowedMethods.includes("qr") && Object.values(shiftQrModes).some(m => m !== "disabled" && m !== "");
+  const allowManual = allowedMethods.includes("manual");
+  const allowGps = allowedMethods.includes("gps");
 
   return (
     <div className="space-y-4 animate-fade-in pb-24">
