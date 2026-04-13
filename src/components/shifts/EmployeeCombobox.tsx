@@ -265,110 +265,122 @@ export function EmployeeCombobox({
 
       {/* Employee list */}
       <div className="border rounded-xl overflow-y-auto" style={{ maxHeight }}>
-        {sorted.length === 0 ? (
+        {sorted.length === 0 && !onAddNewEmployee ? (
           <p className="text-xs text-muted-foreground p-3 text-center">
-            {search ? "Sin resultados" : "No hay empleados"}
+            {search ? "No results" : "No employees"}
           </p>
         ) : (
-          sorted.map(emp => {
-            const isSelected = selected.includes(emp.id);
-            const conflicts = conflictMap.get(emp.id);
-            const hasConflict = !!conflicts?.length;
-            const unavailableReason = unavailableMap.get(emp.id);
-            const isUnavailable = !!unavailableReason;
-            const isHardBlocked = isUnavailable && availabilityBlockMode === "hard" && !isSelected;
-            const empIsDriver = isDriver(emp);
-            const group = getGroup(emp);
+          <>
+            {sorted.map(emp => {
+              const isSelected = selected.includes(emp.id);
+              const conflicts = conflictMap.get(emp.id);
+              const hasConflict = !!conflicts?.length;
+              const unavailableReason = unavailableMap.get(emp.id);
+              const isUnavailable = !!unavailableReason;
+              const isHardBlocked = isUnavailable && availabilityBlockMode === "hard" && !isSelected;
+              const empIsDriver = isDriver(emp);
+              const group = getGroup(emp);
 
-            let groupHeader: React.ReactNode = null;
-            if (!isSelected && groupBreaks.has(emp.id)) {
-              const labels: Record<GroupKey, { label: string; color: string; icon: React.ReactNode }> = {
-                ready: { label: `Disponibles · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
-                warning: { label: "Con advertencia", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
-                blocked: { label: "No disponibles", color: "text-destructive", icon: <CalendarOff className="h-2.5 w-2.5" /> },
-              };
-              const g = labels[group];
-              groupHeader = (
-                <div className={cn("flex items-center gap-1.5 px-2.5 py-1 bg-muted/40 text-[8px] font-bold uppercase tracking-wider border-b border-border/20", g.color)}>
-                  {g.icon} {g.label}
-                </div>
-              );
-            }
+              let groupHeader: React.ReactNode = null;
+              if (!isSelected && groupBreaks.has(emp.id)) {
+                const labels: Record<GroupKey, { label: string; color: string; icon: React.ReactNode }> = {
+                  ready: { label: `Available · ${readyCount}`, color: "text-earning", icon: <UserCheck className="h-2.5 w-2.5" /> },
+                  warning: { label: "Warning", color: "text-warning", icon: <AlertTriangle className="h-2.5 w-2.5" /> },
+                  blocked: { label: "Unavailable", color: "text-destructive", icon: <CalendarOff className="h-2.5 w-2.5" /> },
+                };
+                const g = labels[group];
+                groupHeader = (
+                  <div className={cn("flex items-center gap-1.5 px-2.5 py-1 bg-muted/40 text-[8px] font-bold uppercase tracking-wider border-b border-border/20", g.color)}>
+                    {g.icon} {g.label}
+                  </div>
+                );
+              }
 
-            return (
-              <div key={emp.id}>
-                {groupHeader}
-                <label
-                  className={cn(
-                    "flex items-center gap-2 px-2 py-1.5 text-xs transition-colors border-b border-border/10 last:border-0",
-                    isHardBlocked ? "cursor-not-allowed opacity-35" : "cursor-pointer",
-                    isSelected ? "bg-primary/[0.07]" : "hover:bg-accent/50",
-                    hasConflict && !isSelected && "bg-warning/[0.04]",
-                    isUnavailable && !hasConflict && !isSelected && "bg-destructive/[0.03]",
-                  )}
-                >
-                  <Checkbox
-                    checked={isSelected} onCheckedChange={() => handleToggle(emp.id)}
-                    disabled={isHardBlocked} className="shrink-0 h-3.5 w-3.5"
-                  />
-                  <EmployeeAvatar
-                    firstName={emp.first_name} lastName={emp.last_name}
-                    avatarUrl={emp.avatar_url} gender={emp.gender} size="xs"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1">
-                      <span className={cn("font-semibold text-[11px] truncate", isUnavailable && !isSelected && "text-muted-foreground")}>
-                        {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)}
-                      </span>
-                      {empIsDriver && (
-                        <span className={cn(
-                          "h-3.5 px-1 rounded text-[7px] font-bold flex items-center gap-0.5 shrink-0",
-                          requiresDriver ? "bg-earning/15 text-earning ring-1 ring-earning/30" : "bg-primary/10 text-primary"
-                        )}>
-                          <Car className="h-2 w-2" />
+              return (
+                <div key={emp.id}>
+                  {groupHeader}
+                  <label
+                    className={cn(
+                      "flex items-center gap-2 px-2 py-1.5 text-xs transition-colors border-b border-border/10 last:border-0",
+                      isHardBlocked ? "cursor-not-allowed opacity-35" : "cursor-pointer",
+                      isSelected ? "bg-primary/[0.07]" : "hover:bg-accent/50",
+                      hasConflict && !isSelected && "bg-warning/[0.04]",
+                      isUnavailable && !hasConflict && !isSelected && "bg-destructive/[0.03]",
+                    )}
+                  >
+                    <Checkbox
+                      checked={isSelected} onCheckedChange={() => handleToggle(emp.id)}
+                      disabled={isHardBlocked} className="shrink-0 h-3.5 w-3.5"
+                    />
+                    <EmployeeAvatar
+                      firstName={emp.first_name} lastName={emp.last_name}
+                      avatarUrl={emp.avatar_url} gender={emp.gender} size="xs"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <span className={cn("font-semibold text-[11px] truncate", isUnavailable && !isSelected && "text-muted-foreground")}>
+                          {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)}
                         </span>
+                        {empIsDriver && (
+                          <span className={cn(
+                            "h-3.5 px-1 rounded text-[7px] font-bold flex items-center gap-0.5 shrink-0",
+                            requiresDriver ? "bg-earning/15 text-earning ring-1 ring-earning/30" : "bg-primary/10 text-primary"
+                          )}>
+                            <Car className="h-2 w-2" />
+                          </span>
+                        )}
+                        {emp.employee_role && (
+                          <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-medium truncate max-w-[50px] shrink-0">
+                            {formatDisplayText(emp.employee_role, "label")}
+                          </span>
+                        )}
+                        {!emp.user_id && (
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0 cursor-default">No portal</span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-[10px]">No active portal account</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                      {isUnavailable && (
+                        <p className="text-[8px] text-destructive flex items-center gap-0.5 mt-0.5 truncate">
+                          <CalendarOff className="h-2 w-2 shrink-0" /> {unavailableReason}
+                        </p>
                       )}
-                      {emp.employee_role && (
-                        <span className="h-3.5 px-1 rounded bg-muted text-muted-foreground text-[7px] font-medium truncate max-w-[50px] shrink-0">
-                          {formatDisplayText(emp.employee_role, "label")}
-                        </span>
-                      )}
-                      {!emp.user_id && (
-                        <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="h-3.5 px-1 rounded bg-warning/10 text-warning text-[7px] font-bold shrink-0 cursor-default">Sin portal</span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-[10px]">No tiene cuenta activa en el portal</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      {hasConflict && !isUnavailable && (
+                        <p className="text-[8px] text-warning flex items-center gap-0.5 mt-0.5 truncate">
+                          <AlertTriangle className="h-2 w-2 shrink-0" /> {conflicts![0].shiftTitle} ({conflicts![0].time})
+                        </p>
                       )}
                     </div>
-                    {/* Inline warning — single line */}
-                    {isUnavailable && (
-                      <p className="text-[8px] text-destructive flex items-center gap-0.5 mt-0.5 truncate">
-                        <CalendarOff className="h-2 w-2 shrink-0" /> {unavailableReason}
-                      </p>
-                    )}
-                    {hasConflict && !isUnavailable && (
-                      <p className="text-[8px] text-warning flex items-center gap-0.5 mt-0.5 truncate">
-                        <AlertTriangle className="h-2 w-2 shrink-0" /> {conflicts![0].shiftTitle} ({conflicts![0].time})
-                      </p>
-                    )}
-                  </div>
-                </label>
-              </div>
-            );
-          })
+                  </label>
+                </div>
+              );
+            })}
+            {/* Persistent "+ Add new employee" action */}
+            {onAddNewEmployee && (
+              <button
+                type="button"
+                onClick={onAddNewEmployee}
+                className="flex items-center gap-2 w-full px-2 py-2 text-xs font-semibold text-primary hover:bg-primary/[0.06] transition-colors border-t border-border/20"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                + Add new employee
+              </button>
+            )}
+          </>
         )}
       </div>
 
       {/* Summary */}
       <div className="flex items-center justify-between text-[9px] text-muted-foreground px-0.5">
-        <span>{filtered.length} trabajadores</span>
+        <span>{filtered.length} workers</span>
         {selected.length > 0 && (
           <span className="font-semibold text-foreground">
-            {selected.length} seleccionado{selected.length !== 1 ? "s" : ""}
+            {selected.length} selected
           </span>
         )}
       </div>
