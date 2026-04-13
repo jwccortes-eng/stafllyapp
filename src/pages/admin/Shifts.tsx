@@ -1009,16 +1009,18 @@ export default function Shifts() {
           .update({ title: `#${code} ${originalTitle}` } as any)
           .eq("id", newShift.id);
       }
-      // Copy assignments
-      const shiftAssigns = assignments.filter(a => a.shift_id === s.id);
-      if (shiftAssigns.length > 0 && newShift) {
-        const newAssigns = shiftAssigns.map(a => ({
-          company_id: selectedCompanyId,
-          shift_id: newShift.id,
-          employee_id: a.employee_id,
-          status: "pending",
-        }));
-        await supabase.from("shift_assignments").insert(newAssigns as any);
+      // Copy assignments (respects shifts_config.copy_week_assignments)
+      if (shiftsConfig.copy_week_assignments && newShift) {
+        const shiftAssigns = assignments.filter(a => a.shift_id === s.id);
+        if (shiftAssigns.length > 0) {
+          const newAssigns = shiftAssigns.map(a => ({
+            company_id: selectedCompanyId,
+            shift_id: newShift.id,
+            employee_id: a.employee_id,
+            status: "pending",
+          }));
+          await supabase.from("shift_assignments").insert(newAssigns as any);
+        }
       }
       if (newShift) {
         await logShiftActivity("copiar_semana", newShift.id, null, {
