@@ -91,6 +91,7 @@ export default function PortalClock() {
   const [clockPhotoRequired, setClockPhotoRequired] = useState(false);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [shiftQrModes, setShiftQrModes] = useState<Record<string, string>>({});
+  const [allowedMethods, setAllowedMethods] = useState<string[]>(["manual", "gps", "qr", "kiosk"]);
   const [successState, setSuccessState] = useState<{ type: "in" | "out"; time: string; shift: string } | null>(null);
   const [hasDailyOnlyShifts, setHasDailyOnlyShifts] = useState(false);
 
@@ -119,6 +120,9 @@ export default function PortalClock() {
         .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_config").maybeSingle();
       const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
       setClockPhotoRequired(clockCfg.require_photo === true);
+      if (Array.isArray(clockCfg.allowed_methods) && clockCfg.allowed_methods.length > 0) {
+        setAllowedMethods(clockCfg.allowed_methods as string[]);
+      }
     }
 
     const today = new Date();
