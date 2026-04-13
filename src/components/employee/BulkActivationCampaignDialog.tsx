@@ -138,15 +138,30 @@ export function BulkActivationCampaignDialog({ open, onOpenChange, employees, on
       // Build results from response
       const resultsList: SendResult[] = [];
       const selectedEmployees = eligible.filter(e => selectedIds.has(e.id));
+      const processedCount = data.processed ?? 0;
+      const emailsSentCount = data.emails_sent ?? 0;
 
       for (const emp of selectedEmployees) {
-        const failed = data.errors?.find((err: string) => err.includes(emp.first_name));
+        const emailError = data.errors?.find((err: string) => err.includes(`Email to ${emp.first_name}`));
+        const activationError = data.errors?.find((err: string) => 
+          err.includes(`${emp.first_name} ${emp.last_name}`) && !err.startsWith("Email to")
+        );
+
+        let status: SendResult["status"];
+        if (activationError) {
+          status = "failed";
+        } else if (emailError) {
+          status = "email_failed"; // Activation succeeded, email didn't
+        } else {
+          status = "sent";
+        }
+
         resultsList.push({
           employee_id: emp.id,
           name: formatPersonName(`${emp.first_name} ${emp.last_name}`),
           email: emp.email,
-          status: failed ? "failed" : "sent",
-          error: failed,
+          status,
+          error: activationError || emailError,
         });
       }
 
