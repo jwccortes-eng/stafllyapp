@@ -176,6 +176,7 @@ export default function Shifts() {
   const [driverEmployeeId, setDriverEmployeeId] = useState("");
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [copyingWeek, setCopyingWeek] = useState(false);
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
