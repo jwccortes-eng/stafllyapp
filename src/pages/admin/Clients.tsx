@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import AuditPanel from "@/components/audit/AuditPanel";
 import { cn } from "@/lib/utils";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
