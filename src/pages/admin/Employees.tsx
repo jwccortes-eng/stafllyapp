@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash, Building2, UserPlus } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash, Building2, UserPlus, Rocket } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -57,6 +57,7 @@ import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
 import { ColumnPreferencesDialog, useColumnPreferences, EMPLOYEE_COLUMNS } from "@/components/employee/ColumnPreferencesDialog";
+import { BulkActivationCampaignDialog } from "@/components/employee/BulkActivationCampaignDialog";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
@@ -199,6 +200,7 @@ export default function Employees() {
   const [archiveTarget, setArchiveTarget] = useState<EmployeeRecord | null>(null);
   const [colPrefsOpen, setColPrefsOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [campaignOpen, setCampaignOpen] = useState(false);
   const { visibleColumns, savePreferences } = useColumnPreferences("employees");
   const { toast } = useToast();
 
@@ -579,9 +581,9 @@ export default function Employees() {
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {isPrivileged && (
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleBulkPortalInvite} disabled={bulkInviting}>
-              {bulkInviting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
-              Invitar todos
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
+              <Rocket className="h-3.5 w-3.5 mr-1.5" />
+              Activation Campaign
             </Button>
           )}
           <BulkRateAssignment />
@@ -1022,9 +1024,17 @@ export default function Employees() {
         onSave={savePreferences}
       />
 
+      {/* Activation Campaign */}
+      <BulkActivationCampaignDialog
+        open={campaignOpen}
+        onOpenChange={setCampaignOpen}
+        employees={employees}
+        onComplete={() => { fetchEmployees(); refetchInvitations(); }}
+      />
+
       {/* Audit */}
       <div className="mt-6">
-        <AuditPanel entityType="employee" title="Actividad de empleados" hideViews compact />
+        <AuditPanel entityType="employee" title="Employee activity" hideViews compact />
       </div>
     </div>
   );
