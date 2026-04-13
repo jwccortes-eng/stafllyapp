@@ -581,9 +581,9 @@ export default function Employees() {
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {isPrivileged && (
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleBulkPortalInvite} disabled={bulkInviting}>
-              {bulkInviting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
-              Invitar todos
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCampaignOpen(true)}>
+              <Rocket className="h-3.5 w-3.5 mr-1.5" />
+              Activation Campaign
             </Button>
           )}
           <BulkRateAssignment />
