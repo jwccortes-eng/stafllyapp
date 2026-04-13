@@ -340,7 +340,7 @@ export default function Employees() {
 
     if (archiveRec && archiveRec.eligible_for_rehire === false) {
       const proceed = window.confirm(
-        `⚠️ ALERTA: ${emp.first_name} ${emp.last_name} fue marcado como NO RECONTRATABLE.\n\nMotivo: ${archiveRec.reason}\n${archiveRec.notes ? `Notas: ${archiveRec.notes}` : ""}\n\n¿Deseas reactivar de todos modos?`
+        `⚠️ WARNING: ${emp.first_name} ${emp.last_name} was marked as NOT ELIGIBLE FOR REHIRE.\n\nReason: ${archiveRec.reason}\n${archiveRec.notes ? `Notes: ${archiveRec.notes}` : ""}\n\nDo you want to reactivate anyway?`
       );
       if (!proceed) return;
     }
@@ -349,7 +349,7 @@ export default function Employees() {
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado reactivado" });
+      toast({ title: "Employee reactivated" });
       fetchEmployees();
     }
   };
@@ -449,7 +449,7 @@ export default function Employees() {
       if (!existing) {
         if (updateMode === "full") {
           const allChanges = CONNECTEAM_FIELDS.filter(field => row[field.key]?.trim()).map(field => ({ field: field.key, label: field.label, oldVal: "—", newVal: row[field.key] ?? "" }));
-          if (allChanges.length > 0) diffs.push({ employeeId: "__new__" + (row.connecteam_employee_id || row.phone_number || `${row.first_name}_${row.last_name}`), name: `${row.first_name ?? ""} ${row.last_name ?? ""} (NUEVO)`, changes: allChanges, selected: true });
+          if (allChanges.length > 0) diffs.push({ employeeId: "__new__" + (row.connecteam_employee_id || row.phone_number || `${row.first_name}_${row.last_name}`), name: `${row.first_name ?? ""} ${row.last_name ?? ""} (NEW)`, changes: allChanges, selected: true });
         }
         continue;
       }
@@ -500,11 +500,11 @@ export default function Employees() {
     const rows = filtered.map(emp => {
       const row: Record<string, string> = {};
       exportFields.forEach(f => { row[f.label] = emp[f.key] ?? ""; });
-      row["Estado"] = emp.is_active ? "Activo" : "Inactivo";
+      row["Status"] = emp.is_active ? "Active" : "Inactive";
       return row;
     });
-    await writeExcelFile(rows, "Empleados", `empleados_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    toast({ title: "Exportado", description: `${rows.length} empleados exportados a Excel` });
+    await writeExcelFile(rows, "Employees", `employees_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast({ title: "Exported", description: `${rows.length} employees exported to Excel` });
   };
 
   const uniqueRoles = [...new Set(employees.map(e => e.employee_role).filter(Boolean))];
@@ -553,7 +553,7 @@ export default function Employees() {
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado actualizado" });
+      toast({ title: "Employee updated" });
       setIsEditing(false);
       fetchEmployees();
       setViewEmployee(prev => prev ? { ...prev, ...buildInsertData(form) } : prev);
@@ -588,7 +588,7 @@ export default function Employees() {
           )}
           <BulkRateAssignment />
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExport} disabled={filtered.length === 0}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />Exportar
+            <Download className="h-3.5 w-3.5 mr-1.5" />Export
           </Button>
           {/* Update Dialog */}
           <Dialog open={updateOpen} onOpenChange={(v) => { setUpdateOpen(v); if (!v) resetUpdate(); }}>
