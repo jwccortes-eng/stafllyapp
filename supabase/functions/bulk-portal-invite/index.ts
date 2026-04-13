@@ -15,7 +15,11 @@ function extractLast4Digits(phone: string): string | null {
   return digits.slice(-4);
 }
 
-function buildInviteHtml(employee: { first_name: string; last_name: string; phone_number: string }, pin: string): string {
+function buildActivationEmail(
+  employee: { first_name: string; last_name: string; phone_number: string },
+  pin: string,
+  companyName: string,
+): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -24,40 +28,42 @@ function buildInviteHtml(employee: { first_name: string; last_name: string; phon
   <div style="max-width: 520px; margin: 40px auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
     <div style="background: linear-gradient(135deg, #3366FF, #5B8DEF); padding: 32px 24px; text-align: center;">
       <h1 style="color: #fff; font-size: 22px; margin: 0;">StaflyApps</h1>
-      <p style="color: rgba(255,255,255,0.8); font-size: 13px; margin: 8px 0 0;">Portal de Empleados</p>
+      <p style="color: rgba(255,255,255,0.85); font-size: 14px; margin: 8px 0 0;">${companyName}</p>
     </div>
     <div style="padding: 32px 24px;">
-      <h2 style="font-size: 18px; color: #1a1a2e; margin: 0 0 16px;">¡Hola ${employee.first_name}! 👋</h2>
+      <h2 style="font-size: 18px; color: #1a1a2e; margin: 0 0 16px;">Hi ${employee.first_name}! 👋</h2>
       <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 20px;">
-        Tu acceso al portal de empleados ha sido activado. Ahora puedes:
+        Your employee portal at <strong>${companyName}</strong> has been activated. You now have access to:
       </p>
       <ul style="font-size: 14px; color: #555; line-height: 1.8; padding-left: 20px; margin: 0 0 24px;">
-        <li>📅 Ver tus turnos asignados</li>
-        <li>✅ Aceptar o rechazar turnos</li>
-        <li>⏰ Registrar entrada y salida</li>
-        <li>📋 Ver detalles de tus trabajos</li>
+        <li>📅 View your assigned shifts</li>
+        <li>✅ Accept or decline shifts</li>
+        <li>⏰ Clock in and clock out</li>
+        <li>💰 Track your hours and payments</li>
+        <li>📊 View payment reports (hourly, daily & more)</li>
+        <li>📋 Access your work history</li>
       </ul>
       
       <div style="background: #f0f4ff; border-radius: 12px; padding: 20px; margin: 0 0 24px;">
-        <p style="font-size: 13px; font-weight: 600; color: #3366FF; margin: 0 0 12px;">🔐 Información de acceso</p>
+        <p style="font-size: 13px; font-weight: 600; color: #3366FF; margin: 0 0 12px;">🔐 Your Login Credentials</p>
         <table style="width: 100%; font-size: 14px; color: #333;">
-          <tr><td style="padding: 4px 0; color: #777;">Usuario:</td><td style="padding: 4px 0; font-weight: 600;">${employee.phone_number}</td></tr>
-          <tr><td style="padding: 4px 0; color: #777;">PIN temporal:</td><td style="padding: 4px 0; font-weight: 600; font-family: monospace; font-size: 18px; letter-spacing: 4px;">${pin}</td></tr>
+          <tr><td style="padding: 4px 0; color: #777;">Phone:</td><td style="padding: 4px 0; font-weight: 600;">${employee.phone_number}</td></tr>
+          <tr><td style="padding: 4px 0; color: #777;">Temporary PIN:</td><td style="padding: 4px 0; font-weight: 600; font-family: monospace; font-size: 18px; letter-spacing: 4px;">${pin}</td></tr>
         </table>
       </div>
 
       <div style="background: #fff8e6; border-radius: 12px; padding: 16px; margin: 0 0 24px; border: 1px solid #ffe0a0;">
         <p style="font-size: 13px; color: #8b6914; margin: 0;">
-          ⚠️ <strong>Por seguridad</strong>, deberás cambiar tu PIN después de tu primer inicio de sesión.
+          ⚠️ <strong>Security note</strong> — You'll be asked to change your PIN after your first login.
         </p>
       </div>
 
       <a href="https://staflyapps.com/portal" style="display: block; text-align: center; background: #3366FF; color: #fff; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-size: 14px; font-weight: 600;">
-        Acceder al Portal →
+        Access Employee Portal →
       </a>
     </div>
     <div style="padding: 16px 24px; background: #f8f9fc; text-align: center;">
-      <p style="font-size: 11px; color: #999; margin: 0;">StaflyApps · Gestión de personal inteligente</p>
+      <p style="font-size: 11px; color: #999; margin: 0;">StaflyApps · ${companyName} · Smart Workforce Management</p>
     </div>
   </div>
 </body>
@@ -75,10 +81,10 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Auth check: must be admin/owner
+    // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "No autorizado" }), {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -88,7 +94,7 @@ Deno.serve(async (req) => {
     });
     const { data: { user: caller } } = await callerClient.auth.getUser();
     if (!caller) {
-      return new Response(JSON.stringify({ error: "No autorizado" }), {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -96,39 +102,53 @@ Deno.serve(async (req) => {
     const { data: roleData } = await callerClient.from("user_roles").select("role").eq("user_id", caller.id);
     const callerRoles = (roleData ?? []).map((r: any) => r.role);
     if (!callerRoles.includes("owner") && !callerRoles.includes("admin") && !callerRoles.includes("developer")) {
-      return new Response(JSON.stringify({ error: "Solo admins pueden enviar invitaciones" }), {
+      return new Response(JSON.stringify({ error: "Only admins can send activation emails" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { company_id } = await req.json();
+    const body = await req.json();
+    const { company_id, employee_ids, send_email = true } = body;
+
     if (!company_id) {
-      return new Response(JSON.stringify({ error: "company_id requerido" }), {
+      return new Response(JSON.stringify({ error: "company_id required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Find eligible employees: active, has phone (force mode — resets all PINs)
-    const { data: employees, error: fetchErr } = await adminClient
+    // Get company name for email branding
+    const { data: companyData } = await adminClient
+      .from("companies")
+      .select("name")
+      .eq("id", company_id)
+      .single();
+    const companyName = companyData?.name ?? "Your Company";
+
+    // Build query for eligible employees
+    let query = adminClient
       .from("employees")
-      .select("id, first_name, last_name, phone_number, email, access_pin, is_active")
+      .select("id, first_name, last_name, phone_number, email, access_pin, is_active, user_id")
       .eq("company_id", company_id)
       .eq("is_active", true)
       .not("phone_number", "is", null);
 
+    // If specific IDs provided, filter to those
+    if (employee_ids && Array.isArray(employee_ids) && employee_ids.length > 0) {
+      query = query.in("id", employee_ids);
+    }
+
+    const { data: employees, error: fetchErr } = await query;
+
     if (fetchErr) {
-      return new Response(JSON.stringify({ error: "Error al buscar empleados" }), {
+      return new Response(JSON.stringify({ error: "Error fetching employees" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (!employees || employees.length === 0) {
       return new Response(JSON.stringify({ 
-        success: true, 
-        processed: 0, 
-        skipped: 0, 
-        emails_sent: 0,
-        message: "No hay empleados elegibles (todos ya tienen PIN o no tienen teléfono)" 
+        success: true, processed: 0, skipped: 0, emails_sent: 0,
+        message: "No eligible employees found",
       }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -138,18 +158,14 @@ Deno.serve(async (req) => {
     let skipped = 0;
     let emailsSent = 0;
     const errors: string[] = [];
-
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
 
     for (const emp of employees) {
       try {
         const pin = extractLast4Digits(emp.phone_number);
-        if (!pin) {
-          skipped++;
-          continue;
-        }
+        if (!pin) { skipped++; continue; }
 
-        // Update employee record
+        // Update employee record with PIN and portal access
         const { error: updateErr } = await adminClient
           .from("employees")
           .update({
@@ -170,15 +186,7 @@ Deno.serve(async (req) => {
         const empEmail = `emp_${cleanPhone}@employee.internal`;
         const pwd = AUTH_PWD_PREFIX + pin;
 
-        // Check if auth user exists
-        const { data: existingEmp } = await adminClient
-          .from("employees")
-          .select("user_id")
-          .eq("id", emp.id)
-          .single();
-
-        if (!existingEmp?.user_id) {
-          // Create auth user
+        if (!emp.user_id) {
           const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
             email: empEmail,
             password: pwd,
@@ -187,13 +195,11 @@ Deno.serve(async (req) => {
           });
 
           if (createErr) {
-            // User might already exist
             const { data: { users } } = await adminClient.auth.admin.listUsers();
             const existing = users?.find((u: any) => u.email === empEmail);
             if (existing) {
               await adminClient.auth.admin.updateUserById(existing.id, { password: pwd });
               await adminClient.from("employees").update({ user_id: existing.id }).eq("id", emp.id);
-              // Ensure employee role
               const { data: roles } = await adminClient.from("user_roles").select("role").eq("user_id", existing.id).limit(1);
               if (!roles || roles.length === 0) {
                 await adminClient.from("user_roles").insert({ user_id: existing.id, role: "employee" });
@@ -201,44 +207,55 @@ Deno.serve(async (req) => {
             }
           } else if (newUser?.user) {
             await adminClient.from("employees").update({ user_id: newUser.user.id }).eq("id", emp.id);
-            // Ensure employee role
             const { data: roles } = await adminClient.from("user_roles").select("role").eq("user_id", newUser.user.id).limit(1);
             if (!roles || roles.length === 0) {
               await adminClient.from("user_roles").insert({ user_id: newUser.user.id, role: "employee" });
             }
           }
         } else {
-          // Update existing auth user password
-          await adminClient.auth.admin.updateUserById(existingEmp.user_id, { password: pwd });
+          await adminClient.auth.admin.updateUserById(emp.user_id, { password: pwd });
         }
 
         processed++;
 
-        // Send invitation email if employee has a real email
-        if (emp.email && apiKey) {
+        // Send activation email
+        if (send_email && emp.email && apiKey) {
           try {
-            const inviteHtml = buildInviteHtml(emp, pin);
-            const text = inviteHtml.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+            const html = buildActivationEmail(emp, pin, companyName);
+            const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
             await sendLovableEmail(
               {
                 to: emp.email,
-                subject: "Tu acceso al Portal de Empleados StaflyApps",
-                html: inviteHtml,
+                subject: `${companyName} — Your Employee Portal is Ready`,
+                html,
                 text,
-                from: "StaflyApps <noreply@notify.staflyapps.com>",
+                from: `${companyName} via StaflyApps <noreply@notify.staflyapps.com>`,
                 sender_domain: "notify.staflyapps.com",
                 purpose: "transactional",
-                label: "portal_invite",
+                label: "portal_activation",
                 run_id: crypto.randomUUID(),
                 message_id: crypto.randomUUID(),
               },
-              { apiKey }
+              { apiKey },
             );
             emailsSent++;
           } catch (emailErr: any) {
-            errors.push(`Email a ${emp.first_name}: ${emailErr.message}`);
+            errors.push(`Email to ${emp.first_name}: ${emailErr.message}`);
           }
         }
+
+        // Log the invitation
+        try {
+          await adminClient.from("employee_invitations").insert({
+            company_id,
+            employee_id: emp.id,
+            channel: "email",
+            status: "sent",
+            sent_by: caller.id,
+            sent_at: new Date().toISOString(),
+            notes: `Bulk activation campaign — ${companyName}`,
+          });
+        } catch (_) { /* non-critical */ }
       } catch (empErr: any) {
         errors.push(`${emp.first_name} ${emp.last_name}: ${empErr.message}`);
         skipped++;
@@ -251,6 +268,7 @@ Deno.serve(async (req) => {
       processed,
       skipped,
       emails_sent: emailsSent,
+      company_name: companyName,
       errors: errors.length > 0 ? errors : undefined,
     }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
