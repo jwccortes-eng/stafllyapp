@@ -111,7 +111,7 @@ export function ShiftDetailDialog({
   shift, open, onOpenChange, assignments, employees, locations, clients, allShifts = [],
   canEdit, onAddEmployees, onRemoveAssignment, onEdit, onPublish, onSave, onRequestAction,
   onDuplicate, onDelete,
-  availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee,
+  availabilityConfigs = [], availabilityOverrides = [], onAddNewEmployee, allowClaims = true,
 }: ShiftDetailDialogProps) {
   const { user } = useAuth();
   const { selectedCompanyId } = useCompany();
@@ -518,10 +518,12 @@ export function ShiftDetailDialog({
                       <Label className="text-[11px] text-muted-foreground font-medium">Plazas</Label>
                       <Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm mt-1" />
                     </div>
-                    <div className="flex items-center gap-2 h-9">
-                      <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="detail-claimable" />
-                      <Label htmlFor="detail-claimable" className="text-xs font-normal cursor-pointer">Reclamo</Label>
-                    </div>
+                    {allowClaims && (
+                      <div className="flex items-center gap-2 h-9">
+                        <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="detail-claimable" />
+                        <Label htmlFor="detail-claimable" className="text-xs font-normal cursor-pointer">Reclamo</Label>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label className="text-[11px] text-muted-foreground font-medium">Notas</Label>
@@ -542,7 +544,7 @@ export function ShiftDetailDialog({
                     <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
                   </div>
 
-                  {shift.claimable && (
+                  {allowClaims && shift.claimable && (
                     <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 rounded-xl px-3 py-2">
                       <Megaphone className="h-3.5 w-3.5" />
                       <span className="font-medium">Los empleados pueden reclamar este turno</span>
@@ -864,7 +866,7 @@ export function ShiftDetailDialog({
               )}
 
               {/* Claimable toggle */}
-              {effectiveCanEdit && (
+              {effectiveCanEdit && allowClaims && (
                 <div className="flex items-center justify-between rounded-lg border border-border/20 bg-muted/10 px-2.5 py-2">
                   <div className="flex items-center gap-2">
                     <Megaphone className="h-3 w-3 text-primary" />
