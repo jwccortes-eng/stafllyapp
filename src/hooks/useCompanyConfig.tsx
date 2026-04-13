@@ -13,7 +13,7 @@ import { toast } from "sonner";
  * Usage:
  *   const { config, updateConfig, loading } = useCompanyConfig<ShiftsConfig>("shifts_config", SHIFTS_DEFAULTS);
  */
-export function useCompanyConfig<T extends Record<string, unknown>>(
+export function useCompanyConfig<T extends object>(
   configKey: string,
   defaults: T,
 ) {
