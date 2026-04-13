@@ -1080,6 +1080,11 @@ export default function Shifts() {
             <p className="text-xs text-muted-foreground mt-0.5">Programa y gestiona turnos de trabajo</p>
           </div>
           <div className="flex items-center gap-2">
+            {canEdit && (
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Shift settings">
+                <Settings2 className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline" className="h-8 text-xs">
