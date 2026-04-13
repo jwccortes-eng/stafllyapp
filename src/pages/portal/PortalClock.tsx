@@ -114,11 +114,11 @@ export default function PortalClock() {
     if (emp) {
       setCompanyId(emp.company_id);
       setHasProfilePhoto(!!emp.avatar_url);
-      const { data: clockPhotoSetting } = await supabase
-        .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_photo").maybeSingle();
-      setClockPhotoRequired(
-        clockPhotoSetting?.value != null && typeof clockPhotoSetting.value === "object" && (clockPhotoSetting.value as any)?.required === true
-      );
+      // Read clock_config (consolidated namespace)
+      const { data: clockCfgRow } = await supabase
+        .from("company_settings").select("value").eq("company_id", emp.company_id).eq("key", "clock_config").maybeSingle();
+      const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
+      setClockPhotoRequired(clockCfg.require_photo === true);
     }
 
     const today = new Date();
@@ -228,24 +228,28 @@ export default function PortalClock() {
           .select("location_id, locations(latitude, longitude, geofence_radius)").eq("id", selectedShift.id).maybeSingle();
         const loc = (shiftData as any)?.locations;
         if (loc?.latitude && loc?.longitude) {
-          const { data: geoSetting } = await supabase.from("company_settings")
-            .select("value").eq("company_id", companyId).eq("key", "geofence").maybeSingle();
-          const enforcementEnabled = geoSetting?.value != null && typeof geoSetting.value === "object" && (geoSetting.value as any)?.enforce === true;
+          // Read clock_config for GPS enforcement
+          const { data: clockCfgRow } = await supabase.from("company_settings")
+            .select("value").eq("company_id", companyId).eq("key", "clock_config").maybeSingle();
+          const clockCfg = (clockCfgRow?.value && typeof clockCfgRow.value === "object") ? clockCfgRow.value as Record<string, unknown> : {};
+          const gpsEnforcement = (clockCfg.gps_enforcement as string) ?? "none";
+          const configRadius = typeof clockCfg.gps_radius_meters === "number" ? clockCfg.gps_radius_meters : 200;
           if (!pos) {
-            if (enforcementEnabled) {
+            if (gpsEnforcement === "block") {
               toast({ title: "Enable your location", description: "Your company requires GPS location for clocking in. Enable it in settings and try again.", variant: "destructive" });
               setActing(false); return;
             }
           } else {
             const dist = distanceMeters(pos.latitude, pos.longitude, loc.latitude, loc.longitude);
-            const radius = loc.geofence_radius ?? 200;
+            const radius = loc.geofence_radius ?? configRadius;
             if (dist > radius) {
-              if (enforcementEnabled) {
+              if (gpsEnforcement === "block") {
                 toast({ title: "Outside work area", description: `Move closer to the shift location (${Math.round(dist)}m away).`, variant: "destructive" });
                 await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: "high", description: `Clock-in blocked at ${Math.round(dist)}m` } as any);
                 setActing(false); return;
               } else {
-                await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: "high", description: `Clock-in at ${Math.round(dist)}m` } as any);
+                // warn or none — just log
+                await supabase.from("clock_alerts").insert({ employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, type: "OUTSIDE_GEOFENCE", severity: gpsEnforcement === "warn" ? "high" : "low", description: `Clock-in at ${Math.round(dist)}m` } as any);
               }
             }
           }
