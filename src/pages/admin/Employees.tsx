@@ -1024,9 +1024,17 @@ export default function Employees() {
         onSave={savePreferences}
       />
 
+      {/* Activation Campaign */}
+      <BulkActivationCampaignDialog
+        open={campaignOpen}
+        onOpenChange={setCampaignOpen}
+        employees={employees}
+        onComplete={() => { fetchEmployees(); refetchInvitations(); }}
+      />
+
       {/* Audit */}
       <div className="mt-6">
-        <AuditPanel entityType="employee" title="Actividad de empleados" hideViews compact />
+        <AuditPanel entityType="employee" title="Employee activity" hideViews compact />
       </div>
     </div>
   );
