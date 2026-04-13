@@ -59,6 +59,8 @@ interface ShiftDetailDialogProps {
   availabilityOverrides?: AvailabilityOverride[];
   /** Callback when user wants to add a brand-new employee from the combobox */
   onAddNewEmployee?: () => void;
+  /** When false, hides all claimable UI */
+  allowClaims?: boolean;
 }
 
 function calcHours(start: string, end: string): string {
