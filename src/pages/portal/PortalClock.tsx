@@ -541,7 +541,7 @@ export default function PortalClock() {
             Scan QR
           </Button>
         )}
-        {!isClockedIn && (
+        {!isClockedIn && allowManual && (
           <Button variant="ghost" size="sm" className={cn("h-11 text-xs text-muted-foreground gap-1.5", hasQrShifts ? "flex-1" : "w-full")} onClick={() => setRequestOpen(true)}>
             <FileText className="h-3.5 w-3.5" /> Report time
           </Button>
