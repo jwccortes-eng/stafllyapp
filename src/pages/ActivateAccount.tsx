@@ -140,11 +140,12 @@ export default function ActivateAccount() {
       const invitationCompanyId = data.company_id;
       if (!invitationCompanyId) { setPageState("invalid"); return; }
 
-      const { data: emp } = await supabase
-        .from("employees")
-        .select("first_name, last_name, company_id, phone_number, avatar_url, email")
-        .eq("id", data.employee_id)
-        .single();
+      // Use security-definer RPC to bypass RLS (activation page is unauthenticated)
+      const { data: empRows } = await supabase.rpc("get_employee_for_activation", {
+        _employee_id: data.employee_id,
+        _invite_token: token,
+      });
+      const emp = Array.isArray(empRows) ? empRows[0] : empRows;
 
       if (!emp) { setPageState("invalid"); return; }
 
