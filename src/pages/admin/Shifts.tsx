@@ -100,6 +100,14 @@ export default function Shifts() {
   const [locations, setLocations] = useState<(SelectOption & { address?: string; client_id?: string | null })[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
+
+  // Open create dialog when navigated with ?create=1
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setCreateOpen(true);
+      setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete("create"); return p; }, { replace: true });
+    }
+  }, [searchParams]);
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [weekViewMode, setWeekViewMode] = useState<"grid" | "job" | "employee">("job");
   const [currentDay, setCurrentDay] = useState(() => initialDate);

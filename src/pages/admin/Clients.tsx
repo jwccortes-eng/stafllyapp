@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import AuditPanel from "@/components/audit/AuditPanel";
 import { cn } from "@/lib/utils";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
@@ -61,7 +62,15 @@ export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [formOpen, setFormOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setFormOpen(true);
+      setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete("create"); return p; }, { replace: true });
+    }
+  }, [searchParams]);
   const [editing, setEditing] = useState<Client | null>(null);
   const [showDeleted, setShowDeleted] = useState("active");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");

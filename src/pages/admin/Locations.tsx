@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import AuditPanel from "@/components/audit/AuditPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,7 +52,15 @@ export default function Locations() {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [formOpen, setFormOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setFormOpen(true);
+      setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete("create"); return p; }, { replace: true });
+    }
+  }, [searchParams]);
   const [editing, setEditing] = useState<Location | null>(null);
   const [showDeleted, setShowDeleted] = useState("active");
 
