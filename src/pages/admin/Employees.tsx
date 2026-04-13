@@ -146,13 +146,13 @@ function EmployeeForm({ fields, form, setForm, loading, onSubmit, submitLabel }:
           )}
         </FormField>
       ))}
-      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : submitLabel}</Button>
+      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Saving..." : submitLabel}</Button>
     </form>
   );
 }
 
 export default function Employees() {
-  usePageView("Empleados");
+  usePageView("Employees");
   const { selectedCompanyId, selectedCompany } = useCompany();
   const { role } = useAuth();
   const isPrivileged = role === 'developer' || role === 'owner' || role === 'admin';
@@ -211,11 +211,11 @@ export default function Employees() {
       const { data, error } = await supabase.functions.invoke("bulk-portal-invite", {
         body: { company_id: selectedCompanyId },
       });
-      if (error) { toast({ title: "Error", description: "Error al enviar invitaciones", variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: "Failed to send invitations", variant: "destructive" }); return; }
       if (data?.error) { toast({ title: "Error", description: data.error, variant: "destructive" }); return; }
       toast({
-        title: "Invitaciones enviadas ✅",
-        description: `${data.processed} empleados activados, ${data.emails_sent} emails enviados${data.skipped > 0 ? `, ${data.skipped} omitidos` : ""}`,
+        title: "Invitations sent ✅",
+        description: `${data.processed} employees activated, ${data.emails_sent} emails sent${data.skipped > 0 ? `, ${data.skipped} skipped` : ""}`,
       });
       fetchEmployees();
     } catch (e: any) {
@@ -303,7 +303,7 @@ export default function Employees() {
     if (error) {
       toast({ title: "Error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado actualizado" });
+      toast({ title: "Employee updated" });
       setEditOpen(false);
       setEditingEmployee(null);
       setForm(emptyForm());
@@ -316,9 +316,9 @@ export default function Employees() {
     if (!deleteTarget) return;
     const { error } = await supabase.from("employees").delete().eq("id", deleteTarget.id);
     if (error) {
-      toast({ title: "Error al eliminar", description: getUserFriendlyError(error), variant: "destructive" });
+      toast({ title: "Delete error", description: getUserFriendlyError(error), variant: "destructive" });
     } else {
-      toast({ title: "Empleado eliminado" });
+      toast({ title: "Employee deleted" });
       fetchEmployees();
     }
     setDeleteTarget(null);

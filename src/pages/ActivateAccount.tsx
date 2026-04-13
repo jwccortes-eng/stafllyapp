@@ -838,22 +838,22 @@ export default function ActivateAccount() {
                     <CheckCircle2 className="h-10 w-10 text-white" />
                   </div>
                   <div className="space-y-1">
-                    <h2 className="text-xl font-bold text-foreground">¡Todo listo! 🎉</h2>
-                    <p className="text-sm text-muted-foreground">Tu portal está activado. Ya puedes ver turnos, confirmar asistencia y chatear.</p>
+                    <h2 className="text-xl font-bold text-foreground">You're all set! 🎉</h2>
+                    <p className="text-sm text-muted-foreground">Your portal is activated. You can now view shifts, confirm attendance and chat with your team.</p>
                   </div>
                   <div className="rounded-xl border border-earning/20 bg-earning/5 p-4 space-y-2 text-left">
                     <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-earning" /> Perfil completo
+                      <CheckCircle2 className="h-3.5 w-3.5 text-earning" /> Profile complete
                     </p>
                     <div className="text-xs text-muted-foreground space-y-1 ml-5">
-                      <p>• Ver y confirmar turnos</p>
-                      <p>• Registrar entrada y salida</p>
-                      <p>• Chat con tu equipo</p>
-                      <p>• Ver pagos y anuncios</p>
+                      <p>• View and confirm shifts</p>
+                      <p>• Clock in and out</p>
+                      <p>• Chat with your team</p>
+                      <p>• View payments and announcements</p>
                     </div>
                   </div>
                   <Button onClick={() => navigate("/portal")} className="w-full h-12 rounded-xl text-base font-semibold gap-2">
-                    Ir a mi portal <ArrowRight className="h-4 w-4" />
+                    Go to my portal <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
               )}
