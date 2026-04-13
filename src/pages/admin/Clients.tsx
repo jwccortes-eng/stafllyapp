@@ -62,7 +62,8 @@ export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [formOpen, setFormOpen] = useState(() => searchParams.get("create") === "1");
   const [editing, setEditing] = useState<Client | null>(null);
   const [showDeleted, setShowDeleted] = useState("active");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
