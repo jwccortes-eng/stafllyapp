@@ -994,15 +994,15 @@ export default function Employees() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
-        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Editar empleado</DialogTitle><DialogDescription>Modifica los datos del empleado</DialogDescription></DialogHeader><EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Guardar cambios" /></DialogContent>
+        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Edit employee</DialogTitle><DialogDescription>Update employee information</DialogDescription></DialogHeader><EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Save changes" /></DialogContent>
       </Dialog>
 
       {/* Delete Confirmation */}
       <PasswordConfirmDialog
         open={passwordOpen}
         onOpenChange={(v) => { setPasswordOpen(v); if (!v) setDeleteTarget(null); }}
-        title="Eliminar empleado"
-        description={`Se eliminará permanentemente a ${deleteTarget?.first_name} ${deleteTarget?.last_name}.`}
+        title="Delete employee"
+        description={`${deleteTarget?.first_name} ${deleteTarget?.last_name} will be permanently deleted.`}
         onConfirm={handleDelete}
       />
 
