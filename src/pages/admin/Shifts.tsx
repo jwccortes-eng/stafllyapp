@@ -339,7 +339,7 @@ export default function Shifts() {
     setEndTime(shiftsConfig.default_end_time);
     setSlots(String(shiftsConfig.default_slots));
     setClientId(""); setLocationId(""); setNotes("");
-    setClaimable(false); setSelectedEmployees([]);
+    setClaimable(shiftsConfig.allow_claims ? false : false); setSelectedEmployees([]);
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
     setDayType("full_day"); setShiftAdminId("");
     setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
@@ -462,6 +462,8 @@ export default function Shifts() {
 
   const createSingleShift = async (shiftDate: string, skipNotifications = false, forceDraft = false) => {
     if (!selectedCompanyId) return null;
+    // Determine initial status: auto_publish overrides unless forceDraft
+    const initialStatus = (!forceDraft && shiftsConfig.auto_publish) ? "published" : (forceDraft ? "draft" : "draft");
     const insertData: any = {
       company_id: selectedCompanyId,
       title: title.trim() || "Turno",
@@ -470,7 +472,7 @@ export default function Shifts() {
       client_id: clientId || null,
       location_id: locationId || null,
       notes: notes.trim() || null,
-      claimable,
+      claimable: shiftsConfig.allow_claims ? claimable : false,
       meeting_point: meetingPoint.trim() || null,
       special_instructions: specialInstructions.trim() || null,
       created_by: user?.id,
@@ -481,8 +483,8 @@ export default function Shifts() {
       car_capacity: parseInt(carCapacity) || 4,
       transportation_notes: transportNotes.trim() || null,
       driver_employee_id: driverEmployeeId || null,
+      status: initialStatus,
     };
-    if (forceDraft) insertData.status = "draft";
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); return null; }
@@ -707,6 +709,11 @@ export default function Shifts() {
   };
 
   const handlePublishShift = async (shift: Shift) => {
+    // require_shift_admin gate
+    if (shiftsConfig.require_shift_admin && !(shift as any).shift_admin_id) {
+      toast.error("A shift lead must be assigned before publishing");
+      return;
+    }
     const { error } = await supabase.from("scheduled_shifts")
       .update({ status: "published" } as any)
       .eq("id", shift.id);
@@ -756,8 +763,16 @@ export default function Shifts() {
   // --- Bulk publish all draft shifts in current view ---
   const [bulkPublishing, setBulkPublishing] = useState(false);
   const handlePublishAll = async () => {
-    const draftShifts = filteredShifts.filter(s => s.status !== "published" && s.status !== "locked");
+    let draftShifts = filteredShifts.filter(s => s.status !== "published" && s.status !== "locked");
     if (draftShifts.length === 0) { toast.info("No hay turnos borrador para publicar"); return; }
+    // require_shift_admin gate for bulk publish
+    if (shiftsConfig.require_shift_admin) {
+      const blocked = draftShifts.filter(s => !(s as any).shift_admin_id);
+      if (blocked.length > 0) {
+        toast.error(`${blocked.length} shift(s) missing a shift lead — assign one before publishing`);
+        return;
+      }
+    }
     setBulkPublishing(true);
     const ids = draftShifts.map(s => s.id);
     const { error } = await supabase.from("scheduled_shifts")
@@ -1186,7 +1201,7 @@ export default function Shifts() {
       {/* ── FILTERS + BULK ACTIONS ── */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1">
-          <ShiftFilters filters={filters} onChange={setFilters} clients={clients} locations={locations} />
+          <ShiftFilters filters={filters} onChange={setFilters} clients={clients} locations={locations} allowClaims={shiftsConfig.allow_claims} />
         </div>
         {canEdit && (
           <div className="flex items-center gap-1.5 shrink-0">
@@ -1755,6 +1770,7 @@ export default function Shifts() {
         availabilityConfigs={availConfigs}
         availabilityOverrides={availOverrides}
         onAddNewEmployee={() => setQuickAddOpen(true)}
+        allowClaims={shiftsConfig.allow_claims}
       />
 
       <ShiftEditDialog
@@ -1766,6 +1782,7 @@ export default function Shifts() {
         employees={employees}
         assignments={assignments}
         onSave={handleEditShift}
+        allowClaims={shiftsConfig.allow_claims}
       />
 
       <QuickAddInviteWizard
