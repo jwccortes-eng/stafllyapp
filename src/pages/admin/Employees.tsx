@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash, Building2 } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash, Building2, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -48,6 +48,7 @@ import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
+import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
@@ -187,6 +188,7 @@ export default function Employees() {
   const [bulkInviting, setBulkInviting] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<EmployeeRecord | null>(null);
   const [colPrefsOpen, setColPrefsOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const { visibleColumns, savePreferences } = useColumnPreferences("employees");
   const { toast } = useToast();
 
@@ -666,6 +668,10 @@ export default function Employees() {
             <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />New</Button></DialogTrigger>
             <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter the new employee's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} employees`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
           </Dialog>
+          <Button size="sm" variant="outline" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
+            <UserPlus className="h-3.5 w-3.5 mr-1.5" />Agregar e invitar
+          </Button>
+          <QuickAddInviteWizard open={quickAddOpen} onOpenChange={setQuickAddOpen} onEmployeeCreated={fetchEmployees} />
         </div>
       </div>
 
