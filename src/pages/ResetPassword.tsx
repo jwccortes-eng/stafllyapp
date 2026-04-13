@@ -130,7 +130,7 @@ export default function ResetPassword() {
         }
 
         if (!hasRecoveryIntent) {
-          finishRecoveryCheck(false, "Este enlace de recuperación ha expirado o no es válido.");
+          finishRecoveryCheck(false, "This recovery link has expired or is invalid.");
           subscription.unsubscribe();
           return;
         }
@@ -150,14 +150,14 @@ export default function ResetPassword() {
           if (delayedSession) {
             markRecoveryReady("delayed-session", delayedSession.user.email);
           } else {
-            finishRecoveryCheck(false, "No pudimos validar tu enlace de recuperación. Solicita uno nuevo.");
+            finishRecoveryCheck(false, "We couldn't validate your recovery link. Please request a new one.");
           }
 
           subscription.unsubscribe();
         }, 2500);
       } catch (error: any) {
         console.error("[reset-password] recovery setup error", error);
-        finishRecoveryCheck(false, error?.message || "No pudimos validar tu enlace de recuperación.");
+        finishRecoveryCheck(false, error?.message || "We couldn't validate your recovery link.");
         subscription.unsubscribe();
       }
 
@@ -176,12 +176,12 @@ export default function ResetPassword() {
     e.preventDefault();
 
     if (password.length < 6) {
-      toast({ title: "Error", description: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" });
+      toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
       return;
     }
 
     if (password !== confirm) {
-      toast({ title: "Error", description: "Las contraseñas no coinciden", variant: "destructive" });
+      toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
       return;
     }
 
@@ -200,7 +200,7 @@ export default function ResetPassword() {
     console.log("[reset-password] password updated successfully");
     await supabase.auth.signOut();
     setSuccess(true);
-    toast({ title: "¡Listo!", description: "Tu contraseña ha sido actualizada." });
+    toast({ title: "Done!", description: "Your password has been updated." });
     setLoading(false);
     window.setTimeout(() => navigate("/auth", { replace: true }), 1800);
   };
@@ -211,8 +211,8 @@ export default function ResetPassword() {
         <div className="w-full max-w-[400px] text-center space-y-4">
           <StaflyLogo size={44} />
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <h1 className="text-lg font-semibold font-heading text-foreground">Validando enlace</h1>
-          <p className="text-sm text-muted-foreground">Estamos preparando tu recuperación de contraseña.</p>
+          <h1 className="text-lg font-semibold font-heading text-foreground">Validating link</h1>
+          <p className="text-sm text-muted-foreground">Preparing your password recovery.</p>
         </div>
       </div>
     );
@@ -223,9 +223,9 @@ export default function ResetPassword() {
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="w-full max-w-[400px] text-center space-y-4">
           <StaflyLogo size={44} />
-          <h1 className="text-lg font-semibold font-heading text-foreground">Enlace inválido</h1>
-          <p className="text-sm text-muted-foreground">{recoveryError || "Este enlace de recuperación ha expirado o no es válido."}</p>
-          <Button variant="outline" onClick={() => navigate("/auth", { replace: true })}>Volver al login</Button>
+          <h1 className="text-lg font-semibold font-heading text-foreground">Invalid link</h1>
+          <p className="text-sm text-muted-foreground">{recoveryError || "This recovery link has expired or is invalid."}</p>
+          <Button variant="outline" onClick={() => navigate("/auth", { replace: true })}>Back to login</Button>
         </div>
       </div>
     );
@@ -236,8 +236,8 @@ export default function ResetPassword() {
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="w-full max-w-[400px] text-center space-y-4">
           <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
-          <h1 className="text-lg font-semibold font-heading text-foreground">Contraseña actualizada</h1>
-          <p className="text-sm text-muted-foreground">Serás redirigido al login en unos segundos...</p>
+          <h1 className="text-lg font-semibold font-heading text-foreground">Password updated</h1>
+          <p className="text-sm text-muted-foreground">You'll be redirected to login shortly...</p>
         </div>
       </div>
     );
@@ -253,16 +253,16 @@ export default function ResetPassword() {
         <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
           <div className="text-center space-y-1">
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              Nueva contraseña
+              New password
             </h1>
             <p className="text-sm text-muted-foreground">
-              Ingresa tu nueva contraseña para continuar
+              Enter your new password to continue
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="new-password" className="text-xs font-semibold text-foreground/80">Nueva contraseña</Label>
+              <Label htmlFor="new-password" className="text-xs font-semibold text-foreground/80">New password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                 <Input
@@ -282,7 +282,7 @@ export default function ResetPassword() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="confirm-password" className="text-xs font-semibold text-foreground/80">Confirmar contraseña</Label>
+              <Label htmlFor="confirm-password" className="text-xs font-semibold text-foreground/80">Confirm password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                 <Input
@@ -299,14 +299,14 @@ export default function ResetPassword() {
             </div>
 
             <Button type="submit" className="w-full h-11 text-sm font-semibold rounded-xl shadow-sm mt-2" disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar contraseña"}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save password"}
             </Button>
           </form>
         </div>
 
         <div className="flex items-center justify-center gap-1.5 mt-8 text-muted-foreground/40">
           <Lock className="h-3 w-3" />
-          <span className="text-[11px]">Acceso seguro · staflyapps.com</span>
+          <span className="text-[11px]">Secure access · staflyapps.com</span>
         </div>
       </div>
     </div>

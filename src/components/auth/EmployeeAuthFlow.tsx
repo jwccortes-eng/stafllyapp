@@ -30,7 +30,7 @@ async function extractErrorMsg(error: any): Promise<string> {
       if (body?.error) return body.error;
     }
   } catch { /* ignore */ }
-  return error?.message || "Error de conexión. Verifica tu internet e intenta de nuevo.";
+  return error?.message || "Connection error. Check your internet and try again.";
 }
 
 export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => void }) {
@@ -52,7 +52,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
 
   const handlePhoneCheck = async () => {
     if (!phone.trim() || phone.replace(/\D/g, "").length < 7) {
-      toast({ title: "Error", description: "Ingresa un número de teléfono válido", variant: "destructive" });
+      toast({ title: "Error", description: "Enter a valid phone number", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -70,9 +70,9 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
       if (data?.error) {
         toast({ title: "Error", description: data.error, variant: "destructive" });
       } else if (!data?.found) {
-        toast({ title: "No encontrado", description: "No hay cuenta asociada a este número. Verifica con tu administrador.", variant: "destructive" });
+        toast({ title: "Not found", description: "No account linked to this number. Check with your administrator.", variant: "destructive" });
       } else if (!data.is_active) {
-        toast({ title: "Cuenta inactiva", description: "Tu cuenta está inactiva. Contacta al administrador.", variant: "destructive" });
+        toast({ title: "Account inactive", description: "Your account is inactive. Contact your administrator.", variant: "destructive" });
       } else {
         setEmployeeInfo(data);
         if (!data.requires_activation) {
@@ -82,7 +82,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         }
       }
     } catch (e: any) {
-      toast({ title: "Error", description: e?.message || "Error de conexión. Verifica tu internet e intenta de nuevo.", variant: "destructive" });
+      toast({ title: "Error", description: e?.message || "Connection error. Check your internet and try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,6 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
           refresh_token: data.session.refresh_token,
         });
 
-        // Check if forced PIN change is required
         if (data.must_change_pin) {
           setStep("force_change_pin");
         } else {
@@ -119,7 +118,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         }
       }
     } catch (e: any) {
-      toast({ title: "Error", description: e?.message || "Error al iniciar sesión. Verifica tu internet.", variant: "destructive" });
+      toast({ title: "Error", description: e?.message || "Sign-in error. Check your internet.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -135,7 +134,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
 
   const handleForceChangePinConfirm = async (enteredPin: string) => {
     if (enteredPin !== newPin) {
-      toast({ title: "No coinciden", description: "Los PINs no coinciden. Intenta de nuevo.", variant: "destructive" });
+      toast({ title: "Mismatch", description: "PINs don't match. Try again.", variant: "destructive" });
       setChangePinPhase("create");
       setNewPin("");
       setConfirmNewPin("");
@@ -157,11 +156,11 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
       if (data?.error) {
         toast({ title: "Error", description: data.error, variant: "destructive" });
       } else {
-        toast({ title: "¡PIN actualizado! 🔒", description: "Tu nuevo PIN ha sido guardado." });
+        toast({ title: "PIN updated! 🔒", description: "Your new PIN has been saved." });
         onSessionReady();
       }
     } catch (e: any) {
-      toast({ title: "Error", description: e?.message || "Error al cambiar PIN.", variant: "destructive" });
+      toast({ title: "Error", description: e?.message || "Error changing PIN.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -177,7 +176,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
 
   const handlePinConfirm = (enteredPin: string) => {
     if (enteredPin !== pin) {
-      toast({ title: "No coinciden", description: "Los PINs no coinciden. Intenta de nuevo.", variant: "destructive" });
+      toast({ title: "Mismatch", description: "PINs don't match. Try again.", variant: "destructive" });
       setPinPhase("create");
       setPin("");
       setConfirmPin("");
@@ -191,7 +190,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Archivo muy grande", description: "La imagen debe ser menor a 5MB", variant: "destructive" });
+      toast({ title: "File too large", description: "Image must be under 5MB", variant: "destructive" });
       return;
     }
     setAvatarFile(file);
@@ -203,7 +202,6 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
     try {
       let avatarUrl: string | undefined;
 
-      // Upload avatar if selected
       if (avatarFile) {
         const ext = avatarFile.name.split(".").pop() || "jpg";
         const path = `${phone.replace(/\D/g, "")}_${Date.now()}.${ext}`;
@@ -242,11 +240,11 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
         });
-        toast({ title: "¡Cuenta activada! 🎉", description: "Bienvenido a StaflyApps" });
+        toast({ title: "Account activated! 🎉", description: "Welcome to StaflyApps" });
         onSessionReady();
       }
     } catch (e: any) {
-      toast({ title: "Error", description: e?.message || "Error al activar cuenta. Verifica tu internet.", variant: "destructive" });
+      toast({ title: "Error", description: e?.message || "Error activating account. Check your internet.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -266,20 +264,20 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
         <div className="bg-card rounded-2xl shadow-sm border border-border/40 px-8 py-9 space-y-6">
           <div className="text-center space-y-1">
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              Acceso empleado
+              Employee access
             </h1>
             <p className="text-sm text-muted-foreground">
-              Ingresa tu número de teléfono registrado
+              Enter your registered phone number
             </p>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-primary/[0.06] border border-primary/10">
             <Phone className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs text-primary font-medium">Modo empleado</span>
+            <span className="text-xs text-primary font-medium">Employee mode</span>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="phone" className="text-xs font-semibold text-foreground/80">Teléfono</Label>
+            <Label htmlFor="phone" className="text-xs font-semibold text-foreground/80">Phone</Label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
               <Input
@@ -288,7 +286,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
                 inputMode="numeric"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="Tu número de teléfono"
+                placeholder="Your phone number"
                 className="pl-9 h-12 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors"
                 onKeyDown={(e) => e.key === "Enter" && handlePhoneCheck()}
               />
@@ -300,7 +298,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
             disabled={loading}
             className="w-full h-12 text-sm font-semibold rounded-xl shadow-sm"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continuar"}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue"}
           </Button>
         </div>
       )}
@@ -312,7 +310,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
             onClick={() => { setStep("phone"); setPin(""); }}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="h-3 w-3" /> Cambiar número
+            <ArrowLeft className="h-3 w-3" /> Change number
           </button>
 
           <div className="text-center space-y-2">
@@ -322,9 +320,9 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               </AvatarFallback>
             </Avatar>
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              Ingresa tu PIN
+              Enter your PIN
             </h1>
-            <p className="text-sm text-muted-foreground">Ingresa tu PIN de 4 dígitos</p>
+            <p className="text-sm text-muted-foreground">Enter your 4-digit PIN</p>
           </div>
 
           <NumericKeypad
@@ -349,7 +347,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
             onClick={() => { setStep("phone"); setPin(""); setPinPhase("create"); }}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="h-3 w-3" /> Volver
+            <ArrowLeft className="h-3 w-3" /> Back
           </button>
 
           <div className="text-center space-y-2">
@@ -357,10 +355,10 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               <Sparkles className="h-7 w-7 text-primary" />
             </div>
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              ¡Activa tu cuenta!
+              Activate your account!
             </h1>
             <p className="text-sm text-muted-foreground">
-              {pinPhase === "create" ? "Crea un PIN de 4 dígitos" : "Confirma tu PIN"}
+              {pinPhase === "create" ? "Create a 4-digit PIN" : "Confirm your PIN"}
             </p>
           </div>
 
@@ -376,7 +374,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               maxLength={4}
               onChange={setPin}
               onComplete={handlePinCreate}
-              label="Elige tu PIN"
+              label="Choose your PIN"
             />
           ) : (
             <NumericKeypad
@@ -384,7 +382,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               maxLength={4}
               onChange={setConfirmPin}
               onComplete={handlePinConfirm}
-              label="Confirma tu PIN"
+              label="Confirm your PIN"
             />
           )}
         </div>
@@ -398,10 +396,10 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               <UserCheck className="h-7 w-7 text-primary" />
             </div>
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              Completa tu perfil
+              Complete your profile
             </h1>
             <p className="text-sm text-muted-foreground">
-              Sube una foto clara de tu rostro para activar tu cuenta
+              Upload a clear photo of your face to activate your account
             </p>
           </div>
 
@@ -434,17 +432,17 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               </div>
             </button>
             <span className="text-xs text-muted-foreground">
-              {avatarPreview ? "✓ Foto seleccionada" : "Toca para agregar foto (obligatorio)"}
+              {avatarPreview ? "✓ Photo selected" : "Tap to add photo (required)"}
             </span>
             {!avatarPreview && (
-              <p className="text-[10px] text-warning font-medium">⚠️ La foto es requerida para activar tu cuenta</p>
+              <p className="text-[10px] text-warning font-medium">⚠️ A photo is required to activate your account</p>
             )}
           </div>
 
           {/* Email */}
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-xs font-semibold text-foreground/80">
-              Email personal <span className="text-muted-foreground font-normal">(opcional)</span>
+              Personal email <span className="text-muted-foreground font-normal">(optional)</span>
             </Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
@@ -454,7 +452,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
                 inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@email.com"
+                placeholder="you@email.com"
                 className="pl-9 h-11 bg-muted/30 border-border/50 rounded-xl text-sm focus:bg-card transition-colors"
               />
             </div>
@@ -462,7 +460,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
 
           {/* Phone confirmation */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-foreground/80">Teléfono registrado</Label>
+            <Label className="text-xs font-semibold text-foreground/80">Registered phone</Label>
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-muted/30 border border-border/50">
               <Phone className="h-4 w-4 text-muted-foreground/50" />
               <span className="text-sm text-foreground">{phone}</span>
@@ -478,7 +476,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
               <>
                 <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                Activar cuenta
+                Activate account
               </>
             )}
           </Button>
@@ -493,12 +491,12 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               <ShieldCheck className="h-7 w-7 text-warning" />
             </div>
             <h1 className="text-lg font-semibold font-heading text-foreground tracking-tight">
-              Cambia tu PIN
+              Change your PIN
             </h1>
             <p className="text-sm text-muted-foreground">
               {changePinPhase === "create"
-                ? "Por seguridad, crea un nuevo PIN de 4 dígitos"
-                : "Confirma tu nuevo PIN"}
+                ? "For security, create a new 4-digit PIN"
+                : "Confirm your new PIN"}
             </p>
           </div>
 
@@ -513,7 +511,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               maxLength={4}
               onChange={setNewPin}
               onComplete={handleForceChangePinCreate}
-              label="Nuevo PIN"
+              label="New PIN"
             />
           ) : (
             <NumericKeypad
@@ -521,7 +519,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
               maxLength={4}
               onChange={setConfirmNewPin}
               onComplete={handleForceChangePinConfirm}
-              label="Confirma tu nuevo PIN"
+              label="Confirm your new PIN"
             />
           )}
 
@@ -536,7 +534,7 @@ export function EmployeeAuthFlow({ onSessionReady }: { onSessionReady: () => voi
       {/* Footer */}
       <div className="flex items-center justify-center gap-1.5 mt-8 text-muted-foreground/40">
         <Lock className="h-3 w-3" />
-        <span className="text-[11px]">Acceso seguro · staflyapps.com</span>
+        <span className="text-[11px]">Secure access · staflyapps.com</span>
       </div>
     </div>
   );

@@ -38,8 +38,8 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   if (diff < 0 || diff > 24 * 60 * 60 * 1000) return null;
   const hrs = Math.floor(diff / 3600000);
   const mins = Math.floor((diff % 3600000) / 60000);
-  if (hrs > 0) return `en ${hrs}h ${mins}m`;
-  return `en ${mins}m`;
+  if (hrs > 0) return `in ${hrs}h ${mins}m`;
+  return `in ${mins}m`;
 }
 
 function calcDuration(start: string, end: string): string {
@@ -172,9 +172,9 @@ export default function EmployeeDashboard() {
 
   const greeting = (() => {
     const h = new Date().getHours();
-    if (h < 12) return "Buenos días";
-    if (h < 18) return "Buenas tardes";
-    return "Buenas noches";
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
   })();
 
   const firstName = empName.split(" ")[0] || "";
@@ -245,7 +245,7 @@ export default function EmployeeDashboard() {
               <div className="text-left">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-[hsl(var(--status-confirmed))] animate-pulse" />
-                  <span className="text-[13px] font-bold text-foreground">En turno</span>
+                  <span className="text-[13px] font-bold text-foreground">On shift</span>
                 </div>
                 {clockStatus.shiftTitle && (
                   <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">{clockStatus.shiftTitle}</p>
@@ -253,7 +253,7 @@ export default function EmployeeDashboard() {
               </div>
             </div>
             <div className="h-9 px-4 rounded-xl flex items-center gap-1.5 font-bold text-[12px] bg-[hsl(var(--status-confirmed))] text-white">
-              <LogOut className="h-3.5 w-3.5" /> Salida
+              <LogOut className="h-3.5 w-3.5" /> Clock Out
             </div>
           </div>
         </button>
@@ -264,8 +264,8 @@ export default function EmployeeDashboard() {
         <Link to="/portal/shifts">
           <div className="rounded-2xl bg-[hsl(var(--status-pending)/0.08)] border border-[hsl(var(--status-pending)/0.15)] px-3.5 py-2.5 flex items-center gap-3 active:scale-[0.98] transition-all">
             <AlertTriangle className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0" />
-            <p className="text-[13px] font-bold text-foreground flex-1">
-              {pendingCount} turno{pendingCount > 1 ? "s" : ""} por confirmar
+             <p className="text-[13px] font-bold text-foreground flex-1">
+              {pendingCount} shift{pendingCount > 1 ? "s" : ""} to confirm
             </p>
             <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
           </div>
@@ -287,7 +287,7 @@ export default function EmployeeDashboard() {
           {countdown && isConfirmed && (
             <div className="bg-primary/8 px-4 py-1.5 flex items-center gap-2 border-b border-primary/10">
               <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[11px] font-bold text-primary tracking-wide">Empieza {countdown}</span>
+              <span className="text-[11px] font-bold text-primary tracking-wide">Starts {countdown}</span>
             </div>
           )}
 
@@ -296,14 +296,14 @@ export default function EmployeeDashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {isTodayShift && (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-widest">Hoy</span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-widest">Today</span>
                 )}
                 {isTomorrowShift && (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase tracking-widest">Mañana</span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase tracking-widest">Tomorrow</span>
                 )}
                 {!isTodayShift && !isTomorrowShift && (
                   <span className="text-[11px] font-semibold text-muted-foreground capitalize">
-                    {format(parseISO(nextShift.date), "EEE d MMM", { locale: es })}
+                    {format(parseISO(nextShift.date), "EEE d MMM")}
                   </span>
                 )}
                 <span className="text-sm font-bold text-foreground tabular-nums">
@@ -350,7 +350,7 @@ export default function EmployeeDashboard() {
                 onClick={(e) => { e.stopPropagation(); navigate(`/portal/clock?shiftId=${nextShift.id}`); }}
               >
                 <LogIn className="h-4 w-4" />
-                Marcar Entrada
+                Clock In
               </Button>
             )}
             {nextShift.status === "pending" && (
@@ -361,7 +361,7 @@ export default function EmployeeDashboard() {
                 onClick={(e) => { e.stopPropagation(); navigate("/portal/shifts"); }}
               >
                 <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
-                Confirmar turno
+                Confirm shift
               </Button>
             )}
           </div>
@@ -373,8 +373,8 @@ export default function EmployeeDashboard() {
         <Link to="/portal/shifts" className="block">
           <div className="rounded-2xl border-2 border-dashed border-border/30 bg-muted/5 p-6 flex flex-col items-center gap-2 active:scale-[0.98] transition-all">
             <CalendarDays className="h-8 w-8 text-muted-foreground/20" />
-            <p className="text-sm font-bold text-foreground">Sin turnos programados</p>
-            <p className="text-[11px] text-muted-foreground/50">Los turnos asignados aparecerán aquí</p>
+             <p className="text-sm font-bold text-foreground">No scheduled shifts</p>
+            <p className="text-[11px] text-muted-foreground/50">Assigned shifts will appear here</p>
           </div>
         </Link>
       )}
@@ -386,7 +386,7 @@ export default function EmployeeDashboard() {
             <Timer className="h-3.5 w-3.5 text-muted-foreground/40" />
           </div>
           <p className="text-base font-bold font-heading tabular-nums leading-none">{weeklyHours}</p>
-          <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Esta semana</p>
+          <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">This week</p>
         </div>
 
         {isModuleEnabled("my_shifts") && (
@@ -398,7 +398,7 @@ export default function EmployeeDashboard() {
               <p className="text-base font-bold font-heading tabular-nums leading-none">
                 {(upcomingShifts.length + (nextShift ? 1 : 0))}
               </p>
-              <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Turnos</p>
+              <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Shifts</p>
             </div>
           </Link>
         )}
@@ -410,7 +410,7 @@ export default function EmployeeDashboard() {
                 <TrendingUp className="h-3.5 w-3.5 text-[hsl(var(--status-confirmed))]" />
               </div>
               <p className="text-base font-bold font-heading tabular-nums leading-none">${estimatedPay.toFixed(0)}</p>
-              <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Estimado</p>
+              <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Estimated</p>
             </div>
           </Link>
         ) : (
@@ -419,7 +419,7 @@ export default function EmployeeDashboard() {
               <Wallet className="h-3.5 w-3.5 text-muted-foreground/30" />
             </div>
             <p className="text-base font-bold font-heading tabular-nums leading-none text-muted-foreground/30">—</p>
-            <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Pago est.</p>
+            <p className="text-[8px] font-medium text-muted-foreground/50 uppercase tracking-wider mt-1">Est. pay</p>
           </div>
         )}
       </div>
@@ -428,9 +428,9 @@ export default function EmployeeDashboard() {
       {upcomingShifts.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-bold text-foreground">Próximos</h2>
+             <h2 className="text-xs font-bold text-foreground">Upcoming</h2>
             <Link to="/portal/shifts" className="text-[11px] text-primary font-semibold flex items-center gap-1">
-              Ver todos <ArrowRight className="h-3 w-3" />
+              View all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="space-y-1.5">
@@ -445,13 +445,13 @@ export default function EmployeeDashboard() {
                   )}>
                     <div className="text-center shrink-0 w-9">
                       {sIsToday ? (
-                        <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase">Hoy</span>
+                         <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase">Today</span>
                       ) : sIsTomorrow ? (
-                        <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase">Mañ</span>
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase">Tmw</span>
                       ) : (
                         <>
                           <p className="text-[7px] font-bold uppercase text-muted-foreground/40 leading-none">
-                            {format(parseISO(s.date), "MMM", { locale: es })}
+                            {format(parseISO(s.date), "MMM")}
                           </p>
                           <p className="text-sm font-bold text-foreground leading-tight tabular-nums">
                             {format(parseISO(s.date), "d")}
@@ -482,8 +482,8 @@ export default function EmployeeDashboard() {
       {unreadAlerts > 0 && (
         <div className="rounded-xl bg-primary/[0.04] border border-primary/10 px-3.5 py-2.5 flex items-center gap-3">
           <Bell className="h-4 w-4 text-primary shrink-0" />
-          <p className="text-[12px] font-semibold text-foreground flex-1">
-            {unreadAlerts} notificación{unreadAlerts > 1 ? "es" : ""} sin leer
+           <p className="text-[12px] font-semibold text-foreground flex-1">
+            {unreadAlerts} unread notification{unreadAlerts > 1 ? "s" : ""}
           </p>
         </div>
       )}
