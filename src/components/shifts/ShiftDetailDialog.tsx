@@ -57,6 +57,8 @@ interface ShiftDetailDialogProps {
   onDelete?: (shift: Shift) => void;
   availabilityConfigs?: AvailabilityConfig[];
   availabilityOverrides?: AvailabilityOverride[];
+  /** Callback when user wants to add a brand-new employee from the combobox */
+  onAddNewEmployee?: () => void;
 }
 
 function calcHours(start: string, end: string): string {
