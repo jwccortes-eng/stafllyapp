@@ -57,6 +57,7 @@ import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
 import { ColumnPreferencesDialog, useColumnPreferences, EMPLOYEE_COLUMNS } from "@/components/employee/ColumnPreferencesDialog";
+import { BulkActivationCampaignDialog } from "@/components/employee/BulkActivationCampaignDialog";
 
 // Fields that only owner/admin can see
 const SENSITIVE_FIELD_KEYS = new Set([
