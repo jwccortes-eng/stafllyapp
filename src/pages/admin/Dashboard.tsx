@@ -468,18 +468,16 @@ export default function AdminDashboard() {
         // Marketplace KPIs
         if (tenantType === 'marketplace') {
           const empCount = empRes.count ?? 0;
-          const [photoRes, emailRes, wpRes] = await Promise.all([
-            supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).neq("avatar_url" as any, null as any),
-            supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).neq("email" as any, null as any),
-            supabase.from("worker_profiles").select("id", { count: "exact", head: true }).eq("company_id" as any, cid),
-          ]);
+          const photoRes = await supabase.rpc('count_employees_with_photo' as any, { cid });
+          // Use missingPhotoCount from secondary fetch; estimate here
+          const withPhoto = typeof (photoRes as any).data === 'number' ? (photoRes as any).data : 0;
           setMarketplaceKpis({
             totalProfiles: empCount,
-            withPhoto: photoRes.count ?? 0,
-            missingPhoto: empCount - (photoRes.count ?? 0),
-            withEmail: emailRes.count ?? 0,
-            missingEmail: empCount - (emailRes.count ?? 0),
-            workerProfiles: wpRes.count ?? 0,
+            withPhoto: empCount - (missingPhotoCount || empCount), // will be corrected in phase 2
+            missingPhoto: missingPhotoCount || empCount,
+            withEmail: 0, // filled in phase 2
+            missingEmail: 0,
+            workerProfiles: 0,
           });
         }
 
