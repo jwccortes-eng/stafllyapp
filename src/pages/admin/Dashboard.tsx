@@ -469,9 +469,9 @@ export default function AdminDashboard() {
         if (tenantType === 'marketplace') {
           const empCount = empRes.count ?? 0;
           const [photoRes, emailRes, wpRes] = await Promise.all([
-            supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).not("avatar_url", "is", null),
-            supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).not("email", "is", null),
-            supabase.from("worker_profiles").select("id", { count: "exact", head: true }).eq("company_id", cid),
+            supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).neq("avatar_url" as any, null as any),
+            supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).neq("email" as any, null as any),
+            supabase.from("worker_profiles").select("id", { count: "exact", head: true }).eq("company_id" as any, cid),
           ]);
           setMarketplaceKpis({
             totalProfiles: empCount,
