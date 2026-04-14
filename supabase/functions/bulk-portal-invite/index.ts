@@ -266,13 +266,18 @@ Deno.serve(async (req) => {
 
         processed++;
 
-        // Send activation email
-        if (send_email && emp.email && apiKey) {
+        // Send activation email via queue (transactional pattern)
+        if (send_email && emp.email) {
           try {
             const html = buildActivationEmail(emp, pin, companyName);
             const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-            await sendLovableEmail(
-              {
+            const messageId = crypto.randomUUID();
+            const idempotencyKey = `bulk-activation-${emp.id}-${Date.now()}`;
+
+            const { error: enqueueErr } = await adminClient.rpc("enqueue_email", {
+              queue_name: "transactional_emails",
+              payload: {
+                queued_at: new Date().toISOString(),
                 to: emp.email,
                 subject: `${companyName} — Your Employee Portal is Ready`,
                 html,
@@ -281,12 +286,29 @@ Deno.serve(async (req) => {
                 sender_domain: "notify.staflyapps.com",
                 purpose: "transactional",
                 label: "portal_activation",
-                run_id: crypto.randomUUID(),
-                message_id: crypto.randomUUID(),
+                message_id: messageId,
+                idempotency_key: idempotencyKey,
               },
-              { apiKey },
-            );
-            emailsSent++;
+            });
+
+            if (enqueueErr) {
+              errors.push(`Email enqueue for ${emp.first_name}: ${enqueueErr.message}`);
+            } else {
+              // Log pending state
+              await adminClient.from("email_send_log").insert({
+                recipient_email: emp.email,
+                template_name: "portal_activation",
+                status: "pending",
+                message_id: messageId,
+                metadata: {
+                  company_id,
+                  employee_id: emp.id,
+                  idempotency_key: idempotencyKey,
+                  campaign: "bulk_activation",
+                },
+              });
+              emailsSent++;
+            }
           } catch (emailErr: any) {
             errors.push(`Email to ${emp.first_name}: ${emailErr.message}`);
           }
