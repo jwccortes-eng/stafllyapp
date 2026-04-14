@@ -465,6 +465,24 @@ export default function AdminDashboard() {
           pendingTickets: ticketsRes.count ?? 0,
         });
 
+        // Marketplace KPIs
+        if (tenantType === 'marketplace') {
+          const empCount = empRes.count ?? 0;
+          const [photoRes, emailRes, wpRes] = await Promise.all([
+            supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).not("avatar_url", "is", null),
+            supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).not("email", "is", null),
+            supabase.from("worker_profiles").select("id", { count: "exact", head: true }).eq("company_id", cid),
+          ]);
+          setMarketplaceKpis({
+            totalProfiles: empCount,
+            withPhoto: photoRes.count ?? 0,
+            missingPhoto: empCount - (photoRes.count ?? 0),
+            withEmail: emailRes.count ?? 0,
+            missingEmail: empCount - (emailRes.count ?? 0),
+            workerProfiles: wpRes.count ?? 0,
+          });
+        }
+
         setLoading(false);
       } catch (err) {
         console.error("Dashboard critical fetch error:", err);
