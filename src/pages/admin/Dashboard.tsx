@@ -387,12 +387,24 @@ export default function AdminDashboard() {
     setPendingCounts({ shiftRequests: 0, pendingMovements: 0, openTickets: 0, pendingAttendance: 0 });
     setTodaySummary({ shiftsToday: 0, assignedToday: 0, clockedIn: 0, openEntries: 0 });
     setCommercialKpis({ activeClients: 0, openRequests: 0, unpaidInvoices: 0, overdueInvoices: 0, unpaidTotal: 0, overdueTotal: 0 });
-    setMissingPhotoCount(0);
-    setTotalHoursWorked(0);
-    setCompKpis({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
-  }, [selectedCompanyId]);
+     setMissingPhotoCount(0);
+     setTotalHoursWorked(0);
+     setCompKpis({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
+     setTenantType(null);
+     setMarketplaceKpis({ totalProfiles: 0, withPhoto: 0, missingPhoto: 0, withEmail: 0, missingEmail: 0, workerProfiles: 0 });
+   }, [selectedCompanyId]);
 
-  // ── PHASE 1: Critical data (KPIs + today) ──
+   // ── Detect tenant type ──
+   useEffect(() => {
+     if (!selectedCompanyId) return;
+     supabase.from("company_settings").select("value").eq("company_id", selectedCompanyId).eq("key", "tenant_type").maybeSingle()
+       .then(({ data }) => {
+         const val = data?.value;
+         setTenantType(typeof val === 'string' ? val : null);
+       });
+   }, [selectedCompanyId]);
+
+   // ── PHASE 1: Critical data (KPIs + today) ──
   useEffect(() => {
     if (!selectedCompanyId) return;
     setLoading(true);
