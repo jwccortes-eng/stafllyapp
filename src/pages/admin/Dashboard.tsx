@@ -729,13 +729,13 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <HeroKpiCard
             label="Hours Worked"
-            value={animHours || animEmployees}
+            value={animHours}
             icon={Clock}
             color="primary"
             onClick={() => navigate("/app/timeclock")}
           />
           <HeroKpiCard
-            label="Scheduled Employees"
+            label="Active Employees"
             value={`${animEmployees}`}
             icon={Users}
             color="earning"
