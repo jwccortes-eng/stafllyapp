@@ -370,6 +370,9 @@ export default function AdminDashboard() {
   const [missingPhotoCount, setMissingPhotoCount] = useState(0);
   const [totalHoursWorked, setTotalHoursWorked] = useState(0);
   const [compKpis, setCompKpis] = useState({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
+  const [tenantType, setTenantType] = useState<string | null>(null);
+  const [marketplaceKpis, setMarketplaceKpis] = useState({ totalProfiles: 0, withPhoto: 0, missingPhoto: 0, withEmail: 0, missingEmail: 0, workerProfiles: 0 });
+  const isMarketplace = tenantType === 'marketplace';
 
   // ── Reset all state when company changes to prevent cross-tenant data bleed ──
   useEffect(() => {
