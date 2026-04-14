@@ -755,6 +755,39 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[1, 2, 3].map(i => <div key={i} className="h-36 animate-pulse bg-muted/50 rounded-2xl" />)}
       </div>
+    ) : isMarketplace ? (
+      <>
+        {/* Marketplace KPI row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <HeroKpiCard
+            label="Total Profiles"
+            value={marketplaceKpis.totalProfiles}
+            icon={Users}
+            color="primary"
+            onClick={() => navigate("/app/employees")}
+          />
+          <HeroKpiCard
+            label="With Photo"
+            value={marketplaceKpis.withPhoto}
+            icon={Camera}
+            color="earning"
+            onClick={() => navigate("/app/employees")}
+          />
+          <HeroKpiCard
+            label="Missing Photo"
+            value={marketplaceKpis.missingPhoto}
+            icon={AlertCircle}
+            color="warning"
+            onClick={() => navigate("/app/employees")}
+          />
+        </div>
+        {/* Secondary marketplace KPIs */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+          <KpiStatCard label="With Email" value={marketplaceKpis.withEmail} subtitle="contactable" icon={UserCheck} color="earning" onClick={() => navigate("/app/employees")} />
+          <KpiStatCard label="Missing Email" value={marketplaceKpis.missingEmail} subtitle="need outreach" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/employees")} />
+          <KpiStatCard label="Activation Ready" value={marketplaceKpis.withPhoto > 0 ? `${Math.round((marketplaceKpis.withPhoto / Math.max(marketplaceKpis.totalProfiles, 1)) * 100)}%` : "0%"} subtitle="photo completion" icon={Shield} color="primary" />
+        </div>
+      </>
     ) : (
       <>
         {/* Hero KPI row — 3 large cards */}
