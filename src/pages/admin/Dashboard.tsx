@@ -465,21 +465,6 @@ export default function AdminDashboard() {
           pendingTickets: ticketsRes.count ?? 0,
         });
 
-        // Marketplace KPIs
-        if (tenantType === 'marketplace') {
-          const empCount = empRes.count ?? 0;
-          const photoRes = await supabase.rpc('count_employees_with_photo' as any, { cid });
-          // Use missingPhotoCount from secondary fetch; estimate here
-          const withPhoto = typeof (photoRes as any).data === 'number' ? (photoRes as any).data : 0;
-          setMarketplaceKpis({
-            totalProfiles: empCount,
-            withPhoto: empCount - (missingPhotoCount || empCount), // will be corrected in phase 2
-            missingPhoto: missingPhotoCount || empCount,
-            withEmail: 0, // filled in phase 2
-            missingEmail: 0,
-            workerProfiles: 0,
-          });
-        }
 
         setLoading(false);
       } catch (err) {
