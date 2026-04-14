@@ -371,6 +371,24 @@ export default function AdminDashboard() {
   const [totalHoursWorked, setTotalHoursWorked] = useState(0);
   const [compKpis, setCompKpis] = useState({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
 
+  // ── Reset all state when company changes to prevent cross-tenant data bleed ──
+  useEffect(() => {
+    setStats({ totalEmployees: 0, activePeriod: null, periodStatus: null, totalImports: 0, totalMovements: 0, periodTotal: 0, periodStartDate: null, periodEndDate: null, pendingTickets: 0 });
+    setChartData([]);
+    setFeedAnnouncements([]);
+    setActivityItems([]);
+    setOverdueInfos([]);
+    setPeriodSummary({ open: 0, closed: 0, published: 0, paid: 0 });
+    setSparkEmployees([]);
+    setSparkPayments([]);
+    setPendingCounts({ shiftRequests: 0, pendingMovements: 0, openTickets: 0, pendingAttendance: 0 });
+    setTodaySummary({ shiftsToday: 0, assignedToday: 0, clockedIn: 0, openEntries: 0 });
+    setCommercialKpis({ activeClients: 0, openRequests: 0, unpaidInvoices: 0, overdueInvoices: 0, unpaidTotal: 0, overdueTotal: 0 });
+    setMissingPhotoCount(0);
+    setTotalHoursWorked(0);
+    setCompKpis({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
+  }, [selectedCompanyId]);
+
   // ── PHASE 1: Critical data (KPIs + today) ──
   useEffect(() => {
     if (!selectedCompanyId) return;
@@ -399,7 +417,7 @@ export default function AdminDashboard() {
         for (const period of recentPeriods) {
           // Try period_base_pay
           const { data: basePays } = await supabase.from("period_base_pay")
-            .select("base_total_pay, total_work_hours").eq("period_id", period.id);
+            .select("base_total_pay, total_work_hours").eq("period_id", period.id).eq("company_id", cid);
           const pTotal = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.base_total_pay || 0), 0);
           const pHours = (basePays ?? []).reduce((s: number, bp: any) => s + Number(bp.total_work_hours || 0), 0);
           if (pTotal > 0) {
@@ -540,8 +558,8 @@ export default function AdminDashboard() {
 
           // Get reconciliation period statuses that link to these pay_periods
           const [rpsRes, chartMovRes] = await Promise.all([
-            supabase.from("reconciliation_period_status").select("id, period_id").in("period_id", periodIds).neq("status", "superseded"),
-            supabase.from("movements").select("period_id, total_value, concept_id, concepts(category, name)").in("period_id", periodIds),
+            supabase.from("reconciliation_period_status").select("id, period_id").eq("company_id", cid).in("period_id", periodIds).neq("status", "superseded"),
+            supabase.from("movements").select("period_id, total_value, concept_id, concepts(category, name)").eq("company_id", cid).in("period_id", periodIds),
           ]);
 
           const rpsList = rpsRes.data ?? [];
@@ -551,6 +569,7 @@ export default function AdminDashboard() {
             const rpsIds = rpsList.map(r => r.id);
             const { data: rfrData } = await supabase.from("reconciliation_final_records")
               .select("period_status_id, grand_total")
+              .eq("company_id", cid)
               .in("period_status_id", rpsIds);
 
             // Map reconciliation_period_status.id -> pay_period.id
@@ -570,6 +589,7 @@ export default function AdminDashboard() {
           if (periodsWithoutRecon.length > 0) {
             const { data: pbpData } = await supabase.from("period_base_pay")
               .select("period_id, base_total_pay")
+              .eq("company_id", cid)
               .in("period_id", periodsWithoutRecon);
             (pbpData ?? []).forEach((bp: any) => {
               if (!rfrByPeriod[bp.period_id]) rfrByPeriod[bp.period_id] = { base: 0, pending: false };
