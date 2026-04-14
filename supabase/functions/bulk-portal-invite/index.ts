@@ -157,7 +157,6 @@ Deno.serve(async (req) => {
     let skipped = 0;
     let emailsSent = 0;
     const errors: string[] = [];
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
 
     for (const emp of employees) {
       try {
