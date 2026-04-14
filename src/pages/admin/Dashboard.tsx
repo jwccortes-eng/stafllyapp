@@ -1327,6 +1327,10 @@ export default function AdminDashboard() {
 
       {/* ── Render widgets in user-defined order ── */}
       {enabledWidgets.map(w => {
+        // Hide operational-only widgets for marketplace tenants
+        const operationalOnly = new Set(["period_banner", "chart", "commercial_kpis", "compensation_kpis", "today_summary", "weekly_shifts"]);
+        if (isMarketplace && operationalOnly.has(w.id)) return null;
+
         // Special handling: announcements + activity render together in a grid
         if (w.id === "announcements" && bothFeedAndActivity) {
           return (
@@ -1346,8 +1350,8 @@ export default function AdminDashboard() {
         return <div key={w.id}>{content}</div>;
       })}
 
-      {/* ── Weekly Shifts (always show after KPIs if not in widget list) ── */}
-      {!isWidgetEnabled("weekly_shifts") && selectedCompanyId && (
+      {/* ── Weekly Shifts (always show after KPIs if not in widget list — skip for marketplace) ── */}
+      {!isMarketplace && !isWidgetEnabled("weekly_shifts") && selectedCompanyId && (
         <WeeklyShiftPreview companyId={selectedCompanyId} navigate={navigate} />
       )}
     </div>
