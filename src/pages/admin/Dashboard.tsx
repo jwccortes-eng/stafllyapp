@@ -520,7 +520,23 @@ export default function AdminDashboard() {
           openTickets: stats.pendingTickets,
           pendingAttendance: attRes.count ?? 0,
         });
-        setMissingPhotoCount(missingPhotoRes.count ?? 0);
+        const missingPhoto = missingPhotoRes.count ?? 0;
+        setMissingPhotoCount(missingPhoto);
+
+        // Marketplace KPIs (uses data already fetched)
+        if (tenantType === 'marketplace') {
+          const total = stats.totalEmployees || 0;
+          // Count employees with email (empCreatedRes has all active employees)
+          const withEmailCount = ((empCreatedRes as any).data ?? []).length; // already filtered is_active
+          setMarketplaceKpis({
+            totalProfiles: total,
+            withPhoto: total - missingPhoto,
+            missingPhoto: missingPhoto,
+            withEmail: withEmailCount,
+            missingEmail: total - withEmailCount,
+            workerProfiles: 0,
+          });
+        }
 
         const invoices = invRes.data ?? [];
         const unpaid = invoices.filter(i => ["issued", "sent", "viewed", "overdue"].includes(i.status));
