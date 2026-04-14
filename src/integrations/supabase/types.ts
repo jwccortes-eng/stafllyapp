@@ -2680,48 +2680,72 @@ export type Database = {
       employee_invitations: {
         Row: {
           accepted_at: string | null
+          attempts: number
+          bounce_reason: string | null
           channel: string
           company_id: string
           created_at: string
+          delivered_at: string | null
           employee_id: string
           expires_at: string | null
+          failed_at: string | null
           id: string
+          invite_recipient: string | null
           invite_token: string
+          last_attempt_at: string | null
+          last_error: string | null
           metadata: Json | null
           notes: string | null
           opened_at: string | null
+          provider_message_id: string | null
           sent_at: string
           sent_by: string
           status: string
         }
         Insert: {
           accepted_at?: string | null
+          attempts?: number
+          bounce_reason?: string | null
           channel?: string
           company_id: string
           created_at?: string
+          delivered_at?: string | null
           employee_id: string
           expires_at?: string | null
+          failed_at?: string | null
           id?: string
+          invite_recipient?: string | null
           invite_token?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
           metadata?: Json | null
           notes?: string | null
           opened_at?: string | null
+          provider_message_id?: string | null
           sent_at?: string
           sent_by: string
           status?: string
         }
         Update: {
           accepted_at?: string | null
+          attempts?: number
+          bounce_reason?: string | null
           channel?: string
           company_id?: string
           created_at?: string
+          delivered_at?: string | null
           employee_id?: string
           expires_at?: string | null
+          failed_at?: string | null
           id?: string
+          invite_recipient?: string | null
           invite_token?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
           metadata?: Json | null
           notes?: string | null
           opened_at?: string | null
+          provider_message_id?: string | null
           sent_at?: string
           sent_by?: string
           status?: string

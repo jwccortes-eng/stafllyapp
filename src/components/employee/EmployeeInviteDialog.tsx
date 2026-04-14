@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
-import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound } from "lucide-react";
+import type { InviteDeliveryStatus } from "@/hooks/useEmployeeInvitations";
+import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound, XCircle, AlertCircle, MailCheck, MailX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -26,16 +27,19 @@ interface Props {
   inviteToken?: string | null;
 }
 
-type InviteStatus = "created" | "sent" | "opened" | "accepted" | "expired" | "revoked" | "failed";
-
-const STATUS_CONFIG: Record<InviteStatus, { label: string; color: string; icon: any }> = {
-  created: { label: "Pendiente", color: "bg-muted text-muted-foreground", icon: Clock },
-  sent: { label: "Enviado", color: "bg-primary/10 text-primary", icon: Send },
-  opened: { label: "Abierto", color: "bg-warning/10 text-warning", icon: CheckCircle2 },
-  accepted: { label: "Activado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: CheckCircle2 },
-  expired: { label: "Expirado", color: "bg-destructive/10 text-destructive", icon: Clock },
-  revoked: { label: "Revocado", color: "bg-destructive/10 text-destructive", icon: AlertTriangle },
-  failed: { label: "Fallido", color: "bg-destructive/10 text-destructive", icon: AlertTriangle },
+const STATUS_CONFIG: Record<InviteDeliveryStatus, { label: string; color: string; icon: any; description: string }> = {
+  created: { label: "Pendiente", color: "bg-muted text-muted-foreground", icon: Clock, description: "Invitación creada, no enviada aún" },
+  queued: { label: "En cola", color: "bg-primary/10 text-primary", icon: Loader2, description: "Email en cola de envío" },
+  sent: { label: "Enviado", color: "bg-primary/10 text-primary", icon: Send, description: "Enviado (pendiente confirmación)" },
+  provider_accepted: { label: "Aceptado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: MailCheck, description: "Proveedor confirmó recepción" },
+  delivered: { label: "Entregado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: CheckCircle2, description: "Email entregado al buzón" },
+  opened: { label: "Abierto", color: "bg-warning/10 text-warning", icon: CheckCircle2, description: "El empleado abrió el email" },
+  accepted: { label: "Activado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: CheckCircle2, description: "Cuenta activada exitosamente" },
+  expired: { label: "Expirado", color: "bg-destructive/10 text-destructive", icon: Clock, description: "La invitación expiró" },
+  revoked: { label: "Revocado", color: "bg-destructive/10 text-destructive", icon: XCircle, description: "Invitación revocada por admin" },
+  failed: { label: "Fallido", color: "bg-destructive/10 text-destructive", icon: MailX, description: "Error al enviar el email" },
+  bounced: { label: "Rebotado", color: "bg-destructive/10 text-destructive", icon: AlertCircle, description: "Email rebotó (dirección inválida)" },
+  resent: { label: "Reenviado", color: "bg-primary/10 text-primary", icon: RefreshCw, description: "Invitación reenviada" },
 };
 
 export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSent, inviteToken: initialToken }: Props) {
@@ -49,12 +53,17 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const [emailSent, setEmailSent] = useState(false);
   const [liveToken, setLiveToken] = useState<string | null>(initialToken ?? null);
   const [creatingInvite, setCreatingInvite] = useState(false);
-  const [inviteStatus, setInviteStatus] = useState<InviteStatus>("created");
+  const [inviteStatus, setInviteStatus] = useState<InviteDeliveryStatus>("created");
   const [inviteSentAt, setInviteSentAt] = useState<string | null>(null);
   const [inviteChannel, setInviteChannel] = useState<string | null>(null);
   const [inviteId, setInviteId] = useState<string | null>(null);
   const [generatingPin, setGeneratingPin] = useState(false);
   const [livePin, setLivePin] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState(0);
+  const [lastAttemptAt, setLastAttemptAt] = useState<string | null>(null);
+  const [inviteRecipient, setInviteRecipient] = useState<string | null>(null);
+  const [providerMessageId, setProviderMessageId] = useState<string | null>(null);
 
   const company = companies.find(c => c.id === selectedCompanyId);
   const companyName = company?.name ?? "la empresa";
@@ -71,7 +80,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
   // Reset livePin when dialog opens/closes
   useEffect(() => {
-    if (!open) { setLivePin(null); }
+    if (!open) { setLivePin(null); setLastError(null); }
   }, [open]);
 
   // Load or create invitation when dialog opens
@@ -80,9 +89,9 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     setLiveToken(initialToken ?? null);
     setEmailSent(false);
     setCompanyMismatch(false);
+    setLastError(null);
     if (!selectedCompanyId || !user?.id || !employee.id) return;
 
-    // ─── SECURITY: Validate employee belongs to selected company ───
     if (employee.company_id && employee.company_id !== selectedCompanyId) {
       console.error("[invite] BLOCKED: company mismatch — employee.company_id=%s selectedCompanyId=%s employee=%s", employee.company_id, selectedCompanyId, employee.id);
       setCompanyMismatch(true);
@@ -93,13 +102,12 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     (async () => {
       setCreatingInvite(true);
 
-      // Check for existing active invitation first
       const { data: existing } = await supabase
         .from("employee_invitations")
-        .select("id, invite_token, status, sent_at, channel")
+        .select("id, invite_token, status, sent_at, channel, last_error, attempts, last_attempt_at, invite_recipient, provider_message_id")
         .eq("company_id", selectedCompanyId)
         .eq("employee_id", employee.id)
-        .in("status", ["created", "sent", "opened"])
+        .in("status", ["created", "queued", "sent", "provider_accepted", "delivered", "opened"])
         .order("created_at", { ascending: false })
         .limit(1)
         .single() as any;
@@ -110,11 +118,15 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         setInviteSentAt(existing.sent_at);
         setInviteChannel(existing.channel);
         setInviteId(existing.id);
+        setLastError(existing.last_error);
+        setAttempts(existing.attempts ?? 0);
+        setLastAttemptAt(existing.last_attempt_at);
+        setInviteRecipient(existing.invite_recipient);
+        setProviderMessageId(existing.provider_message_id);
         setCreatingInvite(false);
         return;
       }
 
-      // Also check if already accepted
       const { data: accepted } = await supabase
         .from("employee_invitations")
         .select("id, invite_token, status, sent_at, channel")
@@ -137,7 +149,6 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
       if (initialToken) { setCreatingInvite(false); return; }
 
-      // Create new invitation
       const { data, error } = await supabase
         .from("employee_invitations")
         .insert({
@@ -163,7 +174,6 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     return () => { cancelled = true; };
   }, [open, initialToken, selectedCompanyId, user?.id, employee.id]);
 
-  // Update invitation status when sent via a channel
   const markSent = async (channel: "whatsapp" | "sms" | "email" | "copy") => {
     if (!inviteId) return;
     await supabase
@@ -176,15 +186,14 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     onInviteSent?.(channel);
   };
 
-  // Resend: create new invitation
   const resendInvite = async () => {
     if (!selectedCompanyId || !user?.id || !employee.id) return;
     if (employee.company_id && employee.company_id !== selectedCompanyId) {
-      console.error("[invite] BLOCKED resend: company mismatch — employee.company_id=%s selectedCompanyId=%s", employee.company_id, selectedCompanyId);
       toast({ title: "Error de seguridad", description: "Este empleado no pertenece a la empresa seleccionada.", variant: "destructive" });
       return;
     }
     setCreatingInvite(true);
+    setLastError(null);
     const { data, error } = await supabase
       .from("employee_invitations")
       .insert({
@@ -203,17 +212,17 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       setInviteStatus(data.status);
       setInviteSentAt(data.sent_at);
       setInviteId(data.id);
+      setAttempts(0);
+      setProviderMessageId(null);
       toast({ title: "Nueva invitación generada" });
     }
     setCreatingInvite(false);
   };
 
-  // Auto-generate a secure 4-digit PIN
   const generatePin = async () => {
     if (!employee.id) return;
     setGeneratingPin(true);
     try {
-      // Generate a random 4-digit PIN (1000–9999 to avoid leading zeros)
       const newPin = String(Math.floor(1000 + Math.random() * 9000));
       const { error } = await supabase
         .from("employees")
@@ -260,6 +269,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       return;
     }
     setSending(true);
+    setLastError(null);
     try {
       const { data, error } = await supabase.functions.invoke("send-invite-email", {
         body: {
@@ -284,15 +294,65 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
               <p style="font-size: 12px; color: hsl(220, 15%, 46%); margin: 30px 0 0;">Si no esperabas esta invitación, ignora este correo.</p>
             </div>
           `,
+          // Pass metadata for tracking
+          company_id: selectedCompanyId,
+          employee_id: employee.id,
+          invitation_id: inviteId,
         },
       });
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+
+      // The edge function returns status: "queued" — show honest status
+      const returnedStatus = data?.status ?? "queued";
+      const returnedMessageId = data?.message_id ?? null;
+
       setEmailSent(true);
-      await markSent("email");
-      toast({ title: "Email enviado ✅", description: `Invitación enviada a ${employee.email}` });
+      setInviteStatus("queued");
+      setInviteChannel("email");
+      setInviteSentAt(new Date().toISOString());
+      setInviteRecipient(employee.email);
+      if (returnedMessageId) setProviderMessageId(returnedMessageId);
+      setAttempts(prev => prev + 1);
+      setLastAttemptAt(new Date().toISOString());
+
+      // Update invitation record with queued status
+      if (inviteId) {
+        await supabase
+          .from("employee_invitations")
+          .update({
+            status: "queued",
+            channel: "email",
+            sent_at: new Date().toISOString(),
+            invite_recipient: employee.email,
+            provider_message_id: returnedMessageId,
+            last_attempt_at: new Date().toISOString(),
+          } as any)
+          .eq("id", inviteId);
+      }
+
+      onInviteSent?.("email");
+      toast({
+        title: "Email en cola de envío",
+        description: `La invitación para ${employee.email} está siendo procesada. El estado se actualizará automáticamente.`,
+      });
     } catch (err: any) {
-      toast({ title: "Error al enviar", description: err.message ?? "Intenta de nuevo", variant: "destructive" });
+      const errorMsg = err.message ?? "Error desconocido";
+      setLastError(errorMsg);
+
+      // Update invitation with failure
+      if (inviteId) {
+        await supabase
+          .from("employee_invitations")
+          .update({
+            last_error: errorMsg,
+            last_attempt_at: new Date().toISOString(),
+          } as any)
+          .eq("id", inviteId);
+      }
+
+      toast({ title: "Error al enviar", description: errorMsg, variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -309,7 +369,9 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const statusConfig = STATUS_CONFIG[inviteStatus] ?? STATUS_CONFIG.created;
   const StatusIcon = statusConfig.icon;
   const isAccepted = inviteStatus === "accepted";
-  const canResend = ["expired", "revoked", "failed"].includes(inviteStatus) || (inviteStatus === "sent" && inviteSentAt && Date.now() - new Date(inviteSentAt).getTime() > 30 * 60 * 1000);
+  const isFailed = ["failed", "bounced"].includes(inviteStatus);
+  const isQueued = inviteStatus === "queued";
+  const canResend = isFailed || ["expired", "revoked"].includes(inviteStatus) || (inviteStatus === "sent" && inviteSentAt && Date.now() - new Date(inviteSentAt).getTime() > 30 * 60 * 1000);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -323,25 +385,38 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
               <DialogDescription className="text-[11px] mt-0.5">Envía las credenciales de acceso al portal</DialogDescription>
             </div>
             <Badge className={cn("text-[9px] px-2 py-0.5 font-semibold gap-1", statusConfig.color)}>
-              <StatusIcon className="h-3 w-3" />
+              <StatusIcon className={cn("h-3 w-3", isQueued && "animate-spin")} />
               {statusConfig.label}
             </Badge>
           </div>
           {/* Timeline info */}
-          {inviteSentAt && (
-            <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground">
-              {inviteChannel && (
-                <span className="flex items-center gap-1">
-                  {inviteChannel === "whatsapp" && <MessageCircle className="h-3 w-3 text-[#25D366]" />}
-                  {inviteChannel === "sms" && <Smartphone className="h-3 w-3" />}
-                  {inviteChannel === "email" && <Mail className="h-3 w-3" />}
-                  {inviteChannel === "copy" && <Copy className="h-3 w-3" />}
-                  Enviado vía {inviteChannel}
-                </span>
-              )}
-              <span>hace {formatDistanceToNow(new Date(inviteSentAt), { locale: es })}</span>
-            </div>
-          )}
+          <div className="mt-2 space-y-0.5">
+            {inviteSentAt && (
+              <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                {inviteChannel && (
+                  <span className="flex items-center gap-1">
+                    {inviteChannel === "whatsapp" && <MessageCircle className="h-3 w-3 text-[#25D366]" />}
+                    {inviteChannel === "sms" && <Smartphone className="h-3 w-3" />}
+                    {inviteChannel === "email" && <Mail className="h-3 w-3" />}
+                    {inviteChannel === "copy" && <Copy className="h-3 w-3" />}
+                    Enviado vía {inviteChannel}
+                  </span>
+                )}
+                <span>hace {formatDistanceToNow(new Date(inviteSentAt), { locale: es })}</span>
+                {attempts > 0 && <span>· {attempts} intento{attempts > 1 ? "s" : ""}</span>}
+              </div>
+            )}
+            {inviteRecipient && (
+              <div className="text-[10px] text-muted-foreground">
+                📧 {inviteRecipient}
+              </div>
+            )}
+            {statusConfig.description && (
+              <div className="text-[9px] text-muted-foreground/60 italic">
+                {statusConfig.description}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="px-5 pb-5 space-y-4">
@@ -355,6 +430,20 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
             <div className="rounded-lg border border-border/40 bg-muted/30 px-3 py-1.5 text-[10px] flex items-center gap-2">
               <Shield className="h-3 w-3 text-muted-foreground/60 shrink-0" />
               <span className="text-muted-foreground">Empresa: <span className="font-semibold text-foreground">{companyName}</span></span>
+            </div>
+          )}
+
+          {/* Error display */}
+          {lastError && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[10px] space-y-1">
+              <div className="flex items-center gap-1.5 text-destructive font-medium">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                Error de entrega
+              </div>
+              <p className="text-destructive/80 break-words">{lastError}</p>
+              {lastAttemptAt && (
+                <p className="text-muted-foreground">Último intento: hace {formatDistanceToNow(new Date(lastAttemptAt), { locale: es })}</p>
+              )}
             </div>
           )}
 
@@ -434,7 +523,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                 </div>
               </div>
 
-              {/* Invite link (optional enhancement) */}
+              {/* Invite link */}
               {creatingInvite ? (
                 <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.03] p-2.5">
                   <Link2 className="h-4 w-4 text-primary shrink-0" />
@@ -461,7 +550,6 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
               )}
 
               {/* Send channels */}
-              {/* Send channels — always visible, decoupled from invite_link */}
               <Tabs defaultValue="message" className="w-full">
                 <TabsList className="w-full grid grid-cols-2 h-8 bg-muted/30 rounded-lg">
                   <TabsTrigger value="message" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1">
@@ -507,13 +595,49 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                         <Input value={employee.email} disabled className="h-8 text-xs bg-muted/30" />
                       </div>
                       {emailSent ? (
-                        <div className="flex items-center gap-2 justify-center py-3 text-[hsl(var(--earning))]">
-                          <CheckCircle2 className="h-5 w-5" />
-                          <span className="text-xs font-medium">Invitación enviada ✅</span>
+                        <div className="flex flex-col items-center gap-1.5 py-3">
+                          <div className={cn(
+                            "flex items-center gap-2 justify-center",
+                            isQueued ? "text-primary" : isFailed ? "text-destructive" : "text-[hsl(var(--earning))]"
+                          )}>
+                            {isQueued ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : isFailed ? (
+                              <MailX className="h-5 w-5" />
+                            ) : (
+                              <MailCheck className="h-5 w-5" />
+                            )}
+                            <span className="text-xs font-medium">
+                              {isQueued ? "Email en cola de envío..." : isFailed ? "Error al enviar" : "Email procesado ✅"}
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-muted-foreground text-center max-w-[260px]">
+                            {isQueued
+                              ? "El email está siendo procesado. El estado se actualizará cuando el proveedor confirme."
+                              : isFailed
+                                ? "Puedes intentar de nuevo o usar otro canal."
+                                : "El proveedor aceptó el email para entrega."
+                            }
+                          </p>
+                          {isFailed && (
+                            <Button variant="outline" size="sm" className="h-7 text-[10px] mt-1 gap-1" onClick={() => { setEmailSent(false); setLastError(null); }}>
+                              <RefreshCw className="h-3 w-3" /> Reintentar
+                            </Button>
+                          )}
                         </div>
                       ) : (
                         <Button className="w-full h-8 text-xs" onClick={sendEmail} disabled={sending || !hasPin}>
-                          {sending ? "Enviando..." : <><Mail className="h-3.5 w-3.5 mr-1.5" />Enviar invitación por email</>}
+                          {sending ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                              Procesando...
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="h-3.5 w-3.5 mr-1.5" />
+                              Enviar invitación por email
+                            </>
+                          )}
                         </Button>
                       )}
                       {!hasPin && <p className="text-[9px] text-warning text-center">⚠️ Genera un PIN antes de enviar por email</p>}
