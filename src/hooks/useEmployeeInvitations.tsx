@@ -2,11 +2,25 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
+export type InviteDeliveryStatus =
+  | "created"
+  | "queued"
+  | "sent"
+  | "provider_accepted"
+  | "delivered"
+  | "opened"
+  | "accepted"
+  | "expired"
+  | "revoked"
+  | "failed"
+  | "bounced"
+  | "resent";
+
 export interface EmployeeInvitation {
   id: string;
   employee_id: string;
   channel: "whatsapp" | "sms" | "email" | "copy" | "other";
-  status: "created" | "sent" | "opened" | "accepted" | "expired" | "revoked" | "failed";
+  status: InviteDeliveryStatus;
   sent_at: string | null;
   sent_by: string;
   opened_at: string | null;
@@ -14,10 +28,21 @@ export interface EmployeeInvitation {
   notes: string | null;
   invite_token: string | null;
   expires_at: string | null;
+  // Delivery tracking fields
+  provider_message_id: string | null;
+  last_error: string | null;
+  bounce_reason: string | null;
+  attempts: number;
+  last_attempt_at: string | null;
+  delivered_at: string | null;
+  failed_at: string | null;
+  invite_recipient: string | null;
 }
 
 /** Map of employee_id → latest invitation */
 export type InvitationMap = Record<string, EmployeeInvitation>;
+
+const INVITE_FIELDS = "id, employee_id, channel, status, sent_at, sent_by, accepted_at, opened_at, notes, invite_token, expires_at, provider_message_id, last_error, bounce_reason, attempts, last_attempt_at, delivered_at, failed_at, invite_recipient";
 
 export function useEmployeeInvitations(companyId: string | null) {
   const { user } = useAuth();
@@ -29,7 +54,7 @@ export function useEmployeeInvitations(companyId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("employee_invitations")
-      .select("id, employee_id, channel, status, sent_at, sent_by, accepted_at, opened_at, notes, invite_token, expires_at")
+      .select(INVITE_FIELDS)
       .eq("company_id", companyId)
       .order("created_at", { ascending: false });
 
@@ -65,7 +90,7 @@ export function useEmployeeInvitations(companyId: string | null) {
         sent_at: new Date().toISOString(),
         notes: notes ?? null,
       })
-      .select("id, employee_id, channel, status, sent_at, sent_by, accepted_at, opened_at, notes, invite_token, expires_at")
+      .select(INVITE_FIELDS)
       .single();
 
     if (!error && data) {
@@ -74,5 +99,32 @@ export function useEmployeeInvitations(companyId: string | null) {
     return data;
   }, [companyId, user?.id]);
 
-  return { invitations, loading, logInvitation, refetch: fetchInvitations };
+  /** Check real delivery status from email_send_log for an invitation */
+  const checkDeliveryStatus = useCallback(async (invitation: EmployeeInvitation) => {
+    if (!invitation.provider_message_id) return invitation.status;
+
+    const { data } = await supabase
+      .from("email_send_log")
+      .select("status, error_message, created_at")
+      .eq("message_id", invitation.provider_message_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!data) return invitation.status;
+
+    // Map email_send_log status to invitation status
+    const statusMap: Record<string, InviteDeliveryStatus> = {
+      pending: "queued",
+      sent: "provider_accepted",
+      failed: "failed",
+      dlq: "failed",
+      bounced: "bounced",
+      suppressed: "failed",
+    };
+
+    return statusMap[data.status] ?? invitation.status;
+  }, []);
+
+  return { invitations, loading, logInvitation, refetch: fetchInvitations, checkDeliveryStatus };
 }
