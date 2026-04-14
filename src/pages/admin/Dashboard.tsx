@@ -370,6 +370,9 @@ export default function AdminDashboard() {
   const [missingPhotoCount, setMissingPhotoCount] = useState(0);
   const [totalHoursWorked, setTotalHoursWorked] = useState(0);
   const [compKpis, setCompKpis] = useState({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
+  const [tenantType, setTenantType] = useState<string | null>(null);
+  const [marketplaceKpis, setMarketplaceKpis] = useState({ totalProfiles: 0, withPhoto: 0, missingPhoto: 0, withEmail: 0, missingEmail: 0, workerProfiles: 0 });
+  const isMarketplace = tenantType === 'marketplace';
 
   // ── Reset all state when company changes to prevent cross-tenant data bleed ──
   useEffect(() => {
@@ -384,12 +387,24 @@ export default function AdminDashboard() {
     setPendingCounts({ shiftRequests: 0, pendingMovements: 0, openTickets: 0, pendingAttendance: 0 });
     setTodaySummary({ shiftsToday: 0, assignedToday: 0, clockedIn: 0, openEntries: 0 });
     setCommercialKpis({ activeClients: 0, openRequests: 0, unpaidInvoices: 0, overdueInvoices: 0, unpaidTotal: 0, overdueTotal: 0 });
-    setMissingPhotoCount(0);
-    setTotalHoursWorked(0);
-    setCompKpis({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
-  }, [selectedCompanyId]);
+     setMissingPhotoCount(0);
+     setTotalHoursWorked(0);
+     setCompKpis({ rateChanges: 0, dailyPatterns: 0, ridePayments: 0, warnings: 0 });
+     setTenantType(null);
+     setMarketplaceKpis({ totalProfiles: 0, withPhoto: 0, missingPhoto: 0, withEmail: 0, missingEmail: 0, workerProfiles: 0 });
+   }, [selectedCompanyId]);
 
-  // ── PHASE 1: Critical data (KPIs + today) ──
+   // ── Detect tenant type ──
+   useEffect(() => {
+     if (!selectedCompanyId) return;
+     supabase.from("company_settings").select("value").eq("company_id", selectedCompanyId).eq("key", "tenant_type").maybeSingle()
+       .then(({ data }) => {
+         const val = data?.value;
+         setTenantType(typeof val === 'string' ? val : null);
+       });
+   }, [selectedCompanyId]);
+
+   // ── PHASE 1: Critical data (KPIs + today) ──
   useEffect(() => {
     if (!selectedCompanyId) return;
     setLoading(true);
@@ -450,6 +465,7 @@ export default function AdminDashboard() {
           pendingTickets: ticketsRes.count ?? 0,
         });
 
+
         setLoading(false);
       } catch (err) {
         console.error("Dashboard critical fetch error:", err);
@@ -504,7 +520,23 @@ export default function AdminDashboard() {
           openTickets: stats.pendingTickets,
           pendingAttendance: attRes.count ?? 0,
         });
-        setMissingPhotoCount(missingPhotoRes.count ?? 0);
+        const missingPhoto = missingPhotoRes.count ?? 0;
+        setMissingPhotoCount(missingPhoto);
+
+        // Marketplace KPIs (uses data already fetched)
+        if (tenantType === 'marketplace') {
+          const total = stats.totalEmployees || 0;
+          // Count employees with email (empCreatedRes has all active employees)
+          const withEmailCount = ((empCreatedRes as any).data ?? []).length; // already filtered is_active
+          setMarketplaceKpis({
+            totalProfiles: total,
+            withPhoto: total - missingPhoto,
+            missingPhoto: missingPhoto,
+            withEmail: withEmailCount,
+            missingEmail: total - withEmailCount,
+            workerProfiles: 0,
+          });
+        }
 
         const invoices = invRes.data ?? [];
         const unpaid = invoices.filter(i => ["issued", "sent", "viewed", "overdue"].includes(i.status));
@@ -723,6 +755,39 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[1, 2, 3].map(i => <div key={i} className="h-36 animate-pulse bg-muted/50 rounded-2xl" />)}
       </div>
+    ) : isMarketplace ? (
+      <>
+        {/* Marketplace KPI row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <HeroKpiCard
+            label="Total Profiles"
+            value={marketplaceKpis.totalProfiles}
+            icon={Users}
+            color="primary"
+            onClick={() => navigate("/app/employees")}
+          />
+          <HeroKpiCard
+            label="With Photo"
+            value={marketplaceKpis.withPhoto}
+            icon={Camera}
+            color="earning"
+            onClick={() => navigate("/app/employees")}
+          />
+          <HeroKpiCard
+            label="Missing Photo"
+            value={marketplaceKpis.missingPhoto}
+            icon={AlertCircle}
+            color="warning"
+            onClick={() => navigate("/app/employees")}
+          />
+        </div>
+        {/* Secondary marketplace KPIs */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+          <KpiStatCard label="With Email" value={marketplaceKpis.withEmail} subtitle="contactable" icon={UserCheck} color="earning" onClick={() => navigate("/app/employees")} />
+          <KpiStatCard label="Missing Email" value={marketplaceKpis.missingEmail} subtitle="need outreach" icon={AlertTriangle} color="warning" onClick={() => navigate("/app/employees")} />
+          <KpiStatCard label="Activation Ready" value={marketplaceKpis.withPhoto > 0 ? `${Math.round((marketplaceKpis.withPhoto / Math.max(marketplaceKpis.totalProfiles, 1)) * 100)}%` : "0%"} subtitle="photo completion" icon={Shield} color="primary" />
+        </div>
+      </>
     ) : (
       <>
         {/* Hero KPI row — 3 large cards */}
@@ -1262,6 +1327,10 @@ export default function AdminDashboard() {
 
       {/* ── Render widgets in user-defined order ── */}
       {enabledWidgets.map(w => {
+        // Hide operational-only widgets for marketplace tenants
+        const operationalOnly = new Set(["period_banner", "chart", "commercial_kpis", "compensation_kpis", "today_summary", "weekly_shifts"]);
+        if (isMarketplace && operationalOnly.has(w.id)) return null;
+
         // Special handling: announcements + activity render together in a grid
         if (w.id === "announcements" && bothFeedAndActivity) {
           return (
@@ -1281,8 +1350,8 @@ export default function AdminDashboard() {
         return <div key={w.id}>{content}</div>;
       })}
 
-      {/* ── Weekly Shifts (always show after KPIs if not in widget list) ── */}
-      {!isWidgetEnabled("weekly_shifts") && selectedCompanyId && (
+      {/* ── Weekly Shifts (always show after KPIs if not in widget list — skip for marketplace) ── */}
+      {!isMarketplace && !isWidgetEnabled("weekly_shifts") && selectedCompanyId && (
         <WeeklyShiftPreview companyId={selectedCompanyId} navigate={navigate} />
       )}
     </div>
