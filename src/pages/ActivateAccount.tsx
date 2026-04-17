@@ -316,27 +316,44 @@ export default function ActivateAccount() {
         if (!docsOk) { setBusy(false); return; }
       }
 
-      let avatarUrl: string | undefined;
-      if (avatarFile) {
-        const ext = avatarFile.name.split(".").pop() || "jpg";
-        const path = `${invite.employee_id}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("employee-avatars")
-          .upload(path, avatarFile, { upsert: true });
-        if (!upErr) {
-          const { data: urlData } = supabase.storage.from("employee-avatars").getPublicUrl(path);
-          avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-        }
-      }
-
+      // Activate first to get an authenticated session — required by storage RLS
       const { data, error: fnErr } = await supabase.functions.invoke("employee-auth", {
-        body: { action: "activate", phone: invite.employee_phone, pin, avatar_url: avatarUrl },
+        body: { action: "activate", phone: invite.employee_phone, pin },
       });
 
       if (fnErr || data?.error) {
         setError(data?.error || "Activation error. Please try again.");
         setBusy(false);
         return;
+      }
+
+      // Establish session BEFORE attempting any storage upload (RLS requires authenticated role)
+      if (data?.session) {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+      }
+
+      // Now that we're authenticated, upload the avatar (storage policy allows it)
+      let avatarUrl: string | undefined;
+      if (avatarFile) {
+        try {
+          const ext = avatarFile.name.split(".").pop() || "jpg";
+          const path = `${invite.employee_id}.${ext}`;
+          const { error: upErr } = await supabase.storage
+            .from("employee-avatars")
+            .upload(path, avatarFile, { upsert: true });
+          if (upErr) {
+            console.error("[activate] avatar upload failed:", upErr);
+          } else {
+            const { data: urlData } = supabase.storage.from("employee-avatars").getPublicUrl(path);
+            avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+          }
+        } catch (uploadErr) {
+          console.error("[activate] avatar upload exception:", uploadErr);
+          // Don't block activation on photo failure — user can re-upload from portal
+        }
       }
 
       await (supabase.from("employee_invitations" as any)
@@ -348,15 +365,9 @@ export default function ActivateAccount() {
           portal_access_enabled: true,
           onboarding_status: "complete",
           onboarding_completed_at: new Date().toISOString(),
+          ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
         } as any)
         .eq("id", invite.employee_id);
-
-      if (data?.session) {
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        });
-      }
 
       setWizardStep("ready");
     } catch (err: any) {
