@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { safeRandomUUID } from "@/lib/safe-storage";
 import { supabase } from "@/integrations/supabase/client";
 import { APP_BASE_URL } from "@/lib/app-url";
 import { useCompany } from "@/hooks/useCompany";

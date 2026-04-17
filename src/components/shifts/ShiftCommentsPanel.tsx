@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { safeRandomUUID } from "@/lib/safe-storage";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
