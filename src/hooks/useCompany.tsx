@@ -69,7 +69,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     if (!user) {
       setCompanies([]);
       setLoading(false);
@@ -79,14 +79,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     let list: Company[] = [];
 
     if (role === 'developer' || role === 'owner') {
-      // Owners see all companies
       const { data } = await supabase
         .from("companies")
         .select("id, name, slug, is_active, invite_code, brand_color, logo_url")
         .order("name");
       list = (data as Company[]) ?? [];
     } else {
-      // Non-owners only see companies they belong to via company_users
       const { data } = await supabase
         .from("company_users")
         .select("company_id, companies(id, name, slug, is_active, brand_color, logo_url)")
@@ -100,45 +98,46 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
     setCompanies(list);
 
-    // Restore or auto-assign selected company
+    // CRITICAL: read fresh values from storage (not from closure) so a recent
+    // company switch is NOT overwritten back to "first company" when this re-runs.
+    const currentSelection = safeLocalStorage.getItem("selectedCompanyId");
+
     if (canUseGlobalMode) {
-      // Developer/owner: ALWAYS start in global mode on fresh load.
-      // Only honour a prior selection if the user manually switched this session.
+      // Developer/owner: start in global mode unless user manually switched this session
       if (!manuallySelected) {
         setSelectedCompanyIdRaw(null);
       }
-      // If they did manually select, keep current selectedCompanyId as-is.
     } else {
-      // Regular users MUST have a company context
-      const stored = safeLocalStorage.getItem("selectedCompanyId");
-      const hasValidSelection = !!selectedCompanyId && list.some(c => c.id === selectedCompanyId);
-      if (!hasValidSelection && list.length > 0) {
-        if (stored && list.some(c => c.id === stored)) {
-          setSelectedCompanyIdRaw(stored);
-        } else {
-          const first = list[0].id;
-          setSelectedCompanyIdRaw(first);
-          safeLocalStorage.setItem("selectedCompanyId", first);
-        }
-      } else if (list.length === 0 && selectedCompanyId) {
+      // Regular users MUST have a company context.
+      // Trust localStorage as source of truth — do NOT clobber a valid selection.
+      const validStored = currentSelection && list.some(c => c.id === currentSelection)
+        ? currentSelection
+        : null;
+
+      if (validStored) {
+        setSelectedCompanyIdRaw(validStored);
+      } else if (list.length > 0) {
+        const first = list[0].id;
+        setSelectedCompanyIdRaw(first);
+        safeLocalStorage.setItem("selectedCompanyId", first);
+      } else {
         setSelectedCompanyIdRaw(null);
       }
     }
 
     setLoading(false);
-  };
+  }, [user, role, canUseGlobalMode, manuallySelected]);
 
   /** Switch company: update state + invalidate all cached queries */
   const switchCompany = useCallback((id: string | null) => {
     if (id === selectedCompanyId) return;
     setSelectedCompanyId(id);
-    // Invalidate all React Query caches so screens reload with new company data
     queryClient.invalidateQueries();
   }, [selectedCompanyId, setSelectedCompanyId]);
 
   useEffect(() => {
     if (user && role !== undefined) fetchCompanies();
-  }, [user, role]);
+  }, [user, role, fetchCompanies]);
 
   useEffect(() => {
     if (selectedCompanyId) {
