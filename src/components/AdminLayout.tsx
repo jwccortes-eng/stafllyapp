@@ -149,7 +149,7 @@ export default function AdminLayout() {
 
   // Desktop layout: Sidebar + TopBar + Content
   return (
-    <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); localStorage.setItem("sidebar-collapsed", String(v)); } }}>
+    <SidebarContext.Provider value={{ collapsed, setCollapsed: (v: boolean) => { setCollapsed(v); safeLocalStorage.setItem("sidebar-collapsed", String(v)); } }}>
       <div className="min-h-screen bg-background">
         <AdminSidebar />
         <TopBar collapsed={collapsed} />
