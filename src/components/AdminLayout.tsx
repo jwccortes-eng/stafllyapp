@@ -18,6 +18,7 @@ import { NavItem } from "@/components/navigation/nav-items";
 import CompanySwitcher from "@/components/CompanySwitcher";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { SoundStatusControl } from "@/components/SoundStatusControl";
+import { safeLocalStorage } from "@/lib/safe-storage";
 
 function MobilePageTitle({ items }: { items: NavItem[] }) {
   const location = useLocation();
@@ -43,7 +44,7 @@ export default function AdminLayout() {
   const { user, role, loading, signOut, hasModuleAccess, canAccessAdmin, canAccessPortal, employeeId } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, isModuleActive } = useCompany();
   const [collapsed, setCollapsed] = useState(() => {
-    const saved = localStorage.getItem("sidebar-collapsed");
+    const saved = safeLocalStorage.getItem("sidebar-collapsed");
     return saved !== null ? saved === "true" : true;
   });
   const isMobile = useIsMobile();
