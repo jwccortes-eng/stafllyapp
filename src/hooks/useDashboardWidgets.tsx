@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { safeLocalStorage } from "@/lib/safe-storage";
 
 export interface DashboardWidget {
   id: string;
@@ -33,7 +34,7 @@ export function useDashboardWidgets() {
   const [widgets, setWidgets] = useState<DashboardWidget[]>(DEFAULT_WIDGETS);
 
   useEffect(() => {
-    const saved = localStorage.getItem(getStorageKey(user?.id));
+    const saved = safeLocalStorage.getItem(getStorageKey(user?.id));
     if (saved) {
       try {
         const parsed: DashboardWidget[] = JSON.parse(saved);
@@ -51,7 +52,7 @@ export function useDashboardWidgets() {
   }, [user?.id]);
 
   const persist = useCallback((next: DashboardWidget[]) => {
-    localStorage.setItem(getStorageKey(user?.id), JSON.stringify(next));
+    safeLocalStorage.setItem(getStorageKey(user?.id), JSON.stringify(next));
     setWidgets(next);
   }, [user?.id]);
 

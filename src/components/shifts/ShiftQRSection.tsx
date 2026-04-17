@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { safeRandomUUID } from "@/lib/safe-storage";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -32,7 +33,7 @@ export function ShiftQRSection({
 
   const handleRegenerate = async () => {
     setRegenerating(true);
-    const newToken = crypto.randomUUID();
+    const newToken = safeRandomUUID();
     const { error } = await supabase
       .from("scheduled_shifts")
       .update({ qr_token: newToken } as any)

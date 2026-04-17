@@ -18,6 +18,8 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      // Never register the SW during local/preview dev — avoids stale-cache + iframe issues.
+      devOptions: { enabled: false },
       includeAssets: ["favicon.png", "favicon.ico"],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],

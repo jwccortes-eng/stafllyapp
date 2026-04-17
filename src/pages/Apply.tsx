@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { safeRandomUUID } from "@/lib/safe-storage";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { StaflyMark } from "@/components/brand/StaflyBrand";
@@ -357,7 +358,7 @@ export default function Apply() {
         formatted_address: [address.address_line, address.address_city, address.address_state, address.address_zip].filter(Boolean).join(", ") || null,
       };
 
-      const applicationId = crypto.randomUUID();
+      const applicationId = safeRandomUUID();
 
       const { error } = await supabase
         .from("job_applications")

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { safeRandomUUID } from "@/lib/safe-storage";
 import { MessageCircle, X, Send, Loader2, Bot, User, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -76,7 +77,7 @@ export default function EmployeeChatWidget() {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
-    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: trimmed };
+    const userMsg: Message = { id: safeRandomUUID(), role: "user", content: trimmed };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
@@ -91,13 +92,13 @@ export default function EmployeeChatWidget() {
       if (data?.error) throw new Error(data.error);
 
       const reply = data?.reply || "No pude generar una respuesta.";
-      const assistantMsg: Message = { id: crypto.randomUUID(), role: "assistant", content: reply };
+      const assistantMsg: Message = { id: safeRandomUUID(), role: "assistant", content: reply };
       setMessages((prev) => [...prev, assistantMsg]);
       persistMessage("assistant", reply);
     } catch (e: any) {
       const errorMessage = e?.message || "Error desconocido";
       toast({ title: "Error", description: errorMessage, variant: "destructive" });
-      const errMsg: Message = { id: crypto.randomUUID(), role: "assistant", content: `⚠️ ${errorMessage}` };
+      const errMsg: Message = { id: safeRandomUUID(), role: "assistant", content: `⚠️ ${errorMessage}` };
       setMessages((prev) => [...prev, errMsg]);
     } finally {
       setLoading(false);

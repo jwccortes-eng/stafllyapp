@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/query-client";
+import { safeLocalStorage } from "@/lib/safe-storage";
 
 interface Company {
   id: string;
@@ -62,9 +63,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setSelectedCompanyIdRaw(id);
     setManuallySelected(true);
     if (id) {
-      localStorage.setItem("selectedCompanyId", id);
+      safeLocalStorage.setItem("selectedCompanyId", id);
     } else {
-      localStorage.removeItem("selectedCompanyId");
+      safeLocalStorage.removeItem("selectedCompanyId");
     }
   }, []);
 
@@ -109,7 +110,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       // If they did manually select, keep current selectedCompanyId as-is.
     } else {
       // Regular users MUST have a company context
-      const stored = localStorage.getItem("selectedCompanyId");
+      const stored = safeLocalStorage.getItem("selectedCompanyId");
       const hasValidSelection = !!selectedCompanyId && list.some(c => c.id === selectedCompanyId);
       if (!hasValidSelection && list.length > 0) {
         if (stored && list.some(c => c.id === stored)) {
@@ -117,7 +118,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         } else {
           const first = list[0].id;
           setSelectedCompanyIdRaw(first);
-          localStorage.setItem("selectedCompanyId", first);
+          safeLocalStorage.setItem("selectedCompanyId", first);
         }
       } else if (list.length === 0 && selectedCompanyId) {
         setSelectedCompanyIdRaw(null);

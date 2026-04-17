@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { safeRandomUUID } from "@/lib/safe-storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,7 +115,7 @@ export function SendNotificationDialog({
 
     for (const file of Array.from(files)) {
       const ext = file.name.split(".").pop();
-      const path = `${selectedCompanyId}/${shift.id}/${crypto.randomUUID()}.${ext}`;
+      const path = `${selectedCompanyId}/${shift.id}/${safeRandomUUID()}.${ext}`;
 
       const { error } = await supabase.storage
         .from("shift-attachments")
