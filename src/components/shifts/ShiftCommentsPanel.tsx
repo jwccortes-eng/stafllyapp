@@ -71,7 +71,7 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
 
     for (const file of Array.from(files)) {
       const ext = file.name.split(".").pop();
-      const path = `${companyId}/${shiftId}/comments/${crypto.randomUUID()}.${ext}`;
+      const path = `${companyId}/${shiftId}/comments/${safeRandomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("shift-attachments").upload(path, file);
       if (error) { toast.error(`Error: ${error.message}`); continue; }
       const { data: urlData } = supabase.storage.from("shift-attachments").getPublicUrl(path);

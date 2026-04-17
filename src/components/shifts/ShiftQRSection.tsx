@@ -33,7 +33,7 @@ export function ShiftQRSection({
 
   const handleRegenerate = async () => {
     setRegenerating(true);
-    const newToken = crypto.randomUUID();
+    const newToken = safeRandomUUID();
     const { error } = await supabase
       .from("scheduled_shifts")
       .update({ qr_token: newToken } as any)

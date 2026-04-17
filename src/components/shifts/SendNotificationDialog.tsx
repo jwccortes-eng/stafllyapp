@@ -115,7 +115,7 @@ export function SendNotificationDialog({
 
     for (const file of Array.from(files)) {
       const ext = file.name.split(".").pop();
-      const path = `${selectedCompanyId}/${shift.id}/${crypto.randomUUID()}.${ext}`;
+      const path = `${selectedCompanyId}/${shift.id}/${safeRandomUUID()}.${ext}`;
 
       const { error } = await supabase.storage
         .from("shift-attachments")

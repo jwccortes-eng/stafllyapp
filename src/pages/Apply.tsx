@@ -358,7 +358,7 @@ export default function Apply() {
         formatted_address: [address.address_line, address.address_city, address.address_state, address.address_zip].filter(Boolean).join(", ") || null,
       };
 
-      const applicationId = crypto.randomUUID();
+      const applicationId = safeRandomUUID();
 
       const { error } = await supabase
         .from("job_applications")

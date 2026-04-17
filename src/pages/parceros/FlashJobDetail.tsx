@@ -141,7 +141,7 @@ export default function FlashJobDetail() {
 
     if (!error) {
       setMyResponse({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         flash_job_id: id,
         user_id: user.id,
         status: "interested",

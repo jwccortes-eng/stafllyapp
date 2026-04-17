@@ -75,13 +75,13 @@ export default function KioskDevices() {
 
   useEffect(() => { fetchDevices(); fetchLocations(); }, [selectedCompanyId]);
 
-  const openCreate = () => { setEditing(null); setFormName(""); setFormLocation(""); setFormDeviceId(crypto.randomUUID().slice(0, 8).toUpperCase()); setDialogOpen(true); };
+  const openCreate = () => { setEditing(null); setFormName(""); setFormLocation(""); setFormDeviceId(safeRandomUUID().slice(0, 8).toUpperCase()); setDialogOpen(true); };
   const openEdit = (d: KioskDevice) => { setEditing(d); setFormName(d.name); setFormLocation(d.location_id ?? ""); setFormDeviceId(d.device_identifier); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!formName.trim() || !selectedCompanyId) return;
     setSaving(true);
-    const payload = { company_id: selectedCompanyId, name: formName.trim(), location_id: formLocation && formLocation !== "none" ? formLocation : null, device_identifier: formDeviceId || crypto.randomUUID().slice(0, 8).toUpperCase() };
+    const payload = { company_id: selectedCompanyId, name: formName.trim(), location_id: formLocation && formLocation !== "none" ? formLocation : null, device_identifier: formDeviceId || safeRandomUUID().slice(0, 8).toUpperCase() };
 
     if (editing) {
       await kioskFetch(`kiosk_devices?id=eq.${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
