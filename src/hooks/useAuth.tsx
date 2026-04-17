@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { safeLocalStorage } from "@/lib/safe-storage";
 
 type AppRole = 'developer' | 'owner' | 'company_owner' | 'admin' | 'manager' | 'supervisor' | 'employee' | null;
 type ActiveMode = 'admin' | 'employee';
@@ -77,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole>(null);
   const [allRoles, setAllRoles] = useState<Set<string>>(new Set());
   const [activeMode, setActiveModeState] = useState<ActiveMode>(() => {
-    return (localStorage.getItem("stafly-active-mode") as ActiveMode) || 'admin';
+    return (safeLocalStorage.getItem("stafly-active-mode") as ActiveMode) || 'admin';
   });
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [allEmployeeIds, setAllEmployeeIds] = useState<{ id: string; companyId: string }[]>([]);
@@ -89,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setActiveMode = useCallback((mode: ActiveMode) => {
     setActiveModeState(mode);
-    localStorage.setItem("stafly-active-mode", mode);
+    safeLocalStorage.setItem("stafly-active-mode", mode);
   }, []);
 
   const fetchUserData = async (userId: string) => {
@@ -175,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Auto-set active mode based on what access user has
       const hasAdminRole = [...availableRoles].some(r => ADMIN_ROLES.has(r));
       const hasEmployeeProfile = activeEmps.length > 0;
-      const savedMode = localStorage.getItem("stafly-active-mode") as ActiveMode | null;
+      const savedMode = safeLocalStorage.getItem("stafly-active-mode") as ActiveMode | null;
 
       if (savedMode === 'employee' && hasEmployeeProfile) {
         setActiveModeState('employee');
