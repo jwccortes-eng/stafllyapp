@@ -144,8 +144,6 @@ export function ShiftRidesPanel({
 
   const addRide = async (driverId: string) => {
     setSaving(true);
-    setDriverPickerOpen(false);
-    setDriverSearch("");
     const remainingPassengers = Math.max(0, totalAssigned - totalPassengersAssigned);
     const passengerCount = Math.min(MAX_PASSENGERS, remainingPassengers || MAX_PASSENGERS);
 
