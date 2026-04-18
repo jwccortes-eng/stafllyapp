@@ -99,7 +99,7 @@ export function ShiftRidesPanel({
     const concepts = (conceptsRes.data ?? []) as Concept[];
     setAllConcepts(concepts);
 
-    const stored = mappingRes.data?.value as ConceptMapping | null;
+    const stored = mappingRes.data?.value as unknown as ConceptMapping | null;
     if (stored?.regular_concept_id || stored?.special_concept_id) {
       setMapping({
         regular_concept_id: stored.regular_concept_id ?? null,
