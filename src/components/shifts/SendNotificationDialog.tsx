@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
@@ -270,21 +271,16 @@ export function SendNotificationDialog({
           {target === "specific" && (
             <div>
               <Label className="text-xs text-muted-foreground">Empleado</Label>
-              <Select value={selectedEmployeeId} onValueChange={v => { setSelectedEmployeeId(v); setValidated(false); }}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Seleccionar empleado..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {assignedEmployees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      <span className="flex items-center gap-2">
-                        <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} size="sm" />
-                        {emp.first_name} {emp.last_name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="mt-1">
+                <SingleEmployeePicker
+                  employees={assignedEmployees as any}
+                  value={selectedEmployeeId || null}
+                  onChange={(id) => { setSelectedEmployeeId(id ?? ""); setValidated(false); }}
+                  placeholder="Buscar empleado asignado..."
+                  emptyLabel="Seleccionar empleado..."
+                  allowClear={false}
+                />
+              </div>
             </div>
           )}
 
