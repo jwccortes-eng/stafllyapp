@@ -20,6 +20,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { ShiftQRSection } from "./ShiftQRSection";
+import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import type { Shift, SelectOption, Employee } from "./types";
 
 interface LocationOption extends SelectOption {
@@ -399,13 +400,16 @@ export function ShiftEditDialog({
                 </div>
                 <div>
                   <Label className="text-[11px] text-muted-foreground font-medium">Conductor asignado</Label>
-                  <Select value={driverEmployeeId || "none"} onValueChange={v => setDriverEmployeeId(v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sin asignar</SelectItem>
-                      {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <div className="mt-1">
+                    <SingleEmployeePicker
+                      employees={employees ?? []}
+                      value={driverEmployeeId || null}
+                      onChange={(id) => setDriverEmployeeId(id ?? "")}
+                      placeholder="Buscar conductor..."
+                      emptyLabel="Sin asignar"
+                      highlightDrivers
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
