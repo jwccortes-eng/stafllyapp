@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+// Popover removed: driver picker now uses unified SingleEmployeePicker
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -54,8 +54,6 @@ export function ShiftRidesPanel({
   const [mapping, setMapping] = useState<ConceptMapping>({ regular_concept_id: null, special_concept_id: null });
   const [saving, setSaving] = useState(false);
   const [generatingPayments, setGeneratingPayments] = useState(false);
-  const [driverPickerOpen, setDriverPickerOpen] = useState(false);
-  const [driverSearch, setDriverSearch] = useState("");
   const [mappingOpen, setMappingOpen] = useState(false);
 
   // Load drivers (employees with has_car = 'Yes')
@@ -131,13 +129,7 @@ export function ShiftRidesPanel({
   const ridesWithoutPayment = rides.filter(r => !r.movement_id).length;
   const mappingComplete = !!(mapping.regular_concept_id && mapping.special_concept_id);
 
-  const filteredDrivers = useMemo(() => {
-    if (!driverSearch.trim()) return drivers;
-    const q = driverSearch.toLowerCase();
-    return drivers.filter(d =>
-      `${d.first_name} ${d.last_name} ${d.phone_number ?? ""} ${d.employee_role ?? ""}`.toLowerCase().includes(q)
-    );
-  }, [drivers, driverSearch]);
+  // (driver search filtering moved into SingleEmployeePicker)
 
   const saveMapping = async (next: ConceptMapping) => {
     setMapping(next);
