@@ -10,6 +10,7 @@ import { Car, Plus, Trash2, Loader2, DollarSign, Users, AlertTriangle, Settings2
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatPersonName } from "@/lib/format-helpers";
+import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import type { Assignment, Employee } from "./types";
 
 const MAX_PASSENGERS = 5;
@@ -462,71 +463,25 @@ export function ShiftRidesPanel({
         </p>
       )}
 
-      {/* Add driver — advanced searchable popover (allows duplicates) */}
+      {/* Add driver — unified searchable picker (allows duplicates with usage badge) */}
       {canEdit && drivers.length > 0 && (
-        <Popover open={driverPickerOpen} onOpenChange={setDriverPickerOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full h-9 text-xs gap-1.5 border-dashed">
-              <Plus className="h-3.5 w-3.5" /> Agregar ride
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[320px] p-0" align="start">
-            <div className="p-2 border-b">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  autoFocus
-                  value={driverSearch}
-                  onChange={(e) => setDriverSearch(e.target.value)}
-                  placeholder="Buscar conductor..."
-                  className="h-8 text-xs pl-8"
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
-                {filteredDrivers.length} conductor{filteredDrivers.length !== 1 ? "es" : ""} disponible{filteredDrivers.length !== 1 ? "s" : ""} · puedes asignar el mismo varias veces
-              </p>
-            </div>
-            <div className="max-h-[280px] overflow-y-auto">
-              {filteredDrivers.length === 0 ? (
-                <p className="text-xs text-muted-foreground p-3 text-center">Sin resultados</p>
-              ) : (
-                filteredDrivers.map(d => {
-                  const usedCount = rides.filter(r => r.driver_id === d.id).length;
-                  return (
-                    <button
-                      key={d.id}
-                      onClick={() => addRide(d.id)}
-                      disabled={saving}
-                      className="flex items-center gap-2 w-full px-2.5 py-2 text-xs hover:bg-accent/60 transition-colors border-b border-border/10 last:border-0 disabled:opacity-50"
-                    >
-                      <EmployeeAvatar
-                        firstName={d.first_name}
-                        lastName={d.last_name}
-                        avatarUrl={d.avatar_url}
-                        gender={d.gender}
-                        size="sm"
-                      />
-                      <div className="flex-1 min-w-0 text-left">
-                        <p className="font-semibold truncate">
-                          {formatPersonName(d.first_name)} {formatPersonName(d.last_name)}
-                        </p>
-                        {d.employee_role && (
-                          <p className="text-[10px] text-muted-foreground truncate">{d.employee_role}</p>
-                        )}
-                      </div>
-                      {usedCount > 0 && (
-                        <Badge variant="outline" className="text-[9px] bg-primary/10 text-primary border-primary/20 shrink-0">
-                          {usedCount}×
-                        </Badge>
-                      )}
-                      <Check className="h-3.5 w-3.5 text-primary opacity-0 group-hover:opacity-100" />
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
+        <div className="space-y-1">
+          <SingleEmployeePicker
+            employees={drivers}
+            value={null}
+            onChange={(id) => { if (id) addRide(id); }}
+            placeholder="Buscar conductor..."
+            emptyLabel="+ Agregar ride"
+            allowClear={false}
+            highlightDrivers
+            usageCount={(id) => rides.filter(r => r.driver_id === id).length}
+            disabled={saving}
+            triggerClassName="border-dashed"
+          />
+          <p className="text-[10px] text-muted-foreground px-1">
+            Puedes asignar el mismo conductor varias veces si hay varios viajes.
+          </p>
+        </div>
       )}
 
       {canEdit && drivers.length === 0 && (
