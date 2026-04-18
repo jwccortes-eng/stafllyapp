@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Badge } from "@/components/ui/badge";
-import { Car, Plus, Trash2, Loader2, DollarSign, Users, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Car, Plus, Trash2, Loader2, DollarSign, Users, AlertTriangle, Settings2, Search, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { formatPersonName } from "@/lib/format-helpers";
 import type { Assignment, Employee } from "./types";
 
 const MAX_PASSENGERS = 5;
@@ -18,6 +21,17 @@ interface ShiftRide {
   passenger_count: number;
   movement_id: string | null;
   notes: string | null;
+}
+
+interface Concept {
+  id: string;
+  name: string;
+  default_rate: number | null;
+}
+
+interface ConceptMapping {
+  regular_concept_id: string | null;
+  special_concept_id: string | null;
 }
 
 interface ShiftRidesPanelProps {
@@ -34,19 +48,25 @@ export function ShiftRidesPanel({
 }: ShiftRidesPanelProps) {
   const [rides, setRides] = useState<ShiftRide[]>([]);
   const [loading, setLoading] = useState(true);
-  const [drivers, setDrivers] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
+  const [drivers, setDrivers] = useState<Employee[]>([]);
+  const [allConcepts, setAllConcepts] = useState<Concept[]>([]);
+  const [mapping, setMapping] = useState<ConceptMapping>({ regular_concept_id: null, special_concept_id: null });
   const [saving, setSaving] = useState(false);
   const [generatingPayments, setGeneratingPayments] = useState(false);
+  const [driverPickerOpen, setDriverPickerOpen] = useState(false);
+  const [driverSearch, setDriverSearch] = useState("");
+  const [mappingOpen, setMappingOpen] = useState(false);
 
   // Load drivers (employees with has_car = 'Yes')
   const loadDrivers = useCallback(async () => {
     const { data } = await supabase
       .from("employees")
-      .select("id, first_name, last_name")
+      .select("id, first_name, last_name, avatar_url, gender, phone_number, employee_role, has_car, user_id")
       .eq("company_id", companyId)
       .eq("is_active", true)
-      .in("has_car", ["Yes", "true", "Sí", "yes", "YES"]);
-    setDrivers(data ?? []);
+      .in("has_car", ["Yes", "true", "Sí", "yes", "YES"])
+      .order("first_name");
+    setDrivers((data ?? []) as Employee[]);
   }, [companyId]);
 
   // Load rides for this shift
@@ -61,19 +81,80 @@ export function ShiftRidesPanel({
     setLoading(false);
   }, [shiftId]);
 
+  // Load all active concepts + mapping config
+  const loadConceptsAndMapping = useCallback(async () => {
+    const [conceptsRes, mappingRes] = await Promise.all([
+      supabase.from("concepts")
+        .select("id, name, default_rate")
+        .eq("company_id", companyId)
+        .eq("is_active", true)
+        .order("name"),
+      supabase.from("company_settings")
+        .select("value")
+        .eq("company_id", companyId)
+        .eq("key", "ride_concept_mapping")
+        .maybeSingle(),
+    ]);
+
+    const concepts = (conceptsRes.data ?? []) as Concept[];
+    setAllConcepts(concepts);
+
+    const stored = mappingRes.data?.value as unknown as ConceptMapping | null;
+    if (stored?.regular_concept_id || stored?.special_concept_id) {
+      setMapping({
+        regular_concept_id: stored.regular_concept_id ?? null,
+        special_concept_id: stored.special_concept_id ?? null,
+      });
+    } else {
+      // Auto-detect by common name patterns (English + Spanish)
+      const findByPatterns = (patterns: string[]) =>
+        concepts.find(c => patterns.some(p => c.name.toLowerCase().includes(p.toLowerCase())))?.id ?? null;
+
+      setMapping({
+        regular_concept_id: findByPatterns(["ride regular", "transporte regular", "ride normal"]),
+        special_concept_id: findByPatterns(["ride special", "transporte especial", "ride especial"]),
+      });
+    }
+  }, [companyId]);
+
   useEffect(() => {
     loadRides();
     loadDrivers();
-  }, [loadRides, loadDrivers]);
+    loadConceptsAndMapping();
+  }, [loadRides, loadDrivers, loadConceptsAndMapping]);
 
   const totalAssigned = assignments.filter(a => a.shift_id === shiftId).length;
   const vehiclesNeeded = Math.ceil(totalAssigned / MAX_PASSENGERS);
   const totalPassengersAssigned = rides.reduce((sum, r) => sum + r.passenger_count, 0);
+  const ridesWithPayment = rides.filter(r => r.movement_id).length;
+  const ridesWithoutPayment = rides.filter(r => !r.movement_id).length;
+  const mappingComplete = !!(mapping.regular_concept_id && mapping.special_concept_id);
+
+  const filteredDrivers = useMemo(() => {
+    if (!driverSearch.trim()) return drivers;
+    const q = driverSearch.toLowerCase();
+    return drivers.filter(d =>
+      `${d.first_name} ${d.last_name} ${d.phone_number ?? ""} ${d.employee_role ?? ""}`.toLowerCase().includes(q)
+    );
+  }, [drivers, driverSearch]);
+
+  const saveMapping = async (next: ConceptMapping) => {
+    setMapping(next);
+    const { error } = await supabase.from("company_settings").upsert({
+      company_id: companyId,
+      key: "ride_concept_mapping",
+      value: next as any,
+    } as any, { onConflict: "company_id,key" });
+    if (error) toast.error("No se pudo guardar el mapeo: " + error.message);
+    else toast.success("Mapeo de conceptos guardado");
+  };
 
   const addRide = async (driverId: string) => {
     setSaving(true);
+    setDriverPickerOpen(false);
+    setDriverSearch("");
     const remainingPassengers = Math.max(0, totalAssigned - totalPassengersAssigned);
-    const passengerCount = Math.min(MAX_PASSENGERS, remainingPassengers);
+    const passengerCount = Math.min(MAX_PASSENGERS, remainingPassengers || MAX_PASSENGERS);
 
     const { error } = await supabase.from("shift_rides").insert({
       shift_id: shiftId,
@@ -113,23 +194,14 @@ export function ShiftRidesPanel({
 
   const generatePayments = async () => {
     if (rides.length === 0) return;
-    setGeneratingPayments(true);
-
-    // Get or verify concepts exist
-    const { data: concepts } = await supabase
-      .from("concepts")
-      .select("id, name, default_rate")
-      .eq("company_id", companyId)
-      .in("name", ["Ride Regular", "Ride Special"])
-      .eq("is_active", true);
-
-    const conceptMap = new Map((concepts ?? []).map(c => [c.name, c]));
-
-    if (!conceptMap.has("Ride Regular") && !conceptMap.has("Ride Special")) {
-      toast.error("No se encontraron los conceptos 'Ride Regular' o 'Ride Special'. Créalos primero en Conceptos.");
-      setGeneratingPayments(false);
+    if (!mappingComplete) {
+      toast.error("Mapea los conceptos de Ride Regular y Special primero");
+      setMappingOpen(true);
       return;
     }
+    setGeneratingPayments(true);
+
+    const conceptById = new Map(allConcepts.map(c => [c.id, c]));
 
     // Get current period
     const today = new Date().toISOString().split("T")[0];
@@ -153,11 +225,10 @@ export function ShiftRidesPanel({
     for (const ride of rides) {
       if (ride.movement_id) { skipped++; continue; }
 
-      const conceptName = ride.ride_type === "special" ? "Ride Special" : "Ride Regular";
-      const concept = conceptMap.get(conceptName) || conceptMap.get("Ride Regular");
+      const conceptId = ride.ride_type === "special" ? mapping.special_concept_id : mapping.regular_concept_id;
+      const concept = conceptId ? conceptById.get(conceptId) : null;
       if (!concept) { skipped++; continue; }
 
-      // Check employee-specific rate
       const { data: empRate } = await supabase
         .from("concept_employee_rates")
         .select("rate")
@@ -177,7 +248,7 @@ export function ShiftRidesPanel({
           quantity: 1,
           rate,
           total_value: rate,
-          note: `Auto: ${conceptName} - Turno`,
+          note: `Auto: ${concept.name} - Turno`,
           approval_status: "pending",
         } as any)
         .select("id")
@@ -190,14 +261,9 @@ export function ShiftRidesPanel({
     }
 
     await loadRides();
-    toast.success(`${created} pago${created !== 1 ? "s" : ""} generado${created !== 1 ? "s" : ""}${skipped > 0 ? `, ${skipped} omitido${skipped !== 1 ? "s" : ""} (ya tenían pago)` : ""}`);
+    toast.success(`${created} pago${created !== 1 ? "s" : ""} generado${created !== 1 ? "s" : ""}${skipped > 0 ? `, ${skipped} omitido${skipped !== 1 ? "s" : ""}` : ""}`);
     setGeneratingPayments(false);
   };
-
-  const ridesWithPayment = rides.filter(r => r.movement_id).length;
-  const ridesWithoutPayment = rides.filter(r => !r.movement_id).length;
-  const assignedDriverIds = new Set(rides.map(r => r.driver_id));
-  const availableDrivers = drivers.filter(d => !assignedDriverIds.has(d.id));
 
   if (loading) {
     return (
@@ -209,7 +275,7 @@ export function ShiftRidesPanel({
 
   return (
     <div className="space-y-4">
-      {/* Summary */}
+      {/* Summary header */}
       <div className="rounded-xl bg-muted/30 p-3 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs">
@@ -223,7 +289,7 @@ export function ShiftRidesPanel({
         </div>
         <div className="flex items-center justify-between text-[10px] text-muted-foreground">
           <span>Capacidad: {MAX_PASSENGERS} pasajeros/vehículo</span>
-          <span>{rides.length} ride{rides.length !== 1 ? "s" : ""} asignado{rides.length !== 1 ? "s" : ""}</span>
+          <span>{rides.length} ride{rides.length !== 1 ? "s" : ""} asignado{rides.length !== 1 ? "s" : ""} · {totalPassengersAssigned}/{totalAssigned} cubiertos</span>
         </div>
         {rides.length < vehiclesNeeded && totalAssigned > 0 && (
           <div className="flex items-center gap-1.5 text-[10px] text-warning">
@@ -232,6 +298,72 @@ export function ShiftRidesPanel({
           </div>
         )}
       </div>
+
+      {/* Concept mapping warning + manage */}
+      {canEdit && !mappingComplete && (
+        <div className="rounded-xl border border-warning/30 bg-warning/5 p-2.5 flex items-center gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
+          <p className="text-[11px] text-warning-foreground flex-1">
+            Conceptos de pago no mapeados. Configura cuál concepto pagará Regular y Special.
+          </p>
+          <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setMappingOpen(true)}>
+            Configurar
+          </Button>
+        </div>
+      )}
+
+      {/* Mapping sheet (inline) */}
+      {mappingOpen && (
+        <div className="rounded-xl border border-border/40 bg-muted/20 p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold flex items-center gap-1.5">
+              <Settings2 className="h-3 w-3" /> Mapeo de conceptos de Rides
+            </p>
+            <button onClick={() => setMappingOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            <div>
+              <label className="text-[10px] text-muted-foreground">Ride Regular paga →</label>
+              <Select
+                value={mapping.regular_concept_id ?? ""}
+                onValueChange={(v) => saveMapping({ ...mapping, regular_concept_id: v })}
+              >
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona concepto..." /></SelectTrigger>
+                <SelectContent>
+                  {allConcepts.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="text-xs">{c.name} {c.default_rate ? `· $${c.default_rate}` : ""}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground">Ride Special paga →</label>
+              <Select
+                value={mapping.special_concept_id ?? ""}
+                onValueChange={(v) => saveMapping({ ...mapping, special_concept_id: v })}
+              >
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona concepto..." /></SelectTrigger>
+                <SelectContent>
+                  {allConcepts.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="text-xs">{c.name} {c.default_rate ? `· $${c.default_rate}` : ""}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {allConcepts.length === 0 && (
+              <p className="text-[10px] text-destructive">
+                No hay conceptos activos. Crea conceptos en Conceptos primero.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Ride list */}
       {rides.length > 0 && (
@@ -250,15 +382,34 @@ export function ShiftRidesPanel({
                 <EmployeeAvatar
                   firstName={driver?.first_name ?? "?"}
                   lastName={driver?.last_name ?? ""}
+                  avatarUrl={driver?.avatar_url}
+                  gender={driver?.gender}
                   size="sm"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold truncate">
                     {driver ? `${driver.first_name} ${driver.last_name}` : "Conductor desconocido"}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {ride.passenger_count} pasajero{ride.passenger_count !== 1 ? "s" : ""}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    {canEdit && !ride.movement_id ? (
+                      <Input
+                        type="number"
+                        min={1}
+                        max={MAX_PASSENGERS}
+                        value={ride.passenger_count}
+                        onChange={(e) => {
+                          const v = Math.max(1, Math.min(MAX_PASSENGERS, parseInt(e.target.value) || 1));
+                          updateRide(ride.id, { passenger_count: v });
+                        }}
+                        className="h-5 w-12 text-[10px] px-1.5 py-0"
+                      />
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">{ride.passenger_count}</span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground">
+                      pasajero{ride.passenger_count !== 1 ? "s" : ""}
+                    </span>
+                  </div>
                 </div>
 
                 {canEdit && !ride.movement_id ? (
@@ -311,34 +462,87 @@ export function ShiftRidesPanel({
         </p>
       )}
 
-      {/* Add driver */}
-      {canEdit && availableDrivers.length > 0 && (
-        <div className="border border-dashed border-primary/25 rounded-xl p-3 space-y-2 bg-primary/5">
-          <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
-            <Plus className="h-3 w-3" /> Agregar conductor
-          </p>
-          <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto">
-            {availableDrivers.map(d => (
-              <Button
-                key={d.id}
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs justify-start gap-1.5 px-2"
-                onClick={() => addRide(d.id)}
-                disabled={saving}
-              >
-                <EmployeeAvatar firstName={d.first_name} lastName={d.last_name} size="sm" />
-                {d.first_name} {d.last_name}
-              </Button>
-            ))}
-          </div>
-        </div>
+      {/* Add driver — advanced searchable popover (allows duplicates) */}
+      {canEdit && drivers.length > 0 && (
+        <Popover open={driverPickerOpen} onOpenChange={setDriverPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full h-9 text-xs gap-1.5 border-dashed">
+              <Plus className="h-3.5 w-3.5" /> Agregar ride
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[320px] p-0" align="start">
+            <div className="p-2 border-b">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  autoFocus
+                  value={driverSearch}
+                  onChange={(e) => setDriverSearch(e.target.value)}
+                  placeholder="Buscar conductor..."
+                  className="h-8 text-xs pl-8"
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
+                {filteredDrivers.length} conductor{filteredDrivers.length !== 1 ? "es" : ""} disponible{filteredDrivers.length !== 1 ? "s" : ""} · puedes asignar el mismo varias veces
+              </p>
+            </div>
+            <div className="max-h-[280px] overflow-y-auto">
+              {filteredDrivers.length === 0 ? (
+                <p className="text-xs text-muted-foreground p-3 text-center">Sin resultados</p>
+              ) : (
+                filteredDrivers.map(d => {
+                  const usedCount = rides.filter(r => r.driver_id === d.id).length;
+                  return (
+                    <button
+                      key={d.id}
+                      onClick={() => addRide(d.id)}
+                      disabled={saving}
+                      className="flex items-center gap-2 w-full px-2.5 py-2 text-xs hover:bg-accent/60 transition-colors border-b border-border/10 last:border-0 disabled:opacity-50"
+                    >
+                      <EmployeeAvatar
+                        firstName={d.first_name}
+                        lastName={d.last_name}
+                        avatarUrl={d.avatar_url}
+                        gender={d.gender}
+                        size="sm"
+                      />
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="font-semibold truncate">
+                          {formatPersonName(d.first_name)} {formatPersonName(d.last_name)}
+                        </p>
+                        {d.employee_role && (
+                          <p className="text-[10px] text-muted-foreground truncate">{d.employee_role}</p>
+                        )}
+                      </div>
+                      {usedCount > 0 && (
+                        <Badge variant="outline" className="text-[9px] bg-primary/10 text-primary border-primary/20 shrink-0">
+                          {usedCount}×
+                        </Badge>
+                      )}
+                      <Check className="h-3.5 w-3.5 text-primary opacity-0 group-hover:opacity-100" />
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       )}
 
-      {canEdit && availableDrivers.length === 0 && drivers.length === 0 && (
+      {canEdit && drivers.length === 0 && (
         <p className="text-[10px] text-muted-foreground text-center">
           No hay empleados con vehículo registrado. Activa "¿Tiene carro?" en el perfil del empleado.
         </p>
+      )}
+
+      {/* Manage mapping access */}
+      {canEdit && mappingComplete && !mappingOpen && (
+        <button
+          onClick={() => setMappingOpen(true)}
+          className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 mx-auto"
+        >
+          <Settings2 className="h-2.5 w-2.5" /> Cambiar mapeo de conceptos
+        </button>
       )}
 
       {/* Generate payments button */}
@@ -346,14 +550,17 @@ export function ShiftRidesPanel({
         <Button
           className="w-full h-9 text-xs gap-1.5"
           onClick={generatePayments}
-          disabled={generatingPayments}
+          disabled={generatingPayments || !mappingComplete}
         >
           {generatingPayments ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <DollarSign className="h-3.5 w-3.5" />
           )}
-          Generar pagos ({ridesWithoutPayment} ride{ridesWithoutPayment !== 1 ? "s" : ""})
+          {!mappingComplete
+            ? "Configura mapeo para generar pagos"
+            : `Generar pagos (${ridesWithoutPayment} ride${ridesWithoutPayment !== 1 ? "s" : ""})`
+          }
         </Button>
       )}
 
