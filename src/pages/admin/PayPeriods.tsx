@@ -599,6 +599,9 @@ export default function PayPeriods() {
                             sourceType={p.source_type}
                             reconciliationStatus={p.reconciliation_status}
                             lastReconciledAt={p.last_reconciled_at}
+                            onOpenSummary={() => {
+                              if (!expandedPeriods.has(p.id)) toggleExpand(p.id);
+                            }}
                           />
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>

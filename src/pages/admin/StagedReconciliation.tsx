@@ -484,6 +484,19 @@ export default function StagedReconciliation() {
       <PageHeader
         title="Cierre Semanal"
         subtitle="Importar → Emparejar → Revisar → Aprobar → Publicar → Cerrar"
+        rightSlot={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const ppId = activePeriod?.period_id;
+              window.location.href = ppId ? `/app/pay-periods?focus=${ppId}` : "/app/pay-periods";
+            }}
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Volver a Periods
+          </Button>
+        }
       />
 
       {/* ── Period Selector Bar ── */}
