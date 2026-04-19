@@ -269,6 +269,7 @@ export default function ChannelView() {
             </Button>
           </div>
         </footer>
+      )}
     </div>
   );
 }
