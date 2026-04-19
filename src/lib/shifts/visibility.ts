@@ -52,6 +52,31 @@
 export const CLAIMABLE_VISIBLE_STATUSES = ["open", "published"] as const;
 
 /**
+ * Canonical "is this shift claimable by THIS employee right now?" predicate.
+ * Mirror of the RLS rule on `scheduled_shifts` + the listing/detail filters.
+ * Use to keep notifications / Home / MyShifts / PortalShiftDetail in lockstep.
+ *
+ * Pre-conditions assumed satisfied (filtered server-side):
+ *   - shift.company_id === employee.company_id
+ *   - shift.claimable === true
+ *   - shift.status ∈ CLAIMABLE_VISIBLE_STATUSES
+ *   - shift.deleted_at === null
+ *   - shift.date >= today
+ */
+export function isShiftClaimableForEmployee(args: {
+  shiftId: string;
+  slots: number | null;
+  activeAssignmentsCount: number;
+  myShiftIds: ReadonlySet<string>;
+  pendingRequestShiftIds: ReadonlySet<string>;
+}): boolean {
+  if (args.myShiftIds.has(args.shiftId)) return false;
+  if (args.pendingRequestShiftIds.has(args.shiftId)) return false;
+  if (args.slots != null && args.activeAssignmentsCount >= args.slots) return false;
+  return true;
+}
+
+/**
  * Apply the canonical "visible scheduled_shift" filter to a Supabase query.
  * Use as: `applyVisibleShiftFilter(supabase.from("scheduled_shifts").select(...))`
  */

@@ -157,6 +157,13 @@ export default function EmployeeDashboard() {
 
     // Count claimable shifts (open/published, future, not full, not already mine)
     const myShiftIds = new Set(mapped.map(s => s.id));
+    // Align with PortalShiftDetail / MyShifts: pending requests hide the shift
+    const { data: myPendingReqs } = await supabase
+      .from("shift_requests")
+      .select("shift_id")
+      .eq("employee_id", employeeId!)
+      .eq("status", "pending");
+    const pendingRequestShiftIds = new Set((myPendingReqs ?? []).map((r: any) => r.shift_id as string));
     const { data: claimRows } = await supabase
       .from("scheduled_shifts")
       .select("id, slots, shift_assignments(id, status)")
@@ -167,6 +174,7 @@ export default function EmployeeDashboard() {
       .gte("date", today);
     const cCount = (claimRows ?? []).filter((s: any) => {
       if (myShiftIds.has(s.id)) return false;
+      if (pendingRequestShiftIds.has(s.id)) return false;
       const active = (s.shift_assignments ?? []).filter((a: any) => a.status !== "removed" && a.status !== "rejected").length;
       return !s.slots || active < s.slots;
     }).length;
