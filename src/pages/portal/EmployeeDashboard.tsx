@@ -8,7 +8,7 @@ import {
   Wallet, Clock, CalendarDays,
   ArrowRight, LogIn, LogOut, MapPin, Timer,
   Bell, ChevronRight, AlertTriangle, Navigation,
-  Briefcase, TrendingUp,
+  Briefcase, TrendingUp, HandMetal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -71,6 +71,7 @@ export default function EmployeeDashboard() {
   const [weeklyHours, setWeeklyHours] = useState("0h");
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [claimableCount, setClaimableCount] = useState(0);
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -150,6 +151,23 @@ export default function EmployeeDashboard() {
     setPendingCount(pCount);
     if (mapped.length > 0) setNextShift(mapped[0]);
     setUpcomingShifts(mapped.slice(1, 4));
+
+    // Count claimable shifts (open/published, future, not full, not already mine)
+    const myShiftIds = new Set(mapped.map(s => s.id));
+    const { data: claimRows } = await supabase
+      .from("scheduled_shifts")
+      .select("id, slots, shift_assignments(id, status)")
+      .eq("company_id", emp.company_id)
+      .eq("claimable", true)
+      .in("status", ["open", "published"])
+      .is("deleted_at", null)
+      .gte("date", today);
+    const cCount = (claimRows ?? []).filter((s: any) => {
+      if (myShiftIds.has(s.id)) return false;
+      const active = (s.shift_assignments ?? []).filter((a: any) => a.status !== "removed" && a.status !== "rejected").length;
+      return !s.slots || active < s.slots;
+    }).length;
+    setClaimableCount(cCount);
 
     if (periodRes.data) {
       const p = periodRes.data;
@@ -232,6 +250,26 @@ export default function EmployeeDashboard() {
           </span>
         )}
       </div>
+
+      {/* ── Available shifts hero — visible only when claimables exist ── */}
+      {isModuleEnabled("my_shifts") && claimableCount > 0 && (
+        <Link to="/portal/shifts?tab=available" className="block">
+          <div className="rounded-2xl bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.04] to-card border-2 border-emerald-500/25 px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-all shadow-[0_4px_20px_-8px_hsl(var(--primary)/0.15)]">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+              <HandMetal className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold text-foreground leading-tight">
+                {claimableCount} shift{claimableCount > 1 ? "s" : ""} available
+              </p>
+              <p className="text-[10.5px] text-muted-foreground/70 mt-0.5">
+                Tap to view and request
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+          </div>
+        </Link>
+      )}
 
       {/* ── Active clock banner — only when clocked in ── */}
       {isModuleEnabled("my_clock") && clockStatus.isClockedIn && (

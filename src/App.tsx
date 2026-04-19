@@ -122,6 +122,7 @@ const MyPayments = lazy(() => import("./pages/portal/MyPayments"));
 const WeekDetail = lazy(() => import("./pages/portal/WeekDetail"));
 const Accumulated = lazy(() => import("./pages/portal/Accumulated"));
 const MyShifts = lazy(() => import("./pages/portal/MyShifts"));
+const PortalShiftDetail = lazy(() => import("./pages/portal/PortalShiftDetail"));
 const MyAnnouncements = lazy(() => import("./pages/portal/MyAnnouncements"));
 const PortalResources = lazy(() => import("./pages/portal/PortalResources"));
 const PortalProfile = lazy(() => import("./pages/portal/PortalProfile"));
@@ -276,6 +277,7 @@ function App() {
                 <Route path="week/:periodId" element={<WeekDetail />} />
                 <Route path="accumulated" element={<Accumulated />} />
                 <Route path="shifts" element={<MyShifts />} />
+                <Route path="shifts/:shiftId" element={<PortalShiftDetail />} />
                 <Route path="announcements" element={<MyAnnouncements />} />
                 <Route path="resources" element={<PortalResources />} />
                 <Route path="clock" element={<PortalClock />} />

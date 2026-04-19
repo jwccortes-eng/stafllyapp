@@ -15,6 +15,7 @@ const TYPE_ROUTES: Record<string, string> = {
   shift_assigned: "/portal/shifts",
   shift_published: "/portal/shifts",
   shift_available: "/portal/shifts",
+  shift_claimable: "/portal/shifts",
   shift_updated: "/portal/shifts",
   shift_confirmed: "/app/shifts",
   shift_rejected: "/app/shifts",
@@ -38,8 +39,29 @@ const TYPE_ROUTES: Record<string, string> = {
   review_pending: "/app/shifts",
 };
 
+// Notification types where metadata.shift_id should deep-link to the shift detail page
+const SHIFT_DETAIL_TYPES = new Set([
+  "shift_claimable",
+  "shift_available",
+  "shift_assigned",
+  "shift_published",
+  "shift_updated",
+  "shift_updated_reaccept",
+  "shift_reminder",
+  "shift_reminder_24h",
+  "shift_reminder_1h",
+  "shift_confirm_reminder",
+  "shift_confirm_urgent",
+]);
+
 function getNotificationRoute(n: { type: string; metadata: Record<string, any> | null }) {
-  return TYPE_ROUTES[n.type] || "/app";
+  const base = TYPE_ROUTES[n.type] || "/app";
+  // Deep-link to /portal/shifts/:id when we have a shift_id and route targets the portal
+  const shiftId = n.metadata?.shift_id;
+  if (shiftId && SHIFT_DETAIL_TYPES.has(n.type) && base.startsWith("/portal/shifts")) {
+    return `/portal/shifts/${shiftId}`;
+  }
+  return base;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -47,6 +69,7 @@ const TYPE_COLORS: Record<string, string> = {
   shift_assigned: "bg-primary",
   shift_published: "bg-primary",
   shift_available: "bg-emerald-500",
+  shift_claimable: "bg-emerald-500",
   shift_updated: "bg-sky-500",
   shift_updated_reaccept: "bg-amber-500",
   clock_request: "bg-orange-500",
@@ -72,7 +95,7 @@ type FilterTab = "all" | "shifts" | "clock" | "people" | "other";
 
 const FILTER_GROUPS: Record<FilterTab, string[] | null> = {
   all: null,
-  shifts: ["shift_request_new", "shift_assigned", "shift_published", "shift_available", "shift_updated", "shift_confirmed", "shift_rejected", "shift_reminder", "shift_reminder_24h", "shift_reminder_1h", "shift_confirm_reminder", "shift_confirm_urgent"],
+  shifts: ["shift_request_new", "shift_assigned", "shift_published", "shift_available", "shift_claimable", "shift_updated", "shift_confirmed", "shift_rejected", "shift_reminder", "shift_reminder_24h", "shift_reminder_1h", "shift_confirm_reminder", "shift_confirm_urgent"],
   clock: ["clock_request", "no_clock", "no_clockin_alert", "no_show_alert"],
   people: ["new_application", "invitation_accepted", "invitation_expired", "review_pending"],
   other: ["announcement", "payment_ready", "period_closed", "payroll_email"],
@@ -99,6 +122,7 @@ const TYPE_LABELS: Record<string, string> = {
   shift_assigned: "Assigned",
   shift_published: "Published",
   shift_available: "Available",
+  shift_claimable: "Available",
   shift_updated: "Updated",
   shift_confirmed: "Confirmed",
   shift_rejected: "Rejected",
