@@ -80,12 +80,14 @@ export default function MyShifts() {
     if (!emp) { setLoading(false); return; }
 
     // CRITICAL: filter scheduled_shifts.deleted_at to hide soft-deleted shifts.
+    // ALSO exclude removed/rejected assignments (set by trigger on soft-delete or by employee).
     // See src/lib/shifts/visibility.ts for the canonical rule.
     const { data: assignData } = await supabase
       .from("shift_assignments")
       .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions, company_id, operational_version, locations (name), clients (name))`)
       .eq("employee_id", employeeId)
       .is("scheduled_shifts.deleted_at", null)
+      .not("status", "in", "(removed,rejected)")
       .order("created_at", { ascending: false });
 
     const mapped: ShiftAssignment[] = (assignData ?? []).map((a: any) => ({
@@ -110,19 +112,21 @@ export default function MyShifts() {
     const today = new Date().toISOString().split("T")[0];
     const { data: claimData } = await supabase
       .from("scheduled_shifts")
-      .select(`id, title, date, start_time, end_time, notes, slots, locations (name), clients (name), shift_assignments (id)`)
+      .select(`id, title, date, start_time, end_time, notes, slots, locations (name), clients (name), shift_assignments (id, status)`)
       .eq("company_id", emp.company_id).eq("claimable", true)
       .in("status", ["open", "published"])
       .is("deleted_at", null).gte("date", today).order("date", { ascending: true });
 
     const myShiftIds = new Set(mapped.map(a => a.shift.id));
+    const activeCount = (s: any) =>
+      (s.shift_assignments ?? []).filter((a: any) => a.status !== "removed" && a.status !== "rejected").length;
     const claimableFiltered: ClaimableShift[] = (claimData ?? [])
       .filter((s: any) => !myShiftIds.has(s.id))
-      .filter((s: any) => { const c = s.shift_assignments?.length ?? 0; return !s.slots || c < s.slots; })
+      .filter((s: any) => { const c = activeCount(s); return !s.slots || c < s.slots; })
       .map((s: any) => ({
         id: s.id, title: s.title, date: s.date, start_time: s.start_time,
         end_time: s.end_time, notes: s.notes, slots: s.slots,
-        location: s.locations, client: s.clients, assignedCount: s.shift_assignments?.length ?? 0,
+        location: s.locations, client: s.clients, assignedCount: activeCount(s),
       }));
     setClaimable(claimableFiltered);
     setLoading(false);
