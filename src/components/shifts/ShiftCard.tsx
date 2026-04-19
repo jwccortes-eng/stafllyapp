@@ -94,12 +94,12 @@ export function ShiftCard({
   const isFull = assignmentCount >= totalSlots;
   const isEmpty = assignmentCount === 0;
 
-  // Capacity bar tone — uses semantic tokens (matches OpsStatusChip language)
+  // Capacity bar tone — desaturated to support, not compete with the chip
   const barTone = isFull
-    ? "bg-earning"
+    ? "bg-earning/70"
     : isEmpty
-    ? "bg-destructive/70"
-    : "bg-warning";
+    ? "bg-destructive/55"
+    : "bg-warning/65";
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("application/shift-action", e.altKey ? "duplicate" : "move");
