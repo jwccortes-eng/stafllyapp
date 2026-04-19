@@ -374,113 +374,143 @@ export default function PortalClock() {
   const allowGps = allowedMethods.includes("gps");
 
   return (
-    <div className="space-y-4 animate-fade-in pb-24">
-      {/* Missing photo warning */}
+    <div className="space-y-3 animate-fade-in pb-24">
+      {/* ── Missing photo gate ── */}
       {!hasProfilePhoto && (
-        <button onClick={() => navigate("/portal/profile")}
-          className="w-full rounded-xl border-2 border-destructive/30 bg-destructive/5 p-3 flex items-center gap-3 hover:bg-destructive/10 transition-colors active:scale-[0.98]">
-          <Camera className="h-5 w-5 text-destructive shrink-0" />
-          <div className="text-left flex-1">
-            <p className="text-xs font-bold text-destructive">Upload your profile photo</p>
-            <p className="text-[10px] text-muted-foreground">Required to clock in</p>
+        <button
+          onClick={() => navigate("/portal/profile")}
+          className="w-full rounded-xl border bg-card p-3 flex items-center gap-3 transition-all hover:bg-muted/30 active:scale-[0.99] relative overflow-hidden"
+        >
+          <span className="absolute left-0 top-0 bottom-0 w-[1.5px] bg-destructive" />
+          <div className="h-8 w-8 rounded-lg bg-destructive/[0.08] flex items-center justify-center shrink-0">
+            <Camera className="h-4 w-4 text-destructive" />
           </div>
-          <ChevronRight className="h-4 w-4 text-destructive/30" />
+          <div className="text-left flex-1 min-w-0">
+            <p className="text-[12px] font-semibold text-foreground">Profile photo required</p>
+            <p className="text-[10.5px] text-muted-foreground mt-0.5">Tap to upload before clocking in</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
         </button>
       )}
 
       {/* ── Success State ── */}
       {successState && (
-        <div className={cn(
-          "rounded-2xl p-5 text-center space-y-2 animate-fade-in",
-          successState.type === "in"
-            ? "bg-[hsl(var(--status-confirmed)/0.08)] border-2 border-[hsl(var(--status-confirmed)/0.2)]"
-            : "bg-primary/[0.06] border-2 border-primary/20"
-        )}>
-          <CheckCircle2 className={cn("h-10 w-10 mx-auto", successState.type === "in" ? "text-[hsl(var(--status-confirmed))]" : "text-primary")} />
-          <p className="text-lg font-bold font-heading text-foreground">
-            {successState.type === "in" ? "✓ Clock-in recorded" : "✓ Clock-out recorded"}
-          </p>
-          <p className="text-sm text-muted-foreground">{successState.shift} · {successState.time}</p>
-        </div>
-      )}
-
-      {/* ── Current time — compact ── */}
-      <div className="text-center">
-        <p className="text-4xl font-bold font-heading tracking-tight tabular-nums text-foreground">
-          {format(now, "HH:mm")}
-          <span className="text-lg text-muted-foreground/40 ml-0.5">{format(now, "ss")}</span>
-        </p>
-        <p className="text-[12px] text-muted-foreground capitalize mt-0.5">
-          {format(now, "EEEE, MMMM d", { locale: enUS })}
-        </p>
-      </div>
-
-      {/* ── Clocked-in status ── */}
-      {isClockedIn && (
-        <div className="rounded-2xl p-4 text-center relative overflow-hidden bg-gradient-to-br from-[hsl(var(--status-confirmed))] to-[hsl(var(--status-confirmed)/0.8)] text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,hsl(0_0%_100%/0.12),transparent_60%)]" />
-          <div className="relative space-y-1.5">
-            <div className="flex items-center justify-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-widest">On shift</span>
-            </div>
-            <p className="text-3xl font-bold tabular-nums font-heading">{getElapsed()}</p>
-            <p className="text-[11px] opacity-80">Clock-in: {format(new Date(activeEntry!.clock_in), "HH:mm")}</p>
+        <div className="rounded-xl border bg-card p-4 flex items-center gap-3 animate-fade-in relative overflow-hidden">
+          <span className={cn(
+            "absolute left-0 top-0 bottom-0 w-[1.5px]",
+            successState.type === "in" ? "bg-earning" : "bg-primary"
+          )} />
+          <div className={cn(
+            "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ml-1",
+            successState.type === "in" ? "bg-earning/[0.08] text-earning" : "bg-primary/[0.08] text-primary"
+          )}>
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-foreground">
+              {successState.type === "in" ? "Clock-in recorded" : "Clock-out recorded"}
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+              {successState.shift} · <span className="tabular-nums font-medium">{successState.time}</span>
+            </p>
           </div>
         </div>
       )}
 
-      {/* ── Shift selection — only when not clocked in ── */}
+      {/* ── Hero clock ── */}
+      <div className="text-center pt-1 pb-1">
+        <p className="text-[42px] leading-none font-semibold font-mono tracking-tight tabular-nums text-foreground">
+          {format(now, "HH:mm")}
+          <span className="text-[18px] text-muted-foreground/40 ml-1 align-top">{format(now, "ss")}</span>
+        </p>
+        <p className="text-[11px] text-muted-foreground/70 capitalize mt-1.5 tracking-wide">
+          {format(now, "EEEE, MMMM d", { locale: enUS })}
+        </p>
+      </div>
+
+      {/* ── Active session ── */}
+      {isClockedIn && (
+        <div className="rounded-xl border bg-card p-4 relative overflow-hidden">
+          <span className="absolute left-0 top-0 bottom-0 w-[1.5px] bg-earning" />
+          <div className="flex items-center justify-between gap-3 mb-3 pl-1">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-earning opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
+              </span>
+              <span className="text-[10.5px] font-semibold uppercase tracking-widest text-earning">On shift</span>
+            </div>
+            <p className="text-[10.5px] text-muted-foreground tabular-nums">
+              Started {format(new Date(activeEntry!.clock_in), "HH:mm")}
+            </p>
+          </div>
+          <p className="text-[34px] leading-none font-semibold font-mono tabular-nums text-foreground text-center py-1">
+            {getElapsed()}
+          </p>
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 text-center mt-2">
+            Elapsed
+          </p>
+        </div>
+      )}
+
+      {/* ── Shift selection ── */}
       {!isClockedIn && (
         <>
           {todayShifts.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">
-                {todayShifts.length === 1 ? "Your shift today" : "Select your shift"}
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1">
+                {todayShifts.length === 1 ? "Today's shift" : "Select shift"}
               </p>
               <div className="space-y-1.5">
                 {todayShifts.map(s => {
                   const isSelected = selectedShift?.id === s.id;
                   const alreadyClockedShift = todayEntries.some(e => e.shift_id === s.id);
                   const timeCheck = isClockInAllowed(s);
+                  const railTone = alreadyClockedShift
+                    ? "bg-earning/60"
+                    : isSelected
+                      ? "bg-primary"
+                      : !timeCheck.allowed
+                        ? "bg-warning/50"
+                        : "bg-border";
                   return (
                     <button
-                      key={s.id} disabled={alreadyClockedShift}
+                      key={s.id}
+                      disabled={alreadyClockedShift}
                       onClick={() => setSelectedShift(isSelected ? null : s)}
                       className={cn(
-                        "w-full rounded-xl border p-3 text-left transition-all min-h-[56px]",
-                        isSelected && "border-primary bg-primary/[0.04] ring-2 ring-primary/20",
-                        !isSelected && !alreadyClockedShift && "border-border/40 hover:border-primary/30 bg-card shadow-sm",
-                        alreadyClockedShift && "opacity-40 cursor-not-allowed bg-muted/20",
+                        "w-full rounded-xl border bg-card p-3 text-left transition-all min-h-[60px] relative overflow-hidden",
+                        "hover:bg-muted/20 hover:-translate-y-[0.5px]",
+                        isSelected && "ring-1 ring-primary/30 border-primary/40",
+                        alreadyClockedShift && "opacity-50 cursor-not-allowed hover:translate-y-0 hover:bg-card",
                       )}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[13px] font-bold truncate flex-1">{s.title}</span>
-                        {alreadyClockedShift && (
-                          <span className="text-[9px] font-bold text-[hsl(var(--status-confirmed))] flex items-center gap-0.5 shrink-0">
-                            <CheckCircle2 className="h-3 w-3" /> Done
+                      <span className={cn("absolute left-0 top-0 bottom-0 w-[1.5px]", railTone)} />
+                      <div className="pl-1.5">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="text-[13px] font-semibold truncate flex-1 text-foreground">
+                            {s.title}
                           </span>
-                        )}
-                        {!alreadyClockedShift && !timeCheck.allowed && (
-                          <span className="text-[9px] font-bold text-[hsl(var(--status-pending))] flex items-center gap-0.5 shrink-0">
-                            <Clock className="h-3 w-3" /> Not yet
+                          {alreadyClockedShift && <OpsStatusChip label="Done" tone="success" size="sm" />}
+                          {!alreadyClockedShift && !timeCheck.allowed && (
+                            <OpsStatusChip label="Not yet" tone="warning" size="sm" />
+                          )}
+                          {!alreadyClockedShift && timeCheck.allowed && isSelected && (
+                            <OpsStatusChip label="Ready" tone="primary" size="sm" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-[10.5px] text-muted-foreground">
+                          <span className="flex items-center gap-1 font-medium tabular-nums">
+                            <Clock className="h-3 w-3 opacity-60" />
+                            {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
                           </span>
-                        )}
-                        {!alreadyClockedShift && timeCheck.allowed && isSelected && (
-                          <span className="text-[9px] font-bold text-primary flex items-center gap-0.5 shrink-0">
-                            <CheckCircle2 className="h-3 w-3" /> Ready
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
-                        <span className="flex items-center gap-1 font-medium tabular-nums">
-                          <Clock className="h-3 w-3" /> {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
-                        </span>
-                        {s.location_name && (
-                          <span className="flex items-center gap-1 truncate">
-                            <MapPin className="h-3 w-3" /> {s.location_name}
-                          </span>
-                        )}
+                          {s.location_name && (
+                            <span className="flex items-center gap-1 truncate min-w-0">
+                              <MapPin className="h-3 w-3 opacity-60 shrink-0" />
+                              <span className="truncate">{s.location_name}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   );
@@ -488,112 +518,150 @@ export default function PortalClock() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-border/30 bg-muted/10 p-5 flex flex-col items-center gap-2 text-center">
-              <CalendarDays className="h-7 w-7 text-muted-foreground/20" />
-              <p className="text-sm font-bold text-foreground">
-                 {hasDailyOnlyShifts ? "Daily-pay shifts" : "No shifts today"}
+            <div className="rounded-xl border bg-card p-6 flex flex-col items-center gap-2 text-center">
+              <div className="h-10 w-10 rounded-xl bg-muted/40 flex items-center justify-center">
+                <CalendarDays className="h-5 w-5 text-muted-foreground/50" />
+              </div>
+              <p className="text-[13px] font-semibold text-foreground mt-1">
+                {hasDailyOnlyShifts ? "Daily-pay shifts" : "No shifts today"}
               </p>
-              <p className="text-[11px] text-muted-foreground/60 max-w-[240px]">
+              <p className="text-[11px] text-muted-foreground/70 max-w-[260px] leading-relaxed">
                 {hasDailyOnlyShifts
-                  ? "Your shifts today don't require clocking in. Your pay is calculated automatically."
-                  : "You have no assigned shifts. If one is missing, contact your supervisor."}
+                  ? "Today's shifts don't require clocking in. Pay is calculated automatically."
+                  : "No assigned shifts. Contact your supervisor if one is missing."}
               </p>
             </div>
           )}
         </>
       )}
 
-      {/* Clock-in blocked warning */}
+      {/* ── Clock-in blocked ── */}
       {!isClockedIn && clockInBlocked && selectedShift && (
-        <div className="rounded-xl border border-[hsl(var(--status-pending)/0.3)] bg-[hsl(var(--status-pending)/0.05)] p-3 flex items-start gap-2.5">
-          <Clock className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0 mt-0.5" />
-          <p className="text-[11px] text-[hsl(var(--status-pending))] font-medium leading-relaxed">{clockInBlocked}</p>
+        <div className="rounded-xl border bg-card p-3 flex items-start gap-2.5 relative overflow-hidden">
+          <span className="absolute left-0 top-0 bottom-0 w-[1.5px] bg-warning" />
+          <Clock className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5 ml-1" />
+          <p className="text-[11px] text-foreground/80 font-medium leading-relaxed">{clockInBlocked}</p>
         </div>
       )}
 
-      {/* ── Primary CTA ── */}
+      {/* ── Single primary CTA ── */}
       {isClockedIn ? (
         <Button
-          onClick={initiateClockOut} disabled={acting}
-          className="w-full h-14 rounded-2xl text-base font-bold gap-3 shadow-xl transition-all active:scale-[0.95] bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+          onClick={initiateClockOut}
+          disabled={acting}
+          className="w-full h-13 rounded-xl text-[14px] font-semibold gap-2.5 transition-all active:scale-[0.98] bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm"
         >
-          {acting ? <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <><LogOut className="h-5 w-5" /> Clock Out</>}
+          {acting ? (
+            <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <><LogOut className="h-4 w-4" /> Clock Out</>
+          )}
         </Button>
       ) : (
         <Button
           onClick={initiateClockIn}
           disabled={acting || !companyId || !selectedShift || !!clockInBlocked || !hasProfilePhoto}
-          className="w-full h-14 rounded-2xl text-base font-bold gap-3 shadow-xl transition-all active:scale-[0.95] gradient-primary text-white hover:shadow-2xl disabled:opacity-40"
+          className="w-full h-13 rounded-xl text-[14px] font-semibold gap-2.5 transition-all active:scale-[0.98] bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm disabled:opacity-40"
         >
-          {acting ? <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <><LogIn className="h-5 w-5" /> Clock In</>}
+          {acting ? (
+            <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <><LogIn className="h-4 w-4" /> Clock In</>
+          )}
         </Button>
       )}
 
-      {/* QR + manual row */}
-      <div className="flex items-center gap-2">
-        {hasQrShifts && (
-          <Button
-            variant="outline"
-            onClick={() => setQrScannerOpen(true)}
-            className="flex-1 h-11 rounded-xl text-xs font-bold gap-2 border-primary/20 text-primary hover:bg-primary/5"
-          >
-            <ScanLine className="h-4 w-4" />
-            Scan QR
-          </Button>
-        )}
-        {!isClockedIn && allowManual && (
-          <Button variant="ghost" size="sm" className={cn("h-11 text-xs text-muted-foreground gap-1.5", hasQrShifts ? "flex-1" : "w-full")} onClick={() => setRequestOpen(true)}>
-            <FileText className="h-3.5 w-3.5" /> Report time
-          </Button>
-        )}
-      </div>
+      {/* ── Secondary methods ── */}
+      {(hasQrShifts || (!isClockedIn && allowManual)) && (
+        <div className="flex items-center gap-2">
+          {hasQrShifts && (
+            <Button
+              variant="outline"
+              onClick={() => setQrScannerOpen(true)}
+              className="flex-1 h-10 rounded-xl text-[11.5px] font-medium gap-2 border-border/60 hover:bg-muted/40"
+            >
+              <ScanLine className="h-3.5 w-3.5" />
+              Scan QR
+            </Button>
+          )}
+          {!isClockedIn && allowManual && (
+            <Button
+              variant="ghost"
+              onClick={() => setRequestOpen(true)}
+              className={cn(
+                "h-10 rounded-xl text-[11.5px] font-medium text-muted-foreground gap-1.5 hover:bg-muted/40",
+                hasQrShifts ? "flex-1" : "w-full"
+              )}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Report time
+            </Button>
+          )}
+        </div>
+      )}
 
-      {/* Today summary */}
+      {/* ── Today summary ── */}
       {(todayEntries.length > 0 || isClockedIn) && (
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl border border-border/40 bg-card p-3 shadow-sm">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <Timer className="h-3 w-3" />
-              <span className="text-[9px] font-bold uppercase tracking-widest">Hours today</span>
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="rounded-xl border bg-card p-3">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="h-5 w-5 rounded-md bg-primary/[0.08] flex items-center justify-center">
+                <Timer className="h-3 w-3 text-primary" />
+              </div>
+              <span className="text-[9.5px] font-semibold uppercase tracking-widest text-muted-foreground/70">Hours</span>
             </div>
-            <p className="text-lg font-bold text-foreground tabular-nums font-heading">{totalHoursToday()}</p>
+            <p className="text-[18px] font-semibold text-foreground tabular-nums font-mono leading-none">{totalHoursToday()}</p>
           </div>
-          <div className="rounded-xl border border-border/40 bg-card p-3 shadow-sm">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <CalendarDays className="h-3 w-3" />
-              <span className="text-[9px] font-bold uppercase tracking-widest">Entries</span>
+          <div className="rounded-xl border bg-card p-3">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="h-5 w-5 rounded-md bg-info/[0.08] flex items-center justify-center">
+                <CalendarDays className="h-3 w-3 text-info" />
+              </div>
+              <span className="text-[9.5px] font-semibold uppercase tracking-widest text-muted-foreground/70">Entries</span>
             </div>
-            <p className="text-lg font-bold text-foreground tabular-nums font-heading">{todayEntries.length}</p>
+            <p className="text-[18px] font-semibold text-foreground tabular-nums font-mono leading-none">{todayEntries.length}</p>
           </div>
         </div>
       )}
 
-      {/* Daily history */}
+      {/* ── Today's history ── */}
       {todayEntries.length > 0 && (
-        <div className="space-y-1.5">
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">Today's history</h3>
+        <div className="space-y-1.5 pt-1">
+          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1">
+            Today's history
+          </h3>
           {todayEntries.map((entry) => {
             const isActive = !entry.clock_out;
             return (
-              <div key={entry.id} className={cn(
-                "rounded-xl border bg-card p-3 flex items-center gap-3 shadow-sm",
-                isActive && "border-[hsl(var(--status-confirmed)/0.2)] bg-[hsl(var(--status-confirmed)/0.03)]"
-              )}>
+              <div
+                key={entry.id}
+                className="rounded-xl border bg-card p-3 flex items-center gap-3 relative overflow-hidden transition-all hover:bg-muted/20"
+              >
+                <span className={cn(
+                  "absolute left-0 top-0 bottom-0 w-[1.5px]",
+                  isActive ? "bg-earning" : "bg-border"
+                )} />
                 <div className={cn(
-                  "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
-                  isActive ? "bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))]" : "bg-muted text-muted-foreground"
+                  "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ml-1",
+                  isActive ? "bg-earning/[0.08] text-earning" : "bg-muted/60 text-muted-foreground"
                 )}>
                   <Clock className="h-3.5 w-3.5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold tabular-nums">{format(new Date(entry.clock_in), "HH:mm")}</span>
-                    <span className="text-muted-foreground/40 text-xs">→</span>
-                    <span className="text-sm font-bold tabular-nums">{entry.clock_out ? format(new Date(entry.clock_out), "HH:mm") : "—"}</span>
-                    {isActive && <span className="text-[9px] font-bold text-[hsl(var(--status-confirmed))] ml-1">In progress</span>}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold tabular-nums font-mono text-foreground">
+                      {format(new Date(entry.clock_in), "HH:mm")}
+                    </span>
+                    <span className="text-muted-foreground/30 text-[11px]">→</span>
+                    <span className="text-[13px] font-semibold tabular-nums font-mono text-foreground">
+                      {entry.clock_out ? format(new Date(entry.clock_out), "HH:mm") : "—"}
+                    </span>
                   </div>
-                  {!isActive && <p className="text-[10px] text-muted-foreground mt-0.5">{getDuration(entry)}</p>}
+                  {!isActive && (
+                    <p className="text-[10.5px] text-muted-foreground mt-0.5 tabular-nums">{getDuration(entry)}</p>
+                  )}
                 </div>
+                {isActive && <OpsStatusChip label="Live" tone="success" size="sm" pulse />}
               </div>
             );
           })}
