@@ -1,4 +1,4 @@
-import { Clock, GripVertical, Hand, Moon, Lock, MapPin, CalendarDays } from "lucide-react";
+import { Clock, GripVertical, Hand, Moon, Lock, MapPin, CalendarDays, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
@@ -31,28 +31,28 @@ interface ShiftCardProps {
   coverageStatus?: { percent: number; missing: number; extra: number } | null;
 }
 
-type ChipSpec = { label: string; tone: OpsStatusTone };
-
-function getStatusChips(shift: Shift, assignmentCount: number): ChipSpec[] {
-  const chips: ChipSpec[] = [];
+/**
+ * Map shift+staffing state to a single ops tone.
+ * Mirrors the logic used in ShiftDetailDialog header for visual coherence.
+ */
+function getShiftTone(
+  shift: Shift,
+  assignmentCount: number,
+): { tone: OpsStatusTone; label: string } {
   const totalSlots = shift.slots ?? 1;
 
-  if (assignmentCount === 0) {
-    chips.push({ label: "Sin asignar", tone: "critical" });
-  } else if (assignmentCount < totalSlots) {
+  if (shift.status === "locked") return { tone: "muted", label: "Bloqueado" };
+  if (shift.status === "cancelled" || shift.status === "canceled")
+    return { tone: "critical", label: "Cancelado" };
+
+  if (assignmentCount === 0) return { tone: "critical", label: "Sin asignar" };
+  if (assignmentCount < totalSlots) {
     const missing = totalSlots - assignmentCount;
-    chips.push({ label: `${missing} vacante${missing > 1 ? "s" : ""}`, tone: "warning" });
+    return { tone: "warning", label: `${missing} vacante${missing > 1 ? "s" : ""}` };
   }
 
-  if (shift.status !== "published" && shift.status !== "locked") {
-    chips.push({ label: "Borrador", tone: "info" });
-  }
-
-  if (shift.status === "locked") {
-    chips.push({ label: "Bloqueado", tone: "muted" });
-  }
-
-  return chips;
+  if (shift.status !== "published") return { tone: "info", label: "Borrador" };
+  return { tone: "success", label: "Cubierto" };
 }
 
 function isOvernight(startTime: string, endTime: string): boolean {
@@ -71,23 +71,53 @@ function calcDuration(start: string, end: string): string {
 }
 
 export function ShiftCard({
-  shift, assignmentCount, assignedNames = [], assignedEmployees = [], locationName, clientName, clientIds = [], onClick, compact, draggable, onDragStart, showDate, coverageStatus,
+  shift,
+  assignmentCount,
+  assignedNames = [],
+  assignedEmployees = [],
+  locationName,
+  clientName,
+  clientIds = [],
+  onClick,
+  compact,
+  draggable,
+  onDragStart,
+  showDate,
+  coverageStatus,
 }: ShiftCardProps) {
   const color = getClientColor(shift.client_id, clientIds);
-  const chips = getStatusChips(shift, assignmentCount);
+  const primary = getShiftTone(shift, assignmentCount);
   const overnight = isOvernight(shift.start_time, shift.end_time);
   const isLocked = shift.status === "locked";
   const totalSlots = shift.slots ?? 1;
   const fillPercent = Math.min(100, Math.round((assignmentCount / totalSlots) * 100));
   const isFull = assignmentCount >= totalSlots;
+  const isEmpty = assignmentCount === 0;
+
+  // Capacity bar tone — uses semantic tokens (matches OpsStatusChip language)
+  const barTone = isFull
+    ? "bg-earning"
+    : isEmpty
+    ? "bg-destructive/70"
+    : "bg-warning";
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("application/shift-action", e.altKey ? "duplicate" : "move");
-    e.dataTransfer.setData("application/shift-data", JSON.stringify({
-      shiftId: shift.id, title: shift.title, start_time: shift.start_time,
-      end_time: shift.end_time, slots: shift.slots, client_id: shift.client_id,
-      location_id: shift.location_id, notes: shift.notes, claimable: shift.claimable, status: shift.status,
-    }));
+    e.dataTransfer.setData(
+      "application/shift-data",
+      JSON.stringify({
+        shiftId: shift.id,
+        title: shift.title,
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        slots: shift.slots,
+        client_id: shift.client_id,
+        location_id: shift.location_id,
+        notes: shift.notes,
+        claimable: shift.claimable,
+        status: shift.status,
+      }),
+    );
     if (e.altKey) e.dataTransfer.effectAllowed = "copy";
     onDragStart?.(e);
   };
@@ -95,119 +125,132 @@ export function ShiftCard({
   return (
     <div
       className={cn(
-        "cursor-pointer transition-all group border-l-[3px] rounded-xl overflow-hidden bg-white/90 dark:bg-card/90 border border-border/20 hover:shadow-md hover:-translate-y-0.5",
-        color.border,
-        isLocked && "opacity-75",
-        draggable && "hover:ring-1 hover:ring-primary/15"
+        "group cursor-pointer relative rounded-xl border border-border/40 bg-card",
+        "transition-[transform,box-shadow,border-color] duration-150",
+        "hover:-translate-y-px hover:shadow-sm hover:border-border/70",
+        isLocked && "opacity-70",
       )}
       draggable={draggable && !isLocked}
       onDragStart={handleDragStart}
       onClick={onClick}
     >
-      <div className={cn("px-3 py-2.5", compact && "px-2.5 py-2")}>
-        <div className="flex items-start gap-1.5">
+      {/* Client accent — thin left rail, low chroma */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full",
+          color.dot,
+          "opacity-70",
+        )}
+      />
+
+      <div className={cn("pl-3 pr-3 py-2.5", compact && "pl-2.5 pr-2.5 py-2")}>
+        {/* Row 1 — title + code + status */}
+        <div className="flex items-center gap-2 min-w-0">
           {draggable && (
-            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/20 mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/25 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity -ml-0.5" />
           )}
-          <div className="min-w-0 flex-1 space-y-1.5">
-            {/* Title row */}
-            <div className="flex items-start justify-between gap-1">
-              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                {shift.shift_code && (
-                  <span className="text-[9px] font-mono font-semibold text-primary/60 bg-primary/8 rounded-md px-1.5 py-0.5 shrink-0">
-                    #{formatShiftCode(shift.shift_code)}
-                  </span>
-                )}
-                <p className={cn("font-semibold truncate leading-tight", compact ? "text-[11px]" : "text-xs")}>
-                  {shift.title}
-                </p>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {shift.claimable && <Hand className="h-3 w-3 text-violet-400" />}
-                {overnight && <Moon className="h-3 w-3 text-indigo-400" />}
-                {isLocked && <Lock className="h-3 w-3 text-muted-foreground/50" />}
-              </div>
-            </div>
-
-            {/* Time + duration */}
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80">
-              <span className="flex items-center gap-1 shrink-0 font-medium">
-                <Clock className="h-3 w-3" />
-                {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
-              </span>
-              <span className="text-[9px] text-muted-foreground/50 font-medium">
-                {calcDuration(shift.start_time, shift.end_time)}
-              </span>
-            </div>
-
-            {/* Date (when shown) */}
-            {showDate && (
-              <p className="text-[9px] text-muted-foreground/60 capitalize">
-                {format(parseISO(shift.date), "EEE d MMM", { locale: es })}
-              </p>
+          {shift.shift_code && (
+            <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70 bg-muted/50 rounded px-1.5 py-px shrink-0">
+              {formatShiftCode(shift.shift_code)}
+            </span>
+          )}
+          <p
+            className={cn(
+              "font-semibold text-foreground truncate flex-1 leading-tight",
+              compact ? "text-[12px]" : "text-[13px]",
             )}
+          >
+            {shift.title}
+          </p>
+          <OpsStatusChip label={primary.label} tone={primary.tone} size="sm" />
+        </div>
 
-            {/* Assigned employees preview — avatar stack */}
-            {assignedEmployees.length > 0 ? (
-              <EmployeeAvatarGroup
-                employees={assignedEmployees}
-                max={4}
-                size="xs"
-                showNames={assignedEmployees.length <= 2}
-              />
-            ) : assignedNames.length > 0 ? (
-              <div className="space-y-px">
-                {assignedNames.slice(0, 2).map((name, i) => (
-                  <div key={i} className="flex items-center gap-1 text-[9px] text-muted-foreground/60">
-                    <Users className="h-2.5 w-2.5 shrink-0" />
-                    <span className="truncate">{name}</span>
-                  </div>
-                ))}
-                {assignedNames.length > 2 && (
-                  <span className="text-[9px] text-muted-foreground/40 ml-3.5">+{assignedNames.length - 2} más</span>
-                )}
-              </div>
-            ) : null}
+        {/* Row 2 — meta line: time · duration · client · location */}
+        <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-muted-foreground/85 min-w-0">
+          <Clock className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+          <span className="font-medium tabular-nums shrink-0">
+            {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
+          </span>
+          <span className="text-muted-foreground/40 shrink-0">·</span>
+          <span className="tabular-nums text-muted-foreground/70 shrink-0">
+            {calcDuration(shift.start_time, shift.end_time)}
+          </span>
+          {clientName && (
+            <>
+              <span className="text-muted-foreground/40 shrink-0">·</span>
+              <span className="truncate">{clientName}</span>
+            </>
+          )}
+        </div>
 
-            {/* Capacity bar + badges */}
-            <div className="space-y-1 pt-0.5">
-              {/* Mini capacity bar */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-1 bg-muted/50 rounded-full overflow-hidden">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all duration-300",
-                      isFull ? "bg-emerald-400 dark:bg-emerald-500" :
-                      assignmentCount === 0 ? "bg-rose-400 dark:bg-rose-500" :
-                      "bg-amber-400 dark:bg-amber-500"
-                    )}
-                    style={{ width: `${fillPercent}%` }}
-                  />
-                </div>
-                <span className="text-[9px] tabular-nums text-muted-foreground/60 font-medium shrink-0">
-                  {assignmentCount}/{totalSlots}
-                </span>
-              </div>
+        {/* Row 2.5 — date (when shown across views) */}
+        {showDate && (
+          <p className="text-[10px] text-muted-foreground/60 capitalize mt-0.5">
+            {format(parseISO(shift.date), "EEE d MMM", { locale: es })}
+          </p>
+        )}
 
-              {/* Status chips — unified ops vocabulary */}
-              {(chips.length > 0 || (coverageStatus && coverageStatus.percent < 100)) && (
-                <div className="flex items-center gap-1 flex-wrap">
-                  {chips.map((c, i) => (
-                    <OpsStatusChip key={i} label={c.label} tone={c.tone} size="sm" />
-                  ))}
-                  {coverageStatus && coverageStatus.percent < 100 && (
-                    <OpsStatusChip
-                      label={coverageStatus.missing > 0 ? `${coverageStatus.missing} sin fichar` : `${coverageStatus.percent}%`}
-                      tone="warning"
-                      size="sm"
-                      leading={<AlertTriangle className="h-2.5 w-2.5" />}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
+        {/* Row 3 — location (only if no client shown above to avoid duplication) */}
+        {locationName && !clientName && (
+          <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground/70 min-w-0">
+            <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+            <span className="truncate">{locationName}</span>
+          </div>
+        )}
+
+        {/* Row 4 — capacity bar + ratio + signals */}
+        <div className="flex items-center gap-2 mt-2">
+          <div className="flex-1 h-[3px] bg-muted/60 rounded-full overflow-hidden">
+            <div
+              className={cn("h-full rounded-full transition-all duration-300", barTone)}
+              style={{ width: `${fillPercent}%` }}
+            />
+          </div>
+          <span className="text-[10px] tabular-nums text-muted-foreground/70 font-medium shrink-0">
+            {assignmentCount}/{totalSlots}
+          </span>
+          {/* Signal icons — desaturated, sober */}
+          <div className="flex items-center gap-1 shrink-0">
+            {shift.claimable && (
+              <Hand className="h-3 w-3 text-muted-foreground/55" aria-label="Claimable" />
+            )}
+            {overnight && (
+              <Moon className="h-3 w-3 text-muted-foreground/55" aria-label="Overnight" />
+            )}
+            {isLocked && (
+              <Lock className="h-3 w-3 text-muted-foreground/55" aria-label="Locked" />
+            )}
           </div>
         </div>
+
+        {/* Row 5 — assigned avatars (only when present) */}
+        {assignedEmployees.length > 0 ? (
+          <div className="mt-2">
+            <EmployeeAvatarGroup
+              employees={assignedEmployees}
+              max={5}
+              size="xs"
+              showNames={false}
+            />
+          </div>
+        ) : assignedNames.length > 0 ? (
+          <p className="mt-2 text-[10px] text-muted-foreground/60 truncate">
+            {assignedNames.slice(0, 3).join(" · ")}
+            {assignedNames.length > 3 && ` +${assignedNames.length - 3}`}
+          </p>
+        ) : null}
+
+        {/* Row 6 — coverage warning, only when off target */}
+        {coverageStatus && coverageStatus.percent < 100 && coverageStatus.missing > 0 && (
+          <div className="mt-1.5">
+            <OpsStatusChip
+              label={`${coverageStatus.missing} sin fichar`}
+              tone="warning"
+              size="sm"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
