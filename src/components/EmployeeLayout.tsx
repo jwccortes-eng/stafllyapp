@@ -12,6 +12,7 @@ import { SoundStatusControl } from "@/components/SoundStatusControl";
 import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { PortalBottomNav } from "@/components/portal/PortalBottomNav";
 import { PortalMoreSheet } from "@/components/portal/PortalMoreSheet";
+import { ProductSwitcher } from "@/components/portal/ProductSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { PortalPageTitle } from "@/components/portal/PortalPageTitle";
 import { PhotoGate } from "@/components/portal/PhotoGate";
@@ -166,6 +167,7 @@ export default function EmployeeLayout() {
               {companySwitcher || <PortalPageTitle />}
             </div>
             <div className="flex items-center gap-1">
+              <ProductSwitcher compact />
               <ModeSwitcher compact />
               <SoundStatusControl compact />
               <NotificationBell />
@@ -192,6 +194,7 @@ export default function EmployeeLayout() {
             {companySwitcher}
           </div>
           <div className="flex items-center gap-2">
+            <ProductSwitcher />
             <ModeSwitcher />
             <SoundStatusControl />
             <NotificationBell />
