@@ -20,6 +20,10 @@ import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import PayrollSequenceSettings from "@/components/payroll/PayrollSequenceSettings";
+import PeriodReconciliationCell from "@/components/payroll/PeriodReconciliationCell";
+import { usePayrollSequenceConfig, formatSequence } from "@/hooks/usePayrollSequenceConfig";
+import { Settings } from "lucide-react";
 
 interface PayPeriod {
   id: string;
@@ -29,6 +33,10 @@ interface PayPeriod {
   closed_at: string | null;
   published_at: string | null;
   paid_at?: string | null;
+  sequence_number?: number | null;
+  source_type?: string | null;
+  reconciliation_status?: string | null;
+  last_reconciled_at?: string | null;
 }
 
 interface ImportInfo {
@@ -64,6 +72,8 @@ export default function PayPeriods() {
   const [importsMap, setImportsMap] = useState<Record<string, ImportInfo[]>>({});
   const [loadingImports, setLoadingImports] = useState<Set<string>>(new Set());
   const [periodMeta, setPeriodMeta] = useState<Record<string, { hasImports: boolean; hasBasePay: boolean }>>({});
+  const [showSequenceConfig, setShowSequenceConfig] = useState(false);
+  const { config: seqConfig } = usePayrollSequenceConfig();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -326,6 +336,10 @@ export default function PayPeriods() {
         subtitle="Miércoles a Martes — ciclo semanal"
         badge="Semanal"
         rightSlot={<div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setShowSequenceConfig(s => !s)}>
+            <Settings className="h-4 w-4 mr-2" />
+            {seqConfig.use_payroll_sequence ? `Consecutivo: ${seqConfig.prefix || ""}${seqConfig.next_number}` : "Consecutivo"}
+          </Button>
           <Dialog open={bulkOpenDialog} onOpenChange={setBulkOpenDialog}>
             <DialogTrigger asChild>
               <Button variant="outline"><Unlock className="h-4 w-4 mr-2" />Abrir periodos</Button>
@@ -477,23 +491,29 @@ export default function PayPeriods() {
         </div>}
       />
 
+      {showSequenceConfig && (
+        <div className="mb-4">
+          <PayrollSequenceSettings />
+        </div>
+      )}
+
       <div className="data-table-wrapper">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-10"></TableHead>
+              <TableHead className="w-16">#</TableHead>
               <TableHead>Inicio</TableHead>
               <TableHead>Fin</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>Gestión</TableHead>
+              <TableHead>Origen / Reconciliation</TableHead>
               <TableHead>Cerrado</TableHead>
-              <TableHead className="w-28">Acciones</TableHead>
               <TableHead className="w-28">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {periods.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No hay periodos</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No hay periodos</TableCell></TableRow>
             ) : (
               periods.map((p) => {
                 const isExpanded = expandedPeriods.has(p.id);
@@ -519,6 +539,9 @@ export default function PayPeriods() {
                               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </Button>
                           </CollapsibleTrigger>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {p.sequence_number ? formatSequence(p.sequence_number, seqConfig) : "—"}
                         </TableCell>
                         <TableCell className="font-medium">
                           {isCurrentWeek && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mr-2" />}
@@ -569,6 +592,14 @@ export default function PayPeriods() {
                               </div>
                             );
                           })()}
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <PeriodReconciliationCell
+                            periodId={p.id}
+                            sourceType={p.source_type}
+                            reconciliationStatus={p.reconciliation_status}
+                            lastReconciledAt={p.last_reconciled_at}
+                          />
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>
                         <TableCell>
@@ -638,7 +669,7 @@ export default function PayPeriods() {
 
                       <CollapsibleContent asChild>
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                          <TableCell colSpan={7} className="p-0">
+                          <TableCell colSpan={8} className="p-0">
                             <div className="px-6 py-4 border-t border-border/50">
                               {isLoadingImports ? (
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
