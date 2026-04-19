@@ -1,10 +1,10 @@
-import { Badge } from "@/components/ui/badge";
 import { Clock, Users, GripVertical, MapPin, AlertTriangle, Hand, Moon, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { EmployeeAvatarGroup, type AvatarGroupItem } from "@/components/ui/employee-avatar-group";
+import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import type { Shift } from "./types";
 import { getClientColor, formatShiftCode } from "./types";
 import type { ShiftCoverageItem } from "@/hooks/useShiftCoverage";
@@ -33,27 +33,28 @@ interface ShiftCardProps {
   coverageStatus?: { percent: number; missing: number; extra: number } | null;
 }
 
-type StatusBadge = { label: string; variant: "destructive" | "warning" | "secondary" | "default" | "outline" };
+type ChipSpec = { label: string; tone: OpsStatusTone };
 
-function getStatusBadges(shift: Shift, assignmentCount: number): StatusBadge[] {
-  const badges: StatusBadge[] = [];
+function getStatusChips(shift: Shift, assignmentCount: number): ChipSpec[] {
+  const chips: ChipSpec[] = [];
   const totalSlots = shift.slots ?? 1;
 
   if (assignmentCount === 0) {
-    badges.push({ label: "Sin asignar", variant: "destructive" });
+    chips.push({ label: "Sin asignar", tone: "critical" });
   } else if (assignmentCount < totalSlots) {
-    badges.push({ label: `${totalSlots - assignmentCount} vacante${totalSlots - assignmentCount > 1 ? "s" : ""}`, variant: "warning" });
+    const missing = totalSlots - assignmentCount;
+    chips.push({ label: `${missing} vacante${missing > 1 ? "s" : ""}`, tone: "warning" });
   }
 
   if (shift.status !== "published" && shift.status !== "locked") {
-    badges.push({ label: "Borrador", variant: "secondary" });
+    chips.push({ label: "Borrador", tone: "info" });
   }
 
   if (shift.status === "locked") {
-    badges.push({ label: "Bloqueado", variant: "outline" });
+    chips.push({ label: "Bloqueado", tone: "muted" });
   }
 
-  return badges;
+  return chips;
 }
 
 function isOvernight(startTime: string, endTime: string): boolean {
@@ -75,7 +76,7 @@ export function ShiftCard({
   shift, assignmentCount, assignedNames = [], assignedEmployees = [], locationName, clientName, clientIds = [], onClick, compact, draggable, onDragStart, showDate, coverageStatus,
 }: ShiftCardProps) {
   const color = getClientColor(shift.client_id, clientIds);
-  const badges = getStatusBadges(shift, assignmentCount);
+  const chips = getStatusChips(shift, assignmentCount);
   const overnight = isOvernight(shift.start_time, shift.end_time);
   const isLocked = shift.status === "locked";
   const totalSlots = shift.slots ?? 1;
@@ -190,33 +191,19 @@ export function ShiftCard({
                 </span>
               </div>
 
-              {/* Status badges */}
-              {badges.length > 0 && (
+              {/* Status chips — unified ops vocabulary */}
+              {(chips.length > 0 || (coverageStatus && coverageStatus.percent < 100)) && (
                 <div className="flex items-center gap-1 flex-wrap">
-                  {badges.map((b, i) => (
-                    <Badge
-                      key={i}
-                      variant={b.variant as any}
-                      className={cn(
-                        "text-[7px] px-1.5 py-0 h-3.5 font-bold uppercase tracking-wider leading-none rounded-full border-0",
-                        b.variant === "warning" && "bg-[hsl(var(--pastel-yellow))] text-[hsl(var(--pastel-yellow-text))]",
-                        b.variant === "destructive" && "bg-[hsl(var(--pastel-rose))] text-[hsl(var(--pastel-rose-text))]",
-                        b.variant === "default" && "bg-[hsl(var(--pastel-green))] text-[hsl(var(--pastel-green-text))]",
-                        b.variant === "secondary" && "bg-[hsl(var(--pastel-sky))] text-[hsl(var(--pastel-sky-text))]",
-                        b.variant === "outline" && "bg-[hsl(var(--pastel-violet))] text-[hsl(var(--pastel-violet-text))]",
-                      )}
-                    >
-                      {b.label}
-                    </Badge>
+                  {chips.map((c, i) => (
+                    <OpsStatusChip key={i} label={c.label} tone={c.tone} size="sm" />
                   ))}
                   {coverageStatus && coverageStatus.percent < 100 && (
-                    <Badge
-                      variant="outline"
-                      className="text-[7px] px-1.5 py-0 h-3.5 font-bold uppercase tracking-wider leading-none rounded-full bg-[hsl(var(--pastel-orange))] text-[hsl(var(--pastel-orange-text))] border-0"
-                    >
-                      <AlertTriangle className="h-2 w-2 mr-0.5" />
-                      {coverageStatus.missing > 0 ? `${coverageStatus.missing} sin fichar` : `${coverageStatus.percent}%`}
-                    </Badge>
+                    <OpsStatusChip
+                      label={coverageStatus.missing > 0 ? `${coverageStatus.missing} sin fichar` : `${coverageStatus.percent}%`}
+                      tone="warning"
+                      size="sm"
+                      leading={<AlertTriangle className="h-2.5 w-2.5" />}
+                    />
                   )}
                 </div>
               )}

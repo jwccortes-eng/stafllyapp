@@ -6,11 +6,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Sheet = SheetPrimitive.Root;
-
 const SheetTrigger = SheetPrimitive.Trigger;
-
 const SheetClose = SheetPrimitive.Close;
-
 const SheetPortal = SheetPrimitive.Portal;
 
 const SheetOverlay = React.forwardRef<
@@ -33,13 +30,12 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
  *
  * - `tone="default"` → original Stafly sheet, untouched.
  * - `tone="ops"`     → operations side panel preset:
- *      · wider on desktop (xl:max-w-2xl) for richer detail
- *      · zero padding (consumers control header/body/footer themselves)
- *      · subtle border + flat surface, no heavy shadow
- *      · ideal pairing with sticky OpsSheetHeader / OpsSheetFooter blocks
+ *      · wider on desktop (xl:max-w-2xl)
+ *      · zero padding (consumers compose with OpsSheetHeader/Body/Footer)
+ *      · flat surface, crisper border
  */
 const sheetVariants = cva(
-  "fixed z-50 bg-background transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  "fixed z-50 bg-background transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500 flex flex-col",
   {
     variants: {
       side: {
@@ -52,11 +48,10 @@ const sheetVariants = cva(
       },
       tone: {
         default: "gap-4 p-6 shadow-lg",
-        ops: "gap-0 p-0 shadow-2xl bg-background",
+        ops: "gap-0 p-0 shadow-2xl",
       },
     },
     compoundVariants: [
-      // Operations preset extends desktop width & uses crisper border
       { side: "right", tone: "ops", className: "sm:max-w-md lg:max-w-lg xl:max-w-2xl border-l border-border/80" },
       { side: "left", tone: "ops", className: "sm:max-w-md lg:max-w-lg xl:max-w-2xl border-r border-border/80" },
     ],
@@ -160,7 +155,7 @@ const OpsSheetHeader = ({
         {title}
       </SheetPrimitive.Title>
       {subtitle && (
-        <p className="text-xs text-muted-foreground mt-0.5 truncate">{subtitle}</p>
+        <div className="text-xs text-muted-foreground mt-0.5 truncate">{subtitle}</div>
       )}
     </div>
     <div className="shrink-0 flex items-center gap-1">

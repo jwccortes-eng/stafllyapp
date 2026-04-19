@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, OpsSheetHeader, OpsSheetBody, OpsSheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { EmployeeCombobox } from "./EmployeeCombobox";
+import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
   CheckCircle2, XCircle, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
   CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy, FileText, Radar,
-  AlertTriangle, Compass, History,
+  AlertTriangle, Compass, History, MoreVertical,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
@@ -85,16 +87,16 @@ interface ShiftRequestItem {
   employee: { first_name: string; last_name: string };
 }
 
-// ── Tab button component ──
+// ── Tab button — Linear-style: underline on active, no pill chrome ──
 function TabButton({ active, onClick, children, badge }: { active: boolean; onClick: () => void; children: React.ReactNode; badge?: number }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 whitespace-nowrap",
+        "relative flex items-center gap-1.5 px-3 h-9 text-[11px] font-medium transition-colors whitespace-nowrap border-b-2 -mb-px",
         active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          ? "text-foreground border-primary"
+          : "text-muted-foreground border-transparent hover:text-foreground hover:border-border"
       )}
     >
       {children}
@@ -105,6 +107,17 @@ function TabButton({ active, onClick, children, badge }: { active: boolean; onCl
       )}
     </button>
   );
+}
+
+// ── Map shift status → OpsStatusChip tone ──
+function shiftStatusToTone(status: string): OpsStatusTone {
+  switch (status) {
+    case "published": return "success";
+    case "draft":     return "warning";
+    case "locked":    return "muted";
+    case "cancelled": return "critical";
+    default:          return "neutral";
+  }
 }
 
 export function ShiftDetailDialog({
@@ -337,102 +350,83 @@ export function ShiftDetailDialog({
   return (
     <>
     <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); setEditing(false); } }}>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col border-l border-border/30 shadow-xl">
-        <SheetTitle className="sr-only">{shift.title}</SheetTitle>
-
-        {/* ── HERO HEADER ── */}
-        <div className={cn("relative px-5 pt-5 pb-4 overflow-hidden")}>
-          {/* Background gradient accent */}
-          <div className={cn("absolute inset-0 opacity-[0.07]", clientColor.bg)} />
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-12 translate-x-12 blur-2xl" />
-
-          <div className="relative z-10">
-            {/* Top row: code + date + status */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                {shift.shift_code && (
-                  <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 rounded-lg px-2 py-1">
-                    #{formatShiftCode(shift.shift_code)}
-                  </span>
-                )}
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CalendarDays className="h-3 w-3" />
-                  <span className="capitalize">{format(parseISO(shift.date), "EEE d MMM yyyy", { locale: es })}</span>
-                </div>
-              </div>
-              <Badge
-                variant={shift.status === "published" ? "default" : shift.status === "locked" ? "outline" : "secondary"}
-                className={cn(
-                  "text-[10px] px-2.5 py-0.5 rounded-full font-semibold",
-                  shift.status === "locked" && "border-muted-foreground/30 text-muted-foreground"
-                )}
-              >
-                {shift.status === "locked" && <Lock className="h-2.5 w-2.5 mr-1" />}
-                {statusLabel}
-              </Badge>
+      <SheetContent tone="ops" side="right" hideClose>
+        {/* ── PREMIUM HEADER (sticky) ── */}
+        <OpsSheetHeader
+          onClose={() => onOpenChange(false)}
+          leading={
+            <div className={cn(
+              "h-10 w-10 rounded-xl flex items-center justify-center ring-1",
+              clientColor.bg, clientColor.text, "ring-border/40"
+            )}>
+              <CalendarDays className="h-5 w-5" />
             </div>
-
-            {/* Time hero display */}
-            <div className="flex items-baseline gap-3 mb-2">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-primary" />
-                </div>
-                <span className="text-2xl font-bold tracking-tight font-[var(--font-heading)]">
-                  {shift.start_time.slice(0, 5)}
+          }
+          title={
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="truncate">{shift.title || "Turno"}</span>
+              {shift.shift_code && (
+                <span className="text-[10px] font-mono font-bold text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5 shrink-0">
+                  #{formatShiftCode(shift.shift_code)}
                 </span>
-                <span className="text-muted-foreground text-lg">→</span>
-                <span className="text-2xl font-bold tracking-tight font-[var(--font-heading)]">
-                  {shift.end_time.slice(0, 5)}
-                </span>
-              </div>
-              <span className="text-sm font-semibold text-primary bg-primary/10 rounded-lg px-2.5 py-1">
-                {hoursLabel}
+              )}
+            </div>
+          }
+          subtitle={
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="capitalize">{format(parseISO(shift.date), "EEE d MMM yyyy", { locale: es })}</span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="font-medium text-foreground/80 tabular-nums">
+                {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
               </span>
-            </div>
-
-            {/* Client & Location chips */}
-            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground/40">·</span>
+              <span className="font-medium text-primary tabular-nums">{hoursLabel}</span>
               {client && (
-                <div className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium", clientColor.bg, clientColor.text)}>
-                  <Building2 className="h-3 w-3" />
-                  {formatDisplayText(client.name, "name")}
-                </div>
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="truncate">{formatDisplayText(client.name, "name")}</span>
+                </>
               )}
-              {location && (
-                <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium bg-muted text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  {formatDisplayText(location.name, "name")}
-                </div>
-              )}
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
-                <Globe className="h-3 w-3" />
-                America/New_York
-              </div>
             </div>
+          }
+          rightSlot={
+            <OpsStatusChip
+              label={statusLabel}
+              tone={shiftStatusToTone(shift.status)}
+              size="sm"
+              leading={shift.status === "locked" ? <Lock className="h-2.5 w-2.5" /> : undefined}
+            />
+          }
+        />
 
-            {/* Team fill bar */}
-            <div className="mt-3 flex items-center gap-3">
-              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-500",
-                    fillPercent >= 100 ? "bg-earning" : fillPercent > 50 ? "bg-primary" : "bg-warning"
-                  )}
-                  style={{ width: `${fillPercent}%` }}
-                />
-              </div>
-              <span className="text-[11px] font-semibold tabular-nums whitespace-nowrap">
-                <Users className="h-3 w-3 inline mr-0.5 -mt-0.5" />
-                {shiftAssignments.length}/{slotsNum}
-              </span>
+        {/* ── META STRIP: location · timezone · capacity ── */}
+        <div className="flex items-center gap-3 px-5 py-2.5 border-b border-border/40 bg-muted/20">
+          {location && (
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground min-w-0">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate">{formatDisplayText(location.name, "name")}</span>
             </div>
+          )}
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden max-w-[140px]">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  fillPercent >= 100 ? "bg-earning" : fillPercent > 50 ? "bg-primary" : "bg-warning"
+                )}
+                style={{ width: `${fillPercent}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-semibold tabular-nums text-foreground whitespace-nowrap">
+              <Users className="h-3 w-3 inline mr-0.5 -mt-0.5" />
+              {shiftAssignments.length}/{slotsNum}
+            </span>
           </div>
         </div>
 
-        {/* ── TAB BAR ── */}
-        <div className="px-4 py-2 border-t border-b border-border/30 bg-muted/20">
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+        {/* ── TAB BAR — Linear-style underline ── */}
+        <div className="px-4 border-b border-border/60 bg-background">
+          <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
             <TabButton active={tab === "details"} onClick={() => setTab("details")}>
               <StickyNote className="h-3 w-3" /> Detalles
             </TabButton>
@@ -465,7 +459,7 @@ export function ShiftDetailDialog({
         </div>
 
         {/* ── BODY ── */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <OpsSheetBody>
 
           {/* ─── DETAILS TAB ─── */}
           {tab === "details" ? (
@@ -950,9 +944,7 @@ export function ShiftDetailDialog({
           ) : tab === "audit" ? (
             <ShiftAuditTrail shiftId={shift.id} />
           ) : null}
-        </div>
-
-        {/* ── Reject request overlay ── */}
+        </OpsSheetBody>
         {rejectReqId && (
           <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="bg-card border border-border/30 rounded-2xl p-5 w-full max-w-sm space-y-3 shadow-xl">
@@ -969,9 +961,9 @@ export function ShiftDetailDialog({
           </div>
         )}
 
-        {/* ── FOOTER ACTION BAR ── */}
+        {/* ── FOOTER (sticky) — 1 primary + overflow menu ── */}
         {isLocked ? (
-          <div className="px-5 py-3 border-t border-border/30 bg-muted/30 flex items-center justify-between">
+          <OpsSheetFooter className="justify-between">
             <div className="flex items-center gap-2">
               <Lock className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground font-medium">Turno bloqueado — solo lectura</span>
@@ -980,7 +972,7 @@ export function ShiftDetailDialog({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-[10px] gap-1.5 rounded-full text-emerald-600 border-emerald-200/50 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
+                className="h-8 text-xs gap-1.5"
                 onClick={async () => {
                   const { error } = await supabase.from("scheduled_shifts")
                     .update({ status: "published" } as any)
@@ -988,91 +980,136 @@ export function ShiftDetailDialog({
                   if (error) { toast.error(error.message); return; }
                   toast.success("Turno desbloqueado");
                   onOpenChange(false);
-                  // Trigger parent reload by calling onPublish with updated shift
                   onPublish({ ...shift, status: "published" });
                 }}
               >
-                <Unlock className="h-3 w-3" />
+                <Unlock className="h-3.5 w-3.5" />
                 Desbloquear
               </Button>
             )}
-          </div>
+          </OpsSheetFooter>
         ) : canEdit && (
-          <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
+          <OpsSheetFooter>
             {!editing ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                {shift.status !== "published" && (
-                  <Button size="sm" onClick={() => onPublish(shift)} className="h-8 text-xs gap-1.5 rounded-full">
-                    <Send className="h-3 w-3" /> Publicar
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)} className="h-8 text-xs gap-1.5 rounded-full">
-                  <Bell className="h-3 w-3" /> Notificar
-                </Button>
+              <>
+                {/* Secondary action — open ops console */}
                 <Button
-                  variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-full"
-                  onClick={async () => {
-                    const empIds = shiftAssignments.map(a => a.employee_id);
-                    if (empIds.length === 0) { toast.error("No hay empleados asignados."); return; }
-                    const { data } = await supabase.from("employees").select("phone_number").in("id", empIds).not("phone_number", "is", null);
-                    const phones = (data ?? []).map(e => e.phone_number).filter((p): p is string => !!p && p.trim().length > 0);
-                    if (phones.length === 0) { toast.error("Ningún empleado tiene teléfono registrado."); return; }
-                    const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
-                    window.open(`sms:${phones.join(",")}${separator}body=`, "_blank");
-                  }}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}
+                  className="h-8 text-xs gap-1.5"
                 >
-                  <Smartphone className="h-3 w-3" /> SMS
+                  <Radar className="h-3.5 w-3.5" /> Operaciones
                 </Button>
-                {onDuplicate && (
-                  <Button variant="outline" size="sm" onClick={() => { onDuplicate(shift); onOpenChange(false); }} className="h-8 text-xs gap-1.5 rounded-full">
-                    <Copy className="h-3 w-3" /> Duplicar
+
+                {/* Edit (secondary) */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                  className="h-8 text-xs gap-1.5"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Editar
+                </Button>
+
+                {/* Overflow menu — keeps footer clean */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label="Más acciones">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
+                      <Bell className="h-4 w-4 mr-2" /> Notificar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        const empIds = shiftAssignments.map(a => a.employee_id);
+                        if (empIds.length === 0) { toast.error("No hay empleados asignados."); return; }
+                        const { data } = await supabase.from("employees").select("phone_number").in("id", empIds).not("phone_number", "is", null);
+                        const phones = (data ?? []).map(e => e.phone_number).filter((p): p is string => !!p && p.trim().length > 0);
+                        if (phones.length === 0) { toast.error("Ningún empleado tiene teléfono registrado."); return; }
+                        const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
+                        window.open(`sms:${phones.join(",")}${separator}body=`, "_blank");
+                      }}
+                    >
+                      <Smartphone className="h-4 w-4 mr-2" /> Enviar SMS
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
+                          const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
+                          const assignedEmps = shiftAssigns.map(a => {
+                            const emp = employees.find(e => e.id === a.employee_id);
+                            return { name: emp ? `${emp.first_name} ${emp.last_name}` : "—", phone: (emp as any)?.phone_number || null, role: null };
+                          });
+                          const clientName = clients.find(c => c.id === shift.client_id)?.name || null;
+                          const locationName = locations.find(l => l.id === shift.location_id)?.name || null;
+                          downloadShiftAssignmentPDF({
+                            title: shift.title, date: shift.date, startTime: shift.start_time, endTime: shift.end_time,
+                            clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
+                            transportRequired: (shift as any).transportation_required || false,
+                            transportNotes: (shift as any).transportation_notes || null,
+                            carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
+                            employees: assignedEmps, supervisorName: null,
+                          });
+                        });
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-2" /> Descargar PDF
+                    </DropdownMenuItem>
+                    {onDuplicate && (
+                      <DropdownMenuItem onClick={() => { onDuplicate(shift); onOpenChange(false); }}>
+                        <Copy className="h-4 w-4 mr-2" /> Duplicar
+                      </DropdownMenuItem>
+                    )}
+                    {onDelete && !isLocked && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setDeleteConfirm(true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Eliminar turno
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* PRIMARY action — Publicar (or Confirmar publicado state) */}
+                {shift.status !== "published" ? (
+                  <Button
+                    size="sm"
+                    onClick={() => onPublish(shift)}
+                    className="h-8 text-xs gap-1.5"
+                  >
+                    <Send className="h-3.5 w-3.5" /> Publicar
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => setNotifyOpen(true)}
+                    className="h-8 text-xs gap-1.5"
+                  >
+                    <Bell className="h-3.5 w-3.5" /> Notificar equipo
                   </Button>
                 )}
-                <Button variant="default" size="sm" onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }} className="h-8 text-xs gap-1.5 rounded-full">
-                  <Radar className="h-3 w-3" /> Operaciones
-                </Button>
-                {onDelete && !isLocked && (
-                  <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(true)} className="h-8 text-xs gap-1.5 rounded-full text-destructive border-destructive/30 hover:bg-destructive/10">
-                    <Trash2 className="h-3 w-3" /> Eliminar
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-full" onClick={() => {
-                  import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
-                    const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
-                    const assignedEmps = shiftAssigns.map(a => {
-                      const emp = employees.find(e => e.id === a.employee_id);
-                      return { name: emp ? `${emp.first_name} ${emp.last_name}` : "—", phone: (emp as any)?.phone_number || null, role: null };
-                    });
-                    const clientName = clients.find(c => c.id === shift.client_id)?.name || null;
-                    const locationName = locations.find(l => l.id === shift.location_id)?.name || null;
-                    downloadShiftAssignmentPDF({
-                      title: shift.title, date: shift.date, startTime: shift.start_time, endTime: shift.end_time,
-                      clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
-                      transportRequired: (shift as any).transportation_required || false,
-                      transportNotes: (shift as any).transportation_notes || null,
-                      carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
-                      employees: assignedEmps, supervisorName: null,
-                    });
-                  });
-                }}>
-                  <FileText className="h-3 w-3" /> PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="h-8 text-xs gap-1.5 rounded-full ml-auto">
-                  <Pencil className="h-3 w-3" /> Editar
-                </Button>
-              </div>
+              </>
             ) : (
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={handleInlineSave} disabled={saving || !date} className="h-8 text-xs gap-1.5 rounded-full flex-1">
-                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              <>
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs">
+                  <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+                </Button>
+                <Button size="sm" onClick={handleInlineSave} disabled={saving || !date} className="h-8 text-xs gap-1.5">
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                   Guardar cambios
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs rounded-full">
-                  <X className="h-3 w-3 mr-1" /> Cancelar
-                </Button>
-              </div>
+              </>
             )}
-          </div>
+          </OpsSheetFooter>
         )}
       </SheetContent>
     </Sheet>

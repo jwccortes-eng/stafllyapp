@@ -70,28 +70,14 @@ toolbars artesanales en cada página. `backdrop-blur` automático al hacer scrol
 Pill de estado con vocabulario `tone` unificado. Sustituye usos sueltos de
 `<Badge variant="outline" />` para estados operativos.
 
-### Presets `ops` en componentes existentes
-
-Para mantener cohesión con el resto del sistema sin duplicar la librería,
-ciertos componentes base aceptan una variante `ops`:
-
-| Componente            | Preset operativo                                                              |
-|-----------------------|--------------------------------------------------------------------------------|
-| `<Card variant="ops">`| Ring sutil en lugar de border, sombra plana, radio `xl`. Para listas operativas|
-| `<Card density="ops">`| Padding compacto en `CardHeader/Content/Footer` (px-4 py-3)                    |
-| `<Sheet tone="ops">`  | Side panel ancho (xl:max-w-2xl), sin padding, listo para componer con bloques  |
-| `<OpsSheetHeader />`  | Header sticky del side panel ops (avatar + título + chip + close)              |
-| `<OpsSheetBody />`    | Body scrollable con padding y spacing operativos                               |
-| `<OpsSheetFooter />`  | Footer sticky con acciones primarias                                           |
-
-Componentes que **mantienen su rol sin cambios**:
+### Componentes existentes que mantienen su rol
 
 | Componente            | Cuándo usarlo                                 |
 |-----------------------|------------------------------------------------|
 | `<PageHeader />`      | Cabecera de página — siempre primero           |
 | `<KpiCard />`         | Dashboard, widgets financieros, no operativos  |
+| `<Sheet />`           | Side panel de detalle                          |
 | `<EmptyState />`      | Estado vacío de cualquier vista                |
-| `<Badge />`           | Tags neutros / contadores. Para estados operativos usar `<OpsStatusChip />` |
 
 ---
 
