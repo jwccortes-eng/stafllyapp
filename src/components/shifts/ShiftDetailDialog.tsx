@@ -166,6 +166,18 @@ export function ShiftDetailDialog({
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
+  // Typed role slots (only present when shift came from a service request)
+  const [roleSlots, setRoleSlots] = useState<ShiftRoleSlot[]>([]);
+  const loadRoleSlots = useCallback(async () => {
+    if (!shift) { setRoleSlots([]); return; }
+    const { data } = await supabase
+      .from("shift_role_slots" as any)
+      .select("id, shift_id, role_type, role_label, quantity, sort_order")
+      .eq("shift_id", shift.id)
+      .order("sort_order");
+    setRoleSlots((data ?? []) as unknown as ShiftRoleSlot[]);
+  }, [shift]);
+
   const loadRequests = useCallback(async () => {
     if (!shift) return;
     setLoadingRequests(true);
