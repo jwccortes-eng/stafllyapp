@@ -82,10 +82,13 @@ export default function MyShifts() {
     // CRITICAL: filter scheduled_shifts.deleted_at to hide soft-deleted shifts.
     // ALSO exclude removed/rejected assignments (set by trigger on soft-delete or by employee).
     // See src/lib/shifts/visibility.ts for the canonical rule.
+    // Defense in depth: scope to the employee's own company so a stale
+    // selection or upstream bug can never leak cross-tenant assignments.
     const { data: assignData } = await supabase
       .from("shift_assignments")
       .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions, company_id, operational_version, locations (name), clients (name))`)
       .eq("employee_id", employeeId)
+      .eq("company_id", emp.company_id)
       .is("scheduled_shifts.deleted_at", null)
       .not("status", "in", "(removed,rejected)")
       .order("created_at", { ascending: false });

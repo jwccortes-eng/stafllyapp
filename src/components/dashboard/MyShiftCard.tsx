@@ -15,6 +15,9 @@ import { es } from "date-fns/locale";
 
 export function MyShiftCard() {
   const { canAccessPortal, canAccessAdmin, setActiveMode } = useAuth();
+  // useEffectiveEmployee returns null when the selected admin company has no
+  // matching employee record — this prevents Mi Portal from showing data
+  // belonging to a different company than the one the admin is viewing.
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
   const [nextShift, setNextShift] = useState<{
