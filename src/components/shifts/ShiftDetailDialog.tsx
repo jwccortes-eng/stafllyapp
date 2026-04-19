@@ -38,6 +38,12 @@ import { formatShiftCode, getClientColor } from "./types";
 import { SendNotificationDialog } from "./SendNotificationDialog";
 import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
 import { ShiftAuditTrail } from "./ShiftAuditTrail";
+import { ShiftRoleSlotsTeamPanel } from "./ShiftRoleSlotsTeamPanel";
+import {
+  pickRoleSlotsForNewAssignments,
+  type ShiftRoleSlot,
+  type ActiveAssignment,
+} from "@/lib/service-requests/role-slot-utils";
 
 interface ShiftDetailDialogProps {
   shift: Shift | null;
@@ -49,7 +55,11 @@ interface ShiftDetailDialogProps {
   clients: SelectOption[];
   allShifts?: Shift[];
   canEdit: boolean;
-  onAddEmployees: (shiftId: string, employeeIds: string[]) => void;
+  onAddEmployees: (
+    shiftId: string,
+    employeeIds: string[],
+    slotByEmployee?: Record<string, string | null>,
+  ) => void;
   onRemoveAssignment: (assignmentId: string) => void;
   onEdit: (shift: Shift) => void;
   onPublish: (shift: Shift) => void;
