@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, OpsSheetHeader, OpsSheetBody, OpsSheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { EmployeeCombobox } from "./EmployeeCombobox";
+import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Clock, MapPin, Users, Trash2, UserPlus, Send, Save, Globe, Loader2,
   CheckCircle2, XCircle, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
   CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy, FileText, Radar,
-  AlertTriangle, Compass, History,
+  AlertTriangle, Compass, History, MoreVertical,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
@@ -85,16 +87,16 @@ interface ShiftRequestItem {
   employee: { first_name: string; last_name: string };
 }
 
-// ── Tab button component ──
+// ── Tab button — Linear-style: underline on active, no pill chrome ──
 function TabButton({ active, onClick, children, badge }: { active: boolean; onClick: () => void; children: React.ReactNode; badge?: number }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 whitespace-nowrap",
+        "relative flex items-center gap-1.5 px-3 h-9 text-[11px] font-medium transition-colors whitespace-nowrap border-b-2 -mb-px",
         active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          ? "text-foreground border-primary"
+          : "text-muted-foreground border-transparent hover:text-foreground hover:border-border"
       )}
     >
       {children}
@@ -105,6 +107,17 @@ function TabButton({ active, onClick, children, badge }: { active: boolean; onCl
       )}
     </button>
   );
+}
+
+// ── Map shift status → OpsStatusChip tone ──
+function shiftStatusToTone(status: string): OpsStatusTone {
+  switch (status) {
+    case "published": return "success";
+    case "draft":     return "warning";
+    case "locked":    return "muted";
+    case "cancelled": return "critical";
+    default:          return "neutral";
+  }
 }
 
 export function ShiftDetailDialog({
