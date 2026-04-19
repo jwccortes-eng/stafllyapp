@@ -356,31 +356,31 @@ export function ShiftDetailDialog({
           onClose={() => onOpenChange(false)}
           leading={
             <div className={cn(
-              "h-10 w-10 rounded-xl flex items-center justify-center ring-1",
+              "h-8 w-8 rounded-lg flex items-center justify-center ring-1",
               clientColor.bg, clientColor.text, "ring-border/40"
             )}>
-              <CalendarDays className="h-5 w-5" />
+              <CalendarDays className="h-4 w-4" />
             </div>
           }
           title={
             <div className="flex items-center gap-2 min-w-0">
               <span className="truncate">{shift.title || "Turno"}</span>
               {shift.shift_code && (
-                <span className="text-[10px] font-mono font-bold text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5 shrink-0">
+                <span className="text-[9.5px] font-mono font-semibold text-muted-foreground bg-muted/60 rounded px-1.5 py-px shrink-0">
                   #{formatShiftCode(shift.shift_code)}
                 </span>
               )}
             </div>
           }
           subtitle={
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="capitalize">{format(parseISO(shift.date), "EEE d MMM yyyy", { locale: es })}</span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="capitalize">{format(parseISO(shift.date), "EEE d MMM", { locale: es })}</span>
               <span className="text-muted-foreground/40">·</span>
               <span className="font-medium text-foreground/80 tabular-nums">
                 {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
               </span>
               <span className="text-muted-foreground/40">·</span>
-              <span className="font-medium text-primary tabular-nums">{hoursLabel}</span>
+              <span className="tabular-nums">{hoursLabel}</span>
               {client && (
                 <>
                   <span className="text-muted-foreground/40">·</span>
@@ -399,10 +399,10 @@ export function ShiftDetailDialog({
           }
         />
 
-        {/* ── META STRIP: location · timezone · capacity ── */}
-        <div className="flex items-center gap-3 px-5 py-2.5 border-b border-border/40 bg-muted/20">
+        {/* ── META STRIP: location · capacity ── */}
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border/40 bg-muted/15">
           {location && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground min-w-0">
+            <div className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground min-w-0">
               <MapPin className="h-3 w-3 shrink-0" />
               <span className="truncate">{formatDisplayText(location.name, "name")}</span>
             </div>
@@ -417,44 +417,74 @@ export function ShiftDetailDialog({
                 style={{ width: `${fillPercent}%` }}
               />
             </div>
-            <span className="text-[11px] font-semibold tabular-nums text-foreground whitespace-nowrap">
+            <span className="text-[10.5px] font-semibold tabular-nums text-foreground whitespace-nowrap">
               <Users className="h-3 w-3 inline mr-0.5 -mt-0.5" />
               {shiftAssignments.length}/{slotsNum}
             </span>
           </div>
         </div>
 
-        {/* ── TAB BAR — Linear-style underline ── */}
+        {/* ── TAB BAR — 4 primary visible + overflow ── */}
         <div className="px-4 border-b border-border/60 bg-background">
-          <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-0">
             <TabButton active={tab === "details"} onClick={() => setTab("details")}>
               <StickyNote className="h-3 w-3" /> Detalles
             </TabButton>
             <TabButton active={tab === "team"} onClick={() => setTab("team")}>
               <UsersRound className="h-3 w-3" /> Equipo
             </TabButton>
-            {requests.length > 0 && (
-              <TabButton active={tab === "requests"} onClick={() => setTab("requests")} badge={pendingRequests}>
-                <Sparkles className="h-3 w-3" /> Solicitudes
-              </TabButton>
-            )}
             <TabButton active={tab === "attendance"} onClick={() => setTab("attendance")}>
               <ClipboardCheck className="h-3 w-3" /> Asistencia
-            </TabButton>
-            <TabButton active={tab === "chat"} onClick={() => setTab("chat")}>
-              <MessageCircleIcon className="h-3 w-3" /> Chat
-            </TabButton>
-            <TabButton active={tab === "comments"} onClick={() => setTab("comments")}>
-              <MessageSquare className="h-3 w-3" /> Notas
             </TabButton>
             {!!(shift as any).transportation_required && (
               <TabButton active={tab === "rides"} onClick={() => setTab("rides")}>
                 <Car className="h-3 w-3" /> Rides
               </TabButton>
             )}
-            <TabButton active={tab === "audit"} onClick={() => setTab("audit")}>
-              <FileText className="h-3 w-3" /> Historial
-            </TabButton>
+
+            {/* Overflow tabs — Solicitudes · Chat · Notas · Historial */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    "relative flex items-center gap-1 px-2 h-9 text-[11px] font-medium transition-colors whitespace-nowrap border-b-2 -mb-px",
+                    ["requests", "chat", "comments", "audit"].includes(tab)
+                      ? "text-foreground border-primary"
+                      : "text-muted-foreground border-transparent hover:text-foreground hover:border-border"
+                  )}
+                  aria-label="Más pestañas"
+                >
+                  <MoreVertical className="h-3 w-3" />
+                  <span>Más</span>
+                  {pendingRequests > 0 && (
+                    <span className="h-4 min-w-4 px-1 inline-flex items-center justify-center rounded-full text-[9px] font-bold bg-warning text-warning-foreground">
+                      {pendingRequests}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-44">
+                {requests.length > 0 && (
+                  <DropdownMenuItem onClick={() => setTab("requests")}>
+                    <Sparkles className="h-3.5 w-3.5 mr-2" /> Solicitudes
+                    {pendingRequests > 0 && (
+                      <span className="ml-auto h-4 min-w-4 px-1 inline-flex items-center justify-center rounded-full text-[9px] font-bold bg-warning text-warning-foreground">
+                        {pendingRequests}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => setTab("chat")}>
+                  <MessageCircleIcon className="h-3.5 w-3.5 mr-2" /> Chat
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTab("comments")}>
+                  <MessageSquare className="h-3.5 w-3.5 mr-2" /> Notas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTab("audit")}>
+                  <FileText className="h-3.5 w-3.5 mr-2" /> Historial
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -992,37 +1022,26 @@ export function ShiftDetailDialog({
           <OpsSheetFooter>
             {!editing ? (
               <>
-                {/* Secondary action — open ops console */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}
-                  className="h-8 text-xs gap-1.5"
-                >
-                  <Radar className="h-3.5 w-3.5" /> Operaciones
-                </Button>
-
-                {/* Edit (secondary) */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditing(true)}
-                  className="h-8 text-xs gap-1.5"
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Editar
-                </Button>
-
-                {/* Overflow menu — keeps footer clean */}
+                {/* Overflow menu — secondary actions live here for a clean footer */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label="Más acciones">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground" aria-label="Más acciones">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
-                      <Bell className="h-4 w-4 mr-2" /> Notificar
+                  <DropdownMenuContent align="start" className="w-52">
+                    <DropdownMenuItem onClick={() => setEditing(true)}>
+                      <Pencil className="h-4 w-4 mr-2" /> Editar turno
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}>
+                      <Radar className="h-4 w-4 mr-2" /> Centro de operaciones
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {shift.status === "published" && (
+                      <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
+                        <Bell className="h-4 w-4 mr-2" /> Notificar equipo
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       onClick={async () => {
                         const empIds = shiftAssignments.map(a => a.employee_id);
@@ -1078,21 +1097,33 @@ export function ShiftDetailDialog({
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* PRIMARY action — Publicar (or Confirmar publicado state) */}
+                {/* Spacer pushes primary to the right edge */}
+                <div className="flex-1" />
+
+                {/* Subtle secondary — Edit. Ghost weight so primary owns the eye. */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                  className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Editar
+                </Button>
+
+                {/* SINGLE PRIMARY — Publicar (or Notificar when already published) */}
                 {shift.status !== "published" ? (
                   <Button
                     size="sm"
                     onClick={() => onPublish(shift)}
-                    className="h-8 text-xs gap-1.5"
+                    className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
                   >
                     <Send className="h-3.5 w-3.5" /> Publicar
                   </Button>
                 ) : (
                   <Button
                     size="sm"
-                    variant="default"
                     onClick={() => setNotifyOpen(true)}
-                    className="h-8 text-xs gap-1.5"
+                    className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
                   >
                     <Bell className="h-3.5 w-3.5" /> Notificar equipo
                   </Button>
