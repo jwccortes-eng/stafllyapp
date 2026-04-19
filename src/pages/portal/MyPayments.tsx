@@ -129,32 +129,35 @@ export default function MyPayments() {
 
   return (
     <div className="space-y-5 animate-fade-in pb-24">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">My Payments</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {payments.length > 0 ? `${payments.length} period${payments.length > 1 ? "s" : ""} recorded` : "No published payments"}
-        </p>
-      </div>
+      {/* Header — single title, no subline noise */}
+      <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">My Payments</h1>
 
-      {/* Hero — single source: latest period */}
+      {/* Hero — one question: how much did I earn */}
       {latestPayment && (
-        <div className="rounded-3xl bg-card border border-border/40 p-5 shadow-sm">
-          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-bold">Latest period</p>
-          <p className="text-[40px] font-bold font-heading mt-2 leading-none tracking-tight tabular-nums text-foreground">
+        <div className="rounded-3xl bg-gradient-to-br from-card to-card/60 border border-border/40 p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-bold">Latest period</p>
+            <span className="text-[10px] text-muted-foreground/70 font-medium tabular-nums">
+              {formatPeriodLabel(latestPayment.start_date, latestPayment.end_date)}
+            </span>
+          </div>
+          <p className="text-[44px] font-bold font-heading mt-2.5 leading-none tracking-tight tabular-nums text-foreground">
             ${latestPayment.total_final_pay.toFixed(2)}
           </p>
-          <p className="text-[11.5px] text-muted-foreground mt-2.5 font-medium">
-            {formatPeriodLabel(latestPayment.start_date, latestPayment.end_date)}
-          </p>
           {(latestPayment.extras_total > 0 || latestPayment.deductions_total > 0) && (
-            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30 text-[10.5px] tabular-nums">
-              <span className="text-muted-foreground/70">Base ${latestPayment.base_total_pay.toFixed(0)}</span>
+            <div className="flex items-center gap-1.5 mt-4 flex-wrap">
+              <span className="text-[10px] tabular-nums px-2 py-1 rounded-md bg-muted/40 text-muted-foreground font-semibold">
+                Base ${latestPayment.base_total_pay.toFixed(0)}
+              </span>
               {latestPayment.extras_total > 0 && (
-                <span className="text-[hsl(var(--status-confirmed))] font-semibold">+${latestPayment.extras_total.toFixed(0)}</span>
+                <span className="text-[10px] tabular-nums px-2 py-1 rounded-md bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))] font-semibold">
+                  +${latestPayment.extras_total.toFixed(0)}
+                </span>
               )}
               {latestPayment.deductions_total > 0 && (
-                <span className="text-destructive font-semibold">−${latestPayment.deductions_total.toFixed(0)}</span>
+                <span className="text-[10px] tabular-nums px-2 py-1 rounded-md bg-destructive/10 text-destructive font-semibold">
+                  −${latestPayment.deductions_total.toFixed(0)}
+                </span>
               )}
             </div>
           )}
