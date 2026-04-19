@@ -37,6 +37,15 @@
  *  ✓ Refetch portal `EmployeeDashboard` next-shift card
  *  ✓ Refetch portal `PortalClock` today's shifts
  *  ✓ Refetch admin `Attendance` / `OperationsCommandCenter` for the date
+ *
+ * Database-level safety net (DO NOT remove)
+ * -----------------------------------------
+ * Trigger `trg_invalidate_assignments_on_shift_soft_delete` on `scheduled_shifts`:
+ * when `deleted_at` transitions from NULL to NOT NULL, all active
+ * `shift_assignments` for that shift are auto-set to status='removed' and
+ * response_status='rejected'. This is a hard guarantee that no orphan
+ * assignment can survive a shift soft-delete (root cause of the
+ * "Carlos Ortiz still sees PRUEBA MARIA" bug, Apr 2026).
  */
 
 /** Statuses considered "claimable-publishable" for the worker portal. */
