@@ -22,30 +22,33 @@ interface OpsStatusChipProps {
   size?: "sm" | "md" | "lg";
 }
 
+// Sober, enterprise-grade tones — low chroma surfaces, strong-contrast text.
+// Uses ~6% surface fill + 15% border + full text colour for a flat, premium feel.
 const toneClasses: Record<OpsStatusTone, string> = {
-  neutral: "bg-muted text-muted-foreground border-border",
-  primary: "bg-primary/10 text-primary border-primary/20",
-  success: "bg-earning/10 text-earning border-earning/20",
-  warning: "bg-warning/12 text-warning border-warning/25",
-  critical: "bg-destructive/10 text-destructive border-destructive/20",
-  info: "bg-info/10 text-info border-info/20",
-  muted: "bg-muted/50 text-muted-foreground border-transparent",
+  neutral: "bg-muted/60 text-foreground/80 border-border/60",
+  primary: "bg-primary/[0.08] text-primary border-primary/15",
+  success: "bg-earning/[0.08] text-earning border-earning/20",
+  warning: "bg-warning/[0.08] text-warning border-warning/20",
+  critical: "bg-destructive/[0.08] text-destructive border-destructive/20",
+  info: "bg-info/[0.08] text-info border-info/20",
+  muted: "bg-muted/40 text-muted-foreground border-border/40",
 };
 
 const dotTone: Record<OpsStatusTone, string> = {
-  neutral: "bg-muted-foreground",
+  neutral: "bg-foreground/50",
   primary: "bg-primary",
   success: "bg-earning",
   warning: "bg-warning",
   critical: "bg-destructive",
   info: "bg-info",
-  muted: "bg-muted-foreground/60",
+  muted: "bg-muted-foreground/50",
 };
 
+// Slightly tighter type — premium, less shouty.
 const sizeClasses = {
-  sm: "h-5 px-1.5 text-[10px] gap-1",
-  md: "h-6 px-2 text-[11px] gap-1.5",
-  lg: "h-7 px-2.5 text-xs gap-1.5",
+  sm: "h-[18px] px-1.5 text-[10px] gap-1 tracking-normal",
+  md: "h-[22px] px-2 text-[10.5px] gap-1.5 tracking-normal",
+  lg: "h-6 px-2.5 text-[11px] gap-1.5 tracking-normal",
 };
 
 /**
@@ -66,7 +69,8 @@ export function OpsStatusChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border font-medium uppercase tracking-wide whitespace-nowrap",
+        // Premium pill: flat surface, 1px hairline border, medium-weight non-uppercase label.
+        "inline-flex items-center rounded-full border font-medium whitespace-nowrap",
         toneClasses[tone],
         sizeClasses[size],
         className,
