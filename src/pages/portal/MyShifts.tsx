@@ -2,12 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import {
-  CalendarDays, Clock, MapPin, HandMetal, Loader2, LayoutList, LayoutGrid,
+  CalendarDays, Clock, MapPin, HandMetal, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   format, parseISO, isBefore, startOfDay, isToday, isTomorrow,
-  endOfWeek, startOfWeek, isWithinInterval,
 } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -55,8 +54,7 @@ interface ClaimableShift {
   assignedCount: number;
 }
 
-type TabFilter = "today" | "upcoming" | "week" | "history";
-type StatusFilter = "all" | "pending" | "confirmed" | "cancelled";
+type TabFilter = "today" | "upcoming" | "history";
 
 export default function MyShifts() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
@@ -70,8 +68,6 @@ export default function MyShifts() {
   const [rejectReason, setRejectReason] = useState("");
   const [selectedShift, setSelectedShift] = useState<ShiftAssignment | null>(null);
   const [activeTab, setActiveTab] = useState<TabFilter>("today");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [compactView, setCompactView] = useState(true);
   // toast imported from sonner at top
 
   const load = async () => {
@@ -243,23 +239,13 @@ export default function MyShifts() {
   };
 
   const today = startOfDay(new Date());
-  const weekInterval = { start: startOfWeek(new Date(), { weekStartsOn: 1 }), end: endOfWeek(new Date(), { weekStartsOn: 1 }) };
 
   const getFiltered = (): ShiftAssignment[] => {
     let list = assignments;
     switch (activeTab) {
       case "today": list = list.filter(a => isToday(parseISO(a.shift.date))); break;
       case "upcoming": list = list.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))); break;
-      case "week": list = list.filter(a => isWithinInterval(parseISO(a.shift.date), weekInterval)); break;
       case "history": list = list.filter(a => isBefore(parseISO(a.shift.date), today)); break;
-    }
-    switch (statusFilter) {
-      case "pending": list = list.filter(a => {
-        const ds = getDisplayStatus(a);
-        return ds === "pending" || ds === "needs_reacceptance";
-      }); break;
-      case "confirmed": list = list.filter(a => getDisplayStatus(a) === "confirmed"); break;
-      case "cancelled": list = list.filter(a => getDisplayStatus(a) === "rejected"); break;
     }
     list.sort((a, b) => {
       if (activeTab === "history") return parseISO(b.shift.date).getTime() - parseISO(a.shift.date).getTime();
@@ -272,21 +258,12 @@ export default function MyShifts() {
 
   const todayCount = assignments.filter(a => isToday(parseISO(a.shift.date))).length;
   const upcomingCount = assignments.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))).length;
-  const weekCount = assignments.filter(a => isWithinInterval(parseISO(a.shift.date), weekInterval)).length;
   const pastCount = assignments.filter(a => isBefore(parseISO(a.shift.date), today)).length;
 
   const tabs: { key: TabFilter; label: string; count: number }[] = [
     { key: "today", label: "Today", count: todayCount },
     { key: "upcoming", label: "Upcoming", count: upcomingCount },
-    { key: "week", label: "Week", count: weekCount },
     { key: "history", label: "History", count: pastCount },
-  ];
-
-  const statusFilters: { key: StatusFilter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "pending", label: "Pending" },
-    { key: "confirmed", label: "Confirmed" },
-    { key: "cancelled", label: "Cancelled" },
   ];
 
   const subtitle = (() => {
