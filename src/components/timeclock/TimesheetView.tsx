@@ -168,6 +168,7 @@ export function TimesheetView() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [gpsFilter, setGpsFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [exceptionFilter, setExceptionFilter] = useState<"all" | "late" | "off_site" | "missing_out" | "open">("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -383,10 +384,18 @@ export function TimesheetView() {
         if (gpsFilter === "missing" && r.gpsMissing === 0) return false;
         if (sourceFilter === "clock" && r.importedCount === r.entryCount) return false;
         if (sourceFilter === "import" && r.importedCount === 0) return false;
+        if (exceptionFilter === "late" && r.lateCount === 0) return false;
+        if (exceptionFilter === "off_site" && r.gpsOffSite === 0) return false;
+        if (exceptionFilter === "open" && r.openCount === 0) return false;
+        if (exceptionFilter === "missing_out") {
+          // missing-out heuristic: open clock_in older than 12h
+          const hasMissing = entries.some(e => e.employee_id === r.id && !e.clock_out && e.source === "clock" && differenceInMinutes(new Date(), new Date(e.clock_in)) > 720);
+          if (!hasMissing) return false;
+        }
         return true;
       })
       .sort((a, b) => b.totalHours - a.totalHours);
-  }, [employees, entries, search, statusFilter, gpsFilter, sourceFilter, getClockEventsForEntry, shiftMap]);
+  }, [employees, entries, search, statusFilter, gpsFilter, sourceFilter, exceptionFilter, getClockEventsForEntry, shiftMap]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
   const paginatedRows = rows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
@@ -505,7 +514,22 @@ export function TimesheetView() {
 
   const colCount = canApprove ? 10 : 9;
 
-  const hasActiveFilters = statusFilter !== "all" || gpsFilter !== "all" || sourceFilter !== "all";
+  const hasActiveFilters = statusFilter !== "all" || gpsFilter !== "all" || sourceFilter !== "all" || exceptionFilter !== "all";
+
+  // --- Exception aggregates for the actionable banner ---
+  const exceptions = useMemo(() => {
+    let late = 0, offSite = 0, missingOut = 0, open = 0;
+    rows.forEach(r => {
+      late += r.lateCount;
+      offSite += r.gpsOffSite;
+      open += r.openCount;
+    });
+    // missingOut = clock entries with no clock_out and >12h elapsed (kpis.missingClockOut already computed)
+    missingOut = kpis.missingClockOut;
+    return { late, offSite, missingOut, open };
+  }, [rows, kpis.missingClockOut]);
+
+  const hasExceptions = exceptions.late + exceptions.offSite + exceptions.missingOut + exceptions.open > 0;
 
   return (
     <div className="space-y-4">
@@ -520,6 +544,27 @@ export function TimesheetView() {
         <KpiMini icon={<WifiOff className="h-4 w-4 text-muted-foreground/60" />} value={kpis.gpsMiss} label="No GPS" />
         <KpiMini icon={<AlertCircle className={cn("h-4 w-4", kpis.missingClockOut > 0 ? "text-warning" : "text-muted-foreground/60")} />} value={kpis.missingClockOut} label="Missing Out" accent={kpis.missingClockOut > 0 ? "warning" : undefined} />
       </div>
+
+      {/* Exceptions Banner — actionable, only when issues exist */}
+      {hasExceptions && (
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/40 bg-muted/20">
+            <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Excepciones a resolver</span>
+            {exceptionFilter !== "all" && (
+              <Button variant="ghost" size="sm" className="ml-auto h-6 text-[10px] px-2" onClick={() => setExceptionFilter("all")}>
+                Limpiar filtro
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 px-4 py-3">
+            <ExceptionPill active={exceptionFilter === "late"} count={exceptions.late} tone="warning" label="Late" onClick={() => setExceptionFilter(f => f === "late" ? "all" : "late")} />
+            <ExceptionPill active={exceptionFilter === "off_site"} count={exceptions.offSite} tone="critical" label="Off-site" onClick={() => setExceptionFilter(f => f === "off_site" ? "all" : "off_site")} />
+            <ExceptionPill active={exceptionFilter === "missing_out"} count={exceptions.missingOut} tone="warning" label="Missing Out" onClick={() => setExceptionFilter(f => f === "missing_out" ? "all" : "missing_out")} />
+            <ExceptionPill active={exceptionFilter === "open"} count={exceptions.open} tone="info" label="Open" onClick={() => setExceptionFilter(f => f === "open" ? "all" : "open")} />
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
@@ -653,11 +698,21 @@ export function TimesheetView() {
             <TableBody>
               {paginatedRows.map(row => {
                 const isExpanded = expandedIds.has(row.id);
+                // Severity rail tone — mirrors ShiftCard pattern
+                const railTone =
+                  row.openCount > 0 ? "bg-earning"
+                  : row.gpsOffSite > 0 || row.rejectedCount > 0 ? "bg-destructive"
+                  : row.lateCount > 0 || row.pendingCount > 0 ? "bg-warning"
+                  : row.approvedCount === row.entryCount ? "bg-earning/60"
+                  : "bg-border";
                 return (
                   <Fragment key={row.id}>
-                    <TableRow className="cursor-pointer hover:bg-muted/40" onClick={() => toggleExpand(row.id)}>
+                    <TableRow className="cursor-pointer hover:bg-muted/30 transition-colors relative" onClick={() => toggleExpand(row.id)}>
                       {canApprove && <TableCell onClick={e => e.stopPropagation()}><Checkbox checked={row.entryIds.every(id => selectedIds.has(id))} onCheckedChange={() => toggleEmployee(row.entryIds)} /></TableCell>}
-                      <TableCell className="px-1">{isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}</TableCell>
+                      <TableCell className="px-1 relative">
+                        <span aria-hidden className={cn("absolute left-0 top-2 bottom-2 w-[1.5px] rounded-r-full opacity-50", railTone)} />
+                        {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           <EmployeeAvatar firstName={row.first_name} lastName={row.last_name} avatarUrl={row.avatar_url} size="md" />
@@ -873,5 +928,43 @@ function KpiMini({ icon, value, label, accent }: { icon: React.ReactNode; value:
         <p className="text-[10px] text-muted-foreground/80 truncate mt-1">{label}</p>
       </CardContent>
     </Card>
+  );
+}
+
+// --- Exception Pill — actionable filter chip with sober premium tone ---
+function ExceptionPill({
+  active, count, tone, label, onClick,
+}: {
+  active: boolean;
+  count: number;
+  tone: "warning" | "critical" | "info";
+  label: string;
+  onClick: () => void;
+}) {
+  const isEmpty = count === 0;
+  const toneClasses =
+    tone === "critical"
+      ? active ? "border-destructive/50 bg-destructive/[0.06] text-destructive" : "border-border/50 bg-card text-foreground hover:border-destructive/40"
+      : tone === "warning"
+      ? active ? "border-warning/50 bg-warning/[0.06] text-warning" : "border-border/50 bg-card text-foreground hover:border-warning/40"
+      : active ? "border-info/50 bg-info/[0.06] text-info" : "border-border/50 bg-card text-foreground hover:border-info/40";
+  const dotClass =
+    tone === "critical" ? "bg-destructive" : tone === "warning" ? "bg-warning" : "bg-info";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={isEmpty}
+      className={cn(
+        "group inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-all duration-150",
+        "disabled:opacity-40 disabled:cursor-not-allowed",
+        !isEmpty && "hover:-translate-y-[0.5px] hover:shadow-[0_1px_3px_-1px_hsl(var(--foreground)/0.08)]",
+        toneClasses,
+      )}
+    >
+      <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", isEmpty ? "bg-muted-foreground/30" : dotClass)} />
+      <span className="text-[11px] font-medium tracking-wide">{label}</span>
+      <span className={cn("font-mono tabular-nums text-[12px] font-bold", isEmpty && "text-muted-foreground/50")}>{count}</span>
+    </button>
   );
 }
