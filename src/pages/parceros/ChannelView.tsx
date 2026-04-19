@@ -148,7 +148,7 @@ export default function ChannelView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
@@ -156,7 +156,7 @@ export default function ChannelView() {
 
   if (!channel) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
         <h1 className="text-lg font-bold text-foreground">Canal no encontrado</h1>
         <Button variant="outline" onClick={() => navigate("/parceros")} className="mt-4">Volver</Button>
       </div>
@@ -164,18 +164,27 @@ export default function ChannelView() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Channel Header */}
-      <header className="sticky top-0 z-20 bg-card border-b border-border/40 px-3 py-2.5 safe-top">
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Channel Header — branded */}
+      <header
+        className="sticky top-0 z-20 px-3 py-2.5 safe-top border-b border-border/40 backdrop-blur-xl"
+        style={{ background: "hsl(var(--card) / 0.85)" }}
+      >
         <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <button onClick={() => navigate("/parceros")} className="text-muted-foreground hover:text-foreground">
+          <button
+            onClick={() => navigate("/parceros")}
+            className="text-muted-foreground hover:text-foreground active:scale-95 transition-all h-8 w-8 flex items-center justify-center rounded-lg hover:bg-muted/40"
+            aria-label="Volver"
+          >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <span className="text-xl">{channel.icon}</span>
+          <span className="text-2xl">{channel.icon}</span>
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-bold text-foreground truncate">{channel.name}</h1>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-[8px] h-3.5">{channel.zone}</Badge>
+            <h1 className="text-sm font-bold text-foreground truncate font-heading">{channel.name}</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <Badge variant="outline" className="text-[8px] h-3.5 border-primary/30 text-primary bg-primary/10">
+                {channel.zone}
+              </Badge>
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                 <Users className="h-2.5 w-2.5" /> {channel.member_count}
               </span>
