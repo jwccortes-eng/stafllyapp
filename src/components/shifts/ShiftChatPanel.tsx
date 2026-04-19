@@ -27,7 +27,7 @@ interface ShiftChatPanelProps {
   shiftId: string;
   shiftDate: string;
   companyId: string;
-  /** If user is admin/manager */
+  /** Force admin mode. If omitted, role is derived from useAuth. */
   isAdmin?: boolean;
 }
 
