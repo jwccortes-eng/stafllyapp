@@ -8,7 +8,7 @@ import {
   Wallet, Clock, CalendarDays,
   ArrowRight, LogIn, LogOut, MapPin, Timer,
   Bell, ChevronRight, AlertTriangle, Navigation,
-  Briefcase, TrendingUp,
+  Briefcase, TrendingUp, HandMetal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -71,6 +71,7 @@ export default function EmployeeDashboard() {
   const [weeklyHours, setWeeklyHours] = useState("0h");
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [claimableCount, setClaimableCount] = useState(0);
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
