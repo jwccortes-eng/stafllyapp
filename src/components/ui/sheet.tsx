@@ -144,18 +144,19 @@ const OpsSheetHeader = ({
 }: OpsSheetHeaderProps) => (
   <div
     className={cn(
-      "sticky top-0 z-10 flex items-start gap-3 border-b border-border/60 bg-background/90 px-5 py-3.5 backdrop-blur-md",
+      // Tighter vertical rhythm — px-4 / py-2.5 reads as executive, not chunky.
+      "sticky top-0 z-10 flex items-center gap-2.5 border-b border-border/60 bg-background/90 px-4 py-2.5 backdrop-blur-md",
       className,
     )}
     {...props}
   >
-    {leading && <div className="shrink-0 mt-0.5">{leading}</div>}
+    {leading && <div className="shrink-0">{leading}</div>}
     <div className="min-w-0 flex-1">
-      <SheetPrimitive.Title className="text-base font-semibold font-heading text-foreground leading-tight truncate">
+      <SheetPrimitive.Title className="text-[13.5px] font-semibold font-heading text-foreground leading-tight truncate">
         {title}
       </SheetPrimitive.Title>
       {subtitle && (
-        <div className="text-xs text-muted-foreground mt-0.5 truncate">{subtitle}</div>
+        <div className="text-[11px] text-muted-foreground mt-0.5 truncate leading-tight">{subtitle}</div>
       )}
     </div>
     <div className="shrink-0 flex items-center gap-1">
@@ -165,16 +166,16 @@ const OpsSheetHeader = ({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
         </button>
       ) : (
         <SheetPrimitive.Close
           aria-label="Close"
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+          className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
         </SheetPrimitive.Close>
       )}
     </div>
