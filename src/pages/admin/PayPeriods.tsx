@@ -20,6 +20,10 @@ import { useAuth } from "@/hooks/useAuth";
 import PasswordConfirmDialog from "@/components/PasswordConfirmDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import PayrollSequenceSettings from "@/components/payroll/PayrollSequenceSettings";
+import PeriodReconciliationCell from "@/components/payroll/PeriodReconciliationCell";
+import { usePayrollSequenceConfig, formatSequence } from "@/hooks/usePayrollSequenceConfig";
+import { Settings } from "lucide-react";
 
 interface PayPeriod {
   id: string;
@@ -29,6 +33,10 @@ interface PayPeriod {
   closed_at: string | null;
   published_at: string | null;
   paid_at?: string | null;
+  sequence_number?: number | null;
+  source_type?: string | null;
+  reconciliation_status?: string | null;
+  last_reconciled_at?: string | null;
 }
 
 interface ImportInfo {
@@ -64,6 +72,8 @@ export default function PayPeriods() {
   const [importsMap, setImportsMap] = useState<Record<string, ImportInfo[]>>({});
   const [loadingImports, setLoadingImports] = useState<Set<string>>(new Set());
   const [periodMeta, setPeriodMeta] = useState<Record<string, { hasImports: boolean; hasBasePay: boolean }>>({});
+  const [showSequenceConfig, setShowSequenceConfig] = useState(false);
+  const { config: seqConfig } = usePayrollSequenceConfig();
   const { toast } = useToast();
   const navigate = useNavigate();
 
