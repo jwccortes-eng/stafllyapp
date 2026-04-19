@@ -1094,7 +1094,7 @@ export function ShiftDetailDialog({
                     <DropdownMenuSeparator />
                     {shift.status === "published" && (
                       <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
-                        <Bell className="h-4 w-4 mr-2" /> Notificar equipo
+                        <Bell className="h-4 w-4 mr-2" /> Notificar a asignados
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
@@ -1180,7 +1180,7 @@ export function ShiftDetailDialog({
                     onClick={() => setNotifyOpen(true)}
                     className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
                   >
-                    <Bell className="h-3.5 w-3.5" /> Notificar equipo
+                    <Bell className="h-3.5 w-3.5" /> Notificar a asignados
                   </Button>
                 )}
               </>

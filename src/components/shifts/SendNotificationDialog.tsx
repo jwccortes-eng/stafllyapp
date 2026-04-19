@@ -230,8 +230,12 @@ export function SendNotificationDialog({
         <DialogHeader>
           <DialogTitle className="text-base flex items-center gap-2">
             <Send className="h-4 w-4 text-primary" />
-            Enviar notificación
+            Notificar a empleados asignados
           </DialogTitle>
+          <p className="text-[11px] text-muted-foreground -mt-1">
+            Este mensaje se envía solo a quienes ya están asignados al turno.
+            Para abrirlo a reclamo, activa el switch <strong>Reclamo</strong> y publica el turno.
+          </p>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -243,29 +247,45 @@ export function SendNotificationDialog({
             </p>
           </div>
 
-          {/* Target */}
-          <div>
-            <Label className="text-xs text-muted-foreground">Destinatario</Label>
-            <Select value={target} onValueChange={v => { setTarget(v as any); setValidated(false); }}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  <span className="flex items-center gap-1.5">
-                    <Users className="h-3 w-3" />
-                    Turno completo ({assignedEmployees.length} personas)
-                  </span>
-                </SelectItem>
-                <SelectItem value="specific">
-                  <span className="flex items-center gap-1.5">
-                    <User className="h-3 w-3" />
-                    Empleado específico
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Empty-state: no assignees → block + redirect to claim flow */}
+          {assignedEmployees.length === 0 ? (
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs space-y-2">
+              <p className="flex items-start gap-1.5 font-semibold text-warning">
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                Este turno no tiene empleados asignados todavía.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Las notificaciones de este modal solo llegan a empleados ya asignados.
+                Si quieres que los empleados elegibles puedan <strong>reclamar</strong> el turno,
+                cierra este diálogo, activa el switch <strong>Reclamo</strong> en la pestaña Detalles
+                y publica el turno — aparecerá en el portal de los trabajadores como turno disponible.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Target */}
+              <div>
+                <Label className="text-xs text-muted-foreground">Destinatario</Label>
+                <Select value={target} onValueChange={v => { setTarget(v as any); setValidated(false); }}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <span className="flex items-center gap-1.5">
+                        <Users className="h-3 w-3" />
+                        Todos los asignados ({assignedEmployees.length} {assignedEmployees.length === 1 ? "persona" : "personas"})
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="specific">
+                      <span className="flex items-center gap-1.5">
+                        <User className="h-3 w-3" />
+                        Empleado específico
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
           {/* Specific employee picker */}
           {target === "specific" && (
@@ -405,21 +425,25 @@ export function SendNotificationDialog({
               )}
             </div>
           )}
+            </>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {assignedEmployees.length === 0 ? "Cerrar" : "Cancelar"}
           </Button>
-          <Button
-            size="sm"
-            onClick={validated && validationErrors.length === 0 ? handleSend : validate}
-            disabled={sending}
-            className="gap-1.5"
-          >
-            {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-            {validated && validationErrors.length === 0 ? "Enviar notificación" : "Validar y enviar"}
-          </Button>
+          {assignedEmployees.length > 0 && (
+            <Button
+              size="sm"
+              onClick={validated && validationErrors.length === 0 ? handleSend : validate}
+              disabled={sending}
+              className="gap-1.5"
+            >
+              {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+              {validated && validationErrors.length === 0 ? "Enviar notificación" : "Validar y enviar"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
