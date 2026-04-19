@@ -32,11 +32,16 @@ interface ShiftChatPanelProps {
 }
 
 export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdminProp }: ShiftChatPanelProps) {
-  const { user, employeeId, canAccessAdmin, allRoles } = useAuth();
-  // Detect admin internally: prop wins if explicitly set, otherwise derive from auth.
-  // This fixes the bug where an admin chatting from the employee portal sent as 'employee'
-  // and got blocked by RLS for not having a shift_assignment.
-  const isAdmin = isAdminProp ?? (canAccessAdmin || allRoles.has("admin") || allRoles.has("owner") || allRoles.has("company_owner") || allRoles.has("developer"));
+  const { user, employeeId, allRoles } = useAuth();
+  // Hardened admin detection (Apr 2026 — Jorge / shift #0192 fix):
+  // We REQUIRE an explicit privileged role in `allRoles`. We deliberately ignore
+  // `canAccessAdmin` here because it can be true for users with mixed roles or
+  // delegated permissions, which caused employees (e.g. Jorge) to be misclassified
+  // as admin and rejected by RLS (`scm_insert_admin`) when sending messages.
+  // Only these four roles are valid admin senders for shift chat:
+  const ADMIN_CHAT_ROLES = ["developer", "owner", "company_owner", "admin"] as const;
+  const hasExplicitAdminRole = ADMIN_CHAT_ROLES.some((r) => allRoles.has(r));
+  const isAdmin = isAdminProp ?? hasExplicitAdminRole;
   const { play } = useSoundContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
