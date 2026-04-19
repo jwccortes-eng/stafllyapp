@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { GitCompareArrows, ExternalLink, Database, Upload, Sparkles, Layers } from "lucide-react";
+import { GitCompareArrows, BarChart3, Upload, Sparkles, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Props {
@@ -9,6 +9,8 @@ interface Props {
   sourceType?: string | null;
   reconciliationStatus?: string | null;
   lastReconciledAt?: string | null;
+  /** When provided, the "Resumen" button calls back into the parent (e.g. expands the row). */
+  onOpenSummary?: () => void;
 }
 
 const SOURCE_META: Record<string, { label: string; icon: any; className: string }> = {
@@ -28,16 +30,17 @@ const RECON_STATUS_META: Record<string, { label: string; className: string }> = 
 };
 
 /**
- * Inline cell for the Periods table that shows reconciliation source +
- * status mirror, with a quick-jump button into the matching reconciliation
- * session. Reads the denormalized columns on pay_periods (kept in sync
- * via DB triggers).
+ * Inline cell for the Periods table — shows source/status mirror and exposes
+ * cross-navigation to Reconciliation and the period summary, without merging
+ * the two pages. Reads denormalized columns on `pay_periods` (synced by DB
+ * triggers from `reconciliation_period_status`).
  */
 export default function PeriodReconciliationCell({
   periodId,
   sourceType,
   reconciliationStatus,
   lastReconciledAt,
+  onOpenSummary,
 }: Props) {
   const navigate = useNavigate();
   const source = SOURCE_META[sourceType || "organic"] || SOURCE_META.organic;
@@ -49,8 +52,13 @@ export default function PeriodReconciliationCell({
     navigate(`/app/staged-reconciliation?period=${periodId}`);
   };
 
+  const goToSummary = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onOpenSummary?.();
+  };
+
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 flex-wrap">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -61,7 +69,11 @@ export default function PeriodReconciliationCell({
           </TooltipTrigger>
           <TooltipContent className="text-xs">
             <p>Origen del periodo: {source.label.toLowerCase()}</p>
-            {lastReconciledAt && <p className="text-muted-foreground">Última reconciliación: {new Date(lastReconciledAt).toLocaleString()}</p>}
+            {lastReconciledAt && (
+              <p className="text-muted-foreground">
+                Última reconciliación: {new Date(lastReconciledAt).toLocaleString()}
+              </p>
+            )}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -72,23 +84,27 @@ export default function PeriodReconciliationCell({
         </Badge>
       )}
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={goToReconciliation}
-            >
-              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="text-xs">
-            Abrir en Reconciliation
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Button
+        variant="outline"
+        size="xs"
+        onClick={goToReconciliation}
+        className="gap-1 h-7"
+      >
+        <GitCompareArrows className="h-3 w-3" />
+        Reconciliación
+      </Button>
+
+      {onOpenSummary && (
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={goToSummary}
+          className="gap-1 h-7"
+        >
+          <BarChart3 className="h-3 w-3" />
+          Resumen
+        </Button>
+      )}
     </div>
   );
 }
