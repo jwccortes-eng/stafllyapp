@@ -270,8 +270,9 @@ export function ShiftDetailDialog({
       setEditing(false);
       setTab("details");
       loadRequests();
+      loadRoleSlots();
     }
-  }, [shift, open, loadRequests]);
+  }, [shift, open, loadRequests, loadRoleSlots]);
 
   if (!shift) return null;
 
@@ -288,13 +289,26 @@ export function ShiftDetailDialog({
   const slotsNum = shift.slots ?? 1;
   const fillPercent = Math.min(100, (shiftAssignments.length / slotsNum) * 100);
 
+  /** Map [employeeId → role_slot_id|null] for the next batch of assignments,
+   *  using FIFO allocation against the current state of typed role slots. */
+  const buildSlotMapping = (employeeIds: string[]): Record<string, string | null> => {
+    const picks = pickRoleSlotsForNewAssignments(
+      roleSlots,
+      shiftAssignments as unknown as ActiveAssignment[],
+      employeeIds,
+    );
+    const map: Record<string, string | null> = {};
+    employeeIds.forEach((id, idx) => { map[id] = picks[idx] ?? null; });
+    return map;
+  };
+
   const toggleEmployee = (id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]);
   };
 
   const handleAdd = () => {
     if (selected.length > 0) {
-      onAddEmployees(shift.id, selected);
+      onAddEmployees(shift.id, selected, buildSlotMapping(selected));
       setSelected([]);
       setShowAddPanel(false);
     }
@@ -312,7 +326,7 @@ export function ShiftDetailDialog({
       toast.info("No hay empleados disponibles para asignar");
       return;
     }
-    onAddEmployees(shift.id, toAdd);
+    onAddEmployees(shift.id, toAdd, buildSlotMapping(toAdd));
     setSelected([]);
     setShowAddPanel(false);
   };
