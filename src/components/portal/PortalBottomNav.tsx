@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 interface TabItem {
   id: string;
-  to: string;
+  to?: string;
   icon: React.ElementType;
   label: string;
   end?: boolean;
@@ -13,24 +13,37 @@ interface TabItem {
 /**
  * 4-tab bottom nav — premium executive density.
  * Following benchmark: a single primary action zone,
- * Profile/Payments/Availability live in the More sheet.
+ * Profile / Payments / Availability / Announcements live in the More sheet.
  */
 const TABS: TabItem[] = [
   { id: "home", to: "/portal", icon: Home, label: "Home", end: true },
   { id: "shifts", to: "/portal/shifts", icon: CalendarDays, label: "Shifts" },
   { id: "clock", to: "/portal/clock", icon: Clock, label: "Clock" },
-  { id: "more", to: "/portal/more", icon: MoreHorizontal, label: "More" },
+  { id: "more", icon: MoreHorizontal, label: "More" },
 ];
 
-export function PortalBottomNav() {
+const MORE_PATHS = [
+  "/portal/profile",
+  "/portal/payments",
+  "/portal/availability",
+  "/portal/announcements",
+  "/portal/resources",
+  "/portal/w9",
+];
+
+interface PortalBottomNavProps {
+  onOpenMore?: () => void;
+  moreOpen?: boolean;
+}
+
+export function PortalBottomNav({ onOpenMore, moreOpen = false }: PortalBottomNavProps) {
   const location = useLocation();
 
   const isActive = (item: TabItem) => {
     if (item.id === "more") {
-      // "More" is active when on profile/payments/availability/announcements
-      return ["/portal/profile", "/portal/payments", "/portal/availability", "/portal/announcements", "/portal/resources", "/portal/more"]
-        .some(p => location.pathname === p || location.pathname.startsWith(p + "/"));
+      return moreOpen || MORE_PATHS.some(p => location.pathname === p || location.pathname.startsWith(p + "/"));
     }
+    if (!item.to) return false;
     if (item.end) return location.pathname === item.to;
     return location.pathname === item.to || location.pathname.startsWith(item.to + "/");
   };
@@ -41,19 +54,12 @@ export function PortalBottomNav() {
         <div className="flex items-center justify-around h-[58px] px-1">
           {TABS.map((item) => {
             const active = isActive(item);
-            return (
-              <NavLink
-                key={item.id}
-                to={item.to}
-                end={item.end}
-                className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 active:scale-90 transition-all duration-150"
-              >
+            const inner = (
+              <>
                 <div
                   className={cn(
                     "flex items-center justify-center transition-all duration-200 h-7 w-7 rounded-xl",
-                    active
-                      ? "text-primary"
-                      : "text-muted-foreground/45"
+                    active ? "text-primary" : "text-muted-foreground/45"
                   )}
                 >
                   <item.icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.4 : 1.8} />
@@ -61,13 +67,39 @@ export function PortalBottomNav() {
                 <span
                   className={cn(
                     "text-[10px] leading-none transition-colors",
-                    active
-                      ? "text-primary font-bold"
-                      : "text-muted-foreground/45 font-medium"
+                    active ? "text-primary font-bold" : "text-muted-foreground/45 font-medium"
                   )}
                 >
                   {item.label}
                 </span>
+              </>
+            );
+
+            const baseClass = "flex flex-col items-center justify-center gap-0.5 flex-1 py-1 active:scale-90 transition-all duration-150";
+
+            if (item.id === "more") {
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={onOpenMore}
+                  className={baseClass}
+                  aria-label="More options"
+                  aria-expanded={moreOpen}
+                >
+                  {inner}
+                </button>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.id}
+                to={item.to!}
+                end={item.end}
+                className={baseClass}
+              >
+                {inner}
               </NavLink>
             );
           })}
