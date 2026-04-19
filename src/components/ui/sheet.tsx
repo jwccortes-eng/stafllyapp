@@ -130,7 +130,7 @@ SheetDescription.displayName = SheetPrimitive.Description.displayName;
  *   </SheetContent>
  * ────────────────────────────────────────────────────────────────── */
 
-interface OpsSheetHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+interface OpsSheetHeaderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   leading?: React.ReactNode;
