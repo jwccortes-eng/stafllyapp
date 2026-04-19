@@ -1,13 +1,11 @@
-import { Clock, Users, GripVertical, MapPin, AlertTriangle, Hand, Moon, Lock } from "lucide-react";
+import { Clock, GripVertical, Hand, Moon, Lock, MapPin, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import { EmployeeAvatarGroup, type AvatarGroupItem } from "@/components/ui/employee-avatar-group";
+import { EmployeeAvatarGroup } from "@/components/ui/employee-avatar-group";
 import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 import type { Shift } from "./types";
 import { getClientColor, formatShiftCode } from "./types";
-import type { ShiftCoverageItem } from "@/hooks/useShiftCoverage";
 
 export interface AssignedEmployee {
   firstName: string;
