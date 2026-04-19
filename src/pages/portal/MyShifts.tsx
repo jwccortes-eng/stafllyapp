@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PortalShiftDetailDrawer } from "@/components/portal/PortalShiftDetailDrawer";
 import { PortalShiftCard, type PortalShiftData } from "@/components/portal/PortalShiftCard";
+import { CLAIMABLE_VISIBLE_STATUSES, isShiftClaimableForEmployee } from "@/lib/shifts/visibility";
 
 interface ShiftAssignment {
   id: string;
@@ -118,15 +119,27 @@ export default function MyShifts() {
       .from("scheduled_shifts")
       .select(`id, title, date, start_time, end_time, notes, slots, locations (name), clients (name), shift_assignments (id, status)`)
       .eq("company_id", emp.company_id).eq("claimable", true)
-      .in("status", ["open", "published"])
+      .in("status", [...CLAIMABLE_VISIBLE_STATUSES])
       .is("deleted_at", null).gte("date", today).order("date", { ascending: true });
 
     const myShiftIds = new Set(mapped.map(a => a.shift.id));
+    // Same rule as PortalShiftDetail: a pending request hides the shift from the available list
+    const { data: myPendingReqs } = await supabase
+      .from("shift_requests")
+      .select("shift_id")
+      .eq("employee_id", employeeId)
+      .eq("status", "pending");
+    const pendingRequestShiftIds = new Set((myPendingReqs ?? []).map((r: any) => r.shift_id as string));
     const activeCount = (s: any) =>
       (s.shift_assignments ?? []).filter((a: any) => a.status !== "removed" && a.status !== "rejected").length;
     const claimableFiltered: ClaimableShift[] = (claimData ?? [])
-      .filter((s: any) => !myShiftIds.has(s.id))
-      .filter((s: any) => { const c = activeCount(s); return !s.slots || c < s.slots; })
+      .filter((s: any) => isShiftClaimableForEmployee({
+        shiftId: s.id,
+        slots: s.slots,
+        activeAssignmentsCount: activeCount(s),
+        myShiftIds,
+        pendingRequestShiftIds,
+      }))
       .map((s: any) => ({
         id: s.id, title: s.title, date: s.date, start_time: s.start_time,
         end_time: s.end_time, notes: s.notes, slots: s.slots,
