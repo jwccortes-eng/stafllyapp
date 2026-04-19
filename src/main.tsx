@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { registerPwa } from "./lib/pwa-runtime";
 
 /**
  * Cross-browser SW hygiene.
@@ -46,3 +47,8 @@ import "./index.css";
 })();
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// Production-only: register the service worker AFTER mount so the initial
+// render is never blocked, and the user gets a "new version available" toast
+// when an updated bundle is deployed (fixes Aline / iPhone stale-cache, Apr 2026).
+registerPwa();
