@@ -31,8 +31,12 @@ interface ShiftChatPanelProps {
   isAdmin?: boolean;
 }
 
-export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin = false }: ShiftChatPanelProps) {
-  const { user, employeeId } = useAuth();
+export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdminProp }: ShiftChatPanelProps) {
+  const { user, employeeId, canAccessAdmin, allRoles } = useAuth();
+  // Detect admin internally: prop wins if explicitly set, otherwise derive from auth.
+  // This fixes the bug where an admin chatting from the employee portal sent as 'employee'
+  // and got blocked by RLS for not having a shift_assignment.
+  const isAdmin = isAdminProp ?? (canAccessAdmin || allRoles.has("admin") || allRoles.has("owner") || allRoles.has("company_owner") || allRoles.has("developer"));
   const { play } = useSoundContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
