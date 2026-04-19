@@ -12221,6 +12221,14 @@ export type Database = {
         Returns: undefined
       }
       user_company_ids: { Args: { _user_id: string }; Returns: string[] }
+      user_is_assigned_to_shift: {
+        Args: { _shift_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_is_company_admin: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
