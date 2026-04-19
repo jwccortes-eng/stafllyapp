@@ -35,9 +35,11 @@ export function MyShiftCard() {
     const we = endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
 
     const [assignRes, clockRes, weekRes] = await Promise.all([
+      // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
       supabase.from("shift_assignments")
         .select("status, scheduled_shifts!inner (id, title, date, start_time, end_time, status, locations (name))")
         .eq("employee_id", employeeId).neq("status", "rejected")
+        .is("scheduled_shifts.deleted_at", null)
         .gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(1),
       supabase.from("time_entries").select("id").eq("employee_id", employeeId).is("clock_out", null).limit(1),
       supabase.from("time_entries").select("clock_in, clock_out")

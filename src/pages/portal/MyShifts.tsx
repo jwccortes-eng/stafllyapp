@@ -77,10 +77,13 @@ export default function MyShifts() {
     const { data: emp } = await supabase.from("employees").select("company_id").eq("id", employeeId).maybeSingle();
     if (!emp) { setLoading(false); return; }
 
+    // CRITICAL: filter scheduled_shifts.deleted_at to hide soft-deleted shifts.
+    // See src/lib/shifts/visibility.ts for the canonical rule.
     const { data: assignData } = await supabase
       .from("shift_assignments")
       .select(`id, status, response_status, accepted_shift_version, scheduled_shifts!inner (id, title, date, start_time, end_time, notes, status, slots, shift_code, meeting_point, special_instructions, company_id, operational_version, locations (name), clients (name))`)
       .eq("employee_id", employeeId)
+      .is("scheduled_shifts.deleted_at", null)
       .order("created_at", { ascending: false });
 
     const mapped: ShiftAssignment[] = (assignData ?? []).map((a: any) => ({
