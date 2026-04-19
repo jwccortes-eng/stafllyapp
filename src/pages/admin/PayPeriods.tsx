@@ -336,6 +336,10 @@ export default function PayPeriods() {
         subtitle="Miércoles a Martes — ciclo semanal"
         badge="Semanal"
         rightSlot={<div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setShowSequenceConfig(s => !s)}>
+            <Settings className="h-4 w-4 mr-2" />
+            {seqConfig.use_payroll_sequence ? `Consecutivo: ${seqConfig.prefix || ""}${seqConfig.next_number}` : "Consecutivo"}
+          </Button>
           <Dialog open={bulkOpenDialog} onOpenChange={setBulkOpenDialog}>
             <DialogTrigger asChild>
               <Button variant="outline"><Unlock className="h-4 w-4 mr-2" />Abrir periodos</Button>
