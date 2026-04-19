@@ -5822,10 +5822,14 @@ export type Database = {
           created_at: string
           end_date: string
           id: string
+          last_reconciled_at: string | null
+          last_reconciliation_id: string | null
           paid_at: string | null
           paid_by: string | null
           published_at: string | null
+          reconciliation_status: string | null
           sequence_number: number | null
+          source_type: string
           start_date: string
           status: string
         }
@@ -5838,10 +5842,14 @@ export type Database = {
           created_at?: string
           end_date: string
           id?: string
+          last_reconciled_at?: string | null
+          last_reconciliation_id?: string | null
           paid_at?: string | null
           paid_by?: string | null
           published_at?: string | null
+          reconciliation_status?: string | null
           sequence_number?: number | null
+          source_type?: string
           start_date: string
           status?: string
         }
@@ -5854,10 +5862,14 @@ export type Database = {
           created_at?: string
           end_date?: string
           id?: string
+          last_reconciled_at?: string | null
+          last_reconciliation_id?: string | null
           paid_at?: string | null
           paid_by?: string | null
           published_at?: string | null
+          reconciliation_status?: string | null
           sequence_number?: number | null
+          source_type?: string
           start_date?: string
           status?: string
         }
@@ -5867,6 +5879,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_periods_last_reconciliation_id_fkey"
+            columns: ["last_reconciliation_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_period_status"
             referencedColumns: ["id"]
           },
         ]
@@ -8041,7 +8060,7 @@ export type Database = {
           outcome_label: string | null
           payroll_batch_id: string | null
           period_end: string
-          period_id: string | null
+          period_id: string
           period_label: string
           period_start: string
           posted_at: string | null
@@ -8091,7 +8110,7 @@ export type Database = {
           outcome_label?: string | null
           payroll_batch_id?: string | null
           period_end: string
-          period_id?: string | null
+          period_id: string
           period_label?: string
           period_start: string
           posted_at?: string | null
@@ -8141,7 +8160,7 @@ export type Database = {
           outcome_label?: string | null
           payroll_batch_id?: string | null
           period_end?: string
-          period_id?: string | null
+          period_id?: string
           period_label?: string
           period_start?: string
           posted_at?: string | null
