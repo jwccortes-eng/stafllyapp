@@ -698,11 +698,21 @@ export function TimesheetView() {
             <TableBody>
               {paginatedRows.map(row => {
                 const isExpanded = expandedIds.has(row.id);
+                // Severity rail tone — mirrors ShiftCard pattern
+                const railTone =
+                  row.openCount > 0 ? "bg-earning"
+                  : row.gpsOffSite > 0 || row.rejectedCount > 0 ? "bg-destructive"
+                  : row.lateCount > 0 || row.pendingCount > 0 ? "bg-warning"
+                  : row.approvedCount === row.entryCount ? "bg-earning/60"
+                  : "bg-border";
                 return (
                   <Fragment key={row.id}>
-                    <TableRow className="cursor-pointer hover:bg-muted/40" onClick={() => toggleExpand(row.id)}>
+                    <TableRow className="cursor-pointer hover:bg-muted/30 transition-colors relative" onClick={() => toggleExpand(row.id)}>
                       {canApprove && <TableCell onClick={e => e.stopPropagation()}><Checkbox checked={row.entryIds.every(id => selectedIds.has(id))} onCheckedChange={() => toggleEmployee(row.entryIds)} /></TableCell>}
-                      <TableCell className="px-1">{isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}</TableCell>
+                      <TableCell className="px-1 relative">
+                        <span aria-hidden className={cn("absolute left-0 top-2 bottom-2 w-[1.5px] rounded-r-full opacity-50", railTone)} />
+                        {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           <EmployeeAvatar firstName={row.first_name} lastName={row.last_name} avatarUrl={row.avatar_url} size="md" />

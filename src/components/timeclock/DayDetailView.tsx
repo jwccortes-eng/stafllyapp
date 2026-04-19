@@ -296,15 +296,23 @@ export function DayDetailView() {
                 const jobTitle = shift?.title?.replace(/^#\d+\s*-?\s*/, "") || "";
                 const clientName = (shift as any)?.clients?.name;
                 const locationName = (shift as any)?.locations?.name;
+                // Severity rail — premium ShiftCard pattern
+                const railTone =
+                  !entry.clock_out ? "bg-earning"
+                  : entry.status === "rejected" ? "bg-destructive"
+                  : entry.status === "pending" ? "bg-warning"
+                  : entry.status === "approved" ? "bg-earning/60"
+                  : "bg-border";
 
                 return (
                   <tr
                     key={entry.id}
-                    className="border-b border-border/20 hover:bg-muted/30 transition-colors cursor-pointer"
+                    className="border-b border-border/20 hover:bg-muted/30 transition-colors cursor-pointer relative"
                     onClick={() => setSelectedEmpId(entry.employee_id)}
                   >
                     {canApprove && (
-                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                      <td className="px-3 py-3 relative" onClick={e => e.stopPropagation()}>
+                        <span aria-hidden className={cn("absolute left-0 top-2 bottom-2 w-[1.5px] rounded-r-full opacity-50", railTone)} />
                         <Checkbox
                           checked={selectedIds.has(entry.id)}
                           onCheckedChange={() => {
@@ -315,7 +323,10 @@ export function DayDetailView() {
                         />
                       </td>
                     )}
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 relative">
+                      {!canApprove && (
+                        <span aria-hidden className={cn("absolute left-0 top-2 bottom-2 w-[1.5px] rounded-r-full opacity-50", railTone)} />
+                      )}
                       <div className="flex items-center gap-2.5">
                         {emp && <EmployeeAvatar firstName={emp.first_name} lastName={emp.last_name} avatarUrl={emp.avatar_url} size="md" />}
                         <span className="font-medium text-xs tracking-wide">{getEmpName(entry.employee_id)}</span>
