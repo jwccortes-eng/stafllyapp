@@ -94,12 +94,12 @@ export function ShiftCard({
   const isFull = assignmentCount >= totalSlots;
   const isEmpty = assignmentCount === 0;
 
-  // Capacity bar tone — uses semantic tokens (matches OpsStatusChip language)
+  // Capacity bar tone — desaturated to support, not compete with the chip
   const barTone = isFull
-    ? "bg-earning"
+    ? "bg-earning/70"
     : isEmpty
-    ? "bg-destructive/70"
-    : "bg-warning";
+    ? "bg-destructive/55"
+    : "bg-warning/65";
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("application/shift-action", e.altKey ? "duplicate" : "move");
@@ -126,21 +126,21 @@ export function ShiftCard({
     <div
       className={cn(
         "group cursor-pointer relative rounded-xl border border-border/40 bg-card",
-        "transition-[transform,box-shadow,border-color] duration-150",
-        "hover:-translate-y-px hover:shadow-sm hover:border-border/70",
+        "transition-[transform,box-shadow,border-color] duration-200 ease-out",
+        "hover:-translate-y-[0.5px] hover:shadow-[0_1px_3px_-1px_hsl(var(--foreground)/0.08)] hover:border-border/60",
         isLocked && "opacity-70",
       )}
       draggable={draggable && !isLocked}
       onDragStart={handleDragStart}
       onClick={onClick}
     >
-      {/* Client accent — thin left rail, low chroma */}
+      {/* Client accent — whisper-thin identity rail, never competes */}
       <span
         aria-hidden
         className={cn(
-          "absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full",
+          "absolute left-0 top-3 bottom-3 w-[1.5px] rounded-r-full",
           color.dot,
-          "opacity-70",
+          "opacity-40 group-hover:opacity-60 transition-opacity",
         )}
       />
 
