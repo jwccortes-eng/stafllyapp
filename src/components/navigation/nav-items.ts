@@ -44,6 +44,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "notifications", to: "/app/notifications", icon: Bell, label: "Notifications", module: null, section: "Management" },
   { id: "invite", to: "/app/invite", icon: UserPlus, label: "Invitations", module: null, section: "Management" },
   { id: "admin-hub", to: "/app/admin", icon: Wrench, label: "Admin", module: null, section: "Administration", roles: ["owner"] },
+  { id: "service-requests", to: "/app/service-requests", icon: ClipboardList, label: "Service Requests", module: null, section: "Commercial" },
   { id: "staffing-requests", to: "/app/staffing-requests", icon: ClipboardList, label: "Requests", module: null, section: "Commercial" },
   { id: "invoices", to: "/app/invoices", icon: Receipt, label: "Invoices", module: null, section: "Commercial" },
   { id: "service-categories", to: "/app/service-categories", icon: Tags, label: "Categories", module: null, section: "Commercial" },
