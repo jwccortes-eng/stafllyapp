@@ -1,25 +1,23 @@
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Clock, MapPin, Users, CalendarDays, FileText, Navigation,
-  AlertCircle, LogIn, LogOut, MessageCircle, Star, Timer, Copy, ExternalLink,
-  CheckCircle2, XCircle, Briefcase, ScanLine, Phone, Shield, Car,
-  ChevronRight,
+  AlertCircle, LogIn, MessageCircle, Star, Copy, ExternalLink,
+  Briefcase, ScanLine, Phone,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { NavigationButtons } from "@/components/navigation/NavigationButtons";
 import { format, parseISO, differenceInMinutes, isToday, isTomorrow } from "date-fns";
-import { es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ShiftTeamPanel } from "@/components/shifts/ShiftTeamPanel";
 import { ShiftChatPanel } from "@/components/shifts/ShiftChatPanel";
-import { useAuth } from "@/hooks/useAuth";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 
 interface ShiftInfo {
   id: string;
@@ -53,7 +51,7 @@ function calcHours(start: string, end: string): string {
   const mins = differenceInMinutes(e, s);
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return m > 0 ? `${h}h ${String(m).padStart(2, "0")}m` : `${h}h`;
+  return m > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
 }
 
 function getCountdown(dateStr: string, startTime: string): string | null {
@@ -65,17 +63,24 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   if (diff < 0 || diff > 24 * 60 * 60 * 1000) return null;
   const hrs = Math.floor(diff / 3600000);
   const mins = Math.floor((diff % 3600000) / 60000);
-  if (hrs > 0) return `Empieza en ${hrs}h ${mins}m`;
-  return `Empieza en ${mins}m`;
+  if (hrs > 0) return `Starts in ${hrs}h ${mins}m`;
+  return `Starts in ${mins}m`;
 }
 
-const statusConfig: Record<string, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
-  confirmed: { label: "Confirmado", cls: "bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))]", icon: CheckCircle2 },
-  pending: { label: "Pendiente", cls: "bg-[hsl(var(--status-pending)/0.1)] text-[hsl(var(--status-pending))]", icon: AlertCircle },
-  needs_reacceptance: { label: "Requiere nueva aceptación", cls: "bg-[hsl(var(--status-pending)/0.1)] text-[hsl(var(--status-pending))]", icon: AlertCircle },
-  rejected: { label: "Rechazado", cls: "bg-[hsl(var(--status-cancelled)/0.1)] text-[hsl(var(--status-cancelled))]", icon: XCircle },
-  accepted: { label: "Aceptado", cls: "bg-[hsl(var(--status-confirmed)/0.1)] text-[hsl(var(--status-confirmed))]", icon: CheckCircle2 },
-};
+function getStatusMeta(status?: string): { tone: OpsStatusTone; label: string } {
+  switch (status) {
+    case "confirmed":
+    case "accepted":
+      return { tone: "success", label: "Confirmed" };
+    case "needs_reacceptance":
+      return { tone: "warning", label: "Re-accept" };
+    case "rejected":
+      return { tone: "critical", label: "Rejected" };
+    case "pending":
+    default:
+      return { tone: "warning", label: "Pending" };
+  }
+}
 
 type DrawerTab = "info" | "team" | "chat";
 
@@ -111,196 +116,203 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
   const hoursLabel = calcHours(shift.start_time?.slice(0, 5), shift.end_time?.slice(0, 5));
   const isTodayShift = isToday(parseISO(shift.date));
   const isTomorrowShift = isTomorrow(parseISO(shift.date));
-  const cfg = statusConfig[assignmentStatus ?? ""] ?? statusConfig.pending;
-  const StatusIcon = cfg.icon;
+  const statusMeta = getStatusMeta(assignmentStatus);
   const shiftCompanyId = shift.company_id || empCompanyId || "";
   const countdown = isTodayShift ? getCountdown(shift.date, shift.start_time) : null;
   const isConfirmed = assignmentStatus === "confirmed" || assignmentStatus === "accepted";
 
   const copyAddress = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Copiado", description: "Dirección copiada" });
+    toast({ title: "Copied", description: "Address copied to clipboard" });
   };
 
-  const clockLabel = clockingMethod === "required" ? "QR obligatorio" : clockingMethod === "optional" ? "QR opcional" : "Fichaje móvil";
+  const clockLabel = clockingMethod === "required" ? "QR required" : clockingMethod === "optional" ? "QR optional" : "Mobile clock-in";
   const ClockMethodIcon = clockingMethod === "required" || clockingMethod === "optional" ? ScanLine : Phone;
 
   return (
     <Drawer open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setTab("info"); }}>
-      <DrawerContent className="max-h-[92vh] overflow-hidden">
-        {/* ── Header ── */}
-        <DrawerHeader className="pb-3 space-y-2.5 pt-4">
-          {/* Countdown */}
-          {countdown && isConfirmed && (
-            <div className="bg-primary/[0.06] rounded-xl px-3.5 py-2 flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[11px] font-bold text-primary tracking-wide">{countdown}</span>
+      <DrawerContent className="max-h-[92vh] overflow-hidden p-0">
+        {/* ────── Sticky header — compact, executive ────── */}
+        <DrawerHeader className="px-4 pt-3 pb-3 space-y-2 border-b border-border/40 bg-card sticky top-0 z-10">
+          {/* Meta row — code, day chip, status */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {shift.shift_code && (
+              <span className="text-[10px] font-mono font-semibold text-muted-foreground/70 bg-muted/60 rounded px-1.5 py-0.5 tabular-nums">
+                #{shift.shift_code.padStart(4, "0")}
+              </span>
+            )}
+            {isTodayShift && (
+              <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-primary text-primary-foreground uppercase tracking-widest">Today</span>
+            )}
+            {isTomorrowShift && (
+              <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-muted text-foreground uppercase tracking-widest">Tomorrow</span>
+            )}
+            <span className="text-[11px] text-muted-foreground/70 font-medium tabular-nums">
+              {shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)} · {hoursLabel}
+            </span>
+            <div className="ml-auto">
+              <OpsStatusChip tone={statusMeta.tone} label={statusMeta.label} size="sm" />
             </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 flex-wrap">
-              {shift.shift_code && (
-                <span className="text-[9px] font-mono font-bold text-primary bg-primary/10 rounded-md px-1.5 py-0.5">
-                  #{shift.shift_code.padStart(4, "0")}
-                </span>
-              )}
-              {isTodayShift && (
-                <span className="text-[8px] px-2 py-0.5 rounded-full font-bold bg-primary text-primary-foreground uppercase tracking-widest">HOY</span>
-              )}
-              {isTomorrowShift && (
-                <span className="text-[8px] px-2 py-0.5 rounded-full font-bold bg-accent text-accent-foreground uppercase tracking-widest">MAÑANA</span>
-              )}
-            </div>
-            <Badge className={cn("text-[9px] px-2.5 py-0.5 font-bold rounded-full border-0", cfg.cls)}>
-              <StatusIcon className="h-2.5 w-2.5 mr-0.5" />
-              {cfg.label}
-            </Badge>
           </div>
 
-          <DrawerTitle className="text-left text-lg font-bold leading-snug line-clamp-2">{shift.title}</DrawerTitle>
+          {/* Title */}
+          <DrawerTitle className="text-left text-[17px] font-bold leading-snug line-clamp-2">
+            {shift.title}
+          </DrawerTitle>
 
-          {/* Client */}
+          {/* Sub-meta — client */}
           {shift.client && (
-            <p className="text-[12px] text-muted-foreground flex items-center gap-1.5">
-              <Briefcase className="h-3 w-3 text-primary/40" />
+            <p className="text-[12px] text-muted-foreground/85 flex items-center gap-1.5">
+              <Briefcase className="h-3 w-3 text-muted-foreground/55" />
               {shift.client.name}
             </p>
           )}
+
+          {/* Countdown — only when actionable */}
+          {countdown && isConfirmed && (
+            <div className="flex items-center gap-2 text-[10.5px] font-semibold text-primary bg-primary/[0.06] rounded-lg px-2.5 py-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+              <span className="tracking-wide">{countdown}</span>
+            </div>
+          )}
         </DrawerHeader>
 
-        {/* Tab bar */}
-        <div className="px-4 pb-3 flex items-center gap-1 bg-muted/30 mx-4 rounded-xl p-1">
-          {(["info", "team", "chat"] as DrawerTab[]).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all",
-                tab === t
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t === "info" && <><CalendarDays className="h-3 w-3" /> Detalles</>}
-              {t === "team" && <><Users className="h-3 w-3" /> Equipo</>}
-              {t === "chat" && <><MessageCircle className="h-3 w-3" /> Chat</>}
-            </button>
-          ))}
+        {/* ────── Tab bar — sober, compact ────── */}
+        <div className="px-4 pt-2.5 pb-2 flex items-center gap-1 bg-background sticky top-0 z-[5]">
+          <div className="flex items-center gap-0.5 bg-muted/40 rounded-xl p-0.5 w-full">
+            {(["info", "team", "chat"] as DrawerTab[]).map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all",
+                  tab === t
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground/70 hover:text-foreground"
+                )}
+              >
+                {t === "info" && <><CalendarDays className="h-3 w-3" /> Details</>}
+                {t === "team" && <><Users className="h-3 w-3" /> Team</>}
+                {t === "chat" && <><MessageCircle className="h-3 w-3" /> Chat</>}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="px-4 pb-[max(env(safe-area-inset-bottom,24px),24px)] overflow-y-auto" style={{ maxHeight: "calc(92vh - 200px)" }}>
+        {/* ────── Content ────── */}
+        <div className="px-4 pb-[max(env(safe-area-inset-bottom,24px),24px)] overflow-y-auto" style={{ maxHeight: "calc(92vh - 220px)" }}>
           {tab === "info" && (
-            <div className="space-y-3">
-              {/* ── A. Schedule block ── */}
-              <div className="rounded-xl bg-muted/30 p-3.5 space-y-2">
-                <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Horario</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <span className="text-base font-bold text-foreground tabular-nums">
-                      {shift.start_time?.slice(0, 5)} → {shift.end_time?.slice(0, 5)}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground/50 bg-muted/50 px-2 py-0.5 rounded-full font-medium">{hoursLabel}</span>
+            <div className="space-y-3 pt-1">
+              {/* A. Schedule — primary block */}
+              <section className="rounded-xl border border-border/40 bg-card p-3.5 space-y-1.5">
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Schedule</p>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground/70" />
+                  <span className="text-[15px] font-bold text-foreground tabular-nums">
+                    {shift.start_time?.slice(0, 5)} → {shift.end_time?.slice(0, 5)}
+                  </span>
+                  <span className="ml-auto text-[11px] text-muted-foreground/70 bg-muted/50 px-2 py-0.5 rounded-md font-medium tabular-nums">
+                    {hoursLabel}
+                  </span>
                 </div>
-                <p className="text-[12px] text-muted-foreground capitalize">
-                  {format(parseISO(shift.date), "EEEE d 'de' MMMM yyyy", { locale: es })}
+                <p className="text-[12px] text-muted-foreground/80 capitalize">
+                  {format(parseISO(shift.date), "EEEE, MMMM d, yyyy", { locale: enUS })}
                 </p>
-              </div>
+              </section>
 
-              {/* ── B. Location block ── */}
+              {/* B. Location */}
               {shift.location && (
-                <div className="rounded-xl bg-muted/30 p-3.5 space-y-2">
-                  <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Ubicación</p>
+                <section className="rounded-xl border border-border/40 bg-card p-3.5 space-y-2">
+                  <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Location</p>
                   <div className="flex items-center gap-2.5">
-                    <MapPin className="h-4 w-4 text-primary shrink-0" />
+                    <MapPin className="h-4 w-4 text-muted-foreground/70 shrink-0" />
                     <p className="text-[13px] font-semibold flex-1">{shift.location.name}</p>
                     <button
-                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-colors"
+                      className="p-1.5 rounded-md hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors"
                       onClick={() => copyAddress(shift.location!.name)}
+                      aria-label="Copy address"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </button>
                   </div>
                   {locationCoords && (
-                    <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navegar" />
+                    <NavigationButtons latitude={locationCoords.lat} longitude={locationCoords.lng} label="Navigate" />
                   )}
-                </div>
+                </section>
               )}
 
-              {/* ── C. Meeting Point ── */}
+              {/* C. Meeting Point — sober premium link */}
               {shift.meeting_point && (
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shift.meeting_point)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 p-3.5 rounded-xl bg-primary/[0.04] border border-primary/10 hover:bg-primary/[0.07] transition-colors group"
+                  className="flex items-center gap-2.5 p-3 rounded-xl border border-border/40 bg-card hover:border-border/70 hover:bg-muted/30 transition-colors group"
                 >
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Navigation className="h-4 w-4 text-primary" />
+                  <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                    <Navigation className="h-3.5 w-3.5 text-muted-foreground/80" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[9px] uppercase tracking-widest text-primary/50 font-bold">Punto de encuentro</p>
-                    <p className="text-[13px] font-semibold group-hover:underline mt-0.5">{shift.meeting_point}</p>
+                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Meeting Point</p>
+                    <p className="text-[12.5px] font-semibold mt-0.5 truncate">{shift.meeting_point}</p>
                   </div>
-                  <ExternalLink className="h-3.5 w-3.5 text-primary/30" />
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors" />
                 </a>
               )}
 
-              {/* ── D. Clocking block ── */}
-              <div className="rounded-xl bg-muted/30 p-3.5">
-                <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold mb-2">Método de fichaje</p>
+              {/* D. Clocking method */}
+              <section className="rounded-xl border border-border/40 bg-card p-3.5">
+                <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold mb-2">Clock-in method</p>
                 <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-lg bg-primary/8 flex items-center justify-center">
-                    <ClockMethodIcon className="h-4 w-4 text-primary" />
+                  <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                    <ClockMethodIcon className="h-4 w-4 text-muted-foreground/80" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-foreground">{clockLabel}</p>
                     {clockingMethod === "required" && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Escanea el QR en la ubicación para fichar</p>
+                      <p className="text-[10.5px] text-muted-foreground/70 mt-0.5">Scan the QR code on site to clock in</p>
                     )}
                   </div>
                 </div>
-              </div>
+              </section>
 
-              {/* ── E. Instructions ── */}
+              {/* E. Instructions — only when present */}
               {shift.special_instructions && (
-                <div className="rounded-xl bg-[hsl(var(--status-pending)/0.05)] border border-[hsl(var(--status-pending)/0.15)] p-3.5">
+                <section className="rounded-xl border border-warning/30 bg-warning/[0.04] p-3.5">
                   <div className="flex items-start gap-2.5">
-                    <AlertCircle className="h-4 w-4 text-[hsl(var(--status-pending))] shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[9px] uppercase tracking-widest text-[hsl(var(--status-pending))] font-bold">Instrucciones</p>
+                    <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-widest text-warning font-bold">Instructions</p>
                       <p className="text-[13px] mt-1 leading-relaxed text-foreground">{shift.special_instructions}</p>
                     </div>
                   </div>
-                </div>
+                </section>
               )}
 
-              {/* ── F. Notes ── */}
+              {/* F. Notes */}
               {shift.notes && (
-                <div className="rounded-xl bg-muted/30 p-3.5">
+                <section className="rounded-xl border border-border/40 bg-card p-3.5">
                   <div className="flex items-start gap-2.5">
-                    <FileText className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Notas</p>
+                    <FileText className="h-4 w-4 text-muted-foreground/55 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Notes</p>
                       <p className="text-[13px] mt-1 leading-relaxed">{shift.notes}</p>
                     </div>
                   </div>
-                </div>
+                </section>
               )}
 
-              {/* ── G. Payment disclaimer ── */}
-              <p className="text-[10px] text-muted-foreground/40 leading-relaxed px-1 italic">
-                Las horas programadas son estimadas. La nómina se calcula con las horas reales fichadas.
+              {/* G. Payment disclaimer — minimal */}
+              <p className="text-[10px] text-muted-foreground/45 leading-relaxed px-1 italic">
+                Scheduled hours are estimates. Payroll uses actual clocked hours.
               </p>
 
-              {/* ── H. Review ── */}
+              {/* H. Review — only when completed */}
               {shift.status === "completed" && employeeId && shiftCompanyId && (
-                <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30">
+                <section className="flex items-center gap-2.5 p-3 rounded-xl border border-border/40 bg-card">
                   <Star className="h-4 w-4 text-amber-400 shrink-0" />
                   <div className="flex-1">
-                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Evaluar turno</p>
+                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground/60 font-bold">Rate this shift</p>
                   </div>
                   <ShiftReviewButton
                     shiftId={shift.id}
@@ -308,31 +320,37 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
                     reviewerType="employee"
                     reviewerId={employeeId}
                   />
-                </div>
-              )}
-
-              {/* ── I. Primary action ── */}
-              {isConfirmed && isTodayShift && (
-                <Button
-                  size="lg"
-                  className="w-full h-12 text-sm gap-2.5 font-bold rounded-xl shadow-lg shadow-primary/20"
-                  onClick={() => { onOpenChange(false); navigate(`/portal/clock?shiftId=${shift.id}`); }}
-                >
-                  <LogIn className="h-4.5 w-4.5" />
-                  Marcar Entrada
-                </Button>
+                </section>
               )}
             </div>
           )}
 
           {tab === "team" && (
-            <ShiftTeamPanel shiftId={shift.id} companyId={shiftCompanyId} compact={false} />
+            <div className="pt-1">
+              <ShiftTeamPanel shiftId={shift.id} companyId={shiftCompanyId} compact={false} />
+            </div>
           )}
 
           {tab === "chat" && shiftCompanyId && (
-            <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={shiftCompanyId} isAdmin={false} />
+            <div className="pt-1">
+              <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={shiftCompanyId} isAdmin={false} />
+            </div>
           )}
         </div>
+
+        {/* ────── Sticky footer — single primary action ────── */}
+        {tab === "info" && isConfirmed && isTodayShift && (
+          <div className="px-4 pt-2 pb-[max(env(safe-area-inset-bottom,16px),16px)] border-t border-border/40 bg-card">
+            <Button
+              size="lg"
+              className="w-full h-12 text-sm gap-2 font-bold rounded-xl shadow-md shadow-primary/15"
+              onClick={() => { onOpenChange(false); navigate(`/portal/clock?shiftId=${shift.id}`); }}
+            >
+              <LogIn className="h-4 w-4" />
+              Clock In
+            </Button>
+          </div>
+        )}
       </DrawerContent>
     </Drawer>
   );
