@@ -3,6 +3,14 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import { readFileSync } from "node:fs";
+
+// Read version straight from package.json so the running bundle is traceable.
+const pkg = JSON.parse(
+  readFileSync(path.resolve(__dirname, "package.json"), "utf-8"),
+);
+const APP_VERSION: string = pkg.version || "0.0.0";
+const APP_BUILD_TIME: string = new Date().toISOString();
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -13,15 +21,31 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
+  define: {
+    // Surfaced in the UI by <BuildVersionBadge /> and used by pwa-runtime.ts
+    // to debug stale-cache issues (e.g. Aline / iPhone, Apr 2026).
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __APP_BUILD_TIME__: JSON.stringify(APP_BUILD_TIME),
+  },
   plugins: [
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      // We register the SW manually from src/lib/pwa-runtime.ts so we can
+      // gate it on production + non-iframe + non-preview hosts and surface a
+      // "new version available" toast.
+      injectRegister: false,
       // Never register the SW during local/preview dev — avoids stale-cache + iframe issues.
       devOptions: { enabled: false },
       includeAssets: ["favicon.png", "favicon.ico"],
       workbox: {
+        // Take control of open clients immediately so a freshly-installed SW
+        // never serves the old bundle alongside the new one.
+        skipWaiting: true,
+        clientsClaim: true,
+        // Always clean up obsolete precache entries on activate.
+        cleanupOutdatedCaches: true,
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,

@@ -240,6 +240,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPermissions([]);
     setActionPermissions([]);
     setFullName(null);
+    // Wipe SW + CacheStorage so the next user on this device never inherits
+    // cached responses or a stale bundle (Aline / iPhone fix, Apr 2026).
+    try {
+      const { clearPwaCachesAndUnregister } = await import("@/lib/pwa-runtime");
+      await clearPwaCachesAndUnregister();
+    } catch {
+      // non-blocking
+    }
     window.location.href = "/";
   };
 

@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useTheme } from "next-themes";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { BuildVersionBadge } from "@/components/BuildVersionBadge";
 
 interface MoreItem {
   id: string;
@@ -168,6 +169,9 @@ export function PortalMoreSheet({
               Cerrar sesión
             </button>
           </LogoutConfirmDialog>
+        </div>
+        <div className="flex justify-center pb-2">
+          <BuildVersionBadge />
         </div>
       </div>
     </div>
