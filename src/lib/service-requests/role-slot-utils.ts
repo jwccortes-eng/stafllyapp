@@ -20,6 +20,7 @@ export interface ShiftRoleSlot {
 export interface ActiveAssignment {
   id: string;
   shift_id: string;
+  employee_id: string;
   status: string;
   role_slot_id: string | null;
 }
