@@ -723,6 +723,15 @@ export function ShiftDetailDialog({
                 );
               })()}
 
+              {/* ── Service-request role plan (only for converted shifts) ── */}
+              {roleSlots.length > 0 && (
+                <ShiftRoleSlotsTeamPanel
+                  slots={roleSlots}
+                  assignments={shiftAssignments as unknown as ActiveAssignment[]}
+                  employees={employees}
+                />
+              )}
+
               {/* ── Role slots: Driver + Admin + Lead ── */}
               {(() => {
                 const requiresCar = !!(shift as any).transportation_required;
