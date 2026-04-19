@@ -100,9 +100,11 @@ export default function EmployeeDashboard() {
       supabase.from("companies").select("name").eq("id", emp.company_id).maybeSingle(),
       supabase.from("pay_periods").select("id, start_date, end_date, status, published_at")
         .eq("company_id", emp.company_id).order("start_date", { ascending: false }).limit(1).maybeSingle(),
+      // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
       supabase.from("shift_assignments")
         .select("status, scheduled_shifts!inner (id, title, date, start_time, end_time, status, meeting_point, locations (name), clients (name))")
         .eq("employee_id", employeeId).neq("status", "rejected")
+        .is("scheduled_shifts.deleted_at", null)
         .gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(5),
       supabase.from("time_entries").select("id, clock_in, clock_out, shift_id, scheduled_shifts(title)").eq("employee_id", employeeId).is("clock_out", null).limit(1) as any,
       supabase.from("time_entries").select("clock_in, clock_out")

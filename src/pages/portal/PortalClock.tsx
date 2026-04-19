@@ -135,9 +135,12 @@ export default function PortalClock() {
         .select("id, clock_in, clock_out, status, notes, break_minutes, shift_id")
         .eq("employee_id", employeeId).gte("clock_in", dayStart).lte("clock_in", dayEnd)
         .order("clock_in", { ascending: false }),
+      // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
       supabase.from("shift_assignments")
         .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, pay_type, qr_attendance_mode, qr_token, locations(name), clients(name))")
-        .eq("employee_id", employeeId).eq("scheduled_shifts.date", todayStr).in("status", ["confirmed", "pending"]),
+        .eq("employee_id", employeeId).eq("scheduled_shifts.date", todayStr)
+        .is("scheduled_shifts.deleted_at", null)
+        .in("status", ["confirmed", "pending"]),
     ]);
 
     const list = (entriesRes.data ?? []) as TimeEntry[];
