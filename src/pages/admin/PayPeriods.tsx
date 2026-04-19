@@ -589,6 +589,14 @@ export default function PayPeriods() {
                             );
                           })()}
                         </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <PeriodReconciliationCell
+                            periodId={p.id}
+                            sourceType={p.source_type}
+                            reconciliationStatus={p.reconciliation_status}
+                            lastReconciledAt={p.last_reconciled_at}
+                          />
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{p.closed_at ? format(new Date(p.closed_at), "yyyy-MM-dd HH:mm") : "—"}</TableCell>
                         <TableCell>
                           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
