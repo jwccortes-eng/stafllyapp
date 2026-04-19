@@ -920,3 +920,41 @@ function KpiMini({ icon, value, label, accent }: { icon: React.ReactNode; value:
     </Card>
   );
 }
+
+// --- Exception Pill — actionable filter chip with sober premium tone ---
+function ExceptionPill({
+  active, count, tone, label, onClick,
+}: {
+  active: boolean;
+  count: number;
+  tone: "warning" | "critical" | "info";
+  label: string;
+  onClick: () => void;
+}) {
+  const isEmpty = count === 0;
+  const toneClasses =
+    tone === "critical"
+      ? active ? "border-destructive/50 bg-destructive/[0.06] text-destructive" : "border-border/50 bg-card text-foreground hover:border-destructive/40"
+      : tone === "warning"
+      ? active ? "border-warning/50 bg-warning/[0.06] text-warning" : "border-border/50 bg-card text-foreground hover:border-warning/40"
+      : active ? "border-info/50 bg-info/[0.06] text-info" : "border-border/50 bg-card text-foreground hover:border-info/40";
+  const dotClass =
+    tone === "critical" ? "bg-destructive" : tone === "warning" ? "bg-warning" : "bg-info";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={isEmpty}
+      className={cn(
+        "group inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-all duration-150",
+        "disabled:opacity-40 disabled:cursor-not-allowed",
+        !isEmpty && "hover:-translate-y-[0.5px] hover:shadow-[0_1px_3px_-1px_hsl(var(--foreground)/0.08)]",
+        toneClasses,
+      )}
+    >
+      <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", isEmpty ? "bg-muted-foreground/30" : dotClass)} />
+      <span className="text-[11px] font-medium tracking-wide">{label}</span>
+      <span className={cn("font-mono tabular-nums text-[12px] font-bold", isEmpty && "text-muted-foreground/50")}>{count}</span>
+    </button>
+  );
+}
