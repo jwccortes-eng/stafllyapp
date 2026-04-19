@@ -158,7 +158,30 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdmin
 
   const handleSend = async () => {
     if (!text.trim() || !isChatOpen) return;
+    if (!isAdmin && !employeeId) {
+      toast.error("No tienes acceso a este chat");
+      return;
+    }
     setSending(true);
+
+    // Auto-create thread on first message if it doesn't exist (idempotent: UNIQUE on shift_id)
+    if (!chatConfig?.id) {
+      const { data: created, error: cfgErr } = await supabase
+        .from("shift_chat_config")
+        .upsert(
+          { shift_id: shiftId, company_id: companyId, is_open: true } as any,
+          { onConflict: "shift_id" }
+        )
+        .select("id, is_open")
+        .maybeSingle();
+      if (cfgErr || !created) {
+        console.error("[shift-chat] thread init failed", cfgErr);
+        toast.error("No se pudo inicializar el chat del turno");
+        setSending(false);
+        return;
+      }
+      setChatConfig(created);
+    }
 
     const msg: any = {
       shift_id: shiftId,
@@ -166,16 +189,21 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdmin
       content: text.trim(),
       sender_type: isAdmin ? "admin" : "employee",
     };
-
-    if (isAdmin && user) {
-      msg.sender_user_id = user.id;
-    } else if (employeeId) {
-      msg.sender_employee_id = employeeId;
-    }
+    if (isAdmin && user) msg.sender_user_id = user.id;
+    else if (employeeId) msg.sender_employee_id = employeeId;
 
     const { error } = await supabase.from("shift_chat_messages").insert(msg);
     if (error) {
-      toast.error("Error al enviar mensaje");
+      console.error("[shift-chat] send failed", error);
+      const code = (error as any)?.code;
+      const m = (error.message || "").toLowerCase();
+      if (code === "42501" || m.includes("row-level security") || m.includes("policy")) {
+        toast.error(isAdmin ? "No tienes permisos para escribir en este chat" : "No estás asignado a este turno");
+      } else if (m.includes("foreign key") || m.includes("violates")) {
+        toast.error("El turno o el chat no es válido");
+      } else {
+        toast.error("Error al enviar mensaje");
+      }
     } else {
       setText("");
     }
@@ -185,24 +213,23 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdmin
   const toggleChat = async () => {
     if (!isAdmin) return;
     const newState = !isChatOpen;
-    
-    if (chatConfig?.id) {
-      await supabase.from("shift_chat_config")
-        .update({ 
-          is_open: newState, 
-          ...(newState ? { reopened_by: user?.id, reopened_at: new Date().toISOString() } : {})
-        } as any)
-        .eq("id", chatConfig.id);
-    } else {
-      await supabase.from("shift_chat_config").insert({
-        shift_id: shiftId,
-        company_id: companyId,
-        is_open: newState,
-        ...(newState ? { reopened_by: user?.id, reopened_at: new Date().toISOString() } : {}),
-      } as any);
+    const payload: any = {
+      shift_id: shiftId,
+      company_id: companyId,
+      is_open: newState,
+      ...(newState ? { reopened_by: user?.id, reopened_at: new Date().toISOString() } : {}),
+    };
+    const { data, error } = await supabase
+      .from("shift_chat_config")
+      .upsert(payload, { onConflict: "shift_id" })
+      .select("id, is_open")
+      .maybeSingle();
+    if (error) {
+      console.error("[shift-chat] toggle failed", error);
+      toast.error("No se pudo actualizar el estado del chat");
+      return;
     }
-    
-    setChatConfig(prev => prev ? { ...prev, is_open: newState } : { is_open: newState });
+    if (data) setChatConfig(data);
     toast.success(newState ? "Chat reabierto" : "Chat cerrado");
   };
 
