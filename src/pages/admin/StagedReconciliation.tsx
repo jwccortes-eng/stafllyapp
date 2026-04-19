@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getDefaultPayPeriod, sortPeriodsDesc } from "@/lib/pay-period-helpers";
 import { useCompany } from "@/hooks/useCompany";
 import { useReconciliationPeriod } from "@/hooks/useReconciliationPeriod";
@@ -185,12 +186,42 @@ export default function StagedReconciliation() {
       });
   }, [selectedCompanyId]);
 
+  // ── Auto-select via ?period=<pay_period_id> from Periods page ──
+  const [searchParams, setSearchParams] = useSearchParams();
+  const handledQueryParam = useRef<string | null>(null);
+  useEffect(() => {
+    const requestedPp = searchParams.get("period");
+    if (!requestedPp || payPeriods.length === 0) return;
+    if (handledQueryParam.current === requestedPp) return;
+    handledQueryParam.current = requestedPp;
+
+    // If a recon session already exists for this pay_period, select it
+    const existingRecon = periods.find(p => p.period_id === requestedPp);
+    if (existingRecon) {
+      setActivePeriod(existingRecon);
+      loadFinalRecords(existingRecon.id);
+      loadClosingReceipt(existingRecon.id);
+      setTab("closedesk");
+    } else {
+      // Otherwise, create one from the pay_period
+      handleCreateFromPayPeriod(requestedPp);
+    }
+
+    // Clear the query param to avoid re-firing
+    const next = new URLSearchParams(searchParams);
+    next.delete("period");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, payPeriods, periods]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Auto-select default period only when no valid selection exists ──
   useEffect(() => {
     if (periods.length === 0) return;
 
     // If activePeriod is set AND still exists in the loaded list, keep it (manual selection)
     if (activePeriod && periods.some(p => p.id === activePeriod.id)) return;
+
+    // Skip default selection if a query param is being processed
+    if (searchParams.get("period")) return;
 
     // No valid selection — pick the best default
     const best = getDefaultPayPeriod(periods);
@@ -199,7 +230,7 @@ export default function StagedReconciliation() {
       loadFinalRecords(best.id);
       loadClosingReceipt(best.id);
     }
-  }, [periods, activePeriod, setActivePeriod, loadFinalRecords, loadClosingReceipt]);
+  }, [periods, activePeriod, setActivePeriod, loadFinalRecords, loadClosingReceipt, searchParams]);
 
   const refresh = useCallback(() => {
     setRefreshKey(k => k + 1);
