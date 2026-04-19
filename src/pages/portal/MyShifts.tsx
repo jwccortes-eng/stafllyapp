@@ -332,7 +332,7 @@ export default function MyShifts() {
           return (
             <button
               key={t.key}
-              onClick={() => setActiveTab(t.key)}
+              onClick={() => changeTab(t.key)}
               className={cn(
                 "relative flex items-baseline gap-1.5 pb-2.5 text-[13px] font-semibold transition-colors",
                 active ? "text-foreground" : "text-muted-foreground/55 hover:text-foreground/80",
@@ -342,13 +342,16 @@ export default function MyShifts() {
               {t.count > 0 && (
                 <span className={cn(
                   "text-[10px] font-bold tabular-nums",
-                  active ? "text-primary" : "text-muted-foreground/45",
+                  active ? (t.key === "available" ? "text-emerald-600 dark:text-emerald-400" : "text-primary") : "text-muted-foreground/45",
                 )}>
                   {t.count}
                 </span>
               )}
               {active && (
-                <span className="absolute -bottom-px left-0 right-0 h-[2px] bg-primary rounded-full" />
+                <span className={cn(
+                  "absolute -bottom-px left-0 right-0 h-[2px] rounded-full",
+                  t.key === "available" ? "bg-emerald-500" : "bg-primary"
+                )} />
               )}
             </button>
           );
@@ -377,49 +380,55 @@ export default function MyShifts() {
         </div>
       )}
 
-      {/* Available shifts — secondary section, only when relevant */}
-      {claimable.length > 0 && activeTab !== "history" && (
-        <div className="pt-2">
-          <div className="flex items-center justify-between mb-2 px-1">
-            <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5">
-              <HandMetal className="h-3 w-3" />
-              Available · {claimable.length}
-            </h2>
-          </div>
-          <div className="space-y-2">
-            {claimable.map((s) => (
-              <div key={s.id} className="rounded-2xl border border-dashed border-primary/25 bg-primary/[0.02] p-3.5 space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold text-foreground truncate">{s.title}</p>
-                    <p className="text-[10.5px] text-muted-foreground/70 mt-0.5">
-                      {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
-                      {" · "}
-                      <span className="tabular-nums">{s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}</span>
-                    </p>
-                    {s.location && (
-                      <p className="text-[10.5px] text-muted-foreground/60 mt-0.5 flex items-center gap-1 truncate">
-                        <MapPin className="h-2.5 w-2.5 shrink-0" /> {s.location.name}
-                      </p>
+      {/* AVAILABLE TAB — claimable shifts as primary content */}
+      {activeTab === "available" && claimable.length > 0 && (
+        <div className="space-y-2">
+          {claimable.map((s) => (
+            <div
+              key={s.id}
+              className="rounded-2xl border-2 border-emerald-500/25 bg-gradient-to-br from-emerald-500/[0.04] to-card p-3.5 space-y-2.5 active:scale-[0.99] transition-all cursor-pointer"
+              onClick={() => navigate(`/portal/shifts/${s.id}`)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+                      Available
+                    </span>
+                    {s.slots && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                        {s.slots - s.assignedCount} spot{(s.slots - s.assignedCount) !== 1 ? "s" : ""}
+                      </span>
                     )}
                   </div>
-                  {s.slots && (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary shrink-0">
-                      {s.slots - s.assignedCount} spot{(s.slots - s.assignedCount) !== 1 ? "s" : ""}
-                    </span>
+                  <p className="text-[13.5px] font-bold text-foreground truncate">{s.title}</p>
+                  <p className="text-[11px] text-muted-foreground/75 mt-0.5">
+                    {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
+                    {" · "}
+                    <span className="tabular-nums">{s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}</span>
+                  </p>
+                  {s.location && (
+                    <p className="text-[11px] text-muted-foreground/65 mt-0.5 flex items-center gap-1 truncate">
+                      <MapPin className="h-2.5 w-2.5 shrink-0" /> {s.location.name}
+                    </p>
                   )}
                 </div>
-                <Button size="sm" variant="outline" className="w-full h-9 text-[11px] rounded-xl font-semibold" onClick={() => claimShift(s.id)} disabled={claiming === s.id}>
-                  {claiming === s.id ? <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" />Requesting...</> : <>Request shift</>}
-                </Button>
               </div>
-            ))}
-          </div>
+              <Button
+                size="sm"
+                className="w-full h-10 text-[12px] rounded-xl font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={(e) => { e.stopPropagation(); claimShift(s.id); }}
+                disabled={claiming === s.id}
+              >
+                {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Requesting...</> : <><HandMetal className="h-3.5 w-3.5" />Request shift</>}
+              </Button>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Empty state — single source */}
-      {filtered.length === 0 && claimable.length === 0 && (
+      {activeTab !== "available" && filtered.length === 0 && (
         <div className="text-center py-14 space-y-3">
           <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/30 border border-border/15 flex items-center justify-center">
             <CalendarDays className="h-7 w-7 text-muted-foreground/20" />
