@@ -141,7 +141,7 @@ export default function EmployeeLayout() {
 
   const navAndSheet = (
     <>
-      <PortalBottomNav />
+      <PortalBottomNav onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
       <PortalMoreSheet
         open={moreOpen}
         onClose={() => setMoreOpen(false)}

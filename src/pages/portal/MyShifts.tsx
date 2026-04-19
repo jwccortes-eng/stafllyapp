@@ -2,12 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import {
-  CalendarDays, Clock, MapPin, HandMetal, Loader2, LayoutList, LayoutGrid,
+  CalendarDays, Clock, MapPin, HandMetal, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   format, parseISO, isBefore, startOfDay, isToday, isTomorrow,
-  endOfWeek, startOfWeek, isWithinInterval,
 } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -55,8 +54,7 @@ interface ClaimableShift {
   assignedCount: number;
 }
 
-type TabFilter = "today" | "upcoming" | "week" | "history";
-type StatusFilter = "all" | "pending" | "confirmed" | "cancelled";
+type TabFilter = "today" | "upcoming" | "history";
 
 export default function MyShifts() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
@@ -70,8 +68,6 @@ export default function MyShifts() {
   const [rejectReason, setRejectReason] = useState("");
   const [selectedShift, setSelectedShift] = useState<ShiftAssignment | null>(null);
   const [activeTab, setActiveTab] = useState<TabFilter>("today");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [compactView, setCompactView] = useState(true);
   // toast imported from sonner at top
 
   const load = async () => {
@@ -243,23 +239,13 @@ export default function MyShifts() {
   };
 
   const today = startOfDay(new Date());
-  const weekInterval = { start: startOfWeek(new Date(), { weekStartsOn: 1 }), end: endOfWeek(new Date(), { weekStartsOn: 1 }) };
 
   const getFiltered = (): ShiftAssignment[] => {
     let list = assignments;
     switch (activeTab) {
       case "today": list = list.filter(a => isToday(parseISO(a.shift.date))); break;
       case "upcoming": list = list.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))); break;
-      case "week": list = list.filter(a => isWithinInterval(parseISO(a.shift.date), weekInterval)); break;
       case "history": list = list.filter(a => isBefore(parseISO(a.shift.date), today)); break;
-    }
-    switch (statusFilter) {
-      case "pending": list = list.filter(a => {
-        const ds = getDisplayStatus(a);
-        return ds === "pending" || ds === "needs_reacceptance";
-      }); break;
-      case "confirmed": list = list.filter(a => getDisplayStatus(a) === "confirmed"); break;
-      case "cancelled": list = list.filter(a => getDisplayStatus(a) === "rejected"); break;
     }
     list.sort((a, b) => {
       if (activeTab === "history") return parseISO(b.shift.date).getTime() - parseISO(a.shift.date).getTime();
@@ -272,21 +258,12 @@ export default function MyShifts() {
 
   const todayCount = assignments.filter(a => isToday(parseISO(a.shift.date))).length;
   const upcomingCount = assignments.filter(a => !isBefore(parseISO(a.shift.date), today) && !isToday(parseISO(a.shift.date))).length;
-  const weekCount = assignments.filter(a => isWithinInterval(parseISO(a.shift.date), weekInterval)).length;
   const pastCount = assignments.filter(a => isBefore(parseISO(a.shift.date), today)).length;
 
   const tabs: { key: TabFilter; label: string; count: number }[] = [
     { key: "today", label: "Today", count: todayCount },
     { key: "upcoming", label: "Upcoming", count: upcomingCount },
-    { key: "week", label: "Week", count: weekCount },
     { key: "history", label: "History", count: pastCount },
-  ];
-
-  const statusFilters: { key: StatusFilter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "pending", label: "Pending" },
-    { key: "confirmed", label: "Confirmed" },
-    { key: "cancelled", label: "Cancelled" },
   ];
 
   const subtitle = (() => {
@@ -360,83 +337,14 @@ export default function MyShifts() {
         ))}
       </div>
 
-      {/* Status chips + view toggle */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {statusFilters.map((sf) => (
-            <button
-              key={sf.key}
-              onClick={() => setStatusFilter(sf.key)}
-              className={cn(
-                "px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all",
-                statusFilter === sf.key
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-muted-foreground/50 hover:bg-muted/40"
-              )}
-            >
-              {sf.label}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={() => setCompactView(!compactView)}
-          className="p-1.5 rounded-xl text-muted-foreground/40 hover:text-foreground hover:bg-muted/40 transition-colors shrink-0"
-        >
-          {compactView ? <LayoutGrid className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
-        </button>
-      </div>
-
-      {/* Claimable shifts */}
-      {claimable.length > 0 && activeTab !== "history" && (
-        <div>
-          <h2 className="text-xs font-bold text-primary mb-2 flex items-center gap-1.5">
-            <HandMetal className="h-3.5 w-3.5" />
-            Available shifts · {claimable.length}
-          </h2>
-          <div className="space-y-2">
-            {claimable.map((s) => (
-              <div key={s.id} className="rounded-2xl border-2 border-dashed border-primary/20 bg-primary/[0.02] p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-bold text-foreground">{s.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                      {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEEE d MMM", { locale: enUS })}
-                    </p>
-                  </div>
-                  {s.slots && (
-                    <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-primary/10 text-primary">
-                      {s.slots - s.assignedCount} spot{(s.slots - s.assignedCount) !== 1 ? "s" : ""}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3.5 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <Clock className="h-3.5 w-3.5 text-primary/50" />
-                    {s.start_time?.slice(0, 5)} – {s.end_time?.slice(0, 5)}
-                  </span>
-                  {s.location && (
-                    <span className="flex items-center gap-1 truncate">
-                      <MapPin className="h-3 w-3 shrink-0 text-primary/40" /> {s.location.name}
-                    </span>
-                  )}
-                </div>
-                <Button size="sm" className="w-full h-10 text-xs rounded-xl font-bold" onClick={() => claimShift(s.id)} disabled={claiming === s.id}>
-                  {claiming === s.id ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Requesting...</> : <><HandMetal className="h-3.5 w-3.5 mr-1.5" />Request shift</>}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Shift list */}
+      {/* Shift list — always compact, single source of state per card */}
       {filtered.length > 0 && (
         <div className="space-y-2">
           {filtered.map((a) => (
             <PortalShiftCard
               key={a.id}
               shift={toCardData(a)}
-              compact={compactView || activeTab === "history"}
+              compact
               onClick={() => setSelectedShift(a)}
               onAccept={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => acceptAssignment(a.id) : undefined}
               onReject={a.status === "pending" && !isBefore(parseISO(a.shift.date), today) ? () => { setRejectDialogId(a.id); setRejectReason(""); } : undefined}
@@ -451,7 +359,48 @@ export default function MyShifts() {
         </div>
       )}
 
-      {/* Empty states */}
+      {/* Available shifts — secondary section, only when relevant */}
+      {claimable.length > 0 && activeTab !== "history" && (
+        <div className="pt-2">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5">
+              <HandMetal className="h-3 w-3" />
+              Available · {claimable.length}
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {claimable.map((s) => (
+              <div key={s.id} className="rounded-2xl border border-dashed border-primary/25 bg-primary/[0.02] p-3.5 space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-foreground truncate">{s.title}</p>
+                    <p className="text-[10.5px] text-muted-foreground/70 mt-0.5">
+                      {isToday(parseISO(s.date)) ? "Today" : isTomorrow(parseISO(s.date)) ? "Tomorrow" : format(parseISO(s.date), "EEE d MMM", { locale: enUS })}
+                      {" · "}
+                      <span className="tabular-nums">{s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}</span>
+                    </p>
+                    {s.location && (
+                      <p className="text-[10.5px] text-muted-foreground/60 mt-0.5 flex items-center gap-1 truncate">
+                        <MapPin className="h-2.5 w-2.5 shrink-0" /> {s.location.name}
+                      </p>
+                    )}
+                  </div>
+                  {s.slots && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-primary/10 text-primary shrink-0">
+                      {s.slots - s.assignedCount} spot{(s.slots - s.assignedCount) !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+                <Button size="sm" variant="outline" className="w-full h-9 text-[11px] rounded-xl font-semibold" onClick={() => claimShift(s.id)} disabled={claiming === s.id}>
+                  {claiming === s.id ? <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" />Requesting...</> : <>Request shift</>}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state — single source */}
       {filtered.length === 0 && claimable.length === 0 && (
         <div className="text-center py-14 space-y-3">
           <div className="h-14 w-14 mx-auto rounded-2xl bg-muted/30 border border-border/15 flex items-center justify-center">
@@ -461,7 +410,6 @@ export default function MyShifts() {
             <p className="text-sm font-bold text-foreground">
               {activeTab === "today" && "No shifts today"}
               {activeTab === "upcoming" && "No upcoming shifts"}
-              {activeTab === "week" && "No shifts this week"}
               {activeTab === "history" && "No history"}
             </p>
             <p className="text-xs text-muted-foreground/60 max-w-[240px] mx-auto">
@@ -476,13 +424,6 @@ export default function MyShifts() {
         </div>
       )}
 
-      {filtered.length === 0 && claimable.length > 0 && activeTab !== "history" && (
-        <div className="rounded-2xl border-2 border-dashed border-primary/20 bg-primary/[0.02] p-6 text-center space-y-2">
-          <HandMetal className="h-7 w-7 text-primary mx-auto" />
-          <p className="text-sm font-bold text-foreground">Shifts available!</p>
-          <p className="text-xs text-muted-foreground">Request the open shifts above.</p>
-        </div>
-      )}
 
       {/* Shift detail drawer */}
       <PortalShiftDetailDrawer
