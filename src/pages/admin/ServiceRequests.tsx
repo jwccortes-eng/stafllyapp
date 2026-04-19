@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import { Helmet } from "react-helmet-async";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Inbox, AlertTriangle } from "lucide-react";
@@ -31,6 +30,10 @@ export default function ServiceRequests() {
 
   const { data, isLoading } = useServiceRequests({ status });
 
+  useEffect(() => {
+    document.title = "Service Requests · Stafly";
+  }, []);
+
   const filtered = useMemo(() => {
     if (!data) return [];
     const q = search.trim().toLowerCase();
@@ -53,11 +56,6 @@ export default function ServiceRequests() {
 
   return (
     <div className="space-y-4">
-      <Helmet>
-        <title>Service Requests · Stafly</title>
-        <meta name="description" content="Manage client service requests, convert them into shifts and track operational fulfillment." />
-      </Helmet>
-
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
