@@ -9528,6 +9528,227 @@ export type Database = {
           },
         ]
       }
+      service_request_items: {
+        Row: {
+          billing_unit:
+            | Database["public"]["Enums"]["service_request_billing_unit"]
+            | null
+          company_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          quantity_requested: number
+          requested_bill_rate: number | null
+          role_label: string | null
+          role_type: Database["public"]["Enums"]["service_request_role_type"]
+          service_request_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          billing_unit?:
+            | Database["public"]["Enums"]["service_request_billing_unit"]
+            | null
+          company_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity_requested?: number
+          requested_bill_rate?: number | null
+          role_label?: string | null
+          role_type?: Database["public"]["Enums"]["service_request_role_type"]
+          service_request_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          billing_unit?:
+            | Database["public"]["Enums"]["service_request_billing_unit"]
+            | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity_requested?: number
+          requested_bill_rate?: number | null
+          role_label?: string | null
+          role_type?: Database["public"]["Enums"]["service_request_role_type"]
+          service_request_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_request_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_request_items_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_request_shift_links: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          linked_by: string | null
+          service_request_id: string
+          service_request_item_id: string | null
+          shift_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          linked_by?: string | null
+          service_request_id: string
+          service_request_item_id?: string | null
+          shift_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          linked_by?: string | null
+          service_request_id?: string
+          service_request_item_id?: string | null
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_request_shift_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_request_shift_links_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_request_shift_links_service_request_item_id_fkey"
+            columns: ["service_request_item_id"]
+            isOneToOne: false
+            referencedRelation: "service_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_request_shift_links_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_requests: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          client_name_snapshot: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          end_time: string | null
+          gender_requirement: Database["public"]["Enums"]["service_request_gender_req"]
+          id: string
+          location_name: string | null
+          notes: string | null
+          onsite_contact_name: string | null
+          onsite_contact_phone: string | null
+          request_channel: Database["public"]["Enums"]["service_request_channel"]
+          request_code: string
+          request_date: string
+          service_address: string | null
+          service_date: string
+          start_time: string | null
+          status: Database["public"]["Enums"]["service_request_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_id?: string | null
+          client_name_snapshot?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          gender_requirement?: Database["public"]["Enums"]["service_request_gender_req"]
+          id?: string
+          location_name?: string | null
+          notes?: string | null
+          onsite_contact_name?: string | null
+          onsite_contact_phone?: string | null
+          request_channel?: Database["public"]["Enums"]["service_request_channel"]
+          request_code: string
+          request_date?: string
+          service_address?: string | null
+          service_date: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["service_request_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_id?: string | null
+          client_name_snapshot?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          gender_requirement?: Database["public"]["Enums"]["service_request_gender_req"]
+          id?: string
+          location_name?: string | null
+          notes?: string | null
+          onsite_contact_name?: string | null
+          onsite_contact_phone?: string | null
+          request_channel?: Database["public"]["Enums"]["service_request_channel"]
+          request_code?: string
+          request_date?: string
+          service_address?: string | null
+          service_date?: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["service_request_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_assignments: {
         Row: {
           accepted_at: string | null
@@ -12095,6 +12316,31 @@ export type Database = {
         | "expired"
         | "dismissed"
         | "flagged"
+      service_request_billing_unit: "hourly" | "daily" | "flat"
+      service_request_channel:
+        | "whatsapp"
+        | "phone"
+        | "manual"
+        | "client_link"
+        | "email"
+      service_request_gender_req: "none" | "men_only" | "women_only"
+      service_request_role_type:
+        | "waiter"
+        | "captain"
+        | "kitchen_staff"
+        | "cleaner"
+        | "bartender"
+        | "other"
+      service_request_status:
+        | "new"
+        | "reviewing"
+        | "approved_for_scheduling"
+        | "converted_to_shift"
+        | "in_progress"
+        | "pending_closure_review"
+        | "ready_for_billing"
+        | "invoiced"
+        | "cancelled"
       service_zone_type: "radius" | "polygon" | "city" | "county" | "state"
       staffing_request_status:
         | "draft"
@@ -12441,6 +12687,34 @@ export const Constants = {
         "expired",
         "dismissed",
         "flagged",
+      ],
+      service_request_billing_unit: ["hourly", "daily", "flat"],
+      service_request_channel: [
+        "whatsapp",
+        "phone",
+        "manual",
+        "client_link",
+        "email",
+      ],
+      service_request_gender_req: ["none", "men_only", "women_only"],
+      service_request_role_type: [
+        "waiter",
+        "captain",
+        "kitchen_staff",
+        "cleaner",
+        "bartender",
+        "other",
+      ],
+      service_request_status: [
+        "new",
+        "reviewing",
+        "approved_for_scheduling",
+        "converted_to_shift",
+        "in_progress",
+        "pending_closure_review",
+        "ready_for_billing",
+        "invoiced",
+        "cancelled",
       ],
       service_zone_type: ["radius", "polygon", "city", "county", "state"],
       staffing_request_status: [

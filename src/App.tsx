@@ -86,6 +86,7 @@ const TaxForms1099 = lazy(() => import("./pages/admin/TaxForms1099"));
 const ImportInactiveEmployees = lazy(() => import("./pages/admin/ImportInactiveEmployees"));
 const UnpaidShiftsReport = lazy(() => import("./pages/admin/UnpaidShiftsReport"));
 const StaffingRequests = lazy(() => import("./pages/admin/StaffingRequests"));
+const ServiceRequests = lazy(() => import("./pages/admin/ServiceRequests"));
 const InvoicesPage = lazy(() => import("./pages/admin/Invoices"));
 const ServiceCategories = lazy(() => import("./pages/admin/ServiceCategories"));
 const AIWorkforce = lazy(() => import("./pages/admin/AIWorkforce"));
@@ -241,6 +242,7 @@ function App() {
                 <Route path="import-inactive" element={<CompanyRequiredGuard><ImportInactiveEmployees /></CompanyRequiredGuard>} />
                 <Route path="unpaid-shifts" element={<CompanyRequiredGuard><ModuleGate moduleKey="reports"><UnpaidShiftsReport /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="staffing-requests" element={<CompanyRequiredGuard><StaffingRequests /></CompanyRequiredGuard>} />
+                <Route path="service-requests" element={<CompanyRequiredGuard><ServiceRequests /></CompanyRequiredGuard>} />
                 <Route path="invoices" element={<CompanyRequiredGuard><InvoicesPage /></CompanyRequiredGuard>} />
                 <Route path="service-categories" element={<CompanyRequiredGuard><ServiceCategories /></CompanyRequiredGuard>} />
                 <Route path="ai-workforce" element={<CompanyRequiredGuard><AIWorkforce /></CompanyRequiredGuard>} />
