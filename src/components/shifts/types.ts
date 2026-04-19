@@ -23,6 +23,9 @@ export interface Assignment {
   shift_id: string;
   employee_id: string;
   status: string;
+  /** Optional link to a typed role slot (Waiter, Captain, etc.) when the
+   *  shift was created from a service request. Null for legacy/manual shifts. */
+  role_slot_id?: string | null;
 }
 
 export interface SelectOption { id: string; name: string; }

@@ -860,10 +860,18 @@ export default function Shifts() {
     loadData();
   };
 
-  const handleAddEmployees = async (shiftId: string, employeeIds: string[]) => {
+  const handleAddEmployees = async (
+    shiftId: string,
+    employeeIds: string[],
+    slotByEmployee?: Record<string, string | null>,
+  ) => {
     if (!selectedCompanyId) return;
     const assigns = employeeIds.map(eid => ({
-      company_id: selectedCompanyId, shift_id: shiftId, employee_id: eid, status: "pending",
+      company_id: selectedCompanyId,
+      shift_id: shiftId,
+      employee_id: eid,
+      status: "pending",
+      role_slot_id: slotByEmployee?.[eid] ?? null,
     }));
     const { error } = await supabase.from("shift_assignments").insert(assigns as any);
     if (error) { toast.error(error.message); return; }

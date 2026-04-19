@@ -38,6 +38,12 @@ import { formatShiftCode, getClientColor } from "./types";
 import { SendNotificationDialog } from "./SendNotificationDialog";
 import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
 import { ShiftAuditTrail } from "./ShiftAuditTrail";
+import { ShiftRoleSlotsTeamPanel } from "./ShiftRoleSlotsTeamPanel";
+import {
+  pickRoleSlotsForNewAssignments,
+  type ShiftRoleSlot,
+  type ActiveAssignment,
+} from "@/lib/service-requests/role-slot-utils";
 
 interface ShiftDetailDialogProps {
   shift: Shift | null;
@@ -49,7 +55,11 @@ interface ShiftDetailDialogProps {
   clients: SelectOption[];
   allShifts?: Shift[];
   canEdit: boolean;
-  onAddEmployees: (shiftId: string, employeeIds: string[]) => void;
+  onAddEmployees: (
+    shiftId: string,
+    employeeIds: string[],
+    slotByEmployee?: Record<string, string | null>,
+  ) => void;
   onRemoveAssignment: (assignmentId: string) => void;
   onEdit: (shift: Shift) => void;
   onPublish: (shift: Shift) => void;
@@ -156,6 +166,18 @@ export function ShiftDetailDialog({
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
+  // Typed role slots (only present when shift came from a service request)
+  const [roleSlots, setRoleSlots] = useState<ShiftRoleSlot[]>([]);
+  const loadRoleSlots = useCallback(async () => {
+    if (!shift) { setRoleSlots([]); return; }
+    const { data } = await supabase
+      .from("shift_role_slots" as any)
+      .select("id, shift_id, role_type, role_label, quantity, sort_order")
+      .eq("shift_id", shift.id)
+      .order("sort_order");
+    setRoleSlots((data ?? []) as unknown as ShiftRoleSlot[]);
+  }, [shift]);
+
   const loadRequests = useCallback(async () => {
     if (!shift) return;
     setLoadingRequests(true);
@@ -183,8 +205,18 @@ export function ShiftDetailDialog({
       setProcessingReqId(null);
       return;
     }
+    // Auto-pick a typed role slot if the shift has any (FIFO by sort_order)
+    const [pickedSlotId] = pickRoleSlotsForNewAssignments(
+      roleSlots,
+      shiftAssignments as unknown as ActiveAssignment[],
+      [req.employee_id],
+    );
     const { error: assignErr } = await supabase.from("shift_assignments").insert({
-      company_id: selectedCompanyId, shift_id: shift.id, employee_id: req.employee_id, status: "confirmed",
+      company_id: selectedCompanyId,
+      shift_id: shift.id,
+      employee_id: req.employee_id,
+      status: "confirmed",
+      role_slot_id: pickedSlotId ?? null,
     } as any);
     if (assignErr) { toast.error(assignErr.message); setProcessingReqId(null); return; }
     await supabase.from("shift_requests")
@@ -238,8 +270,9 @@ export function ShiftDetailDialog({
       setEditing(false);
       setTab("details");
       loadRequests();
+      loadRoleSlots();
     }
-  }, [shift, open, loadRequests]);
+  }, [shift, open, loadRequests, loadRoleSlots]);
 
   if (!shift) return null;
 
@@ -256,13 +289,26 @@ export function ShiftDetailDialog({
   const slotsNum = shift.slots ?? 1;
   const fillPercent = Math.min(100, (shiftAssignments.length / slotsNum) * 100);
 
+  /** Map [employeeId → role_slot_id|null] for the next batch of assignments,
+   *  using FIFO allocation against the current state of typed role slots. */
+  const buildSlotMapping = (employeeIds: string[]): Record<string, string | null> => {
+    const picks = pickRoleSlotsForNewAssignments(
+      roleSlots,
+      shiftAssignments as unknown as ActiveAssignment[],
+      employeeIds,
+    );
+    const map: Record<string, string | null> = {};
+    employeeIds.forEach((id, idx) => { map[id] = picks[idx] ?? null; });
+    return map;
+  };
+
   const toggleEmployee = (id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]);
   };
 
   const handleAdd = () => {
     if (selected.length > 0) {
-      onAddEmployees(shift.id, selected);
+      onAddEmployees(shift.id, selected, buildSlotMapping(selected));
       setSelected([]);
       setShowAddPanel(false);
     }
@@ -280,7 +326,7 @@ export function ShiftDetailDialog({
       toast.info("No hay empleados disponibles para asignar");
       return;
     }
-    onAddEmployees(shift.id, toAdd);
+    onAddEmployees(shift.id, toAdd, buildSlotMapping(toAdd));
     setSelected([]);
     setShowAddPanel(false);
   };
@@ -676,6 +722,15 @@ export function ShiftDetailDialog({
                   </div>
                 );
               })()}
+
+              {/* ── Service-request role plan (only for converted shifts) ── */}
+              {roleSlots.length > 0 && (
+                <ShiftRoleSlotsTeamPanel
+                  slots={roleSlots}
+                  assignments={shiftAssignments as unknown as ActiveAssignment[]}
+                  employees={employees}
+                />
+              )}
 
               {/* ── Role slots: Driver + Admin + Lead ── */}
               {(() => {
