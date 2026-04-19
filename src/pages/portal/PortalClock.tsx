@@ -4,9 +4,8 @@ import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { enUS } from "date-fns/locale";
 import {
-  Clock, LogIn, LogOut, MapPin, Timer, CalendarDays, Users,
-  AlertCircle, FileText, ArrowLeft, ShieldAlert, Camera, ScanLine,
-  CheckCircle2, XCircle, Briefcase, Navigation, ChevronRight,
+  Clock, LogIn, LogOut, MapPin, Timer, CalendarDays,
+  FileText, Camera, ScanLine, CheckCircle2, ChevronRight,
 } from "lucide-react";
 import { capturePosition, getDeviceId, distanceMeters } from "@/lib/geo-helpers";
 import { ClockPhotoCapture } from "@/components/portal/ClockPhotoCapture";
@@ -17,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { OpsStatusChip } from "@/components/operations/OpsStatusChip";
 
 interface TimeEntry {
   id: string;
