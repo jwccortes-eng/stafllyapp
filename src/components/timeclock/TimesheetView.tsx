@@ -545,6 +545,27 @@ export function TimesheetView() {
         <KpiMini icon={<AlertCircle className={cn("h-4 w-4", kpis.missingClockOut > 0 ? "text-warning" : "text-muted-foreground/60")} />} value={kpis.missingClockOut} label="Missing Out" accent={kpis.missingClockOut > 0 ? "warning" : undefined} />
       </div>
 
+      {/* Exceptions Banner — actionable, only when issues exist */}
+      {hasExceptions && (
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/40 bg-muted/20">
+            <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Excepciones a resolver</span>
+            {exceptionFilter !== "all" && (
+              <Button variant="ghost" size="sm" className="ml-auto h-6 text-[10px] px-2" onClick={() => setExceptionFilter("all")}>
+                Limpiar filtro
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 px-4 py-3">
+            <ExceptionPill active={exceptionFilter === "late"} count={exceptions.late} tone="warning" label="Late" onClick={() => setExceptionFilter(f => f === "late" ? "all" : "late")} />
+            <ExceptionPill active={exceptionFilter === "off_site"} count={exceptions.offSite} tone="critical" label="Off-site" onClick={() => setExceptionFilter(f => f === "off_site" ? "all" : "off_site")} />
+            <ExceptionPill active={exceptionFilter === "missing_out"} count={exceptions.missingOut} tone="warning" label="Missing Out" onClick={() => setExceptionFilter(f => f === "missing_out" ? "all" : "missing_out")} />
+            <ExceptionPill active={exceptionFilter === "open"} count={exceptions.open} tone="info" label="Open" onClick={() => setExceptionFilter(f => f === "open" ? "all" : "open")} />
+          </div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full sm:max-w-[220px]">
