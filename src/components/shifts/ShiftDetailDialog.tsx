@@ -944,21 +944,77 @@ export function ShiftDetailDialog({
                 </>
               )}
 
-              {/* Claimable toggle */}
-              {effectiveCanEdit && allowClaims && (
-                <div className="flex items-center justify-between rounded-lg border border-border/20 bg-muted/10 px-2.5 py-2">
-                  <div className="flex items-center gap-2">
-                    <Megaphone className="h-3 w-3 text-primary" />
-                    <p className="text-[10px] font-medium">Reclamo abierto</p>
+              {/* ── Claim / Reclamo block ── separated from "Notify assigned" */}
+              {effectiveCanEdit && allowClaims && (() => {
+                const openSlots = Math.max(0, slotsNum - shiftAssignments.length);
+                const isPublished = shift.status === "published";
+                const isDraft = shift.status === "draft";
+                const isClaimable = !!shift.claimable;
+                return (
+                  <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-2.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Megaphone className="h-3.5 w-3.5 text-primary" />
+                        <p className="text-[11px] font-semibold text-foreground">Claim / Reclamo</p>
+                      </div>
+                      <Switch
+                        checked={isClaimable}
+                        onCheckedChange={async (checked) => {
+                          if (onSave) await onSave(shift.id, { claimable: checked }, shift);
+                        }}
+                      />
+                    </div>
+
+                    {isClaimable && (
+                      <>
+                        {/* Slot + request stats */}
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <div className="rounded-lg bg-background/60 border border-border/30 px-2 py-1.5 text-center">
+                            <p className="text-[14px] font-bold tabular-nums text-foreground leading-none">{openSlots}</p>
+                            <p className="text-[9px] text-muted-foreground mt-0.5">Open slots</p>
+                          </div>
+                          <div className="rounded-lg bg-background/60 border border-border/30 px-2 py-1.5 text-center">
+                            <p className="text-[14px] font-bold tabular-nums text-warning leading-none">{pendingRequests}</p>
+                            <p className="text-[9px] text-muted-foreground mt-0.5">Pending</p>
+                          </div>
+                          <div className="rounded-lg bg-background/60 border border-border/30 px-2 py-1.5 text-center">
+                            <p className="text-[14px] font-bold tabular-nums text-foreground leading-none">
+                              {shiftAssignments.length}<span className="text-muted-foreground font-normal">/{slotsNum}</span>
+                            </p>
+                            <p className="text-[9px] text-muted-foreground mt-0.5">Filled</p>
+                          </div>
+                        </div>
+
+                        {/* Status CTA — clarify publish vs open */}
+                        {isDraft ? (
+                          <div className="flex items-start gap-1.5 rounded-lg bg-warning/10 border border-warning/30 px-2 py-1.5">
+                            <Clock className="h-3 w-3 text-warning mt-0.5 shrink-0" />
+                            <p className="text-[10px] text-warning-foreground leading-tight">
+                              Falta <strong>publicar</strong> el turno para que aparezca en el portal.
+                            </p>
+                          </div>
+                        ) : isPublished ? (
+                          <div className="flex items-start gap-1.5 rounded-lg bg-earning/10 border border-earning/30 px-2 py-1.5">
+                            <CheckCircle2 className="h-3 w-3 text-earning mt-0.5 shrink-0" />
+                            <p className="text-[10px] text-foreground/80 leading-tight">
+                              Abierto para reclamo. Visible en el portal del trabajador.
+                            </p>
+                          </div>
+                        ) : null}
+
+                        {pendingRequests > 0 && (
+                          <button
+                            onClick={() => setTab("requests")}
+                            className="w-full text-[10px] font-semibold text-primary hover:underline text-center py-1"
+                          >
+                            Revisar {pendingRequests} solicitud{pendingRequests !== 1 ? "es" : ""} →
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
-                  <Switch
-                    checked={shift.claimable}
-                    onCheckedChange={async (checked) => {
-                      if (onSave) await onSave(shift.id, { claimable: checked }, shift);
-                    }}
-                  />
-                </div>
-              )}
+                );
+              })()}
             </div>
 
           /* ─── REQUESTS TAB ─── */
