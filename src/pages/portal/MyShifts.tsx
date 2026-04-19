@@ -424,13 +424,6 @@ export default function MyShifts() {
         </div>
       )}
 
-      {filtered.length === 0 && claimable.length > 0 && activeTab !== "history" && (
-        <div className="rounded-2xl border-2 border-dashed border-primary/20 bg-primary/[0.02] p-6 text-center space-y-2">
-          <HandMetal className="h-7 w-7 text-primary mx-auto" />
-          <p className="text-sm font-bold text-foreground">Shifts available!</p>
-          <p className="text-xs text-muted-foreground">Request the open shifts above.</p>
-        </div>
-      )}
 
       {/* Shift detail drawer */}
       <PortalShiftDetailDrawer
