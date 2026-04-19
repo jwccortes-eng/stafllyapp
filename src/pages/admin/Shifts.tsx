@@ -23,9 +23,11 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
-import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, Copy, Settings2 } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Users, Building2, Calendar, CalendarIcon, AlertTriangle, CheckCircle2, Clock, Lock, Unlock, Send, Upload, MoreHorizontal, ScanEye, MessageSquare, Hash, CreditCard, FileText, Car, UserX, Map, Copy, Settings2, CalendarRange } from "lucide-react";
 import { formatDisplayText } from "@/lib/format-helpers";
-// PageHeader not used — custom header with KPI cards
+import { PageHeader } from "@/components/ui/page-header";
+import { OpsKpiStrip, type OpsKpiItem } from "@/components/operations/OpsKpiStrip";
+import { OpsToolbar } from "@/components/operations/OpsToolbar";
 import { format, startOfWeek, addDays, addMonths, startOfMonth, endOfMonth, subDays, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -1087,16 +1089,48 @@ export default function Shifts() {
     setCreateOpen(true);
   };
 
+  // ── Operations KPI strip (replaces legacy 4-card grid) ──
+  const opsKpis: OpsKpiItem[] = [
+    {
+      key: "today",
+      label: "Turnos hoy",
+      value: loading ? "—" : kpiMetrics.todayShifts,
+      tone: "primary",
+      icon: <CalendarDays className="h-3.5 w-3.5" />,
+    },
+    {
+      key: "workers",
+      label: "Trabajadores",
+      value: loading ? "—" : kpiMetrics.uniqueWorkers,
+      tone: "success",
+      icon: <Users className="h-3.5 w-3.5" />,
+    },
+    {
+      key: "missing",
+      label: "Faltantes",
+      value: loading ? "—" : kpiMetrics.missingWorkers,
+      tone: kpiMetrics.missingWorkers > 0 ? "critical" : "success",
+      icon: <UserX className="h-3.5 w-3.5" />,
+      hint: kpiMetrics.missingWorkers > 0 ? "sin cubrir" : "cubierto",
+    },
+    {
+      key: "hours",
+      label: "Horas hoy",
+      value: loading ? "—" : kpiMetrics.totalHours,
+      tone: "info",
+      icon: <Clock className="h-3.5 w-3.5" />,
+    },
+  ];
+
   return (
     <div className="space-y-4">
-      {/* ── HEADER: Title + KPI Cards ── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold font-heading tracking-tight text-foreground">Turnos</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Programa y gestiona turnos de trabajo</p>
-          </div>
-          <div className="flex items-center gap-2">
+      {/* ── PAGE HEADER (unified with rest of app) ── */}
+      <PageHeader
+        title="Turnos"
+        subtitle="Centro operativo de programación y cobertura"
+        icon={CalendarRange}
+        rightSlot={
+          <>
             {canEdit && (
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSettingsOpen(true)} title="Shift settings">
                 <Settings2 className="h-4 w-4 text-muted-foreground" />
@@ -1122,81 +1156,66 @@ export default function Shifts() {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+          </>
+        }
+      />
+
+      {/* ── OPS KPI STRIP ── */}
+      <OpsKpiStrip items={opsKpis} />
+
+      {/* ── OPS TOOLBAR: view switcher · date nav · today ── */}
+      <OpsToolbar
+        sticky={false}
+        left={
+          <div className="flex items-center gap-0.5 bg-secondary rounded-xl p-1">
+            {([
+              { key: "day" as ViewMode, icon: Calendar, label: "Día" },
+              { key: "week" as ViewMode, icon: LayoutGrid, label: "Semana" },
+              { key: "month" as ViewMode, icon: CalendarDays, label: "Mes" },
+              { key: "employee" as ViewMode, icon: Users, label: "Equipo" },
+              { key: "client" as ViewMode, icon: Building2, label: "Clientes" },
+            ]).map(({ key, icon: Icon, label }) => (
+              <button
+                key={key}
+                onClick={() => setViewMode(key)}
+                className={cn(
+                  "flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-all duration-150",
+                  viewMode === key
+                    ? "bg-card shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" /> <span className="hidden md:inline">{label}</span>
+              </button>
+            ))}
           </div>
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { icon: CalendarDays, value: loading ? "—" : kpiMetrics.todayShifts, label: "Turnos hoy", color: "text-primary", bg: "bg-primary/10" },
-            { icon: Users, value: loading ? "—" : kpiMetrics.uniqueWorkers, label: "Trabajadores", color: "text-earning", bg: "bg-earning/10" },
-            { icon: UserX, value: loading ? "—" : kpiMetrics.missingWorkers, label: "Faltantes", color: kpiMetrics.missingWorkers > 0 ? "text-destructive" : "text-earning", bg: kpiMetrics.missingWorkers > 0 ? "bg-destructive/10" : "bg-earning/10" },
-            { icon: Clock, value: loading ? "—" : kpiMetrics.totalHours, label: "Horas hoy", color: "text-status-completed", bg: "bg-status-completed/10" },
-          ].map(({ icon: Icon, value, label, color, bg }) => (
-            <div key={label} className="stat-card p-3.5">
-              <div className="flex items-center gap-2.5">
-                <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center", bg)}>
-                  <Icon className={cn("h-4 w-4", color)} />
-                </div>
-                <div>
-                  <p className={cn("text-lg font-bold tabular-nums leading-none", kpiMetrics.missingWorkers > 0 && label === "Faltantes" ? "text-destructive" : "text-foreground")}>{value}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── TOOLBAR: View switcher + Navigation + Actions ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl bg-card border border-border/40 shadow-xs px-4 py-3">
-        {/* View tabs */}
-        <div className="flex items-center gap-0.5 bg-secondary rounded-xl p-1">
-          {([
-            { key: "day" as ViewMode, icon: Calendar, label: "Día" },
-            { key: "week" as ViewMode, icon: LayoutGrid, label: "Semana" },
-            { key: "month" as ViewMode, icon: CalendarDays, label: "Mes" },
-            { key: "employee" as ViewMode, icon: Users, label: "Equipo" },
-            { key: "client" as ViewMode, icon: Building2, label: "Clientes" },
-          ]).map(({ key, icon: Icon, label }) => (
+        }
+        center={
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateBack}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
             <button
-              key={key}
-              onClick={() => setViewMode(key)}
-              className={cn(
-                "flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all duration-200",
-                viewMode === key
-                  ? "bg-card shadow-sm text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              onClick={navigateToday}
+              className="text-[13px] font-semibold capitalize min-w-[160px] text-center px-3 py-1 rounded-xl hover:bg-accent/50 transition-colors"
             >
-              <Icon className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{label}</span>
+              {navLabel}
             </button>
-          ))}
-        </div>
-
-        {/* Date navigation */}
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateBack}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <button
-            onClick={navigateToday}
-            className="text-[13px] font-semibold capitalize min-w-[160px] text-center px-3 py-1.5 rounded-xl hover:bg-accent/50 transition-colors"
-          >
-            {navLabel}
-          </button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateForward}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <div className="w-px h-5 bg-border/40 mx-1" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={navigateForward}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        }
+        right={
           <button
             onClick={navigateToday}
             className="text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/15 px-3 py-1.5 rounded-xl transition-colors"
           >
             Hoy
           </button>
-        </div>
-      </div>
+        }
+      />
+
 
       {/* ── FILTERS + BULK ACTIONS ── */}
       <div className="flex flex-col sm:flex-row gap-2">
