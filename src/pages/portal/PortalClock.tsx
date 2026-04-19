@@ -372,37 +372,47 @@ export default function PortalClock() {
   const hasQrShifts = allowedMethods.includes("qr") && Object.values(shiftQrModes).some(m => m !== "disabled" && m !== "");
   const allowManual = allowedMethods.includes("manual");
   const allowGps = allowedMethods.includes("gps");
+  const activeShift = activeEntry ? todayShifts.find(s => s.id === activeEntry.shift_id) : null;
+
+  // Resolve the single shift currently in focus (active > selected > only-one-today).
+  const focusShift: TodayShift | null =
+    activeShift ?? selectedShift ?? (todayShifts.length === 1 ? todayShifts[0] : null);
+
+  // Other shifts of the day (excluding the focused one and already-clocked entries) — feed Zone 2.
+  const otherShifts = todayShifts.filter(s => s.id !== focusShift?.id);
+  const closedEntries = todayEntries.filter(e => e.clock_out);
+  const hasZone2Content = otherShifts.length > 0 || closedEntries.length > 0;
 
   return (
-    <div className="space-y-3 animate-fade-in pb-24">
-      {/* ── Missing photo gate ── */}
+    <div className="animate-fade-in pb-24">
+      {/* ─── Profile photo gate — high-priority blocker ─── */}
       {!hasProfilePhoto && (
         <button
           onClick={() => navigate("/portal/profile")}
-          className="w-full rounded-xl border bg-card p-3 flex items-center gap-3 transition-all hover:bg-muted/30 active:scale-[0.99] relative overflow-hidden"
+          className="w-full mb-3 rounded-xl border bg-card p-3 flex items-center gap-3 transition-all hover:bg-muted/30 active:scale-[0.99] relative overflow-hidden"
         >
-          <span className="absolute left-0 top-0 bottom-0 w-[1.5px] bg-destructive" />
-          <div className="h-8 w-8 rounded-lg bg-destructive/[0.08] flex items-center justify-center shrink-0">
+          <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-destructive" />
+          <div className="h-8 w-8 rounded-lg bg-destructive/[0.08] flex items-center justify-center shrink-0 ml-1">
             <Camera className="h-4 w-4 text-destructive" />
           </div>
           <div className="text-left flex-1 min-w-0">
-            <p className="text-[12px] font-semibold text-foreground">Profile photo required</p>
-            <p className="text-[10.5px] text-muted-foreground mt-0.5">Tap to upload before clocking in</p>
+            <p className="text-[12.5px] font-semibold text-foreground">Profile photo required</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Tap to upload before clocking in</p>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
         </button>
       )}
 
-      {/* ── Success State ── */}
+      {/* ─── Success toast inline — auto-dismiss ─── */}
       {successState && (
-        <div className="rounded-xl border bg-card p-4 flex items-center gap-3 animate-fade-in relative overflow-hidden">
+        <div className="mb-3 rounded-xl border bg-card p-3 flex items-center gap-3 animate-fade-in relative overflow-hidden">
           <span className={cn(
-            "absolute left-0 top-0 bottom-0 w-[1.5px]",
-            successState.type === "in" ? "bg-earning" : "bg-primary"
+            "absolute left-0 top-0 bottom-0 w-[2px]",
+            successState.type === "in" ? "bg-earning" : "bg-primary",
           )} />
           <div className={cn(
-            "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ml-1",
-            successState.type === "in" ? "bg-earning/[0.08] text-earning" : "bg-primary/[0.08] text-primary"
+            "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ml-1",
+            successState.type === "in" ? "bg-earning/[0.08] text-earning" : "bg-primary/[0.08] text-primary",
           )}>
             <CheckCircle2 className="h-4 w-4" />
           </div>
@@ -417,168 +427,222 @@ export default function PortalClock() {
         </div>
       )}
 
-      {/* ── Hero clock ── */}
-      <div className="text-center pt-1 pb-1">
-        <p className="text-[42px] leading-none font-semibold font-mono tracking-tight tabular-nums text-foreground">
-          {format(now, "HH:mm")}
-          <span className="text-[18px] text-muted-foreground/40 ml-1 align-top">{format(now, "ss")}</span>
-        </p>
-        <p className="text-[11px] text-muted-foreground/70 capitalize mt-1.5 tracking-wide">
-          {format(now, "EEEE, MMMM d", { locale: enUS })}
-        </p>
-      </div>
-
-      {/* ── Active session ── */}
-      {isClockedIn && (
-        <div className="rounded-xl border bg-card p-4 relative overflow-hidden">
-          <span className="absolute left-0 top-0 bottom-0 w-[1.5px] bg-earning" />
-          <div className="flex items-center justify-between gap-3 mb-3 pl-1">
+      {/* ════════════════════════════════════════════════
+           ZONE 1 — Primary action
+           One mission per screen: clock in or clock out.
+           ════════════════════════════════════════════════ */}
+      <section
+        className={cn(
+          "rounded-2xl border overflow-hidden",
+          isClockedIn
+            ? "bg-card border-earning/30 shadow-[0_4px_20px_-8px_hsl(var(--earning)/0.18)]"
+            : focusShift
+            ? "bg-card border-primary/25"
+            : "bg-card border-border/40",
+        )}
+      >
+        {/* ── State header — single source of operational status ── */}
+        {isClockedIn ? (
+          <div className="px-4 pt-3.5 pb-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-earning opacity-60" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-earning" />
               </span>
-              <span className="text-[10.5px] font-semibold uppercase tracking-widest text-earning">On shift</span>
+              <span className="text-[10.5px] font-bold uppercase tracking-widest text-earning">On shift</span>
             </div>
-            <p className="text-[10.5px] text-muted-foreground tabular-nums">
+            <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
               Started {format(new Date(activeEntry!.clock_in), "HH:mm")}
             </p>
           </div>
-          <p className="text-[34px] leading-none font-semibold font-mono tabular-nums text-foreground text-center py-1">
-            {getElapsed()}
-          </p>
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 text-center mt-2">
-            Elapsed
-          </p>
-        </div>
-      )}
+        ) : (
+          <div className="px-4 pt-3.5 pb-1 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/55">
+              {focusShift ? "Ready to clock in" : "No shift selected"}
+            </p>
+            <p className="text-[10.5px] text-muted-foreground/70 tabular-nums">
+              {format(now, "HH:mm:ss")}
+            </p>
+          </div>
+        )}
 
-      {/* ── Shift selection ── */}
-      {!isClockedIn && (
-        <>
-          {todayShifts.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1">
-                {todayShifts.length === 1 ? "Today's shift" : "Select shift"}
+        {/* ── Hero center — timer (if clocked in) or shift identity ── */}
+        <div className="px-4 pt-1 pb-3 text-center">
+          {isClockedIn ? (
+            <>
+              <p className="text-[44px] leading-none font-bold font-mono tabular-nums text-foreground">
+                {getElapsed()}
               </p>
-              <div className="space-y-1.5">
-                {todayShifts.map(s => {
-                  const isSelected = selectedShift?.id === s.id;
-                  const alreadyClockedShift = todayEntries.some(e => e.shift_id === s.id);
-                  const timeCheck = isClockInAllowed(s);
-                  const railTone = alreadyClockedShift
-                    ? "bg-earning/60"
-                    : isSelected
-                      ? "bg-primary"
-                      : !timeCheck.allowed
-                        ? "bg-warning/50"
-                        : "bg-border";
-                  return (
-                    <button
-                      key={s.id}
-                      disabled={alreadyClockedShift}
-                      onClick={() => setSelectedShift(isSelected ? null : s)}
-                      className={cn(
-                        "w-full rounded-xl border bg-card p-3 text-left transition-all min-h-[60px] relative overflow-hidden",
-                        "hover:bg-muted/20 hover:-translate-y-[0.5px]",
-                        isSelected && "ring-1 ring-primary/30 border-primary/40",
-                        alreadyClockedShift && "opacity-50 cursor-not-allowed hover:translate-y-0 hover:bg-card",
-                      )}
-                    >
-                      <span className={cn("absolute left-0 top-0 bottom-0 w-[1.5px]", railTone)} />
-                      <div className="pl-1.5">
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <span className="text-[13px] font-semibold truncate flex-1 text-foreground">
-                            {s.title}
-                          </span>
-                          {alreadyClockedShift && <OpsStatusChip label="Done" tone="success" size="sm" />}
-                          {!alreadyClockedShift && !timeCheck.allowed && (
-                            <OpsStatusChip label="Not yet" tone="warning" size="sm" />
-                          )}
-                          {!alreadyClockedShift && timeCheck.allowed && isSelected && (
-                            <OpsStatusChip label="Ready" tone="primary" size="sm" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 text-[10.5px] text-muted-foreground">
-                          <span className="flex items-center gap-1 font-medium tabular-nums">
-                            <Clock className="h-3 w-3 opacity-60" />
-                            {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
-                          </span>
-                          {s.location_name && (
-                            <span className="flex items-center gap-1 truncate min-w-0">
-                              <MapPin className="h-3 w-3 opacity-60 shrink-0" />
-                              <span className="truncate">{s.location_name}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 mt-2 font-semibold">
+                Elapsed
+              </p>
+            </>
+          ) : focusShift ? (
+            <>
+              <p className="text-[16px] font-bold text-foreground leading-tight line-clamp-2">
+                {focusShift.title}
+              </p>
+              <div className="flex items-center justify-center gap-1.5 mt-2 text-[12px] text-muted-foreground/85">
+                <Clock className="h-3 w-3 opacity-60" />
+                <span className="tabular-nums font-medium">
+                  {focusShift.start_time.slice(0, 5)}–{focusShift.end_time.slice(0, 5)}
+                </span>
+                {focusShift.location_name && (
+                  <>
+                    <span className="text-muted-foreground/30">·</span>
+                    <span className="truncate max-w-[140px]">{focusShift.location_name}</span>
+                  </>
+                )}
               </div>
-            </div>
+            </>
           ) : (
-            <div className="rounded-xl border bg-card p-6 flex flex-col items-center gap-2 text-center">
-              <div className="h-10 w-10 rounded-xl bg-muted/40 flex items-center justify-center">
-                <CalendarDays className="h-5 w-5 text-muted-foreground/50" />
-              </div>
-              <p className="text-[13px] font-semibold text-foreground mt-1">
-                {hasDailyOnlyShifts ? "Daily-pay shifts" : "No shifts today"}
+            <>
+              <p className="text-[42px] leading-none font-semibold font-mono tabular-nums text-foreground">
+                {format(now, "HH:mm")}
               </p>
-              <p className="text-[11px] text-muted-foreground/70 max-w-[260px] leading-relaxed">
+              <p className="text-[11px] text-muted-foreground/65 capitalize mt-2">
+                {format(now, "EEEE, MMMM d", { locale: enUS })}
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* ── Inline blocker — only when relevant ── */}
+        {!isClockedIn && clockInBlocked && focusShift && (
+          <div className="mx-4 mb-3 rounded-lg bg-warning/[0.06] border border-warning/15 px-3 py-2 flex items-start gap-2">
+            <Clock className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+            <p className="text-[11px] text-foreground/85 font-medium leading-relaxed">{clockInBlocked}</p>
+          </div>
+        )}
+
+        {/* ── Primary CTA — single dominant action ── */}
+        <div className="px-4 pb-4">
+          {isClockedIn ? (
+            <Button
+              onClick={initiateClockOut}
+              disabled={acting}
+              className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-md shadow-destructive/15"
+            >
+              {acting ? (
+                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <><LogOut className="h-4 w-4" /> Clock Out</>
+              )}
+            </Button>
+          ) : focusShift ? (
+            <Button
+              onClick={initiateClockIn}
+              disabled={acting || !companyId || !!clockInBlocked || !hasProfilePhoto}
+              className="w-full h-14 rounded-xl text-[15px] font-bold gap-2.5 transition-all active:scale-[0.98] bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/15 disabled:opacity-40 disabled:shadow-none"
+            >
+              {acting ? (
+                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <><LogIn className="h-4 w-4" /> Clock In</>
+              )}
+            </Button>
+          ) : (
+            // Empty-state CTA: no shift, sober informational block (no fake CTA).
+            <div className="rounded-xl bg-muted/30 border border-border/30 px-4 py-3.5 flex flex-col items-center text-center gap-1">
+              <CalendarDays className="h-5 w-5 text-muted-foreground/45" />
+              <p className="text-[12.5px] font-semibold text-foreground">
+                {hasDailyOnlyShifts ? "Daily-pay shifts today" : "No shifts to clock"}
+              </p>
+              <p className="text-[10.5px] text-muted-foreground/65 max-w-[260px] leading-relaxed">
                 {hasDailyOnlyShifts
                   ? "Today's shifts don't require clocking in. Pay is calculated automatically."
-                  : "No assigned shifts. Contact your supervisor if one is missing."}
+                  : "Contact your supervisor if a shift is missing."}
               </p>
             </div>
           )}
-        </>
-      )}
-
-      {/* ── Clock-in blocked ── */}
-      {!isClockedIn && clockInBlocked && selectedShift && (
-        <div className="rounded-xl border bg-card p-3 flex items-start gap-2.5 relative overflow-hidden">
-          <span className="absolute left-0 top-0 bottom-0 w-[1.5px] bg-warning" />
-          <Clock className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5 ml-1" />
-          <p className="text-[11px] text-foreground/80 font-medium leading-relaxed">{clockInBlocked}</p>
         </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════
+           ZONE 2 — Today
+           Secondary, scannable. Other shifts + closed entries + alt methods.
+           ════════════════════════════════════════════════ */}
+      {hasZone2Content && (
+        <section className="mt-5">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/55">
+              Today
+            </h2>
+            <p className="text-[10.5px] text-muted-foreground/50 tabular-nums">
+              {totalHoursToday()} · {todayEntries.length} entr{todayEntries.length === 1 ? "y" : "ies"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border/40 bg-card overflow-hidden divide-y divide-border/30">
+            {/* Other selectable shifts */}
+            {otherShifts.map(s => {
+              const alreadyClocked = todayEntries.some(e => e.shift_id === s.id);
+              const timeCheck = isClockInAllowed(s);
+              return (
+                <button
+                  key={s.id}
+                  disabled={alreadyClocked || isClockedIn}
+                  onClick={() => setSelectedShift(s)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
+                    !alreadyClocked && !isClockedIn && "hover:bg-muted/30 active:bg-muted/50",
+                    (alreadyClocked || isClockedIn) && "opacity-55 cursor-not-allowed",
+                  )}
+                >
+                  <div className="h-8 w-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground/70" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-foreground truncate">{s.title}</p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-0.5 tabular-nums">
+                      {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
+                      {s.location_name && <> · <span className="text-muted-foreground/55">{s.location_name}</span></>}
+                    </p>
+                  </div>
+                  {alreadyClocked ? (
+                    <OpsStatusChip label="Done" tone="success" size="sm" />
+                  ) : !timeCheck.allowed ? (
+                    <OpsStatusChip label="Not yet" tone="warning" size="sm" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Closed entries — minimal rows */}
+            {closedEntries.map(entry => (
+              <div
+                key={entry.id}
+                className="flex items-center gap-3 px-4 py-3"
+              >
+                <div className="h-8 w-8 rounded-lg bg-earning/[0.08] flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-earning" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-foreground tabular-nums font-mono">
+                    {format(new Date(entry.clock_in), "HH:mm")}
+                    <span className="text-muted-foreground/40 mx-1.5 font-sans">→</span>
+                    {entry.clock_out ? format(new Date(entry.clock_out), "HH:mm") : "—"}
+                  </p>
+                  <p className="text-[10.5px] text-muted-foreground/65 mt-0.5 tabular-nums">
+                    {getDuration(entry)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
-      {/* ── Single primary CTA ── */}
-      {isClockedIn ? (
-        <Button
-          onClick={initiateClockOut}
-          disabled={acting}
-          className="w-full h-13 rounded-xl text-[14px] font-semibold gap-2.5 transition-all active:scale-[0.98] bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm"
-        >
-          {acting ? (
-            <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <><LogOut className="h-4 w-4" /> Clock Out</>
-          )}
-        </Button>
-      ) : (
-        <Button
-          onClick={initiateClockIn}
-          disabled={acting || !companyId || !selectedShift || !!clockInBlocked || !hasProfilePhoto}
-          className="w-full h-13 rounded-xl text-[14px] font-semibold gap-2.5 transition-all active:scale-[0.98] bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm disabled:opacity-40"
-        >
-          {acting ? (
-            <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <><LogIn className="h-4 w-4" /> Clock In</>
-          )}
-        </Button>
-      )}
-
-      {/* ── Secondary methods ── */}
+      {/* ─── Alt methods — minimal, low-emphasis row ─── */}
       {(hasQrShifts || (!isClockedIn && allowManual)) && (
-        <div className="flex items-center gap-2">
+        <div className="mt-3 flex items-center gap-2">
           {hasQrShifts && (
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setQrScannerOpen(true)}
-              className="flex-1 h-10 rounded-xl text-[11.5px] font-medium gap-2 border-border/60 hover:bg-muted/40"
+              className="flex-1 h-10 rounded-xl text-[12px] font-medium text-muted-foreground gap-1.5 hover:bg-muted/40 hover:text-foreground"
             >
               <ScanLine className="h-3.5 w-3.5" />
               Scan QR
@@ -589,8 +653,8 @@ export default function PortalClock() {
               variant="ghost"
               onClick={() => setRequestOpen(true)}
               className={cn(
-                "h-10 rounded-xl text-[11.5px] font-medium text-muted-foreground gap-1.5 hover:bg-muted/40",
-                hasQrShifts ? "flex-1" : "w-full"
+                "h-10 rounded-xl text-[12px] font-medium text-muted-foreground gap-1.5 hover:bg-muted/40 hover:text-foreground",
+                hasQrShifts ? "flex-1" : "w-full",
               )}
             >
               <FileText className="h-3.5 w-3.5" />
@@ -600,77 +664,9 @@ export default function PortalClock() {
         </div>
       )}
 
-      {/* ── Today summary ── */}
-      {(todayEntries.length > 0 || isClockedIn) && (
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          <div className="rounded-xl border bg-card p-3">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <div className="h-5 w-5 rounded-md bg-primary/[0.08] flex items-center justify-center">
-                <Timer className="h-3 w-3 text-primary" />
-              </div>
-              <span className="text-[9.5px] font-semibold uppercase tracking-widest text-muted-foreground/70">Hours</span>
-            </div>
-            <p className="text-[18px] font-semibold text-foreground tabular-nums font-mono leading-none">{totalHoursToday()}</p>
-          </div>
-          <div className="rounded-xl border bg-card p-3">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <div className="h-5 w-5 rounded-md bg-info/[0.08] flex items-center justify-center">
-                <CalendarDays className="h-3 w-3 text-info" />
-              </div>
-              <span className="text-[9.5px] font-semibold uppercase tracking-widest text-muted-foreground/70">Entries</span>
-            </div>
-            <p className="text-[18px] font-semibold text-foreground tabular-nums font-mono leading-none">{todayEntries.length}</p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Today's history ── */}
-      {todayEntries.length > 0 && (
-        <div className="space-y-1.5 pt-1">
-          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1">
-            Today's history
-          </h3>
-          {todayEntries.map((entry) => {
-            const isActive = !entry.clock_out;
-            return (
-              <div
-                key={entry.id}
-                className="rounded-xl border bg-card p-3 flex items-center gap-3 relative overflow-hidden transition-all hover:bg-muted/20"
-              >
-                <span className={cn(
-                  "absolute left-0 top-0 bottom-0 w-[1.5px]",
-                  isActive ? "bg-earning" : "bg-border"
-                )} />
-                <div className={cn(
-                  "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ml-1",
-                  isActive ? "bg-earning/[0.08] text-earning" : "bg-muted/60 text-muted-foreground"
-                )}>
-                  <Clock className="h-3.5 w-3.5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-semibold tabular-nums font-mono text-foreground">
-                      {format(new Date(entry.clock_in), "HH:mm")}
-                    </span>
-                    <span className="text-muted-foreground/30 text-[11px]">→</span>
-                    <span className="text-[13px] font-semibold tabular-nums font-mono text-foreground">
-                      {entry.clock_out ? format(new Date(entry.clock_out), "HH:mm") : "—"}
-                    </span>
-                  </div>
-                  {!isActive && (
-                    <p className="text-[10.5px] text-muted-foreground mt-0.5 tabular-nums">{getDuration(entry)}</p>
-                  )}
-                </div>
-                {isActive && <OpsStatusChip label="Live" tone="success" size="sm" pulse />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Manual time request dialog */}
+      {/* ─── Manual time request dialog ─── */}
       <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
@@ -680,7 +676,7 @@ export default function PortalClock() {
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">Describe what hours you worked and why you couldn't clock in.</p>
             <Textarea value={requestMessage} onChange={e => setRequestMessage(e.target.value)}
-              placeholder="E.g.: I worked from 8:00 to 17:00 but couldn't clock in because..." rows={4} className="text-sm resize-none" />
+              placeholder="E.g.: I worked from 8:00 to 17:00 but couldn't clock in because..." rows={4} className="text-sm resize-none rounded-xl" />
             <Button onClick={handleSendTimeRequest} disabled={sendingRequest || !requestMessage.trim()} className="w-full h-11 text-sm font-bold rounded-xl">
               {sendingRequest ? <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" /> : null}
               Send request
