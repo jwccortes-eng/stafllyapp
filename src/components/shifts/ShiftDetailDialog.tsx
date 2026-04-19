@@ -205,8 +205,18 @@ export function ShiftDetailDialog({
       setProcessingReqId(null);
       return;
     }
+    // Auto-pick a typed role slot if the shift has any (FIFO by sort_order)
+    const [pickedSlotId] = pickRoleSlotsForNewAssignments(
+      roleSlots,
+      shiftAssignments as unknown as ActiveAssignment[],
+      [req.employee_id],
+    );
     const { error: assignErr } = await supabase.from("shift_assignments").insert({
-      company_id: selectedCompanyId, shift_id: shift.id, employee_id: req.employee_id, status: "confirmed",
+      company_id: selectedCompanyId,
+      shift_id: shift.id,
+      employee_id: req.employee_id,
+      status: "confirmed",
+      role_slot_id: pickedSlotId ?? null,
     } as any);
     if (assignErr) { toast.error(assignErr.message); setProcessingReqId(null); return; }
     await supabase.from("shift_requests")
