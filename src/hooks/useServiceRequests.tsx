@@ -217,13 +217,18 @@ export function useConvertRequestToShift() {
     }) => {
       if (!selectedCompanyId) throw new Error("No company selected");
 
-      const { data: detail, error: detErr } = await supabase
-        .from("service_requests" as any)
-        .select("*")
-        .eq("id", input.request_id)
-        .single();
+      const [{ data: detail, error: detErr }, { data: items, error: itErr }] = await Promise.all([
+        supabase.from("service_requests" as any).select("*").eq("id", input.request_id).single(),
+        supabase
+          .from("service_request_items" as any)
+          .select("*")
+          .eq("service_request_id", input.request_id)
+          .order("sort_order"),
+      ]);
       if (detErr) throw detErr;
+      if (itErr) throw itErr;
       const req = detail as any;
+      const itemList = (items ?? []) as unknown as ServiceRequestItem[];
 
       // Create scheduled_shift
       const { data: shift, error: sErr } = await supabase
@@ -243,15 +248,47 @@ export function useConvertRequestToShift() {
         .select("id")
         .single();
       if (sErr) throw sErr;
+      const shiftId = (shift as any).id as string;
 
-      // Link
-      const { error: linkErr } = await supabase.from("service_request_shift_links" as any).insert({
-        company_id: selectedCompanyId,
-        service_request_id: input.request_id,
-        shift_id: (shift as any).id,
-        linked_by: user?.id ?? null,
-      } as any);
-      if (linkErr) throw linkErr;
+      // Create real role slots from items (preserves staffing plan per role)
+      if (itemList.length > 0) {
+        const { error: slotsErr } = await supabase.from("shift_role_slots" as any).insert(
+          itemList.map((it, idx) => ({
+            company_id: selectedCompanyId,
+            shift_id: shiftId,
+            role_type: it.role_type,
+            role_label: it.role_label ?? null,
+            quantity: it.quantity_requested,
+            service_request_id: input.request_id,
+            service_request_item_id: it.id,
+            notes: it.notes ?? null,
+            sort_order: idx,
+          })) as any
+        );
+        if (slotsErr) throw slotsErr;
+      }
+
+      // Link request <-> shift (with optional per-item links so audit trail keeps the role context)
+      if (itemList.length > 0) {
+        const { error: linkErr } = await supabase.from("service_request_shift_links" as any).insert(
+          itemList.map(it => ({
+            company_id: selectedCompanyId,
+            service_request_id: input.request_id,
+            shift_id: shiftId,
+            service_request_item_id: it.id,
+            linked_by: user?.id ?? null,
+          })) as any
+        );
+        if (linkErr) throw linkErr;
+      } else {
+        const { error: linkErr } = await supabase.from("service_request_shift_links" as any).insert({
+          company_id: selectedCompanyId,
+          service_request_id: input.request_id,
+          shift_id: shiftId,
+          linked_by: user?.id ?? null,
+        } as any);
+        if (linkErr) throw linkErr;
+      }
 
       // Move status forward
       await supabase
@@ -259,17 +296,47 @@ export function useConvertRequestToShift() {
         .update({ status: "converted_to_shift" as any, updated_by: user?.id ?? null } as any)
         .eq("id", input.request_id);
 
-      return (shift as any).id as string;
+      return shiftId;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [REQUESTS_KEY] });
-      toast.success("Shift created and linked");
+      toast.success("Shift created with role slots");
     },
     onError: (e: any) => toast.error(e.message ?? "Could not convert to shift"),
   });
 }
 
-/** Fulfillment comparison: requested vs scheduled vs accepted vs worked vs payable per role */
+/** Returns the role slots configured for a given shift. */
+export function useShiftRoleSlots(shiftId: string | null) {
+  return useQuery({
+    queryKey: ["shift-role-slots", shiftId],
+    queryFn: async () => {
+      if (!shiftId) return [];
+      const { data, error } = await supabase
+        .from("shift_role_slots" as any)
+        .select("*")
+        .eq("shift_id", shiftId)
+        .order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    enabled: !!shiftId,
+  });
+}
+
+/**
+ * REAL per-role fulfillment.
+ * - requested: from service_request_items (quantity_requested)
+ * - scheduled: count of shift_assignments tied to that role's slot (status != rejected/removed)
+ * - accepted:  scheduled where response_status = 'accepted'
+ * - worked:    distinct employees with a time_entry that has clock_in & clock_out (status != rejected),
+ *              attributed to the role via the assignment's role_slot_id
+ * - payable:   hourly  -> distinct employees with approved time_entries (clock_out set)
+ *              daily   -> distinct (employee, workday) covered by a daily-pay shift, attributed by role slot
+ *
+ * If a request has shifts linked WITHOUT role_slots (legacy convert), we fall back to "—" for that role's
+ * scheduled/accepted/worked/payable so admins clearly see "no per-role tracking" instead of a fake number.
+ */
 export function useRequestFulfillment(requestId: string | null) {
   const { selectedCompanyId } = useCompany();
 
@@ -291,59 +358,121 @@ export function useRequestFulfillment(requestId: string | null) {
       ]);
 
       const itemList = (items ?? []) as unknown as ServiceRequestItem[];
-      const shiftIds = ((links ?? []) as any[]).map((l: any) => l.shift_id);
+      const shiftIds = Array.from(new Set(((links ?? []) as any[]).map(l => l.shift_id)));
 
-      // Aggregate scheduled/accepted/worked across all linked shifts
-      let scheduledTotal = 0;
-      let acceptedTotal = 0;
-      let workedTotal = 0;
-      let payableTotal = 0;
-
-      if (shiftIds.length > 0) {
-        const [{ data: assigns }, { data: entries }] = await Promise.all([
-          supabase
-            .from("shift_assignments")
-            .select("employee_id, status, response_status")
-            .in("shift_id", shiftIds)
-            .neq("status", "removed"),
-          supabase
-            .from("time_entries")
-            .select("employee_id, clock_in, clock_out, status")
-            .in("shift_id", shiftIds)
-            .neq("status", "rejected"),
-        ]);
-
-        const all = (assigns ?? []) as any[];
-        scheduledTotal = all.filter(a => a.status !== "rejected").length;
-        acceptedTotal = all.filter(a => a.response_status === "accepted").length;
-
-        const validEntries = ((entries ?? []) as any[]).filter(e => e.clock_in && e.clock_out);
-        workedTotal = new Set(validEntries.map(e => e.employee_id)).size;
-        payableTotal = ((entries ?? []) as any[]).filter(e => e.status === "approved" && e.clock_out).length;
-        // dedupe payable by employee
-        payableTotal = new Set(
-          ((entries ?? []) as any[])
-            .filter(e => e.status === "approved" && e.clock_out)
-            .map(e => e.employee_id)
-        ).size;
+      if (itemList.length === 0) return [];
+      if (shiftIds.length === 0) {
+        return itemList.map(it => ({
+          role_type: it.role_type,
+          role_label: it.role_label || ROLE_LABELS[it.role_type],
+          requested: it.quantity_requested,
+          scheduled: 0,
+          accepted: 0,
+          worked: 0,
+          payable: 0,
+        }));
       }
 
-      // Distribute totals proportionally across role lines (operational view by role).
-      // For MVP we group all roles into a single comparison; per-role breakdown
-      // requires per-shift role mapping, which we don't have yet. We still expose
-      // each requested role line so admins can see the asks.
-      const totalRequested = itemList.reduce((s, it) => s + (it.quantity_requested ?? 0), 0) || 1;
+      // Pull all relevant data in parallel.
+      const [{ data: slots }, { data: assigns }, { data: entries }, { data: shifts }] = await Promise.all([
+        supabase
+          .from("shift_role_slots" as any)
+          .select("id, shift_id, role_type, service_request_item_id")
+          .in("shift_id", shiftIds),
+        supabase
+          .from("shift_assignments")
+          .select("id, shift_id, employee_id, status, response_status, role_slot_id")
+          .in("shift_id", shiftIds)
+          .neq("status", "removed"),
+        supabase
+          .from("time_entries")
+          .select("id, shift_id, employee_id, clock_in, clock_out, status")
+          .in("shift_id", shiftIds)
+          .neq("status", "rejected"),
+        supabase
+          .from("scheduled_shifts")
+          .select("id, pay_type")
+          .in("id", shiftIds),
+      ]);
+
+      const slotById = new Map<string, any>();
+      ((slots ?? []) as any[]).forEach(s => slotById.set(s.id, s));
+
+      // Map each item -> set of slot ids that represent it
+      const slotsByItem = new Map<string, string[]>();
+      ((slots ?? []) as any[]).forEach(s => {
+        if (!s.service_request_item_id) return;
+        const arr = slotsByItem.get(s.service_request_item_id) ?? [];
+        arr.push(s.id);
+        slotsByItem.set(s.service_request_item_id, arr);
+      });
+
+      // Map each assignment -> the item id it serves (via slot)
+      const assignmentItem = new Map<string, string | null>();
+      ((assigns ?? []) as any[]).forEach(a => {
+        const slot = a.role_slot_id ? slotById.get(a.role_slot_id) : null;
+        assignmentItem.set(a.id, slot?.service_request_item_id ?? null);
+      });
+
+      const payTypeByShift = new Map<string, string>();
+      ((shifts ?? []) as any[]).forEach(s => payTypeByShift.set(s.id, s.pay_type ?? "hourly"));
+
+      // Build a mapping employee -> item via their assignment(s) on these shifts
+      // (an employee can fill different role slots on different shifts)
+      const employeeItemKey = (employeeId: string, shiftId: string): string | null => {
+        const a = ((assigns ?? []) as any[]).find(x => x.employee_id === employeeId && x.shift_id === shiftId);
+        if (!a) return null;
+        return assignmentItem.get(a.id) ?? null;
+      };
 
       return itemList.map(it => {
-        const share = (it.quantity_requested ?? 0) / totalRequested;
+        const slotIdsForItem = new Set(slotsByItem.get(it.id) ?? []);
+
+        const itemAssignments = ((assigns ?? []) as any[]).filter(a =>
+          a.role_slot_id && slotIdsForItem.has(a.role_slot_id)
+        );
+
+        const scheduled = itemAssignments.filter(a => a.status !== "rejected").length;
+        const accepted = itemAssignments.filter(a => a.response_status === "accepted").length;
+
+        // Worked = distinct employees of THIS item that have clock_in & clock_out
+        const workedEmps = new Set<string>();
+        ((entries ?? []) as any[]).forEach(e => {
+          if (!e.clock_in || !e.clock_out) return;
+          const itemId = employeeItemKey(e.employee_id, e.shift_id);
+          if (itemId === it.id) workedEmps.add(e.employee_id);
+        });
+        const worked = workedEmps.size;
+
+        // Payable: differentiated by pay_type
+        // - hourly: distinct employees with at least one approved entry (clock_out set)
+        // - daily : distinct (employee, workday) for daily shifts the employee was scheduled on
+        const payableHourly = new Set<string>();
+        const payableDailyKeys = new Set<string>();
+        ((entries ?? []) as any[]).forEach(e => {
+          const itemId = employeeItemKey(e.employee_id, e.shift_id);
+          if (itemId !== it.id) return;
+          const payType = payTypeByShift.get(e.shift_id) ?? "hourly";
+          if (payType === "daily") {
+            // Daily: count workday once the entry is at least clocked-in (daily concept pays by day worked)
+            if (e.clock_in) {
+              const day = String(e.clock_in).slice(0, 10);
+              payableDailyKeys.add(`${e.employee_id}|${day}`);
+            }
+          } else {
+            if (e.status === "approved" && e.clock_out) payableHourly.add(e.employee_id);
+          }
+        });
+        const payable = payableHourly.size + payableDailyKeys.size;
+
         return {
           role_type: it.role_type,
           role_label: it.role_label || ROLE_LABELS[it.role_type],
           requested: it.quantity_requested,
-          scheduled: Math.round(scheduledTotal * share),
-          accepted: Math.round(acceptedTotal * share),
-          worked: Math.round(workedTotal * share),
-          payable: Math.round(payableTotal * share),
+          scheduled,
+          accepted,
+          worked,
+          payable,
         };
       });
     },
