@@ -487,23 +487,29 @@ export default function PayPeriods() {
         </div>}
       />
 
+      {showSequenceConfig && (
+        <div className="mb-4">
+          <PayrollSequenceSettings />
+        </div>
+      )}
+
       <div className="data-table-wrapper">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-10"></TableHead>
+              <TableHead className="w-16">#</TableHead>
               <TableHead>Inicio</TableHead>
               <TableHead>Fin</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>Gestión</TableHead>
+              <TableHead>Origen / Reconciliation</TableHead>
               <TableHead>Cerrado</TableHead>
-              <TableHead className="w-28">Acciones</TableHead>
               <TableHead className="w-28">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {periods.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No hay periodos</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No hay periodos</TableCell></TableRow>
             ) : (
               periods.map((p) => {
                 const isExpanded = expandedPeriods.has(p.id);
@@ -529,6 +535,9 @@ export default function PayPeriods() {
                               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </Button>
                           </CollapsibleTrigger>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {p.sequence_number ? formatSequence(p.sequence_number, seqConfig) : "—"}
                         </TableCell>
                         <TableCell className="font-medium">
                           {isCurrentWeek && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mr-2" />}
