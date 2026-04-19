@@ -9764,6 +9764,7 @@ export type Database = {
           responded_at: string | null
           response_required: boolean
           response_status: string
+          role_slot_id: string | null
           shift_id: string
           status: string
         }
@@ -9781,6 +9782,7 @@ export type Database = {
           responded_at?: string | null
           response_required?: boolean
           response_status?: string
+          role_slot_id?: string | null
           shift_id: string
           status?: string
         }
@@ -9798,6 +9800,7 @@ export type Database = {
           responded_at?: string | null
           response_required?: boolean
           response_status?: string
+          role_slot_id?: string | null
           shift_id?: string
           status?: string
         }
@@ -9821,6 +9824,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_role_slot_id_fkey"
+            columns: ["role_slot_id"]
+            isOneToOne: false
+            referencedRelation: "shift_role_slots"
             referencedColumns: ["id"]
           },
           {
@@ -10412,6 +10422,80 @@ export type Database = {
           },
           {
             foreignKeyName: "shift_rides_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_role_slots: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          quantity: number
+          role_label: string | null
+          role_type: Database["public"]["Enums"]["service_request_role_type"]
+          service_request_id: string | null
+          service_request_item_id: string | null
+          shift_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity: number
+          role_label?: string | null
+          role_type: Database["public"]["Enums"]["service_request_role_type"]
+          service_request_id?: string | null
+          service_request_item_id?: string | null
+          shift_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          role_label?: string | null
+          role_type?: Database["public"]["Enums"]["service_request_role_type"]
+          service_request_id?: string | null
+          service_request_item_id?: string | null
+          shift_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_role_slots_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_role_slots_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_role_slots_service_request_item_id_fkey"
+            columns: ["service_request_item_id"]
+            isOneToOne: false
+            referencedRelation: "service_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_role_slots_shift_id_fkey"
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "scheduled_shifts"
