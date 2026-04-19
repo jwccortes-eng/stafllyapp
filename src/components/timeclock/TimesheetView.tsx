@@ -384,10 +384,18 @@ export function TimesheetView() {
         if (gpsFilter === "missing" && r.gpsMissing === 0) return false;
         if (sourceFilter === "clock" && r.importedCount === r.entryCount) return false;
         if (sourceFilter === "import" && r.importedCount === 0) return false;
+        if (exceptionFilter === "late" && r.lateCount === 0) return false;
+        if (exceptionFilter === "off_site" && r.gpsOffSite === 0) return false;
+        if (exceptionFilter === "open" && r.openCount === 0) return false;
+        if (exceptionFilter === "missing_out") {
+          // missing-out heuristic: open clock_in older than 12h
+          const hasMissing = entries.some(e => e.employee_id === r.id && !e.clock_out && e.source === "clock" && differenceInMinutes(new Date(), new Date(e.clock_in)) > 720);
+          if (!hasMissing) return false;
+        }
         return true;
       })
       .sort((a, b) => b.totalHours - a.totalHours);
-  }, [employees, entries, search, statusFilter, gpsFilter, sourceFilter, getClockEventsForEntry, shiftMap]);
+  }, [employees, entries, search, statusFilter, gpsFilter, sourceFilter, exceptionFilter, getClockEventsForEntry, shiftMap]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
   const paginatedRows = rows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
