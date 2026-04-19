@@ -251,6 +251,26 @@ export default function EmployeeDashboard() {
         )}
       </div>
 
+      {/* ── Available shifts hero — visible only when claimables exist ── */}
+      {isModuleEnabled("my_shifts") && claimableCount > 0 && (
+        <Link to="/portal/shifts?tab=available" className="block">
+          <div className="rounded-2xl bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.04] to-card border-2 border-emerald-500/25 px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-all shadow-[0_4px_20px_-8px_hsl(var(--primary)/0.15)]">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+              <HandMetal className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold text-foreground leading-tight">
+                {claimableCount} shift{claimableCount > 1 ? "s" : ""} available
+              </p>
+              <p className="text-[10.5px] text-muted-foreground/70 mt-0.5">
+                Tap to view and request
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+          </div>
+        </Link>
+      )}
+
       {/* ── Active clock banner — only when clocked in ── */}
       {isModuleEnabled("my_clock") && clockStatus.isClockedIn && (
         <button
