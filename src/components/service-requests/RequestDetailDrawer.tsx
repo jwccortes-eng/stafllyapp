@@ -9,6 +9,7 @@ import { ROLE_LABELS, STATUS_LABELS, STATUS_TONE, CHANNEL_LABELS, GENDER_LABELS 
 import { cn } from "@/lib/utils";
 import { ConvertToShiftDialog } from "./ConvertToShiftDialog";
 import { FulfillmentTable } from "./FulfillmentTable";
+import { ShiftRoleSlotsPanel } from "./ShiftRoleSlotsPanel";
 import { Link } from "react-router-dom";
 
 interface Props {
@@ -112,16 +113,18 @@ export function RequestDetailDrawer({ open, onOpenChange, requestId }: Props) {
               {data.links.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No shifts linked yet. Convert this request to a shift to start operations.</p>
               ) : (
-                <div className="space-y-1.5">
-                  {data.links.map(l => (
-                    <Link
-                      key={l.id}
-                      to={`/app/shifts?shiftId=${l.shift_id}`}
-                      className="flex items-center justify-between rounded-lg border border-border bg-card hover:bg-accent/40 transition px-3 py-2 text-sm"
-                    >
-                      <span className="font-mono text-xs text-muted-foreground">{l.shift_id.slice(0, 8)}</span>
-                      <ArrowRight className="size-3.5 text-muted-foreground" />
-                    </Link>
+                <div className="space-y-2">
+                  {Array.from(new Set(data.links.map(l => l.shift_id))).map(shiftId => (
+                    <div key={shiftId} className="rounded-lg border border-border bg-card p-2.5 space-y-2">
+                      <Link
+                        to={`/app/shifts?shiftId=${shiftId}`}
+                        className="flex items-center justify-between text-sm hover:bg-accent/40 -m-2 p-2 rounded-md transition"
+                      >
+                        <span className="font-mono text-xs text-muted-foreground">Shift {shiftId.slice(0, 8)}</span>
+                        <ArrowRight className="size-3.5 text-muted-foreground" />
+                      </Link>
+                      <ShiftRoleSlotsPanel shiftId={shiftId} />
+                    </div>
                   ))}
                 </div>
               )}
