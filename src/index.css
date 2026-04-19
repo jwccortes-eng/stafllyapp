@@ -151,6 +151,64 @@
     --spacing: 0.25rem;
   }
 
+  /* ═══════════════════════════════════════════════════════════
+     PARCEROS — Brand tokens (Coral vibrante sobre fondo oscuro)
+     Aplicados solo dentro de .parceros-brand para no contaminar
+     el resto del sistema Stafly.
+     ═══════════════════════════════════════════════════════════ */
+  .parceros-brand {
+    /* Base oscura premium */
+    --background: 230 25% 6%;
+    --foreground: 30 20% 96%;
+
+    --card: 230 22% 9%;
+    --card-foreground: 30 20% 96%;
+
+    --popover: 230 22% 11%;
+    --popover-foreground: 30 20% 96%;
+
+    /* Coral vibrante = identidad Parceros */
+    --primary: 8 95% 64%;
+    --primary-hover: 8 90% 58%;
+    --primary-dark: 8 85% 50%;
+    --primary-glow: 14 100% 70%;
+    --primary-foreground: 230 25% 6%;
+
+    /* Acentos secundarios */
+    --accent-warm: 35 100% 62%;
+    --accent-warm-foreground: 230 25% 6%;
+
+    --secondary: 230 18% 14%;
+    --secondary-foreground: 30 20% 96%;
+
+    --muted: 230 18% 13%;
+    --muted-foreground: 230 12% 62%;
+
+    --accent: 230 16% 16%;
+    --accent-foreground: 30 20% 96%;
+
+    --border: 230 16% 18%;
+    --input: 230 16% 18%;
+    --ring: 8 95% 64%;
+
+    /* Estados sobre dark */
+    --success: 158 70% 52%;
+    --warning: 35 100% 62%;
+    --destructive: 0 78% 60%;
+
+    /* Surfaces */
+    --surface-1: 230 22% 9%;
+    --surface-2: 230 20% 11%;
+    --surface-3: 230 18% 14%;
+
+    /* Glow Parceros */
+    --parceros-coral: 8 95% 64%;
+    --parceros-amber: 35 100% 62%;
+    --parceros-glow: 0 8px 32px -8px hsl(8 95% 64% / 0.4);
+    --gradient-parceros: linear-gradient(135deg, hsl(8 95% 64%), hsl(14 100% 70%) 50%, hsl(35 100% 62%));
+    --gradient-parceros-dark: linear-gradient(135deg, hsl(230 25% 6%) 0%, hsl(230 22% 9%) 50%, hsl(8 35% 12%) 100%);
+  }
+
   .dark {
     --background: 220 22% 7%;
     --foreground: 216 18% 95%;

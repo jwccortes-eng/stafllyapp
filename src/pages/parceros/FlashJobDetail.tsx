@@ -156,7 +156,7 @@ export default function FlashJobDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
@@ -164,7 +164,7 @@ export default function FlashJobDetail() {
 
   if (!job) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
         <h1 className="text-lg font-bold text-foreground">Trabajo no encontrado</h1>
         <Button variant="outline" onClick={() => navigate("/parceros")} className="mt-4">Volver</Button>
       </div>
@@ -179,21 +179,33 @@ export default function FlashJobDetail() {
   const slotsPercent = (job.slots_filled / job.slots_total) * 100;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-20 bg-card border-b border-border/40 px-3 py-2.5 safe-top">
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Header — Flash Job branded */}
+      <header
+        className="sticky top-0 z-20 px-3 py-2.5 safe-top border-b border-border/40 backdrop-blur-xl"
+        style={{ background: "hsl(var(--card) / 0.85)" }}
+      >
         <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <button onClick={() => navigate("/parceros")} className="text-muted-foreground hover:text-foreground">
+          <button
+            onClick={() => navigate("/parceros")}
+            className="text-muted-foreground hover:text-foreground active:scale-95 transition-all h-8 w-8 flex items-center justify-center rounded-lg hover:bg-muted/40"
+            aria-label="Volver"
+          >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <Zap className="h-5 w-5 text-amber-500" />
+          <div
+            className="h-7 w-7 rounded-lg flex items-center justify-center shadow-md"
+            style={{ background: "var(--gradient-parceros)" }}
+          >
+            <Zap className="h-4 w-4 text-white" strokeWidth={2.5} />
+          </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-bold text-foreground truncate">Flash Job</h1>
+            <h1 className="text-sm font-bold text-foreground truncate font-heading">Flash Job</h1>
           </div>
           {!expired && countdown && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/10">
-              <Timer className="h-3 w-3 text-red-500" />
-              <span className="text-[10px] font-bold text-red-500 tabular-nums">{countdown}</span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-destructive/15 border border-destructive/30">
+              <Timer className="h-3 w-3 text-destructive" />
+              <span className="text-[10px] font-bold text-destructive tabular-nums">{countdown}</span>
             </div>
           )}
         </div>

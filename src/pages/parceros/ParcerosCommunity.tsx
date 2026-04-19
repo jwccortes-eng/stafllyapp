@@ -1,17 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ParcerosHeader } from "@/components/parceros/ParcerosHeader";
 import {
-  Search, Zap, MapPin, Users, MessageSquare, Plus, Clock,
-  DollarSign, ArrowRight, Loader2, Radio, TrendingUp, ChevronRight,
-  Hash, Star, Briefcase, AlertTriangle,
+  Search, MapPin, Users, Clock, Loader2, Radio, TrendingUp, ChevronRight,
+  Hash, Briefcase, AlertTriangle, Zap,
 } from "lucide-react";
-import { format, formatDistanceToNow, isPast } from "date-fns";
+import { formatDistanceToNow, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 
 /* ─── Types ─── */
@@ -109,46 +108,33 @@ export default function ParcerosCommunity() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Hero Header */}
-      <header className="bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary-dark))] to-[hsl(220,60%,15%)] text-white px-4 pt-6 pb-4 safe-top">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Radio className="h-5 w-5 text-green-400 animate-pulse" />
-                <h1 className="text-xl font-heading font-black tracking-tight">Parceros</h1>
-              </div>
-              <p className="text-xs text-white/60 mt-0.5">Tu comunidad de trabajo</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[10px] font-medium text-white/70">{channels.length} canales activos</span>
-            </div>
-          </div>
+    <>
+      <ParcerosHeader
+        subtitle={`${channels.length} canales activos · Tu comunidad de trabajo`}
+      />
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar canales, trabajos, zonas..."
-              className="pl-10 h-10 bg-white/10 border-white/10 text-white placeholder:text-white/40 rounded-xl focus:bg-white/15"
-            />
-          </div>
+      {/* Search bar */}
+      <div className="px-4 py-3 bg-card/40 border-b border-border/30">
+        <div className="max-w-2xl mx-auto relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar canales, trabajos, zonas..."
+            className="pl-10 h-10 bg-background/60 border-border/40 rounded-xl"
+          />
         </div>
-      </header>
+      </div>
 
       {/* Tab Nav */}
-      <nav className="sticky top-0 z-20 bg-card border-b border-border/40 px-4">
+      <nav className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border/40 px-4">
         <div className="max-w-2xl mx-auto flex">
           {(
             [
@@ -170,7 +156,7 @@ export default function ParcerosCommunity() {
               <Icon className="h-3.5 w-3.5" />
               {label}
               {key === "flash" && filteredJobs.length > 0 && (
-                <span className="ml-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                <span className="ml-1 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full">
                   {filteredJobs.length}
                 </span>
               )}
@@ -180,7 +166,7 @@ export default function ParcerosCommunity() {
       </nav>
 
       {/* Content */}
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 space-y-4">
+      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 space-y-4 overflow-y-auto">
         {activeTab === "radar" && (
           <RadarFeed channels={filteredChannels} flashJobs={filteredJobs} navigate={navigate} />
         )}
@@ -190,8 +176,8 @@ export default function ParcerosCommunity() {
         {activeTab === "flash" && (
           <FlashJobList jobs={filteredJobs} navigate={navigate} userId={user?.id} />
         )}
-      </main>
-    </div>
+      </div>
+    </>
   );
 }
 
