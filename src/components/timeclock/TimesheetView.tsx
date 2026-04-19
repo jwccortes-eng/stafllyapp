@@ -27,6 +27,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { distanceMeters, googleMapsUrl } from "@/lib/geo-helpers";
+import { OpsStatusChip, type OpsStatusTone } from "@/components/operations/OpsStatusChip";
 
 interface TimeEntry {
   id: string;
@@ -121,12 +122,13 @@ function getGpsStatus(
   return { status: "off_site", distance: dist };
 }
 
-const GPS_CONFIG: Record<GpsStatus, { label: string; color: string; icon: typeof Shield }> = {
-  verified: { label: "GPS Verified", color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400", icon: Shield },
-  near: { label: "Near Site", color: "text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400", icon: Navigation },
-  off_site: { label: "Off Site", color: "text-destructive bg-destructive/10", icon: AlertTriangle },
-  weak: { label: "GPS Weak", color: "text-muted-foreground bg-muted/50", icon: WifiOff },
-  missing: { label: "No GPS", color: "text-muted-foreground bg-muted/30", icon: WifiOff },
+// Sober GPS tones aligned with OpsStatusChip language
+const GPS_CONFIG: Record<GpsStatus, { label: string; tone: OpsStatusTone; icon: typeof Shield }> = {
+  verified: { label: "GPS Verified", tone: "success", icon: Shield },
+  near:     { label: "Near Site",    tone: "warning", icon: Navigation },
+  off_site: { label: "Off Site",     tone: "critical", icon: AlertTriangle },
+  weak:     { label: "GPS Weak",     tone: "muted",   icon: WifiOff },
+  missing:  { label: "No GPS",       tone: "muted",   icon: WifiOff },
 };
 
 function clockMethodLabel(method: string): string {
@@ -485,20 +487,20 @@ export function TimesheetView() {
 
   const selectedPeriod = payPeriods.find(p => p.id === selectedPeriodId);
 
-  const getStatusBadge = (row: typeof rows[0]) => {
-    if (row.openCount > 0) return <Badge className="text-[10px] rounded-full px-2.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">Active Now</Badge>;
-    if (row.importedCount > 0 && row.importedCount === row.entryCount) return <Badge className="text-[10px] rounded-full px-2.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0">Importado</Badge>;
-    if (row.approvedCount === row.entryCount && row.entryCount > 0) return <Badge className="text-[10px] rounded-full px-2.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">Aprobado</Badge>;
-    if (row.rejectedCount > 0) return <Badge className="text-[10px] rounded-full px-2.5 bg-destructive/10 text-destructive border-0">Rechazado</Badge>;
-    if (row.pendingCount > 0) return <Badge className="text-[10px] rounded-full px-2.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">Pendiente</Badge>;
-    return <span className="text-xs text-muted-foreground">--</span>;
+  const getStatusChip = (row: typeof rows[0]) => {
+    if (row.openCount > 0) return <OpsStatusChip size="sm" tone="warning" label="Active Now" pulse />;
+    if (row.importedCount > 0 && row.importedCount === row.entryCount) return <OpsStatusChip size="sm" tone="info" label="Importado" />;
+    if (row.approvedCount === row.entryCount && row.entryCount > 0) return <OpsStatusChip size="sm" tone="success" label="Aprobado" />;
+    if (row.rejectedCount > 0) return <OpsStatusChip size="sm" tone="critical" label="Rechazado" />;
+    if (row.pendingCount > 0) return <OpsStatusChip size="sm" tone="warning" label="Pendiente" />;
+    return <span className="text-xs text-muted-foreground/50">—</span>;
   };
 
   const getEntryStatusIcon = (status: string) => {
-    if (status === "approved") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
+    if (status === "approved") return <CheckCircle2 className="h-3.5 w-3.5 text-earning" />;
     if (status === "rejected") return <XCircle className="h-3.5 w-3.5 text-destructive" />;
-    if (status === "imported") return <Upload className="h-3.5 w-3.5 text-blue-500" />;
-    return <Clock className="h-3.5 w-3.5 text-amber-500" />;
+    if (status === "imported") return <Upload className="h-3.5 w-3.5 text-info" />;
+    return <Clock className="h-3.5 w-3.5 text-warning" />;
   };
 
   const colCount = canApprove ? 10 : 9;
@@ -507,16 +509,16 @@ export function TimesheetView() {
 
   return (
     <div className="space-y-4">
-      {/* KPI Cards */}
+      {/* KPI Cards — sober tokens, exceptions highlighted only when > 0 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-        <KpiMini icon={<Users className="h-4 w-4 text-primary" />} value={kpis.employeeCount} label="Empleados" />
-        <KpiMini icon={<Clock className="h-4 w-4 text-primary" />} value={kpis.totalHours + "h"} label="Hrs Totales" />
-        <KpiMini icon={<Signal className="h-4 w-4 text-emerald-500" />} value={kpis.activeNow} label="Active Now" accent={kpis.activeNow > 0 ? "emerald" : undefined} />
-        <KpiMini icon={<AlertTriangle className="h-4 w-4 text-amber-500" />} value={kpis.needsReview} label="Needs Review" accent={kpis.needsReview > 0 ? "amber" : undefined} />
-        <KpiMini icon={<Shield className="h-4 w-4 text-emerald-500" />} value={kpis.gpsOk} label="GPS Verified" />
-        <KpiMini icon={<Navigation className="h-4 w-4 text-destructive" />} value={kpis.gpsOff} label="Off Site" accent={kpis.gpsOff > 0 ? "red" : undefined} />
-        <KpiMini icon={<WifiOff className="h-4 w-4 text-muted-foreground" />} value={kpis.gpsMiss} label="No GPS" />
-        <KpiMini icon={<AlertCircle className="h-4 w-4 text-amber-500" />} value={kpis.missingClockOut} label="Missing Out" accent={kpis.missingClockOut > 0 ? "amber" : undefined} />
+        <KpiMini icon={<Users className="h-4 w-4 text-muted-foreground" />} value={kpis.employeeCount} label="Empleados" />
+        <KpiMini icon={<Clock className="h-4 w-4 text-muted-foreground" />} value={kpis.totalHours + "h"} label="Hrs Totales" />
+        <KpiMini icon={<Signal className={cn("h-4 w-4", kpis.activeNow > 0 ? "text-earning" : "text-muted-foreground/60")} />} value={kpis.activeNow} label="Active Now" accent={kpis.activeNow > 0 ? "earning" : undefined} />
+        <KpiMini icon={<AlertTriangle className={cn("h-4 w-4", kpis.needsReview > 0 ? "text-warning" : "text-muted-foreground/60")} />} value={kpis.needsReview} label="Needs Review" accent={kpis.needsReview > 0 ? "warning" : undefined} />
+        <KpiMini icon={<Shield className="h-4 w-4 text-muted-foreground" />} value={kpis.gpsOk} label="GPS Verified" />
+        <KpiMini icon={<Navigation className={cn("h-4 w-4", kpis.gpsOff > 0 ? "text-destructive" : "text-muted-foreground/60")} />} value={kpis.gpsOff} label="Off Site" accent={kpis.gpsOff > 0 ? "destructive" : undefined} />
+        <KpiMini icon={<WifiOff className="h-4 w-4 text-muted-foreground/60" />} value={kpis.gpsMiss} label="No GPS" />
+        <KpiMini icon={<AlertCircle className={cn("h-4 w-4", kpis.missingClockOut > 0 ? "text-warning" : "text-muted-foreground/60")} />} value={kpis.missingClockOut} label="Missing Out" accent={kpis.missingClockOut > 0 ? "warning" : undefined} />
       </div>
 
       {/* Toolbar */}
@@ -610,10 +612,11 @@ export function TimesheetView() {
         <div className="flex-1" />
 
         {pendingRequestsTotal > 0 && (
-          <div className="flex items-center gap-1.5">
-            <Badge className="bg-amber-500 text-white rounded-full h-5 w-5 p-0 flex items-center justify-center text-[10px]">{pendingRequestsTotal}</Badge>
-            <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Pendientes</span>
-          </div>
+          <OpsStatusChip
+            size="sm"
+            tone="warning"
+            label={`${pendingRequestsTotal} pendientes`}
+          />
         )}
 
         <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={handleExport}><Download className="h-3.5 w-3.5" /> Exportar</Button>
@@ -661,31 +664,32 @@ export function TimesheetView() {
                           <div>
                             <div className="flex items-center gap-1.5">
                               <span className="font-medium text-sm">{row.first_name} {row.last_name}</span>
-                              {row.openCount > 0 && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
+                              {row.openCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-earning animate-pulse" />}
                             </div>
                             {row.employee_role && <span className="text-[10px] text-muted-foreground">{row.employee_role}</span>}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center"><span className="font-mono text-sm">{row.daysWorked}</span></TableCell>
-                      <TableCell className="text-center"><span className="font-mono font-semibold text-sm">{row.totalMins > 0 ? formatHours(row.totalMins) : "--"}</span></TableCell>
-                      <TableCell className="text-center hidden md:table-cell"><span className="text-sm">{row.entryCount}</span></TableCell>
+                      <TableCell className="text-center"><span className="font-mono text-sm tabular-nums">{row.daysWorked}</span></TableCell>
+                      <TableCell className="text-center"><span className="font-mono font-semibold text-sm tabular-nums">{row.totalMins > 0 ? formatHours(row.totalMins) : "—"}</span></TableCell>
+                      <TableCell className="text-center hidden md:table-cell"><span className="text-sm tabular-nums text-muted-foreground">{row.entryCount}</span></TableCell>
                       <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {row.gpsVerified > 0 && <span className="text-[10px] text-emerald-600 font-medium">{row.gpsVerified}✓</span>}
-                          {row.gpsOffSite > 0 && <span className="text-[10px] text-destructive font-medium">{row.gpsOffSite}✗</span>}
-                          {row.gpsMissing > 0 && <span className="text-[10px] text-muted-foreground">{row.gpsMissing}?</span>}
+                        <div className="flex items-center justify-center gap-2 text-[10.5px] tabular-nums">
+                          {row.gpsVerified > 0 && <span className="text-earning font-medium">{row.gpsVerified}<span className="ml-0.5 opacity-60">✓</span></span>}
+                          {row.gpsOffSite > 0 && <span className="text-destructive font-medium">{row.gpsOffSite}<span className="ml-0.5 opacity-60">✗</span></span>}
+                          {row.gpsMissing > 0 && <span className="text-muted-foreground/70">{row.gpsMissing}<span className="ml-0.5">?</span></span>}
+                          {row.gpsVerified === 0 && row.gpsOffSite === 0 && row.gpsMissing === 0 && <span className="text-muted-foreground/40">—</span>}
                         </div>
                       </TableCell>
                       <TableCell className="text-center hidden lg:table-cell">
                         <div className="flex items-center justify-center gap-1 flex-wrap">
-                          {row.lateCount > 0 && <Badge className="text-[9px] px-1.5 py-0 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">{row.lateCount} Late</Badge>}
-                          {row.openCount > 0 && <Badge className="text-[9px] px-1.5 py-0 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-0">{row.openCount} Open</Badge>}
-                          {row.gpsOffSite > 0 && <Badge className="text-[9px] px-1.5 py-0 rounded-full bg-destructive/10 text-destructive border-0">{row.gpsOffSite} Off-site</Badge>}
-                          {!row.hasIssues && <span className="text-[10px] text-muted-foreground">—</span>}
+                          {row.lateCount > 0 && <OpsStatusChip size="sm" tone="warning" label={`${row.lateCount} Late`} />}
+                          {row.openCount > 0 && <OpsStatusChip size="sm" tone="warning" label={`${row.openCount} Open`} />}
+                          {row.gpsOffSite > 0 && <OpsStatusChip size="sm" tone="critical" label={`${row.gpsOffSite} Off-site`} />}
+                          {!row.hasIssues && <span className="text-[10px] text-muted-foreground/40">—</span>}
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">{getStatusBadge(row)}</TableCell>
+                      <TableCell className="text-center">{getStatusChip(row)}</TableCell>
                     </TableRow>
 
                     {/* Expanded detail */}
@@ -728,7 +732,7 @@ export function TimesheetView() {
                                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pl-4">
                                   {isImported ? (
                                     <>
-                                      <div className="flex items-center gap-1.5 text-xs"><Upload className="h-3 w-3 text-blue-500" /><span className="font-medium text-blue-600 dark:text-blue-400">{entry.import_meta?.shift_hours?.toFixed(2)}h</span></div>
+                                      <div className="flex items-center gap-1.5 text-xs"><Upload className="h-3 w-3 text-info" /><span className="font-medium text-info">{entry.import_meta?.shift_hours?.toFixed(2)}h</span></div>
                                       {entry.notes && <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">{entry.notes}</span>}
                                     </>
                                   ) : (
@@ -736,44 +740,49 @@ export function TimesheetView() {
                                       {/* Time */}
                                       <div className="flex items-center gap-1.5 text-xs">
                                         <span className="text-muted-foreground">In:</span>
-                                        <span className="font-mono font-medium">{format(new Date(entry.clock_in), "hh:mm a")}</span>
-                                        {isLate && <Badge className="text-[8px] px-1 py-0 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">Late</Badge>}
+                                        <span className="font-mono font-medium tabular-nums">{format(new Date(entry.clock_in), "hh:mm a")}</span>
+                                        {isLate && <OpsStatusChip size="sm" tone="warning" label="Late" />}
                                       </div>
                                       <div className="flex items-center gap-1.5 text-xs">
                                         <span className="text-muted-foreground">Out:</span>
-                                        <span className="font-mono font-medium">{entry.clock_out ? format(new Date(entry.clock_out), "hh:mm a") : <span className="text-amber-500 font-medium">Active</span>}</span>
+                                        {entry.clock_out
+                                          ? <span className="font-mono font-medium tabular-nums">{format(new Date(entry.clock_out), "hh:mm a")}</span>
+                                          : <OpsStatusChip size="sm" tone="warning" label="Active" pulse />}
                                       </div>
                                       <div className="flex items-center gap-1.5 text-xs">
                                         <span className="text-muted-foreground">Hrs:</span>
-                                        <span className="font-mono font-semibold">{duration > 0 ? formatHours(duration) : "--"}</span>
+                                        <span className="font-mono font-semibold tabular-nums">{duration > 0 ? formatHours(duration) : "—"}</span>
                                       </div>
 
                                       {/* Shift info */}
                                       {shift && (
-                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                          <CircleDot className="h-3 w-3" />
+                                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                          <CircleDot className="h-3 w-3 opacity-60" />
                                           <span className="truncate max-w-[120px]">{shift.title}</span>
-                                          {shift.client_name && <span>· {shift.client_name}</span>}
-                                          {shift.location_name && <span>· 📍 {shift.location_name}</span>}
+                                          {shift.client_name && <span className="opacity-70">· {shift.client_name}</span>}
+                                          {shift.location_name && <span className="opacity-70">· 📍 {shift.location_name}</span>}
                                         </div>
                                       )}
 
                                       {/* Clock method */}
                                       {ceIn && (
-                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80">
                                           {clockMethodIcon(ceIn.clock_method)}
                                           <span>{clockMethodLabel(ceIn.clock_method)}</span>
                                         </div>
                                       )}
 
-                                      {/* GPS badge */}
+                                      {/* GPS chip — sober ops tone */}
                                       <TooltipProvider delayDuration={200}>
                                         <Tooltip>
                                           <TooltipTrigger asChild>
-                                            <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium rounded-full px-2 py-0.5", gpsConf.color)}>
-                                              <gpsConf.icon className="h-2.5 w-2.5" />
-                                              {gpsConf.label}
-                                              {gps.distance !== undefined && <span>({Math.round(gps.distance)}m)</span>}
+                                            <span>
+                                              <OpsStatusChip
+                                                size="sm"
+                                                tone={gpsConf.tone}
+                                                label={`${gpsConf.label}${gps.distance !== undefined ? ` · ${Math.round(gps.distance)}m` : ""}`}
+                                                leading={<gpsConf.icon className="h-2.5 w-2.5" />}
+                                              />
                                             </span>
                                           </TooltipTrigger>
                                           <TooltipContent className="text-xs max-w-xs">
@@ -848,14 +857,20 @@ export function TimesheetView() {
   );
 }
 
-// --- Mini KPI Card ---
-function KpiMini({ icon, value, label, accent }: { icon: React.ReactNode; value: string | number; label: string; accent?: string }) {
+// --- Mini KPI Card — sober tokens, premium ops feel ---
+function KpiMini({ icon, value, label, accent }: { icon: React.ReactNode; value: string | number; label: string; accent?: "earning" | "warning" | "destructive" | "info" }) {
   return (
-    <Card className="border-border/30 rounded-xl">
-      <CardContent className="pt-3 pb-2 px-3">
+    <Card className="border-border/40 rounded-xl shadow-none hover:border-border/70 transition-colors">
+      <CardContent className="pt-3 pb-2.5 px-3">
         <div className="flex items-center gap-2 mb-1">{icon}</div>
-        <div className={cn("text-xl font-bold font-mono tabular-nums", accent === "emerald" && "text-emerald-600 dark:text-emerald-400", accent === "amber" && "text-amber-600 dark:text-amber-400", accent === "red" && "text-destructive")}>{value}</div>
-        <p className="text-[10px] text-muted-foreground truncate">{label}</p>
+        <div className={cn(
+          "text-xl font-bold font-mono tabular-nums leading-none",
+          accent === "earning" && "text-earning",
+          accent === "warning" && "text-warning",
+          accent === "destructive" && "text-destructive",
+          accent === "info" && "text-info",
+        )}>{value}</div>
+        <p className="text-[10px] text-muted-foreground/80 truncate mt-1">{label}</p>
       </CardContent>
     </Card>
   );
