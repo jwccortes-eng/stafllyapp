@@ -212,7 +212,7 @@ export default function PortalClock() {
     if (!shiftData) { toast({ title: "Shift not found", variant: "destructive" }); return; }
     if (shiftData.qr_token !== scannedToken) { toast({ title: "Expired or invalid QR", description: "Ask your supervisor for a new code.", variant: "destructive" }); return; }
     const { data: assignment } = await supabase.from("shift_assignments")
-      .select("id, status").eq("shift_id", scannedShiftId).eq("employee_id", employeeId).neq("status", "rejected").maybeSingle();
+      .select("id, status").eq("shift_id", scannedShiftId).eq("employee_id", employeeId).not("status", "in", "(removed,rejected)").maybeSingle();
     if (!assignment) { toast({ title: "You're not assigned to this shift", variant: "destructive" }); return; }
     const matchingShift = todayShifts.find(s => s.id === scannedShiftId);
     if (matchingShift) setSelectedShift(matchingShift);

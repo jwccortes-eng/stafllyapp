@@ -35,7 +35,7 @@ export default function EmployeeLayout() {
 
   // Resolve the correct employeeId for the selected company
   const currentEmployeeId = selectedCompanyId
-    ? resolveEmployeeForCompany(selectedCompanyId) ?? employeeId
+    ? resolveEmployeeForCompany(selectedCompanyId)
     : employeeId;
 
   // Filter companies to only those where the user has an employee record

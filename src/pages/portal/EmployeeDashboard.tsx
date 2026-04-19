@@ -104,7 +104,9 @@ export default function EmployeeDashboard() {
       // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
       supabase.from("shift_assignments")
         .select("status, scheduled_shifts!inner (id, title, date, start_time, end_time, status, meeting_point, locations (name), clients (name))")
-        .eq("employee_id", employeeId).neq("status", "rejected")
+        .eq("employee_id", employeeId)
+        .eq("company_id", emp.company_id)
+        .not("status", "in", "(removed,rejected)")
         .is("scheduled_shifts.deleted_at", null)
         .gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(5),
       supabase.from("time_entries").select("id, clock_in, clock_out, shift_id, scheduled_shifts(title)").eq("employee_id", employeeId).is("clock_out", null).limit(1) as any,
@@ -149,7 +151,7 @@ export default function EmployeeDashboard() {
       };
     });
     setPendingCount(pCount);
-    if (mapped.length > 0) setNextShift(mapped[0]);
+    setNextShift(mapped[0] ?? null);
     setUpcomingShifts(mapped.slice(1, 4));
 
     // Count claimable shifts (open/published, future, not full, not already mine)
