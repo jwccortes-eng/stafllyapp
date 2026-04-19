@@ -323,7 +323,7 @@ export function PortalShiftDetailDrawer({ shift, assignmentStatus, open, onOpenC
               {/* Review — only when completed */}
               {shift.status === "completed" && employeeId && shiftCompanyId && (
                 <section className="flex items-center gap-2.5 p-3 rounded-2xl border border-border/40 bg-card">
-                  <Star className="h-4 w-4 text-amber-400 shrink-0" />
+                  <Star className="h-4 w-4 text-warning shrink-0" />
                   <div className="flex-1">
                     <p className="text-[10px] uppercase tracking-widest text-muted-foreground/55 font-bold">Rate this shift</p>
                   </div>
