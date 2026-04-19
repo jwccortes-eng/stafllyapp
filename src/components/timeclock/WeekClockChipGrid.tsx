@@ -35,10 +35,11 @@ interface ChipData {
   pillClass: string;
 }
 
+// Sober tokens consistent with OpsStatusChip language
 const STATUS_DOT: Record<ClockStatus, string> = {
-  on_time: "bg-emerald-500",
-  late: "bg-amber-500",
-  no_shift: "bg-sky-400",
+  on_time: "bg-earning",
+  late: "bg-warning",
+  no_shift: "bg-info",
 };
 
 const MAX_VISIBLE = 4;

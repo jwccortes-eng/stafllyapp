@@ -14,11 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmployeeDayDetailDrawer } from "@/components/today/EmployeeDayDetailDrawer";
 import {
   ChevronLeft, ChevronRight, Search, Timer,
-  CheckCircle2, XCircle, Clock, MessageSquare,
+  CheckCircle2, XCircle, Clock, Users, Activity,
 } from "lucide-react";
 import { format, differenceInMinutes, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { OpsStatusChip } from "@/components/operations/OpsStatusChip";
+import { cn } from "@/lib/utils";
 
 interface TimeEntry {
   id: string;
@@ -42,22 +44,20 @@ interface TimeEntry {
 
 interface Employee { id: string; first_name: string; last_name: string; avatar_url?: string | null; }
 
-/* Deterministic pastel color from string */
-const JOB_COLORS = [
-  "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
-  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
-  "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
-  "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-  "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
-  "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
-  "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
-  "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
-];
-
+/**
+ * Sober job pills — derived hue from name but constrained to a single
+ * "neutral surface + colored accent dot" pattern, aligned with the
+ * Ops Command Center premium chip language.
+ */
 function hashStr(s: string) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
   return Math.abs(h);
+}
+
+const JOB_HUES = [200, 160, 280, 30, 350, 180, 250, 20]; // sober palette of HSL hues
+function jobHue(title: string) {
+  return JOB_HUES[hashStr(title) % JOB_HUES.length];
 }
 
 export function DayDetailView() {
@@ -182,29 +182,33 @@ export function DayDetailView() {
     }
   };
 
-  const getJobColor = (title: string) => JOB_COLORS[hashStr(title) % JOB_COLORS.length];
-
   return (
     <div className="space-y-4">
-      {/* KPIs - Connecteam style */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-3xl font-bold">{activeCount}</span>
-          <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground">Fichados ahora</span>
+      {/* KPI Strip — premium ops language consistent with Shifts */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-border/40 bg-card px-4 py-3 flex items-center gap-3">
+          <div className={cn(
+            "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
+            activeCount > 0 ? "bg-earning/[0.08] text-earning" : "bg-muted/60 text-muted-foreground"
+          )}>
+            <Activity className="h-4 w-4" />
           </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto text-muted-foreground">
-            <MessageSquare className="h-3.5 w-3.5" />
-          </Button>
+          <div className="min-w-0">
+            <div className="text-2xl font-bold font-mono tabular-nums leading-none">{activeCount}</div>
+            <p className="text-[11px] text-muted-foreground/80 mt-1">Fichados ahora</p>
+          </div>
+          {activeCount > 0 && (
+            <span className="ml-auto h-1.5 w-1.5 rounded-full bg-earning animate-pulse shrink-0" />
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-3xl font-bold">{totalAttendance}</span>
-          <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground">Asistencia total</span>
+        <div className="rounded-xl border border-border/40 bg-card px-4 py-3 flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-muted/60 flex items-center justify-center shrink-0 text-muted-foreground">
+            <Users className="h-4 w-4" />
           </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto text-muted-foreground">
-            <MessageSquare className="h-3.5 w-3.5" />
-          </Button>
+          <div className="min-w-0">
+            <div className="text-2xl font-bold font-mono tabular-nums leading-none">{totalAttendance}</div>
+            <p className="text-[11px] text-muted-foreground/80 mt-1">Asistencia total</p>
+          </div>
         </div>
       </div>
 
@@ -328,20 +332,24 @@ export function DayDetailView() {
                     </td>
                     <td className="px-3 py-3">
                       {jobTitle ? (
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold truncate max-w-[140px] ${getJobColor(jobTitle)}`}>
-                          {shift?.shift_code ? `${shift.shift_code} - ` : ""}{jobTitle}
+                        <span
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground/85 truncate max-w-[150px]"
+                          style={{ borderLeftColor: `hsl(${jobHue(jobTitle)} 55% 55%)`, borderLeftWidth: 2 }}
+                        >
+                          {shift?.shift_code && <span className="text-muted-foreground/60 font-mono text-[10px]">{shift.shift_code}</span>}
+                          <span className="truncate">{jobTitle}</span>
                         </span>
                       ) : (
-                        <span className="text-muted-foreground/40 text-xs">--</span>
+                        <span className="text-muted-foreground/40 text-xs">—</span>
                       )}
                     </td>
                     <td className="px-3 py-3">
                       {(clientName || locationName) ? (
-                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium bg-primary/10 text-primary truncate max-w-[120px]">
+                        <span className="inline-flex items-center rounded-full border border-border/50 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground/80 truncate max-w-[130px]">
                           {clientName || locationName}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground/40 text-xs">--</span>
+                        <span className="text-muted-foreground/40 text-xs">—</span>
                       )}
                     </td>
                     <td className="px-3 py-3">
@@ -364,13 +372,19 @@ export function DayDetailView() {
                       )}
                     </td>
                     <td className="px-3 py-3">
-                      <Badge variant={
-                        entry.status === "approved" ? "default" :
-                        entry.status === "rejected" ? "destructive" : "secondary"
-                      } className="text-[10px]">
-                        {entry.status === "approved" ? "Aprobado" :
-                         entry.status === "rejected" ? "Rechazado" : "Pendiente"}
-                      </Badge>
+                      <OpsStatusChip
+                        size="sm"
+                        tone={
+                          entry.status === "approved" ? "success" :
+                          entry.status === "rejected" ? "critical" :
+                          "warning"
+                        }
+                        label={
+                          entry.status === "approved" ? "Aprobado" :
+                          entry.status === "rejected" ? "Rechazado" :
+                          "Pendiente"
+                        }
+                      />
                     </td>
                   </tr>
                 );
