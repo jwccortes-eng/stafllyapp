@@ -944,9 +944,7 @@ export function ShiftDetailDialog({
           ) : tab === "audit" ? (
             <ShiftAuditTrail shiftId={shift.id} />
           ) : null}
-        </div>
-
-        {/* ── Reject request overlay ── */}
+        </OpsSheetBody>
         {rejectReqId && (
           <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="bg-card border border-border/30 rounded-2xl p-5 w-full max-w-sm space-y-3 shadow-xl">
@@ -963,9 +961,9 @@ export function ShiftDetailDialog({
           </div>
         )}
 
-        {/* ── FOOTER ACTION BAR ── */}
+        {/* ── FOOTER (sticky) — 1 primary + overflow menu ── */}
         {isLocked ? (
-          <div className="px-5 py-3 border-t border-border/30 bg-muted/30 flex items-center justify-between">
+          <OpsSheetFooter className="justify-between">
             <div className="flex items-center gap-2">
               <Lock className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground font-medium">Turno bloqueado — solo lectura</span>
@@ -974,7 +972,7 @@ export function ShiftDetailDialog({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-[10px] gap-1.5 rounded-full text-emerald-600 border-emerald-200/50 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
+                className="h-8 text-xs gap-1.5"
                 onClick={async () => {
                   const { error } = await supabase.from("scheduled_shifts")
                     .update({ status: "published" } as any)
@@ -982,91 +980,136 @@ export function ShiftDetailDialog({
                   if (error) { toast.error(error.message); return; }
                   toast.success("Turno desbloqueado");
                   onOpenChange(false);
-                  // Trigger parent reload by calling onPublish with updated shift
                   onPublish({ ...shift, status: "published" });
                 }}
               >
-                <Unlock className="h-3 w-3" />
+                <Unlock className="h-3.5 w-3.5" />
                 Desbloquear
               </Button>
             )}
-          </div>
+          </OpsSheetFooter>
         ) : canEdit && (
-          <div className="px-4 py-3 border-t border-border/30 bg-muted/10">
+          <OpsSheetFooter>
             {!editing ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                {shift.status !== "published" && (
-                  <Button size="sm" onClick={() => onPublish(shift)} className="h-8 text-xs gap-1.5 rounded-full">
-                    <Send className="h-3 w-3" /> Publicar
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)} className="h-8 text-xs gap-1.5 rounded-full">
-                  <Bell className="h-3 w-3" /> Notificar
-                </Button>
+              <>
+                {/* Secondary action — open ops console */}
                 <Button
-                  variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-full"
-                  onClick={async () => {
-                    const empIds = shiftAssignments.map(a => a.employee_id);
-                    if (empIds.length === 0) { toast.error("No hay empleados asignados."); return; }
-                    const { data } = await supabase.from("employees").select("phone_number").in("id", empIds).not("phone_number", "is", null);
-                    const phones = (data ?? []).map(e => e.phone_number).filter((p): p is string => !!p && p.trim().length > 0);
-                    if (phones.length === 0) { toast.error("Ningún empleado tiene teléfono registrado."); return; }
-                    const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
-                    window.open(`sms:${phones.join(",")}${separator}body=`, "_blank");
-                  }}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}
+                  className="h-8 text-xs gap-1.5"
                 >
-                  <Smartphone className="h-3 w-3" /> SMS
+                  <Radar className="h-3.5 w-3.5" /> Operaciones
                 </Button>
-                {onDuplicate && (
-                  <Button variant="outline" size="sm" onClick={() => { onDuplicate(shift); onOpenChange(false); }} className="h-8 text-xs gap-1.5 rounded-full">
-                    <Copy className="h-3 w-3" /> Duplicar
+
+                {/* Edit (secondary) */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                  className="h-8 text-xs gap-1.5"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Editar
+                </Button>
+
+                {/* Overflow menu — keeps footer clean */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label="Más acciones">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
+                      <Bell className="h-4 w-4 mr-2" /> Notificar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        const empIds = shiftAssignments.map(a => a.employee_id);
+                        if (empIds.length === 0) { toast.error("No hay empleados asignados."); return; }
+                        const { data } = await supabase.from("employees").select("phone_number").in("id", empIds).not("phone_number", "is", null);
+                        const phones = (data ?? []).map(e => e.phone_number).filter((p): p is string => !!p && p.trim().length > 0);
+                        if (phones.length === 0) { toast.error("Ningún empleado tiene teléfono registrado."); return; }
+                        const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
+                        window.open(`sms:${phones.join(",")}${separator}body=`, "_blank");
+                      }}
+                    >
+                      <Smartphone className="h-4 w-4 mr-2" /> Enviar SMS
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
+                          const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
+                          const assignedEmps = shiftAssigns.map(a => {
+                            const emp = employees.find(e => e.id === a.employee_id);
+                            return { name: emp ? `${emp.first_name} ${emp.last_name}` : "—", phone: (emp as any)?.phone_number || null, role: null };
+                          });
+                          const clientName = clients.find(c => c.id === shift.client_id)?.name || null;
+                          const locationName = locations.find(l => l.id === shift.location_id)?.name || null;
+                          downloadShiftAssignmentPDF({
+                            title: shift.title, date: shift.date, startTime: shift.start_time, endTime: shift.end_time,
+                            clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
+                            transportRequired: (shift as any).transportation_required || false,
+                            transportNotes: (shift as any).transportation_notes || null,
+                            carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
+                            employees: assignedEmps, supervisorName: null,
+                          });
+                        });
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-2" /> Descargar PDF
+                    </DropdownMenuItem>
+                    {onDuplicate && (
+                      <DropdownMenuItem onClick={() => { onDuplicate(shift); onOpenChange(false); }}>
+                        <Copy className="h-4 w-4 mr-2" /> Duplicar
+                      </DropdownMenuItem>
+                    )}
+                    {onDelete && !isLocked && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setDeleteConfirm(true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Eliminar turno
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* PRIMARY action — Publicar (or Confirmar publicado state) */}
+                {shift.status !== "published" ? (
+                  <Button
+                    size="sm"
+                    onClick={() => onPublish(shift)}
+                    className="h-8 text-xs gap-1.5"
+                  >
+                    <Send className="h-3.5 w-3.5" /> Publicar
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => setNotifyOpen(true)}
+                    className="h-8 text-xs gap-1.5"
+                  >
+                    <Bell className="h-3.5 w-3.5" /> Notificar equipo
                   </Button>
                 )}
-                <Button variant="default" size="sm" onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }} className="h-8 text-xs gap-1.5 rounded-full">
-                  <Radar className="h-3 w-3" /> Operaciones
-                </Button>
-                {onDelete && !isLocked && (
-                  <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(true)} className="h-8 text-xs gap-1.5 rounded-full text-destructive border-destructive/30 hover:bg-destructive/10">
-                    <Trash2 className="h-3 w-3" /> Eliminar
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 rounded-full" onClick={() => {
-                  import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
-                    const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
-                    const assignedEmps = shiftAssigns.map(a => {
-                      const emp = employees.find(e => e.id === a.employee_id);
-                      return { name: emp ? `${emp.first_name} ${emp.last_name}` : "—", phone: (emp as any)?.phone_number || null, role: null };
-                    });
-                    const clientName = clients.find(c => c.id === shift.client_id)?.name || null;
-                    const locationName = locations.find(l => l.id === shift.location_id)?.name || null;
-                    downloadShiftAssignmentPDF({
-                      title: shift.title, date: shift.date, startTime: shift.start_time, endTime: shift.end_time,
-                      clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
-                      transportRequired: (shift as any).transportation_required || false,
-                      transportNotes: (shift as any).transportation_notes || null,
-                      carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
-                      employees: assignedEmps, supervisorName: null,
-                    });
-                  });
-                }}>
-                  <FileText className="h-3 w-3" /> PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="h-8 text-xs gap-1.5 rounded-full ml-auto">
-                  <Pencil className="h-3 w-3" /> Editar
-                </Button>
-              </div>
+              </>
             ) : (
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={handleInlineSave} disabled={saving || !date} className="h-8 text-xs gap-1.5 rounded-full flex-1">
-                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              <>
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs">
+                  <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+                </Button>
+                <Button size="sm" onClick={handleInlineSave} disabled={saving || !date} className="h-8 text-xs gap-1.5">
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                   Guardar cambios
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs rounded-full">
-                  <X className="h-3 w-3 mr-1" /> Cancelar
-                </Button>
-              </div>
+              </>
             )}
-          </div>
+          </OpsSheetFooter>
         )}
       </SheetContent>
     </Sheet>
