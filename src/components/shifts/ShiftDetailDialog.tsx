@@ -350,102 +350,83 @@ export function ShiftDetailDialog({
   return (
     <>
     <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); setEditing(false); } }}>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col border-l border-border/30 shadow-xl">
-        <SheetTitle className="sr-only">{shift.title}</SheetTitle>
-
-        {/* ── HERO HEADER ── */}
-        <div className={cn("relative px-5 pt-5 pb-4 overflow-hidden")}>
-          {/* Background gradient accent */}
-          <div className={cn("absolute inset-0 opacity-[0.07]", clientColor.bg)} />
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-12 translate-x-12 blur-2xl" />
-
-          <div className="relative z-10">
-            {/* Top row: code + date + status */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                {shift.shift_code && (
-                  <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 rounded-lg px-2 py-1">
-                    #{formatShiftCode(shift.shift_code)}
-                  </span>
-                )}
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CalendarDays className="h-3 w-3" />
-                  <span className="capitalize">{format(parseISO(shift.date), "EEE d MMM yyyy", { locale: es })}</span>
-                </div>
-              </div>
-              <Badge
-                variant={shift.status === "published" ? "default" : shift.status === "locked" ? "outline" : "secondary"}
-                className={cn(
-                  "text-[10px] px-2.5 py-0.5 rounded-full font-semibold",
-                  shift.status === "locked" && "border-muted-foreground/30 text-muted-foreground"
-                )}
-              >
-                {shift.status === "locked" && <Lock className="h-2.5 w-2.5 mr-1" />}
-                {statusLabel}
-              </Badge>
+      <SheetContent tone="ops" side="right" hideClose>
+        {/* ── PREMIUM HEADER (sticky) ── */}
+        <OpsSheetHeader
+          onClose={() => onOpenChange(false)}
+          leading={
+            <div className={cn(
+              "h-10 w-10 rounded-xl flex items-center justify-center ring-1",
+              clientColor.bg, clientColor.text, "ring-border/40"
+            )}>
+              <CalendarDays className="h-5 w-5" />
             </div>
-
-            {/* Time hero display */}
-            <div className="flex items-baseline gap-3 mb-2">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-primary" />
-                </div>
-                <span className="text-2xl font-bold tracking-tight font-[var(--font-heading)]">
-                  {shift.start_time.slice(0, 5)}
+          }
+          title={
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="truncate">{shift.title || "Turno"}</span>
+              {shift.shift_code && (
+                <span className="text-[10px] font-mono font-bold text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5 shrink-0">
+                  #{formatShiftCode(shift.shift_code)}
                 </span>
-                <span className="text-muted-foreground text-lg">→</span>
-                <span className="text-2xl font-bold tracking-tight font-[var(--font-heading)]">
-                  {shift.end_time.slice(0, 5)}
-                </span>
-              </div>
-              <span className="text-sm font-semibold text-primary bg-primary/10 rounded-lg px-2.5 py-1">
-                {hoursLabel}
+              )}
+            </div>
+          }
+          subtitle={
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="capitalize">{format(parseISO(shift.date), "EEE d MMM yyyy", { locale: es })}</span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="font-medium text-foreground/80 tabular-nums">
+                {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
               </span>
-            </div>
-
-            {/* Client & Location chips */}
-            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground/40">·</span>
+              <span className="font-medium text-primary tabular-nums">{hoursLabel}</span>
               {client && (
-                <div className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium", clientColor.bg, clientColor.text)}>
-                  <Building2 className="h-3 w-3" />
-                  {formatDisplayText(client.name, "name")}
-                </div>
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="truncate">{formatDisplayText(client.name, "name")}</span>
+                </>
               )}
-              {location && (
-                <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium bg-muted text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  {formatDisplayText(location.name, "name")}
-                </div>
-              )}
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
-                <Globe className="h-3 w-3" />
-                America/New_York
-              </div>
             </div>
+          }
+          rightSlot={
+            <OpsStatusChip
+              label={statusLabel}
+              tone={shiftStatusToTone(shift.status)}
+              size="sm"
+              leading={shift.status === "locked" ? <Lock className="h-2.5 w-2.5" /> : undefined}
+            />
+          }
+        />
 
-            {/* Team fill bar */}
-            <div className="mt-3 flex items-center gap-3">
-              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-500",
-                    fillPercent >= 100 ? "bg-earning" : fillPercent > 50 ? "bg-primary" : "bg-warning"
-                  )}
-                  style={{ width: `${fillPercent}%` }}
-                />
-              </div>
-              <span className="text-[11px] font-semibold tabular-nums whitespace-nowrap">
-                <Users className="h-3 w-3 inline mr-0.5 -mt-0.5" />
-                {shiftAssignments.length}/{slotsNum}
-              </span>
+        {/* ── META STRIP: location · timezone · capacity ── */}
+        <div className="flex items-center gap-3 px-5 py-2.5 border-b border-border/40 bg-muted/20">
+          {location && (
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground min-w-0">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate">{formatDisplayText(location.name, "name")}</span>
             </div>
+          )}
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden max-w-[140px]">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  fillPercent >= 100 ? "bg-earning" : fillPercent > 50 ? "bg-primary" : "bg-warning"
+                )}
+                style={{ width: `${fillPercent}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-semibold tabular-nums text-foreground whitespace-nowrap">
+              <Users className="h-3 w-3 inline mr-0.5 -mt-0.5" />
+              {shiftAssignments.length}/{slotsNum}
+            </span>
           </div>
         </div>
 
-        {/* ── TAB BAR ── */}
-        <div className="px-4 py-2 border-t border-b border-border/30 bg-muted/20">
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+        {/* ── TAB BAR — Linear-style underline ── */}
+        <div className="px-4 border-b border-border/60 bg-background">
+          <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
             <TabButton active={tab === "details"} onClick={() => setTab("details")}>
               <StickyNote className="h-3 w-3" /> Detalles
             </TabButton>
@@ -478,7 +459,7 @@ export function ShiftDetailDialog({
         </div>
 
         {/* ── BODY ── */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <OpsSheetBody>
 
           {/* ─── DETAILS TAB ─── */}
           {tab === "details" ? (
