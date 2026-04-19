@@ -359,7 +359,7 @@ export default function MyShifts() {
       </div>
 
       {/* Shift list — compact rows, single source of state per card */}
-      {filtered.length > 0 && (
+      {activeTab !== "available" && filtered.length > 0 && (
         <div className="space-y-1.5">
           {filtered.map((a) => (
             <PortalShiftCard
