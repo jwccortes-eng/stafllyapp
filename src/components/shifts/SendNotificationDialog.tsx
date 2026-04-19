@@ -425,21 +425,25 @@ export function SendNotificationDialog({
               )}
             </div>
           )}
+            </>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {assignedEmployees.length === 0 ? "Cerrar" : "Cancelar"}
           </Button>
-          <Button
-            size="sm"
-            onClick={validated && validationErrors.length === 0 ? handleSend : validate}
-            disabled={sending}
-            className="gap-1.5"
-          >
-            {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-            {validated && validationErrors.length === 0 ? "Enviar notificación" : "Validar y enviar"}
-          </Button>
+          {assignedEmployees.length > 0 && (
+            <Button
+              size="sm"
+              onClick={validated && validationErrors.length === 0 ? handleSend : validate}
+              disabled={sending}
+              className="gap-1.5"
+            >
+              {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+              {validated && validationErrors.length === 0 ? "Enviar notificación" : "Validar y enviar"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
