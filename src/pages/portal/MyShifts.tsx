@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PortalShiftDetailDrawer } from "@/components/portal/PortalShiftDetailDrawer";
 import { PortalShiftCard, type PortalShiftData } from "@/components/portal/PortalShiftCard";
 
@@ -54,11 +54,12 @@ interface ClaimableShift {
   assignedCount: number;
 }
 
-type TabFilter = "today" | "upcoming" | "history";
+type TabFilter = "available" | "today" | "upcoming" | "history";
 
 export default function MyShifts() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [claimable, setClaimable] = useState<ClaimableShift[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +68,8 @@ export default function MyShifts() {
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [selectedShift, setSelectedShift] = useState<ShiftAssignment | null>(null);
-  const [activeTab, setActiveTab] = useState<TabFilter>("today");
+  const initialTab = (searchParams.get("tab") as TabFilter) || "today";
+  const [activeTab, setActiveTab] = useState<TabFilter>(initialTab);
   // toast imported from sonner at top
 
   const load = async () => {
