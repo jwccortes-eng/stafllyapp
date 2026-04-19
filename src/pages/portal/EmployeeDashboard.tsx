@@ -107,6 +107,7 @@ export default function EmployeeDashboard() {
         .eq("employee_id", employeeId)
         .eq("company_id", emp.company_id)
         .not("status", "in", "(removed,rejected)")
+        .not("scheduled_shifts.status", "in", "(cancelled,canceled)")
         .is("scheduled_shifts.deleted_at", null)
         .gte("scheduled_shifts.date", today).order("created_at", { ascending: true }).limit(5),
       supabase.from("time_entries").select("id, clock_in, clock_out, shift_id, scheduled_shifts(title)").eq("employee_id", employeeId).is("clock_out", null).limit(1) as any,
