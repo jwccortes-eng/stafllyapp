@@ -302,44 +302,47 @@ export default function MyShifts() {
   });
 
   return (
-    <div className="space-y-4 animate-fade-in pb-24">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">
+    <div className="animate-fade-in pb-24">
+      {/* Minimal header — title only, subtitle merged into active tab context */}
+      <div className="pt-1 pb-3">
+        <h1 className="text-[22px] font-bold font-heading tracking-tight text-foreground leading-none">
           My Shifts
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-2xl overflow-x-auto no-scrollbar">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-1 justify-center",
-              activeTab === t.key
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground/60 hover:text-foreground"
-            )}
-          >
-            {t.label}
-            {t.count > 0 && (
-              <span className={cn(
-                "text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1",
-                activeTab === t.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground/60"
-              )}>
-                {t.count}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* Underline tab bar — premium, low-noise, mirrors video benchmark rhythm */}
+      <div className="flex items-center gap-5 border-b border-border/40 mb-3">
+        {tabs.map((t) => {
+          const active = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={cn(
+                "relative flex items-baseline gap-1.5 pb-2.5 text-[13px] font-semibold transition-colors",
+                active ? "text-foreground" : "text-muted-foreground/55 hover:text-foreground/80",
+              )}
+            >
+              {t.label}
+              {t.count > 0 && (
+                <span className={cn(
+                  "text-[10px] font-bold tabular-nums",
+                  active ? "text-primary" : "text-muted-foreground/45",
+                )}>
+                  {t.count}
+                </span>
+              )}
+              {active && (
+                <span className="absolute -bottom-px left-0 right-0 h-[2px] bg-primary rounded-full" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Shift list — always compact, single source of state per card */}
+      {/* Shift list — compact rows, single source of state per card */}
       {filtered.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {filtered.map((a) => (
             <PortalShiftCard
               key={a.id}

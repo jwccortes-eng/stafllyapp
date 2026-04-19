@@ -1,6 +1,5 @@
 import {
-  Clock, MapPin, CheckCircle2, AlertCircle, XCircle, LogIn, ChevronRight,
-  Navigation, Briefcase,
+  Clock, MapPin, CheckCircle2, LogIn, ChevronRight, Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isToday, isTomorrow, differenceInMinutes } from "date-fns";
@@ -24,6 +23,7 @@ export interface PortalShiftData {
 
 interface PortalShiftCardProps {
   shift: PortalShiftData;
+  /** Compact = dense list row (default for MyShifts). Full = detail-rich card. */
   compact?: boolean;
   onClick?: () => void;
   onAccept?: () => void;
@@ -32,38 +32,19 @@ interface PortalShiftCardProps {
   responding?: boolean;
 }
 
-/**
- * Map portal status → unified OpsStatusChip tone + label.
- * Mirrors the language used in admin Shifts/TimeClock for visual coherence.
- */
-function getStatusMeta(status: string): { tone: OpsStatusTone; label: string } {
+/** Status → unified chip + rail tone. Mirrors admin Shifts/Time Clock language. */
+function getStatusMeta(status: string): { tone: OpsStatusTone; label: string; rail: string } {
   switch (status) {
     case "confirmed":
     case "accepted":
-      return { tone: "success", label: "Confirmed" };
+      return { tone: "success", label: "Confirmed", rail: "bg-earning/70" };
     case "needs_reacceptance":
-      return { tone: "warning", label: "Needs Re-accept" };
+      return { tone: "warning", label: "Re-accept", rail: "bg-warning" };
     case "rejected":
-      return { tone: "critical", label: "Rejected" };
+      return { tone: "critical", label: "Rejected", rail: "bg-destructive" };
     case "pending":
     default:
-      return { tone: "warning", label: "Pending" };
-  }
-}
-
-/** Severity rail tone — mirrors admin ShiftCard pattern. */
-function getRailClass(status: string): string {
-  switch (status) {
-    case "confirmed":
-    case "accepted":
-      return "bg-earning/60";
-    case "needs_reacceptance":
-    case "pending":
-      return "bg-warning";
-    case "rejected":
-      return "bg-destructive";
-    default:
-      return "bg-border";
+      return { tone: "warning", label: "Pending", rail: "bg-warning/80" };
   }
 }
 
@@ -90,6 +71,14 @@ function getCountdown(dateStr: string, startTime: string): string | null {
   return `in ${mins}m`;
 }
 
+/** Day label used in compact + full views. */
+function dayLabel(dateStr: string): string {
+  const d = parseISO(dateStr);
+  if (isToday(d)) return "Today";
+  if (isTomorrow(d)) return "Tomorrow";
+  return format(d, "EEE d MMM", { locale: enUS });
+}
+
 export function PortalShiftCard({
   shift,
   compact = false,
@@ -99,62 +88,107 @@ export function PortalShiftCard({
   onClockIn,
   responding,
 }: PortalShiftCardProps) {
-  const statusMeta = getStatusMeta(shift.status);
-  const railClass = getRailClass(shift.status);
+  const meta = getStatusMeta(shift.status);
   const isTodayShift = isToday(parseISO(shift.date));
-  const isTomorrowShift = isTomorrow(parseISO(shift.date));
   const countdown = isTodayShift ? getCountdown(shift.date, shift.start_time) : null;
   const isPending = shift.status === "pending" || shift.status === "needs_reacceptance";
   const isConfirmed = shift.status === "confirmed" || shift.status === "accepted";
   const duration = calcDuration(shift.start_time, shift.end_time);
+  const subtitle = shift.client_name ?? shift.location_name ?? null;
 
-  // ───────── Compact view — dense list mode ─────────
+  // ───────── Compact row — single line, max scannability ─────────
+  // Pattern: [rail] · [day chip] · [time] · [title · subtitle] · [chip] · [chevron]
+  // Acceptance/clock-in actions shown only when needed, on a second collapsed row.
   if (compact) {
     return (
       <div
         className={cn(
-          "group relative flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-card",
-          "border border-border/40 transition-all duration-150",
-          "active:scale-[0.985] cursor-pointer",
-          "hover:border-border/70 hover:shadow-[0_1px_3px_-1px_hsl(var(--foreground)/0.08)]",
+          "group relative bg-card rounded-xl border border-border/40 overflow-hidden",
+          "transition-colors duration-150 active:bg-muted/30 cursor-pointer",
+          isTodayShift && isConfirmed && "border-primary/25",
         )}
         onClick={onClick}
       >
-        {/* Severity rail */}
-        <span aria-hidden className={cn("absolute left-0 top-3 bottom-3 w-[1.5px] rounded-r-full opacity-50", railClass)} />
+        {/* Severity rail — flush left, full height */}
+        <span aria-hidden className={cn("absolute left-0 top-0 bottom-0 w-[2px]", meta.rail)} />
 
-        {/* Date tile */}
-        <div className="text-center shrink-0 w-10 -ml-0.5">
-          <p className="text-[8px] font-bold uppercase text-muted-foreground/45 leading-none tracking-wider">
-            {format(parseISO(shift.date), "MMM", { locale: enUS })}
-          </p>
-          <p className="text-base font-bold text-foreground/80 leading-tight tabular-nums mt-0.5">
-            {format(parseISO(shift.date), "d")}
-          </p>
-        </div>
+        {/* Primary row */}
+        <div className="flex items-center gap-3 pl-3.5 pr-3 py-2.5">
+          {/* Day + time block — fixed width for column alignment */}
+          <div className="shrink-0 w-[58px]">
+            <p className={cn(
+              "text-[10px] font-bold uppercase tracking-wider leading-none",
+              isTodayShift ? "text-primary" : "text-muted-foreground/55",
+            )}>
+              {isTodayShift ? "Today" : isTomorrow(parseISO(shift.date)) ? "Tomr" : format(parseISO(shift.date), "EEE", { locale: enUS })}
+            </p>
+            <p className="text-[13px] font-bold text-foreground/90 tabular-nums leading-tight mt-1">
+              {shift.start_time?.slice(0, 5)}
+            </p>
+          </div>
 
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-foreground truncate leading-tight">{shift.title}</p>
-          <div className="flex items-center gap-2 text-[10.5px] text-muted-foreground/70 mt-1 min-w-0">
-            <span className="flex items-center gap-1 font-medium tabular-nums shrink-0">
-              <Clock className="h-2.5 w-2.5" />
-              {shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}
-            </span>
-            {shift.client_name && (
-              <>
-                <span className="text-muted-foreground/30">·</span>
-                <span className="truncate">{shift.client_name}</span>
-              </>
-            )}
+          {/* Title + subtitle */}
+          <div className="min-w-0 flex-1">
+            <p className="text-[13.5px] font-semibold text-foreground truncate leading-tight">
+              {shift.title}
+            </p>
+            <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
+              <span className="tabular-nums">{shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}</span>
+              {subtitle && <> · {subtitle}</>}
+            </p>
+          </div>
+
+          {/* Status chip + chevron */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
           </div>
         </div>
 
-        <OpsStatusChip tone={statusMeta.tone} label={statusMeta.label} size="sm" />
+        {/* Inline actions — only shown when explicit response or clock-in is required */}
+        {(isPending && (onAccept || onReject)) && (
+          <div
+            className="flex items-center gap-2 px-3.5 pb-2.5 pt-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button
+              size="sm"
+              className="flex-1 h-9 text-[12px] font-semibold rounded-lg gap-1.5"
+              onClick={onAccept}
+              disabled={responding}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {shift.status === "needs_reacceptance" ? "Accept changes" : "Confirm"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 px-3 text-[12px] text-muted-foreground hover:text-destructive rounded-lg"
+              onClick={onReject}
+              disabled={responding}
+            >
+              Decline
+            </Button>
+          </div>
+        )}
+
+        {isConfirmed && isTodayShift && onClockIn && (
+          <div className="px-3.5 pb-2.5" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              className="w-full h-9 text-[12px] font-semibold rounded-lg gap-1.5 shadow-sm shadow-primary/15"
+              onClick={onClockIn}
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              Clock In{countdown && ` · starts ${countdown}`}
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
 
-  // ───────── Full card — premium mobile-first ─────────
+  // ───────── Full card — used in detail / hero contexts ─────────
   return (
     <div
       className={cn(
@@ -162,14 +196,12 @@ export function PortalShiftCard({
         "transition-all duration-150 active:scale-[0.99]",
         isTodayShift
           ? "border-primary/25 shadow-[0_2px_12px_-6px_hsl(var(--primary)/0.15)]"
-          : "border-border/40 hover:border-border/70",
+          : "border-border/40",
       )}
       onClick={onClick}
     >
-      {/* Severity rail */}
-      <span aria-hidden className={cn("absolute left-0 top-4 bottom-4 w-[1.5px] rounded-r-full opacity-60", railClass)} />
+      <span aria-hidden className={cn("absolute left-0 top-4 bottom-4 w-[1.5px] rounded-r-full opacity-60", meta.rail)} />
 
-      {/* Countdown banner — tight, premium */}
       {countdown && isConfirmed && (
         <div className="bg-primary/[0.05] px-4 py-1.5 flex items-center gap-2 border-b border-primary/10">
           <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
@@ -180,22 +212,14 @@ export function PortalShiftCard({
       )}
 
       <div className="p-4 space-y-2.5">
-        {/* Row 1 — Day chip + Time + Status */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            {isTodayShift ? (
-              <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-primary text-primary-foreground uppercase tracking-widest shrink-0">
-                Today
-              </span>
-            ) : isTomorrowShift ? (
-              <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-muted text-foreground uppercase tracking-widest shrink-0">
-                Tomorrow
-              </span>
-            ) : (
-              <span className="text-[11px] font-semibold text-muted-foreground/80 capitalize shrink-0">
-                {format(parseISO(shift.date), "EEE d MMM", { locale: enUS })}
-              </span>
-            )}
+            <span className={cn(
+              "text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-widest shrink-0",
+              isTodayShift ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+            )}>
+              {dayLabel(shift.date)}
+            </span>
             <span className="text-sm font-bold text-foreground flex items-center gap-1.5 tabular-nums truncate">
               <Clock className="h-3.5 w-3.5 text-primary/70 shrink-0" />
               {shift.start_time?.slice(0, 5)}–{shift.end_time?.slice(0, 5)}
@@ -204,15 +228,13 @@ export function PortalShiftCard({
               · {duration}
             </span>
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground/25 shrink-0 group-hover:text-muted-foreground/50 transition-colors" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground/25 shrink-0" />
         </div>
 
-        {/* Row 2 — Title */}
         <p className="text-[15px] font-bold text-foreground leading-snug line-clamp-2">
           {shift.title}
         </p>
 
-        {/* Row 3 — Client · Location (single line, sober) */}
         {(shift.location_name || shift.client_name) && (
           <div className="flex items-center gap-2 text-[11.5px] text-muted-foreground/85 min-w-0">
             {shift.client_name && (
@@ -233,23 +255,10 @@ export function PortalShiftCard({
           </div>
         )}
 
-        {/* Row 4 — Meeting point (only when present, single sober pill) */}
-        {shift.meeting_point && (
-          <div className="flex items-center gap-1.5 text-[11px] text-foreground/75 bg-muted/50 rounded-lg px-2.5 py-1.5">
-            <Navigation className="h-3 w-3 shrink-0 text-primary/60" />
-            <span className="truncate font-medium">{shift.meeting_point}</span>
-          </div>
-        )}
-
-        {/* Row 5 — Status chip (single, OpsStatusChip language) */}
         <div className="flex items-center justify-between gap-2 pt-0.5">
-          <OpsStatusChip tone={statusMeta.tone} label={statusMeta.label} size="sm" />
-          {shift.status === "needs_reacceptance" && (
-            <span className="text-[10px] text-warning font-semibold">Modified — re-accept</span>
-          )}
+          <OpsStatusChip tone={meta.tone} label={meta.label} size="sm" />
         </div>
 
-        {/* Actions: Accept / Reject — single primary, sober secondary */}
         {isPending && (onAccept || onReject) && (
           <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
             <Button
@@ -273,7 +282,6 @@ export function PortalShiftCard({
           </div>
         )}
 
-        {/* Action: Clock In — single primary CTA */}
         {isConfirmed && isTodayShift && onClockIn && (
           <div className="pt-1" onClick={e => e.stopPropagation()}>
             <Button
