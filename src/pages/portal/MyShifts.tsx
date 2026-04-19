@@ -106,7 +106,8 @@ export default function MyShifts() {
     const { data: claimData } = await supabase
       .from("scheduled_shifts")
       .select(`id, title, date, start_time, end_time, notes, slots, locations (name), clients (name), shift_assignments (id)`)
-      .eq("company_id", emp.company_id).eq("claimable", true).eq("status", "open")
+      .eq("company_id", emp.company_id).eq("claimable", true)
+      .in("status", ["open", "published"])
       .is("deleted_at", null).gte("date", today).order("date", { ascending: true });
 
     const myShiftIds = new Set(mapped.map(a => a.shift.id));
