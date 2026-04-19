@@ -134,13 +134,13 @@ export function ShiftCard({
       onDragStart={handleDragStart}
       onClick={onClick}
     >
-      {/* Client accent — thin left rail, low chroma */}
+      {/* Client accent — whisper-thin identity rail, never competes */}
       <span
         aria-hidden
         className={cn(
-          "absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full",
+          "absolute left-0 top-3 bottom-3 w-[1.5px] rounded-r-full",
           color.dot,
-          "opacity-70",
+          "opacity-40 group-hover:opacity-60 transition-opacity",
         )}
       />
 
