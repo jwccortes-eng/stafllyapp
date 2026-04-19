@@ -230,6 +230,13 @@ export function useConvertRequestToShift() {
       const req = detail as any;
       const itemList = (items ?? []) as unknown as ServiceRequestItem[];
 
+      // Total capacity = sum of role-line quantities; drives the legacy `slots`
+      // field so the scheduler treats this shift identically to a manual one.
+      const totalCapacity = itemList.reduce(
+        (acc, it) => acc + Number(it.quantity_requested ?? 0),
+        0,
+      );
+
       // Create scheduled_shift
       const { data: shift, error: sErr } = await supabase
         .from("scheduled_shifts")
@@ -240,6 +247,7 @@ export function useConvertRequestToShift() {
           date: req.service_date,
           start_time: req.start_time ?? "09:00:00",
           end_time: req.end_time ?? "17:00:00",
+          slots: Math.max(1, totalCapacity),
           notes: req.notes ?? null,
           meeting_point: req.service_address ?? null,
           pay_type: (input.pay_type ?? "hourly") as any,
