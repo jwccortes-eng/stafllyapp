@@ -168,6 +168,7 @@ export function TimesheetView() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [gpsFilter, setGpsFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [exceptionFilter, setExceptionFilter] = useState<"all" | "late" | "off_site" | "missing_out" | "open">("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -505,7 +506,22 @@ export function TimesheetView() {
 
   const colCount = canApprove ? 10 : 9;
 
-  const hasActiveFilters = statusFilter !== "all" || gpsFilter !== "all" || sourceFilter !== "all";
+  const hasActiveFilters = statusFilter !== "all" || gpsFilter !== "all" || sourceFilter !== "all" || exceptionFilter !== "all";
+
+  // --- Exception aggregates for the actionable banner ---
+  const exceptions = useMemo(() => {
+    let late = 0, offSite = 0, missingOut = 0, open = 0;
+    rows.forEach(r => {
+      late += r.lateCount;
+      offSite += r.gpsOffSite;
+      open += r.openCount;
+    });
+    // missingOut = clock entries with no clock_out and >12h elapsed (kpis.missingClockOut already computed)
+    missingOut = kpis.missingClockOut;
+    return { late, offSite, missingOut, open };
+  }, [rows, kpis.missingClockOut]);
+
+  const hasExceptions = exceptions.late + exceptions.offSite + exceptions.missingOut + exceptions.open > 0;
 
   return (
     <div className="space-y-4">
