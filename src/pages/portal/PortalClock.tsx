@@ -140,6 +140,7 @@ export default function PortalClock() {
         .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, pay_type, qr_attendance_mode, qr_token, locations(name), clients(name))")
         .eq("employee_id", employeeId).eq("scheduled_shifts.date", todayStr)
         .is("scheduled_shifts.deleted_at", null)
+        .not("scheduled_shifts.status", "in", "(cancelled,canceled)")
         .in("status", ["confirmed", "pending"]),
     ]);
 

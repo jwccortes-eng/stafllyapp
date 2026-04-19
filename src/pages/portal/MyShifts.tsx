@@ -90,6 +90,7 @@ export default function MyShifts() {
       .eq("employee_id", employeeId)
       .eq("company_id", emp.company_id)
       .is("scheduled_shifts.deleted_at", null)
+      .not("scheduled_shifts.status", "in", "(cancelled,canceled)")
       .not("status", "in", "(removed,rejected)")
       .order("created_at", { ascending: false });
 

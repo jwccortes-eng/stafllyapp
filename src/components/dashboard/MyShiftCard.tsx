@@ -27,8 +27,9 @@ export function MyShiftCard() {
   const [weeklyHours, setWeeklyHours] = useState("0h");
   const [loading, setLoading] = useState(true);
 
-  // Only render for dual-access users viewing admin dashboard
-  const shouldShow = canAccessAdmin && canAccessPortal && !!employeeId;
+  // Temporarily disabled to prevent any hybrid admin/portal contamination.
+  // Keep the component inert even if a route still mounts it somewhere.
+  const shouldShow = false && canAccessAdmin && canAccessPortal && !!employeeId;
 
   const loadData = useCallback(async () => {
     if (!employeeId) return;
