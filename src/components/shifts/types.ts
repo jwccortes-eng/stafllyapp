@@ -54,10 +54,17 @@ export interface Employee {
  * so we don't break older records that haven't been migrated yet.
  */
 export function isEmployeeDriver(e: Pick<Employee, "can_drive" | "has_car">): boolean {
+  // Authoritative: boolean column wins when explicitly set.
   if (e.can_drive === true) return true;
-  if (e.can_drive === false) return false; // explicit false wins over legacy text
+  if (e.can_drive === false) return false;
+  // Legacy fallback: free-form text. Real DB values include sentences like
+  // "Yes, I have a Car" or "Sí tengo carro", so we use substring matching
+  // anchored on affirmative tokens and explicitly reject "no/dont/don't".
   const hc = (e.has_car ?? "").toLowerCase().trim();
-  return hc === "yes" || hc === "true" || hc === "sí" || hc === "si" || hc === "1";
+  if (!hc) return false;
+  // Negative phrases first ("No, I dont have a car") to avoid false positives.
+  if (/\b(no|don'?t|sin|nunca)\b/.test(hc)) return false;
+  return /\b(yes|sí|si|true|1|tengo|have)\b/.test(hc) || hc === "1";
 }
 
 export type ViewMode = "day" | "week" | "month" | "employee" | "client";
