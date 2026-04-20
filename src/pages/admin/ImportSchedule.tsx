@@ -397,8 +397,9 @@ export default function ImportSchedule() {
           // Clean shift code: extract only the leading numeric part
           const numericCode = group.shiftCode ? group.shiftCode.match(/^(\d+)/)?.[1] || group.shiftCode : null;
 
+          // Title is kept clean — `shift_code` is the single source of truth and is rendered
+          // as a separate `#0001` chip by the cards/headers. Do NOT bake the code into the title.
           let title = "";
-          if (numericCode) title += `#${numericCode.padStart(4, "0")} `;
           if (group.job) {
             const cleanJob = group.job.replace(/^\d+\s*[-–]\s*/, "").trim();
             title += cleanJob;
