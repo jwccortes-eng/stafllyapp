@@ -347,6 +347,7 @@ export default function Shifts() {
     setMeetingPoint(""); setSpecialInstructions(""); setPayType("hourly");
     setDayType("full_day"); setShiftAdminId("");
     setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
+    setClockMethod("both");
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
     setRepeatConfig(DEFAULT_REPEAT);
   };
