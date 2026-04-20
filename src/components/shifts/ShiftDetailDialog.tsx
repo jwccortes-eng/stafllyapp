@@ -142,18 +142,8 @@ export function ShiftDetailDialog({
   const [selected, setSelected] = useState<string[]>([]);
   const [tab, setTab] = useState("details");
 
-  // Inline edit state
-  const [editing, setEditing] = useState(false);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [slots, setSlots] = useState("1");
-  const [clientId, setClientId] = useState("");
-  const [locationId, setLocationId] = useState("");
-  const [notes, setNotes] = useState("");
-  const [claimable, setClaimable] = useState(false);
-  const [saving, setSaving] = useState(false);
+  // Editing is now delegated to the canonical ShiftEditDialog (ShiftFormFields).
+  // No local form state — this sheet is read-only and triggers `onEdit(shift)`.
 
   // Shift requests state
   const [requests, setRequests] = useState<ShiftRequestItem[]>([]);
