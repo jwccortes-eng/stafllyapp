@@ -36,7 +36,7 @@ const HelpCenter = lazy(() => import("./pages/help/HelpCenter"));
 const UserManual = lazy(() => import("./pages/help/UserManual"));
 
 // Admin pages
-const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const AdminDashboard = AdminDashboardStub;
 const PayPeriods = lazy(() => import("./pages/admin/PayPeriods"));
 const ImportConnecteam = lazy(() => import("./pages/admin/ImportConnecteam"));
 const Concepts = lazy(() => import("./pages/admin/Concepts"));
@@ -150,6 +150,18 @@ function PageFallback() {
     <div className="flex items-center justify-center min-h-[50vh]">
       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
     </div>
+  );
+}
+
+function AdminDashboardStub() {
+  return (
+    <section className="space-y-3">
+      <header className="space-y-1">
+        <p className="text-sm font-medium text-muted-foreground">Admin</p>
+        <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">Dashboard</h1>
+      </header>
+      <p className="text-sm text-muted-foreground">Dashboard stub</p>
+    </section>
   );
 }
 
