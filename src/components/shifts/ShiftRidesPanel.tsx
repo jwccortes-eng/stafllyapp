@@ -144,6 +144,43 @@ export function ShiftRidesPanel({
 
   // (driver search filtering moved into SingleEmployeePicker)
 
+  /**
+   * Decide invite path before opening the dialog. Reuses the central
+   * resolve-applicant-identity edge function so the same logic that drives
+   * /apply/:slug also drives this admin-side action:
+   *   - new           → registro/onboarding (here we just open the invite flow)
+   *   - existing_no_portal / existing_inactive → activación (open invite)
+   *   - existing_active → cuenta lista, no reinvitar (sólo aviso)
+   *   - pending_application → ya hay invitación pendiente (sólo aviso)
+   */
+  const handleInviteEmployee = useCallback(async (emp: Employee) => {
+    const phone = (emp.phone_number ?? "").replace(/\D/g, "");
+    if (!phone && !emp.email) {
+      toast.error("Este empleado no tiene teléfono ni email para invitar.");
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke("resolve-applicant-identity", {
+        body: { company_id: companyId, phone, email: emp.email ?? undefined },
+      });
+      if (error) throw error;
+      const scenario = (data as { scenario?: string } | null)?.scenario;
+      if (scenario === "existing_active") {
+        toast.success(`${formatPersonName(emp.first_name)} ya tiene cuenta activa.`);
+        return;
+      }
+      if (scenario === "pending_application") {
+        toast.message("Ya hay una solicitud pendiente para este teléfono.");
+        // Still open the dialog so admin can resend / copy link.
+      }
+      // For new / existing_no_portal / existing_inactive → abrir invitación.
+    } catch (err: unknown) {
+      // Don't block the admin if resolver fails — fall through to invite dialog.
+      console.warn("[ShiftRidesPanel] phone resolution failed (non-blocking):", err);
+    }
+    setInviteEmployee(emp);
+  }, [companyId]);
+
   const saveMapping = async (next: ConceptMapping) => {
     setMapping(next);
     const { error } = await supabase.from("company_settings").upsert({
