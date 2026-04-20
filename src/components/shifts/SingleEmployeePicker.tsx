@@ -188,36 +188,53 @@ export function SingleEmployeePicker({
               const used = usageCount?.(emp.id) ?? 0;
               const isSelected = emp.id === value;
               const empIsDriver = isDriver(emp);
+              const portalState = resolvePortalState(emp);
+              const portalBadge = PORTAL_BADGE[portalState];
+              const canInvite = !!onInviteEmployee && portalState !== "active" && !!(emp.phone_number || emp.email);
               return (
-                <button
+                <div
                   key={emp.id}
-                  type="button"
-                  onClick={() => handleSelect(emp.id)}
                   className={cn(
-                    "flex items-center gap-2 w-full px-2.5 py-2 text-xs hover:bg-accent/60 transition-colors border-b border-border/10 last:border-0 text-left",
+                    "flex items-center gap-2 w-full px-2.5 py-2 text-xs hover:bg-accent/60 transition-colors border-b border-border/10 last:border-0",
                     isSelected && "bg-primary/[0.07]",
                   )}
                 >
-                  <EmployeeAvatar
-                    firstName={emp.first_name}
-                    lastName={emp.last_name}
-                    avatarUrl={emp.avatar_url}
-                    gender={emp.gender}
-                    size="sm"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate flex items-center gap-1">
-                      {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)}
-                      {highlightDrivers && empIsDriver && (
-                        <Car className="h-3 w-3 text-primary/70 shrink-0" />
-                      )}
-                    </p>
-                    {emp.employee_role && (
-                      <p className="text-[10px] text-muted-foreground truncate">
-                        {formatDisplayText(emp.employee_role, "label")}
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(emp.id)}
+                    className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                  >
+                    <EmployeeAvatar
+                      firstName={emp.first_name}
+                      lastName={emp.last_name}
+                      avatarUrl={emp.avatar_url}
+                      gender={emp.gender}
+                      size="sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate flex items-center gap-1">
+                        {formatPersonName(emp.first_name)} {formatPersonName(emp.last_name)}
+                        {highlightDrivers && empIsDriver && (
+                          <Car className="h-3 w-3 text-primary/70 shrink-0" />
+                        )}
                       </p>
-                    )}
-                  </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {emp.employee_role && (
+                          <span className="text-[10px] text-muted-foreground truncate">
+                            {formatDisplayText(emp.employee_role, "label")}
+                          </span>
+                        )}
+                        {emp.phone_number && (
+                          <span className="text-[10px] text-muted-foreground/80 truncate">· {emp.phone_number}</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                  {showPortalState && (
+                    <Badge variant="outline" className={cn("text-[9px] shrink-0", portalBadge.className)}>
+                      {portalBadge.label}
+                    </Badge>
+                  )}
                   {used > 0 && (
                     <Badge
                       variant="outline"
@@ -226,8 +243,21 @@ export function SingleEmployeePicker({
                       {used}×
                     </Badge>
                   )}
+                  {canInvite && (
+                    <button
+                      type="button"
+                      title={portalState === "pending" ? "Reenviar invitación" : "Enviar invitación"}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        onInviteEmployee?.(emp);
+                      }}
+                      className="rounded-md p-1 hover:bg-primary/10 text-primary shrink-0"
+                    >
+                      <Send className="h-3 w-3" />
+                    </button>
+                  )}
                   {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
-                </button>
+                </div>
               );
             })
           )}
