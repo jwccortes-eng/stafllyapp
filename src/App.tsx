@@ -186,6 +186,12 @@ function App() {
               <Route path="/join/:inviteCode" element={<JoinCompany />} />
               <Route path="/invite" element={<AcceptInvite />} />
               <Route path="/activate/:token" element={<ActivateAccount />} />
+              <Route path="/s/:token" element={<ShiftLink />} />
+              <Route path="/client" element={<ClientLayout />}>
+                <Route index element={<ClientDashboard />} />
+                <Route path="requests" element={<ClientRequests />} />
+                <Route path="requests/new" element={<ClientNewRequest />} />
+              </Route>
               {/* Parceros — own layout, branded */}
               <Route path="/parceros" element={<ParcerosLayout />}>
                 <Route index element={<ParcerosCommunity />} />
