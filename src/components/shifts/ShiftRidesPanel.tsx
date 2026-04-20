@@ -596,6 +596,21 @@ export function ShiftRidesPanel({
           ✓ Todos los rides tienen pago generado
         </p>
       )}
+
+      {/* Invite dialog: opens when admin clicks Invitar/Reenviar inline.
+          Reuses the canonical EmployeeInviteDialog so portal token, channel,
+          delivery status and resend logic stay consistent across the app. */}
+      {inviteEmployee && (
+        <EmployeeInviteDialog
+          open={!!inviteEmployee}
+          onOpenChange={(o) => { if (!o) setInviteEmployee(null); }}
+          employee={inviteEmployee as unknown as Record<string, any>}
+          onInviteSent={() => {
+            // Refresh drivers so the portal-state badge updates immediately.
+            loadDrivers();
+          }}
+        />
+      )}
     </div>
   );
 }
