@@ -115,6 +115,11 @@ const UpgradeRequests = lazy(() => import("./pages/admin/UpgradeRequests"));
 const Apply = lazy(() => import("./pages/Apply"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));
+const ShiftLink = lazy(() => import("./pages/ShiftLink"));
+const ClientLayout = lazy(() => import("./components/client/ClientLayout"));
+const ClientDashboard = lazy(() => import("./pages/client/ClientDashboard"));
+const ClientRequests = lazy(() => import("./pages/client/ClientRequests"));
+const ClientNewRequest = lazy(() => import("./pages/client/ClientNewRequest"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 // Portal pages
 const EmployeeDashboard = lazy(() => import("./pages/portal/EmployeeDashboard"));
