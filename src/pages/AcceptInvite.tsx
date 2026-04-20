@@ -32,11 +32,9 @@ export default function AcceptInvite() {
     if (!token) { setState("invalid"); return; }
 
     (async () => {
-      const { data, error } = await (supabase
-        .from("employee_invitations" as any)
-        .select("id, employee_id, status, expires_at, company_id, opened_at")
-        .eq("invite_token", token)
-        .single() as any);
+      const { data: inviteRows, error } = await (supabase
+        .rpc("get_invitation_by_token", { _token: token }) as any);
+      const data = Array.isArray(inviteRows) ? inviteRows[0] : inviteRows;
 
       if (error || !data) { setState("invalid"); return; }
 
@@ -44,8 +42,10 @@ export default function AcceptInvite() {
 
       if (data.expires_at && new Date(data.expires_at) < new Date()) {
         if (data.status !== "expired") {
-          await (supabase.from("employee_invitations" as any)
-            .update({ status: "expired" }).eq("id", data.id) as any);
+          await (supabase.rpc("update_invitation_status_by_token", {
+            _token: token,
+            _new_status: "expired",
+          }) as any);
         }
         setState("expired");
         return;
@@ -53,9 +53,10 @@ export default function AcceptInvite() {
 
       if (!markedOpened.current && data.status !== "opened" && data.status !== "accepted") {
         markedOpened.current = true;
-        await (supabase.from("employee_invitations" as any)
-          .update({ status: "opened", opened_at: data.opened_at ?? new Date().toISOString() })
-          .eq("id", data.id) as any);
+        await (supabase.rpc("update_invitation_status_by_token", {
+          _token: token,
+          _new_status: "opened",
+        }) as any);
       }
 
       let employeeName = "";

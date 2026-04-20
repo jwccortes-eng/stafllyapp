@@ -357,9 +357,10 @@ export default function ActivateAccount() {
         }
       }
 
-      await (supabase.from("employee_invitations" as any)
-        .update({ status: "accepted", accepted_at: new Date().toISOString() })
-        .eq("id", invite.id) as any);
+      await (supabase.rpc("update_invitation_status_by_token", {
+        _token: token,
+        _new_status: "accepted",
+      }) as any);
 
       await supabase.from("employees")
         .update({
