@@ -11529,6 +11529,7 @@ export type Database = {
       }
       worker_profiles: {
         Row: {
+          avatar_url: string | null
           bio: string | null
           city: string | null
           country: string | null
@@ -11541,13 +11542,19 @@ export type Database = {
           english_level:
             | Database["public"]["Enums"]["english_level_enum"]
             | null
+          first_name: string | null
           gender: string | null
           headline: string | null
           id: string
           is_available_for_marketplace: boolean | null
           is_profile_public: boolean | null
+          last_name: string | null
           primary_phone: string | null
+          primary_worker_type:
+            | Database["public"]["Enums"]["worker_type_enum"]
+            | null
           profile_completion_percent: number | null
+          profile_completion_stage: Database["public"]["Enums"]["profile_stage_enum"]
           public_slug: string | null
           referred_by: string | null
           state: string | null
@@ -11556,10 +11563,14 @@ export type Database = {
           verification_status:
             | Database["public"]["Enums"]["verification_status"]
             | null
+          work_authorization_status:
+            | Database["public"]["Enums"]["work_auth_status_enum"]
+            | null
           years_of_experience: number | null
           zip_code: string | null
         }
         Insert: {
+          avatar_url?: string | null
           bio?: string | null
           city?: string | null
           country?: string | null
@@ -11572,13 +11583,19 @@ export type Database = {
           english_level?:
             | Database["public"]["Enums"]["english_level_enum"]
             | null
+          first_name?: string | null
           gender?: string | null
           headline?: string | null
           id?: string
           is_available_for_marketplace?: boolean | null
           is_profile_public?: boolean | null
+          last_name?: string | null
           primary_phone?: string | null
+          primary_worker_type?:
+            | Database["public"]["Enums"]["worker_type_enum"]
+            | null
           profile_completion_percent?: number | null
+          profile_completion_stage?: Database["public"]["Enums"]["profile_stage_enum"]
           public_slug?: string | null
           referred_by?: string | null
           state?: string | null
@@ -11586,11 +11603,15 @@ export type Database = {
           user_id?: string | null
           verification_status?:
             | Database["public"]["Enums"]["verification_status"]
+            | null
+          work_authorization_status?:
+            | Database["public"]["Enums"]["work_auth_status_enum"]
             | null
           years_of_experience?: number | null
           zip_code?: string | null
         }
         Update: {
+          avatar_url?: string | null
           bio?: string | null
           city?: string | null
           country?: string | null
@@ -11603,13 +11624,19 @@ export type Database = {
           english_level?:
             | Database["public"]["Enums"]["english_level_enum"]
             | null
+          first_name?: string | null
           gender?: string | null
           headline?: string | null
           id?: string
           is_available_for_marketplace?: boolean | null
           is_profile_public?: boolean | null
+          last_name?: string | null
           primary_phone?: string | null
+          primary_worker_type?:
+            | Database["public"]["Enums"]["worker_type_enum"]
+            | null
           profile_completion_percent?: number | null
+          profile_completion_stage?: Database["public"]["Enums"]["profile_stage_enum"]
           public_slug?: string | null
           referred_by?: string | null
           state?: string | null
@@ -11617,6 +11644,9 @@ export type Database = {
           user_id?: string | null
           verification_status?:
             | Database["public"]["Enums"]["verification_status"]
+            | null
+          work_authorization_status?:
+            | Database["public"]["Enums"]["work_auth_status_enum"]
             | null
           years_of_experience?: number | null
           zip_code?: string | null
@@ -12108,6 +12138,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
+      compute_profile_stage: {
+        Args: { _worker_profile_id: string }
+        Returns: Database["public"]["Enums"]["profile_stage_enum"]
+      }
       consolidate_all_passports: { Args: never; Returns: Json }
       consolidate_passport: {
         Args: { _worker_profile_id: string }
@@ -12219,6 +12253,10 @@ export type Database = {
           _entity_type: Database["public"]["Enums"]["review_entity_type"]
         }
         Returns: undefined
+      }
+      user_can_access_worker_docs: {
+        Args: { _user_id: string; _worker_profile_id: string }
+        Returns: boolean
       }
       user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       user_is_assigned_to_shift: {
@@ -12365,6 +12403,11 @@ export type Database = {
         | "payroll_offset"
         | "other"
       proficiency_level: "beginner" | "intermediate" | "advanced" | "expert"
+      profile_stage_enum:
+        | "minimal"
+        | "claim_ready"
+        | "work_ready"
+        | "payroll_ready"
       profile_visibility: "private" | "limited" | "public"
       rate_source: "concept_default" | "per_employee"
       repayment_mode:
@@ -12454,6 +12497,25 @@ export type Database = {
         | "document_scan"
         | "reference_check"
       verification_status: "unverified" | "pending" | "verified" | "rejected"
+      work_auth_status_enum:
+        | "citizen"
+        | "permanent_resident"
+        | "work_visa"
+        | "ead"
+        | "pending"
+        | "not_provided"
+      worker_type_enum:
+        | "server"
+        | "bartender"
+        | "cook"
+        | "kitchen_help"
+        | "runner"
+        | "host"
+        | "security"
+        | "driver"
+        | "cleaner"
+        | "event_staff"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -12732,6 +12794,12 @@ export const Constants = {
         "other",
       ],
       proficiency_level: ["beginner", "intermediate", "advanced", "expert"],
+      profile_stage_enum: [
+        "minimal",
+        "claim_ready",
+        "work_ready",
+        "payroll_ready",
+      ],
       profile_visibility: ["private", "limited", "public"],
       rate_source: ["concept_default", "per_employee"],
       repayment_mode: [
@@ -12831,6 +12899,27 @@ export const Constants = {
         "reference_check",
       ],
       verification_status: ["unverified", "pending", "verified", "rejected"],
+      work_auth_status_enum: [
+        "citizen",
+        "permanent_resident",
+        "work_visa",
+        "ead",
+        "pending",
+        "not_provided",
+      ],
+      worker_type_enum: [
+        "server",
+        "bartender",
+        "cook",
+        "kitchen_help",
+        "runner",
+        "host",
+        "security",
+        "driver",
+        "cleaner",
+        "event_staff",
+        "other",
+      ],
     },
   },
 } as const
