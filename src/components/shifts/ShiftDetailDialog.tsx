@@ -996,7 +996,19 @@ export function ShiftDetailDialog({
           ) : tab === "chat" ? (
             <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} />
           ) : tab === "rides" ? (
-            <ShiftRidesPanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canEdit={effectiveCanEdit} />
+            <ShiftRidesPanel
+              shiftId={shift.id}
+              companyId={selectedCompanyId!}
+              assignments={assignments}
+              employees={employees}
+              canEdit={effectiveCanEdit}
+              shiftContext={{
+                title: shift.title || "Turno",
+                date: shift.date,
+                start_time: shift.start_time,
+                shift_link_token: (shift as Shift & { shift_link_token?: string | null }).shift_link_token,
+              }}
+            />
           ) : tab === "audit" ? (
             <ShiftAuditTrail shiftId={shift.id} />
           ) : null}
