@@ -135,7 +135,11 @@ export default function Shifts() {
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  // `loading` reflects ONLY the very first load. Background refetches use `isRefetching`
+  // so the previous data stays visible — no skeleton flash, no layout shift.
   const [loading, setLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
+  const hasLoadedOnce = useRef(false);
   const [clients, setClients] = useState<SelectOption[]>([]);
   const [locations, setLocations] = useState<(SelectOption & { address?: string; client_id?: string | null })[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
