@@ -71,11 +71,43 @@ export async function copyLink(url: string): Promise<void> {
   }
 }
 
-export function openWhatsApp(ctx: ShiftShareContext, phone?: string | null): void {
-  const text = encodeURIComponent(buildShiftMessage(ctx));
+/**
+ * Open WhatsApp with the templated message.
+ *
+ * We always use `wa.me` (never `api.whatsapp.com/send`) — `api.whatsapp.com`
+ * sends `X-Frame-Options: DENY` and gets blocked with `ERR_BLOCKED_BY_RESPONSE`
+ * when opened from inside an iframe (Lovable preview, embedded contexts).
+ *
+ * If `window.open` returns null (popup blocker, sandboxed iframe, in-app browser)
+ * we copy the full message to the clipboard and surface a clear toast so the
+ * admin can paste it manually instead of getting silently nothing.
+ */
+export async function openWhatsApp(
+  ctx: ShiftShareContext,
+  phone?: string | null,
+): Promise<void> {
+  const message = buildShiftMessage(ctx);
+  const text = encodeURIComponent(message);
   const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
   const base = cleanPhone ? `https://wa.me/${cleanPhone}` : "https://wa.me/";
-  window.open(`${base}?text=${text}`, "_blank", "noopener,noreferrer");
+  const url = `${base}?text=${text}`;
+
+  let win: Window | null = null;
+  try {
+    win = window.open(url, "_blank", "noopener,noreferrer");
+  } catch {
+    win = null;
+  }
+
+  if (!win) {
+    // Popup blocked / iframe sandbox / in-app browser → degrade gracefully.
+    try {
+      await navigator.clipboard.writeText(`${message}`);
+      toast.error("No pudimos abrir WhatsApp. Copiamos el mensaje al portapapeles.");
+    } catch {
+      toast.error("No pudimos abrir WhatsApp. Copia el link manualmente: " + ctx.url);
+    }
+  }
 }
 
 export async function shareNative(ctx: ShiftShareContext): Promise<void> {

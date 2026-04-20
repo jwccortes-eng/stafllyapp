@@ -244,7 +244,9 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const normalizedPhone = phoneDigits.startsWith("00") ? phoneDigits.slice(2) : phoneDigits;
   const fullPhone = normalizedPhone.length === 10 ? `1${normalizedPhone}` : normalizedPhone;
 
-  const waLink = `https://api.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(message)}`;
+  // wa.me is iframe-safe; api.whatsapp.com sends X-Frame-Options: DENY and
+  // breaks with ERR_BLOCKED_BY_RESPONSE inside embedded contexts.
+  const waLink = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
   const smsLink = `sms:${employee.phone_number ?? ""}?body=${encodeURIComponent(message)}`;
 
   const copyMessage = async () => {
