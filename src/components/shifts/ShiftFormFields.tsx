@@ -23,7 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   CalendarIcon, Clock, Building2, Users, Hash, CreditCard, FileText, Car, Compass,
-  Plus, Loader2, ChevronDown, Settings2, QrCode,
+  Plus, Loader2, ChevronDown, Settings2, QrCode, ScanLine,
 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -452,7 +452,20 @@ export function ShiftFormFields({
 
       {/* ── Payment ── */}
       <SectionCard icon={CreditCard} title="Tipo de pago">
-        <Select value={v.payType} onValueChange={val => onChange({ payType: val as "hourly" | "daily" })}>
+        <Select
+          value={v.payType}
+          onValueChange={val => {
+            const newPayType = val as "hourly" | "daily";
+            // Auto-suggest attendance mode if user hasn't customized it (still on the
+            // default of the previous pay type). Daily → arrival, Hourly → clock.
+            const currentDefault = defaultAttendanceModeForPayType(v.payType);
+            const patch: any = { payType: newPayType };
+            if (v.attendanceMode === currentDefault) {
+              patch.attendanceMode = defaultAttendanceModeForPayType(newPayType);
+            }
+            onChange(patch);
+          }}
+        >
           <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
@@ -475,6 +488,43 @@ export function ShiftFormFields({
           </div>
         )}
       </SectionCard>
+
+      {/* ── Attendance Mode + Meeting Time (operational presence) ── */}
+      <SectionCard icon={ScanLine} title="Control de asistencia">
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium">Modo</Label>
+          <Select
+            value={v.attendanceMode}
+            onValueChange={val => onChange({ attendanceMode: val as ShiftAttendanceMode })}
+          >
+            <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="clock">⏱ {SHIFT_ATTENDANCE_MODE_LABELS.clock}</SelectItem>
+              <SelectItem value="arrival">📍 {SHIFT_ATTENDANCE_MODE_LABELS.arrival}</SelectItem>
+              <SelectItem value="hybrid">🔀 {SHIFT_ATTENDANCE_MODE_LABELS.hybrid}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            {SHIFT_ATTENDANCE_MODE_HINTS[v.attendanceMode]}
+          </p>
+        </div>
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+            <Clock className="h-3 w-3" /> Hora de convocatoria (opcional)
+          </Label>
+          <Input
+            type="time"
+            value={v.meetingTime}
+            onChange={e => onChange({ meetingTime: e.target.value })}
+            className="h-9 text-sm mt-1"
+            placeholder="--:--"
+          />
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Si se define, se usa para calcular puntualidad en lugar de la hora de inicio del turno.
+          </p>
+        </div>
+      </SectionCard>
+
 
       {/* ── Clock method + QR (QR only in edit, needs shift.id) ── */}
       <div className={cn("grid gap-3", mode === "edit" && shift && onQrUpdate ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
