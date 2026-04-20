@@ -13,7 +13,8 @@ const TEST_USERS = [
   { email: "empleado@staflyapps.com", full_name: "Empleado Test", role: "employee" },
 ];
 
-const PASSWORD = "123456";
+// Password is sourced from a secret. We refuse to run with a weak/missing value.
+const PASSWORD = Deno.env.get("SEED_TEST_PASSWORD") ?? "";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,6 +22,17 @@ serve(async (req) => {
   }
 
   try {
+    // Hard guard: refuse to seed with weak / missing password.
+    if (!PASSWORD || PASSWORD.length < 12) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "SEED_TEST_PASSWORD secret is not configured or is too weak (min 12 chars). Set a strong value in Supabase secrets before running this function.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
