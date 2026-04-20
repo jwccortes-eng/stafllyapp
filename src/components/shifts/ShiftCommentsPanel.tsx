@@ -44,7 +44,7 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
   const [comments, setComments] = useState<ShiftComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState("");
-  const [attachments, setAttachments] = useState<{ url: string; filename: string; type: string }[]>([]);
+  const [attachments, setAttachments] = useState<ShiftAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -84,8 +84,12 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
       const path = `${companyId}/${shiftId}/comments/${safeRandomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("shift-attachments").upload(path, file);
       if (error) { toast.error(`Error: ${error.message}`); continue; }
-      const { data: urlData } = supabase.storage.from("shift-attachments").getPublicUrl(path);
-      setAttachments(prev => [...prev, { url: urlData.publicUrl, filename: file.name, type: file.type }]);
+      // Bucket is private — generate a short-lived signed URL just for the local preview.
+      // The persisted `path` is the source of truth; viewers resolve it on demand.
+      const { data: signed } = await supabase.storage
+        .from("shift-attachments")
+        .createSignedUrl(path, 60 * 60);
+      setAttachments(prev => [...prev, { path, url: signed?.signedUrl ?? "", filename: file.name, type: file.type }]);
     }
 
     setUploading(false);
