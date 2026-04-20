@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-import { Search, ChevronDown, X, Check, Car } from "lucide-react";
+import { Search, ChevronDown, X, Check, Car, Send } from "lucide-react";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { cn } from "@/lib/utils";
 import type { Employee } from "./types";
@@ -22,6 +22,10 @@ export interface SingleEmployeePickerProps {
   highlightDrivers?: boolean;
   /** Restrict the list to driver-only when true */
   driversOnly?: boolean;
+  /** Show portal-access state badges (Active / Pending / New) per row */
+  showPortalState?: boolean;
+  /** Inline invite action triggered from a row (admin-only flow) */
+  onInviteEmployee?: (employee: Employee) => void;
   triggerClassName?: string;
   size?: "sm" | "md";
   disabled?: boolean;
@@ -32,6 +36,20 @@ export interface SingleEmployeePickerProps {
 
 import { isEmployeeDriver } from "./types";
 const isDriver = (e: Employee) => isEmployeeDriver(e);
+
+type PortalState = "active" | "pending" | "new";
+
+function resolvePortalState(e: Employee): PortalState {
+  if (e.user_id) return "active";
+  if (e.access_pin) return "pending";
+  return "new";
+}
+
+const PORTAL_BADGE: Record<PortalState, { label: string; className: string }> = {
+  active: { label: "Activo", className: "bg-[hsl(var(--earning))]/12 text-[hsl(var(--earning))] border-[hsl(var(--earning))]/25" },
+  pending: { label: "Pendiente", className: "bg-warning/12 text-warning border-warning/25" },
+  new: { label: "Nuevo", className: "bg-muted text-muted-foreground border-border/40" },
+};
 
 /**
  * Unified single-employee selector for the Shifts module.
