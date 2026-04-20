@@ -309,3 +309,5 @@ function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, 
     </div>
   );
 }
+
+export const WeekByJobView = memo(WeekByJobViewImpl);
