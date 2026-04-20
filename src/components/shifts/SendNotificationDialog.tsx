@@ -127,12 +127,16 @@ export function SendNotificationDialog({
         continue;
       }
 
-      const { data: urlData } = supabase.storage
+      // Bucket is private — generate a short-lived signed URL for the in-dialog preview.
+      // The persisted `path` is the source of truth; recipients resolve it to a fresh
+      // signed URL at render time via resolveShiftAttachmentUrl().
+      const { data: signed } = await supabase.storage
         .from("shift-attachments")
-        .getPublicUrl(path);
+        .createSignedUrl(path, 60 * 60);
 
       setAttachments(prev => [...prev, {
-        url: urlData.publicUrl,
+        path,
+        url: signed?.signedUrl ?? "",
         filename: file.name,
         type: file.type,
       }]);

@@ -10,11 +10,21 @@ import { toast } from "sonner";
 import { Loader2, Send, Image, X, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { resolveShiftAttachmentUrl } from "@/lib/shift-attachments";
+
+interface ShiftAttachment {
+  /** Storage path (preferred for new rows). */
+  path?: string;
+  /** Either a signed URL (preview) or a legacy public URL. */
+  url: string;
+  filename: string;
+  type: string;
+}
 
 interface ShiftComment {
   id: string;
   content: string;
-  attachments: { url: string; filename: string; type: string }[];
+  attachments: ShiftAttachment[];
   author_id: string;
   author_type: string;
   employee_id: string | null;
@@ -34,7 +44,7 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
   const [comments, setComments] = useState<ShiftComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState("");
-  const [attachments, setAttachments] = useState<{ url: string; filename: string; type: string }[]>([]);
+  const [attachments, setAttachments] = useState<ShiftAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -74,8 +84,12 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
       const path = `${companyId}/${shiftId}/comments/${safeRandomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("shift-attachments").upload(path, file);
       if (error) { toast.error(`Error: ${error.message}`); continue; }
-      const { data: urlData } = supabase.storage.from("shift-attachments").getPublicUrl(path);
-      setAttachments(prev => [...prev, { url: urlData.publicUrl, filename: file.name, type: file.type }]);
+      // Bucket is private — generate a short-lived signed URL just for the local preview.
+      // The persisted `path` is the source of truth; viewers resolve it on demand.
+      const { data: signed } = await supabase.storage
+        .from("shift-attachments")
+        .createSignedUrl(path, 60 * 60);
+      setAttachments(prev => [...prev, { path, url: signed?.signedUrl ?? "", filename: file.name, type: file.type }]);
     }
 
     setUploading(false);
@@ -145,16 +159,7 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
                   {c.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {c.attachments.map((att, i) => (
-                        att.type?.startsWith("image/") ? (
-                          <a key={i} href={att.url} target="_blank" rel="noopener noreferrer">
-                            <img src={att.url} alt={att.filename} className="h-12 w-12 rounded object-cover border" />
-                          </a>
-                        ) : (
-                          <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-[10px] text-primary bg-primary/5 rounded px-2 py-1">
-                            <FileText className="h-3 w-3" /> {att.filename}
-                          </a>
-                        )
+                        <SignedAttachment key={i} att={att} />
                       ))}
                     </div>
                   )}
@@ -202,5 +207,49 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Resolves a stored attachment (path or legacy URL) to a fresh signed URL
+ * before rendering. Keeps the bucket private without breaking the UX.
+ */
+function SignedAttachment({ att }: { att: ShiftAttachment }) {
+  const [resolved, setResolved] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const source = att.path ?? att.url;
+    resolveShiftAttachmentUrl(source).then((url) => {
+      if (!cancelled) setResolved(url);
+    });
+    return () => { cancelled = true; };
+  }, [att.path, att.url]);
+
+  if (!resolved) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/30 rounded px-2 py-1">
+        <Loader2 className="h-3 w-3 animate-spin" /> {att.filename}
+      </span>
+    );
+  }
+
+  if (att.type?.startsWith("image/")) {
+    return (
+      <a href={resolved} target="_blank" rel="noopener noreferrer">
+        <img src={resolved} alt={att.filename} className="h-12 w-12 rounded object-cover border" />
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={resolved}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1 text-[10px] text-primary bg-primary/5 rounded px-2 py-1"
+    >
+      <FileText className="h-3 w-3" /> {att.filename}
+    </a>
   );
 }
