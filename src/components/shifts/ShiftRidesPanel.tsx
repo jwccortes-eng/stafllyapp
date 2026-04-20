@@ -541,9 +541,11 @@ export function ShiftRidesPanel({
             value={null}
             onChange={(id) => { if (id) addRide(id); }}
             placeholder="Buscar conductor..."
-            emptyLabel="+ Agregar ride"
+            emptyLabel={`+ Agregar ride (${drivers.length} conductor${drivers.length !== 1 ? "es" : ""})`}
             allowClear={false}
             highlightDrivers
+            showPortalState
+            onInviteEmployee={handleInviteEmployee}
             usageCount={(id) => rides.filter(r => r.driver_id === id).length}
             disabled={saving}
             triggerClassName="border-dashed"
