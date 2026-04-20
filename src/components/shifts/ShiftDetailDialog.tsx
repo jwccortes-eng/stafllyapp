@@ -248,16 +248,6 @@ export function ShiftDetailDialog({
 
   useEffect(() => {
     if (shift && open) {
-      setTitle(shift.title);
-      setDate(shift.date);
-      setStartTime(shift.start_time.slice(0, 5));
-      setEndTime(shift.end_time.slice(0, 5));
-      setSlots(String(shift.slots ?? 1));
-      setClientId(shift.client_id || "");
-      setLocationId(shift.location_id || "");
-      setNotes(shift.notes || "");
-      setClaimable(shift.claimable);
-      setEditing(false);
       setTab("details");
       loadRequests();
       loadRoleSlots();
@@ -273,7 +263,7 @@ export function ShiftDetailDialog({
   const unassigned = employees.filter(e => !assignedIds.has(e.id));
   const location = locations.find(l => l.id === shift.location_id);
   const client = clients.find(c => c.id === shift.client_id);
-  const hoursLabel = calcHours(editing ? startTime : shift.start_time.slice(0, 5), editing ? endTime : shift.end_time.slice(0, 5));
+  const hoursLabel = calcHours(shift.start_time.slice(0, 5), shift.end_time.slice(0, 5));
   const clientIds = clients.map(c => c.id);
   const clientColor = getClientColor(shift.client_id, clientIds);
   const slotsNum = shift.slots ?? 1;
@@ -334,22 +324,7 @@ export function ShiftDetailDialog({
     onRequestAction?.();
   };
 
-  const handleInlineSave = async () => {
-    if (!date) return;
-    if (onSave) {
-      setSaving(true);
-      try {
-        await onSave(shift.id, {
-          title: title.trim(), date, start_time: startTime, end_time: endTime,
-          slots: parseInt(slots) || 1, client_id: clientId || null,
-          location_id: locationId || null, notes: notes.trim() || null, claimable,
-        }, shift);
-        setEditing(false);
-      } finally { setSaving(false); }
-    } else {
-      onEdit(shift);
-    }
-  };
+  // Inline save removed — Edit now opens the canonical ShiftEditDialog (ShiftFormFields).
 
   const statusColors: Record<string, string> = {
     confirmed: "text-earning", pending: "text-warning", rejected: "text-destructive", review: "text-primary",
@@ -385,7 +360,7 @@ export function ShiftDetailDialog({
 
   return (
     <>
-    <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); setEditing(false); } }}>
+    <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); } }}>
       <SheetContent tone="ops" side="right" hideClose>
         {/* ── PREMIUM HEADER (sticky) ── */}
         <OpsSheetHeader
