@@ -97,9 +97,10 @@ export default function AcceptInvite() {
     if (!invite) return;
     setActivating(true);
 
-    await (supabase.from("employee_invitations" as any)
-      .update({ status: "accepted", accepted_at: new Date().toISOString() })
-      .eq("id", invite.id) as any);
+    await (supabase.rpc("update_invitation_status_by_token", {
+      _token: token,
+      _new_status: "accepted",
+    }) as any);
 
     await supabase.from("employees")
       .update({ portal_access_enabled: true } as any)
