@@ -68,6 +68,8 @@ export function SingleEmployeePicker({
   allowClear = true,
   highlightDrivers = false,
   driversOnly = false,
+  showPortalState = false,
+  onInviteEmployee,
   triggerClassName,
   size = "md",
   disabled = false,
