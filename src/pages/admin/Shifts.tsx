@@ -213,6 +213,7 @@ export default function Shifts() {
   const [carCapacity, setCarCapacity] = useState("4");
   const [transportNotes, setTransportNotes] = useState("");
   const [driverEmployeeId, setDriverEmployeeId] = useState("");
+  const [clockMethod, setClockMethod] = useState<"mobile" | "kiosk" | "both">("both");
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [copyingWeek, setCopyingWeek] = useState(false);
