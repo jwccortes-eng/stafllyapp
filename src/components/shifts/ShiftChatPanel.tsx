@@ -37,12 +37,8 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdmin
   const { user, allRoles, resolveEmployeeForCompany } = useAuth();
   const { selectedCompanyId } = useCompany();
   const { effectiveEmployeeId } = useEffectiveEmployee();
-  // Hardened admin detection (Apr 2026 — Jorge / shift #0192 fix):
-  // admin for shift chat must be explicit AND scoped to the shift company.
-  const ADMIN_CHAT_ROLES = ["developer", "owner", "company_owner", "admin"] as const;
   const allRolesArray = useMemo(() => Array.from(allRoles), [allRoles]);
-  const hasExplicitAdminRole = ADMIN_CHAT_ROLES.some((r) => allRoles.has(r));
-  const isCompanyScopedAdmin = hasExplicitAdminRole && selectedCompanyId === companyId;
+  const [isCompanyScopedAdmin, setIsCompanyScopedAdmin] = useState(false);
   const isAdmin = isAdminProp ?? isCompanyScopedAdmin;
   const employeeId = effectiveEmployeeId ?? resolveEmployeeForCompany(companyId);
   const { play } = useSoundContext();
@@ -125,6 +121,47 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdmin
   useEffect(() => {
     loadMessages();
   }, [loadMessages]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveScopedAdmin = async () => {
+      if (!user?.id || !companyId) {
+        if (!cancelled) setIsCompanyScopedAdmin(false);
+        return;
+      }
+
+      if (allRoles.has("developer") || allRoles.has("owner")) {
+        if (!cancelled) setIsCompanyScopedAdmin(true);
+        return;
+      }
+
+      const { data, error } = await supabase.rpc("user_is_company_admin", {
+        _company_id: companyId,
+        _user_id: user.id,
+      });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("[shift-chat] admin scope resolution failed", {
+          companyId,
+          authUserId: user.id,
+          error,
+        });
+        setIsCompanyScopedAdmin(false);
+        return;
+      }
+
+      setIsCompanyScopedAdmin(Boolean(data));
+    };
+
+    void resolveScopedAdmin();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [allRoles, companyId, user?.id]);
 
   useEffect(() => {
     const channel = supabase
