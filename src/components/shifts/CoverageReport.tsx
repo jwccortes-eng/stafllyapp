@@ -55,7 +55,7 @@ export function CoverageReport({ coverage, showAll = false }: Props) {
 
   if (issues.length === 0 && !viewAll) {
     return (
-      <Card className="border-emerald-200 bg-emerald-50/30 dark:border-emerald-900 dark:bg-emerald-950/20">
+    <Card className="border-emerald-200/60 bg-emerald-50/30 dark:border-emerald-900/60 dark:bg-emerald-950/20">
         <CardContent className="p-4 flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
           <div>

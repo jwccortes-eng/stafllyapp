@@ -130,54 +130,117 @@ export default function ImportTimeClock() {
   const [filterTo, setFilterTo] = useState("");
   const [coverageData, setCoverageData] = useState<CoverageSummary | null>(null);
 
-  // Inline coverage analysis (can't use hook inside callback)
+  // Inline coverage analysis (delegates to the shared resolver-aware hook logic)
   const analyzeCoverageInline = async (compId: string, from: string, to: string): Promise<CoverageSummary | null> => {
     try {
+      const { useShiftCoverage: _ignore } = await import("@/hooks/useShiftCoverage");
+      void _ignore;
+      // We can't call the hook here, so we re-fetch using the same shape and
+      // run the resolver. Keeps a single source of truth.
+      const { resolveShiftAttendanceForAssignment, deriveCoverageStatus } =
+        await import("@/lib/attendance-resolver");
+
       const { data: shifts } = await supabase
-        .from("scheduled_shifts").select("id, title, shift_code, date, client_id")
+        .from("scheduled_shifts")
+        .select("id, title, shift_code, date, client_id, pay_type, start_time, end_time")
         .eq("company_id", compId).is("deleted_at", null).gte("date", from).lte("date", to);
       if (!shifts || shifts.length === 0) return null;
       const shiftIds = shifts.map(s => s.id);
+
       const [{ data: assignments }, { data: timeEntries }, { data: employees }] = await Promise.all([
-        supabase.from("shift_assignments").select("shift_id, employee_id, status").eq("company_id", compId).in("shift_id", shiftIds).in("status", ["accepted", "pending"]),
-        supabase.from("time_entries").select("shift_id, employee_id, clock_in, clock_out, status, break_minutes").eq("company_id", compId).in("shift_id", shiftIds).neq("status", "rejected"),
+        supabase.from("shift_assignments")
+          .select("id, shift_id, employee_id, status")
+          .eq("company_id", compId).in("shift_id", shiftIds)
+          .not("status", "in", "(rejected,removed)"),
+        supabase.from("time_entries")
+          .select("id, shift_id, employee_id, clock_in, clock_out, status, break_minutes, entry_source")
+          .eq("company_id", compId).in("shift_id", shiftIds).neq("status", "rejected"),
         supabase.from("employees").select("id, first_name, last_name").eq("company_id", compId),
       ]);
+
       const empMap = new Map<string, string>();
       (employees ?? []).forEach(e => empMap.set(e.id, `${e.first_name} ${e.last_name}`));
+
       const items = shifts.map(shift => {
         const sa = (assignments ?? []).filter(a => a.shift_id === shift.id);
         const te = (timeEntries ?? []).filter(t => t.shift_id === shift.id);
-        const assignedSet = new Set(sa.map(a => a.employee_id));
-        const clockedSet = new Set(te.map(t => t.employee_id));
-        const assignedEmployees = sa.map(a => ({ id: a.employee_id, name: empMap.get(a.employee_id) ?? "?" }));
-        const clockedEmployees = te.map(t => {
-          let hours = 0;
-          if (t.clock_in && t.clock_out) {
-            hours = (new Date(t.clock_out).getTime() - new Date(t.clock_in).getTime()) / 3600000 - (t.break_minutes ?? 0) / 60;
-          }
-          return { id: t.employee_id, name: empMap.get(t.employee_id) ?? "?", hours: Math.round(hours * 100) / 100 };
+
+        const attendanceLines = sa.map(a => {
+          const entries = te.filter(t => t.employee_id === a.employee_id);
+          const resolution = resolveShiftAttendanceForAssignment({
+            shift: { id: shift.id, date: shift.date, start_time: shift.start_time, end_time: shift.end_time, pay_type: shift.pay_type },
+            assignment: { id: a.id, shift_id: a.shift_id, employee_id: a.employee_id, status: a.status },
+            entries,
+          });
+          return { id: a.employee_id, name: empMap.get(a.employee_id) ?? "?", resolution };
         });
-        const missingEmployees = assignedEmployees.filter(e => !clockedSet.has(e.id));
-        const extraEmployees = clockedEmployees.filter(e => !assignedSet.has(e.id));
-        const totalAssigned = assignedSet.size;
-        const totalClocked = clockedSet.size;
-        const coveragePercent = totalAssigned > 0 ? Math.round((Math.min(totalClocked, totalAssigned) / totalAssigned) * 100) : 100;
+
+        let coveredCount = 0, clockCount = 0, manualCount = 0, daypayCount = 0, mixedCount = 0;
+        let noShowCount = 0, pendingReviewCount = 0;
+        for (const l of attendanceLines) {
+          if (l.resolution.is_counted_as_covered) coveredCount += 1;
+          if (l.resolution.resolved_status === "worked_clock") clockCount += 1;
+          if (l.resolution.resolved_status === "worked_manual") manualCount += 1;
+          if (l.resolution.resolved_status === "worked_daypay") daypayCount += 1;
+          if (l.resolution.resolved_status === "worked_mixed") mixedCount += 1;
+          if (l.resolution.resolved_status === "no_show") noShowCount += 1;
+          if (l.resolution.resolved_status === "pending_review") pendingReviewCount += 1;
+        }
+
+        const assignedSet = new Set(sa.map(a => a.employee_id));
+        const extraByEmp = new Map<string, { id: string; name: string; hours: number; source: string }>();
+        for (const t of te) {
+          if (assignedSet.has(t.employee_id)) continue;
+          const minutes = t.clock_in && t.clock_out
+            ? Math.max(0, Math.round((new Date(t.clock_out).getTime() - new Date(t.clock_in).getTime()) / 60000 - (t.break_minutes ?? 0)))
+            : 0;
+          const prev = extraByEmp.get(t.employee_id);
+          extraByEmp.set(t.employee_id, {
+            id: t.employee_id,
+            name: empMap.get(t.employee_id) ?? "?",
+            hours: Math.round(((prev?.hours ?? 0) + minutes / 60) * 100) / 100,
+            source: t.entry_source ?? "clock",
+          });
+        }
+        const extraEmployees = Array.from(extraByEmp.values());
+
+        const status = deriveCoverageStatus({
+          scheduled_count: attendanceLines.length, covered_count: coveredCount,
+          manual_resolved_count: manualCount, daypay_resolved_count: daypayCount,
+          clock_count: clockCount, mixed_count: mixedCount, no_show_count: noShowCount,
+          pending_review_count: pendingReviewCount, extra_count: extraEmployees.length,
+        });
+        const coveragePercent = attendanceLines.length > 0
+          ? Math.round((coveredCount / attendanceLines.length) * 100)
+          : extraEmployees.length > 0 ? 100 : 0;
+
         return {
-          shiftId: shift.id, shiftTitle: shift.title, shiftCode: shift.shift_code, date: shift.date,
-          clientId: shift.client_id, assignedEmployees, clockedEmployees, missingEmployees, extraEmployees,
-          coveragePercent, totalAssigned, totalClocked,
+          shiftId: shift.id, shiftTitle: shift.title, shiftCode: shift.shift_code,
+          date: shift.date, clientId: shift.client_id, payType: shift.pay_type ?? null,
+          attendanceLines, scheduledCount: attendanceLines.length, coveredCount,
+          clockCount, manualCount, daypayCount, mixedCount, noShowCount, pendingReviewCount,
+          extraEmployees, coverageStatus: status, coveragePercent,
         };
       });
-      const fullyCovered = items.filter(i => i.coveragePercent >= 100 && i.missingEmployees.length === 0).length;
-      const uncovered = items.filter(i => i.totalClocked === 0 && i.totalAssigned > 0).length;
-      const totalA = items.reduce((s, i) => s + i.totalAssigned, 0);
-      const totalC = items.reduce((s, i) => s + Math.min(i.totalClocked, i.totalAssigned), 0);
+
+      const fullyCovered = items.filter(i => i.coverageStatus === "covered").length;
+      const coveredWithIncidents = items.filter(i => i.coverageStatus === "covered_with_incidents").length;
+      const partiallyCovered = items.filter(i => i.coverageStatus === "partial").length;
+      const uncovered = items.filter(i => i.coverageStatus === "uncovered").length;
+      const pendingReview = items.filter(i => i.coverageStatus === "pending_review").length;
+      const totalA = items.reduce((s, i) => s + i.scheduledCount, 0);
+      const totalC = items.reduce((s, i) => s + i.coveredCount, 0);
+
       return {
-        totalShifts: items.length, fullyCovered, partiallyCovered: items.length - fullyCovered - uncovered,
-        uncovered, overallPercent: totalA > 0 ? Math.round((totalC / totalA) * 100) : 100, items,
+        totalShifts: items.length,
+        fullyCovered, coveredWithIncidents, partiallyCovered, uncovered, pendingReview,
+        overallPercent: totalA > 0 ? Math.round((totalC / totalA) * 100) : 100,
+        items,
       };
-    } catch { return null; }
+    } catch (err) {
+      console.error("analyzeCoverageInline error:", err);
+      return null;
+    }
   };
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -371,6 +434,7 @@ export default function ImportTimeClock() {
           clock_out: entry.clockOut?.toISOString() ?? null,
           notes: notesParts.join(" | "),
           status: "approved",
+          entry_source: "import",
         });
 
         if (error) {
@@ -413,17 +477,20 @@ export default function ImportTimeClock() {
         setCoverageData(coverageAnalysis);
         setCoverageData(coverageAnalysis);
 
-        // Auto-create tickets for discrepancies
+        // Auto-create tickets ONLY for explicit no-shows (not pending-review,
+        // because those may be resolved manually later). Avoids spam tickets on
+        // day-pay / weekend-job shifts that don't require classic clock pairs.
         if (coverageAnalysis && user) {
-          const issues = coverageAnalysis.items.filter(i => i.missingEmployees.length > 0);
+          const issues = coverageAnalysis.items.filter(i => i.noShowCount > 0);
           for (const item of issues) {
-            for (const emp of item.missingEmployees) {
+            const noShowLines = item.attendanceLines.filter(l => l.resolution.resolved_status === "no_show");
+            for (const line of noShowLines) {
               try {
                 await supabase.from("employee_tickets").insert({
                   company_id: selectedCompanyId,
-                  employee_id: emp.id,
-                  subject: `Fichaje faltante: ${item.shiftTitle} (${item.date})`,
-                  description: `El empleado ${emp.name} estaba programado en el turno "${item.shiftTitle}" el ${item.date} pero no registró fichaje de entrada/salida.`,
+                  employee_id: line.id,
+                  subject: `No-show: ${item.shiftTitle} (${item.date})`,
+                  description: `${line.name} fue marcado como no-show en el turno "${item.shiftTitle}" el ${item.date}.`,
                   type: "attendance",
                   priority: "normal",
                   source: "system",
@@ -477,18 +544,19 @@ export default function ImportTimeClock() {
       doc.setFontSize(12);
       doc.text("Análisis de Cobertura — Programados vs Fichados", 14, 18);
       doc.setFontSize(10);
-      doc.text(`Total turnos: ${coverage.totalShifts} | Cobertura: ${coverage.overallPercent}% | Completos: ${coverage.fullyCovered} | Sin fichaje: ${coverage.uncovered}`, 14, 26);
+      doc.text(`Total turnos: ${coverage.totalShifts} | Cobertura: ${coverage.overallPercent}% | Cubiertos: ${coverage.fullyCovered} | Con incidencia: ${coverage.coveredWithIncidents} | Parciales: ${coverage.partiallyCovered} | Sin cobertura: ${coverage.uncovered} | Pendientes: ${coverage.pendingReview}`, 14, 26);
 
-      const issueItems = coverage.items.filter(i => i.missingEmployees.length > 0 || i.extraEmployees.length > 0);
+      const issueItems = coverage.items.filter(i => i.coverageStatus !== "covered" || i.extraEmployees.length > 0);
       if (issueItems.length > 0) {
         autoTable(doc, {
           startY: 32,
-          head: [["Fecha", "Turno", "Cobertura", "No-shows", "Extras"]],
+          head: [["Fecha", "Turno", "Cobertura", "No-show", "Pendientes", "Extras"]],
           body: issueItems.map(i => [
             i.date,
             i.shiftTitle,
             `${i.coveragePercent}%`,
-            i.missingEmployees.map(e => e.name).join(", ") || "—",
+            i.attendanceLines.filter(l => l.resolution.resolved_status === "no_show").map(l => l.name).join(", ") || "—",
+            i.attendanceLines.filter(l => l.resolution.resolved_status === "pending_review").map(l => l.name).join(", ") || "—",
             i.extraEmployees.map(e => e.name).join(", ") || "—",
           ]),
           theme: "grid",
