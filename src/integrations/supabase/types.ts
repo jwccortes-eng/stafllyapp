@@ -11916,6 +11916,7 @@ export type Database = {
           company_id: string
           created_at: string
           employee_id: string
+          entry_source: string
           id: string
           notes: string | null
           shift_id: string | null
@@ -11936,6 +11937,7 @@ export type Database = {
           company_id: string
           created_at?: string
           employee_id: string
+          entry_source?: string
           id?: string
           notes?: string | null
           shift_id?: string | null
@@ -11956,6 +11958,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           employee_id?: string
+          entry_source?: string
           id?: string
           notes?: string | null
           shift_id?: string | null
