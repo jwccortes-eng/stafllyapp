@@ -56,16 +56,26 @@ export function ShiftRidesPanel({
   const [generatingPayments, setGeneratingPayments] = useState(false);
   const [mappingOpen, setMappingOpen] = useState(false);
 
-  // Load drivers (employees with has_car = 'Yes')
+  // Load drivers from the active company.
+  // Authoritative source: can_drive=true. Legacy fallback: has_car contains "yes/sí/si"
+  // or any free-form text the employee wrote ("Yes, I have a Car", "Sí tengo carro", etc.).
+  // We fetch all active employees of the company and filter client-side via isEmployeeDriver
+  // so that string variants and the boolean column are honored consistently.
   const loadDrivers = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, avatar_url, gender, phone_number, employee_role, has_car, user_id")
+      .select("id, first_name, last_name, avatar_url, gender, phone_number, email, employee_role, has_car, can_drive, user_id, access_pin, is_active")
       .eq("company_id", companyId)
       .eq("is_active", true)
-      .in("has_car", ["Yes", "true", "Sí", "yes", "YES"])
       .order("first_name");
-    setDrivers((data ?? []) as Employee[]);
+    if (error) {
+      console.error("[ShiftRidesPanel] loadDrivers failed", error);
+      setDrivers([]);
+      return;
+    }
+    const all = (data ?? []) as Employee[];
+    const onlyDrivers = all.filter(isEmployeeDriver);
+    setDrivers(onlyDrivers);
   }, [companyId]);
 
   // Load rides for this shift
