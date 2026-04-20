@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { formatPersonName } from "@/lib/format-helpers";
 import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
+import { ShiftShareMenu } from "./ShiftShareMenu";
 import { isEmployeeDriver, type Assignment, type Employee } from "./types";
 
 const MAX_PASSENGERS = 5;
@@ -42,11 +43,13 @@ interface ShiftRidesPanelProps {
   assignments: Assignment[];
   employees: Employee[];
   canEdit: boolean;
+  /** Optional shift context for share-link CTAs (date / time / title). */
+  shiftContext?: { title: string; date: string; start_time: string; shift_link_token?: string | null };
   onRidesChanged?: () => void;
 }
 
 export function ShiftRidesPanel({
-  shiftId, companyId, assignments, employees, canEdit, onRidesChanged,
+  shiftId, companyId, assignments, employees, canEdit, shiftContext, onRidesChanged,
 }: ShiftRidesPanelProps) {
   const [rides, setRides] = useState<ShiftRide[]>([]);
   const [loading, setLoading] = useState(true);
