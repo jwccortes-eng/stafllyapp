@@ -1079,7 +1079,7 @@ export function ShiftDetailDialog({
           ) : tab === "comments" ? (
             <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
           ) : tab === "chat" ? (
-            <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} isAdmin={effectiveCanEdit} />
+            <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} />
           ) : tab === "rides" ? (
             <ShiftRidesPanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canEdit={effectiveCanEdit} />
           ) : tab === "audit" ? (
