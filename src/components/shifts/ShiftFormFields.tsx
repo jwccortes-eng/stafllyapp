@@ -23,7 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   CalendarIcon, Clock, Building2, Users, Hash, CreditCard, FileText, Car, Compass,
-  Plus, Loader2, ChevronDown, Settings2, QrCode,
+  Plus, Loader2, ChevronDown, Settings2, QrCode, ScanLine,
 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -33,6 +33,12 @@ import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import { EmployeeCombobox } from "./EmployeeCombobox";
 import { ShiftQRSection } from "./ShiftQRSection";
 import type { Employee, SelectOption, Shift, Assignment } from "./types";
+import {
+  SHIFT_ATTENDANCE_MODE_LABELS,
+  SHIFT_ATTENDANCE_MODE_HINTS,
+  defaultAttendanceModeForPayType,
+  type ShiftAttendanceMode,
+} from "@/lib/shift-attendance-mode";
 
 export interface LocationOption extends SelectOption {
   address?: string;
@@ -60,6 +66,10 @@ export interface ShiftFormState {
   dayType: "full_day" | "half_day";
   shiftAdminId: string;
   clockMethod: "mobile" | "kiosk" | "both";
+  /** Operational attendance mode (clock vs arrival vs hybrid). */
+  attendanceMode: ShiftAttendanceMode;
+  /** Optional operational call time (HH:MM); falls back to startTime for punctuality. */
+  meetingTime: string;
   // Transport
   transportRequired: boolean;
   carCapacity: string;
@@ -442,7 +452,20 @@ export function ShiftFormFields({
 
       {/* ── Payment ── */}
       <SectionCard icon={CreditCard} title="Tipo de pago">
-        <Select value={v.payType} onValueChange={val => onChange({ payType: val as "hourly" | "daily" })}>
+        <Select
+          value={v.payType}
+          onValueChange={val => {
+            const newPayType = val as "hourly" | "daily";
+            // Auto-suggest attendance mode if user hasn't customized it (still on the
+            // default of the previous pay type). Daily → arrival, Hourly → clock.
+            const currentDefault = defaultAttendanceModeForPayType(v.payType);
+            const patch: any = { payType: newPayType };
+            if (v.attendanceMode === currentDefault) {
+              patch.attendanceMode = defaultAttendanceModeForPayType(newPayType);
+            }
+            onChange(patch);
+          }}
+        >
           <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
@@ -465,6 +488,43 @@ export function ShiftFormFields({
           </div>
         )}
       </SectionCard>
+
+      {/* ── Attendance Mode + Meeting Time (operational presence) ── */}
+      <SectionCard icon={ScanLine} title="Control de asistencia">
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium">Modo</Label>
+          <Select
+            value={v.attendanceMode}
+            onValueChange={val => onChange({ attendanceMode: val as ShiftAttendanceMode })}
+          >
+            <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="clock">⏱ {SHIFT_ATTENDANCE_MODE_LABELS.clock}</SelectItem>
+              <SelectItem value="arrival">📍 {SHIFT_ATTENDANCE_MODE_LABELS.arrival}</SelectItem>
+              <SelectItem value="hybrid">🔀 {SHIFT_ATTENDANCE_MODE_LABELS.hybrid}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            {SHIFT_ATTENDANCE_MODE_HINTS[v.attendanceMode]}
+          </p>
+        </div>
+        <div>
+          <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+            <Clock className="h-3 w-3" /> Hora de convocatoria (opcional)
+          </Label>
+          <Input
+            type="time"
+            value={v.meetingTime}
+            onChange={e => onChange({ meetingTime: e.target.value })}
+            className="h-9 text-sm mt-1"
+            placeholder="--:--"
+          />
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Si se define, se usa para calcular puntualidad en lugar de la hora de inicio del turno.
+          </p>
+        </div>
+      </SectionCard>
+
 
       {/* ── Clock method + QR (QR only in edit, needs shift.id) ── */}
       <div className={cn("grid gap-3", mode === "edit" && shift && onQrUpdate ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
@@ -671,6 +731,8 @@ export const EMPTY_SHIFT_FORM_STATE: ShiftFormState = {
   dayType: "full_day",
   shiftAdminId: "",
   clockMethod: "both",
+  attendanceMode: "clock",
+  meetingTime: "",
   transportRequired: false,
   carCapacity: "4",
   transportNotes: "",
@@ -697,6 +759,9 @@ export function shiftToFormState(shift: Shift): ShiftFormState {
     dayType: (s.day_type as "full_day" | "half_day") ?? "full_day",
     shiftAdminId: s.shift_admin_id ?? "",
     clockMethod: (s.clock_method as "mobile" | "kiosk" | "both") ?? "both",
+    attendanceMode: (s.attendance_mode as ShiftAttendanceMode | undefined)
+      ?? defaultAttendanceModeForPayType(s.pay_type),
+    meetingTime: s.meeting_time ? String(s.meeting_time).slice(0, 5) : "",
     transportRequired: !!s.transportation_required,
     carCapacity: String(s.car_capacity ?? 4),
     transportNotes: s.transportation_notes ?? "",
@@ -723,6 +788,8 @@ export function formStateToShiftPayload(s: ShiftFormState, allowClaims: boolean)
     day_type: s.payType === "daily" ? s.dayType : "full_day",
     shift_admin_id: s.shiftAdminId || null,
     clock_method: s.clockMethod,
+    attendance_mode: s.attendanceMode,
+    meeting_time: s.meetingTime ? s.meetingTime : null,
     transportation_required: s.transportRequired,
     car_capacity: parseInt(s.carCapacity) || 4,
     transportation_notes: s.transportNotes.trim() || null,

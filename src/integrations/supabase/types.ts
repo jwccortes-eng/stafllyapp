@@ -787,10 +787,12 @@ export type Database = {
           device: string | null
           employee_id: string
           id: string
+          is_payroll_relevant: boolean
           kiosk_device_id: string | null
           latitude: number | null
           longitude: number | null
           photo_url: string | null
+          punctuality: string | null
           shift_id: string | null
           time_entry_id: string | null
           type: string
@@ -804,10 +806,12 @@ export type Database = {
           device?: string | null
           employee_id: string
           id?: string
+          is_payroll_relevant?: boolean
           kiosk_device_id?: string | null
           latitude?: number | null
           longitude?: number | null
           photo_url?: string | null
+          punctuality?: string | null
           shift_id?: string | null
           time_entry_id?: string | null
           type: string
@@ -821,10 +825,12 @@ export type Database = {
           device?: string | null
           employee_id?: string
           id?: string
+          is_payroll_relevant?: boolean
           kiosk_device_id?: string | null
           latitude?: number | null
           longitude?: number | null
           photo_url?: string | null
+          punctuality?: string | null
           shift_id?: string | null
           time_entry_id?: string | null
           type?: string
@@ -10008,6 +10014,7 @@ export type Database = {
       }
       scheduled_shifts: {
         Row: {
+          attendance_mode: string
           car_capacity: number
           category_id: string | null
           claimable: boolean
@@ -10024,6 +10031,7 @@ export type Database = {
           id: string
           location_id: string | null
           meeting_point: string | null
+          meeting_time: string | null
           notes: string | null
           operational_version: number
           pay_type: string
@@ -10043,6 +10051,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attendance_mode?: string
           car_capacity?: number
           category_id?: string | null
           claimable?: boolean
@@ -10059,6 +10068,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           meeting_point?: string | null
+          meeting_time?: string | null
           notes?: string | null
           operational_version?: number
           pay_type?: string
@@ -10078,6 +10088,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attendance_mode?: string
           car_capacity?: number
           category_id?: string | null
           claimable?: boolean
@@ -10094,6 +10105,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           meeting_point?: string | null
+          meeting_time?: string | null
           notes?: string | null
           operational_version?: number
           pay_type?: string

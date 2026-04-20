@@ -218,6 +218,8 @@ export default function Shifts() {
   const [transportNotes, setTransportNotes] = useState("");
   const [driverEmployeeId, setDriverEmployeeId] = useState("");
   const [clockMethod, setClockMethod] = useState<"mobile" | "kiosk" | "both">("both");
+  const [attendanceMode, setAttendanceMode] = useState<"clock" | "arrival" | "hybrid">("clock");
+  const [meetingTime, setMeetingTime] = useState<string>("");
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [copyingWeek, setCopyingWeek] = useState(false);
@@ -381,6 +383,7 @@ export default function Shifts() {
     setDayType("full_day"); setShiftAdminId("");
     setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
     setClockMethod("both");
+    setAttendanceMode("clock"); setMeetingTime("");
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
     setRepeatConfig(DEFAULT_REPEAT);
   };
@@ -1443,6 +1446,7 @@ export default function Shifts() {
                 clientId, locationId, notes, claimable,
                 meetingPoint, specialInstructions,
                 payType, dayType, shiftAdminId, clockMethod,
+                attendanceMode, meetingTime,
                 transportRequired, carCapacity, transportNotes, driverEmployeeId,
                 selectedEmployees,
               }}
@@ -1462,6 +1466,8 @@ export default function Shifts() {
                 if (patch.dayType !== undefined) setDayType(patch.dayType);
                 if (patch.shiftAdminId !== undefined) setShiftAdminId(patch.shiftAdminId);
                 if (patch.clockMethod !== undefined) setClockMethod(patch.clockMethod);
+                if (patch.attendanceMode !== undefined) setAttendanceMode(patch.attendanceMode);
+                if (patch.meetingTime !== undefined) setMeetingTime(patch.meetingTime);
                 if (patch.transportRequired !== undefined) {
                   setTransportRequired(patch.transportRequired);
                   if (patch.transportRequired && !transportRequired) {

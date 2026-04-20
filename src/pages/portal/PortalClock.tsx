@@ -17,6 +17,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { OpsStatusChip } from "@/components/operations/OpsStatusChip";
+import {
+  defaultAttendanceModeForPayType,
+  actionLabelsForMode,
+  type ShiftAttendanceMode,
+} from "@/lib/shift-attendance-mode";
 
 interface TimeEntry {
   id: string;
@@ -37,6 +42,7 @@ interface TodayShift {
   location_name?: string;
   client_name?: string;
   pay_type?: string;
+  attendance_mode: ShiftAttendanceMode;
 }
 
 function isClockInAllowed(shift: TodayShift): { allowed: boolean; message: string } {
@@ -137,7 +143,7 @@ export default function PortalClock() {
         .order("clock_in", { ascending: false }),
       // Hide soft-deleted shifts (see src/lib/shifts/visibility.ts)
       supabase.from("shift_assignments")
-        .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, pay_type, qr_attendance_mode, qr_token, locations(name), clients(name))")
+        .select("shift_id, status, scheduled_shifts!inner(id, title, start_time, end_time, shift_code, date, pay_type, attendance_mode, qr_attendance_mode, qr_token, locations(name), clients(name))")
         .eq("employee_id", employeeId).eq("scheduled_shifts.date", todayStr)
         .is("scheduled_shifts.deleted_at", null)
         .not("scheduled_shifts.status", "in", "(cancelled,canceled)")
@@ -150,25 +156,35 @@ export default function PortalClock() {
 
     const qrModes: Record<string, string> = {};
     const mappedShifts: TodayShift[] = (shiftsRes.data ?? []).map((sa: any) => {
-      qrModes[sa.scheduled_shifts.id] = sa.scheduled_shifts.qr_attendance_mode || "disabled";
+      const ss = sa.scheduled_shifts;
+      qrModes[ss.id] = ss.qr_attendance_mode || "disabled";
       return {
-        id: sa.scheduled_shifts.id, title: sa.scheduled_shifts.title,
-        start_time: sa.scheduled_shifts.start_time, end_time: sa.scheduled_shifts.end_time,
-        shift_code: sa.scheduled_shifts.shift_code,
-        location_name: sa.scheduled_shifts.locations?.name,
-        client_name: sa.scheduled_shifts.clients?.name,
-        pay_type: sa.scheduled_shifts.pay_type,
+        id: ss.id, title: ss.title,
+        start_time: ss.start_time, end_time: ss.end_time,
+        shift_code: ss.shift_code,
+        location_name: ss.locations?.name,
+        client_name: ss.clients?.name,
+        pay_type: ss.pay_type,
+        attendance_mode:
+          (ss.attendance_mode as ShiftAttendanceMode) ??
+          defaultAttendanceModeForPayType(ss.pay_type),
       };
     });
     setShiftQrModes(qrModes);
-    const clockableShifts = mappedShifts.filter(s => s.pay_type !== "daily");
-    setHasDailyOnlyShifts(clockableShifts.length === 0 && mappedShifts.length > 0);
-    setTodayShifts(clockableShifts);
+    // Keep on the screen any shift the worker can act on:
+    //  - clock or hybrid → traditional clock in/out (creates time_entries)
+    //  - arrival → presence reporting (clock_events only, no payroll hours)
+    const actionableShifts = mappedShifts.filter(
+      s => s.attendance_mode !== "clock" || s.pay_type !== "daily",
+    );
+    // Daily-only-with-no-arrival edge case (shouldn't happen w/ defaults, but guard):
+    setHasDailyOnlyShifts(actionableShifts.length === 0 && mappedShifts.length > 0);
+    setTodayShifts(actionableShifts);
     const activeOpen = list.find(e => !e.clock_out);
     if (!activeOpen) {
-      const preselect = urlShiftId ? clockableShifts.find(s => s.id === urlShiftId) : null;
+      const preselect = urlShiftId ? actionableShifts.find(s => s.id === urlShiftId) : null;
       if (preselect) setSelectedShift(preselect);
-      else if (clockableShifts.length === 1) setSelectedShift(clockableShifts[0]);
+      else if (actionableShifts.length === 1) setSelectedShift(actionableShifts[0]);
     }
     setLoading(false);
   }, [employeeId]);
@@ -266,17 +282,40 @@ export default function PortalClock() {
           }
         }
       }
-      const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
-        employee_id: employeeId, company_id: companyId, clock_in: new Date().toISOString(), status: "pending", shift_id: selectedShift.id,
-      }).select("id").single();
-      if (error) throw error;
-      if (insertedEntry) {
-        await supabase.from("clock_events").insert({
-          employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, time_entry_id: insertedEntry.id,
-          type: "clock_in", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
+
+      // ────────────────────────────────────────────────────────────
+      // Branch on attendance_mode:
+      //   • clock / hybrid → create time_entry + clock_in event (payroll-relevant)
+      //   • arrival        → only register an "arrival" event (presence only)
+      // ────────────────────────────────────────────────────────────
+      const labels = actionLabelsForMode(selectedShift.attendance_mode);
+
+      if (selectedShift.attendance_mode === "arrival") {
+        const { error } = await supabase.from("clock_events").insert({
+          employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id,
+          time_entry_id: null,
+          type: "arrival",
+          latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null,
+          accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
+          // Trigger compute_clock_event_attendance() will set is_payroll_relevant=false
+          // and compute punctuality automatically.
         } as any);
+        if (error) throw error;
+      } else {
+        const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
+          employee_id: employeeId, company_id: companyId, clock_in: new Date().toISOString(), status: "pending", shift_id: selectedShift.id,
+        }).select("id").single();
+        if (error) throw error;
+        if (insertedEntry) {
+          await supabase.from("clock_events").insert({
+            employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, time_entry_id: insertedEntry.id,
+            type: "clock_in", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
+          } as any);
+        }
       }
+
       setSuccessState({ type: "in", time: format(new Date(), "HH:mm"), shift: selectedShift.title });
+      toast({ title: labels.inSuccess });
       setTimeout(() => setSuccessState(null), 4000);
       setSelectedShift(null);
       await loadData();
