@@ -412,6 +412,9 @@ export function ShiftRidesPanel({
           {rides.map(ride => {
             const driver = drivers.find(d => d.id === ride.driver_id) ||
               employees.find(e => e.id === ride.driver_id);
+            const driverPortalActive = !!driver?.user_id;
+            const driverHasContact = !!(driver?.phone_number || driver?.email);
+            const driverNeedsInvite = canEdit && !!driver && !driverPortalActive && driverHasContact;
             return (
               <div
                 key={ride.id}
@@ -428,8 +431,23 @@ export function ShiftRidesPanel({
                   size="sm"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate">
+                  <p className="text-xs font-semibold truncate flex items-center gap-1.5">
                     {driver ? `${driver.first_name} ${driver.last_name}` : "Conductor desconocido"}
+                    {driver && (
+                      driverPortalActive ? (
+                        <Badge variant="outline" className="text-[9px] bg-[hsl(var(--earning))]/12 text-[hsl(var(--earning))] border-[hsl(var(--earning))]/25">
+                          Activo
+                        </Badge>
+                      ) : driver.access_pin ? (
+                        <Badge variant="outline" className="text-[9px] bg-warning/12 text-warning border-warning/25">
+                          Pendiente
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] bg-muted text-muted-foreground border-border/40">
+                          Sin acceso
+                        </Badge>
+                      )
+                    )}
                   </p>
                   <div className="flex items-center gap-1.5">
                     {canEdit && !ride.movement_id ? (
@@ -452,6 +470,18 @@ export function ShiftRidesPanel({
                     </span>
                   </div>
                 </div>
+
+                {driverNeedsInvite && driver && (
+                  <button
+                    type="button"
+                    onClick={() => handleInviteEmployee(driver)}
+                    title={driver.access_pin ? "Reenviar invitación" : "Enviar invitación / link de acceso"}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    {driver.access_pin ? <RefreshCw className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                    {driver.access_pin ? "Reenviar" : "Invitar"}
+                  </button>
+                )}
 
                 {canEdit && !ride.movement_id ? (
                   <>
@@ -480,7 +510,7 @@ export function ShiftRidesPanel({
                   </>
                 ) : (
                   <Badge variant="outline" className={cn("text-[10px]",
-                    ride.ride_type === "special" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-primary/10 text-primary border-primary/20"
+                    ride.ride_type === "special" ? "bg-warning/10 text-warning border-warning/25" : "bg-primary/10 text-primary border-primary/20"
                   )}>
                     {ride.ride_type === "special" ? "⭐ Special" : "🚗 Regular"}
                   </Badge>
