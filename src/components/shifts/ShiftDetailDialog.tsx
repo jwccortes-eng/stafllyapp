@@ -502,98 +502,35 @@ export function ShiftDetailDialog({
         {/* ── BODY ── */}
         <OpsSheetBody>
 
-          {/* ─── DETAILS TAB ─── */}
+          {/* ─── DETAILS TAB (read-only — full editing happens in ShiftEditDialog) ─── */}
           {tab === "details" ? (
             <div className="space-y-4">
-              {editing ? (
-                /* ── Inline edit mode ── */
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno</Label>
-                    <Input value={title} onChange={e => setTitle(e.target.value)} className="h-9 text-sm mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground font-medium">Fecha</Label>
-                    <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-sm mt-1" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Entrada</Label>
-                      <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="h-9 text-sm mt-1" />
-                    </div>
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Salida</Label>
-                      <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="h-9 text-sm mt-1" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Cliente</Label>
-                      <Select value={clientId || "none"} onValueChange={v => setClientId(v === "none" ? "" : v)}>
-                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {clients.map(c => <SelectItem key={c.id} value={c.id}>{formatDisplayText(c.name, "name")}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Ubicación</Label>
-                      <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
-                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 items-end">
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Plazas</Label>
-                      <Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm mt-1" />
-                    </div>
-                    {allowClaims && (
-                      <div className="flex items-center gap-2 h-9">
-                        <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="detail-claimable" />
-                        <Label htmlFor="detail-claimable" className="text-xs font-normal cursor-pointer">Reclamo</Label>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground font-medium">Notas</Label>
-                    <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" />
-                  </div>
-                </div>
-              ) : (
-                /* ── View mode ── */
-                <div className="space-y-3">
-                  {/* Info cards */}
-                  <div className="rounded-xl border border-border/30 bg-muted/20 divide-y divide-border/30">
-                    <InfoRow icon={StickyNote} label="Nombre del turno" value={shift.title || undefined} empty="Sin nombre (solo código)" />
-                    <InfoRow icon={Building2} label="Cliente" value={client ? formatDisplayText(client.name, "name") : undefined} empty="Sin asignar" />
-                    <InfoRow icon={MapPin} label="Ubicación" value={location?.name} empty="Sin asignar" />
-                    {(shift as any).meeting_point && (
-                      <InfoRow icon={Compass} label="Dirección / Punto de encuentro" value={(shift as any).meeting_point} />
-                    )}
-                    <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
-                  </div>
-
-                  {allowClaims && shift.claimable && (
-                    <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 rounded-xl px-3 py-2">
-                      <Megaphone className="h-3.5 w-3.5" />
-                      <span className="font-medium">Los empleados pueden reclamar este turno</span>
-                    </div>
+              <div className="space-y-3">
+                {/* Info cards */}
+                <div className="rounded-xl border border-border/30 bg-muted/20 divide-y divide-border/30">
+                  <InfoRow icon={StickyNote} label="Nombre del turno" value={shift.title || undefined} empty="Sin nombre (solo código)" />
+                  <InfoRow icon={Building2} label="Cliente" value={client ? formatDisplayText(client.name, "name") : undefined} empty="Sin asignar" />
+                  <InfoRow icon={MapPin} label="Ubicación" value={location?.name} empty="Sin asignar" />
+                  {(shift as any).meeting_point && (
+                    <InfoRow icon={Compass} label="Dirección / Punto de encuentro" value={(shift as any).meeting_point} />
                   )}
-
-                  {shift.notes && (
-                    <div className="rounded-xl bg-muted/30 border border-border/20 px-3.5 py-2.5">
-                      <p className="text-[10px] font-medium text-muted-foreground mb-1">Notas</p>
-                      <p className="text-xs text-foreground/80">{shift.notes}</p>
-                    </div>
-                  )}
+                  <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
                 </div>
-              )}
+
+                {allowClaims && shift.claimable && (
+                  <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 rounded-xl px-3 py-2">
+                    <Megaphone className="h-3.5 w-3.5" />
+                    <span className="font-medium">Los empleados pueden reclamar este turno</span>
+                  </div>
+                )}
+
+                {shift.notes && (
+                  <div className="rounded-xl bg-muted/30 border border-border/20 px-3.5 py-2.5">
+                    <p className="text-[10px] font-medium text-muted-foreground mb-1">Notas</p>
+                    <p className="text-xs text-foreground/80">{shift.notes}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
           /* ─── TEAM TAB ─── */
