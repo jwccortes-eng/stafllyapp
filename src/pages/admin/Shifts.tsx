@@ -411,7 +411,7 @@ export default function Shifts() {
         if (loc.address) setMeetingPoint(loc.address);
         if (loc.default_pay_type) setPayType(loc.default_pay_type as "hourly" | "daily");
         if (loc.default_clock_method) {
-          // clock method not in create form state yet but used in edit; set transport
+          setClockMethod(loc.default_clock_method as "mobile" | "kiosk" | "both");
         }
         if (loc.require_car) {
           setTransportRequired(true);
