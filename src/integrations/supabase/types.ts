@@ -3416,6 +3416,7 @@ export type Database = {
           phone_number: string | null
           portal_access_enabled: boolean
           professional_summary: string | null
+          profile_status: Database["public"]["Enums"]["employee_profile_status"]
           qualify: string | null
           recommended_by: string | null
           service_category_ids: string[] | null
@@ -3478,6 +3479,7 @@ export type Database = {
           phone_number?: string | null
           portal_access_enabled?: boolean
           professional_summary?: string | null
+          profile_status?: Database["public"]["Enums"]["employee_profile_status"]
           qualify?: string | null
           recommended_by?: string | null
           service_category_ids?: string[] | null
@@ -3540,6 +3542,7 @@ export type Database = {
           phone_number?: string | null
           portal_access_enabled?: boolean
           professional_summary?: string | null
+          profile_status?: Database["public"]["Enums"]["employee_profile_status"]
           qualify?: string | null
           recommended_by?: string | null
           service_category_ids?: string[] | null
@@ -13081,6 +13084,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
+      compute_employee_profile_status: {
+        Args: { _employee_id: string }
+        Returns: Database["public"]["Enums"]["employee_profile_status"]
+      }
       compute_profile_stage: {
         Args: { _worker_profile_id: string }
         Returns: Database["public"]["Enums"]["profile_stage_enum"]
@@ -13134,6 +13141,14 @@ export type Database = {
           opened_at: string
           status: string
         }[]
+      }
+      get_profile_status: {
+        Args: { _employee_id: string }
+        Returns: Database["public"]["Enums"]["employee_profile_status"]
+      }
+      get_required_documents_for_company: {
+        Args: { _company_id: string }
+        Returns: string[]
       }
       has_action_permission: {
         Args: { _action: string; _company_id: string; _user_id: string }
@@ -13296,6 +13311,11 @@ export type Database = {
         | "certification"
         | "background_check"
         | "other"
+      employee_profile_status:
+        | "incomplete"
+        | "pending_documents"
+        | "ready"
+        | "active"
       english_level_enum:
         | "none"
         | "basic"
@@ -13677,6 +13697,12 @@ export const Constants = {
         "certification",
         "background_check",
         "other",
+      ],
+      employee_profile_status: [
+        "incomplete",
+        "pending_documents",
+        "ready",
+        "active",
       ],
       english_level_enum: [
         "none",
