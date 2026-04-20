@@ -36,9 +36,12 @@ export interface Employee {
   avatar_url?: string | null;
   gender?: string | null;
   phone_number?: string | null;
+  email?: string | null;
   employee_role?: string | null;
   groups?: string | null;
   user_id?: string | null;
+  /** PIN for portal access (presence indicates portal-ready). */
+  access_pin?: string | null;
   has_car?: string | null;
   /** Authoritative driver flag — boolean column on employees. */
   can_drive?: boolean | null;

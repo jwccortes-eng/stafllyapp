@@ -6,12 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Car, Plus, Trash2, Loader2, DollarSign, Users, AlertTriangle, Settings2, Search, Check } from "lucide-react";
+import { Car, Plus, Trash2, Loader2, DollarSign, Users, AlertTriangle, Settings2, Search, Check, Send, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatPersonName } from "@/lib/format-helpers";
 import { SingleEmployeePicker } from "./SingleEmployeePicker";
-import type { Assignment, Employee } from "./types";
+import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
+import { isEmployeeDriver, type Assignment, type Employee } from "./types";
 
 const MAX_PASSENGERS = 5;
 
@@ -55,17 +56,29 @@ export function ShiftRidesPanel({
   const [saving, setSaving] = useState(false);
   const [generatingPayments, setGeneratingPayments] = useState(false);
   const [mappingOpen, setMappingOpen] = useState(false);
+  /** Driver currently being invited (controls EmployeeInviteDialog). */
+  const [inviteEmployee, setInviteEmployee] = useState<Employee | null>(null);
 
-  // Load drivers (employees with has_car = 'Yes')
+  // Load drivers from the active company.
+  // Authoritative source: can_drive=true. Legacy fallback: has_car contains "yes/sí/si"
+  // or any free-form text the employee wrote ("Yes, I have a Car", "Sí tengo carro", etc.).
+  // We fetch all active employees of the company and filter client-side via isEmployeeDriver
+  // so that string variants and the boolean column are honored consistently.
   const loadDrivers = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("employees")
-      .select("id, first_name, last_name, avatar_url, gender, phone_number, employee_role, has_car, user_id")
+      .select("id, first_name, last_name, avatar_url, gender, phone_number, email, employee_role, has_car, can_drive, user_id, access_pin, is_active")
       .eq("company_id", companyId)
       .eq("is_active", true)
-      .in("has_car", ["Yes", "true", "Sí", "yes", "YES"])
       .order("first_name");
-    setDrivers((data ?? []) as Employee[]);
+    if (error) {
+      console.error("[ShiftRidesPanel] loadDrivers failed", error);
+      setDrivers([]);
+      return;
+    }
+    const all = (data ?? []) as Employee[];
+    const onlyDrivers = all.filter(isEmployeeDriver);
+    setDrivers(onlyDrivers);
   }, [companyId]);
 
   // Load rides for this shift
@@ -130,6 +143,43 @@ export function ShiftRidesPanel({
   const mappingComplete = !!(mapping.regular_concept_id && mapping.special_concept_id);
 
   // (driver search filtering moved into SingleEmployeePicker)
+
+  /**
+   * Decide invite path before opening the dialog. Reuses the central
+   * resolve-applicant-identity edge function so the same logic that drives
+   * /apply/:slug also drives this admin-side action:
+   *   - new           → registro/onboarding (here we just open the invite flow)
+   *   - existing_no_portal / existing_inactive → activación (open invite)
+   *   - existing_active → cuenta lista, no reinvitar (sólo aviso)
+   *   - pending_application → ya hay invitación pendiente (sólo aviso)
+   */
+  const handleInviteEmployee = useCallback(async (emp: Employee) => {
+    const phone = (emp.phone_number ?? "").replace(/\D/g, "");
+    if (!phone && !emp.email) {
+      toast.error("Este empleado no tiene teléfono ni email para invitar.");
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke("resolve-applicant-identity", {
+        body: { company_id: companyId, phone, email: emp.email ?? undefined },
+      });
+      if (error) throw error;
+      const scenario = (data as { scenario?: string } | null)?.scenario;
+      if (scenario === "existing_active") {
+        toast.success(`${formatPersonName(emp.first_name)} ya tiene cuenta activa.`);
+        return;
+      }
+      if (scenario === "pending_application") {
+        toast.message("Ya hay una solicitud pendiente para este teléfono.");
+        // Still open the dialog so admin can resend / copy link.
+      }
+      // For new / existing_no_portal / existing_inactive → abrir invitación.
+    } catch (err: unknown) {
+      // Don't block the admin if resolver fails — fall through to invite dialog.
+      console.warn("[ShiftRidesPanel] phone resolution failed (non-blocking):", err);
+    }
+    setInviteEmployee(emp);
+  }, [companyId]);
 
   const saveMapping = async (next: ConceptMapping) => {
     setMapping(next);
@@ -362,6 +412,9 @@ export function ShiftRidesPanel({
           {rides.map(ride => {
             const driver = drivers.find(d => d.id === ride.driver_id) ||
               employees.find(e => e.id === ride.driver_id);
+            const driverPortalActive = !!driver?.user_id;
+            const driverHasContact = !!(driver?.phone_number || driver?.email);
+            const driverNeedsInvite = canEdit && !!driver && !driverPortalActive && driverHasContact;
             return (
               <div
                 key={ride.id}
@@ -378,8 +431,23 @@ export function ShiftRidesPanel({
                   size="sm"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate">
+                  <p className="text-xs font-semibold truncate flex items-center gap-1.5">
                     {driver ? `${driver.first_name} ${driver.last_name}` : "Conductor desconocido"}
+                    {driver && (
+                      driverPortalActive ? (
+                        <Badge variant="outline" className="text-[9px] bg-[hsl(var(--earning))]/12 text-[hsl(var(--earning))] border-[hsl(var(--earning))]/25">
+                          Activo
+                        </Badge>
+                      ) : driver.access_pin ? (
+                        <Badge variant="outline" className="text-[9px] bg-warning/12 text-warning border-warning/25">
+                          Pendiente
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] bg-muted text-muted-foreground border-border/40">
+                          Sin acceso
+                        </Badge>
+                      )
+                    )}
                   </p>
                   <div className="flex items-center gap-1.5">
                     {canEdit && !ride.movement_id ? (
@@ -402,6 +470,18 @@ export function ShiftRidesPanel({
                     </span>
                   </div>
                 </div>
+
+                {driverNeedsInvite && driver && (
+                  <button
+                    type="button"
+                    onClick={() => handleInviteEmployee(driver)}
+                    title={driver.access_pin ? "Reenviar invitación" : "Enviar invitación / link de acceso"}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    {driver.access_pin ? <RefreshCw className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                    {driver.access_pin ? "Reenviar" : "Invitar"}
+                  </button>
+                )}
 
                 {canEdit && !ride.movement_id ? (
                   <>
@@ -430,7 +510,7 @@ export function ShiftRidesPanel({
                   </>
                 ) : (
                   <Badge variant="outline" className={cn("text-[10px]",
-                    ride.ride_type === "special" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-primary/10 text-primary border-primary/20"
+                    ride.ride_type === "special" ? "bg-warning/10 text-warning border-warning/25" : "bg-primary/10 text-primary border-primary/20"
                   )}>
                     {ride.ride_type === "special" ? "⭐ Special" : "🚗 Regular"}
                   </Badge>
@@ -461,9 +541,11 @@ export function ShiftRidesPanel({
             value={null}
             onChange={(id) => { if (id) addRide(id); }}
             placeholder="Buscar conductor..."
-            emptyLabel="+ Agregar ride"
+            emptyLabel={`+ Agregar ride (${drivers.length} conductor${drivers.length !== 1 ? "es" : ""})`}
             allowClear={false}
             highlightDrivers
+            showPortalState
+            onInviteEmployee={handleInviteEmployee}
             usageCount={(id) => rides.filter(r => r.driver_id === id).length}
             disabled={saving}
             triggerClassName="border-dashed"
@@ -513,6 +595,21 @@ export function ShiftRidesPanel({
         <p className="text-[10px] text-earning text-center font-medium">
           ✓ Todos los rides tienen pago generado
         </p>
+      )}
+
+      {/* Invite dialog: opens when admin clicks Invitar/Reenviar inline.
+          Reuses the canonical EmployeeInviteDialog so portal token, channel,
+          delivery status and resend logic stay consistent across the app. */}
+      {inviteEmployee && (
+        <EmployeeInviteDialog
+          open={!!inviteEmployee}
+          onOpenChange={(o) => { if (!o) setInviteEmployee(null); }}
+          employee={inviteEmployee as unknown as Record<string, any>}
+          onInviteSent={() => {
+            // Refresh drivers so the portal-state badge updates immediately.
+            loadDrivers();
+          }}
+        />
       )}
     </div>
   );
