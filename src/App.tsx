@@ -18,7 +18,10 @@ import AdminLayout from "./components/AdminLayout";
 import EmployeeLayout from "./components/EmployeeLayout";
 import ModuleGate from "./components/ModuleGate";
 import { CompanyRequiredGuard } from "./components/CompanyRequiredGuard";
+import AdminDashboard from "./pages/admin/Dashboard";
 import Employees from "./pages/admin/Employees";
+import Shifts from "./pages/admin/Shifts";
+import PayrollReconciliation from "./pages/admin/PayrollReconciliation";
 
 // Lazy: all pages
 const Index = lazy(() => import("./pages/Index"));
@@ -36,7 +39,6 @@ const HelpCenter = lazy(() => import("./pages/help/HelpCenter"));
 const UserManual = lazy(() => import("./pages/help/UserManual"));
 
 // Admin pages
-const AdminDashboard = AdminDashboardStub;
 const PayPeriods = lazy(() => import("./pages/admin/PayPeriods"));
 const ImportConnecteam = lazy(() => import("./pages/admin/ImportConnecteam"));
 const Concepts = lazy(() => import("./pages/admin/Concepts"));
@@ -51,7 +53,6 @@ const InviteEmployees = lazy(() => import("./pages/admin/InviteEmployees"));
 const Directory = lazy(() => import("./pages/admin/Directory"));
 const Clients = lazy(() => import("./pages/admin/Clients"));
 const Locations = lazy(() => import("./pages/admin/Locations"));
-const Shifts = lazy(() => import("./pages/admin/Shifts"));
 const ImportSchedule = lazy(() => import("./pages/admin/ImportSchedule"));
 const ImportTimeClock = lazy(() => import("./pages/admin/ImportTimeClock"));
 const ImportPayrollExtras = lazy(() => import("./pages/admin/ImportPayrollExtras"));
@@ -107,7 +108,6 @@ const StagedReconciliation = lazy(() => import("./pages/admin/StagedReconciliati
 const CompensationValidation = lazy(() => import("./pages/admin/CompensationValidation"));
 const PayrollPilotClose = lazy(() => import("./pages/admin/PayrollPilotClose"));
 const PayrollMappings = lazy(() => import("./pages/admin/PayrollMappings"));
-const PayrollReconciliation = lazy(() => import("./pages/admin/PayrollReconciliation"));
 const CompensationAdoption = lazy(() => import("./pages/admin/CompensationAdoption"));
 const Applications = lazy(() => import("./pages/admin/Applications"));
 const ApplicationSettings = lazy(() => import("./pages/admin/ApplicationSettings"));
@@ -150,18 +150,6 @@ function PageFallback() {
     <div className="flex items-center justify-center min-h-[50vh]">
       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
     </div>
-  );
-}
-
-function AdminDashboardStub() {
-  return (
-    <section className="space-y-3">
-      <header className="space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">Admin</p>
-        <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">Dashboard</h1>
-      </header>
-      <p className="text-sm text-muted-foreground">Dashboard stub</p>
-    </section>
   );
 }
 
