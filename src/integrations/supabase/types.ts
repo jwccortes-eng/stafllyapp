@@ -13109,6 +13109,17 @@ export type Database = {
           phone_number: string
         }[]
       }
+      get_invitation_by_token: {
+        Args: { _token: string }
+        Returns: {
+          company_id: string
+          employee_id: string
+          expires_at: string
+          id: string
+          opened_at: string
+          status: string
+        }[]
+      }
       has_action_permission: {
         Args: { _action: string; _company_id: string; _user_id: string }
         Returns: boolean
@@ -13191,6 +13202,10 @@ export type Database = {
           _entity_type: Database["public"]["Enums"]["review_entity_type"]
         }
         Returns: undefined
+      }
+      update_invitation_status_by_token: {
+        Args: { _new_status: string; _token: string }
+        Returns: boolean
       }
       user_can_access_worker_docs: {
         Args: { _user_id: string; _worker_profile_id: string }

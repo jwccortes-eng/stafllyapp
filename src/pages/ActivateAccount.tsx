@@ -112,28 +112,29 @@ export default function ActivateAccount() {
     if (!token) { setPageState("invalid"); return; }
 
     (async () => {
-      const { data, error: fetchErr } = await (supabase
-        .from("employee_invitations" as any)
-        .select("id, employee_id, status, expires_at, company_id, opened_at")
-        .eq("invite_token", token)
-        .single() as any);
+      const { data: inviteRows, error: fetchErr } = await (supabase
+        .rpc("get_invitation_by_token", { _token: token }) as any);
+      const data = Array.isArray(inviteRows) ? inviteRows[0] : inviteRows;
 
       if (fetchErr || !data) { setPageState("invalid"); return; }
       if (data.status === "accepted") { setPageState("used"); return; }
 
       if (data.expires_at && new Date(data.expires_at) < new Date()) {
         if (data.status !== "expired") {
-          await (supabase.from("employee_invitations" as any)
-            .update({ status: "expired" }).eq("id", data.id) as any);
+          await (supabase.rpc("update_invitation_status_by_token", {
+            _token: token,
+            _new_status: "expired",
+          }) as any);
         }
         setPageState("expired"); return;
       }
 
       if (!markedOpened.current && data.status !== "opened" && data.status !== "accepted") {
         markedOpened.current = true;
-        await (supabase.from("employee_invitations" as any)
-          .update({ status: "opened", opened_at: data.opened_at ?? new Date().toISOString() })
-          .eq("id", data.id) as any);
+        await (supabase.rpc("update_invitation_status_by_token", {
+          _token: token,
+          _new_status: "opened",
+        }) as any);
       }
 
       // SECURITY: Use invitation's company_id as authoritative source
@@ -356,9 +357,10 @@ export default function ActivateAccount() {
         }
       }
 
-      await (supabase.from("employee_invitations" as any)
-        .update({ status: "accepted", accepted_at: new Date().toISOString() })
-        .eq("id", invite.id) as any);
+      await (supabase.rpc("update_invitation_status_by_token", {
+        _token: token,
+        _new_status: "accepted",
+      }) as any);
 
       await supabase.from("employees")
         .update({
