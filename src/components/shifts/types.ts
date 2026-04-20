@@ -54,17 +54,19 @@ export interface Employee {
  * so we don't break older records that haven't been migrated yet.
  */
 export function isEmployeeDriver(e: Pick<Employee, "can_drive" | "has_car">): boolean {
-  // Authoritative: boolean column wins when explicitly set.
-  if (e.can_drive === true) return true;
-  if (e.can_drive === false) return false;
-  // Legacy fallback: free-form text. Real DB values include sentences like
-  // "Yes, I have a Car" or "Sí tengo carro", so we use substring matching
-  // anchored on affirmative tokens and explicitly reject "no/dont/don't".
+  // Legacy text is the source of truth when present — it was filled by the
+  // employee at onboarding (e.g. "Yes, I have a Car", "Sí tengo carro",
+  // "No, I dont have a car"). The boolean `can_drive` column is mostly
+  // unmigrated (defaults to false in production), so it can only be trusted
+  // when it's TRUE or when legacy text is missing.
   const hc = (e.has_car ?? "").toLowerCase().trim();
-  if (!hc) return false;
-  // Negative phrases first ("No, I dont have a car") to avoid false positives.
-  if (/\b(no|don'?t|sin|nunca)\b/.test(hc)) return false;
-  return /\b(yes|sí|si|true|1|tengo|have)\b/.test(hc) || hc === "1";
+  if (hc) {
+    // Negative phrases first to avoid false positives like "no, I have...".
+    if (/\b(no|don'?t|sin|nunca|nope)\b/.test(hc)) return false;
+    return /\b(yes|sí|si|true|1|tengo|have|have a car|carro)\b/.test(hc);
+  }
+  // No legacy text → fall back to the boolean column.
+  return e.can_drive === true;
 }
 
 export type ViewMode = "day" | "week" | "month" | "employee" | "client";
