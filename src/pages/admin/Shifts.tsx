@@ -1290,7 +1290,13 @@ export default function Shifts() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div className="rounded-2xl bg-card border border-border/40 shadow-xs p-4 sm:p-5 min-h-[420px]">
+      <div className="relative rounded-2xl bg-card border border-border/40 shadow-xs p-4 sm:p-5 min-h-[420px]">
+        {/* Subtle refetch indicator — keeps prior data visible to avoid layout shift */}
+        {isRefetching && !loading && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 text-[10px] text-muted-foreground/70 bg-card/80 backdrop-blur px-2 py-1 rounded-lg border border-border/30">
+            <Loader2 className="h-3 w-3 animate-spin" /> Actualizando…
+          </div>
+        )}
         {loading ? (
           <div className="space-y-4 animate-pulse">
             <div className="grid grid-cols-7 gap-3">
