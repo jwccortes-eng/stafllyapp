@@ -6,12 +6,12 @@
  * flows: any new field added here is immediately available in create AND edit.
  *
  * Design choice: this is a **controlled component**. The owning dialog still
- * keeps its own `useState` for form state (so create can have repeat/quickAdd
- * inline workflows and edit can do material-change detection), but renders
- * the field tree through this single component. Field markup, layout and
- * validation messaging cannot drift apart anymore.
+ * keeps its own form state (so create can have repeat/quickAdd inline workflows
+ * and edit can do material-change detection), but renders the field tree
+ * through this single component. Field markup, layout and validation messaging
+ * cannot drift apart anymore.
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   CalendarIcon, Clock, Building2, Users, Hash, CreditCard, FileText, Car, Compass,
-  Plus, Loader2, ChevronDown, Settings2, MapPin, QrCode,
+  Plus, Loader2, ChevronDown, Settings2, QrCode,
 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -89,7 +89,7 @@ export interface ShiftFormFieldsProps {
   /** Whether the company allows shift claims (hides the checkbox if not) */
   allowClaims?: boolean;
 
-  /** Quick-add inline (create flow uses this; edit can pass no-ops or wire it too) */
+  /** Quick-add inline (passing nothing hides the +button) */
   onQuickAddClient?: (name: string) => Promise<void>;
   onQuickAddLocation?: (name: string, address: string) => Promise<void>;
   /** Open the full employee invite wizard */
@@ -105,7 +105,7 @@ export interface ShiftFormFieldsProps {
   /** Show the assign-employees combobox (CREATE mode). Edit has its own assignment UI. */
   showEmployeePicker?: boolean;
 
-  /** Validation hint: when true, admin field shows an error border */
+  /** Validation hint: when truthy, admin field shows an error border + message */
   adminError?: string | null;
 }
 
@@ -162,11 +162,12 @@ export function ShiftFormFields({
   // Handlers ----------------------------------------------------------------
   const handleClientChange = (newClientId: string) => {
     const id = newClientId === "none" ? "" : newClientId;
-    onChange({ clientId: id });
+    const patch: Partial<ShiftFormState> = { clientId: id };
     if (id) {
       const loc = locations.find(l => l.client_id === id && l.address);
-      if (loc?.address) onChange({ meetingPoint: loc.address });
+      if (loc?.address) patch.meetingPoint = loc.address;
     }
+    onChange(patch);
   };
 
   const handleLocationChange = (newLocId: string) => {
@@ -466,7 +467,7 @@ export function ShiftFormFields({
       </SectionCard>
 
       {/* ── Clock method + QR (QR only in edit, needs shift.id) ── */}
-      <div className={cn("grid gap-3", mode === "edit" && shift ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
+      <div className={cn("grid gap-3", mode === "edit" && shift && onQrUpdate ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
         <SectionCard icon={Clock} title="Método de fichaje">
           <Select
             value={v.clockMethod}
@@ -594,7 +595,7 @@ export function ShiftFormFields({
         )}
       </SectionCard>
 
-      {/* ── Advanced details (collapsed by default) ── */}
+      {/* ── Advanced details (open by default in CREATE so users see it once) ── */}
       <Collapsible defaultOpen={mode === "create"}>
         <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 transition-colors group">
           <div className="flex items-center gap-2">
@@ -629,7 +630,7 @@ export function ShiftFormFields({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ── Employee picker (CREATE mode only) ── */}
+      {/* ── Employee picker (CREATE mode only — edit has its own assignment UI) ── */}
       {showEmployeePicker && (
         <SectionCard icon={Users} title="Asignar empleados">
           <EmployeeCombobox
@@ -651,4 +652,80 @@ export function ShiftFormFields({
       )}
     </div>
   );
+}
+
+/** Empty form state with sensible defaults; used by both create and edit. */
+export const EMPTY_SHIFT_FORM_STATE: ShiftFormState = {
+  title: "",
+  date: "",
+  startTime: "08:00",
+  endTime: "17:00",
+  slots: "1",
+  clientId: "",
+  locationId: "",
+  notes: "",
+  claimable: false,
+  meetingPoint: "",
+  specialInstructions: "",
+  payType: "hourly",
+  dayType: "full_day",
+  shiftAdminId: "",
+  clockMethod: "both",
+  transportRequired: false,
+  carCapacity: "4",
+  transportNotes: "",
+  driverEmployeeId: "",
+  selectedEmployees: [],
+};
+
+/** Map a Shift row from DB → ShiftFormState (used by edit dialog). */
+export function shiftToFormState(shift: Shift): ShiftFormState {
+  const s = shift as any;
+  return {
+    title: s.title ?? "",
+    date: s.date ?? "",
+    startTime: (s.start_time ?? "08:00").slice(0, 5),
+    endTime: (s.end_time ?? "17:00").slice(0, 5),
+    slots: String(s.slots ?? 1),
+    clientId: s.client_id ?? "",
+    locationId: s.location_id ?? "",
+    notes: s.notes ?? "",
+    claimable: !!s.claimable,
+    meetingPoint: s.meeting_point ?? "",
+    specialInstructions: s.special_instructions ?? "",
+    payType: (s.pay_type as "hourly" | "daily") ?? "hourly",
+    dayType: (s.day_type as "full_day" | "half_day") ?? "full_day",
+    shiftAdminId: s.shift_admin_id ?? "",
+    clockMethod: (s.clock_method as "mobile" | "kiosk" | "both") ?? "both",
+    transportRequired: !!s.transportation_required,
+    carCapacity: String(s.car_capacity ?? 4),
+    transportNotes: s.transportation_notes ?? "",
+    driverEmployeeId: s.driver_employee_id ?? "",
+    selectedEmployees: [],
+  };
+}
+
+/** Map ShiftFormState → DB row payload (column names). */
+export function formStateToShiftPayload(s: ShiftFormState, allowClaims: boolean): Record<string, any> {
+  return {
+    title: s.title.trim(),
+    date: s.date,
+    start_time: s.startTime,
+    end_time: s.endTime,
+    slots: parseInt(s.slots) || 1,
+    client_id: s.clientId || null,
+    location_id: s.locationId || null,
+    notes: s.notes.trim() || null,
+    claimable: allowClaims ? s.claimable : false,
+    meeting_point: s.meetingPoint.trim() || null,
+    special_instructions: s.specialInstructions.trim() || null,
+    pay_type: s.payType,
+    day_type: s.payType === "daily" ? s.dayType : "full_day",
+    shift_admin_id: s.shiftAdminId || null,
+    clock_method: s.clockMethod,
+    transportation_required: s.transportRequired,
+    car_capacity: parseInt(s.carCapacity) || 4,
+    transportation_notes: s.transportNotes.trim() || null,
+    driver_employee_id: s.driverEmployeeId || null,
+  };
 }
