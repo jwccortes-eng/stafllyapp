@@ -209,3 +209,47 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
     </div>
   );
 }
+
+/**
+ * Resolves a stored attachment (path or legacy URL) to a fresh signed URL
+ * before rendering. Keeps the bucket private without breaking the UX.
+ */
+function SignedAttachment({ att }: { att: ShiftAttachment }) {
+  const [resolved, setResolved] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const source = att.path ?? att.url;
+    resolveShiftAttachmentUrl(source).then((url) => {
+      if (!cancelled) setResolved(url);
+    });
+    return () => { cancelled = true; };
+  }, [att.path, att.url]);
+
+  if (!resolved) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/30 rounded px-2 py-1">
+        <Loader2 className="h-3 w-3 animate-spin" /> {att.filename}
+      </span>
+    );
+  }
+
+  if (att.type?.startsWith("image/")) {
+    return (
+      <a href={resolved} target="_blank" rel="noopener noreferrer">
+        <img src={resolved} alt={att.filename} className="h-12 w-12 rounded object-cover border" />
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={resolved}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1 text-[10px] text-primary bg-primary/5 rounded px-2 py-1"
+    >
+      <FileText className="h-3 w-3" /> {att.filename}
+    </a>
+  );
+}
