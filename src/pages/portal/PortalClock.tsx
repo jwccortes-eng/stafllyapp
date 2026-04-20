@@ -282,17 +282,40 @@ export default function PortalClock() {
           }
         }
       }
-      const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
-        employee_id: employeeId, company_id: companyId, clock_in: new Date().toISOString(), status: "pending", shift_id: selectedShift.id,
-      }).select("id").single();
-      if (error) throw error;
-      if (insertedEntry) {
-        await supabase.from("clock_events").insert({
-          employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, time_entry_id: insertedEntry.id,
-          type: "clock_in", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
+
+      // ────────────────────────────────────────────────────────────
+      // Branch on attendance_mode:
+      //   • clock / hybrid → create time_entry + clock_in event (payroll-relevant)
+      //   • arrival        → only register an "arrival" event (presence only)
+      // ────────────────────────────────────────────────────────────
+      const labels = actionLabelsForMode(selectedShift.attendance_mode);
+
+      if (selectedShift.attendance_mode === "arrival") {
+        const { error } = await supabase.from("clock_events").insert({
+          employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id,
+          time_entry_id: null,
+          type: "arrival",
+          latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null,
+          accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
+          // Trigger compute_clock_event_attendance() will set is_payroll_relevant=false
+          // and compute punctuality automatically.
         } as any);
+        if (error) throw error;
+      } else {
+        const { data: insertedEntry, error } = await supabase.from("time_entries").insert({
+          employee_id: employeeId, company_id: companyId, clock_in: new Date().toISOString(), status: "pending", shift_id: selectedShift.id,
+        }).select("id").single();
+        if (error) throw error;
+        if (insertedEntry) {
+          await supabase.from("clock_events").insert({
+            employee_id: employeeId, company_id: companyId, shift_id: selectedShift.id, time_entry_id: insertedEntry.id,
+            type: "clock_in", latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null, accuracy: pos?.accuracy ?? null, device, photo_url: photoUrl,
+          } as any);
+        }
       }
+
       setSuccessState({ type: "in", time: format(new Date(), "HH:mm"), shift: selectedShift.title });
+      toast({ title: labels.inSuccess });
       setTimeout(() => setSuccessState(null), 4000);
       setSelectedShift(null);
       await loadData();
