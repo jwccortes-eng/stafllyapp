@@ -66,6 +66,7 @@ const InternalChat = lazy(() => import("./pages/admin/InternalChat"));
 const PlatformSettings = lazy(() => import("./pages/admin/PlatformSettings"));
 const ActivityLog = lazy(() => import("./pages/admin/ActivityLog"));
 const OnboardingWizard = lazy(() => import("./pages/admin/OnboardingWizard"));
+const EmployeeOnboarding = lazy(() => import("./pages/admin/EmployeeOnboarding"));
 const Permissions = lazy(() => import("./pages/admin/Permissions"));
 const CompanyConfig = lazy(() => import("./pages/admin/CompanyConfig"));
 const Automations = lazy(() => import("./pages/admin/Automations"));
@@ -207,6 +208,7 @@ function App() {
               <Route path="/app" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="employees" element={<CompanyRequiredGuard><Employees /></CompanyRequiredGuard>} />
+                <Route path="employees/:id/onboarding" element={<CompanyRequiredGuard><EmployeeOnboarding /></CompanyRequiredGuard>} />
                 <Route path="periods" element={<CompanyRequiredGuard><ModuleGate moduleKey="periods"><PayPeriods /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="import" element={<CompanyRequiredGuard><ModuleGate moduleKey="import"><ImportConnecteam /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="concepts" element={<CompanyRequiredGuard><Concepts /></CompanyRequiredGuard>} />
