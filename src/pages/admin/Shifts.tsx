@@ -280,29 +280,53 @@ export default function Shifts() {
     [weekStart]
   );
 
-  const loadData = useCallback(async () => {
-    if (!selectedCompanyId) return;
-    setLoading(true);
-
-    let dateFrom: string, dateTo: string;
+  // Date range derived from active view — memoized so it only changes when the
+  // *active* date for the current view actually changes. Switching from week→month
+  // does NOT invalidate the week range etc.
+  const dateRange = useMemo(() => {
     if (viewMode === "day") {
-      dateFrom = format(currentDay, "yyyy-MM-dd");
-      dateTo = dateFrom;
-    } else if (viewMode === "week") {
-      dateFrom = format(weekStart, "yyyy-MM-dd");
-      dateTo = format(addDays(weekStart, 6), "yyyy-MM-dd");
-    } else {
-      dateFrom = format(startOfMonth(currentMonth), "yyyy-MM-dd");
-      dateTo = format(endOfMonth(currentMonth), "yyyy-MM-dd");
+      const d = format(currentDay, "yyyy-MM-dd");
+      return { from: d, to: d };
     }
+    if (viewMode === "week") {
+      return {
+        from: format(weekStart, "yyyy-MM-dd"),
+        to: format(addDays(weekStart, 6), "yyyy-MM-dd"),
+      };
+    }
+    return {
+      from: format(startOfMonth(currentMonth), "yyyy-MM-dd"),
+      to: format(endOfMonth(currentMonth), "yyyy-MM-dd"),
+    };
+  }, [viewMode, currentDay, weekStart, currentMonth]);
 
-    // Fetch shifts for the date range
+  // 1) Dictionaries (clients/locations/employees) — only refetched when company changes.
+  const refreshDictionaries = useCallback(async () => {
+    if (!selectedCompanyId) return;
+    const [clientsRes, locsRes, empsRes] = await Promise.all([
+      supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
+      supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
+      supabase.from("employees").select("id, first_name, last_name, phone_number, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive").eq("company_id", selectedCompanyId).eq("is_active", true),
+    ]);
+    setClients((clientsRes.data ?? []) as SelectOption[]);
+    setLocations((locsRes.data ?? []) as any[]);
+    setEmployees((empsRes.data ?? []) as Employee[]);
+  }, [selectedCompanyId]);
+
+  // 2) Shifts + assignments — refetched when company OR date range changes.
+  // Background refetches keep prior data visible (no skeleton flash).
+  const refreshShifts = useCallback(async () => {
+    if (!selectedCompanyId) return;
+    if (hasLoadedOnce.current) {
+      setIsRefetching(true);
+    } else {
+      setLoading(true);
+    }
     const shiftsRes = await supabase.from("scheduled_shifts").select("*, shift_code").eq("company_id", selectedCompanyId)
-      .gte("date", dateFrom).lte("date", dateTo)
+      .gte("date", dateRange.from).lte("date", dateRange.to)
       .is("deleted_at", null).order("start_time");
     const shiftIds = (shiftsRes.data ?? []).map(s => s.id);
 
-    // Fetch assignments only for visible shifts (avoids 1000-row limit)
     let allAssignments: any[] = [];
     if (shiftIds.length > 0) {
       for (let i = 0; i < shiftIds.length; i += 200) {
@@ -313,21 +337,20 @@ export default function Shifts() {
         if (data) allAssignments.push(...data);
       }
     }
-
-    const [clientsRes, locsRes, empsRes] = await Promise.all([
-      supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
-      supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
-      supabase.from("employees").select("id, first_name, last_name, phone_number, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive").eq("company_id", selectedCompanyId).eq("is_active", true),
-    ]);
     setShifts((shiftsRes.data ?? []) as Shift[]);
     setAssignments(allAssignments as Assignment[]);
-    setClients((clientsRes.data ?? []) as SelectOption[]);
-    setLocations((locsRes.data ?? []) as any[]);
-    setEmployees((empsRes.data ?? []) as Employee[]);
+    hasLoadedOnce.current = true;
     setLoading(false);
-  }, [selectedCompanyId, weekStart, currentMonth, currentDay, viewMode]);
+    setIsRefetching(false);
+  }, [selectedCompanyId, dateRange.from, dateRange.to]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // Used by mutations — only the shifts/assignments slice needs to refresh.
+  const loadData = useCallback(async () => {
+    await refreshShifts();
+  }, [refreshShifts]);
+
+  useEffect(() => { refreshDictionaries(); }, [refreshDictionaries]);
+  useEffect(() => { refreshShifts(); }, [refreshShifts]);
 
   // Availability data for the current view range
   const availDateFrom = viewMode === "day" ? format(currentDay, "yyyy-MM-dd")
