@@ -689,8 +689,8 @@ export default function ImportWizard() {
             }
 
             const clientId = matchClient(group.job);
+            // Title stays clean — `shift_code` is the single source of truth.
             let title = "";
-            if (numericCode) title += `#${numericCode.padStart(4, "0")} `;
             if (group.job) title += group.job.replace(/^\d+\s*[-–]\s*/, "").trim();
             if (group.subItem) title += ` - ${group.subItem}`;
             if (!title.trim()) title = "Turno importado";

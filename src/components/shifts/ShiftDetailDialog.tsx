@@ -142,18 +142,8 @@ export function ShiftDetailDialog({
   const [selected, setSelected] = useState<string[]>([]);
   const [tab, setTab] = useState("details");
 
-  // Inline edit state
-  const [editing, setEditing] = useState(false);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [slots, setSlots] = useState("1");
-  const [clientId, setClientId] = useState("");
-  const [locationId, setLocationId] = useState("");
-  const [notes, setNotes] = useState("");
-  const [claimable, setClaimable] = useState(false);
-  const [saving, setSaving] = useState(false);
+  // Editing is now delegated to the canonical ShiftEditDialog (ShiftFormFields).
+  // No local form state — this sheet is read-only and triggers `onEdit(shift)`.
 
   // Shift requests state
   const [requests, setRequests] = useState<ShiftRequestItem[]>([]);
@@ -258,16 +248,6 @@ export function ShiftDetailDialog({
 
   useEffect(() => {
     if (shift && open) {
-      setTitle(shift.title);
-      setDate(shift.date);
-      setStartTime(shift.start_time.slice(0, 5));
-      setEndTime(shift.end_time.slice(0, 5));
-      setSlots(String(shift.slots ?? 1));
-      setClientId(shift.client_id || "");
-      setLocationId(shift.location_id || "");
-      setNotes(shift.notes || "");
-      setClaimable(shift.claimable);
-      setEditing(false);
       setTab("details");
       loadRequests();
       loadRoleSlots();
@@ -283,7 +263,7 @@ export function ShiftDetailDialog({
   const unassigned = employees.filter(e => !assignedIds.has(e.id));
   const location = locations.find(l => l.id === shift.location_id);
   const client = clients.find(c => c.id === shift.client_id);
-  const hoursLabel = calcHours(editing ? startTime : shift.start_time.slice(0, 5), editing ? endTime : shift.end_time.slice(0, 5));
+  const hoursLabel = calcHours(shift.start_time.slice(0, 5), shift.end_time.slice(0, 5));
   const clientIds = clients.map(c => c.id);
   const clientColor = getClientColor(shift.client_id, clientIds);
   const slotsNum = shift.slots ?? 1;
@@ -344,22 +324,7 @@ export function ShiftDetailDialog({
     onRequestAction?.();
   };
 
-  const handleInlineSave = async () => {
-    if (!date) return;
-    if (onSave) {
-      setSaving(true);
-      try {
-        await onSave(shift.id, {
-          title: title.trim(), date, start_time: startTime, end_time: endTime,
-          slots: parseInt(slots) || 1, client_id: clientId || null,
-          location_id: locationId || null, notes: notes.trim() || null, claimable,
-        }, shift);
-        setEditing(false);
-      } finally { setSaving(false); }
-    } else {
-      onEdit(shift);
-    }
-  };
+  // Inline save removed — Edit now opens the canonical ShiftEditDialog (ShiftFormFields).
 
   const statusColors: Record<string, string> = {
     confirmed: "text-earning", pending: "text-warning", rejected: "text-destructive", review: "text-primary",
@@ -395,7 +360,7 @@ export function ShiftDetailDialog({
 
   return (
     <>
-    <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); setEditing(false); } }}>
+    <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setShowAddPanel(false); setSelected([]); } }}>
       <SheetContent tone="ops" side="right" hideClose>
         {/* ── PREMIUM HEADER (sticky) ── */}
         <OpsSheetHeader
@@ -537,98 +502,35 @@ export function ShiftDetailDialog({
         {/* ── BODY ── */}
         <OpsSheetBody>
 
-          {/* ─── DETAILS TAB ─── */}
+          {/* ─── DETAILS TAB (read-only — full editing happens in ShiftEditDialog) ─── */}
           {tab === "details" ? (
             <div className="space-y-4">
-              {editing ? (
-                /* ── Inline edit mode ── */
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground font-medium">Nombre del turno</Label>
-                    <Input value={title} onChange={e => setTitle(e.target.value)} className="h-9 text-sm mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground font-medium">Fecha</Label>
-                    <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-sm mt-1" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Entrada</Label>
-                      <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="h-9 text-sm mt-1" />
-                    </div>
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Salida</Label>
-                      <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="h-9 text-sm mt-1" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Cliente</Label>
-                      <Select value={clientId || "none"} onValueChange={v => setClientId(v === "none" ? "" : v)}>
-                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {clients.map(c => <SelectItem key={c.id} value={c.id}>{formatDisplayText(c.name, "name")}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Ubicación</Label>
-                      <Select value={locationId || "none"} onValueChange={v => setLocationId(v === "none" ? "" : v)}>
-                        <SelectTrigger className="h-9 text-sm mt-1"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 items-end">
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground font-medium">Plazas</Label>
-                      <Input type="number" value={slots} onChange={e => setSlots(e.target.value)} min="1" className="h-9 text-sm mt-1" />
-                    </div>
-                    {allowClaims && (
-                      <div className="flex items-center gap-2 h-9">
-                        <Checkbox checked={claimable} onCheckedChange={c => setClaimable(!!c)} id="detail-claimable" />
-                        <Label htmlFor="detail-claimable" className="text-xs font-normal cursor-pointer">Reclamo</Label>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground font-medium">Notas</Label>
-                    <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Opcional..." className="text-sm resize-none mt-1" />
-                  </div>
-                </div>
-              ) : (
-                /* ── View mode ── */
-                <div className="space-y-3">
-                  {/* Info cards */}
-                  <div className="rounded-xl border border-border/30 bg-muted/20 divide-y divide-border/30">
-                    <InfoRow icon={StickyNote} label="Nombre del turno" value={shift.title || undefined} empty="Sin nombre (solo código)" />
-                    <InfoRow icon={Building2} label="Cliente" value={client ? formatDisplayText(client.name, "name") : undefined} empty="Sin asignar" />
-                    <InfoRow icon={MapPin} label="Ubicación" value={location?.name} empty="Sin asignar" />
-                    {(shift as any).meeting_point && (
-                      <InfoRow icon={Compass} label="Dirección / Punto de encuentro" value={(shift as any).meeting_point} />
-                    )}
-                    <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
-                  </div>
-
-                  {allowClaims && shift.claimable && (
-                    <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 rounded-xl px-3 py-2">
-                      <Megaphone className="h-3.5 w-3.5" />
-                      <span className="font-medium">Los empleados pueden reclamar este turno</span>
-                    </div>
+              <div className="space-y-3">
+                {/* Info cards */}
+                <div className="rounded-xl border border-border/30 bg-muted/20 divide-y divide-border/30">
+                  <InfoRow icon={StickyNote} label="Nombre del turno" value={shift.title || undefined} empty="Sin nombre (solo código)" />
+                  <InfoRow icon={Building2} label="Cliente" value={client ? formatDisplayText(client.name, "name") : undefined} empty="Sin asignar" />
+                  <InfoRow icon={MapPin} label="Ubicación" value={location?.name} empty="Sin asignar" />
+                  {(shift as any).meeting_point && (
+                    <InfoRow icon={Compass} label="Dirección / Punto de encuentro" value={(shift as any).meeting_point} />
                   )}
-
-                  {shift.notes && (
-                    <div className="rounded-xl bg-muted/30 border border-border/20 px-3.5 py-2.5">
-                      <p className="text-[10px] font-medium text-muted-foreground mb-1">Notas</p>
-                      <p className="text-xs text-foreground/80">{shift.notes}</p>
-                    </div>
-                  )}
+                  <InfoRow icon={Users} label="Plazas" value={`${shiftAssignments.length} / ${slotsNum} asignados`} />
                 </div>
-              )}
+
+                {allowClaims && shift.claimable && (
+                  <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 rounded-xl px-3 py-2">
+                    <Megaphone className="h-3.5 w-3.5" />
+                    <span className="font-medium">Los empleados pueden reclamar este turno</span>
+                  </div>
+                )}
+
+                {shift.notes && (
+                  <div className="rounded-xl bg-muted/30 border border-border/20 px-3.5 py-2.5">
+                    <p className="text-[10px] font-medium text-muted-foreground mb-1">Notas</p>
+                    <p className="text-xs text-foreground/80">{shift.notes}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
           /* ─── TEAM TAB ─── */
@@ -1131,125 +1033,111 @@ export function ShiftDetailDialog({
           </OpsSheetFooter>
         ) : canEdit && (
           <OpsSheetFooter>
-            {!editing ? (
-              <>
-                {/* Overflow menu — secondary actions live here for a clean footer */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground" aria-label="Más acciones">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-52">
-                    <DropdownMenuItem onClick={() => setEditing(true)}>
-                      <Pencil className="h-4 w-4 mr-2" /> Editar turno
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}>
-                      <Radar className="h-4 w-4 mr-2" /> Centro de operaciones
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {shift.status === "published" && (
-                      <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
-                        <Bell className="h-4 w-4 mr-2" /> Notificar a asignados
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        const empIds = shiftAssignments.map(a => a.employee_id);
-                        if (empIds.length === 0) { toast.error("No hay empleados asignados."); return; }
-                        const { data } = await supabase.from("employees").select("phone_number").in("id", empIds).not("phone_number", "is", null);
-                        const phones = (data ?? []).map(e => e.phone_number).filter((p): p is string => !!p && p.trim().length > 0);
-                        if (phones.length === 0) { toast.error("Ningún empleado tiene teléfono registrado."); return; }
-                        const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
-                        window.open(`sms:${phones.join(",")}${separator}body=`, "_blank");
-                      }}
-                    >
-                      <Smartphone className="h-4 w-4 mr-2" /> Enviar SMS
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
-                          const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
-                          const assignedEmps = shiftAssigns.map(a => {
-                            const emp = employees.find(e => e.id === a.employee_id);
-                            return { name: emp ? `${emp.first_name} ${emp.last_name}` : "—", phone: (emp as any)?.phone_number || null, role: null };
-                          });
-                          const clientName = clients.find(c => c.id === shift.client_id)?.name || null;
-                          const locationName = locations.find(l => l.id === shift.location_id)?.name || null;
-                          downloadShiftAssignmentPDF({
-                            title: shift.title, date: shift.date, startTime: shift.start_time, endTime: shift.end_time,
-                            clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
-                            transportRequired: (shift as any).transportation_required || false,
-                            transportNotes: (shift as any).transportation_notes || null,
-                            carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
-                            employees: assignedEmps, supervisorName: null,
-                          });
-                        });
-                      }}
-                    >
-                      <FileText className="h-4 w-4 mr-2" /> Descargar PDF
-                    </DropdownMenuItem>
-                    {onDuplicate && (
-                      <DropdownMenuItem onClick={() => { onDuplicate(shift); onOpenChange(false); }}>
-                        <Copy className="h-4 w-4 mr-2" /> Duplicar
-                      </DropdownMenuItem>
-                    )}
-                    {onDelete && !isLocked && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setDeleteConfirm(true)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" /> Eliminar turno
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Spacer pushes primary to the right edge */}
-                <div className="flex-1" />
-
-                {/* Subtle secondary — Edit. Ghost weight so primary owns the eye. */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditing(true)}
-                  className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Editar
+            {/* Overflow menu — secondary actions live here for a clean footer */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground" aria-label="Más acciones">
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
-
-                {/* SINGLE PRIMARY — Publicar (or Notificar when already published) */}
-                {shift.status !== "published" ? (
-                  <Button
-                    size="sm"
-                    onClick={() => onPublish(shift)}
-                    className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
-                  >
-                    <Send className="h-3.5 w-3.5" /> Publicar
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => setNotifyOpen(true)}
-                    className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
-                  >
-                    <Bell className="h-3.5 w-3.5" /> Notificar a asignados
-                  </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52">
+                <DropdownMenuItem onClick={() => { onOpenChange(false); onEdit(shift); }}>
+                  <Pencil className="h-4 w-4 mr-2" /> Editar turno
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}>
+                  <Radar className="h-4 w-4 mr-2" /> Centro de operaciones
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {shift.status === "published" && (
+                  <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
+                    <Bell className="h-4 w-4 mr-2" /> Notificar a asignados
+                  </DropdownMenuItem>
                 )}
-              </>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    const empIds = shiftAssignments.map(a => a.employee_id);
+                    if (empIds.length === 0) { toast.error("No hay empleados asignados."); return; }
+                    const { data } = await supabase.from("employees").select("phone_number").in("id", empIds).not("phone_number", "is", null);
+                    const phones = (data ?? []).map(e => e.phone_number).filter((p): p is string => !!p && p.trim().length > 0);
+                    if (phones.length === 0) { toast.error("Ningún empleado tiene teléfono registrado."); return; }
+                    const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
+                    window.open(`sms:${phones.join(",")}${separator}body=`, "_blank");
+                  }}
+                >
+                  <Smartphone className="h-4 w-4 mr-2" /> Enviar SMS
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
+                      const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
+                      const assignedEmps = shiftAssigns.map(a => {
+                        const emp = employees.find(e => e.id === a.employee_id);
+                        return { name: emp ? `${emp.first_name} ${emp.last_name}` : "—", phone: (emp as any)?.phone_number || null, role: null };
+                      });
+                      const clientName = clients.find(c => c.id === shift.client_id)?.name || null;
+                      const locationName = locations.find(l => l.id === shift.location_id)?.name || null;
+                      downloadShiftAssignmentPDF({
+                        title: shift.title, date: shift.date, startTime: shift.start_time, endTime: shift.end_time,
+                        clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
+                        transportRequired: (shift as any).transportation_required || false,
+                        transportNotes: (shift as any).transportation_notes || null,
+                        carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
+                        employees: assignedEmps, supervisorName: null,
+                      });
+                    });
+                  }}
+                >
+                  <FileText className="h-4 w-4 mr-2" /> Descargar PDF
+                </DropdownMenuItem>
+                {onDuplicate && (
+                  <DropdownMenuItem onClick={() => { onDuplicate(shift); onOpenChange(false); }}>
+                    <Copy className="h-4 w-4 mr-2" /> Duplicar
+                  </DropdownMenuItem>
+                )}
+                {onDelete && !isLocked && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setDeleteConfirm(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Eliminar turno
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Spacer pushes primary to the right edge */}
+            <div className="flex-1" />
+
+            {/* Subtle secondary — Edit. Opens the canonical ShiftEditDialog. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { onOpenChange(false); onEdit(shift); }}
+              className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <Pencil className="h-3.5 w-3.5" /> Editar
+            </Button>
+
+            {/* SINGLE PRIMARY — Publicar (or Notificar when already published) */}
+            {shift.status !== "published" ? (
+              <Button
+                size="sm"
+                onClick={() => onPublish(shift)}
+                className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
+              >
+                <Send className="h-3.5 w-3.5" /> Publicar
+              </Button>
             ) : (
-              <>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs">
-                  <X className="h-3.5 w-3.5 mr-1" /> Cancelar
-                </Button>
-                <Button size="sm" onClick={handleInlineSave} disabled={saving || !date} className="h-8 text-xs gap-1.5">
-                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  Guardar cambios
-                </Button>
-              </>
+              <Button
+                size="sm"
+                onClick={() => setNotifyOpen(true)}
+                className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
+              >
+                <Bell className="h-3.5 w-3.5" /> Notificar a asignados
+              </Button>
             )}
           </OpsSheetFooter>
         )}

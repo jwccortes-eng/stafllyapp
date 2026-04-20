@@ -495,13 +495,8 @@ export default function Shifts() {
 
     if (error) { toast.error(error.message); return null; }
 
-    if (shift?.shift_code) {
-      const code = String(shift.shift_code).padStart(4, "0");
-      const finalTitle = title.trim() ? `#${code} ${title.trim()}` : `#${code}`;
-      await supabase.from("scheduled_shifts")
-        .update({ title: finalTitle } as any)
-        .eq("id", shift.id);
-    }
+    // Title is kept clean — `shift_code` is the single source of truth and is rendered
+    // as a separate `#0001` chip by the cards/headers. Do NOT bake the code into the title.
 
     if (selectedEmployees.length > 0 && shift) {
       const assigns = selectedEmployees.map(eid => ({
@@ -611,11 +606,7 @@ export default function Shifts() {
     } as any).select("id, shift_code").single();
 
     if (error) { toast.error(error.message); return; }
-    if (shift?.shift_code) {
-      const code = String(shift.shift_code).padStart(4, "0");
-      const finalTitle = data.title ? `#${code} ${data.title}` : `#${code}`;
-      await supabase.from("scheduled_shifts").update({ title: finalTitle } as any).eq("id", shift.id);
-    }
+    // Title stays clean — `shift_code` is the single source of truth.
     if (shift) await logShiftActivity("crear_turno", shift.id, null, { title: data.title, date: data.date, quick: true });
     toast.success("Turno borrador creado");
     loadData();
@@ -971,14 +962,9 @@ export default function Shifts() {
 
     if (error) { toast.error(error.message); return; }
 
-    // Update title to include the auto-generated shift code
-    if (newShift?.shift_code) {
-      const originalTitle = shiftData.title.replace(/^#\d{4}\s*/, ""); // strip old code if duplicating
-      const code = String(newShift.shift_code).padStart(4, "0");
-      await supabase.from("scheduled_shifts")
-        .update({ title: `#${code} ${originalTitle}` } as any)
-        .eq("id", newShift.id);
-    }
+    // Title stays clean on duplicate — `shift_code` is the single source of truth.
+    // (Older legacy titles may still carry a `#code ` prefix; the importer + create
+    // flows no longer add it. A one-shot DB cleanup stripped historical contamination.)
 
     if (newShift) {
       await logShiftActivity("duplicar_turno", newShift.id, null, {
