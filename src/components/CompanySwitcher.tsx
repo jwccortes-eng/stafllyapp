@@ -343,4 +343,6 @@ const CompanySwitcher = forwardRef<HTMLDivElement, CompanySwitcherProps>(functio
       />
     </>
   );
-}
+});
+
+export default CompanySwitcher;
