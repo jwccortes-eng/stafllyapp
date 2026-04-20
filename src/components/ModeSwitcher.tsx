@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ import {
  * Mode switcher for users with dual access (admin + employee).
  * Shows current mode and allows switching without re-login.
  */
-export function ModeSwitcher({ compact = false }: { compact?: boolean }) {
+export const ModeSwitcher = forwardRef<HTMLDivElement, { compact?: boolean }>(function ModeSwitcher({ compact = false }, _ref) {
   const { activeMode, setActiveMode, canAccessAdmin, canAccessPortal } = useAuth();
   const navigate = useNavigate();
 
@@ -98,4 +99,4 @@ export function ModeSwitcher({ compact = false }: { compact?: boolean }) {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+});

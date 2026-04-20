@@ -46,6 +46,33 @@ import { registerPwa } from "./lib/pwa-runtime";
   }
 })();
 
+/**
+ * Recover from stale dynamic-import chunks after a deploy.
+ *
+ * Vite emits `vite:preloadError` when a lazy() chunk 404s because the user is
+ * still on an old HTML/manifest after a rebuild. Default behavior throws an
+ * uncaught error and crashes the route. We swallow it and force a single
+ * full reload so the new manifest is fetched.
+ *
+ * Guarded by sessionStorage so a genuinely broken module can't infinite-loop.
+ */
+if (typeof window !== "undefined") {
+  window.addEventListener("vite:preloadError", (event) => {
+    event.preventDefault();
+    const RELOAD_KEY = "vite-preload-reload-at";
+    const last = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+    const now = Date.now();
+    if (now - last < 10_000) {
+      // Already reloaded once recently — don't loop. Surface the error.
+      console.error("[vite:preloadError] reload already attempted, giving up", event);
+      return;
+    }
+    sessionStorage.setItem(RELOAD_KEY, String(now));
+    console.warn("[vite:preloadError] stale chunk detected, reloading", event);
+    window.location.reload();
+  });
+}
+
 createRoot(document.getElementById("root")!).render(<App />);
 
 // Production-only: register the service worker AFTER mount so the initial

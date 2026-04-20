@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Bell, CheckCheck, ExternalLink, Briefcase, Megaphone, CreditCard, Clock, UserPlus, Star } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useNavigate } from "react-router-dom";
@@ -139,7 +139,7 @@ const TYPE_LABELS: Record<string, string> = {
   review_pending: "Review",
 };
 
-export default function NotificationBell() {
+const NotificationBell = forwardRef<HTMLDivElement>(function NotificationBell(_props, _ref) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("all");
@@ -289,4 +289,6 @@ export default function NotificationBell() {
       </PopoverContent>
     </Popover>
   );
-}
+});
+
+export default NotificationBell;

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { forwardRef, useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,7 +25,7 @@ interface CompanySwitcherProps {
   collapsed?: boolean;
 }
 
-export default function CompanySwitcher({ collapsed = false }: CompanySwitcherProps) {
+const CompanySwitcher = forwardRef<HTMLDivElement, CompanySwitcherProps>(function CompanySwitcher({ collapsed = false }, _ref) {
   const { companies, selectedCompanyId, selectedCompany, switchCompany, isGlobalMode, canUseGlobalMode } = useCompany();
   const { user, role, activeMode, canAccessAdmin, canAccessPortal } = useAuth();
   const navigate = useNavigate();
@@ -343,4 +343,6 @@ export default function CompanySwitcher({ collapsed = false }: CompanySwitcherPr
       />
     </>
   );
-}
+});
+
+export default CompanySwitcher;
