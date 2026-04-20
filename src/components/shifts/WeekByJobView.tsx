@@ -29,7 +29,7 @@ function calcDuration(start: string, end: string): string {
   return m > 0 ? `${h}h${m}m` : `${h}h`;
 }
 
-export function WeekByJobView({ weekDays, shifts, assignments, locations, clients, employees, onShiftClick, onDropOnShift }: WeekByJobViewProps) {
+function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, employees, onShiftClick, onDropOnShift }: WeekByJobViewProps) {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set(clients.map(c => c.id)));
   const clientIds = clients.map(c => c.id);
 
