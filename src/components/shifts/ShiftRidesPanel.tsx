@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatPersonName } from "@/lib/format-helpers";
 import { SingleEmployeePicker } from "./SingleEmployeePicker";
-import type { Assignment, Employee } from "./types";
+import { isEmployeeDriver, type Assignment, type Employee } from "./types";
 
 const MAX_PASSENGERS = 5;
 
