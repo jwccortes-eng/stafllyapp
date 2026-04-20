@@ -159,16 +159,7 @@ export function ShiftCommentsPanel({ shiftId, companyId, employees }: ShiftComme
                   {c.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {c.attachments.map((att, i) => (
-                        att.type?.startsWith("image/") ? (
-                          <a key={i} href={att.url} target="_blank" rel="noopener noreferrer">
-                            <img src={att.url} alt={att.filename} className="h-12 w-12 rounded object-cover border" />
-                          </a>
-                        ) : (
-                          <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-[10px] text-primary bg-primary/5 rounded px-2 py-1">
-                            <FileText className="h-3 w-3" /> {att.filename}
-                          </a>
-                        )
+                        <SignedAttachment key={i} att={att} />
                       ))}
                     </div>
                   )}
