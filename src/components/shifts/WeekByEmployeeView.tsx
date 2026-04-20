@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { Clock, Users, Timer, CalendarDays, Ban } from "lucide-react";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { memo } from "react";
 import { getClientColor } from "./types";
 import { isEmployeeAvailable, type AvailabilityConfig, type AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
@@ -21,7 +22,7 @@ interface WeekByEmployeeViewProps {
   availabilityOverrides: AvailabilityOverride[];
 }
 
-export function WeekByEmployeeView({
+function WeekByEmployeeViewImpl({
   weekDays, shifts, assignments, locations, clients, employees,
   onShiftClick, onDropOnShift, availabilityConfigs, availabilityOverrides,
 }: WeekByEmployeeViewProps) {
