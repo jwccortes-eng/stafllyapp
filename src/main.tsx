@@ -71,6 +71,26 @@ if (typeof window !== "undefined") {
     console.warn("[vite:preloadError] stale chunk detected, reloading", event);
     window.location.reload();
   });
+
+  window.onerror = (message, source, lineno, colno, error) => {
+    console.error("[window.onerror]", {
+      message,
+      source,
+      lineno,
+      colno,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return false;
+  };
+
+  window.onunhandledrejection = (event) => {
+    const reason = event.reason;
+    console.error("[window.onunhandledrejection]", {
+      reason,
+      message: reason instanceof Error ? reason.message : String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined,
+    });
+  };
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
