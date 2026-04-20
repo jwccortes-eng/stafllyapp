@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
+import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import { useSoundContext } from "@/hooks/useSound";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Button } from "@/components/ui/button";
@@ -10,38 +12,19 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, subDays, addDays, isAfter, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-
-interface ChatMessage {
-  id: string;
-  content: string;
-  sender_type: string;
-  sender_employee_id: string | null;
-  sender_user_id: string | null;
-  created_at: string;
-  sender_name?: string;
-  sender_avatar?: string | null;
-  sender_gender?: string | null;
-}
-
-interface ShiftChatPanelProps {
-  shiftId: string;
-  shiftDate: string;
-  companyId: string;
-  /** Force admin mode. If omitted, role is derived from useAuth. */
-  isAdmin?: boolean;
-}
-
+...
 export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdminProp }: ShiftChatPanelProps) {
-  const { user, employeeId, allRoles } = useAuth();
+  const { user, allRoles, resolveEmployeeForCompany } = useAuth();
+  const { selectedCompanyId } = useCompany();
+  const { effectiveEmployeeId } = useEffectiveEmployee();
   // Hardened admin detection (Apr 2026 — Jorge / shift #0192 fix):
-  // We REQUIRE an explicit privileged role in `allRoles`. We deliberately ignore
-  // `canAccessAdmin` here because it can be true for users with mixed roles or
-  // delegated permissions, which caused employees (e.g. Jorge) to be misclassified
-  // as admin and rejected by RLS (`scm_insert_admin`) when sending messages.
-  // Only these four roles are valid admin senders for shift chat:
+  // admin for shift chat must be explicit AND scoped to the shift company.
   const ADMIN_CHAT_ROLES = ["developer", "owner", "company_owner", "admin"] as const;
+  const allRolesArray = useMemo(() => Array.from(allRoles), [allRoles]);
   const hasExplicitAdminRole = ADMIN_CHAT_ROLES.some((r) => allRoles.has(r));
-  const isAdmin = isAdminProp ?? hasExplicitAdminRole;
+  const isCompanyScopedAdmin = hasExplicitAdminRole && selectedCompanyId === companyId;
+  const isAdmin = isAdminProp ?? isCompanyScopedAdmin;
+  const employeeId = effectiveEmployeeId ?? resolveEmployeeForCompany(companyId);
   const { play } = useSoundContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,126 +33,24 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdmin
   const [chatConfig, setChatConfig] = useState<{ is_open: boolean; id?: string } | null>(null);
   const prevCountRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Determine if chat should be auto-open based on date
-  const shiftDateObj = parseISO(shiftDate);
-  const autoOpenDate = subDays(shiftDateObj, 1);
-  const autoCloseDate = addDays(shiftDateObj, 1);
-  const now = new Date();
-  const isInAutoWindow = isAfter(now, autoOpenDate) && isBefore(now, autoCloseDate);
-
-  const loadMessages = useCallback(async () => {
-    setLoading(true);
-    
-    // Load chat config
-    const { data: config } = await supabase
-      .from("shift_chat_config")
-      .select("id, is_open")
-      .eq("shift_id", shiftId)
-      .maybeSingle();
-
-    if (config) {
-      setChatConfig(config);
-    } else {
-      // Auto-create config if in window
-      setChatConfig({ is_open: isInAutoWindow });
-    }
-
-    // Load messages
-    const { data } = await supabase
-      .from("shift_chat_messages")
-      .select("id, content, sender_type, sender_employee_id, sender_user_id, created_at")
-      .eq("shift_id", shiftId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true })
-      .limit(200);
-
-    if (data && data.length > 0) {
-      // Fetch sender names
-      const empIds = [...new Set(data.filter(m => m.sender_employee_id).map(m => m.sender_employee_id!))];
-      const userIds = [...new Set(data.filter(m => m.sender_user_id).map(m => m.sender_user_id!))];
-      
-      let empMap: Record<string, { first_name: string; last_name: string; avatar_url: string | null; gender: string | null }> = {};
-      let userMap: Record<string, string> = {};
-      
-      if (empIds.length > 0) {
-        const { data: emps } = await supabase
-          .from("employees")
-          .select("id, first_name, last_name, avatar_url, gender")
-          .in("id", empIds);
-        (emps ?? []).forEach(e => { empMap[e.id] = e; });
-      }
-      
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name")
-          .in("user_id", userIds);
-        (profiles ?? []).forEach(p => { userMap[p.user_id] = p.full_name || "Admin"; });
-      }
-
-      setMessages(data.map(m => {
-        const emp = m.sender_employee_id ? empMap[m.sender_employee_id] : null;
-        return {
-          ...m,
-          sender_name: emp ? `${emp.first_name} ${emp.last_name}` : (m.sender_user_id ? (userMap[m.sender_user_id] || "Admin") : "Sistema"),
-          sender_avatar: emp?.avatar_url,
-          sender_gender: emp?.gender,
-        };
-      }));
-    } else {
-      setMessages([]);
-    }
-    
-    setLoading(false);
-  }, [shiftId, isInAutoWindow]);
-
-  useEffect(() => {
-    loadMessages();
-  }, [loadMessages]);
-
-  // Realtime subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel(`shift-chat-${shiftId}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "shift_chat_messages",
-        filter: `shift_id=eq.${shiftId}`,
-      }, (payload) => {
-        // Play chat sound for messages from others
-        const senderId = (payload.new as any)?.sender_user_id || (payload.new as any)?.sender_employee_id;
-        const isOwnMessage = senderId === user?.id || senderId === employeeId;
-        if (!isOwnMessage) {
-          console.info("[shift-chat] incoming message -> play(chat)", { messageId: (payload.new as any)?.id, shiftId });
-          void play("chat");
-        }
-        loadMessages();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [shiftId, loadMessages, play, user, employeeId]);
-
-  // Auto-scroll
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const isChatOpen = chatConfig?.is_open ?? isInAutoWindow;
-
+...
   const handleSend = async () => {
     if (!text.trim() || !isChatOpen) return;
     if (!isAdmin && !employeeId) {
+      console.info("[shift-chat] send blocked before insert", {
+        authUserId: user?.id ?? null,
+        employeeId,
+        selectedCompanyId,
+        shiftCompanyId: companyId,
+        isAdmin,
+        allRoles: allRolesArray,
+        reason: "missing employee identity for employee sender",
+      });
       toast.error("No tienes acceso a este chat");
       return;
     }
     setSending(true);
 
-    // Auto-create thread on first message if it doesn't exist (idempotent: UNIQUE on shift_id)
     if (!chatConfig?.id) {
       const { data: created, error: cfgErr } = await supabase
         .from("shift_chat_config")
@@ -188,18 +69,47 @@ export function ShiftChatPanel({ shiftId, shiftDate, companyId, isAdmin: isAdmin
       setChatConfig(created);
     }
 
+    const sender_type = isAdmin ? "admin" : "employee";
     const msg: any = {
       shift_id: shiftId,
       company_id: companyId,
       content: text.trim(),
-      sender_type: isAdmin ? "admin" : "employee",
+      sender_type,
     };
-    if (isAdmin && user) msg.sender_user_id = user.id;
+    if (sender_type === "admin" && user) msg.sender_user_id = user.id;
     else if (employeeId) msg.sender_employee_id = employeeId;
+
+    console.info("[shift-chat] insert attempt", {
+      authUserId: user?.id ?? null,
+      employeeId,
+      selectedCompanyId,
+      shiftCompanyId: companyId,
+      isAdmin,
+      allRoles: allRolesArray,
+      sender_type,
+      sender_user_id: msg.sender_user_id ?? null,
+      sender_employee_id: msg.sender_employee_id ?? null,
+      payload: msg,
+    });
 
     const { error } = await supabase.from("shift_chat_messages").insert(msg);
     if (error) {
-      console.error("[shift-chat] send failed", error);
+      console.error("[shift-chat] send failed", {
+        code: (error as any)?.code ?? null,
+        message: error.message ?? null,
+        details: (error as any)?.details ?? null,
+        hint: (error as any)?.hint ?? null,
+        payload: msg,
+        authUserId: user?.id ?? null,
+        employeeId,
+        selectedCompanyId,
+        shiftCompanyId: companyId,
+        isAdmin,
+        allRoles: allRolesArray,
+        sender_type,
+        sender_user_id: msg.sender_user_id ?? null,
+        sender_employee_id: msg.sender_employee_id ?? null,
+      });
       const code = (error as any)?.code;
       const m = (error.message || "").toLowerCase();
       if (code === "42501" || m.includes("row-level security") || m.includes("policy")) {
