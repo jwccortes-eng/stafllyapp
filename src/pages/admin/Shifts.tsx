@@ -352,6 +352,12 @@ export default function Shifts() {
   useEffect(() => { refreshDictionaries(); }, [refreshDictionaries]);
   useEffect(() => { refreshShifts(); }, [refreshShifts]);
 
+  // Stable click handler — prevents child views from re-rendering on every parent render.
+  const handleShiftClick = useCallback((s: Shift) => {
+    setSelectedShift(s);
+    setDetailOpen(true);
+  }, []);
+
   // Availability data for the current view range
   const availDateFrom = viewMode === "day" ? format(currentDay, "yyyy-MM-dd")
     : viewMode === "week" ? format(weekStart, "yyyy-MM-dd")
