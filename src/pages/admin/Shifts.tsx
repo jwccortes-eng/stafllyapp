@@ -488,6 +488,7 @@ export default function Shifts() {
       car_capacity: parseInt(carCapacity) || 4,
       transportation_notes: transportNotes.trim() || null,
       driver_employee_id: driverEmployeeId || null,
+      clock_method: clockMethod,
       status: initialStatus,
     };
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("id, shift_code").single();
