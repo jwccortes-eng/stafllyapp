@@ -1033,125 +1033,111 @@ export function ShiftDetailDialog({
           </OpsSheetFooter>
         ) : canEdit && (
           <OpsSheetFooter>
-            {!editing ? (
-              <>
-                {/* Overflow menu — secondary actions live here for a clean footer */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground" aria-label="Más acciones">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-52">
-                    <DropdownMenuItem onClick={() => setEditing(true)}>
-                      <Pencil className="h-4 w-4 mr-2" /> Editar turno
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}>
-                      <Radar className="h-4 w-4 mr-2" /> Centro de operaciones
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {shift.status === "published" && (
-                      <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
-                        <Bell className="h-4 w-4 mr-2" /> Notificar a asignados
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        const empIds = shiftAssignments.map(a => a.employee_id);
-                        if (empIds.length === 0) { toast.error("No hay empleados asignados."); return; }
-                        const { data } = await supabase.from("employees").select("phone_number").in("id", empIds).not("phone_number", "is", null);
-                        const phones = (data ?? []).map(e => e.phone_number).filter((p): p is string => !!p && p.trim().length > 0);
-                        if (phones.length === 0) { toast.error("Ningún empleado tiene teléfono registrado."); return; }
-                        const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
-                        window.open(`sms:${phones.join(",")}${separator}body=`, "_blank");
-                      }}
-                    >
-                      <Smartphone className="h-4 w-4 mr-2" /> Enviar SMS
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
-                          const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
-                          const assignedEmps = shiftAssigns.map(a => {
-                            const emp = employees.find(e => e.id === a.employee_id);
-                            return { name: emp ? `${emp.first_name} ${emp.last_name}` : "—", phone: (emp as any)?.phone_number || null, role: null };
-                          });
-                          const clientName = clients.find(c => c.id === shift.client_id)?.name || null;
-                          const locationName = locations.find(l => l.id === shift.location_id)?.name || null;
-                          downloadShiftAssignmentPDF({
-                            title: shift.title, date: shift.date, startTime: shift.start_time, endTime: shift.end_time,
-                            clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
-                            transportRequired: (shift as any).transportation_required || false,
-                            transportNotes: (shift as any).transportation_notes || null,
-                            carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
-                            employees: assignedEmps, supervisorName: null,
-                          });
-                        });
-                      }}
-                    >
-                      <FileText className="h-4 w-4 mr-2" /> Descargar PDF
-                    </DropdownMenuItem>
-                    {onDuplicate && (
-                      <DropdownMenuItem onClick={() => { onDuplicate(shift); onOpenChange(false); }}>
-                        <Copy className="h-4 w-4 mr-2" /> Duplicar
-                      </DropdownMenuItem>
-                    )}
-                    {onDelete && !isLocked && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setDeleteConfirm(true)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" /> Eliminar turno
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Spacer pushes primary to the right edge */}
-                <div className="flex-1" />
-
-                {/* Subtle secondary — Edit. Ghost weight so primary owns the eye. */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditing(true)}
-                  className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Editar
+            {/* Overflow menu — secondary actions live here for a clean footer */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground" aria-label="Más acciones">
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
-
-                {/* SINGLE PRIMARY — Publicar (or Notificar when already published) */}
-                {shift.status !== "published" ? (
-                  <Button
-                    size="sm"
-                    onClick={() => onPublish(shift)}
-                    className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
-                  >
-                    <Send className="h-3.5 w-3.5" /> Publicar
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => setNotifyOpen(true)}
-                    className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
-                  >
-                    <Bell className="h-3.5 w-3.5" /> Notificar a asignados
-                  </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52">
+                <DropdownMenuItem onClick={() => { onOpenChange(false); onEdit(shift); }}>
+                  <Pencil className="h-4 w-4 mr-2" /> Editar turno
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { onOpenChange(false); window.location.href = `/app/shift-ops?id=${shift.id}`; }}>
+                  <Radar className="h-4 w-4 mr-2" /> Centro de operaciones
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {shift.status === "published" && (
+                  <DropdownMenuItem onClick={() => setNotifyOpen(true)}>
+                    <Bell className="h-4 w-4 mr-2" /> Notificar a asignados
+                  </DropdownMenuItem>
                 )}
-              </>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    const empIds = shiftAssignments.map(a => a.employee_id);
+                    if (empIds.length === 0) { toast.error("No hay empleados asignados."); return; }
+                    const { data } = await supabase.from("employees").select("phone_number").in("id", empIds).not("phone_number", "is", null);
+                    const phones = (data ?? []).map(e => e.phone_number).filter((p): p is string => !!p && p.trim().length > 0);
+                    if (phones.length === 0) { toast.error("Ningún empleado tiene teléfono registrado."); return; }
+                    const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
+                    window.open(`sms:${phones.join(",")}${separator}body=`, "_blank");
+                  }}
+                >
+                  <Smartphone className="h-4 w-4 mr-2" /> Enviar SMS
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    import("@/lib/shift-pdf").then(({ downloadShiftAssignmentPDF }) => {
+                      const shiftAssigns = assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed");
+                      const assignedEmps = shiftAssigns.map(a => {
+                        const emp = employees.find(e => e.id === a.employee_id);
+                        return { name: emp ? `${emp.first_name} ${emp.last_name}` : "—", phone: (emp as any)?.phone_number || null, role: null };
+                      });
+                      const clientName = clients.find(c => c.id === shift.client_id)?.name || null;
+                      const locationName = locations.find(l => l.id === shift.location_id)?.name || null;
+                      downloadShiftAssignmentPDF({
+                        title: shift.title, date: shift.date, startTime: shift.start_time, endTime: shift.end_time,
+                        clientName, locationName, meetingPoint: (shift as any).meeting_point || null,
+                        transportRequired: (shift as any).transportation_required || false,
+                        transportNotes: (shift as any).transportation_notes || null,
+                        carsNeeded: Math.ceil(shiftAssigns.length / ((shift as any).car_capacity || 4)),
+                        employees: assignedEmps, supervisorName: null,
+                      });
+                    });
+                  }}
+                >
+                  <FileText className="h-4 w-4 mr-2" /> Descargar PDF
+                </DropdownMenuItem>
+                {onDuplicate && (
+                  <DropdownMenuItem onClick={() => { onDuplicate(shift); onOpenChange(false); }}>
+                    <Copy className="h-4 w-4 mr-2" /> Duplicar
+                  </DropdownMenuItem>
+                )}
+                {onDelete && !isLocked && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setDeleteConfirm(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Eliminar turno
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Spacer pushes primary to the right edge */}
+            <div className="flex-1" />
+
+            {/* Subtle secondary — Edit. Opens the canonical ShiftEditDialog. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { onOpenChange(false); onEdit(shift); }}
+              className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <Pencil className="h-3.5 w-3.5" /> Editar
+            </Button>
+
+            {/* SINGLE PRIMARY — Publicar (or Notificar when already published) */}
+            {shift.status !== "published" ? (
+              <Button
+                size="sm"
+                onClick={() => onPublish(shift)}
+                className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
+              >
+                <Send className="h-3.5 w-3.5" /> Publicar
+              </Button>
             ) : (
-              <>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs">
-                  <X className="h-3.5 w-3.5 mr-1" /> Cancelar
-                </Button>
-                <Button size="sm" onClick={handleInlineSave} disabled={saving || !date} className="h-8 text-xs gap-1.5">
-                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  Guardar cambios
-                </Button>
-              </>
+              <Button
+                size="sm"
+                onClick={() => setNotifyOpen(true)}
+                className="h-8 text-xs gap-1.5 px-3.5 shadow-sm"
+              >
+                <Bell className="h-3.5 w-3.5" /> Notificar a asignados
+              </Button>
             )}
           </OpsSheetFooter>
         )}
