@@ -1323,7 +1323,7 @@ export default function Shifts() {
             locations={locations}
             clients={clients}
             employees={employees}
-            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
             onDuplicateToDay={handleDuplicateToDay}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
@@ -1339,7 +1339,7 @@ export default function Shifts() {
               locations={locations}
               clients={clients}
               employees={employees}
-              onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+              onShiftClick={handleShiftClick}
               onDropOnShift={handleDropOnShift}
             />
           ) : weekViewMode === "employee" ? (
@@ -1350,7 +1350,7 @@ export default function Shifts() {
               locations={locations}
               clients={clients}
               employees={employees}
-              onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+              onShiftClick={handleShiftClick}
               onDropOnShift={handleDropOnShift}
               availabilityConfigs={availConfigs}
               availabilityOverrides={availOverrides}
@@ -1363,7 +1363,7 @@ export default function Shifts() {
               locations={locations}
               clients={clients}
               employees={employees}
-              onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+              onShiftClick={handleShiftClick}
               onDropOnShift={handleDropOnShift}
               onDuplicateToDay={handleDuplicateToDay}
               onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
@@ -1379,7 +1379,7 @@ export default function Shifts() {
             locations={locations}
             clients={clients}
             employees={employees}
-            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
             onQuickCreate={canEdit ? handleQuickCreate : undefined}
@@ -1394,7 +1394,7 @@ export default function Shifts() {
             assignments={assignments}
             locations={locations}
             clients={clients}
-            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
           />
         ) : (
@@ -1403,7 +1403,7 @@ export default function Shifts() {
             shifts={filteredShifts}
             assignments={assignments}
             locations={locations}
-            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
           />
         )}
