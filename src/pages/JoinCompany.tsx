@@ -49,13 +49,10 @@ export default function JoinCompany() {
     if (!inviteCode) { setErrorMsg("Invalid invite code."); setStep("error"); return; }
     (async () => {
       const { data, error } = await supabase
-        .from("companies")
-        .select("id, name, logo_url, brand_color")
-        .eq("invite_code", inviteCode.toUpperCase())
-        .eq("is_active", true)
+        .rpc("get_company_by_invite_code", { _invite_code: inviteCode })
         .maybeSingle();
       if (error || !data) { setErrorMsg("The invite link is not valid or the company is inactive."); setStep("error"); return; }
-      setCompany(data);
+      setCompany(data as CompanyInfo);
       setStep("info");
     })();
   }, [inviteCode]);
