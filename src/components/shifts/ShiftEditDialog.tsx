@@ -119,7 +119,7 @@ export function ShiftEditDialog({
             clients={clients}
             locations={locations}
             employees={employees}
-            assignments={assignments}
+            assignments={assignments as any}
             allowClaims={allowClaims}
             shift={shift}
             qrAttendanceMode={qrAttendanceMode}
