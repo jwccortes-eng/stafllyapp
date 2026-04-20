@@ -9318,6 +9318,7 @@ export type Database = {
           reconciliation_hash: string | null
           shift_admin_id: string | null
           shift_code: string | null
+          shift_link_token: string | null
           slots: number | null
           special_instructions: string | null
           start_time: string
@@ -9352,6 +9353,7 @@ export type Database = {
           reconciliation_hash?: string | null
           shift_admin_id?: string | null
           shift_code?: string | null
+          shift_link_token?: string | null
           slots?: number | null
           special_instructions?: string | null
           start_time: string
@@ -9386,6 +9388,7 @@ export type Database = {
           reconciliation_hash?: string | null
           shift_admin_id?: string | null
           shift_code?: string | null
+          shift_link_token?: string | null
           slots?: number | null
           special_instructions?: string | null
           start_time?: string
@@ -12160,6 +12163,7 @@ export type Database = {
         Returns: number
       }
       expire_old_invitations: { Args: never; Returns: number }
+      generate_shift_link_token: { Args: never; Returns: string }
       get_employee_for_activation: {
         Args: { _employee_id: string; _invite_token: string }
         Returns: {
