@@ -6,11 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Car, Plus, Trash2, Loader2, DollarSign, Users, AlertTriangle, Settings2, Search, Check } from "lucide-react";
+import { Car, Plus, Trash2, Loader2, DollarSign, Users, AlertTriangle, Settings2, Search, Check, Send, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatPersonName } from "@/lib/format-helpers";
 import { SingleEmployeePicker } from "./SingleEmployeePicker";
+import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { isEmployeeDriver, type Assignment, type Employee } from "./types";
 
 const MAX_PASSENGERS = 5;
@@ -55,6 +56,8 @@ export function ShiftRidesPanel({
   const [saving, setSaving] = useState(false);
   const [generatingPayments, setGeneratingPayments] = useState(false);
   const [mappingOpen, setMappingOpen] = useState(false);
+  /** Driver currently being invited (controls EmployeeInviteDialog). */
+  const [inviteEmployee, setInviteEmployee] = useState<Employee | null>(null);
 
   // Load drivers from the active company.
   // Authoritative source: can_drive=true. Legacy fallback: has_car contains "yes/sí/si"
