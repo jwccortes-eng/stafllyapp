@@ -30,7 +30,8 @@ export interface SingleEmployeePickerProps {
   align?: "start" | "center" | "end";
 }
 
-const isDriver = (e: Employee) => e.has_car === "Yes" || e.has_car === "true" || e.has_car === "Sí" || e.has_car === "yes";
+import { isEmployeeDriver } from "./types";
+const isDriver = (e: Employee) => isEmployeeDriver(e);
 
 /**
  * Unified single-employee selector for the Shifts module.

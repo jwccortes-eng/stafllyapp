@@ -50,7 +50,8 @@ function getConflicts(
 type QuickFilter = "all" | "available" | "drivers" | "no-conflict";
 type GroupKey = "ready" | "warning" | "blocked";
 
-const isDriver = (e: Employee) => e.has_car === "Yes" || e.has_car === "true" || e.has_car === "Sí";
+import { isEmployeeDriver } from "./types";
+const isDriver = (e: Employee) => isEmployeeDriver(e);
 
 export function EmployeeCombobox({
   employees, selected, onToggle, shifts = [], assignments = [], shiftDate, shiftStart, shiftEnd,
