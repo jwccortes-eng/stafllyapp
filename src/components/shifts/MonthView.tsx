@@ -351,3 +351,5 @@ function MonthViewImpl({
     </div>
   );
 }
+
+export const MonthView = memo(MonthViewImpl);

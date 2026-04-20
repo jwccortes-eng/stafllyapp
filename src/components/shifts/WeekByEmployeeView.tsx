@@ -253,3 +253,5 @@ function WeekByEmployeeViewImpl({
     </div>
   );
 }
+
+export const WeekByEmployeeView = memo(WeekByEmployeeViewImpl);

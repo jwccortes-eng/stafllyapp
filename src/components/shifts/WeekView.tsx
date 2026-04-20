@@ -218,3 +218,5 @@ function WeekViewImpl({
     </div>
   );
 }
+
+export const WeekView = memo(WeekViewImpl);
