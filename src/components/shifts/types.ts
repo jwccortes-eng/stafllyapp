@@ -40,7 +40,21 @@ export interface Employee {
   groups?: string | null;
   user_id?: string | null;
   has_car?: string | null;
+  /** Authoritative driver flag — boolean column on employees. */
+  can_drive?: boolean | null;
   is_active?: boolean;
+}
+
+/**
+ * Single source of truth for "can this employee drive a shift ride".
+ * Reads `can_drive` (boolean) first; falls back to legacy `has_car` text values
+ * so we don't break older records that haven't been migrated yet.
+ */
+export function isEmployeeDriver(e: Pick<Employee, "can_drive" | "has_car">): boolean {
+  if (e.can_drive === true) return true;
+  if (e.can_drive === false) return false; // explicit false wins over legacy text
+  const hc = (e.has_car ?? "").toLowerCase().trim();
+  return hc === "yes" || hc === "true" || hc === "sí" || hc === "si" || hc === "1";
 }
 
 export type ViewMode = "day" | "week" | "month" | "employee" | "client";
