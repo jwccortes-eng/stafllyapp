@@ -153,7 +153,7 @@ export default function EmployeeOnboarding() {
 
       const [{ data: docsData }, reqList] = await Promise.all([
         supabase.from("employee_documents")
-          .select("id, category, name, file_url, file_type, status, created_at")
+          .select("id, category, name, file_url, file_type, created_at")
           .eq("employee_id", row.id)
           .order("created_at", { ascending: false }),
         getRequiredDocumentsForCompany(row.company_id, { canDrive: !!row.can_drive }),
@@ -276,7 +276,7 @@ export default function EmployeeOnboarding() {
       return;
     }
     const { data: docsData } = await supabase.from("employee_documents")
-      .select("id, category, name, file_url, file_type, status, created_at")
+      .select("id, category, name, file_url, file_type, created_at")
       .eq("employee_id", employee.id)
       .order("created_at", { ascending: false });
     setDocs((docsData ?? []) as DocRow[]);
