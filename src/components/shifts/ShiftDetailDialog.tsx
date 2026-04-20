@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
+import { ShiftShareMenu } from "./ShiftShareMenu";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
 import { ShiftChatPanel } from "./ShiftChatPanel";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
@@ -401,12 +402,24 @@ export function ShiftDetailDialog({
             </div>
           }
           rightSlot={
-            <OpsStatusChip
-              label={statusLabel}
-              tone={shiftStatusToTone(shift.status)}
-              size="sm"
-              leading={shift.status === "locked" ? <Lock className="h-2.5 w-2.5" /> : undefined}
-            />
+            <div className="flex items-center gap-1.5">
+              <ShiftShareMenu
+                shiftId={shift.id}
+                token={(shift as Shift & { shift_link_token?: string | null }).shift_link_token}
+                title={shift.title || "Turno"}
+                date={shift.date}
+                startTime={shift.start_time}
+                variant="outline"
+                size="sm"
+                className="h-7 px-2"
+              />
+              <OpsStatusChip
+                label={statusLabel}
+                tone={shiftStatusToTone(shift.status)}
+                size="sm"
+                leading={shift.status === "locked" ? <Lock className="h-2.5 w-2.5" /> : undefined}
+              />
+            </div>
           }
         />
 
@@ -983,7 +996,19 @@ export function ShiftDetailDialog({
           ) : tab === "chat" ? (
             <ShiftChatPanel shiftId={shift.id} shiftDate={shift.date} companyId={selectedCompanyId!} />
           ) : tab === "rides" ? (
-            <ShiftRidesPanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canEdit={effectiveCanEdit} />
+            <ShiftRidesPanel
+              shiftId={shift.id}
+              companyId={selectedCompanyId!}
+              assignments={assignments}
+              employees={employees}
+              canEdit={effectiveCanEdit}
+              shiftContext={{
+                title: shift.title || "Turno",
+                date: shift.date,
+                start_time: shift.start_time,
+                shift_link_token: (shift as Shift & { shift_link_token?: string | null }).shift_link_token,
+              }}
+            />
           ) : tab === "audit" ? (
             <ShiftAuditTrail shiftId={shift.id} />
           ) : null}

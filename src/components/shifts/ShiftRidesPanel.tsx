@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { formatPersonName } from "@/lib/format-helpers";
 import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
+import { ShiftShareMenu } from "./ShiftShareMenu";
 import { isEmployeeDriver, type Assignment, type Employee } from "./types";
 
 const MAX_PASSENGERS = 5;
@@ -42,11 +43,13 @@ interface ShiftRidesPanelProps {
   assignments: Assignment[];
   employees: Employee[];
   canEdit: boolean;
+  /** Optional shift context for share-link CTAs (date / time / title). */
+  shiftContext?: { title: string; date: string; start_time: string; shift_link_token?: string | null };
   onRidesChanged?: () => void;
 }
 
 export function ShiftRidesPanel({
-  shiftId, companyId, assignments, employees, canEdit, onRidesChanged,
+  shiftId, companyId, assignments, employees, canEdit, shiftContext, onRidesChanged,
 }: ShiftRidesPanelProps) {
   const [rides, setRides] = useState<ShiftRide[]>([]);
   const [loading, setLoading] = useState(true);
@@ -472,15 +475,33 @@ export function ShiftRidesPanel({
                 </div>
 
                 {driverNeedsInvite && driver && (
-                  <button
-                    type="button"
-                    onClick={() => handleInviteEmployee(driver)}
-                    title={driver.access_pin ? "Reenviar invitación" : "Enviar invitación / link de acceso"}
-                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
-                  >
-                    {driver.access_pin ? <RefreshCw className="h-3 w-3" /> : <Send className="h-3 w-3" />}
-                    {driver.access_pin ? "Reenviar" : "Invitar"}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {/* PRIMARY — keep onboarding flow first. */}
+                    <button
+                      type="button"
+                      onClick={() => handleInviteEmployee(driver)}
+                      title={driver.access_pin ? "Reenviar invitación" : "Enviar invitación / link de acceso"}
+                      className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      {driver.access_pin ? <RefreshCw className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                      {driver.access_pin ? "Reenviar" : "Invitar"}
+                    </button>
+                    {/* SECONDARY — copy shift link (smart-link), never replaces the primary CTA. */}
+                    {shiftContext && (
+                      <ShiftShareMenu
+                        shiftId={shiftId}
+                        token={shiftContext.shift_link_token}
+                        title={shiftContext.title}
+                        date={shiftContext.date}
+                        startTime={shiftContext.start_time}
+                        recipientName={`${driver.first_name} ${driver.last_name}`}
+                        recipientPhone={driver.phone_number}
+                        compact
+                        variant="ghost"
+                        className="h-6 px-1.5"
+                      />
+                    )}
+                  </div>
                 )}
 
                 {canEdit && !ride.movement_id ? (
