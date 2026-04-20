@@ -10,11 +10,21 @@ import { toast } from "sonner";
 import { Loader2, Send, Image, X, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { resolveShiftAttachmentUrl } from "@/lib/shift-attachments";
+
+interface ShiftAttachment {
+  /** Storage path (preferred for new rows). */
+  path?: string;
+  /** Either a signed URL (preview) or a legacy public URL. */
+  url: string;
+  filename: string;
+  type: string;
+}
 
 interface ShiftComment {
   id: string;
   content: string;
-  attachments: { url: string; filename: string; type: string }[];
+  attachments: ShiftAttachment[];
   author_id: string;
   author_type: string;
   employee_id: string | null;
