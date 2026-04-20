@@ -46,7 +46,10 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: true,
         // Always clean up obsolete precache entries on activate.
         cleanupOutdatedCaches: true,
-        navigateFallbackDenylist: [/^\/~oauth/],
+        // Public entry points must NEVER be served by the SW — fresh recipients
+        // (no prior visit) must hit the server directly so they get the latest
+        // bundle, not a cached one from a previous device install.
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/s\//, /^\/apply\//, /^\/invite/, /^\/activate\//, /^\/join\//],
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
