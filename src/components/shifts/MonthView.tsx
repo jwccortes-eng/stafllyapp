@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo } from "react";
 import { formatPersonName } from "@/lib/format-helpers";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -33,7 +33,7 @@ interface MonthViewProps {
   availabilityOverrides?: AvailabilityOverride[];
 }
 
-export function MonthView({
+function MonthViewImpl({
   currentMonth, shifts, assignments, locations, clients, employees,
   onShiftClick, onDropOnShift, onAddShift,
   onQuickCreate, onOpenFull,
@@ -351,3 +351,5 @@ export function MonthView({
     </div>
   );
 }
+
+export const MonthView = memo(MonthViewImpl);

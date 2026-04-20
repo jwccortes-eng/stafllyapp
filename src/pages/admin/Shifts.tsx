@@ -135,7 +135,11 @@ export default function Shifts() {
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  // `loading` reflects ONLY the very first load. Background refetches use `isRefetching`
+  // so the previous data stays visible — no skeleton flash, no layout shift.
   const [loading, setLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
+  const hasLoadedOnce = useRef(false);
   const [clients, setClients] = useState<SelectOption[]>([]);
   const [locations, setLocations] = useState<(SelectOption & { address?: string; client_id?: string | null })[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -276,29 +280,53 @@ export default function Shifts() {
     [weekStart]
   );
 
-  const loadData = useCallback(async () => {
-    if (!selectedCompanyId) return;
-    setLoading(true);
-
-    let dateFrom: string, dateTo: string;
+  // Date range derived from active view — memoized so it only changes when the
+  // *active* date for the current view actually changes. Switching from week→month
+  // does NOT invalidate the week range etc.
+  const dateRange = useMemo(() => {
     if (viewMode === "day") {
-      dateFrom = format(currentDay, "yyyy-MM-dd");
-      dateTo = dateFrom;
-    } else if (viewMode === "week") {
-      dateFrom = format(weekStart, "yyyy-MM-dd");
-      dateTo = format(addDays(weekStart, 6), "yyyy-MM-dd");
-    } else {
-      dateFrom = format(startOfMonth(currentMonth), "yyyy-MM-dd");
-      dateTo = format(endOfMonth(currentMonth), "yyyy-MM-dd");
+      const d = format(currentDay, "yyyy-MM-dd");
+      return { from: d, to: d };
     }
+    if (viewMode === "week") {
+      return {
+        from: format(weekStart, "yyyy-MM-dd"),
+        to: format(addDays(weekStart, 6), "yyyy-MM-dd"),
+      };
+    }
+    return {
+      from: format(startOfMonth(currentMonth), "yyyy-MM-dd"),
+      to: format(endOfMonth(currentMonth), "yyyy-MM-dd"),
+    };
+  }, [viewMode, currentDay, weekStart, currentMonth]);
 
-    // Fetch shifts for the date range
+  // 1) Dictionaries (clients/locations/employees) — only refetched when company changes.
+  const refreshDictionaries = useCallback(async () => {
+    if (!selectedCompanyId) return;
+    const [clientsRes, locsRes, empsRes] = await Promise.all([
+      supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
+      supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
+      supabase.from("employees").select("id, first_name, last_name, phone_number, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive").eq("company_id", selectedCompanyId).eq("is_active", true),
+    ]);
+    setClients((clientsRes.data ?? []) as SelectOption[]);
+    setLocations((locsRes.data ?? []) as any[]);
+    setEmployees((empsRes.data ?? []) as Employee[]);
+  }, [selectedCompanyId]);
+
+  // 2) Shifts + assignments — refetched when company OR date range changes.
+  // Background refetches keep prior data visible (no skeleton flash).
+  const refreshShifts = useCallback(async () => {
+    if (!selectedCompanyId) return;
+    if (hasLoadedOnce.current) {
+      setIsRefetching(true);
+    } else {
+      setLoading(true);
+    }
     const shiftsRes = await supabase.from("scheduled_shifts").select("*, shift_code").eq("company_id", selectedCompanyId)
-      .gte("date", dateFrom).lte("date", dateTo)
+      .gte("date", dateRange.from).lte("date", dateRange.to)
       .is("deleted_at", null).order("start_time");
     const shiftIds = (shiftsRes.data ?? []).map(s => s.id);
 
-    // Fetch assignments only for visible shifts (avoids 1000-row limit)
     let allAssignments: any[] = [];
     if (shiftIds.length > 0) {
       for (let i = 0; i < shiftIds.length; i += 200) {
@@ -309,21 +337,26 @@ export default function Shifts() {
         if (data) allAssignments.push(...data);
       }
     }
-
-    const [clientsRes, locsRes, empsRes] = await Promise.all([
-      supabase.from("clients").select("id, name").eq("company_id", selectedCompanyId).is("deleted_at", null),
-      supabase.from("locations").select("id, name, address, client_id, default_pay_type, default_clock_method, require_car, default_instructions").eq("company_id", selectedCompanyId).is("deleted_at", null),
-      supabase.from("employees").select("id, first_name, last_name, phone_number, avatar_url, gender, employee_role, groups, user_id, has_car, can_drive").eq("company_id", selectedCompanyId).eq("is_active", true),
-    ]);
     setShifts((shiftsRes.data ?? []) as Shift[]);
     setAssignments(allAssignments as Assignment[]);
-    setClients((clientsRes.data ?? []) as SelectOption[]);
-    setLocations((locsRes.data ?? []) as any[]);
-    setEmployees((empsRes.data ?? []) as Employee[]);
+    hasLoadedOnce.current = true;
     setLoading(false);
-  }, [selectedCompanyId, weekStart, currentMonth, currentDay, viewMode]);
+    setIsRefetching(false);
+  }, [selectedCompanyId, dateRange.from, dateRange.to]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // Used by mutations — only the shifts/assignments slice needs to refresh.
+  const loadData = useCallback(async () => {
+    await refreshShifts();
+  }, [refreshShifts]);
+
+  useEffect(() => { refreshDictionaries(); }, [refreshDictionaries]);
+  useEffect(() => { refreshShifts(); }, [refreshShifts]);
+
+  // Stable click handler — prevents child views from re-rendering on every parent render.
+  const handleShiftClick = useCallback((s: Shift) => {
+    setSelectedShift(s);
+    setDetailOpen(true);
+  }, []);
 
   // Availability data for the current view range
   const availDateFrom = viewMode === "day" ? format(currentDay, "yyyy-MM-dd")
@@ -1263,7 +1296,13 @@ export default function Shifts() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div className="rounded-2xl bg-card border border-border/40 shadow-xs p-4 sm:p-5 min-h-[420px]">
+      <div className="relative rounded-2xl bg-card border border-border/40 shadow-xs p-4 sm:p-5 min-h-[420px]">
+        {/* Subtle refetch indicator — keeps prior data visible to avoid layout shift */}
+        {isRefetching && !loading && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 text-[10px] text-muted-foreground/70 bg-card/80 backdrop-blur px-2 py-1 rounded-lg border border-border/30">
+            <Loader2 className="h-3 w-3 animate-spin" /> Actualizando…
+          </div>
+        )}
         {loading ? (
           <div className="space-y-4 animate-pulse">
             <div className="grid grid-cols-7 gap-3">
@@ -1284,7 +1323,7 @@ export default function Shifts() {
             locations={locations}
             clients={clients}
             employees={employees}
-            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
             onDuplicateToDay={handleDuplicateToDay}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
@@ -1300,7 +1339,7 @@ export default function Shifts() {
               locations={locations}
               clients={clients}
               employees={employees}
-              onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+              onShiftClick={handleShiftClick}
               onDropOnShift={handleDropOnShift}
             />
           ) : weekViewMode === "employee" ? (
@@ -1311,7 +1350,7 @@ export default function Shifts() {
               locations={locations}
               clients={clients}
               employees={employees}
-              onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+              onShiftClick={handleShiftClick}
               onDropOnShift={handleDropOnShift}
               availabilityConfigs={availConfigs}
               availabilityOverrides={availOverrides}
@@ -1324,7 +1363,7 @@ export default function Shifts() {
               locations={locations}
               clients={clients}
               employees={employees}
-              onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+              onShiftClick={handleShiftClick}
               onDropOnShift={handleDropOnShift}
               onDuplicateToDay={handleDuplicateToDay}
               onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
@@ -1340,7 +1379,7 @@ export default function Shifts() {
             locations={locations}
             clients={clients}
             employees={employees}
-            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
             onAddShift={canEdit ? handleAddShiftFromCalendar : undefined}
             onQuickCreate={canEdit ? handleQuickCreate : undefined}
@@ -1355,7 +1394,7 @@ export default function Shifts() {
             assignments={assignments}
             locations={locations}
             clients={clients}
-            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
           />
         ) : (
@@ -1364,7 +1403,7 @@ export default function Shifts() {
             shifts={filteredShifts}
             assignments={assignments}
             locations={locations}
-            onShiftClick={(s) => { setSelectedShift(s); setDetailOpen(true); }}
+            onShiftClick={handleShiftClick}
             onDropOnShift={handleDropOnShift}
           />
         )}

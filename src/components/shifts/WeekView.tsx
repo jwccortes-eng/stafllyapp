@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, memo } from "react";
 import { isSameDay, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,7 @@ interface WeekViewProps {
 
 const DEFAULT_MAX_PILLS = 4;
 
-export function WeekView({
+function WeekViewImpl({
   weekDays, shifts, assignments, locations, clients, employees = [],
   onShiftClick, onDropOnShift, onDuplicateToDay, onAddShift,
   onQuickCreate, onOpenFull,
@@ -218,3 +218,5 @@ export function WeekView({
     </div>
   );
 }
+
+export const WeekView = memo(WeekViewImpl);

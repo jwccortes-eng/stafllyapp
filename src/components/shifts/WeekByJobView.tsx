@@ -3,7 +3,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
 import { Clock, Users, ChevronDown, ChevronUp, Timer, CalendarDays, Lock } from "lucide-react";
-import { useState } from "react";
+import { useState, memo, useMemo, useCallback } from "react";
 import { getClientColor, formatShiftCode } from "./types";
 import type { Shift, Assignment, SelectOption, Employee } from "./types";
 
@@ -29,7 +29,7 @@ function calcDuration(start: string, end: string): string {
   return m > 0 ? `${h}h${m}m` : `${h}h`;
 }
 
-export function WeekByJobView({ weekDays, shifts, assignments, locations, clients, employees, onShiftClick, onDropOnShift }: WeekByJobViewProps) {
+function WeekByJobViewImpl({ weekDays, shifts, assignments, locations, clients, employees, onShiftClick, onDropOnShift }: WeekByJobViewProps) {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set(clients.map(c => c.id)));
   const clientIds = clients.map(c => c.id);
 
@@ -309,3 +309,5 @@ export function WeekByJobView({ weekDays, shifts, assignments, locations, client
     </div>
   );
 }
+
+export const WeekByJobView = memo(WeekByJobViewImpl);
