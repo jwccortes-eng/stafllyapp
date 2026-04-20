@@ -33,6 +33,12 @@ import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import { EmployeeCombobox } from "./EmployeeCombobox";
 import { ShiftQRSection } from "./ShiftQRSection";
 import type { Employee, SelectOption, Shift, Assignment } from "./types";
+import {
+  SHIFT_ATTENDANCE_MODE_LABELS,
+  SHIFT_ATTENDANCE_MODE_HINTS,
+  defaultAttendanceModeForPayType,
+  type ShiftAttendanceMode,
+} from "@/lib/shift-attendance-mode";
 
 export interface LocationOption extends SelectOption {
   address?: string;
@@ -60,6 +66,10 @@ export interface ShiftFormState {
   dayType: "full_day" | "half_day";
   shiftAdminId: string;
   clockMethod: "mobile" | "kiosk" | "both";
+  /** Operational attendance mode (clock vs arrival vs hybrid). */
+  attendanceMode: ShiftAttendanceMode;
+  /** Optional operational call time (HH:MM); falls back to startTime for punctuality. */
+  meetingTime: string;
   // Transport
   transportRequired: boolean;
   carCapacity: string;
