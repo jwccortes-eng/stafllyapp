@@ -145,15 +145,10 @@ export function ShiftCard({
       />
 
       <div className={cn("pl-3 pr-3 py-2.5", compact && "pl-2.5 pr-2.5 py-2")}>
-        {/* Row 1 — title + code + status */}
+        {/* Row 1 — title (with code prefix) + status */}
         <div className="flex items-center gap-2 min-w-0">
           {draggable && (
             <GripVertical className="h-3.5 w-3.5 text-muted-foreground/25 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity -ml-0.5" />
-          )}
-          {shift.shift_code && (
-            <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70 bg-muted/50 rounded px-1.5 py-px shrink-0">
-              {formatShiftCode(shift.shift_code)}
-            </span>
           )}
           <p
             className={cn(
@@ -161,6 +156,11 @@ export function ShiftCard({
               compact ? "text-[12px]" : "text-[13px]",
             )}
           >
+            {shift.shift_code && (
+              <span className="font-mono tabular-nums text-muted-foreground/55 mr-1.5">
+                #{formatShiftCode(shift.shift_code)}
+              </span>
+            )}
             {shift.title}
           </p>
           <OpsStatusChip label={primary.label} tone={primary.tone} size="sm" />

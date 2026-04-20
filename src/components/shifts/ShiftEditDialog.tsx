@@ -349,6 +349,9 @@ export function ShiftEditDialog({
                 Responsable operativo {shiftAssignedIds.length > 0 && <span className="text-destructive">*</span>}
               </Label>
               {(() => {
+                // When no one is assigned yet, allow picking from all employees
+                // so the responsible person can be set in advance. When people
+                // ARE assigned, restrict to that pool (operational rule).
                 const adminCandidates = shiftAssignedIds.length > 0
                   ? employees.filter(e => shiftAssignedIds.includes(e.id))
                   : employees;
@@ -364,7 +367,7 @@ export function ShiftEditDialog({
                       </SelectContent>
                     </Select>
                     {shiftAssignedIds.length === 0 && (
-                      <p className="text-[10px] text-amber-500 mt-0.5">⚠ Asigna empleados primero para seleccionar admin.</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Puedes designarlo ahora; al asignar empleados deberá ser uno de ellos.</p>
                     )}
                     {adminMissing && (
                       <p className="text-[10px] text-destructive mt-0.5 font-medium">⛔ Obligatorio: selecciona un responsable antes de guardar.</p>
