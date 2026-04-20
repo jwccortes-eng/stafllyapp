@@ -12,7 +12,9 @@ import { ClipboardList, Clock, CheckCircle2, Plus } from "lucide-react";
 export default function ClientDashboard() {
   const { data: requests = [], isLoading } = useServiceRequests();
 
-  const open = requests.filter((r) => r.status !== "closed" && r.status !== "cancelled").length;
+  const open = requests.filter(
+    (r) => r.status !== "invoiced" && r.status !== "cancelled",
+  ).length;
   const upcoming = requests.filter((r) => {
     if (!r.service_date) return false;
     return new Date(r.service_date) >= new Date(new Date().toDateString());
@@ -92,7 +94,7 @@ export default function ClientDashboard() {
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">
-                  {r.title ?? "Solicitud"}
+                  {r.client_name_snapshot ?? r.location_name ?? r.request_code}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {r.service_date ?? "Sin fecha"}

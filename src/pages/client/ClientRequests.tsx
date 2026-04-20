@@ -42,7 +42,9 @@ export default function ClientRequests() {
               className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
             >
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{r.title ?? "Solicitud"}</p>
+                <p className="text-sm font-medium truncate">
+                  {r.client_name_snapshot ?? r.location_name ?? r.request_code}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {r.service_date ?? "Sin fecha"}
                 </p>
