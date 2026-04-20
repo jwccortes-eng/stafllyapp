@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { AlertTriangle, BellRing, Volume2, VolumeX } from "lucide-react";
 import { useSoundContext } from "@/hooks/useSound";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ function getStatusMeta(status: "active" | "blocked" | "disabled") {
   return { label: "Disabled", dot: "bg-muted-foreground/40", variant: "secondary" as const, Icon: VolumeX };
 }
 
-export function SoundStatusControl({ compact = false }: { compact?: boolean }) {
+export const SoundStatusControl = forwardRef<HTMLDivElement, { compact?: boolean }>(function SoundStatusControl({ compact = false }, _ref) {
   const { isEnabled, status, setEnabled, testSound, unlockAudio } = useSoundContext();
   const [busy, setBusy] = useState(false);
   const statusMeta = getStatusMeta(status);
@@ -115,4 +115,4 @@ export function SoundStatusControl({ compact = false }: { compact?: boolean }) {
       </PopoverContent>
     </Popover>
   );
-}
+});
