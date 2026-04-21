@@ -63,3 +63,5 @@ project_id = "jplhtputzixwqarqlrth"
     verify_jwt = false
   [functions.kiosk-clock]
     verify_jwt = false
+  [functions.billing-generate-service-blocks]
+    verify_jwt = false
