@@ -29,8 +29,9 @@ import {
 } from "lucide-react";
 import { ReplacementSuggestionDialog } from "@/components/shifts/ReplacementSuggestionDialog";
 import { OpsLiveMapPanel } from "@/components/operations/OpsLiveMapPanel";
-import { OpsAlertsBar } from "@/components/operations/OpsAlertsBar";
+import { OpsAlertsBar, type OpsAlertActionEvent } from "@/components/operations/OpsAlertsBar";
 import { OpsWorkforcePanel } from "@/components/operations/OpsWorkforcePanel";
+import { OpsBroadcastDialog, type BroadcastIntent } from "@/components/operations/OpsBroadcastDialog";
 
 // ─── Types ───
 interface ShiftRow {
