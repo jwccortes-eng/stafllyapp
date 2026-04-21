@@ -11742,13 +11742,47 @@ export type Database = {
           },
         ]
       }
+      shift_review_tags: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          review_id: string
+          tag: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          review_id: string
+          tag: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          review_id?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_review_tags_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "shift_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_reviews: {
         Row: {
           comment: string | null
           company_id: string
           created_at: string
           id: string
+          is_anonymous: boolean
           overall_rating: number
+          private_notes: string | null
           rating_clarity: number | null
           rating_compensation: number | null
           rating_conditions: number | null
@@ -11762,11 +11796,20 @@ export type Database = {
           rating_service: number | null
           rating_supervisor_treatment: number | null
           rating_teamwork: number | null
+          review_type: Database["public"]["Enums"]["review_type"]
           reviewed_client_id: string | null
           reviewed_employee_id: string | null
+          reviewer_employee_id: string | null
           reviewer_id: string
+          reviewer_role:
+            | Database["public"]["Enums"]["review_reviewer_role"]
+            | null
           reviewer_type: string
+          reviewer_user_id: string | null
           shift_id: string
+          status: Database["public"]["Enums"]["review_status"]
+          submitted_at: string | null
+          updated_at: string
           would_work_again: boolean | null
         }
         Insert: {
@@ -11774,7 +11817,9 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          is_anonymous?: boolean
           overall_rating: number
+          private_notes?: string | null
           rating_clarity?: number | null
           rating_compensation?: number | null
           rating_conditions?: number | null
@@ -11788,11 +11833,20 @@ export type Database = {
           rating_service?: number | null
           rating_supervisor_treatment?: number | null
           rating_teamwork?: number | null
+          review_type?: Database["public"]["Enums"]["review_type"]
           reviewed_client_id?: string | null
           reviewed_employee_id?: string | null
+          reviewer_employee_id?: string | null
           reviewer_id: string
+          reviewer_role?:
+            | Database["public"]["Enums"]["review_reviewer_role"]
+            | null
           reviewer_type: string
+          reviewer_user_id?: string | null
           shift_id: string
+          status?: Database["public"]["Enums"]["review_status"]
+          submitted_at?: string | null
+          updated_at?: string
           would_work_again?: boolean | null
         }
         Update: {
@@ -11800,7 +11854,9 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          is_anonymous?: boolean
           overall_rating?: number
+          private_notes?: string | null
           rating_clarity?: number | null
           rating_compensation?: number | null
           rating_conditions?: number | null
@@ -11814,11 +11870,20 @@ export type Database = {
           rating_service?: number | null
           rating_supervisor_treatment?: number | null
           rating_teamwork?: number | null
+          review_type?: Database["public"]["Enums"]["review_type"]
           reviewed_client_id?: string | null
           reviewed_employee_id?: string | null
+          reviewer_employee_id?: string | null
           reviewer_id?: string
+          reviewer_role?:
+            | Database["public"]["Enums"]["review_reviewer_role"]
+            | null
           reviewer_type?: string
+          reviewer_user_id?: string | null
           shift_id?: string
+          status?: Database["public"]["Enums"]["review_status"]
+          submitted_at?: string | null
+          updated_at?: string
           would_work_again?: boolean | null
         }
         Relationships: [
@@ -11853,6 +11918,20 @@ export type Database = {
           {
             foreignKeyName: "shift_reviews_reviewed_employee_id_fkey"
             columns: ["reviewed_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_reviews_reviewer_employee_id_fkey"
+            columns: ["reviewer_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_reviews_reviewer_employee_id_fkey"
+            columns: ["reviewer_employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
             referencedColumns: ["id"]
@@ -13558,6 +13637,52 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_review_stats: {
+        Row: {
+          avg_attitude_score: number | null
+          avg_communication_score: number | null
+          avg_overall_score: number | null
+          avg_presentation_score: number | null
+          avg_punctuality_score: number | null
+          avg_work_quality_score: number | null
+          company_id: string | null
+          employee_id: string | null
+          last_review_at: string | null
+          low_score_count_30d: number | null
+          no_show_flags_90d: number | null
+          total_reviews: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_reviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_reviews_reviewed_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_reviews_reviewed_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees_safe: {
         Row: {
           company_id: string | null
@@ -14157,6 +14282,16 @@ export type Database = {
         | "worker_to_client"
         | "service_experience"
       review_product: "stafly" | "parceros"
+      review_reviewer_role:
+        | "admin"
+        | "owner"
+        | "captain"
+        | "manager"
+        | "supervisor"
+        | "client"
+        | "peer"
+        | "system"
+        | "employee"
       review_status:
         | "generated"
         | "pending"
@@ -14164,6 +14299,7 @@ export type Database = {
         | "expired"
         | "dismissed"
         | "flagged"
+      review_type: "post_shift" | "incident" | "periodic"
       service_block_source_status:
         | "pending"
         | "approved"
@@ -14593,6 +14729,17 @@ export const Constants = {
         "service_experience",
       ],
       review_product: ["stafly", "parceros"],
+      review_reviewer_role: [
+        "admin",
+        "owner",
+        "captain",
+        "manager",
+        "supervisor",
+        "client",
+        "peer",
+        "system",
+        "employee",
+      ],
       review_status: [
         "generated",
         "pending",
@@ -14601,6 +14748,7 @@ export const Constants = {
         "dismissed",
         "flagged",
       ],
+      review_type: ["post_shift", "incident", "periodic"],
       service_block_source_status: [
         "pending",
         "approved",

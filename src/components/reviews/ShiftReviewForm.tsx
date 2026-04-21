@@ -93,6 +93,12 @@ interface ShiftReviewFormProps {
   companyId: string;
   reviewerType: "manager" | "employee";
   reviewerId: string;
+  /** Auth user id of the reviewer (preferred over the legacy reviewer_id). */
+  reviewerUserId?: string;
+  /** Optional employee row id when the reviewer is also a worker (peer/captain). */
+  reviewerEmployeeId?: string | null;
+  /** Granular reviewer role used by reputation/risk calculations. */
+  reviewerRole?: "admin" | "owner" | "manager" | "supervisor" | "captain" | "client" | "peer" | "system" | "employee";
   reviewedEmployeeId?: string;
   reviewedClientId?: string;
   onSuccess?: () => void;
@@ -101,6 +107,7 @@ interface ShiftReviewFormProps {
 
 export function ShiftReviewForm({
   shiftId, companyId, reviewerType, reviewerId,
+  reviewerUserId, reviewerEmployeeId, reviewerRole,
   reviewedEmployeeId, reviewedClientId,
   onSuccess, onCancel,
 }: ShiftReviewFormProps) {
@@ -120,11 +127,19 @@ export function ShiftReviewForm({
     }
     setSaving(true);
     try {
+      const resolvedRole =
+        reviewerRole ?? (reviewerType === "manager" ? "manager" : "employee");
       const row: Record<string, unknown> = {
         shift_id: shiftId,
         company_id: companyId,
         reviewer_type: reviewerType,
         reviewer_id: reviewerId,
+        reviewer_user_id: reviewerUserId ?? reviewerId,
+        reviewer_employee_id: reviewerEmployeeId ?? null,
+        reviewer_role: resolvedRole,
+        review_type: "post_shift",
+        status: "submitted",
+        submitted_at: new Date().toISOString(),
         overall_rating: overall,
         comment: comment.trim() || null,
       };
@@ -138,7 +153,8 @@ export function ShiftReviewForm({
       toast.success("Reseña enviada");
       onSuccess?.();
     } catch (e: any) {
-      if (e?.code === "23505") toast.error("Ya enviaste una reseña para este turno");
+      if (e?.code === "23505") toast.error("Ya enviaste una reseña para este empleado en este turno");
+      else if (e?.message?.includes("Review eligibility")) toast.error(e.message.replace("Review eligibility: ", ""));
       else toast.error(e?.message ?? "Error al enviar reseña");
     } finally {
       setSaving(false);

@@ -34,6 +34,8 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { ProfileStatusBadge } from "@/components/employee/ProfileStatusBadge";
+import { EmployeeReviewBadge } from "@/components/reviews/EmployeeReviewBadge";
+import { useEmployeeReviewStatsBulk } from "@/hooks/useEmployeeReviewStats";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -184,6 +186,11 @@ export default function Workforce() {
     for (const r of rows) c[r.profile_status]++;
     return c;
   }, [rows]);
+
+  const { stats: reviewStats } = useEmployeeReviewStatsBulk(
+    selectedCompanyId,
+    useMemo(() => rows.map(r => r.id), [rows]),
+  );
 
   const filtered = useMemo(() => {
     const q = debounced.trim().toLowerCase();
@@ -375,6 +382,7 @@ export default function Workforce() {
                     <p className="text-[11px] text-muted-foreground truncate">
                       {r.phone_number || r.email || "—"}
                     </p>
+                    <div className="mt-0.5"><EmployeeReviewBadge employeeId={r.id} stats={reviewStats.get(r.id)} size="xs" /></div>
                   </div>
                 </button>
                 <div><ProfileStatusBadge status={r.profile_status} /></div>
@@ -423,10 +431,11 @@ export default function Workforce() {
                         {formatPersonName(`${r.first_name} ${r.last_name}`)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 mt-1">
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       <ProfileStatusBadge status={r.profile_status} size="xs" />
                       <span className="text-[10px] text-muted-foreground">·</span>
                       <DocBar have={r.doc_count} total={r.required_doc_count} compact />
+                      <EmployeeReviewBadge employeeId={r.id} stats={reviewStats.get(r.id)} size="xs" />
                     </div>
                   </div>
                 </button>
