@@ -29,8 +29,9 @@ import {
 } from "lucide-react";
 import { ReplacementSuggestionDialog } from "@/components/shifts/ReplacementSuggestionDialog";
 import { OpsLiveMapPanel } from "@/components/operations/OpsLiveMapPanel";
-import { OpsAlertsBar } from "@/components/operations/OpsAlertsBar";
+import { OpsAlertsBar, type OpsAlertActionEvent } from "@/components/operations/OpsAlertsBar";
 import { OpsWorkforcePanel } from "@/components/operations/OpsWorkforcePanel";
+import { OpsBroadcastDialog, type BroadcastIntent } from "@/components/operations/OpsBroadcastDialog";
 
 // ─── Types ───
 interface ShiftRow {
@@ -101,6 +102,9 @@ export default function OperationsCommandCenter() {
   const [replaceTarget, setReplaceTarget] = useState<{
     shiftId: string; shiftTitle: string; shiftDate: string;
     startTime: string; endTime: string; excludeIds: string[];
+  } | null>(null);
+  const [broadcastTarget, setBroadcastTarget] = useState<{
+    intent: BroadcastIntent; shiftIds: string[]; employeeIds?: string[]; zone?: string;
   } | null>(null);
   const [activeSection, setActiveSection] = useState("alerts");
   const [activeTab, setActiveTab] = useState<"ops" | "map">("ops");
@@ -384,6 +388,41 @@ export default function OperationsCommandCenter() {
           if (a.shiftIds[0]) {
             const shift = shifts.find(s => s.id === a.shiftIds[0]);
             if (shift) setSelectedShiftId(a.shiftIds[0]);
+          }
+        }}
+        onAction={(ev: OpsAlertActionEvent) => {
+          const { alert, action } = ev;
+          // Replacement → open dialog for the FIRST affected shift
+          if (action.id === "suggest_replacements" || action.id === "quick_assign") {
+            const firstId = alert.shiftIds[0];
+            const s = shifts.find(sh => sh.id === firstId);
+            if (s) openReplace(s);
+            else toast.info("Selecciona un turno desde el panel para asignar");
+            return;
+          }
+          // View affected → focus first shift in the drawer
+          if (action.id === "view_affected_employees" || action.id === "view_late_list") {
+            const firstId = alert.shiftIds[0];
+            if (firstId) { setSelectedShiftId(firstId); }
+            else toast.info(`${alert.employeeIds?.length ?? 0} empleados afectados`);
+            return;
+          }
+          // All broadcast variants → unified dialog
+          const intentMap: Record<string, BroadcastIntent> = {
+            broadcast_shift: "broadcast",
+            urgent_broadcast: "urgent",
+            alert_supervisors: "supervisors",
+            send_late_reminder: "late_reminder",
+            reactivate_workforce: "reactivate",
+          };
+          const intent = intentMap[action.id];
+          if (intent) {
+            setBroadcastTarget({
+              intent,
+              shiftIds: alert.shiftIds,
+              employeeIds: alert.employeeIds,
+              zone: alert.zone,
+            });
           }
         }}
       />
@@ -684,6 +723,19 @@ export default function OperationsCommandCenter() {
           shiftEndTime={replaceTarget.endTime} companyId={selectedCompanyId}
           excludeEmployeeIds={replaceTarget.excludeIds}
           onAssigned={() => { loadData(); if (selectedShiftId) loadDrawer(selectedShiftId); }}
+        />
+      )}
+
+      {/* Broadcast dialog (alerts → quick actions) */}
+      {broadcastTarget && selectedCompanyId && (
+        <OpsBroadcastDialog
+          open={!!broadcastTarget}
+          onOpenChange={o => { if (!o) setBroadcastTarget(null); }}
+          companyId={selectedCompanyId}
+          intent={broadcastTarget.intent}
+          shiftIds={broadcastTarget.shiftIds}
+          audienceEmployeeIds={broadcastTarget.employeeIds}
+          zone={broadcastTarget.zone}
         />
       )}
     </div>
