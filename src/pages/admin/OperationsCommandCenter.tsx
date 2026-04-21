@@ -101,6 +101,7 @@ export default function OperationsCommandCenter() {
     startTime: string; endTime: string; excludeIds: string[];
   } | null>(null);
   const [activeSection, setActiveSection] = useState("alerts");
+  const [activeTab, setActiveTab] = useState<"ops" | "map">("ops");
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
   const prevAlertCountRef = useRef(0);
 
