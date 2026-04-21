@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Loader2, Search, ChevronLeft, ChevronRight, Radio, Clock, AlertTriangle,
   Users, Car, Shield, Eye, CheckCircle2, XCircle, Phone, MessageSquare,
-  MapPin, Building2, RefreshCw, Bell, Zap, UserPlus, Plus, Send,
+  MapPin, Building2, RefreshCw, Bell, Zap, UserPlus, Plus, Send, Star,
   Activity, CalendarPlus, UserCheck, ArrowRight, Timer, CalendarIcon, LayoutGrid,
 } from "lucide-react";
 import { ReplacementSuggestionDialog } from "@/components/shifts/ReplacementSuggestionDialog";
@@ -754,6 +754,18 @@ export default function OperationsCommandCenter() {
           shiftIds={broadcastTarget.shiftIds}
           audienceEmployeeIds={broadcastTarget.employeeIds}
           zone={broadcastTarget.zone}
+        />
+      )}
+
+      {/* Post-shift rating dialog (auto sampling for completed shifts, manual otherwise) */}
+      {ratingTarget && (
+        <PostShiftRatingDialog
+          open={!!ratingTarget}
+          onOpenChange={o => { if (!o) setRatingTarget(null); }}
+          shiftId={ratingTarget.shiftId}
+          shiftTitle={ratingTarget.shiftTitle}
+          mode={ratingTarget.mode}
+          onCompleted={() => { toast.success("Evaluaciones registradas"); }}
         />
       )}
     </div>
