@@ -17,7 +17,7 @@ import {
   CheckCircle2, XCircle, ShieldCheck, ShieldX, ShieldQuestion, Megaphone,
   MessageSquare, Bell, Smartphone, Lock, Unlock, ClipboardCheck, Car, Pencil, X,
   CalendarDays, Building2, StickyNote, UsersRound, Sparkles, Phone, MessageCircleIcon, Copy, FileText, Radar,
-  AlertTriangle, Compass, History, MoreVertical,
+  AlertTriangle, Compass, History, MoreVertical, Map as MapIcon,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
 import { ShiftPostReviewsSection } from "@/components/reviews/ShiftPostReviewsSection";
@@ -25,6 +25,7 @@ import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftShareMenu } from "./ShiftShareMenu";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
 import { ShiftChatPanel } from "./ShiftChatPanel";
+import ShiftLiveMapPanel from "./ShiftLiveMapPanel";
 import type { AvailabilityConfig, AvailabilityOverride } from "@/hooks/useEmployeeAvailability";
 import { cn } from "@/lib/utils";
 import { formatDisplayText } from "@/lib/format-helpers";
@@ -460,6 +461,9 @@ export function ShiftDetailDialog({
             </TabButton>
             <TabButton active={tab === "attendance"} onClick={() => setTab("attendance")}>
               <ClipboardCheck className="h-3 w-3" /> Asistencia
+            </TabButton>
+            <TabButton active={tab === "livemap"} onClick={() => setTab("livemap")}>
+              <MapIcon className="h-3 w-3" /> Live map
             </TabButton>
             {!!(shift as any).transportation_required && (
               <TabButton active={tab === "rides"} onClick={() => setTab("rides")}>
