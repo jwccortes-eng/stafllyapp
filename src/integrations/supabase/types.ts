@@ -484,6 +484,322 @@ export type Database = {
           },
         ]
       }
+      billable_service_block_entries: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          hours: number | null
+          id: string
+          notes: string | null
+          service_block_id: string
+          start_time: string | null
+          workers: number
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          hours?: number | null
+          id?: string
+          notes?: string | null
+          service_block_id: string
+          start_time?: string | null
+          workers?: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          hours?: number | null
+          id?: string
+          notes?: string | null
+          service_block_id?: string
+          start_time?: string | null
+          workers?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billable_service_block_entries_service_block_id_fkey"
+            columns: ["service_block_id"]
+            isOneToOne: false
+            referencedRelation: "billable_service_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billable_service_blocks: {
+        Row: {
+          amount: number
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          billable_unit: Database["public"]["Enums"]["billable_unit"]
+          client_id: string
+          client_location_id: string | null
+          company_id: string
+          created_at: string
+          currency: string
+          description_rendered: string | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          qty: number
+          rate: number
+          service_date: string
+          service_type: string | null
+          shift_group_id: string | null
+          source_status: Database["public"]["Enums"]["service_block_source_status"]
+          source_type: Database["public"]["Enums"]["service_block_source_type"]
+          updated_at: string
+          workers_count: number
+        }
+        Insert: {
+          amount?: number
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          billable_unit?: Database["public"]["Enums"]["billable_unit"]
+          client_id: string
+          client_location_id?: string | null
+          company_id: string
+          created_at?: string
+          currency?: string
+          description_rendered?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          qty?: number
+          rate?: number
+          service_date: string
+          service_type?: string | null
+          shift_group_id?: string | null
+          source_status?: Database["public"]["Enums"]["service_block_source_status"]
+          source_type?: Database["public"]["Enums"]["service_block_source_type"]
+          updated_at?: string
+          workers_count?: number
+        }
+        Update: {
+          amount?: number
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          billable_unit?: Database["public"]["Enums"]["billable_unit"]
+          client_id?: string
+          client_location_id?: string | null
+          company_id?: string
+          created_at?: string
+          currency?: string
+          description_rendered?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          qty?: number
+          rate?: number
+          service_date?: string
+          service_type?: string | null
+          shift_group_id?: string | null
+          source_status?: Database["public"]["Enums"]["service_block_source_status"]
+          source_type?: Database["public"]["Enums"]["service_block_source_type"]
+          updated_at?: string
+          workers_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billable_service_blocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "billing_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billable_service_blocks_client_location_id_fkey"
+            columns: ["client_location_id"]
+            isOneToOne: false
+            referencedRelation: "billing_client_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billable_service_blocks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billable_service_blocks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bsb_invoice"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_client_locations: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          client_id: string
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          state: string | null
+          updated_at: string
+          zip: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          client_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          state?: string | null
+          updated_at?: string
+          zip?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          state?: string | null
+          updated_at?: string
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_client_locations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "billing_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_client_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_client_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_clients: {
+        Row: {
+          billing_address_line1: string | null
+          billing_address_line2: string | null
+          billing_city: string | null
+          billing_country: string | null
+          billing_state: string | null
+          billing_zip: string | null
+          company_id: string
+          created_at: string
+          default_currency: string
+          email: string | null
+          id: string
+          is_active: boolean
+          legal_name: string | null
+          name: string
+          notes: string | null
+          operational_client_id: string | null
+          payment_terms: string | null
+          phone: string | null
+          tax_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_state?: string | null
+          billing_zip?: string | null
+          company_id: string
+          created_at?: string
+          default_currency?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          legal_name?: string | null
+          name: string
+          notes?: string | null
+          operational_client_id?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_state?: string | null
+          billing_zip?: string | null
+          company_id?: string
+          created_at?: string
+          default_currency?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          legal_name?: string | null
+          name?: string
+          notes?: string | null
+          operational_client_id?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_clients_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_clients_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_clients_operational_client_id_fkey"
+            columns: ["operational_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_events: {
         Row: {
           company_id: string
@@ -4242,219 +4558,296 @@ export type Database = {
           },
         ]
       }
-      invoice_line_items: {
+      invoice_activity_log: {
         Row: {
-          category_id: string | null
+          action: Database["public"]["Enums"]["invoice_activity_action"]
+          actor_user_id: string | null
           company_id: string
           created_at: string
-          description: string
-          employee_id: string | null
           id: string
           invoice_id: string
-          quantity: number
-          shift_id: string | null
-          sort_order: number
-          total: number
-          unit_price: number
+          new_values_json: Json | null
+          notes: string | null
+          old_values_json: Json | null
         }
         Insert: {
-          category_id?: string | null
+          action: Database["public"]["Enums"]["invoice_activity_action"]
+          actor_user_id?: string | null
           company_id: string
           created_at?: string
-          description: string
-          employee_id?: string | null
           id?: string
           invoice_id: string
-          quantity?: number
-          shift_id?: string | null
-          sort_order?: number
-          total?: number
-          unit_price?: number
+          new_values_json?: Json | null
+          notes?: string | null
+          old_values_json?: Json | null
         }
         Update: {
-          category_id?: string | null
+          action?: Database["public"]["Enums"]["invoice_activity_action"]
+          actor_user_id?: string | null
           company_id?: string
           created_at?: string
-          description?: string
-          employee_id?: string | null
           id?: string
           invoice_id?: string
-          quantity?: number
-          shift_id?: string | null
-          sort_order?: number
-          total?: number
-          unit_price?: number
+          new_values_json?: Json | null
+          notes?: string | null
+          old_values_json?: Json | null
         }
         Relationships: [
           {
-            foreignKeyName: "invoice_line_items_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "service_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_line_items_company_id_fkey"
+            foreignKeyName: "invoice_activity_log_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoice_line_items_company_id_fkey"
+            foreignKeyName: "invoice_activity_log_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_public"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoice_line_items_employee_id_fkey"
-            columns: ["employee_id"]
+            foreignKeyName: "invoice_activity_log_invoice_id_fkey"
+            columns: ["invoice_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      invoice_lines: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          line_order: number
+          line_type: Database["public"]["Enums"]["invoice_line_type"]
+          metadata_json: Json
+          qty: number
+          rate: number
+          source_service_block_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id: string
+          line_order?: number
+          line_type?: Database["public"]["Enums"]["invoice_line_type"]
+          metadata_json?: Json
+          qty?: number
+          rate?: number
+          source_service_block_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          line_order?: number
+          line_type?: Database["public"]["Enums"]["invoice_line_type"]
+          metadata_json?: Json
+          qty?: number
+          rate?: number
+          source_service_block_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "invoice_line_items_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "employees_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            foreignKeyName: "invoice_lines_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoice_line_items_shift_id_fkey"
-            columns: ["shift_id"]
+            foreignKeyName: "invoice_lines_source_service_block_id_fkey"
+            columns: ["source_service_block_id"]
             isOneToOne: false
-            referencedRelation: "scheduled_shifts"
+            referencedRelation: "billable_service_blocks"
             referencedColumns: ["id"]
           },
         ]
       }
-      invoices: {
+      invoice_payments: {
         Row: {
-          approved_at: string | null
-          approved_by: string | null
-          billing_address: string | null
-          client_id: string
+          amount: number
           company_id: string
           created_at: string
           created_by: string | null
-          discount_amount: number | null
-          due_date: string | null
-          external_notes: string | null
-          grand_total: number
           id: string
-          internal_notes: string | null
-          invoice_number: string
-          issue_date: string
-          paid_at: string | null
-          request_id: string | null
-          sent_at: string | null
-          service_period_end: string | null
-          service_period_start: string | null
-          status: Database["public"]["Enums"]["invoice_status"]
-          subtotal: number
-          tax_amount: number | null
-          tax_rate: number | null
-          updated_at: string
-          viewed_at: string | null
-          voided_at: string | null
-          voided_by: string | null
+          invoice_id: string
+          method: Database["public"]["Enums"]["invoice_payment_method"]
+          notes: string | null
+          payment_date: string
+          reference_number: string | null
         }
         Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          billing_address?: string | null
-          client_id: string
+          amount: number
           company_id: string
           created_at?: string
           created_by?: string | null
-          discount_amount?: number | null
-          due_date?: string | null
-          external_notes?: string | null
-          grand_total?: number
           id?: string
-          internal_notes?: string | null
-          invoice_number: string
-          issue_date?: string
-          paid_at?: string | null
-          request_id?: string | null
-          sent_at?: string | null
-          service_period_end?: string | null
-          service_period_start?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"]
-          subtotal?: number
-          tax_amount?: number | null
-          tax_rate?: number | null
-          updated_at?: string
-          viewed_at?: string | null
-          voided_at?: string | null
-          voided_by?: string | null
+          invoice_id: string
+          method?: Database["public"]["Enums"]["invoice_payment_method"]
+          notes?: string | null
+          payment_date?: string
+          reference_number?: string | null
         }
         Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          billing_address?: string | null
-          client_id?: string
+          amount?: number
           company_id?: string
           created_at?: string
           created_by?: string | null
-          discount_amount?: number | null
-          due_date?: string | null
-          external_notes?: string | null
-          grand_total?: number
           id?: string
-          internal_notes?: string | null
-          invoice_number?: string
-          issue_date?: string
-          paid_at?: string | null
-          request_id?: string | null
-          sent_at?: string | null
-          service_period_end?: string | null
-          service_period_start?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"]
-          subtotal?: number
-          tax_amount?: number | null
-          tax_rate?: number | null
-          updated_at?: string
-          viewed_at?: string | null
-          voided_at?: string | null
-          voided_by?: string | null
+          invoice_id?: string
+          method?: Database["public"]["Enums"]["invoice_payment_method"]
+          notes?: string | null
+          payment_date?: string
+          reference_number?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "invoices_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_company_id_fkey"
+            foreignKeyName: "invoice_payments_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_company_id_fkey"
+            foreignKeyName: "invoice_payments_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_public"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_request_id_fkey"
-            columns: ["request_id"]
+            foreignKeyName: "invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
             isOneToOne: false
-            referencedRelation: "staffing_requests"
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          adjustment_total: number
+          amount_paid: number
+          balance_due: number
+          client_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          discount_total: number
+          due_date: string | null
+          finalized_at: string | null
+          footer_message: string | null
+          id: string
+          invoice_date: string
+          invoice_number: number
+          notes: string | null
+          paid_at: string | null
+          payment_instructions: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subject: string | null
+          subtotal: number
+          tax_total: number
+          terms: string | null
+          total: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+        }
+        Insert: {
+          adjustment_total?: number
+          amount_paid?: number
+          balance_due?: number
+          client_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          discount_total?: number
+          due_date?: string | null
+          finalized_at?: string | null
+          footer_message?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_instructions?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subject?: string | null
+          subtotal?: number
+          tax_total?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+        }
+        Update: {
+          adjustment_total?: number
+          amount_paid?: number
+          balance_due?: number
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          discount_total?: number
+          due_date?: string | null
+          finalized_at?: string | null
+          footer_message?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_instructions?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subject?: string | null
+          subtotal?: number
+          tax_total?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey1"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "billing_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey1"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey1"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
             referencedColumns: ["id"]
           },
         ]
@@ -4675,6 +5068,223 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legacy_invoice_line_items: {
+        Row: {
+          category_id: string | null
+          company_id: string
+          created_at: string
+          description: string
+          employee_id: string | null
+          id: string
+          invoice_id: string
+          quantity: number
+          shift_id: string | null
+          sort_order: number
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          category_id?: string | null
+          company_id: string
+          created_at?: string
+          description: string
+          employee_id?: string | null
+          id?: string
+          invoice_id: string
+          quantity?: number
+          shift_id?: string | null
+          sort_order?: number
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          category_id?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string
+          employee_id?: string | null
+          id?: string
+          invoice_id?: string
+          quantity?: number
+          shift_id?: string | null
+          sort_order?: number
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "legacy_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legacy_invoices: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          billing_address: string | null
+          client_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          discount_amount: number | null
+          due_date: string | null
+          external_notes: string | null
+          grand_total: number
+          id: string
+          internal_notes: string | null
+          invoice_number: string
+          issue_date: string
+          paid_at: string | null
+          request_id: string | null
+          sent_at: string | null
+          service_period_end: string | null
+          service_period_start: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          updated_at: string
+          viewed_at: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          billing_address?: string | null
+          client_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
+          external_notes?: string | null
+          grand_total?: number
+          id?: string
+          internal_notes?: string | null
+          invoice_number: string
+          issue_date?: string
+          paid_at?: string | null
+          request_id?: string | null
+          sent_at?: string | null
+          service_period_end?: string | null
+          service_period_start?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          updated_at?: string
+          viewed_at?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          billing_address?: string | null
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
+          external_notes?: string | null
+          grand_total?: number
+          id?: string
+          internal_notes?: string | null
+          invoice_number?: string
+          issue_date?: string
+          paid_at?: string | null
+          request_id?: string | null
+          sent_at?: string | null
+          service_period_end?: string | null
+          service_period_start?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          updated_at?: string
+          viewed_at?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "staffing_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -13347,6 +13957,7 @@ export type Database = {
         | "owner"
         | "manager"
         | "supervisor"
+      billable_unit: "hour" | "day" | "flat"
       calc_mode: "quantity_x_rate" | "manual_value" | "hybrid"
       comp_action_type:
         | "created"
@@ -13456,6 +14067,29 @@ export type Database = {
         | "manual_adjustment"
         | "mixed"
         | "unknown"
+      invoice_activity_action:
+        | "created"
+        | "edited"
+        | "finalized"
+        | "sent"
+        | "payment_recorded"
+        | "paid"
+        | "voided"
+        | "reopened"
+      invoice_line_type:
+        | "service"
+        | "fee"
+        | "discount"
+        | "tax"
+        | "adjustment"
+        | "manual"
+      invoice_payment_method:
+        | "zelle"
+        | "check"
+        | "ach"
+        | "cash"
+        | "card"
+        | "other"
       invoice_status:
         | "draft"
         | "approved"
@@ -13527,6 +14161,13 @@ export type Database = {
         | "expired"
         | "dismissed"
         | "flagged"
+      service_block_source_status:
+        | "pending"
+        | "approved"
+        | "adjusted"
+        | "invoiced"
+        | "discarded"
+      service_block_source_type: "attendance" | "approval" | "manual"
       service_request_billing_unit: "hourly" | "daily" | "flat"
       service_request_channel:
         | "whatsapp"
@@ -13727,6 +14368,7 @@ export const Constants = {
         "manager",
         "supervisor",
       ],
+      billable_unit: ["hour", "day", "flat"],
       calc_mode: ["quantity_x_rate", "manual_value", "hybrid"],
       comp_action_type: [
         "created",
@@ -13850,6 +14492,32 @@ export const Constants = {
         "mixed",
         "unknown",
       ],
+      invoice_activity_action: [
+        "created",
+        "edited",
+        "finalized",
+        "sent",
+        "payment_recorded",
+        "paid",
+        "voided",
+        "reopened",
+      ],
+      invoice_line_type: [
+        "service",
+        "fee",
+        "discount",
+        "tax",
+        "adjustment",
+        "manual",
+      ],
+      invoice_payment_method: [
+        "zelle",
+        "check",
+        "ach",
+        "cash",
+        "card",
+        "other",
+      ],
       invoice_status: [
         "draft",
         "approved",
@@ -13930,6 +14598,14 @@ export const Constants = {
         "dismissed",
         "flagged",
       ],
+      service_block_source_status: [
+        "pending",
+        "approved",
+        "adjusted",
+        "invoiced",
+        "discarded",
+      ],
+      service_block_source_type: ["attendance", "approval", "manual"],
       service_request_billing_unit: ["hourly", "daily", "flat"],
       service_request_channel: [
         "whatsapp",
