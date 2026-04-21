@@ -36,9 +36,9 @@ import {
 import { format } from "date-fns";
 
 const STATUS_BADGE: Record<ServiceBlockStatus, { label: string; cls: string }> = {
-  pending: { label: "Pending", cls: "bg-amber-500/10 text-amber-700 border-amber-300/40" },
-  approved: { label: "Approved", cls: "bg-emerald-500/10 text-emerald-700 border-emerald-300/40" },
-  adjusted: { label: "Adjusted", cls: "bg-sky-500/10 text-sky-700 border-sky-300/40" },
+  pending: { label: "Pending", cls: "bg-warning/10 text-warning border-warning/30" },
+  approved: { label: "Approved", cls: "bg-success/10 text-success border-success/30" },
+  adjusted: { label: "Adjusted", cls: "bg-info/10 text-info border-info/30" },
   discarded: { label: "Discarded", cls: "bg-muted text-muted-foreground border-border" },
   invoiced: { label: "Invoiced", cls: "bg-primary/10 text-primary border-primary/30" },
 };
@@ -97,9 +97,9 @@ export default function InvoicingServiceBlocks() {
     <div className="space-y-6 p-6">
       <PageHeader
         title="Service Blocks"
-        description="Convert approved operations into billable units, ready to be invoiced."
+        subtitle="Convert approved operations into billable units, ready to be invoiced."
         icon={Receipt}
-        actions={
+        rightSlot={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -159,7 +159,7 @@ export default function InvoicingServiceBlocks() {
       {lastResult && (
         <div className="rounded-lg border border-border/60 bg-surface-1 p-4 space-y-2 text-sm">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <CheckCircle2 className="h-4 w-4 text-success" />
             <span>
               <strong>{lastResult.generated}</strong> created ·{" "}
               <strong>{lastResult.updated}</strong> updated ·{" "}
@@ -173,13 +173,13 @@ export default function InvoicingServiceBlocks() {
           {lastResult.skipped.length > 0 && (
             <details className="text-xs">
               <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                <AlertTriangle className="inline h-3 w-3 mr-1 text-amber-600" />
+                <AlertTriangle className="inline h-3 w-3 mr-1 text-warning" />
                 View skip reasons ({lastResult.skipped.length})
               </summary>
               <div className="mt-2 max-h-48 overflow-auto rounded border border-border/40 bg-surface-2 p-2 space-y-1">
                 {lastResult.skipped.map((s, i) => (
                   <div key={i} className="font-mono text-[11px]">
-                    [{s.service_date}] <span className="text-amber-700">{s.reason}</span>
+                    [{s.service_date}] <span className="text-warning">{s.reason}</span>
                     {s.detail ? ` — ${s.detail}` : ""}
                   </div>
                 ))}
@@ -240,7 +240,7 @@ export default function InvoicingServiceBlocks() {
                         {b.service_type ?? <span className="text-muted-foreground">—</span>}
                         {flag && (
                           <span title={b.notes ?? "Needs admin review"}>
-                            <AlertTriangle className="inline ml-2 h-3.5 w-3.5 text-amber-600" />
+                            <AlertTriangle className="inline ml-2 h-3.5 w-3.5 text-warning" />
                           </span>
                         )}
                       </TableCell>
@@ -263,7 +263,7 @@ export default function InvoicingServiceBlocks() {
                               </Button>
                               {b.source_status === "pending" && (
                                 <Button
-                                  variant="ghost" size="icon" className="h-7 w-7 text-emerald-700"
+                                  variant="ghost" size="icon" className="h-7 w-7 text-success"
                                   onClick={() => setStatus.mutate({ id: b.id, status: "approved" })}
                                   title="Approve"
                                 >
