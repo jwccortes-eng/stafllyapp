@@ -244,7 +244,7 @@ export default function Workforce() {
         icon={Users}
         title="Workforce control"
         subtitle="Live readiness, documents and operational actions for every worker."
-        actions={
+        rightSlot={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
               <RefreshCw className="h-3.5 w-3.5" /> Refresh
