@@ -40,11 +40,15 @@ Shifts (operación)
 
 ## Fases
 
-### **Fase 1 — Schema + RLS + Module gate** ✅ APROBADA / EN EJECUCIÓN
+### **Fase 1 — Schema + RLS + Module gate** ✅ COMPLETADA
 
-Migración con 8 tablas + enums + RLS por `company_id` + triggers seguros (`updated_at`, auto invoice_number per-company, activity_log preparado) + registro de módulo `'tenant_invoicing'` en `MODULE_PLAN_MAP` (Pro+).
-
-**Schema pasivo**: todo listo para fases siguientes, sin automatismos que puedan afectar producción. No se crea UI, ni edge functions, ni se acopla a triggers de operación.
+Migración aplicada con éxito:
+- 8 tablas nuevas con RLS estricto multi-tenant por `company_id`
+- 7 enums (`billable_unit`, `service_block_source_type/status`, `invoice_status`, `invoice_line_type`, `invoice_payment_method`, `invoice_activity_action`)
+- Triggers seguros: `updated_at` en todas las tablas, `assign_invoice_number` per-company con advisory locks, `log_invoice_activity` append-only
+- Limpieza preliminar: prototipo legacy renombrado (`invoices` → `legacy_invoices`, `invoice_line_items` → `legacy_invoice_line_items`); `Invoices.tsx` y `Dashboard.tsx` actualizados
+- Módulo `tenant_invoicing` registrado en `MODULE_PLAN_MAP` (requiere Pro+)
+- Schema 100% pasivo: cero acoplamiento con shifts/attendance/payroll
 
 ### **Fase 2 — Billing Clients & Locations**
 
