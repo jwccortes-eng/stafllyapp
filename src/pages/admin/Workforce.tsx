@@ -375,6 +375,7 @@ export default function Workforce() {
                     <p className="text-[11px] text-muted-foreground truncate">
                       {r.phone_number || r.email || "—"}
                     </p>
+                    <div className="mt-0.5"><EmployeeReviewBadge employeeId={r.id} stats={reviewStats.get(r.id)} size="xs" /></div>
                   </div>
                 </button>
                 <div><ProfileStatusBadge status={r.profile_status} /></div>
@@ -423,10 +424,11 @@ export default function Workforce() {
                         {formatPersonName(`${r.first_name} ${r.last_name}`)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 mt-1">
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       <ProfileStatusBadge status={r.profile_status} size="xs" />
                       <span className="text-[10px] text-muted-foreground">·</span>
                       <DocBar have={r.doc_count} total={r.required_doc_count} compact />
+                      <EmployeeReviewBadge employeeId={r.id} stats={reviewStats.get(r.id)} size="xs" />
                     </div>
                   </div>
                 </button>

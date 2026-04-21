@@ -20,6 +20,7 @@ import {
   AlertTriangle, Compass, History, MoreVertical,
 } from "lucide-react";
 import { ShiftReviewButton } from "@/components/reviews/ShiftReviewButton";
+import { ShiftPostReviewsSection } from "@/components/reviews/ShiftPostReviewsSection";
 import { ShiftRidesPanel } from "./ShiftRidesPanel";
 import { ShiftShareMenu } from "./ShiftShareMenu";
 import { ShiftAttendancePanel } from "./ShiftAttendancePanel";
@@ -778,13 +779,7 @@ export function ShiftDetailDialog({
                             {statusLabels[a.status] || a.status}
                           </span>
                         )}
-                        {effectiveCanEdit && selectedCompanyId && (
-                          <ShiftReviewButton
-                            shiftId={shift.id} companyId={selectedCompanyId}
-                            reviewerType="manager" reviewerId={user?.id || ""}
-                            reviewedEmployeeId={emp.id} employeeName={`${emp.first_name} ${emp.last_name}`}
-                          />
-                        )}
+                        {/* Per-row evaluate button removed — consolidated below in ShiftPostReviewsSection */}
                         {effectiveCanEdit && (
                           <button
                             onClick={() => setRemoveConfirm({ assignmentId: a.id, employeeName: `${emp.first_name} ${emp.last_name}` })}
@@ -802,6 +797,25 @@ export function ShiftDetailDialog({
                   <Users className="h-5 w-5 text-muted-foreground/30 mx-auto mb-1" />
                   <p className="text-[10px] text-muted-foreground">Sin empleados asignados</p>
                 </div>
+              )}
+
+              {/* Post-shift reviews — consolidated, only after shift ends */}
+              {effectiveCanEdit && selectedCompanyId && user?.id && shiftAssignments.length > 0 && (
+                <ShiftPostReviewsSection
+                  shiftId={shift.id}
+                  companyId={selectedCompanyId}
+                  reviewerUserId={user.id}
+                  reviewerRole="admin"
+                  shiftEndsAt={(() => {
+                    try {
+                      const d = shift.date as unknown as string;
+                      const t = (shift.end_time as unknown as string) || "00:00:00";
+                      return new Date(`${d}T${t}`);
+                    } catch { return null; }
+                  })()}
+                  assignments={shiftAssignments}
+                  employees={employees}
+                />
               )}
 
               {/* ── Staffing picker — always visible when slots remain ── */}
