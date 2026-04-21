@@ -220,6 +220,8 @@ export default function Shifts() {
   const [clockMethod, setClockMethod] = useState<"mobile" | "kiosk" | "both">("both");
   const [attendanceMode, setAttendanceMode] = useState<"clock" | "arrival" | "hybrid">("clock");
   const [meetingTime, setMeetingTime] = useState<string>("");
+  const [meetingPointLocationId, setMeetingPointLocationId] = useState<string | null>(null);
+  const [jobSiteLocationId, setJobSiteLocationId] = useState<string | null>(null);
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [copyingWeek, setCopyingWeek] = useState(false);
@@ -384,6 +386,7 @@ export default function Shifts() {
     setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
     setClockMethod("both");
     setAttendanceMode("clock"); setMeetingTime("");
+    setMeetingPointLocationId(null); setJobSiteLocationId(null);
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
     setRepeatConfig(DEFAULT_REPEAT);
   };
@@ -526,6 +529,8 @@ export default function Shifts() {
       driver_employee_id: driverEmployeeId || null,
       clock_method: clockMethod,
       status: initialStatus,
+      meeting_point_location_id: meetingPointLocationId || null,
+      job_site_location_id: jobSiteLocationId || null,
     };
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("id, shift_code").single();
 
@@ -1441,6 +1446,7 @@ export default function Shifts() {
           <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
             <ShiftFormFields
               mode="create"
+              companyId={selectedCompanyId}
               value={{
                 title, date, startTime, endTime, slots,
                 clientId, locationId, notes, claimable,
@@ -1449,6 +1455,7 @@ export default function Shifts() {
                 attendanceMode, meetingTime,
                 transportRequired, carCapacity, transportNotes, driverEmployeeId,
                 selectedEmployees,
+                meetingPointLocationId, jobSiteLocationId,
               }}
               onChange={(patch) => {
                 if (patch.title !== undefined) setTitle(patch.title);
@@ -1478,6 +1485,8 @@ export default function Shifts() {
                 if (patch.transportNotes !== undefined) setTransportNotes(patch.transportNotes);
                 if (patch.driverEmployeeId !== undefined) setDriverEmployeeId(patch.driverEmployeeId);
                 if (patch.selectedEmployees !== undefined) setSelectedEmployees(patch.selectedEmployees);
+                if (patch.meetingPointLocationId !== undefined) setMeetingPointLocationId(patch.meetingPointLocationId);
+                if (patch.jobSiteLocationId !== undefined) setJobSiteLocationId(patch.jobSiteLocationId);
               }}
               clients={clients}
               locations={locations}

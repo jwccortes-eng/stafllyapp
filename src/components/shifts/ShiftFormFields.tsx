@@ -45,6 +45,7 @@ import { formatDisplayText } from "@/lib/format-helpers";
 import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import { EmployeeCombobox } from "./EmployeeCombobox";
 import { ShiftQRSection } from "./ShiftQRSection";
+import ShiftLocationsSection from "./ShiftLocationsSection";
 import type { Employee, SelectOption, Shift, Assignment } from "./types";
 import {
   SHIFT_ATTENDANCE_MODE_LABELS,
@@ -90,6 +91,9 @@ export interface ShiftFormState {
   driverEmployeeId: string;
   // Selected workforce (only meaningful in CREATE; edit handles assignments via its own UI)
   selectedEmployees: string[];
+  // Premium structured locations (Phase 1B). Optional, opt-in upgrade.
+  meetingPointLocationId: string | null;
+  jobSiteLocationId: string | null;
 }
 
 export interface ShiftFormFieldsProps {
@@ -130,6 +134,9 @@ export interface ShiftFormFieldsProps {
 
   /** Validation hint: when truthy, admin field shows an error border + message */
   adminError?: string | null;
+
+  /** Required to enable premium structured locations (Phase 1B). When omitted the section is hidden. */
+  companyId?: string | null;
 }
 
 function SectionCard({
@@ -180,6 +187,7 @@ export function ShiftFormFields({
   onQrUpdate,
   showEmployeePicker = false,
   adminError,
+  companyId = null,
 }: ShiftFormFieldsProps) {
   // Local UI state (popovers + quick-add inline forms)
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -476,9 +484,25 @@ export function ShiftFormFields({
             className="h-9 text-sm mt-1"
           />
           <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-            Se prefillea desde el cliente pero puedes cambiarla.
+            Texto libre — fallback rápido. Para precisión operativa, usa las ubicaciones premium debajo.
           </p>
         </div>
+
+        {/* Premium structured locations (Phase 1B) */}
+        {companyId && (
+          <ShiftLocationsSection
+            companyId={companyId}
+            meetingPointLocationId={v.meetingPointLocationId}
+            jobSiteLocationId={v.jobSiteLocationId}
+            onChange={(patch) => {
+              const next: Partial<ShiftFormState> = {};
+              if (patch.meetingPointLocationId !== undefined) next.meetingPointLocationId = patch.meetingPointLocationId;
+              if (patch.jobSiteLocationId !== undefined) next.jobSiteLocationId = patch.jobSiteLocationId;
+              if (patch.meetingPointText !== undefined && patch.meetingPointText) next.meetingPoint = patch.meetingPointText;
+              onChange(next);
+            }}
+          />
+        )}
       </SectionCard>
 
       {/* ── Payment ── */}
@@ -774,6 +798,8 @@ export const EMPTY_SHIFT_FORM_STATE: ShiftFormState = {
   transportNotes: "",
   driverEmployeeId: "",
   selectedEmployees: [],
+  meetingPointLocationId: null,
+  jobSiteLocationId: null,
 };
 
 /** Map a Shift row from DB → ShiftFormState (used by edit dialog). */
@@ -803,6 +829,8 @@ export function shiftToFormState(shift: Shift): ShiftFormState {
     transportNotes: s.transportation_notes ?? "",
     driverEmployeeId: s.driver_employee_id ?? "",
     selectedEmployees: [],
+    meetingPointLocationId: s.meeting_point_location_id ?? null,
+    jobSiteLocationId: s.job_site_location_id ?? null,
   };
 }
 
@@ -830,5 +858,7 @@ export function formStateToShiftPayload(s: ShiftFormState, allowClaims: boolean)
     car_capacity: parseInt(s.carCapacity) || 4,
     transportation_notes: s.transportNotes.trim() || null,
     driver_employee_id: s.driverEmployeeId || null,
+    meeting_point_location_id: s.meetingPointLocationId || null,
+    job_site_location_id: s.jobSiteLocationId || null,
   };
 }

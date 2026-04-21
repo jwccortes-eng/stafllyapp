@@ -114,6 +114,7 @@ export function ShiftEditDialog({
         <div className="flex-1 overflow-y-auto px-4 pb-4">
           <ShiftFormFields
             mode="edit"
+            companyId={(shift as any).company_id ?? null}
             value={form}
             onChange={(patch) => setForm(prev => ({ ...prev, ...patch }))}
             clients={clients}
