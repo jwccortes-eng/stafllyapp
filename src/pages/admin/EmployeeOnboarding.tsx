@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ProfileStatusBadge } from "@/components/employee/ProfileStatusBadge";
+import { resolveEmployeeDocumentUrl, openEmployeeDocument } from "@/lib/employee-documents";
 import { US_STATES, WORKER_TYPES } from "@/lib/onboarding/us-states";
 import {
   DOCUMENT_CATEGORIES,
@@ -260,12 +261,12 @@ export default function EmployeeOnboarding() {
       toast({ title: "Upload failed", description: upErr.message, variant: "destructive" });
       return;
     }
-    const { data: urlData } = supabase.storage.from("employee-documents").getPublicUrl(path);
+    // Bucket is private; persist the storage path and sign on read.
     const { error: insErr } = await supabase.from("employee_documents").insert({
       employee_id: employee.id,
       company_id: employee.company_id,
       name: file.name,
-      file_url: urlData.publicUrl,
+      file_url: path,
       file_type: file.type,
       file_size: file.size,
       category,

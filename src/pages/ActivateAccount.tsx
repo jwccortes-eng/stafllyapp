@@ -275,8 +275,8 @@ export default function ActivateAccount() {
         .from("employee-documents")
         .upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from("employee-documents").getPublicUrl(path);
-      return urlData.publicUrl;
+      // Bucket is private; store the path. Consumers sign on read.
+      return path;
     };
 
     try {
