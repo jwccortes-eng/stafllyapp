@@ -93,12 +93,12 @@ export function useLocationsV2(companyId: string | null, type?: LocationType) {
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<LocationV2Input> }) => {
       const { data, error } = await supabase
         .from("locations_v2")
-        .update(patch)
+        .update(patch as never)
         .eq("id", id)
         .select("*")
         .single();
       if (error) throw error;
-      return data as LocationV2;
+      return data as unknown as LocationV2;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["locations_v2", companyId] });
