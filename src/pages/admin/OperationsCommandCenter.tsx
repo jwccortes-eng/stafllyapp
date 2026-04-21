@@ -577,6 +577,13 @@ export default function OperationsCommandCenter() {
               </div>
             </div>
           )}
+
+          {/* ─── D. Workforce Intelligence Panel (read-only) ─── */}
+          {selectedCompanyId && (
+            <div className="mt-4">
+              <OpsWorkforcePanel companyId={selectedCompanyId} />
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="map" className="mt-0">
