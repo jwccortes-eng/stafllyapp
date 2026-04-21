@@ -203,11 +203,8 @@ export default function InvoicingClients() {
               description={search
                 ? "Ajusta tu búsqueda o limpia los filtros."
                 : "Crea tu primer cliente para empezar a facturar."}
-              action={!search ? (
-                <Button onClick={openNew} className="press-scale gap-2">
-                  <Plus className="h-4 w-4" /> New Client
-                </Button>
-              ) : undefined}
+              actionLabel={!search ? "New Client" : undefined}
+              onAction={!search ? openNew : undefined}
             />
           </div>
         ) : (
@@ -273,7 +270,7 @@ export default function InvoicingClients() {
                   </TableCell>
                   <TableCell className="text-right">
                     {c.is_active ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-0 text-[10px]">
+                      <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0">
                         Activo
                       </Badge>
                     ) : (
