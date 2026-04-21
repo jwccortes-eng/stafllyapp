@@ -243,7 +243,7 @@ export default function Workforce() {
       <PageHeader
         icon={Users}
         title="Workforce control"
-        description="Live readiness, documents and operational actions for every worker."
+        subtitle="Live readiness, documents and operational actions for every worker."
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
