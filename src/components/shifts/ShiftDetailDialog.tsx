@@ -1009,6 +1009,8 @@ export function ShiftDetailDialog({
 
           ) : tab === "attendance" ? (
             <ShiftAttendancePanel shiftId={shift.id} companyId={selectedCompanyId!} assignments={assignments} employees={employees} canManage={effectiveCanEdit} shiftAdminId={(shift as any)?.shift_admin_id} />
+          ) : tab === "livemap" ? (
+            <ShiftLiveMapPanel shiftId={shift.id} companyId={selectedCompanyId!} isActiveShift />
           ) : tab === "comments" ? (
             <ShiftCommentsPanel shiftId={shift.id} companyId={selectedCompanyId!} employees={employees} />
           ) : tab === "chat" ? (
