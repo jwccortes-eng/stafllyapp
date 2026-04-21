@@ -161,12 +161,12 @@ export default function Invoices() {
       };
     });
 
-    const { error } = await supabase.from("invoice_line_items").insert(lines as any);
+    const { error } = await supabase.from("legacy_invoice_line_items").insert(lines as any);
     if (error) { toast.error(error.message); setGeneratingLines(null); return; }
 
     // Update invoice subtotal/grand_total
     const subtotal = lines.reduce((s, l) => s + l.total, 0);
-    await supabase.from("invoices").update({ subtotal, grand_total: subtotal + (inv.tax_amount || 0) - (inv.discount_amount || 0) } as any).eq("id", inv.id);
+    await supabase.from("legacy_invoices").update({ subtotal, grand_total: subtotal + (inv.tax_amount || 0) - (inv.discount_amount || 0) } as any).eq("id", inv.id);
 
     toast.success(`${lines.length} líneas generadas`);
     setGeneratingLines(null);
