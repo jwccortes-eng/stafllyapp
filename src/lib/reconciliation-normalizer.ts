@@ -7,6 +7,7 @@ import {
   normalizeText, normalizePhone, normalizeEmail, hashRow,
   matchEmployee, classifyPayrollRow, detectColumns, resolveEmployeeName,
   type EmployeeRecord, type ColumnMapping, type EmployeeMatchStatus,
+  type EmployeeCompensation,
 } from "./reconciliation-engine";
 
 // ─── System / Non-Employee Row Detection ───
@@ -524,6 +525,7 @@ export function normalizePayrollRows(
   aliases: EmployeeAlias[] = [],
   manualResolutions: ManualNameResolution[] = [],
   customColumnMapping?: ColumnMapping,
+  compensationByEmployeeId: Record<string, EmployeeCompensation> = {},
 ): NormalizationResult<any> {
   if (rawRows.length === 0) return { normalized: [], warnings: [], errors: [], columnMapping: {}, diagnostics: emptyDiagnostics(employees) };
 
@@ -545,7 +547,10 @@ export function normalizePayrollRows(
     if (isSystemRow(nameRaw, email)) { systemRowNames.push(nameRaw.trim()); return buildExcludedRow(raw.id, nameRaw, "system_placeholder"); }
 
     const empMatch = matchEmployeeWithAliases(nameRaw, phone, email, extId, employees, aliases, manualResolutions);
-    const classification = classifyPayrollRow(d);
+    const matchedCompensation = !empMatch.ambiguous && empMatch.employee_id
+      ? compensationByEmployeeId[empMatch.employee_id] ?? null
+      : null;
+    const classification = classifyPayrollRow(d, matchedCompensation);
 
     const workDate = parseDate(d[colMap.work_date || ""]);
     const totalHours = parseNumber(d[colMap.total_hours || ""]);
