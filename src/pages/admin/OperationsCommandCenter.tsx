@@ -390,6 +390,41 @@ export default function OperationsCommandCenter() {
             if (shift) setSelectedShiftId(a.shiftIds[0]);
           }
         }}
+        onAction={(ev: OpsAlertActionEvent) => {
+          const { alert, action } = ev;
+          // Replacement → open dialog for the FIRST affected shift
+          if (action.id === "suggest_replacements" || action.id === "quick_assign") {
+            const firstId = alert.shiftIds[0];
+            const s = shifts.find(sh => sh.id === firstId);
+            if (s) openReplace(s);
+            else toast.info("Selecciona un turno desde el panel para asignar");
+            return;
+          }
+          // View affected → focus first shift in the drawer
+          if (action.id === "view_affected_employees" || action.id === "view_late_list") {
+            const firstId = alert.shiftIds[0];
+            if (firstId) { setSelectedShiftId(firstId); }
+            else toast.info(`${alert.employeeIds?.length ?? 0} empleados afectados`);
+            return;
+          }
+          // All broadcast variants → unified dialog
+          const intentMap: Record<string, BroadcastIntent> = {
+            broadcast_shift: "broadcast",
+            urgent_broadcast: "urgent",
+            alert_supervisors: "supervisors",
+            send_late_reminder: "late_reminder",
+            reactivate_workforce: "reactivate",
+          };
+          const intent = intentMap[action.id];
+          if (intent) {
+            setBroadcastTarget({
+              intent,
+              shiftIds: alert.shiftIds,
+              employeeIds: alert.employeeIds,
+              zone: alert.zone,
+            });
+          }
+        }}
       />
 
       {/* ─── KPIs ─── */}
