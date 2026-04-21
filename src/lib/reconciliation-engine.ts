@@ -562,8 +562,8 @@ export interface PayrollClassification {
   notes: string;
 }
 
-const DAILY_FULL = 0;
-const DAILY_HALF = 0;
+const DAILY_HALF = 999;
+const DAILY_FULL = 888;
 const RIDE_REGULAR = 100;
 const RIDE_SPECIAL = 160;
 
