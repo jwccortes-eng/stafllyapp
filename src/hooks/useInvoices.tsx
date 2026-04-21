@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { toast } from "sonner";
+import { assertTransition } from "@/lib/invoice-status";
 
 export type InvoiceStatus =
   | "draft"
@@ -174,6 +175,11 @@ export function useInvoice(invoiceId: string | undefined) {
   const setStatus = useMutation({
     mutationFn: async (status: InvoiceStatus) => {
       if (!invoiceId || !selectedCompanyId) throw new Error("No invoice");
+      const current = invoice.data?.status;
+      if (!current) throw new Error("Invoice not loaded");
+      // Guardrail: only allow valid lifecycle transitions
+      assertTransition(current, status);
+
       const patch: any = { status };
       const now = new Date().toISOString();
       if (status === "issued") patch.finalized_at = now;

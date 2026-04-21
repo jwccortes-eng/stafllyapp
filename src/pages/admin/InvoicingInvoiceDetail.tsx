@@ -14,6 +14,7 @@ import {
   ArrowLeft, FileText, Loader2, CheckCircle2, Send, XCircle, RotateCcw,
 } from "lucide-react";
 import { format } from "date-fns";
+import { canTransition, isTerminal } from "@/lib/invoice-status";
 
 const STATUS_BADGE: Record<InvoiceStatus, { label: string; cls: string }> = {
   draft:          { label: "Draft",    cls: "bg-muted text-muted-foreground border-border" },
@@ -77,25 +78,25 @@ export default function InvoicingInvoiceDetail() {
               <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
-            {invoice.status === "draft" && (
+            {canTransition(invoice.status, "issued") && (
               <Button size="sm" onClick={() => setStatus.mutate("issued")}>
                 <CheckCircle2 className="h-4 w-4" />
                 Finalize
               </Button>
             )}
-            {(invoice.status === "issued") && (
+            {canTransition(invoice.status, "sent") && (
               <Button size="sm" onClick={() => setStatus.mutate("sent")}>
                 <Send className="h-4 w-4" />
                 Mark as sent
               </Button>
             )}
-            {(invoice.status === "issued" || invoice.status === "sent") && (
+            {canTransition(invoice.status, "draft") && (
               <Button variant="outline" size="sm" onClick={() => setStatus.mutate("draft")}>
                 <RotateCcw className="h-4 w-4" />
                 Reopen
               </Button>
             )}
-            {!["voided", "paid"].includes(invoice.status) && (
+            {canTransition(invoice.status, "voided") && (
               <Button
                 variant="outline" size="sm"
                 onClick={() => setStatus.mutate("voided")}
@@ -104,6 +105,11 @@ export default function InvoicingInvoiceDetail() {
                 <XCircle className="h-4 w-4" />
                 Void
               </Button>
+            )}
+            {isTerminal(invoice.status) && (
+              <span className="text-xs text-muted-foreground italic">
+                No further actions available
+              </span>
             )}
           </div>
         }
