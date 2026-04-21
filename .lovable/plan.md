@@ -1,183 +1,85 @@
+# Plan: Tenant Invoicing (Billing) — Stafly
 
-## Worker Application & Onboarding Flow
-
-### Phase 1: Database Schema
-- Create `job_applications` table with fields: first_name, last_name, phone, email, worker_type, city, availability, can_drive, document_url, ssn_last4, status (pending/reviewing/approved/rejected), company_id, reference_code, notes, reviewed_by, reviewed_at
-- RLS: public insert (no auth needed), company-scoped read/update for admins
-
-### Phase 2: Public Applicant Flow (6 screens)
-- Route: `/apply/:companySlug` — mobile-first, no auth required
-- Step 1: Welcome (company logo + name + CTA)
-- Step 2: Basic info (name, phone, email)
-- Step 3: Worker type selector (visual cards)
-- Step 4: Location & availability
-- Step 5: Verification (document upload, optional SSN last 4)
-- Step 6: Confirmation with reference number
-
-### Phase 3: Admin Approval Panel
-- Route: `/app/applications`
-- Tab view: Pending / Reviewing / Approved / Rejected
-- Table with avatar, name, type, status, date
-- Detail drawer with tabs (Summary, Info, Documents, History)
-- Approve/Reject actions that can optionally create an employee record
-
-### Phase 4: Integration
-- Add nav item for admin sidebar
-- On approval → auto-create employee record + send invitation
-- Detect existing users by phone/email
-
-### Key Decisions Needed
-1. Should approved applicants auto-become employees, or require a separate step?
-2. Document storage: use existing `employee-documents` bucket?
-3. SSN field: follow existing policy (last 4 only)?
+> Módulo independiente de payroll para que cada empresa facture a sus propios clientes.
+> **Reglas absolutas**: no romper shifts/attendance/payroll, multi-tenant estricto por `company_id`, calidad SaaS premium (Stripe + Linear + QuickBooks).
 
 ---
 
-# Configurable Operations Layer — Staged Product Plan
+## Decisiones acordadas
 
-## Architecture Foundation
+| Decisión | Elección |
+|---|---|
+| Alcance MVP | Plan por fases (este documento) |
+| Generación de blocks | **Híbrido**: auto cuando shift tiene `billing_client_id` + `billing_location_id` resueltos; botón manual "Generate" como fallback |
+| Relación con clients | **Tabla nueva `billing_clients`** con `operational_client_id` opcional (FK nullable a `clients.id`) |
+| Acceso | **Pro+ con feature flag por empresa** vía `company_modules.module = 'tenant_invoicing'` |
 
-### What already exists
-- **`company_settings`** table: key/value JSON per company, consumed by CompanyConfig page
-- **`CompanyConfig.tsx`**: Generic settings renderer with `SettingConfig[]` pattern (toggles, numbers, selects, text)
-- **`usePayrollConfig`** hook: Type-safe read of `payroll_config` key with defaults
-- **`company_modules`** table: Feature-level toggles per company
-- **`company_financial_policies`** table: Already configurable advances/loans
+---
 
-### Storage model
-All new settings use `company_settings` with namespaced keys:
+## Arquitectura
+
 ```
-key: "shifts_config"      → { default_start_time, require_client, ... }
-key: "clock_config"       → { grace_period_minutes, gps_enforcement, ... }
-key: "onboarding_config"  → { required_fields, auto_invite_on_create, ... }
-key: "payroll_config"     → already exists, extended with new fields
+Shifts (operación)
+  └─ approval (status=approved)
+       └─ Hybrid generator (edge function)
+            ├─ Auto si shift.client_id mapea a billing_client + billing_location
+            └─ Manual button para shifts sin mapeo
+       └─ billable_service_blocks (status=pending)
+            └─ Admin review/adjust
+                 └─ status=approved
+                      └─ Selección en Create Invoice
+                           └─ invoice_lines (source_service_block_id)
+                                └─ block.source_status='invoiced' (lock)
+                                     └─ invoice draft → finalized → sent → paid
+                                          └─ invoice_payments + activity_log
 ```
 
-### Tenant safety
-- Every `company_settings` row scoped by `company_id` (FK + RLS)
-- Hook reads only for `selectedCompanyId` from `useCompany()`
-- SandboxSync already supports `company_settings` sync
+**Aislamiento total**: cero cambios en `shifts`, `time_entries`, `pay_periods`, `period_base_pay`, `movements`. El módulo solo **lee** de operación; escribe únicamente en sus propias tablas.
 
 ---
 
-## Module 1: Shifts & Scheduling
+## Fases
 
-### Standardized (never configurable)
-- Draft → Published → Locked lifecycle
-- Overlap prevention (DB trigger)
-- Audit trail on every mutation
-- Shift code auto-generation
-- Notification pipeline on assignment/change
+### **Fase 1 — Schema + RLS + Module gate** ⬅️ ARRANCAR AQUÍ
 
-### Configurable settings (`shifts_config`)
-| Setting | Type | Default | Consumed by |
-|---|---|---|---|
-| `default_start_time` | string | "08:00" | Create dialog pre-fill |
-| `default_end_time` | string | "17:00" | Create dialog pre-fill |
-| `default_slots` | number | 1 | Create dialog pre-fill |
-| `require_client` | boolean | false | Create validation |
-| `require_location` | boolean | false | Create validation |
-| `auto_publish` | boolean | false | Create flow (skip draft) |
-| `copy_week_assignments` | boolean | true | handleCopyWeek |
-| `allow_claims` | boolean | true | Claimable checkbox visibility |
-| `max_shift_hours` | number | 16 | Create/edit validation |
-| `require_shift_admin` | boolean | false | Publish gate |
+Migración con 8 tablas + enums + RLS por `company_id` + triggers (`updated_at`, auto invoice_number, activity_log) + registro de módulo `'tenant_invoicing'` en `MODULE_PLAN_MAP` (Pro+). Sin UI, sin riesgo para producción.
 
-### Admin UX: Gear icon in Shifts toolbar → Sheet panel
+### **Fase 2 — Billing Clients & Locations**
 
----
+Página `/app/invoicing/clients`. CRUD con drawer. Vínculo opcional a cliente operativo. ModuleGate aplicado.
 
-## Module 2: Employee Onboarding
+### **Fase 3 — Generador de Service Blocks (híbrido)**
 
-### Standardized
-- Profile completeness check
-- Rehire protection
-- Employer ID auto-assignment
-- Invitation lifecycle
+Edge function `billing-generate-service-blocks` (lee shifts aprobados, resuelve mapeo, calcula qty por `billable_unit`). Página `/app/invoicing/service-blocks` con tabs Pending/Approved/Invoiced y botón "Generate from operations".
 
-### Configurable settings (`onboarding_config`)
-| Setting | Type | Default | Consumed by |
-|---|---|---|---|
-| `required_fields` | string[] | ["first_name","last_name","phone_number"] | QuickAddInviteWizard |
-| `require_email` | boolean | false | Create validation |
-| `require_emergency_contact` | boolean | false | Profile completeness |
-| `require_vehicle_docs` | boolean | false | VehicleDocumentsSection |
-| `auto_invite_on_create` | boolean | false | QuickAddInviteWizard |
-| `invite_expiry_days` | number | 7 | send-invite-email |
-| `welcome_message` | string | "" | Portal first-login banner |
+### **Fase 4 — Create Invoice + Invoice Lines**
 
-### Admin UX: Section in Company Config page
+Página `/app/invoicing/invoices/new` con 5 secciones (Header, Service Blocks Selector, Lines editable, Summary, Payment info). Transacción: invoice + lines + lock blocks.
+
+### **Fase 5 — Invoice Detail + Estados**
+
+Detail split (metadata+activity_log | preview PDF). Lista con KPIs. Estados: draft → finalized → sent → partially_paid → paid, overdue, void. Activity log automático.
+
+### **Fase 6 — PDF Export + Payment Tracking**
+
+Edge function `billing-invoice-pdf`. Registro de pagos. Email opcional con PDF.
+
+### **Fase 7+ (futuro)**
+
+Recurrencia, statements, multi-currency real, Stripe Invoicing como cobro, tax engine, importer Zoho.
 
 ---
 
-## Module 3: Time Clock & Attendance
+## Garantías de no-regresión
 
-### Standardized
-- Overlap prevention, anomaly detection, clock audit trail, kiosk auth
-
-### Configurable settings (`clock_config`)
-| Setting | Type | Default | Consumed by |
-|---|---|---|---|
-| `allowed_methods` | string[] | ["manual","gps","qr","kiosk"] | Portal clock UI |
-| `gps_radius_meters` | number | 200 | GPS enforcement |
-| `gps_enforcement` | "none"\|"warn"\|"block" | "warn" | Clock-in validation |
-| `require_photo` | boolean | false | Consolidate existing `clock_photo` key |
-| `grace_period_minutes` | number | 15 | Late alert trigger |
-| `auto_clock_out_hours` | number | 12 | Cron/edge function |
-| `rounding_mode` | "none"\|"15min"\|"30min" | "none" | Payroll consolidation |
-| `break_deduction_minutes` | number | 0 | Payroll consolidation |
-
-### Admin UX: Consolidate existing CompanyConfig sections
+- ❌ Cero modificaciones a tablas/hooks de operación
+- ✅ Solo se añade FK `operational_client_id` desde `billing_clients` → `clients` (lectura)
+- ✅ Lectura de operación vía edge function dedicada, nunca acoplada a triggers de la operación
+- ✅ ModuleGate `tenant_invoicing` aísla la UI completa
+- ✅ Multi-tenant estricto: RLS por `company_id` + helper `user_company_ids`
 
 ---
 
-## Module 4: Compensation & Payroll
+## Próximo paso
 
-### Standardized
-- Rate hierarchy, period lifecycle, snapshot immutability, anomaly suppression
-
-### Configurable (extend existing `payroll_config`)
-| Setting | Type | Default | Consumed by |
-|---|---|---|---|
-| `ot_multiplier` | number | 1.5 | consolidate_period_base_pay |
-| `auto_consolidate_on_close` | boolean | true | Period close flow |
-| `require_all_clocks_approved` | boolean | false | Period close gate |
-| `min_hours_for_daily_pay` | number | 4 | Daily pay movement logic |
-| `show_pay_to_employees` | boolean | false | Portal PayStub visibility |
-
-### Admin UX: Extend existing PayrollSettings page
-
----
-
-## Shared Infrastructure (build first)
-
-### `useCompanyConfig<T>` hook
-- Reads `company_settings` WHERE company_id + key
-- Returns typed config merged with defaults
-- `updateConfig(partial)` does optimistic upsert
-- React Query cache with `[configKey, companyId]`
-
-### `<ModuleSettingsSheet>` component
-- Slide-out Sheet with categorized fields
-- Supports: toggle, number, text, select, multi-select
-- Instant save per field change
-
----
-
-## Execution Order
-| Step | Scope | Deliverable |
-|---|---|---|
-| 1 | Shared | `useCompanyConfig` hook + `ModuleSettingsSheet` component |
-| 2 | Shifts | Gear icon → settings sheet → pre-fill defaults |
-| 3 | Shifts | Validation rules wired |
-| 4 | Onboarding | Settings section + required_fields + auto_invite |
-| 5 | Clock | Consolidate existing + add new settings |
-| 6 | Payroll | Extend config + wire ot_multiplier |
-
-Each step independently deployable. Defaults match current behavior (zero breaking changes).
-
-## Deferred (Phase 2)
-- Custom fields on entities
-- Per-location/per-client config overrides
-- Conditional logic / automation rules engine
-- Form builder / dynamic forms
+Aprobar este plan → ejecutar **Fase 1** (migración del schema + RLS + módulo en gating). Sin UI, sin riesgo.
