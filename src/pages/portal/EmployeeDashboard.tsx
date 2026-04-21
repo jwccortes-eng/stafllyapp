@@ -16,6 +16,7 @@ import { format, parseISO, isToday, isTomorrow, startOfWeek, endOfWeek, differen
 import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { PendingReviewPrompt } from "@/components/reviews/PendingReviewPrompt";
+import { ReadinessCard } from "@/components/portal/ReadinessCard";
 
 interface NextShift {
   id: string;
@@ -261,6 +262,9 @@ export default function EmployeeDashboard() {
           </span>
         )}
       </div>
+
+      {/* ── Profile readiness — surfaces pending onboarding (auto-hides if ready) ── */}
+      <ReadinessCard />
 
       {/* ── Available shifts hero — visible only when claimables exist ── */}
       {isModuleEnabled("my_shifts") && claimableCount > 0 && (
