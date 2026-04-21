@@ -112,6 +112,26 @@ export default function ShiftLiveMapPanel({ shiftId, companyId, isActiveShift = 
           workers={workers}
           target={target}
           targetLabel={targetLabel}
+          jobSite={
+            jobSite && jobSite.latitude != null && jobSite.longitude != null
+              ? {
+                  latitude: jobSite.latitude,
+                  longitude: jobSite.longitude,
+                  geofence_radius_meters: jobSite.geofence_radius_meters ?? null,
+                }
+              : null
+          }
+          jobSiteName={jobSite?.name ?? jobSite?.formatted_address ?? null}
+          meetingPoint={
+            meetingPoint && meetingPoint.latitude != null && meetingPoint.longitude != null
+              ? {
+                  latitude: meetingPoint.latitude,
+                  longitude: meetingPoint.longitude,
+                  geofence_radius_meters: meetingPoint.geofence_radius_meters ?? null,
+                }
+              : null
+          }
+          meetingPointName={meetingPoint?.name ?? meetingPoint?.formatted_address ?? null}
           lastUpdateAt={lastUpdateAt}
         />
       )}
