@@ -68,13 +68,18 @@ export function useLocationsV2(companyId: string | null, type?: LocationType) {
 
   const create = useMutation({
     mutationFn: async (input: LocationV2Input) => {
+      const payload = {
+        ...input,
+        metadata: (input.metadata ?? {}) as never,
+        created_by: user?.id ?? null,
+      };
       const { data, error } = await supabase
         .from("locations_v2")
-        .insert({ ...input, created_by: user?.id ?? null })
+        .insert(payload as never)
         .select("*")
         .single();
       if (error) throw error;
-      return data as LocationV2;
+      return data as unknown as LocationV2;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["locations_v2", companyId] });
