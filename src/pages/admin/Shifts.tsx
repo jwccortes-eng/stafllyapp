@@ -1446,6 +1446,7 @@ export default function Shifts() {
           <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
             <ShiftFormFields
               mode="create"
+              companyId={selectedCompanyId}
               value={{
                 title, date, startTime, endTime, slots,
                 clientId, locationId, notes, claimable,
@@ -1454,6 +1455,7 @@ export default function Shifts() {
                 attendanceMode, meetingTime,
                 transportRequired, carCapacity, transportNotes, driverEmployeeId,
                 selectedEmployees,
+                meetingPointLocationId, jobSiteLocationId,
               }}
               onChange={(patch) => {
                 if (patch.title !== undefined) setTitle(patch.title);
@@ -1483,6 +1485,8 @@ export default function Shifts() {
                 if (patch.transportNotes !== undefined) setTransportNotes(patch.transportNotes);
                 if (patch.driverEmployeeId !== undefined) setDriverEmployeeId(patch.driverEmployeeId);
                 if (patch.selectedEmployees !== undefined) setSelectedEmployees(patch.selectedEmployees);
+                if (patch.meetingPointLocationId !== undefined) setMeetingPointLocationId(patch.meetingPointLocationId);
+                if (patch.jobSiteLocationId !== undefined) setJobSiteLocationId(patch.jobSiteLocationId);
               }}
               clients={clients}
               locations={locations}
