@@ -631,47 +631,19 @@ export function classifyPayrollRow(row: Record<string, any>): PayrollClassificat
   }
 
   // 4. Daily pay detection (exact or decomposable amounts)
-  if (totalPay === DAILY_FULL || totalPay === DAILY_HALF) {
-    return {
-      pay_type: "daily",
-      base_pay: totalPay,
-      ride_amount: 0,
-      weekend_amount: 0,
-      manual_amount: 0,
-      confidence: 85,
-      notes: `Daily rate: $${totalPay}`,
-    };
-  }
-  if (totalPay > 0) {
-    // Try daily decomposition: totalPay = F * DAILY_FULL + H * DAILY_HALF
-    for (let f = 0; f <= 7; f++) {
-      const rem = totalPay - f * DAILY_FULL;
-      if (rem < 0) break;
-      if (rem === 0 && f > 0) {
-        return {
-          pay_type: "daily",
-          base_pay: totalPay,
-          ride_amount: 0,
-          weekend_amount: 0,
-          manual_amount: 0,
-          confidence: 80,
-          notes: `Daily: ${f} full days = $${totalPay}`,
-        };
-      }
-      if (DAILY_HALF > 0) {
-        const h = rem / DAILY_HALF;
-        if (h > 0 && h <= 7 && h === Math.round(h)) {
-          return {
-            pay_type: "daily",
-            base_pay: totalPay,
-            ride_amount: 0,
-            weekend_amount: 0,
-            manual_amount: 0,
-            confidence: 78,
-            notes: `Daily: ${f}F + ${h}H = $${totalPay}`,
-          };
-        }
-      }
+ // 4. Daily detection (NEW)
+if (totalHours === 0 && totalPay > 0) {
+  return {
+    pay_type: "daily",
+    base_pay: compensation?.daily_rate ?? totalPay,
+    ride_amount: 0,
+    weekend_amount: 0,
+    manual_amount: 0,
+    confidence: 80,
+    notes: "Daily pay inferred (using compensation or fallback totalPay)"
+  };
+}
+}
     }
   }
 
