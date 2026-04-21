@@ -13,16 +13,26 @@ import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
 import LiveMapCanvas from "@/components/locations/LiveMapCanvas";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, MapPin, Navigation } from "lucide-react";
+import { AlertTriangle, MapPin, Navigation, MapPinOff, ArrowRight } from "lucide-react";
 
 interface Props {
   shiftId: string;
   companyId: string;
   /** Whether the shift is in a state where tracking is meaningful. */
   isActiveShift?: boolean;
+  /** Whether the current user can edit the shift (controls Set job site CTA). */
+  canEdit?: boolean;
+  /** Triggered when admin clicks "Set job site" — should open ShiftEditDialog focused on Location & Arrival. */
+  onSetJobSite?: () => void;
 }
 
-export default function ShiftLiveMapPanel({ shiftId, companyId, isActiveShift = true }: Props) {
+export default function ShiftLiveMapPanel({
+  shiftId,
+  companyId,
+  isActiveShift = true,
+  canEdit = false,
+  onSetJobSite,
+}: Props) {
   const { effectiveEmployeeId } = useEffectiveEmployee();
   const { workers, target, jobSite, meetingPoint, lastUpdateAt, loading, stats } = useShiftLiveMap({
     shiftId,
