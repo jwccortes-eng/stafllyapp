@@ -43,6 +43,7 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Main" },
   { to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Main" },
   { to: "/app/employees", icon: Users, label: "Workers", module: "employees", section: "Main" },
+  { to: "/app/workforce", icon: ShieldCheck, label: "Workforce", module: "employees", section: "Main", badge: "new" },
   { to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Main" },
   { to: "/app/locations", icon: MapPin, label: "Locations", module: "locations", section: "Main" },
   { to: "/app/quality", icon: Star, label: "Reviews", module: null, section: "Main" },
