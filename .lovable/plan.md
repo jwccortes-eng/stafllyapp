@@ -61,9 +61,20 @@ Implementado:
 - ModuleGate aplicado en la ruta
 - Cero impacto en payroll / attendance / shifts / dashboard / operational clients
 
-### **Fase 3 — Generador de Service Blocks (híbrido)**
+### **Fase 3 — Generador de Service Blocks (híbrido)** ✅ COMPLETADA
 
-Edge function `billing-generate-service-blocks` (lee shifts aprobados, resuelve mapeo, calcula qty por `billable_unit`). Página `/app/invoicing/service-blocks` con tabs Pending/Approved/Invoiced y botón "Generate from operations".
+Implementado:
+- Migración: `billing_client_locations.is_default` (boolean) + índice único parcial (1 default por billing client) + índices de soporte
+- Edge function `billing-generate-service-blocks` (lee shifts/time_entries aprobados, resuelve mapeo, calcula qty por `billable_unit`, idempotente vía `shift_group_id`)
+- Hook `useBillableServiceBlocks` (list filtrado, generate, update con recalculo de amount, setStatus)
+- Página `/app/invoicing/service-blocks` con tabs Pending/Approved/Invoiced/Discarded, filtros (rango, billing client), botón "Generate from operations" con modal, tabla premium, edit sheet, acciones approve/discard
+- Reportes de skip detallados por motivo: `missing_billing_client`, `missing_billing_location`, `missing_rate`, `missing_attendance_data`, `already_invoiced`, `ambiguous_mapping`
+- Idempotencia fuerte: si existe block con `shift_group_id=shift.id` y status `approved`/`invoiced` → skip; si `pending` → update seguro
+
+**Decisiones registradas:**
+- ✅ `is_default` añadido a `billing_client_locations` (resolver fallback de location)
+- ⏸️ NO se crea aún tabla explícita de mapping `operational_locations → billing_client_locations`. La heurística actual (default location, o única activa) cubre el 80% de casos. Se evaluará en Fase 5+ si surgen escenarios multi-location ambiguos recurrentes.
+
 
 ### **Fase 4 — Create Invoice + Invoice Lines**
 
