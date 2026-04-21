@@ -34,6 +34,8 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { ProfileStatusBadge } from "@/components/employee/ProfileStatusBadge";
+import { EmployeeReviewBadge } from "@/components/reviews/EmployeeReviewBadge";
+import { useEmployeeReviewStatsBulk } from "@/hooks/useEmployeeReviewStats";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -184,6 +186,11 @@ export default function Workforce() {
     for (const r of rows) c[r.profile_status]++;
     return c;
   }, [rows]);
+
+  const { stats: reviewStats } = useEmployeeReviewStatsBulk(
+    selectedCompanyId,
+    useMemo(() => rows.map(r => r.id), [rows]),
+  );
 
   const filtered = useMemo(() => {
     const q = debounced.trim().toLowerCase();
