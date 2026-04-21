@@ -45,6 +45,7 @@ import { formatDisplayText } from "@/lib/format-helpers";
 import { SingleEmployeePicker } from "./SingleEmployeePicker";
 import { EmployeeCombobox } from "./EmployeeCombobox";
 import { ShiftQRSection } from "./ShiftQRSection";
+import ShiftLocationsSection from "./ShiftLocationsSection";
 import type { Employee, SelectOption, Shift, Assignment } from "./types";
 import {
   SHIFT_ATTENDANCE_MODE_LABELS,
