@@ -137,7 +137,7 @@ export default function Apply() {
       setApplicationDisabledCompany(null);
 
       const { data: coCheck, error } = await supabase
-        .from("companies")
+        .from("companies_public")
         .select("id, name, logo_url, brand_color, slug, application_intro, application_cover_url, is_active, application_enabled")
         .eq("slug", normalizedSlug)
         .maybeSingle();
@@ -151,7 +151,7 @@ export default function Apply() {
 
       if (!coCheck) {
         const { data: fuzzy } = await supabase
-          .from("companies")
+          .from("companies_public")
           .select("id, name, slug, is_active, application_enabled")
           .ilike("slug", `%${normalizedSlug.replace(/-/g, "%")}%`)
           .eq("is_active", true)
