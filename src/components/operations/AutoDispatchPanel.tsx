@@ -227,7 +227,9 @@ export function AutoDispatchPanel({
 
   // ─── Render ───────────────────────────────────────────────────────────
   const headerCount = suggestions.length;
-  const showCollapsed = collapsed || headerCount === 0;
+  const showCollapsed = collapsed || (headerCount === 0 && isOff);
+  const levelMeta = LEVEL_BADGE[autoCfg.level];
+  const LevelIcon = levelMeta.icon;
 
   return (
     <>
@@ -237,11 +239,15 @@ export function AutoDispatchPanel({
           onClick={() => setCollapsed(c => !c)}
         >
           <div className="flex items-center justify-between gap-3">
-            <CardTitle className="text-sm flex items-center gap-2">
+            <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
               <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
               </div>
               Smart Dispatch
+              <Badge className={cn("text-[9px] h-5 px-1.5 border gap-1", levelMeta.cls)}>
+                <LevelIcon className="h-2.5 w-2.5" />
+                {levelMeta.label}
+              </Badge>
               {headerCount > 0 && (
                 <Badge className="bg-primary text-primary-foreground border-0 text-[10px] h-5 px-1.5">
                   {headerCount}
@@ -252,8 +258,16 @@ export function AutoDispatchPanel({
             <div className="flex items-center gap-1">
               <Button
                 size="sm" variant="ghost" className="h-7 w-7 p-0"
+                onClick={(e) => { e.stopPropagation(); setSettingsOpen(true); }}
+                title="Configurar autonomía"
+              >
+                <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+              <Button
+                size="sm" variant="ghost" className="h-7 w-7 p-0"
                 onClick={(e) => { e.stopPropagation(); refresh(); }}
                 title="Actualizar"
+                disabled={isOff}
               >
                 <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground", loading && "animate-spin")} />
               </Button>
@@ -265,8 +279,16 @@ export function AutoDispatchPanel({
         </CardHeader>
 
         {!showCollapsed && (
-          <CardContent className="pt-0 space-y-2">
-            {headerCount === 0 ? (
+          <CardContent className="pt-0 space-y-2.5">
+            {isOff ? (
+              <div className="text-center py-5 text-xs text-muted-foreground space-y-2">
+                <ShieldCheck className="h-5 w-5 mx-auto text-muted-foreground/50" />
+                <p>Smart Dispatch desactivado.</p>
+                <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setSettingsOpen(true)}>
+                  Activar
+                </Button>
+              </div>
+            ) : headerCount === 0 ? (
               <div className="text-center py-5 text-xs text-muted-foreground">
                 <CheckCircle2 className="h-5 w-5 mx-auto mb-1 text-earning" />
                 Sin acciones recomendadas. Todo bajo control.
@@ -281,9 +303,15 @@ export function AutoDispatchPanel({
                 />
               ))
             )}
+
+            {!isOff && (
+              <AutoDispatchLog companyId={companyId} refreshKey={logRefreshKey} />
+            )}
           </CardContent>
         )}
       </Card>
+
+      <AutoDispatchSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
 
       {/* Confirm modal — last-mile human gate */}
       <Dialog open={!!confirming} onOpenChange={(o) => { if (!o) setConfirming(null); }}>
