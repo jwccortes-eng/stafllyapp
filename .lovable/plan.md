@@ -50,9 +50,16 @@ Migración aplicada con éxito:
 - Módulo `tenant_invoicing` registrado en `MODULE_PLAN_MAP` (requiere Pro+)
 - Schema 100% pasivo: cero acoplamiento con shifts/attendance/payroll
 
-### **Fase 2 — Billing Clients & Locations**
+### **Fase 2 — Billing Clients & Locations** ✅ COMPLETADA
 
-Página `/app/invoicing/clients`. CRUD con drawer. Vínculo opcional a cliente operativo. ModuleGate aplicado.
+Implementado:
+- Hooks: `useBillingClients` (list/create/update/setActive) y `useBillingClientLocations` (list/create/update/setActive)
+- Página `/app/invoicing/clients` con tabla premium, búsqueda, filtros activo/archivado/todos, drawer lateral (Sheet)
+- Drawer con tabs Datos / Ubicaciones — gestor de locations integrado vía `BillingClientLocationsManager`
+- Vínculo opcional con cliente operativo (Combobox searchable, mismo `company_id`)
+- Sidebar: nueva sección "Invoicing" con entrada "Billing Clients" gated por `tenant_invoicing`
+- ModuleGate aplicado en la ruta
+- Cero impacto en payroll / attendance / shifts / dashboard / operational clients
 
 ### **Fase 3 — Generador de Service Blocks (híbrido)**
 
