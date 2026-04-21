@@ -62,7 +62,7 @@ export function useLocationsV2(companyId: string | null, type?: LocationType) {
       if (type) q = q.eq("location_type", type);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as LocationV2[];
+      return (data ?? []) as unknown as LocationV2[];
     },
   });
 
@@ -121,5 +121,5 @@ export async function fetchLocationById(id: string): Promise<LocationV2 | null> 
     console.warn("fetchLocationById:", error.message);
     return null;
   }
-  return data as LocationV2 | null;
+  return (data ?? null) as unknown as LocationV2 | null;
 }
