@@ -641,7 +641,7 @@ export default function OperationsCommandCenter() {
                 }}
                 onExecuteBroadcast={(shiftId, employeeIds, zone) => {
                   setBroadcastTarget({
-                    intent: "shift_understaffed",
+                    intent: "urgent",
                     shiftIds: [shiftId],
                     employeeIds,
                     zone: zone ?? undefined,
