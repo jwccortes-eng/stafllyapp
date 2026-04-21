@@ -725,6 +725,19 @@ export default function OperationsCommandCenter() {
           onAssigned={() => { loadData(); if (selectedShiftId) loadDrawer(selectedShiftId); }}
         />
       )}
+
+      {/* Broadcast dialog (alerts → quick actions) */}
+      {broadcastTarget && selectedCompanyId && (
+        <OpsBroadcastDialog
+          open={!!broadcastTarget}
+          onOpenChange={o => { if (!o) setBroadcastTarget(null); }}
+          companyId={selectedCompanyId}
+          intent={broadcastTarget.intent}
+          shiftIds={broadcastTarget.shiftIds}
+          audienceEmployeeIds={broadcastTarget.employeeIds}
+          zone={broadcastTarget.zone}
+        />
+      )}
     </div>
   );
 }
