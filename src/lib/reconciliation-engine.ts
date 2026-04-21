@@ -635,7 +635,7 @@ export function classifyPayrollRow(row: Record<string, any>): PayrollClassificat
 if (totalHours === 0 && totalPay > 0) {
   return {
     pay_type: "daily",
-    base_pay: compensation?.daily_rate ?? totalPay,
+    base_pay: totalPay,
     ride_amount: 0,
     weekend_amount: 0,
     manual_amount: 0,
