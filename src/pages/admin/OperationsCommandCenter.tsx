@@ -32,6 +32,7 @@ import { OpsLiveMapPanel } from "@/components/operations/OpsLiveMapPanel";
 import { OpsAlertsBar, type OpsAlertActionEvent } from "@/components/operations/OpsAlertsBar";
 import { OpsWorkforcePanel } from "@/components/operations/OpsWorkforcePanel";
 import { OpsBroadcastDialog, type BroadcastIntent } from "@/components/operations/OpsBroadcastDialog";
+import { PostShiftRatingDialog, type PostShiftRatingMode } from "@/components/operations/PostShiftRatingDialog";
 
 // ─── Types ───
 interface ShiftRow {
