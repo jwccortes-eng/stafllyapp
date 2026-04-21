@@ -22,8 +22,21 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  CalendarIcon, Clock, Building2, Users, Hash, CreditCard, FileText, Car, Compass,
-  Plus, Loader2, ChevronDown, Settings2, QrCode, ScanLine,
+  CalendarIcon,
+  Clock,
+  Building2,
+  Users,
+  Hash,
+  CreditCard,
+  FileText,
+  Car,
+  Compass,
+  Plus,
+  Loader2,
+  ChevronDown,
+  Settings2,
+  QrCode,
+  ScanLine,
 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { es } from "date-fns/locale";
@@ -120,8 +133,16 @@ export interface ShiftFormFieldsProps {
 }
 
 function SectionCard({
-  icon: Icon, title, required, children,
-}: { icon: any; title: string; required?: boolean; children: React.ReactNode }) {
+  icon: Icon,
+  title,
+  required,
+  children,
+}: {
+  icon: any;
+  title: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-xl border border-border/30 bg-card overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-muted/20">
@@ -129,7 +150,8 @@ function SectionCard({
           <Icon className="h-3 w-3 text-primary" />
         </div>
         <span className="text-[11px] font-semibold text-foreground">
-          {title}{required && <span className="text-destructive ml-0.5">*</span>}
+          {title}
+          {required && <span className="text-destructive ml-0.5">*</span>}
         </span>
       </div>
       <div className="p-4 space-y-3">{children}</div>
@@ -174,7 +196,7 @@ export function ShiftFormFields({
     const id = newClientId === "none" ? "" : newClientId;
     const patch: Partial<ShiftFormState> = { clientId: id };
     if (id) {
-      const loc = locations.find(l => l.client_id === id && l.address);
+      const loc = locations.find((l) => l.client_id === id && l.address);
       if (loc?.address) patch.meetingPoint = loc.address;
     }
     onChange(patch);
@@ -184,7 +206,7 @@ export function ShiftFormFields({
     const id = newLocId === "none" ? "" : newLocId;
     const patch: Partial<ShiftFormState> = { locationId: id };
     if (id) {
-      const loc = locations.find(l => l.id === id);
+      const loc = locations.find((l) => l.id === id);
       if (loc) {
         if (loc.address) patch.meetingPoint = loc.address;
         if (loc.default_pay_type) patch.payType = loc.default_pay_type as "hourly" | "daily";
@@ -201,7 +223,8 @@ export function ShiftFormFields({
     setAddingClient(true);
     try {
       await onQuickAddClient(newClientName.trim());
-      setNewClientName(""); setShowAddClient(false);
+      setNewClientName("");
+      setShowAddClient(false);
     } finally {
       setAddingClient(false);
     }
@@ -212,26 +235,28 @@ export function ShiftFormFields({
     setAddingLocation(true);
     try {
       await onQuickAddLocation(newLocationName.trim(), newLocationAddress.trim());
-      setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
+      setNewLocationName("");
+      setNewLocationAddress("");
+      setShowAddLocation(false);
     } finally {
       setAddingLocation(false);
     }
   };
 
   // Admin candidate logic — when employees are assigned, restrict to that pool
-  const shiftAssignedIds = mode === "edit" && shift
-    ? assignments.filter(a => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed").map(a => a.employee_id)
-    : v.selectedEmployees;
-  const adminCandidates = shiftAssignedIds.length > 0
-    ? employees.filter(e => shiftAssignedIds.includes(e.id))
-    : employees;
+  const shiftAssignedIds =
+    mode === "edit" && shift
+      ? assignments
+          .filter((a) => a.shift_id === shift.id && a.status !== "rejected" && a.status !== "removed")
+          .map((a) => a.employee_id)
+      : v.selectedEmployees;
+  const adminCandidates =
+    shiftAssignedIds.length > 0 ? employees.filter((e) => shiftAssignedIds.includes(e.id)) : employees;
 
   const toggleEmployee = (id: string) => {
     const isSelected = v.selectedEmployees.includes(id);
     onChange({
-      selectedEmployees: isSelected
-        ? v.selectedEmployees.filter(x => x !== id)
-        : [...v.selectedEmployees, id],
+      selectedEmployees: isSelected ? v.selectedEmployees.filter((x) => x !== id) : [...v.selectedEmployees, id],
     });
   };
 
@@ -245,7 +270,7 @@ export function ShiftFormFields({
           </Label>
           <Input
             value={v.title}
-            onChange={e => onChange({ title: e.target.value })}
+            onChange={(e) => onChange({ title: e.target.value })}
             placeholder="Ej: Evento corporativo, Servicio VIP..."
             className="h-9 text-sm mt-1"
           />
@@ -277,7 +302,7 @@ export function ShiftFormFields({
               <Calendar
                 mode="single"
                 selected={v.date ? parse(v.date, "yyyy-MM-dd", new Date()) : undefined}
-                onSelect={d => {
+                onSelect={(d) => {
                   if (d) {
                     onChange({ date: format(d, "yyyy-MM-dd") });
                     setDatePickerOpen(false);
@@ -294,7 +319,7 @@ export function ShiftFormFields({
             <Input
               type="time"
               value={v.startTime}
-              onChange={e => onChange({ startTime: e.target.value })}
+              onChange={(e) => onChange({ startTime: e.target.value })}
               className="h-9 text-sm mt-1"
             />
           </div>
@@ -303,7 +328,7 @@ export function ShiftFormFields({
             <Input
               type="time"
               value={v.endTime}
-              onChange={e => onChange({ endTime: e.target.value })}
+              onChange={(e) => onChange({ endTime: e.target.value })}
               className="h-9 text-sm mt-1"
             />
           </div>
@@ -323,8 +348,10 @@ export function ShiftFormFields({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin asignar</SelectItem>
-                  {clients.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{formatDisplayText(c.name, "name")}</SelectItem>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {formatDisplayText(c.name, "name")}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -340,10 +367,10 @@ export function ShiftFormFields({
                     <div className="flex gap-1.5">
                       <Input
                         value={newClientName}
-                        onChange={e => setNewClientName(e.target.value)}
+                        onChange={(e) => setNewClientName(e.target.value)}
                         placeholder="Nombre del cliente"
                         className="h-8 text-sm"
-                        onKeyDown={e => e.key === "Enter" && handleQuickAddClientLocal()}
+                        onKeyDown={(e) => e.key === "Enter" && handleQuickAddClientLocal()}
                       />
                       <Button
                         size="sm"
@@ -369,7 +396,11 @@ export function ShiftFormFields({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin asignar</SelectItem>
-                  {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                  {locations.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {onQuickAddLocation && (
@@ -384,16 +415,16 @@ export function ShiftFormFields({
                     <div className="space-y-1.5">
                       <Input
                         value={newLocationName}
-                        onChange={e => setNewLocationName(e.target.value)}
+                        onChange={(e) => setNewLocationName(e.target.value)}
                         placeholder="Nombre"
                         className="h-8 text-sm"
                       />
                       <Input
                         value={newLocationAddress}
-                        onChange={e => setNewLocationAddress(e.target.value)}
+                        onChange={(e) => setNewLocationAddress(e.target.value)}
                         placeholder="Dirección (opcional)"
                         className="h-8 text-sm"
-                        onKeyDown={e => e.key === "Enter" && handleQuickAddLocationLocal()}
+                        onKeyDown={(e) => e.key === "Enter" && handleQuickAddLocationLocal()}
                       />
                       <Button
                         size="sm"
@@ -417,7 +448,7 @@ export function ShiftFormFields({
               type="number"
               min="1"
               value={v.slots}
-              onChange={e => onChange({ slots: e.target.value })}
+              onChange={(e) => onChange({ slots: e.target.value })}
               className="h-9 text-sm mt-1"
             />
           </div>
@@ -425,7 +456,7 @@ export function ShiftFormFields({
             <div className="flex items-center gap-2 h-9">
               <Checkbox
                 checked={v.claimable}
-                onCheckedChange={c => onChange({ claimable: !!c })}
+                onCheckedChange={(c) => onChange({ claimable: !!c })}
                 id={`claimable-${mode}`}
               />
               <Label htmlFor={`claimable-${mode}`} className="text-xs font-normal cursor-pointer">
@@ -440,7 +471,7 @@ export function ShiftFormFields({
           </Label>
           <Input
             value={v.meetingPoint}
-            onChange={e => onChange({ meetingPoint: e.target.value })}
+            onChange={(e) => onChange({ meetingPoint: e.target.value })}
             placeholder="Se autocompleta con el cliente, o escribe manualmente..."
             className="h-9 text-sm mt-1"
           />
@@ -454,7 +485,7 @@ export function ShiftFormFields({
       <SectionCard icon={CreditCard} title="Tipo de pago">
         <Select
           value={v.payType}
-          onValueChange={val => {
+          onValueChange={(val) => {
             const newPayType = val as "hourly" | "daily";
             // Auto-suggest attendance mode if user hasn't customized it (still on the
             // default of the previous pay type). Daily → arrival, Hourly → clock.
@@ -466,7 +497,9 @@ export function ShiftFormFields({
             onChange(patch);
           }}
         >
-          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="hourly">⏱ Por hora (reloj)</SelectItem>
             <SelectItem value="daily">📅 Por día (tarifa fija)</SelectItem>
@@ -477,11 +510,13 @@ export function ShiftFormFields({
             <p className="text-[10px] text-muted-foreground">Tarifa diaria automática al consolidar.</p>
             <div>
               <Label className="text-[11px] text-muted-foreground font-medium">Jornada</Label>
-              <Select value={v.dayType} onValueChange={val => onChange({ dayType: val as "full_day" | "half_day" })}>
-                <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+              <Select value={v.dayType} onValueChange={(val) => onChange({ dayType: val as "full_day" | "half_day" })}>
+                <SelectTrigger className="h-9 text-sm mt-1">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="full_day">☀️ Día completo ($200)</SelectItem>
-                  <SelectItem value="half_day">🌤️ Medio día ($125)</SelectItem>
+                  <SelectItem value="full_day">☀️ Día completo</SelectItem>
+                  <SelectItem value="half_day">🌤️ Medio día</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -495,18 +530,18 @@ export function ShiftFormFields({
           <Label className="text-[11px] text-muted-foreground font-medium">Modo</Label>
           <Select
             value={v.attendanceMode}
-            onValueChange={val => onChange({ attendanceMode: val as ShiftAttendanceMode })}
+            onValueChange={(val) => onChange({ attendanceMode: val as ShiftAttendanceMode })}
           >
-            <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm mt-1">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="clock">⏱ {SHIFT_ATTENDANCE_MODE_LABELS.clock}</SelectItem>
               <SelectItem value="arrival">📍 {SHIFT_ATTENDANCE_MODE_LABELS.arrival}</SelectItem>
               <SelectItem value="hybrid">🔀 {SHIFT_ATTENDANCE_MODE_LABELS.hybrid}</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {SHIFT_ATTENDANCE_MODE_HINTS[v.attendanceMode]}
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{SHIFT_ATTENDANCE_MODE_HINTS[v.attendanceMode]}</p>
         </div>
         <div>
           <Label className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
@@ -515,7 +550,7 @@ export function ShiftFormFields({
           <Input
             type="time"
             value={v.meetingTime}
-            onChange={e => onChange({ meetingTime: e.target.value })}
+            onChange={(e) => onChange({ meetingTime: e.target.value })}
             className="h-9 text-sm mt-1"
             placeholder="--:--"
           />
@@ -525,15 +560,21 @@ export function ShiftFormFields({
         </div>
       </SectionCard>
 
-
       {/* ── Clock method + QR (QR only in edit, needs shift.id) ── */}
-      <div className={cn("grid gap-3", mode === "edit" && shift && onQrUpdate ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
+      <div
+        className={cn(
+          "grid gap-3",
+          mode === "edit" && shift && onQrUpdate ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1",
+        )}
+      >
         <SectionCard icon={Clock} title="Método de fichaje">
           <Select
             value={v.clockMethod}
-            onValueChange={val => onChange({ clockMethod: val as "mobile" | "kiosk" | "both" })}
+            onValueChange={(val) => onChange({ clockMethod: val as "mobile" | "kiosk" | "both" })}
           >
-            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="both">📱🖥 Ambos (Móvil + Kiosk)</SelectItem>
               <SelectItem value="mobile">📱 Solo Móvil</SelectItem>
@@ -556,29 +597,26 @@ export function ShiftFormFields({
       </div>
 
       {/* ── Shift Admin (responsable operativo) ── */}
-      <SectionCard
-        icon={Users}
-        title="Admin del turno"
-        required={shiftAssignedIds.length > 0}
-      >
+      <SectionCard icon={Users} title="Admin del turno" required={shiftAssignedIds.length > 0}>
         <div>
           <Label className="text-[11px] text-muted-foreground font-medium">
             Responsable operativo {shiftAssignedIds.length > 0 && <span className="text-destructive">*</span>}
           </Label>
           <Select
             value={v.shiftAdminId || "none"}
-            onValueChange={val => onChange({ shiftAdminId: val === "none" ? "" : val })}
+            onValueChange={(val) => onChange({ shiftAdminId: val === "none" ? "" : val })}
           >
-            <SelectTrigger className={cn(
-              "h-9 text-sm mt-1",
-              adminError && "border-destructive/50 ring-1 ring-destructive/20",
-            )}>
+            <SelectTrigger
+              className={cn("h-9 text-sm mt-1", adminError && "border-destructive/50 ring-1 ring-destructive/20")}
+            >
               <SelectValue placeholder="Sin asignar" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sin asignar</SelectItem>
-              {adminCandidates.map(e => (
-                <SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>
+              {adminCandidates.map((e) => (
+                <SelectItem key={e.id} value={e.id}>
+                  {e.first_name} {e.last_name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -591,9 +629,7 @@ export function ShiftFormFields({
               Confirma asistencia del equipo. Debe ser uno de los empleados asignados.
             </p>
           )}
-          {adminError && (
-            <p className="text-[10px] text-destructive mt-0.5 font-medium">⛔ {adminError}</p>
-          )}
+          {adminError && <p className="text-[10px] text-destructive mt-0.5 font-medium">⛔ {adminError}</p>}
         </div>
       </SectionCard>
 
@@ -602,7 +638,7 @@ export function ShiftFormFields({
         <div className="flex items-center gap-2">
           <Checkbox
             checked={v.transportRequired}
-            onCheckedChange={c => onChange({ transportRequired: !!c })}
+            onCheckedChange={(c) => onChange({ transportRequired: !!c })}
             id={`transport-${mode}`}
           />
           <Label htmlFor={`transport-${mode}`} className="text-xs font-normal cursor-pointer">
@@ -618,7 +654,7 @@ export function ShiftFormFields({
                   type="number"
                   min="1"
                   value={v.carCapacity}
-                  onChange={e => onChange({ carCapacity: e.target.value })}
+                  onChange={(e) => onChange({ carCapacity: e.target.value })}
                   className="h-9 text-sm mt-1"
                 />
               </div>
@@ -646,7 +682,7 @@ export function ShiftFormFields({
               <Label className="text-[11px] text-muted-foreground font-medium">Notas de transporte</Label>
               <Input
                 value={v.transportNotes}
-                onChange={e => onChange({ transportNotes: e.target.value })}
+                onChange={(e) => onChange({ transportNotes: e.target.value })}
                 placeholder="Ej: Recoger en oficina a las 7:30 AM"
                 className="h-9 text-sm mt-1"
               />
@@ -670,7 +706,7 @@ export function ShiftFormFields({
               <Label className="text-[11px] text-muted-foreground font-medium">Notas internas</Label>
               <Textarea
                 value={v.notes}
-                onChange={e => onChange({ notes: e.target.value })}
+                onChange={(e) => onChange({ notes: e.target.value })}
                 rows={2}
                 placeholder="Opcional, visible solo para admins..."
                 className="text-sm resize-none mt-1"
@@ -680,7 +716,7 @@ export function ShiftFormFields({
               <Label className="text-[11px] text-muted-foreground font-medium">Instrucciones para el equipo</Label>
               <Textarea
                 value={v.specialInstructions}
-                onChange={e => onChange({ specialInstructions: e.target.value })}
+                onChange={(e) => onChange({ specialInstructions: e.target.value })}
                 rows={2}
                 placeholder="Ej: Llevar uniforme negro, llegar 15 min antes..."
                 className="text-sm resize-none mt-1"
@@ -759,8 +795,8 @@ export function shiftToFormState(shift: Shift): ShiftFormState {
     dayType: (s.day_type as "full_day" | "half_day") ?? "full_day",
     shiftAdminId: s.shift_admin_id ?? "",
     clockMethod: (s.clock_method as "mobile" | "kiosk" | "both") ?? "both",
-    attendanceMode: (s.attendance_mode as ShiftAttendanceMode | undefined)
-      ?? defaultAttendanceModeForPayType(s.pay_type),
+    attendanceMode:
+      (s.attendance_mode as ShiftAttendanceMode | undefined) ?? defaultAttendanceModeForPayType(s.pay_type),
     meetingTime: s.meeting_time ? String(s.meeting_time).slice(0, 5) : "",
     transportRequired: !!s.transportation_required,
     carCapacity: String(s.car_capacity ?? 4),
