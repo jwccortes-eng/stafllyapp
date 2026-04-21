@@ -103,6 +103,9 @@ export default function OperationsCommandCenter() {
     shiftId: string; shiftTitle: string; shiftDate: string;
     startTime: string; endTime: string; excludeIds: string[];
   } | null>(null);
+  const [broadcastTarget, setBroadcastTarget] = useState<{
+    intent: BroadcastIntent; shiftIds: string[]; employeeIds?: string[]; zone?: string;
+  } | null>(null);
   const [activeSection, setActiveSection] = useState("alerts");
   const [activeTab, setActiveTab] = useState<"ops" | "map">("ops");
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
