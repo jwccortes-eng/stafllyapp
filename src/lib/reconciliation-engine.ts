@@ -635,7 +635,7 @@ export function classifyPayrollRow(row: Record<string, any>): PayrollClassificat
 if (totalHours === 0 && totalPay > 0) {
   return {
     pay_type: "daily",
-    base_pay: compensation?.daily_rate ?? totalPay,
+    base_pay: totalPay,
     ride_amount: 0,
     weekend_amount: 0,
     manual_amount: 0,
@@ -643,9 +643,6 @@ if (totalHours === 0 && totalPay > 0) {
     notes: "Daily pay inferred (using compensation or fallback totalPay)"
   };
 }
-}
-    }
-  }
 
   // 5. Only classify as manual_adjustment if keywords confirm it
   if (totalPay > 0 && totalHours === 0 && MANUAL_KEYWORDS.test(notesField + " " + jobTitle + " " + shiftTitle)) {
