@@ -643,9 +643,6 @@ if (totalHours === 0 && totalPay > 0) {
     notes: "Daily pay inferred (using compensation or fallback totalPay)"
   };
 }
-}
-    }
-  }
 
   // 5. Only classify as manual_adjustment if keywords confirm it
   if (totalPay > 0 && totalHours === 0 && MANUAL_KEYWORDS.test(notesField + " " + jobTitle + " " + shiftTitle)) {
