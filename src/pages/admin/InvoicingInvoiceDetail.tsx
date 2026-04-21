@@ -14,6 +14,7 @@ import {
   ArrowLeft, FileText, Loader2, CheckCircle2, Send, XCircle, RotateCcw,
 } from "lucide-react";
 import { format } from "date-fns";
+import { canTransition, isTerminal } from "@/lib/invoice-status";
 
 const STATUS_BADGE: Record<InvoiceStatus, { label: string; cls: string }> = {
   draft:          { label: "Draft",    cls: "bg-muted text-muted-foreground border-border" },
