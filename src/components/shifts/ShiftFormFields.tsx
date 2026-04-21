@@ -91,6 +91,9 @@ export interface ShiftFormState {
   driverEmployeeId: string;
   // Selected workforce (only meaningful in CREATE; edit handles assignments via its own UI)
   selectedEmployees: string[];
+  // Premium structured locations (Phase 1B). Optional, opt-in upgrade.
+  meetingPointLocationId: string | null;
+  jobSiteLocationId: string | null;
 }
 
 export interface ShiftFormFieldsProps {
@@ -131,6 +134,9 @@ export interface ShiftFormFieldsProps {
 
   /** Validation hint: when truthy, admin field shows an error border + message */
   adminError?: string | null;
+
+  /** Required to enable premium structured locations (Phase 1B). When omitted the section is hidden. */
+  companyId?: string | null;
 }
 
 function SectionCard({
