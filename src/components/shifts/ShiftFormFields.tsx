@@ -798,6 +798,8 @@ export const EMPTY_SHIFT_FORM_STATE: ShiftFormState = {
   transportNotes: "",
   driverEmployeeId: "",
   selectedEmployees: [],
+  meetingPointLocationId: null,
+  jobSiteLocationId: null,
 };
 
 /** Map a Shift row from DB → ShiftFormState (used by edit dialog). */
@@ -827,6 +829,8 @@ export function shiftToFormState(shift: Shift): ShiftFormState {
     transportNotes: s.transportation_notes ?? "",
     driverEmployeeId: s.driver_employee_id ?? "",
     selectedEmployees: [],
+    meetingPointLocationId: s.meeting_point_location_id ?? null,
+    jobSiteLocationId: s.job_site_location_id ?? null,
   };
 }
 
@@ -854,5 +858,7 @@ export function formStateToShiftPayload(s: ShiftFormState, allowClaims: boolean)
     car_capacity: parseInt(s.carCapacity) || 4,
     transportation_notes: s.transportNotes.trim() || null,
     driver_employee_id: s.driverEmployeeId || null,
+    meeting_point_location_id: s.meetingPointLocationId || null,
+    job_site_location_id: s.jobSiteLocationId || null,
   };
 }
