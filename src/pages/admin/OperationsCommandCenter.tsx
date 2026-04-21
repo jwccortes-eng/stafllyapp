@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { ReplacementSuggestionDialog } from "@/components/shifts/ReplacementSuggestionDialog";
 import { OpsLiveMapPanel } from "@/components/operations/OpsLiveMapPanel";
+import { OpsAlertsBar } from "@/components/operations/OpsAlertsBar";
+import { OpsWorkforcePanel } from "@/components/operations/OpsWorkforcePanel";
 
 // ─── Types ───
 interface ShiftRow {
@@ -375,6 +377,17 @@ export default function OperationsCommandCenter() {
         </div>
       </div>
 
+      {/* ─── A. Top Alerts Bar (real-time intelligence) ─── */}
+      <OpsAlertsBar
+        companyId={selectedCompanyId}
+        onAlertClick={(a) => {
+          if (a.shiftIds[0]) {
+            const shift = shifts.find(s => s.id === a.shiftIds[0]);
+            if (shift) setSelectedShiftId(a.shiftIds[0]);
+          }
+        }}
+      />
+
       {/* ─── KPIs ─── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         <KpiCard value={totalActiveClocks} label="Fichajes activos" accent="earning" size="sm" icon={<Clock className="h-3.5 w-3.5 text-earning" />} />
@@ -562,6 +575,13 @@ export default function OperationsCommandCenter() {
                   )}
                 </ScrollArea>
               </div>
+            </div>
+          )}
+
+          {/* ─── D. Workforce Intelligence Panel (read-only) ─── */}
+          {selectedCompanyId && (
+            <div className="mt-4">
+              <OpsWorkforcePanel companyId={selectedCompanyId} />
             </div>
           )}
         </TabsContent>
