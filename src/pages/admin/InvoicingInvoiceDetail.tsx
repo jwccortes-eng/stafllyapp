@@ -83,7 +83,7 @@ export default function InvoicingInvoiceDetail() {
                 Finalize
               </Button>
             )}
-            {(invoice.status === "issued" || invoice.status === "approved") && (
+            {(invoice.status === "issued") && (
               <Button size="sm" onClick={() => setStatus.mutate("sent")}>
                 <Send className="h-4 w-4" />
                 Mark as sent
