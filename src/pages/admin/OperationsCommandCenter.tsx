@@ -384,176 +384,194 @@ export default function OperationsCommandCenter() {
         <KpiCard value={criticalShifts} label="Turnos críticos" accent={criticalShifts > 0 ? "deduction" : "muted"} size="sm" icon={<XCircle className="h-3.5 w-3.5 text-deduction" />} />
       </div>
 
-      {/* ─── Quick Actions Bar ─── */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/shifts")}>
-          <CalendarPlus className="h-3.5 w-3.5" /> Crear turno
-        </Button>
-        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/invite-employees")}>
-          <Send className="h-3.5 w-3.5" /> Invitar empleado
-        </Button>
-        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/timeclock")}>
-          <Clock className="h-3.5 w-3.5" /> Time Clock
-        </Button>
-        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/live-map")}>
-          <MapPin className="h-3.5 w-3.5" /> Live Map
-        </Button>
-      </div>
+      {/* ─── View tabs (Operations · Live Map) + Quick Actions ─── */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "ops" | "map")} className="space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <TabsList className="h-9">
+            <TabsTrigger value="ops" className="text-xs gap-1.5 px-3">
+              <LayoutGrid className="h-3.5 w-3.5" /> Operations
+            </TabsTrigger>
+            <TabsTrigger value="map" className="text-xs gap-1.5 px-3">
+              <MapPin className="h-3.5 w-3.5" /> Live Map
+            </TabsTrigger>
+          </TabsList>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-      ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-          {/* ═══ LEFT: Main content (8 cols) ═══ */}
-          <div className="xl:col-span-8 space-y-4">
-
-            {/* ── A. LIVE ALERTS ── */}
-            {alerts.length > 0 && (
-              <section className="space-y-2">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-destructive flex items-center gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5" /> Alertas en vivo ({alerts.length})
-                </h2>
-                <div className="space-y-1.5">
-                  {alerts.map(a => {
-                    const cfg = ALERT_CONFIG[a.type] ?? { emoji: "⚠️", label: a.type, color: "border-border/30" };
-                    return (
-                      <div key={a.id} className={cn("rounded-xl border p-3 flex items-start gap-3", cfg.color)}>
-                        {/* Avatar */}
-                        <Avatar className="h-9 w-9 shrink-0">
-                          {a.employee_avatar && <AvatarImage src={a.employee_avatar} />}
-                          <AvatarFallback className="text-[10px] font-bold bg-destructive/10 text-destructive">
-                            {a.employee_name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-bold">{a.employee_name}</span>
-                            <Badge variant={a.severity === "critical" ? "destructive" : "warning"} className="text-[8px] h-4">
-                              {cfg.emoji} {cfg.label}
-                            </Badge>
-                            {a.minutes_late != null && a.minutes_late > 0 && (
-                              <span className="text-[9px] text-destructive font-bold flex items-center gap-0.5">
-                                <Timer className="h-2.5 w-2.5" /> +{a.minutes_late}min
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-                            {a.shift_title}{a.client_name ? ` • ${a.client_name}` : ""}
-                          </p>
-                          <p className="text-[9px] text-muted-foreground/50">{format(new Date(a.created_at), "HH:mm")}</p>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          {a.phone_number && (
-                            <a href={`https://wa.me/${a.phone_number.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
-                              className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted/50 transition-colors" title="WhatsApp">
-                              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                            </a>
-                          )}
-                          {a.shift_id && (
-                            <Button size="sm" variant="default" className="h-7 text-[9px] gap-1 px-2" onClick={() => {
-                              const s = shifts.find(sh => sh.id === a.shift_id);
-                              if (s) openReplace(s);
-                            }}>
-                              <UserPlus className="h-3 w-3" /> Reemplazar
-                            </Button>
-                          )}
-                          <Button size="sm" variant="ghost" className="h-7 text-[9px] px-2" onClick={() => resolveAlert(a.id)}>
-                            <CheckCircle2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {/* ── B. IN-PROGRESS SHIFTS ── */}
-            {inProgressShifts.length > 0 && (
-              <section className="space-y-2">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-earning flex items-center gap-1.5">
-                  <Activity className="h-3.5 w-3.5" /> En progreso ({inProgressShifts.length})
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {inProgressShifts.map(s => (
-                    <ShiftCard key={s.id} shift={s} onClick={() => loadDrawer(s.id)} onReplace={() => openReplace(s)} variant="in-progress" />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* ── C. ALL DAY SHIFTS ── */}
-            <section className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                  <Zap className="h-3.5 w-3.5 text-primary" /> Turnos del día ({filteredShifts.length})
-                </h2>
-                <div className="flex items-center gap-1.5">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                    <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-8 h-7 w-40 text-xs" />
-                  </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-7 w-auto min-w-[80px] text-[10px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="ok">✅ OK</SelectItem>
-                      <SelectItem value="warning">⚠️ Riesgo</SelectItem>
-                      <SelectItem value="critical">🔴 Crítico</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {filteredShifts.length === 0 ? (
-                <div className="rounded-2xl border border-border/30 bg-card p-8 text-center text-sm text-muted-foreground">
-                  No hay turnos para esta fecha
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {filteredShifts.map(s => (
-                    <ShiftCard key={s.id} shift={s} onClick={() => loadDrawer(s.id)} onReplace={() => openReplace(s)} />
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
-
-          {/* ═══ RIGHT: Activity Feed (4 cols) ═══ */}
-          <div className="xl:col-span-4 space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5" /> Actividad en tiempo real
-            </h2>
-            <ScrollArea className="h-[600px] rounded-2xl border border-border/30 bg-card">
-              {activityFeed.length === 0 ? (
-                <div className="p-6 text-center text-xs text-muted-foreground">Sin actividad hoy</div>
-              ) : (
-                <div className="divide-y divide-border/20">
-                  {activityFeed.map(ev => (
-                    <div key={ev.id} className="px-3 py-2.5 flex items-start gap-2.5 hover:bg-muted/20 transition-colors">
-                      <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-                        {ev.employee_avatar && <AvatarImage src={ev.employee_avatar} />}
-                        <AvatarFallback className="text-[9px] font-bold bg-primary/10 text-primary">
-                          {ev.employee_name ? ev.employee_name.split(" ").map(n => n[0]).join("").slice(0, 2) : "📢"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold truncate">{ev.title}</p>
-                        <p className="text-[10px] text-muted-foreground line-clamp-2">{ev.body}</p>
-                        <p className="text-[9px] text-muted-foreground/40 mt-0.5">{format(new Date(ev.created_at), "HH:mm")}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/shifts")}>
+              <CalendarPlus className="h-3.5 w-3.5" /> Crear turno
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/invite-employees")}>
+              <Send className="h-3.5 w-3.5" /> Invitar empleado
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 shrink-0" onClick={() => navigate("/app/timeclock")}>
+              <Clock className="h-3.5 w-3.5" /> Time Clock
+            </Button>
           </div>
         </div>
-      )}
+
+        <TabsContent value="ops" className="mt-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+              {/* ═══ LEFT: Main content (8 cols) ═══ */}
+              <div className="xl:col-span-8 space-y-4">
+
+                {/* ── A. LIVE ALERTS ── */}
+                {alerts.length > 0 && (
+                  <section className="space-y-2">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-destructive flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Alertas en vivo ({alerts.length})
+                    </h2>
+                    <div className="space-y-1.5">
+                      {alerts.map(a => {
+                        const cfg = ALERT_CONFIG[a.type] ?? { emoji: "⚠️", label: a.type, color: "border-border/30" };
+                        return (
+                          <div key={a.id} className={cn("rounded-xl border p-3 flex items-start gap-3", cfg.color)}>
+                            {/* Avatar */}
+                            <Avatar className="h-9 w-9 shrink-0">
+                              {a.employee_avatar && <AvatarImage src={a.employee_avatar} />}
+                              <AvatarFallback className="text-[10px] font-bold bg-destructive/10 text-destructive">
+                                {a.employee_name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold">{a.employee_name}</span>
+                                <Badge variant={a.severity === "critical" ? "destructive" : "warning"} className="text-[8px] h-4">
+                                  {cfg.emoji} {cfg.label}
+                                </Badge>
+                                {a.minutes_late != null && a.minutes_late > 0 && (
+                                  <span className="text-[9px] text-destructive font-bold flex items-center gap-0.5">
+                                    <Timer className="h-2.5 w-2.5" /> +{a.minutes_late}min
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                                {a.shift_title}{a.client_name ? ` • ${a.client_name}` : ""}
+                              </p>
+                              <p className="text-[9px] text-muted-foreground/50">{format(new Date(a.created_at), "HH:mm")}</p>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {a.phone_number && (
+                                <a href={`https://wa.me/${a.phone_number.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
+                                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted/50 transition-colors" title="WhatsApp">
+                                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                                </a>
+                              )}
+                              {a.shift_id && (
+                                <Button size="sm" variant="default" className="h-7 text-[9px] gap-1 px-2" onClick={() => {
+                                  const s = shifts.find(sh => sh.id === a.shift_id);
+                                  if (s) openReplace(s);
+                                }}>
+                                  <UserPlus className="h-3 w-3" /> Reemplazar
+                                </Button>
+                              )}
+                              <Button size="sm" variant="ghost" className="h-7 text-[9px] px-2" onClick={() => resolveAlert(a.id)}>
+                                <CheckCircle2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {/* ── B. IN-PROGRESS SHIFTS ── */}
+                {inProgressShifts.length > 0 && (
+                  <section className="space-y-2">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-earning flex items-center gap-1.5">
+                      <Activity className="h-3.5 w-3.5" /> En progreso ({inProgressShifts.length})
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {inProgressShifts.map(s => (
+                        <ShiftCard key={s.id} shift={s} onClick={() => loadDrawer(s.id)} onReplace={() => openReplace(s)} variant="in-progress" />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* ── C. ALL DAY SHIFTS ── */}
+                <section className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5 text-primary" /> Turnos del día ({filteredShifts.length})
+                    </h2>
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-8 h-7 w-40 text-xs" />
+                      </div>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-7 w-auto min-w-[80px] text-[10px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="ok">✅ OK</SelectItem>
+                          <SelectItem value="warning">⚠️ Riesgo</SelectItem>
+                          <SelectItem value="critical">🔴 Crítico</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {filteredShifts.length === 0 ? (
+                    <div className="rounded-2xl border border-border/30 bg-card p-8 text-center text-sm text-muted-foreground">
+                      No hay turnos para esta fecha
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {filteredShifts.map(s => (
+                        <ShiftCard key={s.id} shift={s} onClick={() => loadDrawer(s.id)} onReplace={() => openReplace(s)} />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              {/* ═══ RIGHT: Activity Feed (4 cols) ═══ */}
+              <div className="xl:col-span-4 space-y-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Activity className="h-3.5 w-3.5" /> Actividad en tiempo real
+                </h2>
+                <ScrollArea className="h-[600px] rounded-2xl border border-border/30 bg-card">
+                  {activityFeed.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-muted-foreground">Sin actividad hoy</div>
+                  ) : (
+                    <div className="divide-y divide-border/20">
+                      {activityFeed.map(ev => (
+                        <div key={ev.id} className="px-3 py-2.5 flex items-start gap-2.5 hover:bg-muted/20 transition-colors">
+                          <Avatar className="h-7 w-7 shrink-0 mt-0.5">
+                            {ev.employee_avatar && <AvatarImage src={ev.employee_avatar} />}
+                            <AvatarFallback className="text-[9px] font-bold bg-primary/10 text-primary">
+                              {ev.employee_name ? ev.employee_name.split(" ").map(n => n[0]).join("").slice(0, 2) : "📢"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-semibold truncate">{ev.title}</p>
+                            <p className="text-[10px] text-muted-foreground line-clamp-2">{ev.body}</p>
+                            <p className="text-[9px] text-muted-foreground/40 mt-0.5">{format(new Date(ev.created_at), "HH:mm")}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="map" className="mt-0">
+          {selectedCompanyId && (
+            <OpsLiveMapPanel companyId={selectedCompanyId} date={selectedDate} />
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* ─── Shift Detail Drawer ─── */}
       <Sheet open={!!selectedShiftId} onOpenChange={open => { if (!open) setSelectedShiftId(null); }}>
