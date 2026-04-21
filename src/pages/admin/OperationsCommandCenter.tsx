@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Loader2, Search, ChevronLeft, ChevronRight, Radio, Clock, AlertTriangle,
   Users, Car, Shield, Eye, CheckCircle2, XCircle, Phone, MessageSquare,
-  MapPin, Building2, RefreshCw, Bell, Zap, UserPlus, Plus, Send,
+  MapPin, Building2, RefreshCw, Bell, Zap, UserPlus, Plus, Send, Star,
   Activity, CalendarPlus, UserCheck, ArrowRight, Timer, CalendarIcon, LayoutGrid,
 } from "lucide-react";
 import { ReplacementSuggestionDialog } from "@/components/shifts/ReplacementSuggestionDialog";
@@ -32,6 +32,7 @@ import { OpsLiveMapPanel } from "@/components/operations/OpsLiveMapPanel";
 import { OpsAlertsBar, type OpsAlertActionEvent } from "@/components/operations/OpsAlertsBar";
 import { OpsWorkforcePanel } from "@/components/operations/OpsWorkforcePanel";
 import { OpsBroadcastDialog, type BroadcastIntent } from "@/components/operations/OpsBroadcastDialog";
+import { PostShiftRatingDialog, type PostShiftRatingMode } from "@/components/operations/PostShiftRatingDialog";
 
 // ─── Types ───
 interface ShiftRow {
@@ -105,6 +106,9 @@ export default function OperationsCommandCenter() {
   } | null>(null);
   const [broadcastTarget, setBroadcastTarget] = useState<{
     intent: BroadcastIntent; shiftIds: string[]; employeeIds?: string[]; zone?: string;
+  } | null>(null);
+  const [ratingTarget, setRatingTarget] = useState<{
+    shiftId: string; shiftTitle: string; mode: PostShiftRatingMode;
   } | null>(null);
   const [activeSection, setActiveSection] = useState("alerts");
   const [activeTab, setActiveTab] = useState<"ops" | "map">("ops");
@@ -704,6 +708,20 @@ export default function OperationsCommandCenter() {
                     <UserPlus className="h-3.5 w-3.5" /> Buscar reemplazo
                   </Button>
                 )}
+                {selectedShift && (
+                  <Button
+                    size="sm" variant="secondary"
+                    className="w-full gap-2 text-xs"
+                    onClick={() => setRatingTarget({
+                      shiftId: selectedShift.id,
+                      shiftTitle: selectedShift.title,
+                      // Auto sampling when shift is completed; manual otherwise
+                      mode: selectedShift.status === "completed" ? "auto" : "manual",
+                    })}
+                  >
+                    <Star className="h-3.5 w-3.5" /> Calificar trabajadores
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => { setSelectedShiftId(null); navigate(`/app/shift-ops?id=${selectedShiftId}`); }}>
                   <Eye className="h-3.5 w-3.5" /> Abrir operaciones del turno
                 </Button>
@@ -736,6 +754,18 @@ export default function OperationsCommandCenter() {
           shiftIds={broadcastTarget.shiftIds}
           audienceEmployeeIds={broadcastTarget.employeeIds}
           zone={broadcastTarget.zone}
+        />
+      )}
+
+      {/* Post-shift rating dialog (auto sampling for completed shifts, manual otherwise) */}
+      {ratingTarget && (
+        <PostShiftRatingDialog
+          open={!!ratingTarget}
+          onOpenChange={o => { if (!o) setRatingTarget(null); }}
+          shiftId={ratingTarget.shiftId}
+          shiftTitle={ratingTarget.shiftTitle}
+          mode={ratingTarget.mode}
+          onCompleted={() => { toast.success("Evaluaciones registradas"); }}
         />
       )}
     </div>
