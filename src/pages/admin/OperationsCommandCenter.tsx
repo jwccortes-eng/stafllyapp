@@ -343,9 +343,32 @@ export default function OperationsCommandCenter() {
 
         <div className="flex items-center gap-1.5">
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(d => addDays(d, -1))}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-          <Button variant={isToday ? "default" : "outline"} size="sm" className="h-8 text-xs min-w-[90px]" onClick={() => setSelectedDate(new Date())}>
-            {isToday ? "Hoy" : format(selectedDate, "EEE d MMM", { locale: es })}
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant={isToday ? "default" : "outline"} size="sm" className="h-8 text-xs min-w-[120px] gap-1.5">
+                <CalendarIcon className="h-3.5 w-3.5" />
+                {isToday ? "Hoy" : format(selectedDate, "EEE d MMM", { locale: es })}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => d && setSelectedDate(d)}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+              <div className="p-2 border-t flex items-center justify-between">
+                <Button variant="ghost" size="sm" className="text-xs h-7"
+                  onClick={() => setSelectedDate(new Date())}>
+                  Hoy
+                </Button>
+                <span className="text-[10px] text-muted-foreground pr-2">
+                  {format(selectedDate, "PPP", { locale: es })}
+                </span>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(d => addDays(d, 1))}><ChevronRight className="h-3.5 w-3.5" /></Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadData}><RefreshCw className="h-3.5 w-3.5" /></Button>
         </div>
