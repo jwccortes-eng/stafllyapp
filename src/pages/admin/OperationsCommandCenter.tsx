@@ -18,14 +18,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Loader2, Search, ChevronLeft, ChevronRight, Radio, Clock, AlertTriangle,
   Users, Car, Shield, Eye, CheckCircle2, XCircle, Phone, MessageSquare,
   MapPin, Building2, RefreshCw, Bell, Zap, UserPlus, Plus, Send,
-  Activity, CalendarPlus, UserCheck, ArrowRight, Timer,
+  Activity, CalendarPlus, UserCheck, ArrowRight, Timer, CalendarIcon, LayoutGrid,
 } from "lucide-react";
 import { ReplacementSuggestionDialog } from "@/components/shifts/ReplacementSuggestionDialog";
+import { OpsLiveMapPanel } from "@/components/operations/OpsLiveMapPanel";
 
 // ─── Types ───
 interface ShiftRow {
