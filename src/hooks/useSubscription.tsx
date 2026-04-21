@@ -73,6 +73,7 @@ export const MODULE_PLAN_MAP: Record<string, PlanCode> = {
   reconciliation: "paid_manual",
   "command-center": "paid_manual",
   payroll: "paid_manual",
+  tenant_invoicing: "paid_manual",
 };
 
 /** All modules that Pro or higher can access */

@@ -502,7 +502,7 @@ export default function AdminDashboard() {
           supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", cid).eq("is_active", true).is("avatar_url", null),
           supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", cid).is("deleted_at", null).eq("status", "active"),
           supabase.from("staffing_requests").select("id", { count: "exact", head: true }).eq("company_id", cid).not("status", "in", '("completed","cancelled","rejected")'),
-          supabase.from("invoices").select("id, status, grand_total").eq("company_id", cid),
+          supabase.from("legacy_invoices").select("id, status, grand_total").eq("company_id", cid),
           supabase.from("compensation_change_log").select("id", { count: "exact", head: true }).eq("company_id", cid).gte("changed_at", monthStartStr),
           supabase.from("compensation_analysis_summary").select("daily_payment_detected, ride_payment_detected, mixed_compensation_detected").eq("company_id", cid),
           supabase.from("employees").select("created_at").eq("company_id", cid).eq("is_active", true).order("created_at", { ascending: true }),
