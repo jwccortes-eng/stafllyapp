@@ -40,9 +40,11 @@ Shifts (operación)
 
 ## Fases
 
-### **Fase 1 — Schema + RLS + Module gate** ⬅️ ARRANCAR AQUÍ
+### **Fase 1 — Schema + RLS + Module gate** ✅ APROBADA / EN EJECUCIÓN
 
-Migración con 8 tablas + enums + RLS por `company_id` + triggers (`updated_at`, auto invoice_number, activity_log) + registro de módulo `'tenant_invoicing'` en `MODULE_PLAN_MAP` (Pro+). Sin UI, sin riesgo para producción.
+Migración con 8 tablas + enums + RLS por `company_id` + triggers seguros (`updated_at`, auto invoice_number per-company, activity_log preparado) + registro de módulo `'tenant_invoicing'` en `MODULE_PLAN_MAP` (Pro+).
+
+**Schema pasivo**: todo listo para fases siguientes, sin automatismos que puedan afectar producción. No se crea UI, ni edge functions, ni se acopla a triggers de operación.
 
 ### **Fase 2 — Billing Clients & Locations**
 
