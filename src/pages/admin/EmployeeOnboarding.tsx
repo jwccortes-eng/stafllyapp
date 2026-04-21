@@ -1019,7 +1019,7 @@ function DocCard({
       {/* Preview lightbox */}
       {previewOpen && (
         <div
-          onClick={() => setPreviewOpen(null)}
+          onClick={closePreview}
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
         >
           <button
