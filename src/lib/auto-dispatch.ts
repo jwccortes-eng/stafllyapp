@@ -26,27 +26,16 @@
  * Multi-tenant: every public function takes `companyId`.
  */
 import { supabase } from "@/integrations/supabase/client";
-import {
-  generateAlerts,
-  computeCoverageBatch,
-  type OpsAlert,
-  type ShiftCoverage,
-} from "@/lib/operations-intelligence";
-import {
-  suggestReplacements,
-  type ReplacementCandidate,
-} from "@/lib/operations-actions";
+import { generateAlerts, computeCoverageBatch, type OpsAlert, type ShiftCoverage } from "@/lib/operations-intelligence";
+import { suggestReplacements, type ReplacementCandidate } from "@/lib/operations-actions";
 
+import { executeDispatch } from "@/core/dispatch-engine";
+import { applyDispatchPlan } from "@/lib/dispatch-writers";
 // ─── Types ────────────────────────────────────────────────────────────────
 
 export type DispatchActionType = "REPLACE_WORKERS" | "BROADCAST";
 
-export type DispatchStatus =
-  | "suggested"
-  | "executed"
-  | "partially_executed"
-  | "dismissed"
-  | "expired";
+export type DispatchStatus = "suggested" | "executed" | "partially_executed" | "dismissed" | "expired";
 
 export interface DispatchSuggestion {
   /** Stable client-side id (reflects shift + action). UI key. */
@@ -56,13 +45,13 @@ export interface DispatchSuggestion {
   type: DispatchActionType;
   shiftId: string;
   shiftTitle: string;
-  shiftStart: string;        // ISO
+  shiftStart: string; // ISO
   startsInMinutes: number;
   zone: string | null;
   required: number;
   missing: number;
   candidates: ReplacementCandidate[];
-  confidence: number;        // 0–1
+  confidence: number; // 0–1
   reason: string;
   /**
    * UI hint — derived from confidence buckets:
@@ -103,37 +92,29 @@ function computeConfidence(args: {
   const depth = Math.max(0, Math.min(1, available.length / Math.max(1, missing)));
 
   // Rating boost: 0–5 → 0–1, but only when we have ≥ 2 ratings to trust
-  const ratingBoost = top.ratingCount >= 2
-    ? Math.max(0, Math.min(1, (top.rating ?? 0) / 5))
-    : 0.5; // neutral if no rating data
+  const ratingBoost = top.ratingCount >= 2 ? Math.max(0, Math.min(1, (top.rating ?? 0) / 5)) : 0.5; // neutral if no rating data
 
-  const blended =
-    urgency * 0.30 +
-    fit     * 0.30 +
-    depth   * 0.25 +
-    ratingBoost * 0.15;
+  const blended = urgency * 0.3 + fit * 0.3 + depth * 0.25 + ratingBoost * 0.15;
 
   return Math.round(blended * 1000) / 1000;
 }
 
 function bucketOf(c: number): DispatchSuggestion["confidenceBucket"] {
   if (c >= 0.85) return "high";
-  if (c >= 0.60) return "medium";
+  if (c >= 0.6) return "medium";
   return "low";
 }
 
 // ─── Engine ───────────────────────────────────────────────────────────────
 
 const HARD_MAX_STARTS_IN_MIN = 120; // shift must start within 2h
-const HARD_MAX_COVERAGE_PCT = 60;   // and have effective coverage < 60%
+const HARD_MAX_COVERAGE_PCT = 60; // and have effective coverage < 60%
 
 /**
  * Reads alerts → derives candidate suggestions for the qualifying shifts.
  * Pure function: no side-effects, no DB writes. Persisting is up to caller.
  */
-export async function evaluateDispatchActions(
-  companyId: string,
-): Promise<DispatchSuggestion[]> {
+export async function evaluateDispatchActions(companyId: string): Promise<DispatchSuggestion[]> {
   if (!companyId) return [];
 
   // 1) Pull current alerts (already deduped + zone-grouped)
@@ -141,7 +122,7 @@ export async function evaluateDispatchActions(
   const eligibleShiftIds = new Set<string>();
   alerts.forEach((a: OpsAlert) => {
     if (a.kind === "UNDERSTAFFED" || a.kind === "LOW_COVERAGE_SOON") {
-      a.shiftIds.forEach(id => eligibleShiftIds.add(id));
+      a.shiftIds.forEach((id) => eligibleShiftIds.add(id));
     }
   });
   if (!eligibleShiftIds.size) return [];
@@ -151,9 +132,9 @@ export async function evaluateDispatchActions(
 
   // 3) Filter by hard thresholds
   const qualifying: ShiftCoverage[] = [];
-  coverageMap.forEach(cov => {
+  coverageMap.forEach((cov) => {
     if (cov.startsInMinutes == null) return;
-    if (cov.startsInMinutes < 0) return;             // already started
+    if (cov.startsInMinutes < 0) return; // already started
     if (cov.startsInMinutes > HARD_MAX_STARTS_IN_MIN) return;
     if (cov.effectiveCoveragePct >= HARD_MAX_COVERAGE_PCT) return;
     qualifying.push(cov);
@@ -161,7 +142,7 @@ export async function evaluateDispatchActions(
   if (!qualifying.length) return [];
 
   // 4) Hydrate shift metadata (title + zone)
-  const ids = qualifying.map(q => q.shiftId);
+  const ids = qualifying.map((q) => q.shiftId);
   const { data: shiftRows } = await supabase
     .from("scheduled_shifts")
     .select("id, title, date, start_time, location_id, client_id, locations(name), clients(name)")
@@ -182,7 +163,7 @@ export async function evaluateDispatchActions(
     const tA = a.startsInMinutes ?? Infinity;
     const tB = b.startsInMinutes ?? Infinity;
     if (tA !== tB) return tA - tB;
-    return (b.required - b.assigned) - (a.required - a.assigned);
+    return b.required - b.assigned - (a.required - a.assigned);
   });
 
   const suggestions: DispatchSuggestion[] = [];
@@ -194,7 +175,7 @@ export async function evaluateDispatchActions(
     if (missing <= 0) continue;
 
     const candidates = await suggestReplacements(cov.shiftId, { limit: 8 });
-    const available = candidates.filter(c => c.available);
+    const available = candidates.filter((c) => c.available);
 
     if (available.length > 0) {
       const confidence = computeConfidence({
@@ -241,8 +222,7 @@ export async function evaluateDispatchActions(
           candidates: fallbackPool,
           confidence,
           confidenceBucket: bucketOf(confidence),
-          reason:
-            `Sin candidatos libres para "${meta.title}". Sugerimos broadcast a ${fallbackPool.length} workers.`,
+          reason: `Sin candidatos libres para "${meta.title}". Sugerimos broadcast a ${fallbackPool.length} workers.`,
         });
       }
     }
@@ -261,10 +241,7 @@ export async function evaluateDispatchActions(
  * duplicates on every poll. We rely on a recent-window lookup (last 30min,
  * same shift + action_type, status='suggested') as a soft dedupe.
  */
-export async function persistSuggestion(
-  companyId: string,
-  s: DispatchSuggestion,
-): Promise<string | null> {
+export async function persistSuggestion(companyId: string, s: DispatchSuggestion): Promise<string | null> {
   // Soft dedupe — avoid spamming the table on every poll
   const sinceIso = new Date(Date.now() - 30 * 60_000).toISOString();
   const { data: existing } = await supabase
@@ -433,7 +410,9 @@ function safetyBlockReason(s: DispatchSuggestion, cfg: AutoDispatchConfig): stri
  * concurrent runs cannot double-book the same worker.
  */
 async function autoAssignWorker(args: {
-  companyId: string; shiftId: string; employeeId: string;
+  companyId: string;
+  shiftId: string;
+  employeeId: string;
 }): Promise<{ ok: boolean; error?: string }> {
   // Re-validate freshness: shift still under-staffed and worker still free.
   const { data: shift } = await supabase
@@ -468,8 +447,11 @@ async function autoAssignWorker(args: {
  * Uses the same `notifications` table as `OpsBroadcastDialog`.
  */
 async function autoBroadcast(args: {
-  companyId: string; shiftId: string; shiftTitle: string;
-  startsInMinutes: number; employeeIds: string[];
+  companyId: string;
+  shiftId: string;
+  shiftTitle: string;
+  startsInMinutes: number;
+  employeeIds: string[];
 }): Promise<{ ok: boolean; error?: string; sent: number }> {
   if (!args.employeeIds.length) return { ok: false, error: "no_audience", sent: 0 };
   const body =
@@ -477,7 +459,7 @@ async function autoBroadcast(args: {
       ? `🚨 URGENTE: necesitamos cubrir "${args.shiftTitle}" en ${args.startsInMinutes}m. ¿Puedes entrar?`
       : `Necesitamos cubrir "${args.shiftTitle}" en ${args.startsInMinutes}m. ¿Estás disponible?`;
 
-  const rows = args.employeeIds.map(empId => ({
+  const rows = args.employeeIds.map((empId) => ({
     company_id: args.companyId,
     recipient_id: empId,
     recipient_type: "employee",
@@ -505,11 +487,13 @@ export async function executeAutoDispatch(companyId: string): Promise<AutoExecut
   // Global rate limit
   const recentHour = await countRecentAutoActions(companyId, { sinceMs: 60 * 60_000 });
   if (recentHour >= AUTO_SAFETY.maxAutoActionsPerHour) {
-    return [{
-      suggestion: {} as DispatchSuggestion,
-      status: "skipped",
-      reason: `rate_limit_hour:${recentHour}`,
-    }];
+    return [
+      {
+        suggestion: {} as DispatchSuggestion,
+        status: "skipped",
+        reason: `rate_limit_hour:${recentHour}`,
+      },
+    ];
   }
 
   const suggestions = await evaluateDispatchActions(companyId);
@@ -529,7 +513,8 @@ export async function executeAutoDispatch(companyId: string): Promise<AutoExecut
 
     // Per-shift rate limit
     const recentShift = await countRecentAutoActions(companyId, {
-      sinceMs: 60 * 60_000, shiftId: s.shiftId,
+      sinceMs: 60 * 60_000,
+      shiftId: s.shiftId,
     });
     if (recentShift >= AUTO_SAFETY.maxAutoActionsPerShift) {
       results.push({ suggestion: s, status: "skipped", reason: "rate_limit_shift" });
@@ -541,50 +526,53 @@ export async function executeAutoDispatch(companyId: string): Promise<AutoExecut
     const logId = await persistSuggestion(companyId, s);
 
     if (s.type === "REPLACE_WORKERS") {
-      const top = s.candidates[0];
-      const out = await autoAssignWorker({
-        companyId, shiftId: s.shiftId, employeeId: top.employeeId,
-      });
-      if (out.ok) {
-        if (logId) await markDispatchLog(logId, {
+      const plan = await executeDispatch(s.shiftId, "auto");
+      await applyDispatchPlan(plan);
+
+      if (logId) {
+        await markDispatchLog(logId, {
           status: "executed",
-          executedAssignments: { mode: "auto_assign", employeeId: top.employeeId },
-          outcome: `AUTO: asignado ${top.firstName} ${top.lastName}`.trim(),
+          outcome: "AUTO: executed via core engine",
         });
-        results.push({
-          suggestion: s, status: "executed", action: "auto_assign",
-          assignedEmployeeId: top.employeeId,
-        });
-        budget--;
-      } else {
-        if (logId) await markDispatchLog(logId, {
-          status: "dismissed",
-          outcome: `AUTO_FAIL: ${out.error}`,
-        });
-        results.push({ suggestion: s, status: "skipped", reason: out.error });
       }
-    } else {
-      const audience = s.candidates.map(c => c.employeeId);
+
+      results.push({
+        suggestion: s,
+        status: "executed",
+        action: "auto_assign",
+      });
+
+      budget--;
+    }
+    if (s.type === "BROADCAST") {
+      const audience = s.candidates.map((c) => c.employeeId);
       const out = await autoBroadcast({
-        companyId, shiftId: s.shiftId, shiftTitle: s.shiftTitle,
-        startsInMinutes: s.startsInMinutes, employeeIds: audience,
+        companyId,
+        shiftId: s.shiftId,
+        shiftTitle: s.shiftTitle,
+        startsInMinutes: s.startsInMinutes,
+        employeeIds: audience,
       });
       if (out.ok) {
-        if (logId) await markDispatchLog(logId, {
-          status: "executed",
-          executedAssignments: { mode: "auto_broadcast", employeeIds: audience },
-          outcome: `AUTO: broadcast a ${out.sent} workers`,
-        });
+        if (logId)
+          await markDispatchLog(logId, {
+            status: "executed",
+            executedAssignments: { mode: "auto_broadcast", employeeIds: audience },
+            outcome: `AUTO: broadcast a ${out.sent} workers`,
+          });
         results.push({
-          suggestion: s, status: "executed", action: "auto_broadcast",
+          suggestion: s,
+          status: "executed",
+          action: "auto_broadcast",
           notifiedEmployeeIds: audience,
         });
         budget--;
       } else {
-        if (logId) await markDispatchLog(logId, {
-          status: "dismissed",
-          outcome: `AUTO_FAIL: ${out.error}`,
-        });
+        if (logId)
+          await markDispatchLog(logId, {
+            status: "dismissed",
+            outcome: `AUTO_FAIL: ${out.error}`,
+          });
         results.push({ suggestion: s, status: "skipped", reason: out.error });
       }
     }
@@ -610,7 +598,8 @@ export interface DispatchLogEntry {
 }
 
 export async function loadRecentDispatchLogs(
-  companyId: string, opts?: { limit?: number },
+  companyId: string,
+  opts?: { limit?: number },
 ): Promise<DispatchLogEntry[]> {
   if (!companyId) return [];
   const { data } = await supabase
