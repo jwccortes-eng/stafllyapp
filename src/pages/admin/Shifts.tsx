@@ -220,6 +220,8 @@ export default function Shifts() {
   const [clockMethod, setClockMethod] = useState<"mobile" | "kiosk" | "both">("both");
   const [attendanceMode, setAttendanceMode] = useState<"clock" | "arrival" | "hybrid">("clock");
   const [meetingTime, setMeetingTime] = useState<string>("");
+  const [meetingPointLocationId, setMeetingPointLocationId] = useState<string | null>(null);
+  const [jobSiteLocationId, setJobSiteLocationId] = useState<string | null>(null);
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig>(DEFAULT_REPEAT);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [copyingWeek, setCopyingWeek] = useState(false);
@@ -384,6 +386,7 @@ export default function Shifts() {
     setTransportRequired(false); setCarCapacity("4"); setTransportNotes(""); setDriverEmployeeId("");
     setClockMethod("both");
     setAttendanceMode("clock"); setMeetingTime("");
+    setMeetingPointLocationId(null); setJobSiteLocationId(null);
     setNewLocationName(""); setNewLocationAddress(""); setShowAddLocation(false);
     setRepeatConfig(DEFAULT_REPEAT);
   };
@@ -526,6 +529,8 @@ export default function Shifts() {
       driver_employee_id: driverEmployeeId || null,
       clock_method: clockMethod,
       status: initialStatus,
+      meeting_point_location_id: meetingPointLocationId || null,
+      job_site_location_id: jobSiteLocationId || null,
     };
     const { data: shift, error } = await supabase.from("scheduled_shifts").insert(insertData).select("id, shift_code").single();
 
