@@ -176,7 +176,7 @@ export function useInvoice(invoiceId: string | undefined) {
       if (!invoiceId || !selectedCompanyId) throw new Error("No invoice");
       const patch: any = { status };
       const now = new Date().toISOString();
-      if (status === "issued" || status === "approved") patch.finalized_at = now;
+      if (status === "issued") patch.finalized_at = now;
       if (status === "sent") patch.sent_at = now;
       if (status === "paid") patch.paid_at = now;
       if (status === "voided") patch.voided_at = now;
@@ -191,13 +191,12 @@ export function useInvoice(invoiceId: string | undefined) {
       qc.invalidateQueries({ queryKey: [KEY, "one", invoiceId] });
       qc.invalidateQueries({ queryKey: [KEY, selectedCompanyId] });
       const labels: Partial<Record<InvoiceStatus, string>> = {
-        issued: "Factura emitida",
-        approved: "Factura aprobada",
-        sent: "Marcada como enviada",
-        voided: "Factura anulada",
-        draft: "Reabierta como borrador",
+        issued: "Invoice finalized",
+        sent: "Marked as sent",
+        voided: "Invoice voided",
+        draft: "Reopened as draft",
       };
-      toast.success(labels[status] ?? "Estado actualizado");
+      toast.success(labels[status] ?? "Status updated");
     },
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });

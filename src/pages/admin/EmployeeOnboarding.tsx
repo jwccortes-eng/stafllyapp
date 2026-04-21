@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ProfileStatusBadge } from "@/components/employee/ProfileStatusBadge";
+import { resolveEmployeeDocumentUrl, openEmployeeDocument } from "@/lib/employee-documents";
 import { US_STATES, WORKER_TYPES } from "@/lib/onboarding/us-states";
 import {
   DOCUMENT_CATEGORIES,
@@ -260,12 +261,12 @@ export default function EmployeeOnboarding() {
       toast({ title: "Upload failed", description: upErr.message, variant: "destructive" });
       return;
     }
-    const { data: urlData } = supabase.storage.from("employee-documents").getPublicUrl(path);
+    // Bucket is private; persist the storage path and sign on read.
     const { error: insErr } = await supabase.from("employee_documents").insert({
       employee_id: employee.id,
       company_id: employee.company_id,
       name: file.name,
-      file_url: urlData.publicUrl,
+      file_url: path,
       file_type: file.type,
       file_size: file.size,
       category,
@@ -870,6 +871,14 @@ function DocCard({
   const [dragOver, setDragOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const [previewOpen, setPreviewOpen] = useState<DocRow | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const openPreview = async (f: DocRow) => {
+    setPreviewOpen(f);
+    setPreviewUrl(null);
+    const url = await resolveEmployeeDocumentUrl(f.file_url);
+    setPreviewUrl(url);
+  };
+  const closePreview = () => { setPreviewOpen(null); setPreviewUrl(null); };
   const fileInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
 
@@ -945,7 +954,7 @@ function DocCard({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setPreviewOpen(f)}
+                  onClick={() => openPreview(f)}
                   className="h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
                   aria-label="Preview"
                 >
@@ -1010,20 +1019,24 @@ function DocCard({
       {/* Preview lightbox */}
       {previewOpen && (
         <div
-          onClick={() => setPreviewOpen(null)}
+          onClick={closePreview}
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
         >
           <button
-            onClick={() => setPreviewOpen(null)}
+            onClick={closePreview}
             className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"
           >
             <X className="h-4 w-4" />
           </button>
           <div onClick={(e) => e.stopPropagation()} className="max-w-[92vw] max-h-[88vh] bg-card rounded-xl overflow-hidden shadow-2xl">
-            {previewOpen.file_type?.startsWith("image/") ? (
-              <img src={previewOpen.file_url} alt={previewOpen.name} className="max-w-full max-h-[88vh] object-contain" />
+            {!previewUrl ? (
+              <div className="w-[88vw] h-[80vh] flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : previewOpen.file_type?.startsWith("image/") ? (
+              <img src={previewUrl} alt={previewOpen.name} className="max-w-full max-h-[88vh] object-contain" />
             ) : (
-              <iframe src={previewOpen.file_url} title={previewOpen.name} className="w-[88vw] h-[80vh]" />
+              <iframe src={previewUrl} title={previewOpen.name} className="w-[88vw] h-[80vh]" />
             )}
           </div>
         </div>
