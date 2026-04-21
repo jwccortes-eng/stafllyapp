@@ -57,8 +57,9 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/summary", icon: FileSpreadsheet, label: "Reports", module: "summary", section: "Payroll" },
 
   // INVOICING — tenant billing to their own clients
-  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Invoicing", badge: "new" },
-  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Invoicing", badge: "new" },
+  { to: "/app/invoicing/invoices", icon: FileText, label: "Invoices", module: "tenant_invoicing", section: "Invoicing", badge: "new" },
+  { to: "/app/invoicing/service-blocks", icon: ClipboardList, label: "Service Blocks", module: "tenant_invoicing", section: "Invoicing" },
+  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Invoicing" },
 
   // MORE — communication, monitoring & config
   { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "More" },

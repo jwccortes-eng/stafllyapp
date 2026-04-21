@@ -76,9 +76,15 @@ Implementado:
 - ⏸️ NO se crea aún tabla explícita de mapping `operational_locations → billing_client_locations`. La heurística actual (default location, o única activa) cubre el 80% de casos. Se evaluará en Fase 5+ si surgen escenarios multi-location ambiguos recurrentes.
 
 
-### **Fase 4 — Create Invoice + Invoice Lines**
+### **Fase 4 — Create Invoice + Invoice Lines** ✅ COMPLETADA
 
-Página `/app/invoicing/invoices/new` con 5 secciones (Header, Service Blocks Selector, Lines editable, Summary, Payment info). Transacción: invoice + lines + lock blocks.
+Implementado:
+- Hooks: `useInvoices` (list/delete con liberación de blocks), `useInvoice` (detail + lines + setStatus), `useCreateInvoiceFromBlocks` (transaccional con rollback y lock idempotente de blocks → `invoiced` + `invoice_id`)
+- Página `/app/invoicing/invoices` con KPIs (outstanding, overdue, paid, count), filtros (status, client, search), tabla premium, eliminar borradores
+- Página `/app/invoicing/invoices/new` builder en 5 secciones: Header, Service Blocks Selector (solo `approved` + `invoice_id IS NULL`), Lines preview, Notes/Payment, Summary
+- Página `/app/invoicing/invoices/:id` detail con metadata, lines, totales, transiciones de estado (draft → issued → sent, reopen, void)
+- Sidebar: "Invoices" como entrada principal con badge `new`; orden Invoices · Service Blocks · Billing Clients
+- Garantías: no se permiten blocks `discarded` ni `invoiced`; mismatch de cliente bloqueado; rollback completo si falla insert de lines o lock de blocks; validación per-company en cada query
 
 ### **Fase 5 — Invoice Detail + Estados**
 
