@@ -650,6 +650,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_default: boolean
+          location_v2_id: string | null
           name: string
           notes: string | null
           state: string | null
@@ -666,6 +667,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_default?: boolean
+          location_v2_id?: string | null
           name: string
           notes?: string | null
           state?: string | null
@@ -682,6 +684,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_default?: boolean
+          location_v2_id?: string | null
           name?: string
           notes?: string | null
           state?: string | null
@@ -708,6 +711,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_client_locations_location_v2_id_fkey"
+            columns: ["location_v2_id"]
+            isOneToOne: false
+            referencedRelation: "locations_v2"
             referencedColumns: ["id"]
           },
         ]
@@ -5292,6 +5302,255 @@ export type Database = {
           },
         ]
       }
+      location_events: {
+        Row: {
+          accuracy_meters: number | null
+          company_id: string | null
+          context_id: string | null
+          context_type:
+            | Database["public"]["Enums"]["location_context_type_enum"]
+            | null
+          created_at: string
+          details: Json
+          distance_meters: number | null
+          event_type: Database["public"]["Enums"]["location_event_type_enum"]
+          id: string
+          latitude: number | null
+          location_v2_id: string | null
+          longitude: number | null
+          occurred_at: string
+          session_id: string | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["location_subject_type_enum"]
+        }
+        Insert: {
+          accuracy_meters?: number | null
+          company_id?: string | null
+          context_id?: string | null
+          context_type?:
+            | Database["public"]["Enums"]["location_context_type_enum"]
+            | null
+          created_at?: string
+          details?: Json
+          distance_meters?: number | null
+          event_type: Database["public"]["Enums"]["location_event_type_enum"]
+          id?: string
+          latitude?: number | null
+          location_v2_id?: string | null
+          longitude?: number | null
+          occurred_at?: string
+          session_id?: string | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["location_subject_type_enum"]
+        }
+        Update: {
+          accuracy_meters?: number | null
+          company_id?: string | null
+          context_id?: string | null
+          context_type?:
+            | Database["public"]["Enums"]["location_context_type_enum"]
+            | null
+          created_at?: string
+          details?: Json
+          distance_meters?: number | null
+          event_type?: Database["public"]["Enums"]["location_event_type_enum"]
+          id?: string
+          latitude?: number | null
+          location_v2_id?: string | null
+          longitude?: number | null
+          occurred_at?: string
+          session_id?: string | null
+          subject_id?: string
+          subject_type?: Database["public"]["Enums"]["location_subject_type_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_events_location_v2_id_fkey"
+            columns: ["location_v2_id"]
+            isOneToOne: false
+            referencedRelation: "locations_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "location_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_presence: {
+        Row: {
+          accuracy_meters: number | null
+          company_id: string | null
+          context_id: string | null
+          context_type:
+            | Database["public"]["Enums"]["location_context_type_enum"]
+            | null
+          current_lat: number
+          current_lng: number
+          heading: number | null
+          id: string
+          is_active: boolean
+          last_seen_at: string
+          metadata: Json
+          recorded_at: string
+          session_id: string | null
+          source: string | null
+          speed_mps: number | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["location_subject_type_enum"]
+          updated_at: string
+        }
+        Insert: {
+          accuracy_meters?: number | null
+          company_id?: string | null
+          context_id?: string | null
+          context_type?:
+            | Database["public"]["Enums"]["location_context_type_enum"]
+            | null
+          current_lat: number
+          current_lng: number
+          heading?: number | null
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          metadata?: Json
+          recorded_at?: string
+          session_id?: string | null
+          source?: string | null
+          speed_mps?: number | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["location_subject_type_enum"]
+          updated_at?: string
+        }
+        Update: {
+          accuracy_meters?: number | null
+          company_id?: string | null
+          context_id?: string | null
+          context_type?:
+            | Database["public"]["Enums"]["location_context_type_enum"]
+            | null
+          current_lat?: number
+          current_lng?: number
+          heading?: number | null
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          metadata?: Json
+          recorded_at?: string
+          session_id?: string | null
+          source?: string | null
+          speed_mps?: number | null
+          subject_id?: string
+          subject_type?: Database["public"]["Enums"]["location_subject_type_enum"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_presence_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_presence_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_presence_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "location_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_sessions: {
+        Row: {
+          company_id: string | null
+          context_id: string | null
+          context_type: Database["public"]["Enums"]["location_context_type_enum"]
+          created_at: string
+          device: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json
+          source: string | null
+          started_at: string
+          status: Database["public"]["Enums"]["location_session_status_enum"]
+          stopped_at: string | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["location_subject_type_enum"]
+        }
+        Insert: {
+          company_id?: string | null
+          context_id?: string | null
+          context_type?: Database["public"]["Enums"]["location_context_type_enum"]
+          created_at?: string
+          device?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json
+          source?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["location_session_status_enum"]
+          stopped_at?: string | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["location_subject_type_enum"]
+        }
+        Update: {
+          company_id?: string | null
+          context_id?: string | null
+          context_type?: Database["public"]["Enums"]["location_context_type_enum"]
+          created_at?: string
+          device?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json
+          source?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["location_session_status_enum"]
+          stopped_at?: string | null
+          subject_id?: string
+          subject_type?: Database["public"]["Enums"]["location_subject_type_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string | null
@@ -5388,6 +5647,105 @@ export type Database = {
           },
           {
             foreignKeyName: "locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations_v2: {
+        Row: {
+          access_notes: string | null
+          address_line1: string | null
+          address_line2: string | null
+          arrival_notes: string | null
+          city: string | null
+          company_id: string
+          contact_on_site: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          formatted_address: string | null
+          geofence_radius_meters: number | null
+          id: string
+          is_active: boolean
+          latitude: number | null
+          location_type: Database["public"]["Enums"]["location_type_enum"]
+          longitude: number | null
+          metadata: Json
+          name: string | null
+          parking_notes: string | null
+          place_id: string | null
+          postal_code: string | null
+          state: string | null
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_notes?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
+          arrival_notes?: string | null
+          city?: string | null
+          company_id: string
+          contact_on_site?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          formatted_address?: string | null
+          geofence_radius_meters?: number | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          location_type?: Database["public"]["Enums"]["location_type_enum"]
+          longitude?: number | null
+          metadata?: Json
+          name?: string | null
+          parking_notes?: string | null
+          place_id?: string | null
+          postal_code?: string | null
+          state?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_notes?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
+          arrival_notes?: string | null
+          city?: string | null
+          company_id?: string
+          contact_on_site?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          formatted_address?: string | null
+          geofence_radius_meters?: number | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          location_type?: Database["public"]["Enums"]["location_type_enum"]
+          longitude?: number | null
+          metadata?: Json
+          name?: string | null
+          parking_notes?: string | null
+          place_id?: string | null
+          postal_code?: string | null
+          state?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_v2_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locations_v2_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_public"
@@ -10721,8 +11079,10 @@ export type Database = {
           driver_employee_id: string | null
           end_time: string
           id: string
+          job_site_location_id: string | null
           location_id: string | null
           meeting_point: string | null
+          meeting_point_location_id: string | null
           meeting_time: string | null
           notes: string | null
           operational_version: number
@@ -10758,8 +11118,10 @@ export type Database = {
           driver_employee_id?: string | null
           end_time: string
           id?: string
+          job_site_location_id?: string | null
           location_id?: string | null
           meeting_point?: string | null
+          meeting_point_location_id?: string | null
           meeting_time?: string | null
           notes?: string | null
           operational_version?: number
@@ -10795,8 +11157,10 @@ export type Database = {
           driver_employee_id?: string | null
           end_time?: string
           id?: string
+          job_site_location_id?: string | null
           location_id?: string | null
           meeting_point?: string | null
+          meeting_point_location_id?: string | null
           meeting_time?: string | null
           notes?: string | null
           operational_version?: number
@@ -10860,10 +11224,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "scheduled_shifts_job_site_location_id_fkey"
+            columns: ["job_site_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations_v2"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "scheduled_shifts_location_id_fkey"
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_shifts_meeting_point_location_id_fkey"
+            columns: ["meeting_point_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations_v2"
             referencedColumns: ["id"]
           },
           {
@@ -14228,6 +14606,30 @@ export type Database = {
         | "paid"
         | "overdue"
         | "voided"
+      location_context_type_enum: "shift" | "job" | "route" | "general"
+      location_event_type_enum:
+        | "tracking_started"
+        | "tracking_stopped"
+        | "entered_geofence"
+        | "exited_geofence"
+        | "arrived_meeting_point"
+        | "arrived_job_site"
+        | "stale_location"
+        | "manual_checkpoint"
+      location_session_status_enum: "active" | "stopped" | "expired"
+      location_subject_type_enum:
+        | "employee"
+        | "shift"
+        | "applicant"
+        | "provider"
+        | "kiosk_device"
+      location_type_enum:
+        | "billing"
+        | "operational"
+        | "meeting_point"
+        | "job_site"
+        | "company_site"
+        | "customer_site"
       passport_source:
         | "stafly_shift"
         | "marketplace_booking"
@@ -14667,6 +15069,33 @@ export const Constants = {
         "paid",
         "overdue",
         "voided",
+      ],
+      location_context_type_enum: ["shift", "job", "route", "general"],
+      location_event_type_enum: [
+        "tracking_started",
+        "tracking_stopped",
+        "entered_geofence",
+        "exited_geofence",
+        "arrived_meeting_point",
+        "arrived_job_site",
+        "stale_location",
+        "manual_checkpoint",
+      ],
+      location_session_status_enum: ["active", "stopped", "expired"],
+      location_subject_type_enum: [
+        "employee",
+        "shift",
+        "applicant",
+        "provider",
+        "kiosk_device",
+      ],
+      location_type_enum: [
+        "billing",
+        "operational",
+        "meeting_point",
+        "job_site",
+        "company_site",
+        "customer_site",
       ],
       passport_source: [
         "stafly_shift",
