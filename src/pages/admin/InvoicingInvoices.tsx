@@ -174,12 +174,8 @@ export default function InvoicingInvoices() {
                     icon={FileText}
                     title="No invoices yet"
                     description="Create your first invoice from approved service blocks."
-                    action={
-                      <Button onClick={() => navigate("/app/invoicing/invoices/new")}>
-                        <Plus className="h-4 w-4" />
-                        New invoice
-                      </Button>
-                    }
+                    actionLabel="New invoice"
+                    onAction={() => navigate("/app/invoicing/invoices/new")}
                   />
                 </TableCell>
               </TableRow>
