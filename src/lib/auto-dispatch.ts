@@ -327,3 +327,309 @@ export async function markDispatchLog(
 
   if (error) console.warn("[auto-dispatch] markDispatchLog failed", error);
 }
+
+// ─── Full Auto Dispatch (phase 4) ─────────────────────────────────────────
+//
+// Optional opt-in layer. The admin chooses the autonomy level per company
+// via `company_settings.value.level`. The engine never escalates — it only
+// runs the actions explicitly allowed at the current level.
+
+export type AutoDispatchLevel = "off" | "assist" | "semi_auto" | "full_auto";
+
+export interface AutoDispatchConfig {
+  level: AutoDispatchLevel;
+  /** When true, broadcast intents are auto-sent in full_auto. */
+  allowAutoBroadcast: boolean;
+  /** When true, top candidate is auto-assigned in full_auto. */
+  allowAutoAssign: boolean;
+}
+
+export const AUTO_DISPATCH_DEFAULTS: AutoDispatchConfig = {
+  level: "off",
+  allowAutoBroadcast: true,
+  allowAutoAssign: true,
+};
+
+export const AUTO_DISPATCH_SETTINGS_KEY = "auto_dispatch";
+
+/** Hard safety thresholds for ANY automatic execution. Non-negotiable. */
+export const AUTO_SAFETY = {
+  minConfidence: 0.9,
+  maxStartsInMinutes: 120,
+  maxMissingPerShift: 3,
+  minTopCandidateScore: 80,
+  // Rate limits across the entire company
+  maxAutoActionsPerHour: 5,
+  maxAutoActionsPerShift: 2,
+} as const;
+
+/** Loads the auto-dispatch config for a company (with safe defaults). */
+export async function loadAutoDispatchConfig(companyId: string): Promise<AutoDispatchConfig> {
+  if (!companyId) return AUTO_DISPATCH_DEFAULTS;
+  const { data } = await supabase
+    .from("company_settings")
+    .select("value")
+    .eq("company_id", companyId)
+    .eq("key", AUTO_DISPATCH_SETTINGS_KEY)
+    .maybeSingle();
+  const stored = (data?.value as Partial<AutoDispatchConfig>) ?? {};
+  return { ...AUTO_DISPATCH_DEFAULTS, ...stored };
+}
+
+/**
+ * Counts auto-executed dispatches in the last hour for rate limiting.
+ * `outcome` starts with the literal "AUTO:" prefix for everything the engine
+ * runs without admin click — that's our marker.
+ */
+async function countRecentAutoActions(companyId: string, opts: { sinceMs: number; shiftId?: string }) {
+  const sinceIso = new Date(Date.now() - opts.sinceMs).toISOString();
+  let q = supabase
+    .from("dispatch_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .eq("status", "executed")
+    .like("outcome", "AUTO:%")
+    .gte("decided_at", sinceIso);
+  if (opts.shiftId) q = q.eq("shift_id", opts.shiftId);
+  const { count } = await q;
+  return count ?? 0;
+}
+
+export interface AutoExecutionResult {
+  suggestion: DispatchSuggestion;
+  status: "executed" | "skipped";
+  action?: "auto_assign" | "auto_broadcast";
+  reason?: string;
+  assignedEmployeeId?: string;
+  notifiedEmployeeIds?: string[];
+}
+
+/**
+ * Decides whether a single suggestion qualifies for unattended execution.
+ * Returns null when it does, or a human-readable reason when it doesn't.
+ */
+function safetyBlockReason(s: DispatchSuggestion, cfg: AutoDispatchConfig): string | null {
+  if (cfg.level !== "full_auto") return "level_not_full_auto";
+  if (s.confidence < AUTO_SAFETY.minConfidence) return "low_confidence";
+  if (s.startsInMinutes > AUTO_SAFETY.maxStartsInMinutes) return "starts_too_far";
+  if (s.startsInMinutes < 0) return "already_started";
+  if (s.missing > AUTO_SAFETY.maxMissingPerShift) return "too_many_missing";
+  if (s.type === "REPLACE_WORKERS") {
+    if (!cfg.allowAutoAssign) return "auto_assign_disabled";
+    const top = s.candidates[0];
+    if (!top) return "no_candidate";
+    if (!top.available) return "top_busy";
+    if ((top.score ?? 0) < AUTO_SAFETY.minTopCandidateScore) return "candidate_score_low";
+  } else if (s.type === "BROADCAST") {
+    if (!cfg.allowAutoBroadcast) return "auto_broadcast_disabled";
+    if (s.candidates.length < 3) return "audience_too_small";
+  }
+  return null;
+}
+
+/**
+ * Headless assignment — mirrors `ReplacementSuggestionDialog.assignEmployee`
+ * but without UI. Re-checks the overlap guarantee at insert time so two
+ * concurrent runs cannot double-book the same worker.
+ */
+async function autoAssignWorker(args: {
+  companyId: string; shiftId: string; employeeId: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  // Re-validate freshness: shift still under-staffed and worker still free.
+  const { data: shift } = await supabase
+    .from("scheduled_shifts")
+    .select("id, date, start_time, end_time, deleted_at, slots")
+    .eq("id", args.shiftId)
+    .maybeSingle();
+  if (!shift || shift.deleted_at) return { ok: false, error: "shift_gone" };
+
+  const { data: existing } = await supabase
+    .from("shift_assignments")
+    .select("id")
+    .eq("shift_id", args.shiftId)
+    .eq("employee_id", args.employeeId)
+    .not("status", "in", '("rejected","removed")')
+    .maybeSingle();
+  if (existing) return { ok: false, error: "already_assigned" };
+
+  const { error } = await supabase.from("shift_assignments").insert({
+    shift_id: args.shiftId,
+    employee_id: args.employeeId,
+    company_id: args.companyId,
+    status: "confirmed",
+    assignment_role: "worker",
+  } as any);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/**
+ * Headless broadcast — inserts in-app notifications for the audience.
+ * Uses the same `notifications` table as `OpsBroadcastDialog`.
+ */
+async function autoBroadcast(args: {
+  companyId: string; shiftId: string; shiftTitle: string;
+  startsInMinutes: number; employeeIds: string[];
+}): Promise<{ ok: boolean; error?: string; sent: number }> {
+  if (!args.employeeIds.length) return { ok: false, error: "no_audience", sent: 0 };
+  const body =
+    args.startsInMinutes <= 60
+      ? `🚨 URGENTE: necesitamos cubrir "${args.shiftTitle}" en ${args.startsInMinutes}m. ¿Puedes entrar?`
+      : `Necesitamos cubrir "${args.shiftTitle}" en ${args.startsInMinutes}m. ¿Estás disponible?`;
+
+  const rows = args.employeeIds.map(empId => ({
+    company_id: args.companyId,
+    recipient_id: empId,
+    recipient_type: "employee",
+    type: "shift_urgent",
+    title: "🚨 Turno por cubrir",
+    body,
+    metadata: { shift_id: args.shiftId, source: "auto_dispatch" } as any,
+    created_by: null,
+  }));
+
+  const { error } = await supabase.from("notifications").insert(rows as any);
+  if (error) return { ok: false, error: error.message, sent: 0 };
+  return { ok: true, sent: rows.length };
+}
+
+/**
+ * Top-level autonomous loop. Idempotent; safe to call on every poll.
+ * Only acts when company is set to `full_auto` AND every safety rule passes.
+ */
+export async function executeAutoDispatch(companyId: string): Promise<AutoExecutionResult[]> {
+  if (!companyId) return [];
+  const cfg = await loadAutoDispatchConfig(companyId);
+  if (cfg.level !== "full_auto") return [];
+
+  // Global rate limit
+  const recentHour = await countRecentAutoActions(companyId, { sinceMs: 60 * 60_000 });
+  if (recentHour >= AUTO_SAFETY.maxAutoActionsPerHour) {
+    return [{
+      suggestion: {} as DispatchSuggestion,
+      status: "skipped",
+      reason: `rate_limit_hour:${recentHour}`,
+    }];
+  }
+
+  const suggestions = await evaluateDispatchActions(companyId);
+  if (!suggestions.length) return [];
+
+  const results: AutoExecutionResult[] = [];
+  let budget = AUTO_SAFETY.maxAutoActionsPerHour - recentHour;
+
+  for (const s of suggestions) {
+    if (budget <= 0) break;
+
+    const block = safetyBlockReason(s, cfg);
+    if (block) {
+      results.push({ suggestion: s, status: "skipped", reason: block });
+      continue;
+    }
+
+    // Per-shift rate limit
+    const recentShift = await countRecentAutoActions(companyId, {
+      sinceMs: 60 * 60_000, shiftId: s.shiftId,
+    });
+    if (recentShift >= AUTO_SAFETY.maxAutoActionsPerShift) {
+      results.push({ suggestion: s, status: "skipped", reason: "rate_limit_shift" });
+      continue;
+    }
+
+    // Persist (or reuse) the dispatch_logs row first so we always have an
+    // anchor to record the outcome — even when the action itself fails.
+    const logId = await persistSuggestion(companyId, s);
+
+    if (s.type === "REPLACE_WORKERS") {
+      const top = s.candidates[0];
+      const out = await autoAssignWorker({
+        companyId, shiftId: s.shiftId, employeeId: top.employeeId,
+      });
+      if (out.ok) {
+        if (logId) await markDispatchLog(logId, {
+          status: "executed",
+          executedAssignments: { mode: "auto_assign", employeeId: top.employeeId },
+          outcome: `AUTO: asignado ${top.firstName} ${top.lastName}`.trim(),
+        });
+        results.push({
+          suggestion: s, status: "executed", action: "auto_assign",
+          assignedEmployeeId: top.employeeId,
+        });
+        budget--;
+      } else {
+        if (logId) await markDispatchLog(logId, {
+          status: "dismissed",
+          outcome: `AUTO_FAIL: ${out.error}`,
+        });
+        results.push({ suggestion: s, status: "skipped", reason: out.error });
+      }
+    } else {
+      const audience = s.candidates.map(c => c.employeeId);
+      const out = await autoBroadcast({
+        companyId, shiftId: s.shiftId, shiftTitle: s.shiftTitle,
+        startsInMinutes: s.startsInMinutes, employeeIds: audience,
+      });
+      if (out.ok) {
+        if (logId) await markDispatchLog(logId, {
+          status: "executed",
+          executedAssignments: { mode: "auto_broadcast", employeeIds: audience },
+          outcome: `AUTO: broadcast a ${out.sent} workers`,
+        });
+        results.push({
+          suggestion: s, status: "executed", action: "auto_broadcast",
+          notifiedEmployeeIds: audience,
+        });
+        budget--;
+      } else {
+        if (logId) await markDispatchLog(logId, {
+          status: "dismissed",
+          outcome: `AUTO_FAIL: ${out.error}`,
+        });
+        results.push({ suggestion: s, status: "skipped", reason: out.error });
+      }
+    }
+  }
+
+  return results;
+}
+
+// ─── Recent log read (for AutoDispatchLog UI) ────────────────────────────
+
+export interface DispatchLogEntry {
+  id: string;
+  actionType: DispatchActionType;
+  status: DispatchStatus;
+  shiftId: string | null;
+  zone: string | null;
+  confidence: number;
+  reason: string | null;
+  outcome: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  isAuto: boolean;
+}
+
+export async function loadRecentDispatchLogs(
+  companyId: string, opts?: { limit?: number },
+): Promise<DispatchLogEntry[]> {
+  if (!companyId) return [];
+  const { data } = await supabase
+    .from("dispatch_logs")
+    .select("id, action_type, status, shift_id, zone, confidence, reason, outcome, decided_at, created_at")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false })
+    .limit(opts?.limit ?? 20);
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    actionType: r.action_type,
+    status: r.status,
+    shiftId: r.shift_id,
+    zone: r.zone,
+    confidence: Number(r.confidence ?? 0),
+    reason: r.reason,
+    outcome: r.outcome,
+    decidedAt: r.decided_at,
+    createdAt: r.created_at,
+    isAuto: typeof r.outcome === "string" && r.outcome.startsWith("AUTO:"),
+  }));
+}
