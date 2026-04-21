@@ -32,6 +32,7 @@ import { OpsLiveMapPanel } from "@/components/operations/OpsLiveMapPanel";
 import { OpsAlertsBar, type OpsAlertActionEvent } from "@/components/operations/OpsAlertsBar";
 import { OpsWorkforcePanel } from "@/components/operations/OpsWorkforcePanel";
 import { OpsBroadcastDialog, type BroadcastIntent } from "@/components/operations/OpsBroadcastDialog";
+import { AutoDispatchPanel } from "@/components/operations/AutoDispatchPanel";
 import { PostShiftRatingDialog, type PostShiftRatingMode } from "@/components/operations/PostShiftRatingDialog";
 
 // ─── Types ───
@@ -621,7 +622,36 @@ export default function OperationsCommandCenter() {
             </div>
           )}
 
-          {/* ─── D. Workforce Intelligence Panel (read-only) ─── */}
+          {/* ─── D. Smart Dispatch (suggestions only — admin still confirms) ─── */}
+          {selectedCompanyId && (
+            <div className="mt-4">
+              <AutoDispatchPanel
+                companyId={selectedCompanyId}
+                onExecuteReplace={(shiftId, shiftTitle) => {
+                  // Reuse existing replacement dialog — never auto-assigns
+                  const shift = shifts.find(s => s.id === shiftId);
+                  setReplaceTarget({
+                    shiftId,
+                    shiftTitle,
+                    shiftDate: shift?.date ?? dateStr,
+                    startTime: shift?.start_time ?? "",
+                    endTime: shift?.end_time ?? "",
+                    excludeIds: [],
+                  });
+                }}
+                onExecuteBroadcast={(shiftId, employeeIds, zone) => {
+                  setBroadcastTarget({
+                    intent: "shift_understaffed",
+                    shiftIds: [shiftId],
+                    employeeIds,
+                    zone: zone ?? undefined,
+                  });
+                }}
+              />
+            </div>
+          )}
+
+          {/* ─── E. Workforce Intelligence Panel (read-only) ─── */}
           {selectedCompanyId && (
             <div className="mt-4">
               <OpsWorkforcePanel companyId={selectedCompanyId} />
