@@ -117,6 +117,31 @@ export default function ShiftLiveMapPanel({
 
       {loading ? (
         <div className="h-64 rounded-xl border bg-muted/30 animate-pulse" />
+      ) : !targetSite ? (
+        // ─── Premium empty state — no structured venue ───
+        <div className="rounded-2xl border border-dashed bg-gradient-to-br from-muted/40 to-background px-5 py-8 flex flex-col items-center justify-center text-center gap-3 min-h-[240px]">
+          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+            <MapPinOff className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="space-y-1 max-w-sm">
+            <div className="text-sm font-semibold">No structured job site yet</div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              The live map needs a job site (or meeting point) with coordinates so workers can be
+              tracked relative to the venue. Set one to unlock real-time presence, geofencing and
+              arrival events.
+            </p>
+          </div>
+          {canEdit && onSetJobSite ? (
+            <Button size="sm" className="h-8 text-[11px] gap-1.5 mt-1" onClick={onSetJobSite}>
+              <MapPin className="h-3.5 w-3.5" /> Set job site
+              <ArrowRight className="h-3 w-3" />
+            </Button>
+          ) : (
+            <p className="text-[10px] text-muted-foreground italic">
+              Ask an admin to add a structured location.
+            </p>
+          )}
+        </div>
       ) : (
         <LiveMapCanvas
           workers={workers}
