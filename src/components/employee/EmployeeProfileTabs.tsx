@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EmployeeAvailabilitySection } from "@/components/EmployeeAvailabilitySection";
 import { formatPersonName, formatDisplayText } from "@/lib/format-helpers";
 import { format, parseISO, formatDistanceToNow, isValid } from "date-fns";
+import { openEmployeeDocument } from "@/lib/employee-documents";
 
 /** Safe date formatter — returns fallback on invalid/missing values */
 function safeFormat(dateStr: string | null | undefined, fmt: string, fallback = "—"): string {
