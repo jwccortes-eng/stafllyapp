@@ -31,16 +31,26 @@ import {
 import {
   Sparkles, Zap, Send, ChevronDown, ChevronUp,
   RefreshCw, CheckCircle2, X, Eye, AlertTriangle, Loader2, Clock, MapPin,
+  Settings2, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompanyConfig } from "@/hooks/useCompanyConfig";
 import {
   evaluateDispatchActions,
+  executeAutoDispatch,
   persistSuggestion,
   markDispatchLog,
+  AUTO_DISPATCH_DEFAULTS,
+  AUTO_DISPATCH_SETTINGS_KEY,
+  type AutoDispatchConfig,
+  type AutoDispatchLevel,
   type DispatchSuggestion,
 } from "@/lib/auto-dispatch";
+import { AutoDispatchSettings } from "@/components/operations/AutoDispatchSettings";
+import { AutoDispatchLog } from "@/components/operations/AutoDispatchLog";
 
 interface AutoDispatchPanelProps {
   companyId: string;
@@ -64,22 +74,65 @@ const CONFIDENCE_LABEL: Record<DispatchSuggestion["confidenceBucket"], string> =
 
 const POLL_MS = 60_000;
 
+const LEVEL_BADGE: Record<AutoDispatchLevel, { label: string; cls: string; icon: typeof Sparkles }> = {
+  off:        { label: "Off",        cls: "bg-muted/40 text-muted-foreground border-border",        icon: ShieldCheck },
+  assist:     { label: "Assist",     cls: "bg-info/10 text-info border-info/30",                    icon: Sparkles },
+  semi_auto:  { label: "Semi-auto",  cls: "bg-warning/10 text-warning border-warning/30",           icon: Sparkles },
+  full_auto:  { label: "Full auto",  cls: "bg-earning/10 text-earning border-earning/30",           icon: Zap },
+};
+
 export function AutoDispatchPanel({
   companyId, onExecuteReplace, onExecuteBroadcast,
 }: AutoDispatchPanelProps) {
   const { user } = useAuth();
+  const { config: autoCfg } = useCompanyConfig<AutoDispatchConfig>(
+    AUTO_DISPATCH_SETTINGS_KEY, AUTO_DISPATCH_DEFAULTS,
+  );
   const [suggestions, setSuggestions] = useState<DispatchSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [confirming, setConfirming] = useState<DispatchSuggestion | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [logRefreshKey, setLogRefreshKey] = useState(0);
   // Map suggestion.id → dispatch_logs.id for outcome updates
   const logIdMapRef = useRef<Map<string, string>>(new Map());
 
-  // ─── Load + persist ───────────────────────────────────────────────────
+  const isOff = autoCfg.level === "off";
+  const isFullAuto = autoCfg.level === "full_auto";
+
+  // ─── Load + persist + (optional) auto-execute ─────────────────────────
   const refresh = useCallback(async () => {
-    if (!companyId) return;
+    if (!companyId || isOff) {
+      setSuggestions([]);
+      return;
+    }
     setLoading(true);
     try {
+      // In full_auto mode, run the autonomous loop FIRST. Anything it
+      // executes will already have been logged; the subsequent suggestion
+      // refresh will naturally not include those shifts (coverage moved).
+      if (isFullAuto) {
+        try {
+          const results = await executeAutoDispatch(companyId);
+          const executed = results.filter(r => r.status === "executed");
+          if (executed.length > 0) {
+            setLogRefreshKey(k => k + 1);
+            executed.forEach(r => {
+              toast.success(
+                r.action === "auto_assign" ? "⚡ Auto-asignación" : "⚡ Auto-broadcast",
+                {
+                  description: r.action === "auto_assign"
+                    ? `Asignado a "${r.suggestion.shiftTitle}"`
+                    : `Broadcast enviado a ${r.notifiedEmployeeIds?.length ?? 0} workers`,
+                },
+              );
+            });
+          }
+        } catch (err) {
+          console.warn("[AutoDispatchPanel] auto-execute failed", err);
+        }
+      }
+
       const next = await evaluateDispatchActions(companyId);
       setSuggestions(next);
       // Persist each in background (best-effort, doesn't block UI)
@@ -93,7 +146,7 @@ export function AutoDispatchPanel({
     } finally {
       setLoading(false);
     }
-  }, [companyId]);
+  }, [companyId, isOff, isFullAuto]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -101,6 +154,19 @@ export function AutoDispatchPanel({
     const t = setInterval(refresh, POLL_MS);
     return () => clearInterval(t);
   }, [companyId, refresh]);
+
+  // Realtime: any new dispatch_logs row from this company → refresh log inline
+  useEffect(() => {
+    if (!companyId) return;
+    const ch = supabase
+      .channel(`dispatch_logs:${companyId}`)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "dispatch_logs",
+        filter: `company_id=eq.${companyId}`,
+      }, () => setLogRefreshKey(k => k + 1))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [companyId]);
 
   // Auto-expand when new suggestions arrive
   useEffect(() => {
@@ -161,7 +227,9 @@ export function AutoDispatchPanel({
 
   // ─── Render ───────────────────────────────────────────────────────────
   const headerCount = suggestions.length;
-  const showCollapsed = collapsed || headerCount === 0;
+  const showCollapsed = collapsed || (headerCount === 0 && isOff);
+  const levelMeta = LEVEL_BADGE[autoCfg.level];
+  const LevelIcon = levelMeta.icon;
 
   return (
     <>
@@ -171,11 +239,15 @@ export function AutoDispatchPanel({
           onClick={() => setCollapsed(c => !c)}
         >
           <div className="flex items-center justify-between gap-3">
-            <CardTitle className="text-sm flex items-center gap-2">
+            <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
               <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
               </div>
               Smart Dispatch
+              <Badge className={cn("text-[9px] h-5 px-1.5 border gap-1", levelMeta.cls)}>
+                <LevelIcon className="h-2.5 w-2.5" />
+                {levelMeta.label}
+              </Badge>
               {headerCount > 0 && (
                 <Badge className="bg-primary text-primary-foreground border-0 text-[10px] h-5 px-1.5">
                   {headerCount}
@@ -186,8 +258,16 @@ export function AutoDispatchPanel({
             <div className="flex items-center gap-1">
               <Button
                 size="sm" variant="ghost" className="h-7 w-7 p-0"
+                onClick={(e) => { e.stopPropagation(); setSettingsOpen(true); }}
+                title="Configurar autonomía"
+              >
+                <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+              <Button
+                size="sm" variant="ghost" className="h-7 w-7 p-0"
                 onClick={(e) => { e.stopPropagation(); refresh(); }}
                 title="Actualizar"
+                disabled={isOff}
               >
                 <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground", loading && "animate-spin")} />
               </Button>
@@ -199,8 +279,16 @@ export function AutoDispatchPanel({
         </CardHeader>
 
         {!showCollapsed && (
-          <CardContent className="pt-0 space-y-2">
-            {headerCount === 0 ? (
+          <CardContent className="pt-0 space-y-2.5">
+            {isOff ? (
+              <div className="text-center py-5 text-xs text-muted-foreground space-y-2">
+                <ShieldCheck className="h-5 w-5 mx-auto text-muted-foreground/50" />
+                <p>Smart Dispatch desactivado.</p>
+                <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setSettingsOpen(true)}>
+                  Activar
+                </Button>
+              </div>
+            ) : headerCount === 0 ? (
               <div className="text-center py-5 text-xs text-muted-foreground">
                 <CheckCircle2 className="h-5 w-5 mx-auto mb-1 text-earning" />
                 Sin acciones recomendadas. Todo bajo control.
@@ -215,9 +303,15 @@ export function AutoDispatchPanel({
                 />
               ))
             )}
+
+            {!isOff && (
+              <AutoDispatchLog companyId={companyId} refreshKey={logRefreshKey} />
+            )}
           </CardContent>
         )}
       </Card>
+
+      <AutoDispatchSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
 
       {/* Confirm modal — last-mile human gate */}
       <Dialog open={!!confirming} onOpenChange={(o) => { if (!o) setConfirming(null); }}>
