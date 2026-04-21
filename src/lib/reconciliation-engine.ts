@@ -570,7 +570,23 @@ const RIDE_SPECIAL = 160;
 // Known manual-adjustment keywords in notes/job fields
 const MANUAL_KEYWORDS = /\b(bonus|tip|propina|ajuste|manual|reimburs|reintegro|descuento|deduccion)\b/i;
 
-export function classifyPayrollRow(row: Record<string, any>): PayrollClassification {
+/**
+ * Subset of an employee's active compensation profile used by the
+ * reconciliation engine to classify payroll rows. Kept intentionally
+ * narrow so the engine stays decoupled from the full DB shape.
+ */
+export interface EmployeeCompensation {
+  daily_rate?: number | null;
+  half_day_rate?: number | null;
+  hourly_rate?: number | null;
+  ride_rate_regular?: number | null;
+  ride_rate_special?: number | null;
+}
+
+export function classifyPayrollRow(
+  row: Record<string, any>,
+  compensation?: EmployeeCompensation | null,
+): PayrollClassification {
   const totalPay = parseFloat(row["Total pay"] || row["total_pay"] || row["TotalPay"] || "0") || 0;
   const totalHours = parseFloat(row["Total hours"] || row["total_hours"] || row["TotalHours"] || "0") || 0;
   const jobTitle = normalizeText(row["Job title"] || row["job_title"] || row["Job"] || "");
@@ -630,19 +646,24 @@ export function classifyPayrollRow(row: Record<string, any>): PayrollClassificat
     }
   }
 
-  // 4. Daily pay detection (exact or decomposable amounts)
- // 4. Daily detection (NEW)
-if (totalHours === 0 && totalPay > 0) {
-  return {
-    pay_type: "daily",
-    base_pay: totalPay,
-    ride_amount: 0,
-    weekend_amount: 0,
-    manual_amount: 0,
-    confidence: 80,
-    notes: "Daily pay inferred (using compensation or fallback totalPay)"
-  };
-}
+  // 4. Daily pay detection — prefer employee compensation, fallback to totalPay
+  if (totalHours === 0 && totalPay > 0) {
+    const dailyRate = compensation?.daily_rate ?? null;
+    const usedRate = dailyRate != null && dailyRate > 0 ? dailyRate : totalPay;
+    const source = dailyRate != null && dailyRate > 0
+      ? `compensation.daily_rate ($${dailyRate})`
+      : `fallback totalPay ($${totalPay})`;
+
+    return {
+      pay_type: "daily",
+      base_pay: usedRate,
+      ride_amount: 0,
+      weekend_amount: 0,
+      manual_amount: 0,
+      confidence: dailyRate != null && dailyRate > 0 ? 90 : 75,
+      notes: `Daily pay inferred from ${source}`,
+    };
+  }
 
   // 5. Only classify as manual_adjustment if keywords confirm it
   if (totalPay > 0 && totalHours === 0 && MANUAL_KEYWORDS.test(notesField + " " + jobTitle + " " + shiftTitle)) {
