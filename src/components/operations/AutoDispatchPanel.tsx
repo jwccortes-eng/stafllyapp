@@ -31,16 +31,26 @@ import {
 import {
   Sparkles, Zap, Send, ChevronDown, ChevronUp,
   RefreshCw, CheckCircle2, X, Eye, AlertTriangle, Loader2, Clock, MapPin,
+  Settings2, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompanyConfig } from "@/hooks/useCompanyConfig";
 import {
   evaluateDispatchActions,
+  executeAutoDispatch,
   persistSuggestion,
   markDispatchLog,
+  AUTO_DISPATCH_DEFAULTS,
+  AUTO_DISPATCH_SETTINGS_KEY,
+  type AutoDispatchConfig,
+  type AutoDispatchLevel,
   type DispatchSuggestion,
 } from "@/lib/auto-dispatch";
+import { AutoDispatchSettings } from "@/components/operations/AutoDispatchSettings";
+import { AutoDispatchLog } from "@/components/operations/AutoDispatchLog";
 
 interface AutoDispatchPanelProps {
   companyId: string;
@@ -64,22 +74,65 @@ const CONFIDENCE_LABEL: Record<DispatchSuggestion["confidenceBucket"], string> =
 
 const POLL_MS = 60_000;
 
+const LEVEL_BADGE: Record<AutoDispatchLevel, { label: string; cls: string; icon: typeof Sparkles }> = {
+  off:        { label: "Off",        cls: "bg-muted/40 text-muted-foreground border-border",        icon: ShieldCheck },
+  assist:     { label: "Assist",     cls: "bg-info/10 text-info border-info/30",                    icon: Sparkles },
+  semi_auto:  { label: "Semi-auto",  cls: "bg-warning/10 text-warning border-warning/30",           icon: Sparkles },
+  full_auto:  { label: "Full auto",  cls: "bg-earning/10 text-earning border-earning/30",           icon: Zap },
+};
+
 export function AutoDispatchPanel({
   companyId, onExecuteReplace, onExecuteBroadcast,
 }: AutoDispatchPanelProps) {
   const { user } = useAuth();
+  const { config: autoCfg } = useCompanyConfig<AutoDispatchConfig>(
+    AUTO_DISPATCH_SETTINGS_KEY, AUTO_DISPATCH_DEFAULTS,
+  );
   const [suggestions, setSuggestions] = useState<DispatchSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [confirming, setConfirming] = useState<DispatchSuggestion | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [logRefreshKey, setLogRefreshKey] = useState(0);
   // Map suggestion.id → dispatch_logs.id for outcome updates
   const logIdMapRef = useRef<Map<string, string>>(new Map());
 
-  // ─── Load + persist ───────────────────────────────────────────────────
+  const isOff = autoCfg.level === "off";
+  const isFullAuto = autoCfg.level === "full_auto";
+
+  // ─── Load + persist + (optional) auto-execute ─────────────────────────
   const refresh = useCallback(async () => {
-    if (!companyId) return;
+    if (!companyId || isOff) {
+      setSuggestions([]);
+      return;
+    }
     setLoading(true);
     try {
+      // In full_auto mode, run the autonomous loop FIRST. Anything it
+      // executes will already have been logged; the subsequent suggestion
+      // refresh will naturally not include those shifts (coverage moved).
+      if (isFullAuto) {
+        try {
+          const results = await executeAutoDispatch(companyId);
+          const executed = results.filter(r => r.status === "executed");
+          if (executed.length > 0) {
+            setLogRefreshKey(k => k + 1);
+            executed.forEach(r => {
+              toast.success(
+                r.action === "auto_assign" ? "⚡ Auto-asignación" : "⚡ Auto-broadcast",
+                {
+                  description: r.action === "auto_assign"
+                    ? `Asignado a "${r.suggestion.shiftTitle}"`
+                    : `Broadcast enviado a ${r.notifiedEmployeeIds?.length ?? 0} workers`,
+                },
+              );
+            });
+          }
+        } catch (err) {
+          console.warn("[AutoDispatchPanel] auto-execute failed", err);
+        }
+      }
+
       const next = await evaluateDispatchActions(companyId);
       setSuggestions(next);
       // Persist each in background (best-effort, doesn't block UI)
@@ -93,7 +146,7 @@ export function AutoDispatchPanel({
     } finally {
       setLoading(false);
     }
-  }, [companyId]);
+  }, [companyId, isOff, isFullAuto]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -101,6 +154,19 @@ export function AutoDispatchPanel({
     const t = setInterval(refresh, POLL_MS);
     return () => clearInterval(t);
   }, [companyId, refresh]);
+
+  // Realtime: any new dispatch_logs row from this company → refresh log inline
+  useEffect(() => {
+    if (!companyId) return;
+    const ch = supabase
+      .channel(`dispatch_logs:${companyId}`)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "dispatch_logs",
+        filter: `company_id=eq.${companyId}`,
+      }, () => setLogRefreshKey(k => k + 1))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [companyId]);
 
   // Auto-expand when new suggestions arrive
   useEffect(() => {
