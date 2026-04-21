@@ -56,6 +56,9 @@ const COMPANY_LINKS: LinkDef[] = [
   { to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll" },
   { to: "/app/summary", icon: FileSpreadsheet, label: "Reports", module: "summary", section: "Payroll" },
 
+  // INVOICING — tenant billing to their own clients
+  { to: "/app/invoicing/clients", icon: Receipt, label: "Billing Clients", module: "tenant_invoicing", section: "Invoicing", badge: "new" },
+
   // MORE — communication, monitoring & config
   { to: "/app/announcements", icon: Megaphone, label: "Announcements", module: "announcements", section: "More" },
   { to: "/app/chat", icon: MessageCircle, label: "Chat", module: null, section: "More" },
@@ -78,7 +81,7 @@ const GLOBAL_LINKS: LinkDef[] = [
   { to: "/app/system-health", icon: BarChart3, label: "System", module: null, section: "Tools" },
 ];
 
-const COMPANY_SECTION_ORDER = ["Main", "Payroll", "More"];
+const COMPANY_SECTION_ORDER = ["Main", "Payroll", "Invoicing", "More"];
 const GLOBAL_SECTION_ORDER = ["Platform", "Tools"];
 
 export default function AdminSidebar() {

@@ -114,6 +114,7 @@ const CompensationAdoption = lazy(() => import("./pages/admin/CompensationAdopti
 const Applications = lazy(() => import("./pages/admin/Applications"));
 const ApplicationSettings = lazy(() => import("./pages/admin/ApplicationSettings"));
 const UpgradeRequests = lazy(() => import("./pages/admin/UpgradeRequests"));
+const InvoicingClients = lazy(() => import("./pages/admin/InvoicingClients"));
 const Apply = lazy(() => import("./pages/Apply"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));
@@ -286,6 +287,7 @@ function App() {
                 <Route path="applications" element={<CompanyRequiredGuard><Applications /></CompanyRequiredGuard>} />
                 <Route path="application-settings" element={<CompanyRequiredGuard><ApplicationSettings /></CompanyRequiredGuard>} />
                 <Route path="upgrade-requests" element={<UpgradeRequests />} />
+                <Route path="invoicing/clients" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClients /></ModuleGate></CompanyRequiredGuard>} />
               </Route>
 
               {/* Employee portal routes */}
