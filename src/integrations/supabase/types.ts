@@ -2132,6 +2132,82 @@ export type Database = {
         }
         Relationships: []
       }
+      dispatch_logs: {
+        Row: {
+          action_type: string
+          candidates_json: Json
+          company_id: string
+          confidence: number
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          executed_assignments: Json | null
+          id: string
+          outcome: string | null
+          reason: string | null
+          shift_id: string | null
+          status: string
+          updated_at: string
+          zone: string | null
+        }
+        Insert: {
+          action_type: string
+          candidates_json?: Json
+          company_id: string
+          confidence: number
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          executed_assignments?: Json | null
+          id?: string
+          outcome?: string | null
+          reason?: string | null
+          shift_id?: string | null
+          status?: string
+          updated_at?: string
+          zone?: string | null
+        }
+        Update: {
+          action_type?: string
+          candidates_json?: Json
+          company_id?: string
+          confidence?: number
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          executed_assignments?: Json | null
+          id?: string
+          outcome?: string | null
+          reason?: string | null
+          shift_id?: string | null
+          status?: string
+          updated_at?: string
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatch_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispatch_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispatch_logs_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
