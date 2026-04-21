@@ -217,27 +217,52 @@ export default function PortalClock() {
   };
 
   const handleQrScanned = async (data: string) => {
-    setQrScannerOpen(false);
-    if (!employeeId || !companyId) return;
-    const parts = data.split(":");
-    if (parts.length !== 4 || parts[0] !== "stafly" || parts[1] !== "shift") {
-      toast({ title: "Invalid QR", description: "This code does not correspond to a shift.", variant: "destructive" }); return;
+    if (!employeeId || !companyId) {
+      return { kind: "error" as const, title: "Sesión no disponible", description: "Inicia sesión nuevamente." };
     }
-    const [, , scannedShiftId, scannedToken] = parts;
-    const { data: shiftData } = await supabase.from("scheduled_shifts")
-      .select("id, title, qr_token, qr_attendance_mode, start_time, end_time, date").eq("id", scannedShiftId).maybeSingle();
-    if (!shiftData) { toast({ title: "Shift not found", variant: "destructive" }); return; }
-    if (shiftData.qr_token !== scannedToken) { toast({ title: "Expired or invalid QR", description: "Ask your supervisor for a new code.", variant: "destructive" }); return; }
-    const { data: assignment } = await supabase.from("shift_assignments")
-      .select("id, status").eq("shift_id", scannedShiftId).eq("employee_id", employeeId).not("status", "in", "(removed,rejected)").maybeSingle();
-    if (!assignment) { toast({ title: "You're not assigned to this shift", variant: "destructive" }); return; }
-    const matchingShift = todayShifts.find(s => s.id === scannedShiftId);
+    // Delegate validation + audit logging to the edge function.
+    const { data: result, error } = await supabase.functions.invoke("attendance-qr-resolve", {
+      body: { qr: data, employee_id: employeeId },
+    });
+
+    if (error || !result || result.outcome === "internal_error") {
+      return {
+        kind: "error" as const,
+        title: "No pudimos validar el código",
+        description: error?.message ?? result?.message ?? "Intenta de nuevo en unos segundos.",
+      };
+    }
+
+    if (result.outcome !== "ok_clock_in" && result.outcome !== "ok_clock_out") {
+      const titles: Record<string, string> = {
+        invalid_payload: "Código inválido",
+        shift_not_found: "Turno no encontrado",
+        token_mismatch: "QR expirado",
+        qr_disabled: "QR deshabilitado",
+        not_assigned: "No estás asignado",
+        out_of_window: "Fuera de horario",
+        already_clocked_in_elsewhere: "Tienes un turno activo",
+      };
+      return {
+        kind: "error" as const,
+        title: titles[result.outcome] ?? "No se pudo procesar",
+        description: result.message,
+      };
+    }
+
+    // Success path: trigger clock-in/out flow
+    const matchingShift = todayShifts.find(s => s.id === result.shift_id);
     if (matchingShift) setSelectedShift(matchingShift);
-    if (activeEntry && activeEntry.shift_id === scannedShiftId) { initiateClockOut(); }
-    else if (!activeEntry) {
-      if (matchingShift) setTimeout(() => initiateClockIn(), 100);
-      else toast({ title: "This shift is not for today", variant: "destructive" });
-    } else { toast({ title: "You have an active shift", description: "Clock out first.", variant: "destructive" }); }
+
+    if (result.outcome === "ok_clock_out") {
+      setTimeout(() => initiateClockOut(), 200);
+      return { kind: "success" as const, title: "Listo para fichar salida", description: result.shift?.title };
+    }
+    if (matchingShift) {
+      setTimeout(() => initiateClockIn(), 200);
+      return { kind: "success" as const, title: "Listo para fichar entrada", description: matchingShift.title };
+    }
+    return { kind: "error" as const, title: "Turno no programado para hoy" };
   };
 
   const handleClockIn = async (photoUrl: string | null) => {

@@ -13111,6 +13111,10 @@ export type Database = {
       }
       expire_old_invitations: { Args: never; Returns: number }
       generate_shift_link_token: { Args: never; Returns: string }
+      generate_shift_review_requests: {
+        Args: { _shift_id: string }
+        Returns: number
+      }
       get_company_by_invite_code: {
         Args: { _invite_code: string }
         Returns: {
@@ -13212,6 +13216,14 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      pick_workers_to_rate: {
+        Args: { _shift_id: string }
+        Returns: {
+          employee_id: string
+          priority: number
+          sampling_reason: string
+        }[]
       }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
