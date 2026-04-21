@@ -187,6 +187,7 @@ export function ShiftFormFields({
   onQrUpdate,
   showEmployeePicker = false,
   adminError,
+  companyId = null,
 }: ShiftFormFieldsProps) {
   // Local UI state (popovers + quick-add inline forms)
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -483,9 +484,25 @@ export function ShiftFormFields({
             className="h-9 text-sm mt-1"
           />
           <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-            Se prefillea desde el cliente pero puedes cambiarla.
+            Texto libre — fallback rápido. Para precisión operativa, usa las ubicaciones premium debajo.
           </p>
         </div>
+
+        {/* Premium structured locations (Phase 1B) */}
+        {companyId && (
+          <ShiftLocationsSection
+            companyId={companyId}
+            meetingPointLocationId={v.meetingPointLocationId}
+            jobSiteLocationId={v.jobSiteLocationId}
+            onChange={(patch) => {
+              const next: Partial<ShiftFormState> = {};
+              if (patch.meetingPointLocationId !== undefined) next.meetingPointLocationId = patch.meetingPointLocationId;
+              if (patch.jobSiteLocationId !== undefined) next.jobSiteLocationId = patch.jobSiteLocationId;
+              if (patch.meetingPointText !== undefined && patch.meetingPointText) next.meetingPoint = patch.meetingPointText;
+              onChange(next);
+            }}
+          />
+        )}
       </SectionCard>
 
       {/* ── Payment ── */}
