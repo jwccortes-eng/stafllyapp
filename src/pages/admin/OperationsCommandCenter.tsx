@@ -107,6 +107,9 @@ export default function OperationsCommandCenter() {
   const [broadcastTarget, setBroadcastTarget] = useState<{
     intent: BroadcastIntent; shiftIds: string[]; employeeIds?: string[]; zone?: string;
   } | null>(null);
+  const [ratingTarget, setRatingTarget] = useState<{
+    shiftId: string; shiftTitle: string; mode: PostShiftRatingMode;
+  } | null>(null);
   const [activeSection, setActiveSection] = useState("alerts");
   const [activeTab, setActiveTab] = useState<"ops" | "map">("ops");
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
@@ -703,6 +706,20 @@ export default function OperationsCommandCenter() {
                 {selectedShift && (
                   <Button size="sm" className="w-full gap-2 text-xs" onClick={() => openReplace(selectedShift)}>
                     <UserPlus className="h-3.5 w-3.5" /> Buscar reemplazo
+                  </Button>
+                )}
+                {selectedShift && (
+                  <Button
+                    size="sm" variant="secondary"
+                    className="w-full gap-2 text-xs"
+                    onClick={() => setRatingTarget({
+                      shiftId: selectedShift.id,
+                      shiftTitle: selectedShift.title,
+                      // Auto sampling when shift is completed; manual otherwise
+                      mode: selectedShift.status === "completed" ? "auto" : "manual",
+                    })}
+                  >
+                    <Star className="h-3.5 w-3.5" /> Calificar trabajadores
                   </Button>
                 )}
                 <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => { setSelectedShiftId(null); navigate(`/app/shift-ops?id=${selectedShiftId}`); }}>
