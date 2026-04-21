@@ -168,9 +168,14 @@ function VehicleDocumentsSection({ employeeId }: { employeeId: string }) {
                        doc.status}
                     </Badge>
                     {doc.file_url && (
-                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                      <button
+                        type="button"
+                        onClick={() => openEmployeeDocument(doc.file_url)}
+                        className="text-primary hover:text-primary/80"
+                        title="Open document"
+                      >
                         <ExternalLink className="h-3 w-3" />
-                      </a>
+                      </button>
                     )}
                   </div>
                 ) : (
@@ -369,14 +374,18 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
       const path = `${companyId}/${employee.id}/${Date.now()}_${file.name}`;
       const { error: uploadError } = await supabase.storage.from("employee-documents").upload(path, file);
       if (uploadError) { toast({ title: "Error", description: uploadError.message, variant: "destructive" }); continue; }
-      const { data: urlData } = supabase.storage.from("employee-documents").getPublicUrl(path);
-      await (supabase.from("employee_documents" as any) as any).insert({ employee_id: employee.id, company_id: companyId, name: file.name, file_url: urlData.publicUrl, file_type: file.type, file_size: file.size, category: "other" });
+      // Store the storage path (bucket is private; we sign on read).
+      await (supabase.from("employee_documents" as any) as any).insert({ employee_id: employee.id, company_id: companyId, name: file.name, file_url: path, file_type: file.type, file_size: file.size, category: "other" });
     }
     setUploading(false); if (fileRef.current) fileRef.current.value = ""; fetchDocs(); toast({ title: "Documentos subidos" });
   };
   const handleDelete = async (doc: any) => {
-    const path = `${companyId}/${employee.id}/${doc.file_url.split("/").pop()}`;
-    await supabase.storage.from("employee-documents").remove([path]);
+    // Recover the storage path whether the row stores a path or a legacy public URL.
+    const raw: string = doc.file_url ?? "";
+    const marker = "/storage/v1/object/public/employee-documents/";
+    const idx = raw.indexOf(marker);
+    const path = idx !== -1 ? raw.slice(idx + marker.length) : raw;
+    if (path) await supabase.storage.from("employee-documents").remove([path]);
     await (supabase.from("employee_documents" as any) as any).delete().eq("id", doc.id);
     fetchDocs();
   };
@@ -393,7 +402,7 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
           {docs.map((doc: any) => (
             <Card key={doc.id} className="rounded-lg border-border/30"><CardContent className="p-2.5 flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0"><FileText className="h-3.5 w-3.5 text-primary/50 shrink-0" /><div className="min-w-0"><p className="text-[11px] font-medium truncate">{doc.name}</p><p className="text-[9px] text-muted-foreground">{doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : ""}{doc.created_at && ` · ${safeFormat(doc.created_at, "dd MMM yyyy")}`}</p></div></div>
-              <div className="flex items-center gap-0.5"><Button size="icon" variant="ghost" className="h-6 w-6" asChild><a href={doc.file_url} target="_blank" rel="noopener noreferrer"><Download className="h-2.5 w-2.5" /></a></Button><Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button></div>
+              <div className="flex items-center gap-0.5"><Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEmployeeDocument(doc.file_url)}><Download className="h-2.5 w-2.5" /></Button><Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button></div>
             </CardContent></Card>
           ))}
         </div>
