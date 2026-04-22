@@ -680,7 +680,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                             }
                           </p>
                           {isFailed && (
-                            <Button variant="outline" size="sm" className="h-7 text-[10px] mt-1 gap-1" onClick={() => { setEmailSent(false); setLastError(null); }}>
+                            <Button variant="outline" size="sm" className="h-7 text-[10px] mt-1 gap-1" onClick={() => { setInviteStatus("created"); setLastError(null); }}>
                               <RefreshCw className="h-3 w-3" /> Reintentar
                             </Button>
                           )}
