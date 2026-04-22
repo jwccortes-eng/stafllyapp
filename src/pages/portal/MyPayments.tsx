@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { getLocalToday } from "@/lib/pay-period-helpers";
 
 // ============================================================================
 // Types
@@ -269,8 +270,12 @@ export default function MyPayments() {
       }
       setCompanyId(empData.company_id);
 
-      // 2. Find the most recent (current/open) period for this company
-      const today = new Date().toISOString().slice(0, 10);
+      // 2. Selection priority for "current period":
+      //    a) Period containing today (real today, local TZ)
+      //    b) If empty of activity, use most recent period with real time_entries for this worker
+      //    c) Fallback: most recent period overall
+      const today = getLocalToday();
+
       const { data: openPeriod } = await supabase
         .from("pay_periods")
         .select("id, start_date, end_date, status, published_at, paid_at")
@@ -281,10 +286,48 @@ export default function MyPayments() {
         .limit(1)
         .maybeSingle();
 
-      // Fallback: most recent period if no period contains today
       let activePeriod: PeriodInfo | null = openPeriod
         ? (openPeriod as PeriodInfo)
         : null;
+
+      // If today's period has zero real activity for this worker, prefer the
+      // most recent period where they actually clocked in. This keeps the UI
+      // useful when a worker hasn't worked yet this week.
+      if (activePeriod) {
+        const { count: activityCount } = await supabase
+          .from("time_entries")
+          .select("id", { count: "exact", head: true })
+          .eq("employee_id", effectiveEmployeeId!)
+          .eq("company_id", empData.company_id)
+          .gte("clock_in", `${activePeriod.start_date}T00:00:00`)
+          .lte("clock_in", `${activePeriod.end_date}T23:59:59`)
+          .in("status", ["approved", "pending"]);
+
+        if (!activityCount || activityCount === 0) {
+          // Find the most recent period with real activity
+          const { data: lastEntry } = await supabase
+            .from("time_entries")
+            .select("clock_in")
+            .eq("employee_id", effectiveEmployeeId!)
+            .eq("company_id", empData.company_id)
+            .in("status", ["approved", "pending"])
+            .order("clock_in", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (lastEntry?.clock_in) {
+            const lastDate = String(lastEntry.clock_in).slice(0, 10);
+            const { data: activityPeriod } = await supabase
+              .from("pay_periods")
+              .select("id, start_date, end_date, status, published_at, paid_at")
+              .eq("company_id", empData.company_id)
+              .lte("start_date", lastDate)
+              .gte("end_date", lastDate)
+              .maybeSingle();
+            if (activityPeriod) activePeriod = activityPeriod as PeriodInfo;
+          }
+        }
+      }
 
       if (!activePeriod) {
         const { data: latest } = await supabase
@@ -546,6 +589,13 @@ export default function MyPayments() {
     };
   }, [currentShifts, currentMovements, currentBasePay]);
 
+  // Detect "this week has no activity, showing previous week with work"
+  const isViewingPastWithActivity = useMemo(() => {
+    if (!currentPeriod) return false;
+    const today = getLocalToday();
+    return currentPeriod.end_date < today;
+  }, [currentPeriod]);
+
   const periodStatus: PeriodStatus | null = currentPeriod ? deriveStatus(currentPeriod) : null;
 
   // ----- Loading state -----
@@ -576,7 +626,7 @@ export default function MyPayments() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-                Current Period
+                {isViewingPastWithActivity ? "Last Period with Activity" : "Current Period"}
               </p>
               <p className="text-[12px] text-foreground/80 mt-0.5 font-semibold tabular-nums">
                 {formatPeriodLabel(currentPeriod.start_date, currentPeriod.end_date)}
