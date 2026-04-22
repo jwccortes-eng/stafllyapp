@@ -459,7 +459,8 @@ export default function MyPayments() {
         const row = rowMap.get(m.period_id)!;
         const bucket = classifyMovement(m.concepts?.name ?? "", m.concepts?.category ?? "extra");
         const v = Number(m.total_value) || 0;
-        if (bucket === "tips") row.tips_total += v;
+        if (bucket === "base") row.base_total_pay += v;
+        else if (bucket === "tips") row.tips_total += v;
         else if (bucket === "ride") row.ride_total += v;
         else if (bucket === "reimbursement") row.reimbursements_total += v;
         else if (bucket === "deduction") row.deductions_total += v;
@@ -495,6 +496,7 @@ export default function MyPayments() {
     const completedShifts = currentShifts.filter((s) => !s.is_open).length;
     const openShifts = currentShifts.filter((s) => s.is_open).length;
 
+    let baseFromMovements = 0;
     let tips = 0;
     let ride = 0;
     let reimbursements = 0;
@@ -502,17 +504,26 @@ export default function MyPayments() {
     let deductions = 0;
 
     currentMovements.forEach((m) => {
-      if (m.bucket === "tips") tips += m.total_value;
+      if (m.bucket === "base") baseFromMovements += m.total_value;
+      else if (m.bucket === "tips") tips += m.total_value;
       else if (m.bucket === "ride") ride += m.total_value;
       else if (m.bucket === "reimbursement") reimbursements += m.total_value;
       else if (m.bucket === "deduction") deductions += m.total_value;
       else otherExtras += m.total_value;
     });
 
-    // Base pay: prefer official period_base_pay if present (already includes OT calc),
-    // otherwise estimate from real shift totals.
+    // Base pay priority:
+    //   1. Official `period_base_pay` (set when payroll closes).
+    //   2. Real clocked hours × rate (live estimate).
+    //   3. Movement-based base (Connecteam-style "Weekend Job", "Daily Pay", etc.).
+    //
+    // We add the movement base to the live estimate so that workers paid
+    // *partly* by hours and *partly* by jornadas see the full picture.
     const estimatedBase = currentShifts.reduce((s, sh) => s + sh.shift_total, 0);
-    const base = currentBasePay !== null ? currentBasePay : estimatedBase;
+    const base =
+      currentBasePay !== null
+        ? currentBasePay
+        : estimatedBase + baseFromMovements;
 
     const total = base + tips + ride + reimbursements + otherExtras - deductions;
 
@@ -521,6 +532,8 @@ export default function MyPayments() {
       completedShifts,
       openShifts,
       base,
+      baseFromMovements,
+      baseFromHours: estimatedBase,
       tips,
       ride,
       reimbursements,
@@ -528,6 +541,8 @@ export default function MyPayments() {
       deductions,
       total,
       basePayConfirmed: currentBasePay !== null,
+      hasAnyEarnings:
+        base > 0 || tips > 0 || ride > 0 || reimbursements > 0 || otherExtras > 0,
     };
   }, [currentShifts, currentMovements, currentBasePay]);
 
