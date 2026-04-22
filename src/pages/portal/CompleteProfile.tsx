@@ -459,9 +459,13 @@ export default function CompleteProfile() {
               </li>
             ))}
           </ul>
-          <p className="text-[10.5px] text-muted-foreground/70 mt-3">
-            Documents are added by your team admin. Reach out to your supervisor.
-          </p>
+          <Button
+            onClick={() => navigate("/portal/documents")}
+            className="w-full h-10 mt-3 text-xs font-bold"
+            size="sm"
+          >
+            Upload documents now
+          </Button>
         </div>
       )}
 
