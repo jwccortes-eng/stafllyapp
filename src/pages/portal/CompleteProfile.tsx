@@ -212,7 +212,8 @@ export default function CompleteProfile() {
 
       if (error) throw error;
 
-      // Trigger recomputes profile_status automatically; refresh local snapshot.
+      // Trigger recomputes profile_status automatically; refresh local snapshot
+      // so the success/incomplete branch below renders against fresh data.
       await readiness.refresh();
       setSuccess(true);
       toast({
@@ -220,8 +221,10 @@ export default function CompleteProfile() {
         description: "Your information has been saved.",
       });
 
-      // Auto-redirect to portal after a short pause.
-      setTimeout(() => navigate("/portal"), 1500);
+      // Send the worker back to their profile page (where the banner lives) so
+      // they see the status change immediately. `replace` avoids a back-button
+      // loop into the wizard. PortalProfile re-fetches via location.key.
+      setTimeout(() => navigate("/portal/profile", { replace: true }), 1200);
     } catch (err: any) {
       toast({
         title: "Could not save",
