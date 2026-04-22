@@ -296,7 +296,12 @@ Deno.serve(async (req) => {
       }
 
       try {
-        if (payload?.run_id && apiKey) {
+        // Prefer Lovable Email API whenever the api key is configured.
+        // For transactional sends without a run_id, the Lovable API creates a
+        // run inline when purpose:"transactional" + idempotency_key are present.
+        // Resend is only used as a last-resort fallback for specific errors,
+        // since Resend is in test mode and only allows sends to the account owner.
+        if (apiKey) {
           try {
             await sendLovableEmail(
               {
@@ -322,11 +327,15 @@ Deno.serve(async (req) => {
             if (!resendApiKey || !canUseResendFallback(providerError)) {
               throw providerError
             }
+            console.warn('Falling back to Resend after Lovable error', {
+              message_id: payload.message_id,
+              error: providerError instanceof Error ? providerError.message : String(providerError),
+            })
             await sendWithResend(payload, resendApiKey)
           }
         } else {
           if (!resendApiKey) {
-            throw new Error('Missing run_id and RESEND_API_KEY is not configured')
+            throw new Error('No email provider configured (LOVABLE_API_KEY and RESEND_API_KEY both missing)')
           }
           await sendWithResend(payload, resendApiKey)
         }

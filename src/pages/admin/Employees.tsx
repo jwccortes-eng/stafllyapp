@@ -526,7 +526,8 @@ export default function Employees() {
   };
 
   const filtered = employees.filter((e) => {
-    const matchesSearch = `${e.first_name} ${e.last_name} ${e.email ?? ""} ${e.phone_number ?? ""}`.toLowerCase().includes(search.toLowerCase());
+    const haystack = `${e.first_name ?? ""} ${e.last_name ?? ""} ${e.email ?? ""} ${e.phone_number ?? ""} ${e.employer_identification ?? ""}`.toLowerCase();
+    const matchesSearch = haystack.includes(search.toLowerCase());
     const matchesStatus = statusTab === "all" ? true
       : statusTab === "active" ? (e.is_active !== false && !!e.user_id)
       : statusTab === "invited" ? (e.is_active !== false && !e.user_id && !!invitations[e.id])
@@ -536,6 +537,15 @@ export default function Employees() {
     const matchesGroup = filterGroup === "all" || e.groups === filterGroup;
     return matchesSearch && matchesStatus && matchesRole && matchesGroup;
   });
+
+  // When the user searches and gets 0 results in the current tab, but there ARE
+  // matches in other tabs, surface that so they don't think the employee is missing.
+  const hiddenBySearch = search && statusTab !== "all"
+    ? employees.filter(e => {
+        const hay = `${e.first_name ?? ""} ${e.last_name ?? ""} ${e.email ?? ""} ${e.phone_number ?? ""} ${e.employer_identification ?? ""}`.toLowerCase();
+        return hay.includes(search.toLowerCase());
+      }).length
+    : 0;
 
   const openDetailSheet = (emp: EmployeeRecord) => {
     setViewEmployee(emp);
@@ -761,7 +771,23 @@ export default function Employees() {
       ) : fetchError ? (
         <ErrorBlock compact onRetry={fetchEmployees} />
       ) : filtered.length === 0 ? (
-        <EmptyState icon={Users} title="No employees" description={search ? "Try a different term" : "Use 'Quick add' to create and optionally invite your first employee"} actionLabel={!search ? "Quick add" : undefined} onAction={!search ? () => setQuickAddOpen(true) : undefined} />
+        <EmptyState
+          icon={Users}
+          title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} en otra pestaña` : "No employees"}
+          description={
+            hiddenBySearch > 0
+              ? `Hay ${hiddenBySearch} empleado${hiddenBySearch === 1 ? "" : "s"} que coincide${hiddenBySearch === 1 ? "" : "n"} con "${search}" pero no está${hiddenBySearch === 1 ? "" : "n"} en la pestaña actual.`
+              : search
+              ? "Try a different term"
+              : "Use 'Quick add' to create and optionally invite your first employee"
+          }
+          actionLabel={hiddenBySearch > 0 ? "Ver en Todos" : (!search ? "Quick add" : undefined)}
+          onAction={
+            hiddenBySearch > 0
+              ? () => setStatusTab("all")
+              : (!search ? () => setQuickAddOpen(true) : undefined)
+          }
+        />
       ) : viewMode === "grid" ? (
         /* ─── Grid View ─── */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
