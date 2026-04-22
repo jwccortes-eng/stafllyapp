@@ -10,6 +10,8 @@ import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { getUserFriendlyError } from "@/lib/error-helpers";
+import { findExistingEmployeeInCompany, describeDuplicateMatch } from "@/lib/employee-duplicates";
+import { normalizePhone } from "@/lib/phone";
 import { UserPlus, ArrowRight, Loader2, CheckCircle2, Phone, Mail, User, KeyRound } from "lucide-react";
 import { EmployeeInviteDialog } from "./EmployeeInviteDialog";
 
@@ -73,58 +75,29 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     setSaving(true);
 
     // Auto-generate PIN from last 4 digits of phone
-    const digits = phone.replace(/\D/g, "");
+    const digits = normalizePhone(phone);
     const autoPin = digits.length >= 4 ? digits.slice(-4) : String(Math.floor(1000 + Math.random() * 9000));
 
     // Pre-check: surface duplicates BEFORE insert with a clear, actionable message.
     // The DB has UNIQUE(phone_number, company_id) — without this pre-check the user
     // gets a generic "duplicate key" error.
-    const { data: existing } = await supabase
-      .from("employees")
-      .select("id, first_name, last_name, phone_number, email, access_pin, company_id, avatar_url, gender, user_id, is_active, employer_identification")
-      .eq("company_id", selectedCompanyId)
-      .eq("phone_number", digits)
-      .maybeSingle();
+    const existingMatch = await findExistingEmployeeInCompany(selectedCompanyId, {
+      phone: digits,
+      email,
+    });
 
-    if (existing) {
-      const fullName = `${existing.first_name ?? ""} ${existing.last_name ?? ""}`.trim() || "este empleado";
-      const stateLabel = existing.user_id
-        ? "ya tiene portal activo"
-        : existing.is_active === false
-        ? "está archivado"
-        : "ya existe sin portal";
+    if (existingMatch) {
+      const { employee, matchedBy } = existingMatch;
+      const duplicateCopy = describeDuplicateMatch(employee, matchedBy);
       toast({
-        title: `${fullName} ${stateLabel}`,
-        description: `Ya hay un empleado con el teléfono ${digits} en esta empresa. Abriéndolo…`,
+        title: duplicateCopy.title,
+        description: `${duplicateCopy.statusLabel}. Abriendo el registro existente.`,
       });
-      setCreatedEmployee(existing as Record<string, any>);
-      onEmployeeCreated?.(existing as Record<string, any>);
+      setCreatedEmployee(employee);
+      onEmployeeCreated?.(employee);
       setStep(2);
       setSaving(false);
       return true;
-    }
-
-    // Secondary: also check by email when provided to avoid silent overlaps
-    if (email.trim()) {
-      const { data: existingByEmail } = await supabase
-        .from("employees")
-        .select("id, first_name, last_name, phone_number, email, access_pin, company_id, avatar_url, gender, user_id, is_active")
-        .eq("company_id", selectedCompanyId)
-        .eq("email", email.trim())
-        .maybeSingle();
-
-      if (existingByEmail) {
-        const fullName = `${existingByEmail.first_name ?? ""} ${existingByEmail.last_name ?? ""}`.trim() || "este empleado";
-        toast({
-          title: `${fullName} ya existe con este email`,
-          description: `Abriendo el registro existente.`,
-        });
-        setCreatedEmployee(existingByEmail as Record<string, any>);
-        onEmployeeCreated?.(existingByEmail as Record<string, any>);
-        setStep(2);
-        setSaving(false);
-        return true;
-      }
     }
 
     const insertData: Record<string, any> = {
@@ -146,16 +119,12 @@ export function QuickAddInviteWizard({ open, onOpenChange, onEmployeeCreated }: 
     if (error) {
       // Last-resort: if a race condition produced a unique-violation, re-query and surface the existing record.
       if ((error as any)?.code === "23505") {
-        const { data: race } = await supabase
-          .from("employees")
-          .select("id, first_name, last_name, phone_number, email, access_pin, company_id, avatar_url, gender, user_id, is_active")
-          .eq("company_id", selectedCompanyId)
-          .eq("phone_number", digits)
-          .maybeSingle();
-        if (race) {
-          toast({ title: "Empleado ya existe", description: "Abriendo el registro existente." });
-          setCreatedEmployee(race as Record<string, any>);
-          onEmployeeCreated?.(race as Record<string, any>);
+        const raceMatch = await findExistingEmployeeInCompany(selectedCompanyId, { phone: digits, email });
+        if (raceMatch) {
+          const duplicateCopy = describeDuplicateMatch(raceMatch.employee, raceMatch.matchedBy);
+          toast({ title: duplicateCopy.title, description: `${duplicateCopy.statusLabel}. Abriendo el registro existente.` });
+          setCreatedEmployee(raceMatch.employee);
+          onEmployeeCreated?.(raceMatch.employee);
           setStep(2);
           setSaving(false);
           return true;
