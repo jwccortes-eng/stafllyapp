@@ -247,8 +247,10 @@ export default function MyDocuments() {
             </h1>
             <p className="text-[11px] text-muted-foreground/80 mt-0.5">
               {allRequiredDone
-                ? "All required documents are on file."
-                : `${uploadedCount} of ${required.length} required uploaded.`}
+                ? "All required documents are approved."
+                : pendingReviewCount > 0
+                  ? `${approvedCount} of ${required.length} approved · ${pendingReviewCount} pending review`
+                  : `${approvedCount} of ${required.length} required approved.`}
             </p>
           </div>
           {readiness.status && (
