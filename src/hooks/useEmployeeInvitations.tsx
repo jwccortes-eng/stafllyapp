@@ -1,20 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { mapEmailLogStatusToInviteStatus, type InviteDeliveryStatus } from "@/lib/invitation-status";
 
-export type InviteDeliveryStatus =
-  | "created"
-  | "queued"
-  | "sent"
-  | "provider_accepted"
-  | "delivered"
-  | "opened"
-  | "accepted"
-  | "expired"
-  | "revoked"
-  | "failed"
-  | "bounced"
-  | "resent";
+export type { InviteDeliveryStatus } from "@/lib/invitation-status";
 
 export interface EmployeeInvitation {
   id: string;
@@ -114,16 +103,7 @@ export function useEmployeeInvitations(companyId: string | null) {
     if (!data) return invitation.status;
 
     // Map email_send_log status to invitation status
-    const statusMap: Record<string, InviteDeliveryStatus> = {
-      pending: "queued",
-      sent: "provider_accepted",
-      failed: "failed",
-      dlq: "failed",
-      bounced: "bounced",
-      suppressed: "failed",
-    };
-
-    return statusMap[data.status] ?? invitation.status;
+    return mapEmailLogStatusToInviteStatus(data.status, invitation.status);
   }, []);
 
   return { invitations, loading, logInvitation, refetch: fetchInvitations, checkDeliveryStatus };
