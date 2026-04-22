@@ -120,8 +120,14 @@ export default function MyDocuments() {
 
   const otherDocs = docsByCategory.get("other") ?? [];
 
-  const uploadedCount = required.filter((c) => (docsByCategory.get(c) ?? []).length > 0).length;
-  const allRequiredDone = required.length > 0 && uploadedCount === required.length;
+  // Approved is the only state that fulfills a requirement (matches readiness rule).
+  const approvedCount = required.filter(
+    (c) => categoryState(docsByCategory.get(c) ?? []) === "approved",
+  ).length;
+  const pendingReviewCount = required.filter(
+    (c) => categoryState(docsByCategory.get(c) ?? []) === "pending",
+  ).length;
+  const allRequiredDone = required.length > 0 && approvedCount === required.length;
 
   const handleUpload = async (category: DocumentCategory, file: File) => {
     if (!employeeId || !companyId) return;
