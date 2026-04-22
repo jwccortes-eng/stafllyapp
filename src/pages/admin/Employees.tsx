@@ -771,7 +771,23 @@ export default function Employees() {
       ) : fetchError ? (
         <ErrorBlock compact onRetry={fetchEmployees} />
       ) : filtered.length === 0 ? (
-        <EmptyState icon={Users} title="No employees" description={search ? "Try a different term" : "Use 'Quick add' to create and optionally invite your first employee"} actionLabel={!search ? "Quick add" : undefined} onAction={!search ? () => setQuickAddOpen(true) : undefined} />
+        <EmptyState
+          icon={Users}
+          title={hiddenBySearch > 0 ? `${hiddenBySearch} match${hiddenBySearch === 1 ? "" : "es"} en otra pestaña` : "No employees"}
+          description={
+            hiddenBySearch > 0
+              ? `Hay ${hiddenBySearch} empleado${hiddenBySearch === 1 ? "" : "s"} que coincide${hiddenBySearch === 1 ? "" : "n"} con "${search}" pero no está${hiddenBySearch === 1 ? "" : "n"} en la pestaña actual.`
+              : search
+              ? "Try a different term"
+              : "Use 'Quick add' to create and optionally invite your first employee"
+          }
+          actionLabel={hiddenBySearch > 0 ? "Ver en Todos" : (!search ? "Quick add" : undefined)}
+          onAction={
+            hiddenBySearch > 0
+              ? () => setStatusTab("all")
+              : (!search ? () => setQuickAddOpen(true) : undefined)
+          }
+        />
       ) : viewMode === "grid" ? (
         /* ─── Grid View ─── */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
