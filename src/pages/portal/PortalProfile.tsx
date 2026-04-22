@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffectiveEmployee } from "@/hooks/useEffectiveEmployee";
-import { Link, useNavigate, useOutletContext } from "react-router-dom";
+import { useEmployeeReadiness } from "@/hooks/useEmployeeReadiness";
+import { Link, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   User, Mail, Phone, MapPin, CalendarDays, Wallet,
@@ -34,6 +35,7 @@ export default function PortalProfile() {
   const { effectiveEmployeeId: employeeId } = useEffectiveEmployee();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const outletCtx = useOutletContext<{ openMore?: () => void } | null>();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +43,14 @@ export default function PortalProfile() {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Readiness drives the banner *and* acts as a freshness signal: when the
+  // worker comes back from /portal/profile/complete, the status changes and we
+  // re-fetch the employee row so chips (phone, role…) don't show stale values.
+  const readiness = useEmployeeReadiness(employeeId);
+
   useEffect(() => {
     if (!employeeId) return;
+    let cancelled = false;
     async function load() {
       const { data } = await supabase
         .from("employees")
@@ -50,15 +58,18 @@ export default function PortalProfile() {
         .eq("id", employeeId)
         .maybeSingle();
 
+      if (cancelled) return;
       if (data) {
         setProfile(data);
         const { data: comp } = await supabase.from("companies").select("name").eq("id", data.company_id).maybeSingle();
-        setCompanyName(comp?.name ?? "");
+        if (!cancelled) setCompanyName(comp?.name ?? "");
       }
       setLoading(false);
     }
     load();
-  }, [employeeId]);
+    return () => { cancelled = true; };
+    // Re-run when status changes (saved profile) or when navigating back to this route.
+  }, [employeeId, readiness.status, location.key]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
