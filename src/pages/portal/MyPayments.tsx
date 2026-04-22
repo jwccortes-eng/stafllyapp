@@ -129,7 +129,7 @@ function statusBadge(s: PeriodStatus) {
     case "published":
       return { label: "Published", cls: "bg-primary/10 text-primary" };
     case "closed":
-      return { label: "Processing", cls: "bg-amber-500/12 text-amber-600 dark:text-amber-400" };
+      return { label: "Processing", cls: "bg-warning/15 text-warning" };
     default:
       return { label: "In progress", cls: "bg-muted text-muted-foreground" };
   }
@@ -558,7 +558,7 @@ export default function MyPayments() {
               <p className="text-[15px] font-bold font-heading tabular-nums text-foreground mt-0.5">
                 {currentTotals.completedShifts}
                 {currentTotals.openShifts > 0 && (
-                  <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-1 font-semibold">
+                  <span className="text-[10px] text-warning ml-1 font-semibold">
                     +{currentTotals.openShifts} open
                   </span>
                 )}
@@ -817,7 +817,7 @@ function ShiftCard({ shift }: { shift: ShiftEntry }) {
               {formatDay(shift.date)}
             </p>
             {shift.is_open && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wide">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-warning/15 text-warning font-bold uppercase tracking-wide">
                 Open
               </span>
             )}
