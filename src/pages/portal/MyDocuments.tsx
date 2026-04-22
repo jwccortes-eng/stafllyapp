@@ -97,7 +97,7 @@ export default function MyDocuments() {
 
     const { data: rows } = await supabase
       .from("employee_documents" as any)
-      .select("id, name, file_url, file_type, file_size, category, created_at")
+      .select("id, name, file_url, file_type, file_size, category, created_at, review_status, rejection_reason, reviewed_at")
       .eq("employee_id", employeeId)
       .order("created_at", { ascending: false });
 
