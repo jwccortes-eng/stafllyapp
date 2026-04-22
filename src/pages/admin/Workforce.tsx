@@ -116,6 +116,8 @@ export default function Workforce() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ProfileStatus>("all");
   const [workerFilter, setWorkerFilter] = useState<string>("all");
+  const [qualityFilter, setQualityFilter] = useState<QualityFilter>("any");
+  const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [requiredCats, setRequiredCats] = useState<string[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reminderOpen, setReminderOpen] = useState(false);
