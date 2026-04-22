@@ -35,7 +35,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { ProfileStatusBadge } from "@/components/employee/ProfileStatusBadge";
 import { EmployeeReviewBadge } from "@/components/reviews/EmployeeReviewBadge";
-import { useEmployeeReviewStatsBulk } from "@/hooks/useEmployeeReviewStats";
+import { useEmployeeReviewStatsBulk, classifyRisk } from "@/hooks/useEmployeeReviewStats";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -87,6 +87,24 @@ const STATUS_FILTERS: { value: "all" | ProfileStatus; label: string }[] = [
   { value: "active", label: "Active" },
 ];
 
+type SortKey = "recent" | "name" | "score" | "reviews" | "risk";
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "recent", label: "Most recent" },
+  { value: "name", label: "Name (A→Z)" },
+  { value: "score", label: "Highest review score" },
+  { value: "reviews", label: "Most reviews" },
+  { value: "risk", label: "Risk first" },
+];
+
+type QualityFilter = "any" | "with_reviews" | "no_reviews" | "at_risk" | "top_rated";
+const QUALITY_FILTERS: { value: QualityFilter; label: string }[] = [
+  { value: "any", label: "Any quality" },
+  { value: "with_reviews", label: "With reviews" },
+  { value: "no_reviews", label: "No reviews yet" },
+  { value: "at_risk", label: "At risk / watch" },
+  { value: "top_rated", label: "Top rated (≥4★, 3+)" },
+];
+
 export default function Workforce() {
   const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany } = useCompany();
@@ -98,6 +116,8 @@ export default function Workforce() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ProfileStatus>("all");
   const [workerFilter, setWorkerFilter] = useState<string>("all");
+  const [qualityFilter, setQualityFilter] = useState<QualityFilter>("any");
+  const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [requiredCats, setRequiredCats] = useState<string[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reminderOpen, setReminderOpen] = useState(false);
@@ -194,14 +214,64 @@ export default function Workforce() {
 
   const filtered = useMemo(() => {
     const q = debounced.trim().toLowerCase();
-    return rows.filter((r) => {
+    const base = rows.filter((r) => {
       if (statusFilter !== "all" && r.profile_status !== statusFilter) return false;
       if (workerFilter !== "all" && (r.employee_role ?? "") !== workerFilter) return false;
+
+      // Quality filter — uses bulk reviewStats already loaded.
+      if (qualityFilter !== "any") {
+        const s = reviewStats.get(r.id);
+        const hasReviews = !!s && s.total_reviews > 0;
+        if (qualityFilter === "with_reviews" && !hasReviews) return false;
+        if (qualityFilter === "no_reviews" && hasReviews) return false;
+        if (qualityFilter === "at_risk") {
+          const risk = classifyRisk(s);
+          if (risk === "none") return false;
+        }
+        if (qualityFilter === "top_rated") {
+          if (!hasReviews) return false;
+          if ((s!.total_reviews ?? 0) < 3) return false;
+          if ((s!.avg_overall_score ?? 0) < 4) return false;
+        }
+      }
+
       if (!q) return true;
       const hay = `${r.first_name} ${r.last_name} ${r.phone_number ?? ""} ${r.email ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [rows, debounced, statusFilter, workerFilter]);
+
+    // Sorting — non-mutating copy.
+    const sorted = [...base];
+    const score = (id: string) => reviewStats.get(id)?.avg_overall_score ?? -1;
+    const reviews = (id: string) => reviewStats.get(id)?.total_reviews ?? 0;
+    const riskRank = (id: string) => {
+      const r = classifyRisk(reviewStats.get(id));
+      return r === "at_risk" ? 0 : r === "watch" ? 1 : 2;
+    };
+    switch (sortKey) {
+      case "name":
+        sorted.sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`));
+        break;
+      case "score":
+        sorted.sort((a, b) => score(b.id) - score(a.id));
+        break;
+      case "reviews":
+        sorted.sort((a, b) => reviews(b.id) - reviews(a.id));
+        break;
+      case "risk":
+        sorted.sort((a, b) => {
+          const d = riskRank(a.id) - riskRank(b.id);
+          if (d !== 0) return d;
+          return score(a.id) - score(b.id); // lowest score first within same risk tier
+        });
+        break;
+      case "recent":
+      default:
+        // Already ordered by created_at desc from the query.
+        break;
+    }
+    return sorted;
+  }, [rows, debounced, statusFilter, workerFilter, qualityFilter, sortKey, reviewStats]);
 
   const allVisibleSelected = filtered.length > 0 && filtered.every((r) => selected.has(r.id));
   const toggleAllVisible = () => {
@@ -304,11 +374,27 @@ export default function Workforce() {
           </SelectContent>
         </Select>
         <Select value={workerFilter} onValueChange={setWorkerFilter}>
-          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Worker type" /></SelectTrigger>
+          <SelectTrigger className="md:w-[170px] h-10"><SelectValue placeholder="Worker type" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All worker types</SelectItem>
             {WORKER_TYPES.map((w) => (
               <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={qualityFilter} onValueChange={(v) => setQualityFilter(v as QualityFilter)}>
+          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Quality" /></SelectTrigger>
+          <SelectContent>
+            {QUALITY_FILTERS.map((q) => (
+              <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Sort by" /></SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((s) => (
+              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

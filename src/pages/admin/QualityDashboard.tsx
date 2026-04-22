@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, AlertTriangle, TrendingUp, TrendingDown, Minus, CheckCircle2, Clock, MessageSquare, Flag } from "lucide-react";
+import { Star, AlertTriangle, TrendingUp, TrendingDown, Minus, CheckCircle2, Clock, MessageSquare, Flag, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, subDays } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { ReviewFormDialog } from "@/components/reviews/ReviewFormDialog";
+import { WorkforceRankingPanel } from "@/components/reviews/WorkforceRankingPanel";
 import { toast } from "sonner";
 
 interface ReviewSubmission {
@@ -152,8 +153,12 @@ export default function QualityDashboard() {
         <KpiCard label="Open Alerts" value={stats.openFlags} icon={<Flag className="h-4 w-4" />} />
       </div>
 
-      <Tabs defaultValue="flags" className="space-y-4">
+      <Tabs defaultValue="workforce" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="workforce" className="gap-1.5">
+            <Users className="h-3.5 w-3.5" />
+            Workforce ranking
+          </TabsTrigger>
           <TabsTrigger value="flags" className="gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5" />
             Alerts
@@ -167,9 +172,14 @@ export default function QualityDashboard() {
           </TabsTrigger>
           <TabsTrigger value="scores" className="gap-1.5">
             <TrendingUp className="h-3.5 w-3.5" />
-            Rankings
+            Score trends
           </TabsTrigger>
         </TabsList>
+
+        {/* Workforce Ranking Tab — operational cohorts built from employee_review_stats */}
+        <TabsContent value="workforce">
+          {selectedCompanyId && <WorkforceRankingPanel companyId={selectedCompanyId} />}
+        </TabsContent>
 
         {/* Flags Tab */}
         <TabsContent value="flags">
