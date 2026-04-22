@@ -37,6 +37,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 
+type ReviewStatus = "pending" | "approved" | "rejected";
+
 interface DocRow {
   id: string;
   name: string;
@@ -45,6 +47,18 @@ interface DocRow {
   file_size: number | null;
   category: DocumentCategory;
   created_at: string;
+  review_status: ReviewStatus;
+  rejection_reason: string | null;
+  reviewed_at: string | null;
+}
+
+/** Aggregate state for a required category, picking the most favorable doc state. */
+type CategoryState = "approved" | "pending" | "rejected" | "missing";
+function categoryState(items: DocRow[]): CategoryState {
+  if (!items || items.length === 0) return "missing";
+  if (items.some((d) => d.review_status === "approved")) return "approved";
+  if (items.some((d) => d.review_status === "pending")) return "pending";
+  return "rejected";
 }
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15 MB
