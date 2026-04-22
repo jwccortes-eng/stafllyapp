@@ -276,7 +276,7 @@ export default function MyDocuments() {
                 allRequiredDone ? "bg-earning" : "bg-warning",
               )}
               style={{
-                width: `${Math.round((uploadedCount / Math.max(required.length, 1)) * 100)}%`,
+                width: `${Math.round((approvedCount / Math.max(required.length, 1)) * 100)}%`,
               }}
             />
           </div>
