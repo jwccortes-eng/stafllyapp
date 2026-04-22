@@ -374,11 +374,27 @@ export default function Workforce() {
           </SelectContent>
         </Select>
         <Select value={workerFilter} onValueChange={setWorkerFilter}>
-          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Worker type" /></SelectTrigger>
+          <SelectTrigger className="md:w-[170px] h-10"><SelectValue placeholder="Worker type" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All worker types</SelectItem>
             {WORKER_TYPES.map((w) => (
               <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={qualityFilter} onValueChange={(v) => setQualityFilter(v as QualityFilter)}>
+          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Quality" /></SelectTrigger>
+          <SelectContent>
+            {QUALITY_FILTERS.map((q) => (
+              <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+          <SelectTrigger className="md:w-[180px] h-10"><SelectValue placeholder="Sort by" /></SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((s) => (
+              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
