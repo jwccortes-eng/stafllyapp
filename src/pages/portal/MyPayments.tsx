@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { getLocalToday } from "@/lib/pay-period-helpers";
 
 // ============================================================================
 // Types
