@@ -533,6 +533,13 @@ export default function MyPayments() {
     };
   }, [currentShifts, currentMovements, currentBasePay]);
 
+  // Detect "this week has no activity, showing previous week with work"
+  const isViewingPastWithActivity = useMemo(() => {
+    if (!currentPeriod) return false;
+    const today = getLocalToday();
+    return currentPeriod.end_date < today;
+  }, [currentPeriod]);
+
   const periodStatus: PeriodStatus | null = currentPeriod ? deriveStatus(currentPeriod) : null;
 
   // ----- Loading state -----
