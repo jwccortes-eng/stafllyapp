@@ -87,6 +87,24 @@ const STATUS_FILTERS: { value: "all" | ProfileStatus; label: string }[] = [
   { value: "active", label: "Active" },
 ];
 
+type SortKey = "recent" | "name" | "score" | "reviews" | "risk";
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "recent", label: "Most recent" },
+  { value: "name", label: "Name (A→Z)" },
+  { value: "score", label: "Highest review score" },
+  { value: "reviews", label: "Most reviews" },
+  { value: "risk", label: "Risk first" },
+];
+
+type QualityFilter = "any" | "with_reviews" | "no_reviews" | "at_risk" | "top_rated";
+const QUALITY_FILTERS: { value: QualityFilter; label: string }[] = [
+  { value: "any", label: "Any quality" },
+  { value: "with_reviews", label: "With reviews" },
+  { value: "no_reviews", label: "No reviews yet" },
+  { value: "at_risk", label: "At risk / watch" },
+  { value: "top_rated", label: "Top rated (≥4★, 3+)" },
+];
+
 export default function Workforce() {
   const navigate = useNavigate();
   const { selectedCompanyId, selectedCompany } = useCompany();
