@@ -11,8 +11,13 @@
  * Returns SPECIFIC error codes so the UI can render targeted messages instead
  * of a generic "invalid QR".
  */
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import { corsHeaders } from "jsr:@supabase/supabase-js@2/cors";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
 type Outcome =
   | "ok_clock_in"
@@ -80,7 +85,7 @@ Deno.serve(async (req) => {
       return fail("token_mismatch", "This QR has expired. Ask your supervisor for a fresh one.");
     }
 
-    // ── Confirm assignment
+    // ── Confirm assignment (exclude removed/rejected)
     const { data: assignment } = await supabase
       .from("shift_assignments")
       .select("id, status")
