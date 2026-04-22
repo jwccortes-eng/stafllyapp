@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { mapEmailLogStatusToInviteStatus, type InviteDeliveryStatus } from "@/lib/invitation-status";
 
+export type { InviteDeliveryStatus } from "@/lib/invitation-status";
+
 export interface EmployeeInvitation {
   id: string;
   employee_id: string;
