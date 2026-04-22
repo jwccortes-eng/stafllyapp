@@ -138,6 +138,7 @@ const PortalShiftDetail = lazy(() => import("./pages/portal/PortalShiftDetail"))
 const MyAnnouncements = lazy(() => import("./pages/portal/MyAnnouncements"));
 const PortalResources = lazy(() => import("./pages/portal/PortalResources"));
 const PortalProfile = lazy(() => import("./pages/portal/PortalProfile"));
+const CompleteProfile = lazy(() => import("./pages/portal/CompleteProfile"));
 const PortalClock = lazy(() => import("./pages/portal/PortalClock"));
 const PayStub = lazy(() => import("./pages/portal/PayStub"));
 const PortalChat = lazy(() => import("./pages/portal/PortalChat"));
@@ -312,6 +313,7 @@ function App() {
                 <Route path="paystub/:periodId" element={<PayStub />} />
                 <Route path="chat" element={<PortalChat />} />
                 <Route path="profile" element={<PortalProfile />} />
+                <Route path="profile/complete" element={<CompleteProfile />} />
                 <Route path="availability" element={<MyAvailability />} />
                 <Route path="w9" element={<MyW9 />} />
               </Route>

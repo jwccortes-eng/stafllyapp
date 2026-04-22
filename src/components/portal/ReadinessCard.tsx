@@ -20,9 +20,9 @@ export function ReadinessCard() {
   if (r.loading || !r.status) return null;
 
   const isReady = r.status === "ready" || r.status === "active";
-  // Workers cannot self-edit identity fields here; CTA points to profile.
-  // Admins manage onboarding via /app/employees/:id/onboarding.
-  const ctaHref = "/portal/profile";
+  // CTA goes to the editable Complete-Profile wizard (worker self-service).
+  // Admins still manage full onboarding via /app/employees/:id/onboarding.
+  const ctaHref = "/portal/profile/complete";
 
   if (isReady) {
     return (

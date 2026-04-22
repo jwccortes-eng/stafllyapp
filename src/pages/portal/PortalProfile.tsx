@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import { ProfilePhotoUpload } from "@/components/employee/ProfilePhotoUpload";
+import { ReadinessCard } from "@/components/portal/ReadinessCard";
 
 interface EmployeeProfile {
   first_name: string;
@@ -147,6 +148,9 @@ export default function PortalProfile() {
         <h1 className="text-xl font-bold font-heading tracking-tight text-foreground">My Profile</h1>
         <p className="text-xs text-muted-foreground mt-0.5">{companyName}</p>
       </div>
+
+      {/* Readiness banner — surfaces missing data with editable CTA */}
+      <ReadinessCard />
 
       {/* Profile photo required warning */}
       {!profile.avatar_url && (
