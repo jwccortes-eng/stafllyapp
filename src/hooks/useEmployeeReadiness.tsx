@@ -58,10 +58,13 @@ export function useEmployeeReadiness(employeeId: string | null | undefined): Rea
     const canDrive = !!emp.has_car;
     const required = await getRequiredDocumentsForCompany(emp.company_id, { canDrive });
 
+    // Only APPROVED documents satisfy a requirement.
+    // Pending/Rejected uploads keep the worker in `pending_documents`.
     const { data: docs } = await supabase
       .from("employee_documents" as any)
-      .select("category")
-      .eq("employee_id", employeeId);
+      .select("category, review_status")
+      .eq("employee_id", employeeId)
+      .eq("review_status", "approved");
 
     const owned = new Set((docs ?? []).map((d: any) => d.category as DocumentCategory));
     const missing = required

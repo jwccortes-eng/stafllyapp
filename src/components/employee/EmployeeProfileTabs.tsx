@@ -391,6 +391,36 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
     fetchDocs();
   };
 
+  // Admin: approve a document (clears any previous rejection_reason).
+  const handleApprove = async (doc: any) => {
+    const { error } = await (supabase.from("employee_documents" as any) as any)
+      .update({
+        review_status: "approved",
+        reviewed_at: new Date().toISOString(),
+        rejection_reason: null,
+      })
+      .eq("id", doc.id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Documento aprobado" });
+    fetchDocs();
+  };
+
+  // Admin: reject a document with a required reason — surfaced to the worker.
+  const handleReject = async (doc: any) => {
+    const reason = window.prompt("Motivo del rechazo (visible para el trabajador):", doc.rejection_reason ?? "");
+    if (!reason || !reason.trim()) return;
+    const { error } = await (supabase.from("employee_documents" as any) as any)
+      .update({
+        review_status: "rejected",
+        reviewed_at: new Date().toISOString(),
+        rejection_reason: reason.trim(),
+      })
+      .eq("id", doc.id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Documento rechazado" });
+    fetchDocs();
+  };
+
   if (loading) return <div className="py-6 text-center text-[11px] text-muted-foreground">Cargando...</div>;
   return (
     <div className="space-y-4">
@@ -400,12 +430,55 @@ function DocumentsTab({ employee, companyId }: { employee: EmployeeRecord; compa
       </div>
       {docs.length > 0 && (
         <div className="space-y-1.5">
-          {docs.map((doc: any) => (
-            <Card key={doc.id} className="rounded-lg border-border/30"><CardContent className="p-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0"><FileText className="h-3.5 w-3.5 text-primary/50 shrink-0" /><div className="min-w-0"><p className="text-[11px] font-medium truncate">{doc.name}</p><p className="text-[9px] text-muted-foreground">{doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : ""}{doc.created_at && ` · ${safeFormat(doc.created_at, "dd MMM yyyy")}`}</p></div></div>
-              <div className="flex items-center gap-0.5"><Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEmployeeDocument(doc.file_url)}><Download className="h-2.5 w-2.5" /></Button><Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button></div>
-            </CardContent></Card>
-          ))}
+          {docs.map((doc: any) => {
+            const rs = (doc.review_status ?? "pending") as "pending" | "approved" | "rejected";
+            const badgeCls =
+              rs === "approved" ? "bg-earning/10 text-earning" :
+              rs === "rejected" ? "bg-deduction/10 text-deduction" :
+              "bg-warning/10 text-warning";
+            const badgeLabel = rs === "approved" ? "Aprobado" : rs === "rejected" ? "Rechazado" : "Pendiente";
+            return (
+              <Card key={doc.id} className="rounded-lg border-border/30">
+                <CardContent className="p-2.5 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileText className="h-3.5 w-3.5 text-primary/50 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium truncate">{doc.name}</p>
+                        <p className="text-[9px] text-muted-foreground">
+                          {doc.category ? `${doc.category} · ` : ""}
+                          {doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : ""}
+                          {doc.created_at && ` · ${safeFormat(doc.created_at, "dd MMM yyyy")}`}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className={cn("text-[9px] shrink-0", badgeCls)}>{badgeLabel}</Badge>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEmployeeDocument(doc.file_url)}><Download className="h-2.5 w-2.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="h-2.5 w-2.5" /></Button>
+                    </div>
+                  </div>
+                  {rs === "rejected" && doc.rejection_reason && (
+                    <p className="text-[10px] text-deduction/90 leading-snug pl-5">
+                      <span className="font-bold">Motivo:</span> {doc.rejection_reason}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-1.5 pl-5">
+                    {rs !== "approved" && (
+                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-earning/30 text-earning hover:bg-earning/10" onClick={() => handleApprove(doc)}>
+                        Aprobar
+                      </Button>
+                    )}
+                    {rs !== "rejected" && (
+                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 border-deduction/30 text-deduction hover:bg-deduction/10" onClick={() => handleReject(doc)}>
+                        Rechazar
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
       {docs.length === 0 && !w9 && <EmptyState icon={FileText} title="Sin documentos" description="Sube identificaciones u otros" compact />}

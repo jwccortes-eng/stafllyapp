@@ -37,6 +37,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 
+type ReviewStatus = "pending" | "approved" | "rejected";
+
 interface DocRow {
   id: string;
   name: string;
@@ -45,6 +47,18 @@ interface DocRow {
   file_size: number | null;
   category: DocumentCategory;
   created_at: string;
+  review_status: ReviewStatus;
+  rejection_reason: string | null;
+  reviewed_at: string | null;
+}
+
+/** Aggregate state for a required category, picking the most favorable doc state. */
+type CategoryState = "approved" | "pending" | "rejected" | "missing";
+function categoryState(items: DocRow[]): CategoryState {
+  if (!items || items.length === 0) return "missing";
+  if (items.some((d) => d.review_status === "approved")) return "approved";
+  if (items.some((d) => d.review_status === "pending")) return "pending";
+  return "rejected";
 }
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15 MB
@@ -83,7 +97,7 @@ export default function MyDocuments() {
 
     const { data: rows } = await supabase
       .from("employee_documents" as any)
-      .select("id, name, file_url, file_type, file_size, category, created_at")
+      .select("id, name, file_url, file_type, file_size, category, created_at, review_status, rejection_reason, reviewed_at")
       .eq("employee_id", employeeId)
       .order("created_at", { ascending: false });
 
@@ -106,8 +120,14 @@ export default function MyDocuments() {
 
   const otherDocs = docsByCategory.get("other") ?? [];
 
-  const uploadedCount = required.filter((c) => (docsByCategory.get(c) ?? []).length > 0).length;
-  const allRequiredDone = required.length > 0 && uploadedCount === required.length;
+  // Approved is the only state that fulfills a requirement (matches readiness rule).
+  const approvedCount = required.filter(
+    (c) => categoryState(docsByCategory.get(c) ?? []) === "approved",
+  ).length;
+  const pendingReviewCount = required.filter(
+    (c) => categoryState(docsByCategory.get(c) ?? []) === "pending",
+  ).length;
+  const allRequiredDone = required.length > 0 && approvedCount === required.length;
 
   const handleUpload = async (category: DocumentCategory, file: File) => {
     if (!employeeId || !companyId) return;
@@ -227,8 +247,10 @@ export default function MyDocuments() {
             </h1>
             <p className="text-[11px] text-muted-foreground/80 mt-0.5">
               {allRequiredDone
-                ? "All required documents are on file."
-                : `${uploadedCount} of ${required.length} required uploaded.`}
+                ? "All required documents are approved."
+                : pendingReviewCount > 0
+                  ? `${approvedCount} of ${required.length} approved · ${pendingReviewCount} pending review`
+                  : `${approvedCount} of ${required.length} required approved.`}
             </p>
           </div>
           {readiness.status && (
@@ -254,7 +276,7 @@ export default function MyDocuments() {
                 allRequiredDone ? "bg-earning" : "bg-warning",
               )}
               style={{
-                width: `${Math.round((uploadedCount / Math.max(required.length, 1)) * 100)}%`,
+                width: `${Math.round((approvedCount / Math.max(required.length, 1)) * 100)}%`,
               }}
             />
           </div>
@@ -281,82 +303,105 @@ export default function MyDocuments() {
           required.map((cat) => {
             const items = docsByCategory.get(cat) ?? [];
             const meta = DOCUMENT_CATEGORIES[cat];
-            const uploaded = items.length > 0;
+            const state = categoryState(items);
             const isUploading = uploadingCat === cat;
+
+            // Visual tokens per state
+            const tone = {
+              approved: { border: "border-earning/25", iconBg: "bg-earning/12", icon: "text-earning", badge: "bg-earning/10 text-earning", label: "Approved" },
+              pending:  { border: "border-warning/25", iconBg: "bg-warning/12", icon: "text-warning", badge: "bg-warning/10 text-warning", label: "Pending review" },
+              rejected: { border: "border-deduction/30", iconBg: "bg-deduction/12", icon: "text-deduction", badge: "bg-deduction/10 text-deduction", label: "Rejected" },
+              missing:  { border: "border-warning/30", iconBg: "bg-muted", icon: "text-muted-foreground", badge: "bg-warning/10 text-warning", label: "Required" },
+            }[state];
+
+            const Icon =
+              state === "approved" ? CheckCircle2 :
+              state === "pending"  ? Loader2 :
+              state === "rejected" ? AlertTriangle :
+              FileText;
+
+            // Most recent rejection reason (if any) — surfaced to the worker.
+            const lastRejection = items.find((d) => d.review_status === "rejected" && d.rejection_reason);
+
+            const ctaLabel =
+              state === "approved" ? "Replace / add another" :
+              state === "rejected" ? "Upload a new file" :
+              state === "pending"  ? "Add another file" :
+              "Upload document";
 
             return (
               <div
                 key={cat}
                 className={cn(
                   "rounded-2xl border bg-card p-3.5 shadow-xs transition-all",
-                  uploaded ? "border-earning/20" : "border-warning/30",
+                  tone.border,
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <div
-                    className={cn(
-                      "h-9 w-9 rounded-xl flex items-center justify-center shrink-0",
-                      uploaded ? "bg-earning/12" : "bg-warning/12",
-                    )}
-                  >
-                    {uploaded ? (
-                      <CheckCircle2 className="h-4 w-4 text-earning" />
-                    ) : (
-                      <FileText className="h-4 w-4 text-warning" />
-                    )}
+                  <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center shrink-0", tone.iconBg)}>
+                    <Icon className={cn("h-4 w-4", tone.icon, state === "pending" && "animate-spin")} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-foreground leading-tight">
-                        {meta.label}
-                      </p>
-                      <span
-                        className={cn(
-                          "text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full",
-                          uploaded
-                            ? "bg-earning/10 text-earning"
-                            : "bg-warning/10 text-warning",
-                        )}
-                      >
-                        {uploaded ? "Uploaded" : "Missing"}
+                      <p className="text-sm font-semibold text-foreground leading-tight">{meta.label}</p>
+                      <span className={cn("text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full", tone.badge)}>
+                        {tone.label}
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground/70 mt-0.5 leading-snug">
-                      {meta.hint}
-                    </p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-0.5 leading-snug">{meta.hint}</p>
                   </div>
                 </div>
 
+                {/* Rejection reason */}
+                {state === "rejected" && lastRejection?.rejection_reason && (
+                  <div className="mt-3 rounded-xl border border-deduction/20 bg-deduction/[0.05] p-2.5">
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-deduction mb-1">
+                      Reason for rejection
+                    </p>
+                    <p className="text-[11.5px] text-foreground/90 leading-snug">
+                      {lastRejection.rejection_reason}
+                    </p>
+                  </div>
+                )}
+
                 {/* Uploaded file list */}
-                {uploaded && (
+                {items.length > 0 && (
                   <div className="mt-3 space-y-1.5 pl-1">
-                    {items.map((d) => (
-                      <div
-                        key={d.id}
-                        className="flex items-center gap-2 rounded-xl bg-muted/30 px-2.5 py-2"
-                      >
-                        <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-[11.5px] text-foreground truncate flex-1">
-                          {d.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleView(d)}
-                          className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background"
-                          aria-label="View"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(d)}
-                          className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          aria-label="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                    {items.map((d) => {
+                      const itemBadge =
+                        d.review_status === "approved" ? "bg-earning/10 text-earning" :
+                        d.review_status === "rejected" ? "bg-deduction/10 text-deduction" :
+                        "bg-warning/10 text-warning";
+                      const itemLabel =
+                        d.review_status === "approved" ? "Approved" :
+                        d.review_status === "rejected" ? "Rejected" :
+                        "Pending";
+                      return (
+                        <div key={d.id} className="flex items-center gap-2 rounded-xl bg-muted/30 px-2.5 py-2">
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-[11.5px] text-foreground truncate flex-1">{d.name}</span>
+                          <span className={cn("text-[8.5px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full", itemBadge)}>
+                            {itemLabel}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleView(d)}
+                            className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background"
+                            aria-label="View"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(d)}
+                            className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            aria-label="Delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -375,18 +420,14 @@ export default function MyDocuments() {
                   />
                   <Button
                     type="button"
-                    variant={uploaded ? "outline" : "default"}
+                    variant={state === "approved" ? "outline" : "default"}
                     size="sm"
                     className="w-full h-9 text-xs gap-1.5"
                     disabled={isUploading}
                     onClick={() => inputsRef.current[cat]?.click()}
                   >
-                    {isUploading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Upload className="h-3.5 w-3.5" />
-                    )}
-                    {uploaded ? "Replace / add another" : "Upload document"}
+                    {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                    {ctaLabel}
                   </Button>
                 </div>
               </div>
