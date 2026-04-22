@@ -919,30 +919,27 @@ function ShiftCard({ shift }: { shift: ShiftEntry }) {
 }
 
 function HistoryDetails({ row, movements }: { row: PaymentRow; movements: MovementDetail[] }) {
+  const baseItems = movements.filter((m) => m.bucket === "base");
   const tips = movements.filter((m) => m.bucket === "tips");
   const ride = movements.filter((m) => m.bucket === "ride");
   const reimb = movements.filter((m) => m.bucket === "reimbursement");
   const others = movements.filter((m) => m.bucket === "other_extra");
   const deductions = movements.filter((m) => m.bucket === "deduction");
 
+  // Distinguish official base (period_base_pay) from movement-derived base, so
+  // the worker sees the line item rather than just an opaque "$0" base pay.
+  const baseFromMovements = baseItems.reduce((s, m) => s + m.total_value, 0);
+  const officialBase = Math.max(0, row.base_total_pay - baseFromMovements);
+
   return (
     <div className="space-y-2 text-[11.5px]">
-      <DetailLine label="Base pay" value={row.base_total_pay} />
-      {tips.length > 0 && (
-        <Group label="Tips" items={tips} accent />
-      )}
-      {ride.length > 0 && (
-        <Group label="Ride / transport" items={ride} accent />
-      )}
-      {reimb.length > 0 && (
-        <Group label="Reimbursements" items={reimb} accent />
-      )}
-      {others.length > 0 && (
-        <Group label="Other extras" items={others} accent />
-      )}
-      {deductions.length > 0 && (
-        <Group label="Deductions" items={deductions} negative />
-      )}
+      {officialBase > 0 && <DetailLine label="Base pay (hours)" value={officialBase} />}
+      {baseItems.length > 0 && <Group label="Base pay (jornadas)" items={baseItems} />}
+      {tips.length > 0 && <Group label="Tips" items={tips} accent />}
+      {ride.length > 0 && <Group label="Ride / transport" items={ride} accent />}
+      {reimb.length > 0 && <Group label="Reimbursements" items={reimb} accent />}
+      {others.length > 0 && <Group label="Other extras" items={others} accent />}
+      {deductions.length > 0 && <Group label="Deductions" items={deductions} negative />}
       <div className="flex items-center justify-between pt-2 border-t border-border/30 text-[12px] tabular-nums">
         <span className="font-bold text-foreground">Total</span>
         <span className="font-bold text-foreground">${row.total_final_pay.toFixed(2)}</span>
