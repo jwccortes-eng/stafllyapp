@@ -35,7 +35,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { ProfileStatusBadge } from "@/components/employee/ProfileStatusBadge";
 import { EmployeeReviewBadge } from "@/components/reviews/EmployeeReviewBadge";
-import { useEmployeeReviewStatsBulk } from "@/hooks/useEmployeeReviewStats";
+import { useEmployeeReviewStatsBulk, classifyRisk } from "@/hooks/useEmployeeReviewStats";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
