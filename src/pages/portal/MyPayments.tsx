@@ -570,7 +570,7 @@ export default function MyPayments() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-                Current Period
+                {isViewingPastWithActivity ? "Last Period with Activity" : "Current Period"}
               </p>
               <p className="text-[12px] text-foreground/80 mt-0.5 font-semibold tabular-nums">
                 {formatPeriodLabel(currentPeriod.start_date, currentPeriod.end_date)}
