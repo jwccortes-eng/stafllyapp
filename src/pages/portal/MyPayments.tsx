@@ -54,7 +54,7 @@ interface MovementDetail {
   id: string;
   concept_name: string;
   category: "extra" | "deduction" | string;
-  bucket: "tips" | "ride" | "reimbursement" | "other_extra" | "deduction";
+  bucket: "base" | "tips" | "ride" | "reimbursement" | "other_extra" | "deduction";
   quantity: number | null;
   rate: number | null;
   total_value: number;
@@ -106,12 +106,53 @@ function formatDay(iso: string): string {
   }
 }
 
+/**
+ * Classify a movement into a user-facing earnings bucket.
+ *
+ * The Connecteam-style payroll model means many "shift jobs" are recorded as
+ * `extra` movements (e.g. "Weekend Job", "Daily Pay", "Half Day") instead of
+ * coming from time_entries — those are the worker's *base pay* and must show
+ * as such in the breakdown, not as "Other extras".
+ *
+ * See mem://business-logic/connecteam-payroll-model.
+ */
 function classifyMovement(name: string, category: string): MovementDetail["bucket"] {
-  const n = (name || "").toLowerCase();
+  const n = (name || "").toLowerCase().trim();
   if (category === "deduction") return "deduction";
+
+  // Tips
   if (n.includes("propina") || n.includes("tip")) return "tips";
-  if (n.includes("transporte") || n.includes("ride") || n.includes("viaje") || n.includes("transport")) return "ride";
+
+  // Ride / transport — treat "horas de viaje" as ride compensation, not base.
+  if (
+    n.includes("transporte") ||
+    n.includes("transport") ||
+    n.includes("ride") ||
+    n.includes("viaje")
+  ) {
+    return "ride";
+  }
+
+  // Reimbursements
   if (n.includes("reintegro") || n.includes("reimburs")) return "reimbursement";
+
+  // Shift-pattern base pay (Connecteam model)
+  if (
+    n.includes("weekend job") ||
+    n.includes("weekend") ||
+    n.includes("daily pay") ||
+    n.includes("daily") ||
+    n.includes("half day") ||
+    n.includes("media jornada") ||
+    n.includes("jornada") ||
+    n.includes("full day") ||
+    n.includes("base pay") ||
+    n.includes("regular hours") ||
+    n.includes("horas regulares")
+  ) {
+    return "base";
+  }
+
   return "other_extra";
 }
 
@@ -418,7 +459,8 @@ export default function MyPayments() {
         const row = rowMap.get(m.period_id)!;
         const bucket = classifyMovement(m.concepts?.name ?? "", m.concepts?.category ?? "extra");
         const v = Number(m.total_value) || 0;
-        if (bucket === "tips") row.tips_total += v;
+        if (bucket === "base") row.base_total_pay += v;
+        else if (bucket === "tips") row.tips_total += v;
         else if (bucket === "ride") row.ride_total += v;
         else if (bucket === "reimbursement") row.reimbursements_total += v;
         else if (bucket === "deduction") row.deductions_total += v;
@@ -454,6 +496,7 @@ export default function MyPayments() {
     const completedShifts = currentShifts.filter((s) => !s.is_open).length;
     const openShifts = currentShifts.filter((s) => s.is_open).length;
 
+    let baseFromMovements = 0;
     let tips = 0;
     let ride = 0;
     let reimbursements = 0;
@@ -461,17 +504,26 @@ export default function MyPayments() {
     let deductions = 0;
 
     currentMovements.forEach((m) => {
-      if (m.bucket === "tips") tips += m.total_value;
+      if (m.bucket === "base") baseFromMovements += m.total_value;
+      else if (m.bucket === "tips") tips += m.total_value;
       else if (m.bucket === "ride") ride += m.total_value;
       else if (m.bucket === "reimbursement") reimbursements += m.total_value;
       else if (m.bucket === "deduction") deductions += m.total_value;
       else otherExtras += m.total_value;
     });
 
-    // Base pay: prefer official period_base_pay if present (already includes OT calc),
-    // otherwise estimate from real shift totals.
+    // Base pay priority:
+    //   1. Official `period_base_pay` (set when payroll closes).
+    //   2. Real clocked hours × rate (live estimate).
+    //   3. Movement-based base (Connecteam-style "Weekend Job", "Daily Pay", etc.).
+    //
+    // We add the movement base to the live estimate so that workers paid
+    // *partly* by hours and *partly* by jornadas see the full picture.
     const estimatedBase = currentShifts.reduce((s, sh) => s + sh.shift_total, 0);
-    const base = currentBasePay !== null ? currentBasePay : estimatedBase;
+    const base =
+      currentBasePay !== null
+        ? currentBasePay
+        : estimatedBase + baseFromMovements;
 
     const total = base + tips + ride + reimbursements + otherExtras - deductions;
 
@@ -480,6 +532,8 @@ export default function MyPayments() {
       completedShifts,
       openShifts,
       base,
+      baseFromMovements,
+      baseFromHours: estimatedBase,
       tips,
       ride,
       reimbursements,
@@ -487,6 +541,8 @@ export default function MyPayments() {
       deductions,
       total,
       basePayConfirmed: currentBasePay !== null,
+      hasAnyEarnings:
+        base > 0 || tips > 0 || ride > 0 || reimbursements > 0 || otherExtras > 0,
     };
   }, [currentShifts, currentMovements, currentBasePay]);
 
@@ -665,15 +721,28 @@ export default function MyPayments() {
           </div>
 
           {currentShifts.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/40 bg-card/50 px-4 py-8 text-center">
-              <Clock className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
-              <p className="text-[12px] font-semibold text-foreground">
-                No clocked hours yet
-              </p>
-              <p className="text-[10.5px] text-muted-foreground/70 mt-1">
-                Shifts will appear here as you clock in.
-              </p>
-            </div>
+            currentTotals.baseFromMovements > 0 ? (
+              // Worker is paid by jornadas (movements), not by clock — show a friendlier note.
+              <div className="rounded-2xl border border-border/30 bg-card px-4 py-5 text-center">
+                <Wallet className="h-5 w-5 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-[12px] font-semibold text-foreground">
+                  Paid by jornada this period
+                </p>
+                <p className="text-[10.5px] text-muted-foreground/70 mt-1 max-w-[260px] mx-auto leading-relaxed">
+                  Your shifts are recorded as full-day pay items. See the breakdown above.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border/40 bg-card/50 px-4 py-8 text-center">
+                <Clock className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-[12px] font-semibold text-foreground">
+                  No clocked hours yet
+                </p>
+                <p className="text-[10.5px] text-muted-foreground/70 mt-1">
+                  Shifts will appear here as you clock in.
+                </p>
+              </div>
+            )
           ) : (
             <div className="space-y-1.5">
               {currentShifts.map((sh) => (
@@ -863,30 +932,27 @@ function ShiftCard({ shift }: { shift: ShiftEntry }) {
 }
 
 function HistoryDetails({ row, movements }: { row: PaymentRow; movements: MovementDetail[] }) {
+  const baseItems = movements.filter((m) => m.bucket === "base");
   const tips = movements.filter((m) => m.bucket === "tips");
   const ride = movements.filter((m) => m.bucket === "ride");
   const reimb = movements.filter((m) => m.bucket === "reimbursement");
   const others = movements.filter((m) => m.bucket === "other_extra");
   const deductions = movements.filter((m) => m.bucket === "deduction");
 
+  // Distinguish official base (period_base_pay) from movement-derived base, so
+  // the worker sees the line item rather than just an opaque "$0" base pay.
+  const baseFromMovements = baseItems.reduce((s, m) => s + m.total_value, 0);
+  const officialBase = Math.max(0, row.base_total_pay - baseFromMovements);
+
   return (
     <div className="space-y-2 text-[11.5px]">
-      <DetailLine label="Base pay" value={row.base_total_pay} />
-      {tips.length > 0 && (
-        <Group label="Tips" items={tips} accent />
-      )}
-      {ride.length > 0 && (
-        <Group label="Ride / transport" items={ride} accent />
-      )}
-      {reimb.length > 0 && (
-        <Group label="Reimbursements" items={reimb} accent />
-      )}
-      {others.length > 0 && (
-        <Group label="Other extras" items={others} accent />
-      )}
-      {deductions.length > 0 && (
-        <Group label="Deductions" items={deductions} negative />
-      )}
+      {officialBase > 0 && <DetailLine label="Base pay (hours)" value={officialBase} />}
+      {baseItems.length > 0 && <Group label="Base pay (jornadas)" items={baseItems} />}
+      {tips.length > 0 && <Group label="Tips" items={tips} accent />}
+      {ride.length > 0 && <Group label="Ride / transport" items={ride} accent />}
+      {reimb.length > 0 && <Group label="Reimbursements" items={reimb} accent />}
+      {others.length > 0 && <Group label="Other extras" items={others} accent />}
+      {deductions.length > 0 && <Group label="Deductions" items={deductions} negative />}
       <div className="flex items-center justify-between pt-2 border-t border-border/30 text-[12px] tabular-nums">
         <span className="font-bold text-foreground">Total</span>
         <span className="font-bold text-foreground">${row.total_final_pay.toFixed(2)}</span>
