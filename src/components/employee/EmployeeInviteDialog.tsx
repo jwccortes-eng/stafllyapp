@@ -654,7 +654,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                         <Label className="text-[10px]">Email del empleado</Label>
                         <Input value={employee.email} disabled className="h-8 text-xs bg-muted/30" />
                       </div>
-                      {emailSent ? (
+                      {hasEmailAttempt ? (
                         <div className="flex flex-col items-center gap-1.5 py-3">
                           <div className={cn(
                             "flex items-center gap-2 justify-center",
