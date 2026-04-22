@@ -2945,6 +2945,10 @@ export type Database = {
           file_url: string
           id: string
           name: string
+          rejection_reason: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           uploaded_by: string | null
         }
         Insert: {
@@ -2957,6 +2961,10 @@ export type Database = {
           file_url: string
           id?: string
           name: string
+          rejection_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           uploaded_by?: string | null
         }
         Update: {
@@ -2969,6 +2977,10 @@ export type Database = {
           file_url?: string
           id?: string
           name?: string
+          rejection_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           uploaded_by?: string | null
         }
         Relationships: [
