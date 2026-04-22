@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
-import type { InviteDeliveryStatus } from "@/hooks/useEmployeeInvitations";
+import { isInviteStatusFailure, isInviteStatusInFlight, mapEmailLogStatusToInviteStatus, type InviteDeliveryStatus } from "@/lib/invitation-status";
+import { buildWhatsAppTargets, normalizePhone } from "@/lib/phone";
 import { Send, MessageCircle, Phone, Copy, Check, Mail, Smartphone, CheckCircle2, AlertTriangle, Link2, Loader2, RefreshCw, Clock, Shield, KeyRound, XCircle, AlertCircle, MailCheck, MailX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { portalAuthUrl, inviteUrl } from "@/lib/app-url";
@@ -30,8 +31,9 @@ interface Props {
 const STATUS_CONFIG: Record<InviteDeliveryStatus, { label: string; color: string; icon: any; description: string }> = {
   created: { label: "Pendiente", color: "bg-muted text-muted-foreground", icon: Clock, description: "Invitación creada, no enviada aún" },
   queued: { label: "En cola", color: "bg-primary/10 text-primary", icon: Loader2, description: "Email en cola de envío" },
-  sent: { label: "Enviado", color: "bg-primary/10 text-primary", icon: Send, description: "Enviado (pendiente confirmación)" },
-  provider_accepted: { label: "Aceptado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: MailCheck, description: "Proveedor confirmó recepción" },
+  processing: { label: "Procesando", color: "bg-primary/10 text-primary", icon: Loader2, description: "El backend está procesando el envío" },
+  sent: { label: "Enviado al proveedor", color: "bg-primary/10 text-primary", icon: Send, description: "El proveedor aceptó el email, aún sin confirmación final" },
+  provider_accepted: { label: "Aceptado por proveedor", color: "bg-primary/10 text-primary", icon: MailCheck, description: "Proveedor confirmó recepción" },
   delivered: { label: "Entregado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: CheckCircle2, description: "Email entregado al buzón" },
   opened: { label: "Abierto", color: "bg-warning/10 text-warning", icon: CheckCircle2, description: "El empleado abrió el email" },
   accepted: { label: "Activado", color: "bg-[hsl(var(--earning))]/10 text-[hsl(var(--earning))]", icon: CheckCircle2, description: "Cuenta activada exitosamente" },
@@ -39,6 +41,7 @@ const STATUS_CONFIG: Record<InviteDeliveryStatus, { label: string; color: string
   revoked: { label: "Revocado", color: "bg-destructive/10 text-destructive", icon: XCircle, description: "Invitación revocada por admin" },
   failed: { label: "Fallido", color: "bg-destructive/10 text-destructive", icon: MailX, description: "Error al enviar el email" },
   bounced: { label: "Rebotado", color: "bg-destructive/10 text-destructive", icon: AlertCircle, description: "Email rebotó (dirección inválida)" },
+  dlq: { label: "DLQ", color: "bg-destructive/10 text-destructive", icon: AlertCircle, description: "El email agotó sus reintentos y pasó a cola muerta" },
   resent: { label: "Reenviado", color: "bg-primary/10 text-primary", icon: RefreshCw, description: "Invitación reenviada" },
 };
 
@@ -50,7 +53,6 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const [liveToken, setLiveToken] = useState<string | null>(initialToken ?? null);
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [inviteStatus, setInviteStatus] = useState<InviteDeliveryStatus>("created");
@@ -64,6 +66,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const [lastAttemptAt, setLastAttemptAt] = useState<string | null>(null);
   const [inviteRecipient, setInviteRecipient] = useState<string | null>(null);
   const [providerMessageId, setProviderMessageId] = useState<string | null>(null);
+  const [statusChangedAt, setStatusChangedAt] = useState<string | null>(null);
 
   const company = companies.find(c => c.id === selectedCompanyId);
   const companyName = company?.name ?? "la empresa";
@@ -83,11 +86,51 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     if (!open) { setLivePin(null); setLastError(null); }
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !providerMessageId) return;
+
+    let cancelled = false;
+    const syncEmailStatus = async () => {
+      const { data } = await supabase
+        .from("email_send_log")
+        .select("status, error_message, created_at")
+        .eq("message_id", providerMessageId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!data || cancelled) return;
+
+      const nextStatus = mapEmailLogStatusToInviteStatus(data.status, inviteStatus);
+      setInviteStatus(nextStatus);
+      setStatusChangedAt(data.created_at ?? null);
+      if (data.error_message) {
+        setLastError(data.error_message);
+      }
+    };
+
+    void syncEmailStatus();
+    const shouldPoll = isInviteStatusInFlight(inviteStatus);
+    if (!shouldPoll) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const interval = window.setInterval(() => {
+      void syncEmailStatus();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [open, providerMessageId, inviteStatus]);
+
   // Load or create invitation when dialog opens
   useEffect(() => {
     if (!open) return;
     setLiveToken(initialToken ?? null);
-    setEmailSent(false);
     setCompanyMismatch(false);
     setLastError(null);
     if (!selectedCompanyId || !user?.id || !employee.id) return;
@@ -123,6 +166,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
         setLastAttemptAt(existing.last_attempt_at);
         setInviteRecipient(existing.invite_recipient);
         setProviderMessageId(existing.provider_message_id);
+        setStatusChangedAt(existing.last_attempt_at ?? existing.sent_at ?? null);
         setCreatingInvite(false);
         return;
       }
@@ -174,7 +218,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
     return () => { cancelled = true; };
   }, [open, initialToken, selectedCompanyId, user?.id, employee.id]);
 
-  const markSent = async (channel: "whatsapp" | "sms" | "email" | "copy") => {
+  const markSent = async (channel: "whatsapp" | "sms" | "copy") => {
     if (!inviteId) return;
     await supabase
       .from("employee_invitations")
@@ -240,14 +284,28 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
   const message = `¡Hola ${employee.first_name}! 👋\n\nTe invitamos a acceder al portal de empleados de *${companyName}*.\n\n📱 Portal: ${portalUrl}\n📞 Tu teléfono: ${employee.phone_number ?? "—"}\n🔑 Tu PIN: ${pin}\n\nSelecciona "Acceso empleado" e ingresa con tu número y PIN.\n\nDesde el portal podrás:\n✅ Ver tus turnos asignados\n✅ Registrar entrada y salida\n✅ Consultar tus pagos\n✅ Recibir comunicados\n\n${inviteLink ? `🔗 Activa tu cuenta: ${inviteLink}\n\n` : ""}— Equipo ${companyName}`;
 
-  const phoneDigits = (employee.phone_number ?? "").replace(/\D/g, "");
-  const normalizedPhone = phoneDigits.startsWith("00") ? phoneDigits.slice(2) : phoneDigits;
-  const fullPhone = normalizedPhone.length === 10 ? `1${normalizedPhone}` : normalizedPhone;
-
-  // wa.me is iframe-safe; api.whatsapp.com sends X-Frame-Options: DENY and
-  // breaks with ERR_BLOCKED_BY_RESPONSE inside embedded contexts.
-  const waLink = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+  const whatsappTargets = buildWhatsAppTargets(employee.phone_number, message);
   const smsLink = `sms:${employee.phone_number ?? ""}?body=${encodeURIComponent(message)}`;
+  const copyPhoneNumber = async () => {
+    const phoneValue = normalizePhone(employee.phone_number);
+    if (!phoneValue) return;
+    await navigator.clipboard.writeText(phoneValue);
+    toast({ title: "Número copiado" });
+  };
+
+  const openWhatsApp = async (mode: "app" | "web") => {
+    const targetUrl = mode === "app" ? whatsappTargets.waMeUrl : whatsappTargets.waWebUrl;
+    const win = window.open(targetUrl, "_blank", "noopener,noreferrer");
+    if (win) {
+      await markSent("whatsapp");
+      return;
+    }
+    toast({
+      title: "No pudimos abrir WhatsApp",
+      description: "Usa los botones de copiar mensaje, copiar número o WhatsApp Web.",
+      variant: "destructive",
+    });
+  };
 
   const copyMessage = async () => {
     await navigator.clipboard.writeText(message);
@@ -307,10 +365,8 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       if (data?.error) throw new Error(data.error);
 
       // The edge function returns status: "queued" — show honest status
-      const returnedStatus = data?.status ?? "queued";
       const returnedMessageId = data?.message_id ?? null;
 
-      setEmailSent(true);
       setInviteStatus("queued");
       setInviteChannel("email");
       setInviteSentAt(new Date().toISOString());
@@ -318,6 +374,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
       if (returnedMessageId) setProviderMessageId(returnedMessageId);
       setAttempts(prev => prev + 1);
       setLastAttemptAt(new Date().toISOString());
+      setStatusChangedAt(new Date().toISOString());
 
       // Update invitation record with queued status
       if (inviteId) {
@@ -371,9 +428,10 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
   const statusConfig = STATUS_CONFIG[inviteStatus] ?? STATUS_CONFIG.created;
   const StatusIcon = statusConfig.icon;
   const isAccepted = inviteStatus === "accepted";
-  const isFailed = ["failed", "bounced"].includes(inviteStatus);
-  const isQueued = inviteStatus === "queued";
-  const canResend = isFailed || ["expired", "revoked"].includes(inviteStatus) || (inviteStatus === "sent" && inviteSentAt && Date.now() - new Date(inviteSentAt).getTime() > 30 * 60 * 1000);
+  const isFailed = isInviteStatusFailure(inviteStatus);
+  const isQueued = inviteStatus === "queued" || inviteStatus === "processing";
+  const hasEmailAttempt = inviteChannel === "email" && inviteStatus !== "created";
+  const canResend = isFailed || ["expired", "revoked", "dlq"].includes(inviteStatus) || (inviteStatus === "sent" && inviteSentAt && Date.now() - new Date(inviteSentAt).getTime() > 30 * 60 * 1000);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
