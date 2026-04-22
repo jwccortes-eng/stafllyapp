@@ -54,7 +54,7 @@ interface MovementDetail {
   id: string;
   concept_name: string;
   category: "extra" | "deduction" | string;
-  bucket: "tips" | "ride" | "reimbursement" | "other_extra" | "deduction";
+  bucket: "base" | "tips" | "ride" | "reimbursement" | "other_extra" | "deduction";
   quantity: number | null;
   rate: number | null;
   total_value: number;
@@ -106,12 +106,53 @@ function formatDay(iso: string): string {
   }
 }
 
+/**
+ * Classify a movement into a user-facing earnings bucket.
+ *
+ * The Connecteam-style payroll model means many "shift jobs" are recorded as
+ * `extra` movements (e.g. "Weekend Job", "Daily Pay", "Half Day") instead of
+ * coming from time_entries — those are the worker's *base pay* and must show
+ * as such in the breakdown, not as "Other extras".
+ *
+ * See mem://business-logic/connecteam-payroll-model.
+ */
 function classifyMovement(name: string, category: string): MovementDetail["bucket"] {
-  const n = (name || "").toLowerCase();
+  const n = (name || "").toLowerCase().trim();
   if (category === "deduction") return "deduction";
+
+  // Tips
   if (n.includes("propina") || n.includes("tip")) return "tips";
-  if (n.includes("transporte") || n.includes("ride") || n.includes("viaje") || n.includes("transport")) return "ride";
+
+  // Ride / transport — treat "horas de viaje" as ride compensation, not base.
+  if (
+    n.includes("transporte") ||
+    n.includes("transport") ||
+    n.includes("ride") ||
+    n.includes("viaje")
+  ) {
+    return "ride";
+  }
+
+  // Reimbursements
   if (n.includes("reintegro") || n.includes("reimburs")) return "reimbursement";
+
+  // Shift-pattern base pay (Connecteam model)
+  if (
+    n.includes("weekend job") ||
+    n.includes("weekend") ||
+    n.includes("daily pay") ||
+    n.includes("daily") ||
+    n.includes("half day") ||
+    n.includes("media jornada") ||
+    n.includes("jornada") ||
+    n.includes("full day") ||
+    n.includes("base pay") ||
+    n.includes("regular hours") ||
+    n.includes("horas regulares")
+  ) {
+    return "base";
+  }
+
   return "other_extra";
 }
 
