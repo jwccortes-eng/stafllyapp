@@ -721,15 +721,28 @@ export default function MyPayments() {
           </div>
 
           {currentShifts.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/40 bg-card/50 px-4 py-8 text-center">
-              <Clock className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
-              <p className="text-[12px] font-semibold text-foreground">
-                No clocked hours yet
-              </p>
-              <p className="text-[10.5px] text-muted-foreground/70 mt-1">
-                Shifts will appear here as you clock in.
-              </p>
-            </div>
+            currentTotals.baseFromMovements > 0 ? (
+              // Worker is paid by jornadas (movements), not by clock — show a friendlier note.
+              <div className="rounded-2xl border border-border/30 bg-card px-4 py-5 text-center">
+                <Wallet className="h-5 w-5 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-[12px] font-semibold text-foreground">
+                  Paid by jornada this period
+                </p>
+                <p className="text-[10.5px] text-muted-foreground/70 mt-1 max-w-[260px] mx-auto leading-relaxed">
+                  Your shifts are recorded as full-day pay items. See the breakdown above.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border/40 bg-card/50 px-4 py-8 text-center">
+                <Clock className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-[12px] font-semibold text-foreground">
+                  No clocked hours yet
+                </p>
+                <p className="text-[10.5px] text-muted-foreground/70 mt-1">
+                  Shifts will appear here as you clock in.
+                </p>
+              </div>
+            )
           ) : (
             <div className="space-y-1.5">
               {currentShifts.map((sh) => (
