@@ -143,6 +143,7 @@ const PortalClock = lazy(() => import("./pages/portal/PortalClock"));
 const PayStub = lazy(() => import("./pages/portal/PayStub"));
 const PortalChat = lazy(() => import("./pages/portal/PortalChat"));
 const MyW9 = lazy(() => import("./pages/portal/MyW9"));
+const MyDocuments = lazy(() => import("./pages/portal/MyDocuments"));
 const MyAvailability = lazy(() => import("./pages/portal/MyAvailability"));
 
 // Parceros community — own layout
@@ -316,6 +317,7 @@ function App() {
                 <Route path="profile/complete" element={<CompleteProfile />} />
                 <Route path="availability" element={<MyAvailability />} />
                 <Route path="w9" element={<MyW9 />} />
+                <Route path="documents" element={<MyDocuments />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

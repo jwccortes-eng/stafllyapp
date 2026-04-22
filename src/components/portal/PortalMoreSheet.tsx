@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { X, LogOut, Moon, Sun, CalendarCheck, Megaphone, FileText, BookOpen, ChevronRight, Wallet, Shield } from "lucide-react";
+import { X, LogOut, Moon, Sun, CalendarCheck, Megaphone, FileText, BookOpen, ChevronRight, Wallet, Shield, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -31,6 +31,7 @@ const ALL_MORE_ITEMS: (MoreItem & { moduleKey?: string })[] = [
   { id: "payments", to: "/portal/payments", icon: Wallet, label: "Pagos", description: "Historial de pagos", moduleKey: "my_payments" },
   { id: "availability", to: "/portal/availability", icon: CalendarCheck, label: "Disponibilidad", description: "Gestiona tu horario", moduleKey: "my_availability" },
   { id: "announcements", to: "/portal/announcements", icon: Megaphone, label: "Anuncios", description: "Noticias de la empresa", moduleKey: "my_announcements" },
+  { id: "documents", to: "/portal/documents", icon: FolderOpen, label: "My documents", description: "Required onboarding documents" },
   { id: "w9", to: "/portal/w9", icon: FileText, label: "Formulario W-9", description: "Información fiscal", moduleKey: "my_w9" },
   { id: "resources", to: "/portal/resources", icon: BookOpen, label: "Recursos", description: "Material de apoyo", moduleKey: "my_resources" },
 ];

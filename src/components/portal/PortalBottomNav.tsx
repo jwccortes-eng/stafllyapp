@@ -29,6 +29,7 @@ const MORE_PATHS = [
   "/portal/announcements",
   "/portal/resources",
   "/portal/w9",
+  "/portal/documents",
 ];
 
 interface PortalBottomNavProps {

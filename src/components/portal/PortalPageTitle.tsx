@@ -11,6 +11,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/portal/chat": "Chat",
   "/portal/resources": "Resources",
   "/portal/w9": "W-9",
+  "/portal/documents": "My Documents",
 };
 
 export function PortalPageTitle() {
