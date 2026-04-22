@@ -20,9 +20,11 @@ export function ReadinessCard() {
   if (r.loading || !r.status) return null;
 
   const isReady = r.status === "ready" || r.status === "active";
-  // CTA goes to the editable Complete-Profile wizard (worker self-service).
-  // Admins still manage full onboarding via /app/employees/:id/onboarding.
-  const ctaHref = "/portal/profile/complete";
+  // CTA routing:
+  //  • If only documents are missing → go straight to /portal/documents (self-upload).
+  //  • Otherwise (personal info still missing) → wizard.
+  const onlyDocsMissing = r.missingPersonal.length === 0 && r.missingDocuments.length > 0;
+  const ctaHref = onlyDocsMissing ? "/portal/documents" : "/portal/profile/complete";
 
   if (isReady) {
     return (
@@ -70,7 +72,7 @@ export function ReadinessCard() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-bold text-foreground leading-tight">
-              Complete your profile
+              {onlyDocsMissing ? "Upload your documents" : "Complete your profile"}
             </p>
             <p className="text-[10.5px] text-muted-foreground/80 mt-0.5">
               {PROFILE_STATUS_LABELS[r.status]} — needed to be assigned to shifts.
