@@ -214,14 +214,64 @@ export default function Workforce() {
 
   const filtered = useMemo(() => {
     const q = debounced.trim().toLowerCase();
-    return rows.filter((r) => {
+    const base = rows.filter((r) => {
       if (statusFilter !== "all" && r.profile_status !== statusFilter) return false;
       if (workerFilter !== "all" && (r.employee_role ?? "") !== workerFilter) return false;
+
+      // Quality filter — uses bulk reviewStats already loaded.
+      if (qualityFilter !== "any") {
+        const s = reviewStats.get(r.id);
+        const hasReviews = !!s && s.total_reviews > 0;
+        if (qualityFilter === "with_reviews" && !hasReviews) return false;
+        if (qualityFilter === "no_reviews" && hasReviews) return false;
+        if (qualityFilter === "at_risk") {
+          const risk = classifyRisk(s);
+          if (risk === "none") return false;
+        }
+        if (qualityFilter === "top_rated") {
+          if (!hasReviews) return false;
+          if ((s!.total_reviews ?? 0) < 3) return false;
+          if ((s!.avg_overall_score ?? 0) < 4) return false;
+        }
+      }
+
       if (!q) return true;
       const hay = `${r.first_name} ${r.last_name} ${r.phone_number ?? ""} ${r.email ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [rows, debounced, statusFilter, workerFilter]);
+
+    // Sorting — non-mutating copy.
+    const sorted = [...base];
+    const score = (id: string) => reviewStats.get(id)?.avg_overall_score ?? -1;
+    const reviews = (id: string) => reviewStats.get(id)?.total_reviews ?? 0;
+    const riskRank = (id: string) => {
+      const r = classifyRisk(reviewStats.get(id));
+      return r === "at_risk" ? 0 : r === "watch" ? 1 : 2;
+    };
+    switch (sortKey) {
+      case "name":
+        sorted.sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`));
+        break;
+      case "score":
+        sorted.sort((a, b) => score(b.id) - score(a.id));
+        break;
+      case "reviews":
+        sorted.sort((a, b) => reviews(b.id) - reviews(a.id));
+        break;
+      case "risk":
+        sorted.sort((a, b) => {
+          const d = riskRank(a.id) - riskRank(b.id);
+          if (d !== 0) return d;
+          return score(a.id) - score(b.id); // lowest score first within same risk tier
+        });
+        break;
+      case "recent":
+      default:
+        // Already ordered by created_at desc from the query.
+        break;
+    }
+    return sorted;
+  }, [rows, debounced, statusFilter, workerFilter, qualityFilter, sortKey, reviewStats]);
 
   const allVisibleSelected = filtered.length > 0 && filtered.every((r) => selected.has(r.id));
   const toggleAllVisible = () => {
