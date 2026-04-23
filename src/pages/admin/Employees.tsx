@@ -378,6 +378,16 @@ export default function Employees() {
   // on hidden rows. Search is debounce-free and cheap; covers all filter axes.
   useEffect(() => { clearSelection(); }, [statusTab, filterRole, filterGroup, search, selectedCompanyId]);
 
+  // Keyboard shortcut: Esc clears selection while the bulk actions bar is shown.
+  useEffect(() => {
+    if (selectedIds.size === 0) return;
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") clearSelection();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedIds.size]);
+
 
   const activeEmployeeCount = employees.filter(e => e.is_active !== false).length;
   const atEmployeeLimit = !canAddEmployees(activeEmployeeCount);
