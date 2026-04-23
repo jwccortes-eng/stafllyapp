@@ -172,10 +172,29 @@ export default function Employees() {
   const [onboardingSettingsOpen, setOnboardingSettingsOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
-  const [search, setSearch] = useState("");
-  const [statusTab, setStatusTab] = useState<"active" | "invited" | "inactive" | "pending" | "all">("active");
-  const [filterRole, setFilterRole] = useState<string>("all");
-  const [filterGroup, setFilterGroup] = useState<string>("all");
+  // URL-persisted filters (search, status tab, role, group)
+  const { filters: urlFilters, setFilter, resetFilters, activeCount: urlActiveCount } = useUrlFilters({
+    q: "",
+    status: "active",
+    role: "all",
+    group: "all",
+  });
+  const search = urlFilters.q;
+  const setSearch = (v: string) => setFilter({ q: v });
+  type StatusTab = "active" | "invited" | "inactive" | "pending" | "all" | "missing-docs" | "drivers" | "no-activity" | "new";
+  const statusTab = (urlFilters.status as StatusTab) || "active";
+  const setStatusTab = (v: StatusTab) => setFilter({ status: v });
+  const filterRole = urlFilters.role;
+  const setFilterRole = (v: string) => setFilter({ role: v });
+  const filterGroup = urlFilters.group;
+  const setFilterGroup = (v: string) => setFilter({ group: v });
+
+  // Persisted alphabetical sort by default; users can flip it.
+  const { sort, onSort, directionFor } = useSortPreference<"name" | "code" | "role" | "last_activity">(
+    "employees",
+    { key: "name", direction: "asc" },
+  );
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
 
@@ -200,7 +219,7 @@ export default function Employees() {
   const [importStep, setImportStep] = useState<"upload" | "preview" | "done">("upload");
   const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   const [importing, setImporting] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [updateDiffs, setUpdateDiffs] = useState<UpdateDiff[]>([]);
   const [updateStep, setUpdateStep] = useState<"upload" | "preview" | "done">("upload");
   const [updateResult, setUpdateResult] = useState<{ updated: number; skipped: number; created?: number } | null>(null);
