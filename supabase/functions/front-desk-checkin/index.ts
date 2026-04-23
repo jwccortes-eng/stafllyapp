@@ -49,15 +49,13 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as CheckinPayload;
     const { action } = body;
 
-    // ============= LOOKUP =============
-    if (action === "lookup") {
-      const { phone, pin } = body;
-      if (!phone || !pin) {
-        return jsonResp({ error: "Teléfono y PIN son requeridos" }, 400);
-      }
+    // ============= LOOKUP BY PHONE ONLY (assistant flow, no PIN) =============
+    if (action === "lookup_phone" || action === "lookup") {
+      const { phone } = body;
+      if (!phone) return jsonResp({ error: "Ingresa tu número de teléfono" }, 400);
       const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
 
-      // Rate limit reuse
+      // Soft rate limit (prevents enumeration spam)
       const { data: rateData } = await adminClient
         .from("auth_rate_limits")
         .select("*")
@@ -68,32 +66,87 @@ Deno.serve(async (req) => {
         const minutesLeft = Math.ceil(
           (new Date(rateData.locked_until).getTime() - Date.now()) / 60000
         );
-        return jsonResp({ error: `Cuenta bloqueada. Intenta en ${minutesLeft} min.` }, 429);
+        return jsonResp({ error: `Demasiados intentos. Intenta en ${minutesLeft} min.` }, 429);
       }
 
       const { data: employee } = await adminClient
         .from("employees")
         .select(
-          "id, first_name, last_name, phone_number, access_pin, is_active, user_id, company_id, avatar_url, email, address, employee_role, emergency_contact_name, emergency_contact_phone"
+          "id, first_name, last_name, phone_number, is_active, user_id, company_id, avatar_url, email, address, employee_role, emergency_contact_name, emergency_contact_phone"
         )
         .eq("phone_number", cleanPhone)
         .maybeSingle();
 
-      if (!employee || employee.access_pin !== pin) {
+      if (!employee) {
         await recordFailed(adminClient, cleanPhone);
-        return jsonResp({ error: "Credenciales inválidas" }, 401);
+        return jsonResp({ error: "No encontramos un perfil con ese número. Pide ayuda al equipo." }, 404);
       }
       if (!employee.is_active) {
         return jsonResp({ error: "Tu cuenta está inactiva. Contacta al administrador." }, 403);
       }
 
-      // Reset
       await adminClient.from("auth_rate_limits").delete().eq("phone_number", cleanPhone);
-
-      // Build readiness summary
       const summary = await buildEmployeeSummary(adminClient, employee);
-
       return jsonResp({ success: true, employee, summary });
+    }
+
+    // ============= CREATE INQUIRY (request or comment) =============
+    if (action === "create_inquiry") {
+      const { phone, category, message, inquiry_kind, language } = body;
+      if (!phone || !message) return jsonResp({ error: "Teléfono y mensaje son requeridos" }, 400);
+
+      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+      const { data: employee } = await adminClient
+        .from("employees")
+        .select("id, company_id")
+        .eq("phone_number", cleanPhone)
+        .maybeSingle();
+      if (!employee) return jsonResp({ error: "Empleado no encontrado" }, 404);
+
+      const safeCategory = (category || "other").toString().slice(0, 50);
+      const safeMessage = message.toString().slice(0, 2000);
+      const kind = inquiry_kind === "comment" ? "comment" : "request";
+      const visitType = kind === "comment" ? "general_inquiry" : "other";
+      const detail = `[${kind.toUpperCase()} · ${safeCategory}]\n${safeMessage}`;
+
+      const { data: visit, error: insertErr } = await adminClient
+        .from("office_visits")
+        .insert({
+          employee_id: employee.id,
+          company_id: employee.company_id,
+          visit_type: visitType,
+          visit_detail: detail,
+          status: "pending_followup",
+          channel: "front_desk_kiosk",
+          language: language || "es",
+        })
+        .select("id")
+        .single();
+
+      if (insertErr) return jsonResp({ error: insertErr.message }, 500);
+      return jsonResp({ success: true, visit_id: visit.id });
+    }
+
+    // ============= LIST PAYMENTS =============
+    if (action === "list_payments") {
+      const { phone } = body;
+      if (!phone) return jsonResp({ error: "Teléfono requerido" }, 400);
+      const cleanPhone = phone.replace(/[^\d+]/g, "").slice(0, 20);
+      const { data: employee } = await adminClient
+        .from("employees")
+        .select("id")
+        .eq("phone_number", cleanPhone)
+        .maybeSingle();
+      if (!employee) return jsonResp({ payments: [] });
+
+      const { data: rows } = await adminClient
+        .from("normalized_payroll_rows")
+        .select("work_date, total_pay, total_hours, pay_type")
+        .eq("matched_employee_id", employee.id)
+        .order("work_date", { ascending: false })
+        .limit(10);
+
+      return jsonResp({ payments: rows || [] });
     }
 
     // ============= CREATE VISIT =============
