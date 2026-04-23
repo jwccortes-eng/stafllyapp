@@ -67,18 +67,18 @@ const RANGES = [
 ];
 
 const STATUS_LABELS: Record<string, { label: string; tone: string }> = {
-  in_progress: { label: "In progress", tone: "border-blue-300 bg-blue-50 text-blue-800" },
-  resolved: { label: "Resolved", tone: "border-emerald-300 bg-emerald-50 text-emerald-800" },
-  pending_followup: { label: "Pending follow-up", tone: "border-amber-300 bg-amber-50 text-amber-800" },
-  requires_admin_review: { label: "Admin review", tone: "border-rose-300 bg-rose-50 text-rose-800" },
-  cancelled: { label: "Cancelled", tone: "border-neutral-300 bg-neutral-50 text-neutral-700" },
+  in_progress: { label: "In progress", tone: "border-primary/30 bg-primary/10 text-primary" },
+  resolved: { label: "Resolved", tone: "border-earning/30 bg-earning/10 text-earning" },
+  pending_followup: { label: "Pending follow-up", tone: "border-warning/30 bg-warning/10 text-warning" },
+  requires_admin_review: { label: "Admin review", tone: "border-deduction/30 bg-deduction/10 text-deduction" },
+  cancelled: { label: "Cancelled", tone: "border-border bg-muted text-muted-foreground" },
 };
 
 const RATING_META: Record<string, { emoji: string; tone: string }> = {
-  excellent: { emoji: "🤩", tone: "bg-emerald-50 text-emerald-700" },
-  good: { emoji: "🙂", tone: "bg-blue-50 text-blue-700" },
-  regular: { emoji: "😐", tone: "bg-amber-50 text-amber-700" },
-  bad: { emoji: "😞", tone: "bg-rose-50 text-rose-700" },
+  excellent: { emoji: "🤩", tone: "bg-earning/10 text-earning" },
+  good: { emoji: "🙂", tone: "bg-primary/10 text-primary" },
+  regular: { emoji: "😐", tone: "bg-warning/10 text-warning" },
+  bad: { emoji: "😞", tone: "bg-deduction/10 text-deduction" },
 };
 
 export default function FrontDeskHub() {
@@ -296,7 +296,7 @@ function VisitsList({
                           <span>·</span>
                           <span>{format(new Date(v.checked_in_at), "MMM d, HH:mm", { locale: enUS })}</span>
                           {minutes != null && <><span>·</span><span>{minutes} min</span></>}
-                          {v.pending_count > 0 && <><span>·</span><span className="text-amber-700">{v.pending_count} pending</span></>}
+                          {v.pending_count > 0 && <><span>·</span><span className="text-warning font-medium">{v.pending_count} pending</span></>}
                           {v.attendant_name && <><span>·</span><span>by {v.attendant_name}</span></>}
                         </div>
                         {v.visit_detail && (
@@ -326,12 +326,12 @@ function Kpi({
   icon: Icon, label, value, tone = "default",
 }: { icon: any; label: string; value: number | string; tone?: "default" | "warn" }) {
   return (
-    <Card className={cn(tone === "warn" && "border-amber-300 bg-amber-50/30")}>
+    <Card className={cn(tone === "warn" && "border-warning/40 bg-warning/[0.04]")}>
       <CardContent className="p-3">
         <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
           <Icon className="h-3 w-3" /> {label}
         </div>
-        <div className="mt-1 text-2xl font-bold tabular-nums leading-none">{value}</div>
+        <div className={cn("mt-1 text-2xl font-bold tabular-nums leading-none", tone === "warn" && "text-warning")}>{value}</div>
       </CardContent>
     </Card>
   );
