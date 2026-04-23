@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toNumOrFallback } from "@/lib/numeric-input";
 
 const CompanyFinancialPolicies = lazy(() => import("@/components/advances/CompanyFinancialPolicies"));
 const CompensationMatrixTab = lazy(() => import("@/components/compensation/CompensationMatrixTab"));
@@ -191,7 +192,11 @@ export default function PayrollSettings() {
                 min={0}
                 max={14}
                 value={form.overdue_grace_days}
-                onChange={(e) => setForm(f => ({ ...f, overdue_grace_days: Number(e.target.value) }))}
+                onChange={(e) => setForm(f => ({
+                  ...f,
+                  // Required field: fall back to default instead of silent 0 when cleared
+                  overdue_grace_days: toNumOrFallback(e.target.value, DEFAULT_CONFIG.overdue_grace_days),
+                }))}
               />
               <p className="text-[11px] text-muted-foreground">
                 Un periodo se marca como atrasado si no está cerrado después de {form.overdue_grace_days} día(s) del cierre esperado
