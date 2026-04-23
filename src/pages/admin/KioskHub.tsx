@@ -275,7 +275,7 @@ export default function KioskHub() {
                           {e.type === "clock_in" ? "IN" : "OUT"}
                         </Badge>
                         <Link
-                          to={`/app/people/${e.employee_id}`}
+                          to={`/app/employees/${e.employee_id}`}
                           className="font-medium text-sm hover:underline truncate"
                         >
                           {fullName}
