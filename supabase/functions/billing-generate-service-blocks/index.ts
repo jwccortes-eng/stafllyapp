@@ -77,11 +77,12 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: userRes, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userRes?.user) {
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
       return json({ error: "Unauthorized" }, 401);
     }
-    const userId = userRes.user.id;
+    const userId = claimsData.claims.sub;
 
     // 2) Parse + validate input
     const body = (await req.json()) as GenerateInput;
@@ -95,24 +96,42 @@ Deno.serve(async (req) => {
       return json({ error: "Dates must be YYYY-MM-DD" }, 400);
     }
 
-    // 3) Verify membership + admin in target company
+    // 3) Verify membership + authorization in target company
     const admin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data: membership } = await admin
-      .from("company_users")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("company_id", body.company_id)
-      .maybeSingle();
+    const [{ data: membership }, { data: roleRows }, { data: invoicingPerm }] = await Promise.all([
+      admin
+        .from("company_users")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("company_id", body.company_id)
+        .maybeSingle(),
+      admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId),
+      admin
+        .from("module_permissions")
+        .select("can_edit")
+        .eq("user_id", userId)
+        .eq("module", "tenant_invoicing")
+        .maybeSingle(),
+    ]);
 
-    if (!membership) {
+    const membershipRole = String(membership?.role ?? "").trim().toLowerCase();
+    const globalRoles = new Set((roleRows ?? []).map((row: any) => String(row.role ?? "").trim().toLowerCase()));
+
+    const hasGlobalAdminAccess = ["developer", "owner", "admin", "company_owner"].some((role) => globalRoles.has(role));
+    const hasCompanyAdminAccess = ["admin", "owner", "company_owner"].includes(membershipRole);
+    const hasScopedInvoicingAccess = ["manager", "supervisor"].includes(membershipRole) && !!invoicingPerm?.can_edit;
+
+    if (!membership && !hasGlobalAdminAccess) {
       return json({ error: "Not a member of company" }, 403);
     }
 
-    const membershipRole = String(membership.role ?? "").trim().toLowerCase();
-    if (!["admin", "owner", "company_owner", "developer"].includes(membershipRole)) {
+    if (!(hasGlobalAdminAccess || hasCompanyAdminAccess || hasScopedInvoicingAccess)) {
       return json({ error: "Admin privileges required" }, 403);
     }
 
