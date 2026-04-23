@@ -57,7 +57,7 @@ export function FrontDeskWidget() {
           <Users className="h-4 w-4 text-primary" /> Front Desk hoy
         </CardTitle>
         <Button asChild variant="ghost" size="sm" className="h-8 -mr-2">
-          <Link to="/app/front-desk-reports">
+          <Link to="/app/front-desk">
             Ver <ArrowRight className="h-3 w-3 ml-1" />
           </Link>
         </Button>

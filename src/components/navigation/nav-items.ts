@@ -23,7 +23,7 @@ export interface NavItem {
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", to: "/app", icon: LayoutDashboard, label: "Dashboard", module: null, end: true, section: "Home" },
   { id: "ops-center", to: "/app/ops-center", icon: Radio, label: "Ops Center", module: "shifts", section: "Operations" },
-  { id: "front-desk-reports", to: "/app/front-desk-reports", icon: ContactRound, label: "Front Desk", module: null, section: "Operations" },
+  { id: "front-desk", to: "/app/front-desk", icon: ContactRound, label: "Front Desk", module: null, section: "Operations" },
   { id: "shifts", to: "/app/shifts", icon: CalendarDays, label: "Shifts", module: "shifts", section: "Operations" },
   { id: "timeclock", to: "/app/timeclock", icon: Clock, label: "Time Clock", module: "shifts", section: "Operations" },
   { id: "clients", to: "/app/clients", icon: Building2, label: "Clients", module: "clients", section: "Operations" },
@@ -52,7 +52,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "ai-workforce", to: "/app/ai-workforce", icon: Brain, label: "AI Workforce", module: null, section: "Operations" },
   { id: "live-map", to: "/app/live-map", icon: MapIcon, label: "Live Map", module: null, section: "Operations" },
   { id: "leaderboard", to: "/app/leaderboard", icon: Award, label: "Leaderboard", module: null, section: "Operations" },
-  { id: "kiosk-devices", to: "/app/kiosk-devices", icon: Monitor, label: "Kiosk", module: null, section: "Operations" },
+  { id: "kiosk", to: "/app/kiosk", icon: Monitor, label: "Kiosk", module: null, section: "Operations" },
   { id: "attendance", to: "/app/attendance", icon: ScanEye, label: "Attendance", module: null, section: "Operations" },
   { id: "migration", to: "/app/migration", icon: ArrowLeftRight, label: "Migration", module: null, section: "Administration", roles: ["owner"] },
   { id: "staged-recon", to: "/app/payroll-reconciliation", icon: GitCompareArrows, label: "Reconciliation", module: null, section: "Payroll", roles: ["developer", "owner", "company_owner", "admin"] },
