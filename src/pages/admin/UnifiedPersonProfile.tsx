@@ -54,7 +54,6 @@ import {
   Cake,
   Briefcase,
   CalendarDays,
-  Wallet,
   ShieldCheck,
   ShieldOff,
   FileText,

@@ -292,9 +292,9 @@ function VisitsList({
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
-                          <span>{meta.icon} {meta.labelEs}</span>
+                          <span>{meta.icon} {meta.labelEn}</span>
                           <span>·</span>
-                          <span>{format(new Date(v.checked_in_at), "d MMM HH:mm", { locale: es })}</span>
+                          <span>{format(new Date(v.checked_in_at), "MMM d, HH:mm", { locale: enUS })}</span>
                           {minutes != null && <><span>·</span><span>{minutes} min</span></>}
                           {v.pending_count > 0 && <><span>·</span><span className="text-amber-700">{v.pending_count} pending</span></>}
                           {v.attendant_name && <><span>·</span><span>by {v.attendant_name}</span></>}
