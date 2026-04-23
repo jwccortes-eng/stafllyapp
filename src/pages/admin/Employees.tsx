@@ -940,7 +940,13 @@ export default function Employees() {
         }
       />
 
-      {/* ─── Status Tabs ─── */}
+      {/* ─── Status Tabs ───
+          Tone hints (visual priority for problem backlogs):
+            • destructive → blocks operation right now (failed invites)
+            • warning     → needs attention soon (missing docs, inactive backlog)
+            • neutral     → informational
+          A tab only adopts a non-neutral tone when its count > 0, so healthy
+          tenants keep a calm UI and stressed tenants get a glanceable alert. */}
       <div className="flex items-center gap-0.5 border-b border-border/40 overflow-x-auto">
         {([
           { key: "active" as const, label: "Active", count: statusCounts.active },
@@ -952,14 +958,21 @@ export default function Employees() {
             : []),
           { key: "pending" as const, label: "Pending activation", count: statusCounts.pending },
           { key: "new" as const, label: "New", count: statusCounts.new },
-          { key: "missing-docs" as const, label: "Missing docs", count: statusCounts["missing-docs"] },
+          {
+            key: "missing-docs" as const,
+            label: "Missing docs",
+            count: statusCounts["missing-docs"],
+            tone: statusCounts["missing-docs"] > 0 ? ("warning" as const) : undefined,
+          },
           { key: "drivers" as const, label: "Drivers", count: statusCounts.drivers },
           { key: "no-activity" as const, label: "No recent activity", count: statusCounts["no-activity"] },
           { key: "inactive" as const, label: "Inactive", count: statusCounts.inactive },
           { key: "all" as const, label: "All", count: statusCounts.all },
         ]).map(tab => {
           const isActive = statusTab === tab.key;
-          const isDestructive = (tab as any).tone === "destructive";
+          const tone = (tab as any).tone as "destructive" | "warning" | undefined;
+          const isDestructive = tone === "destructive";
+          const isWarning = tone === "warning";
           return (
             <button
               key={tab.key}
@@ -969,20 +982,30 @@ export default function Employees() {
                 isActive
                   ? isDestructive
                     ? "border-destructive text-destructive"
-                    : "border-primary text-primary"
-                  : isDestructive && !isActive
+                    : isWarning
+                      ? "border-warning text-warning"
+                      : "border-primary text-primary"
+                  : isDestructive
                     ? "border-transparent text-destructive/80 hover:text-destructive hover:border-destructive/40"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    : isWarning
+                      ? "border-transparent text-warning/80 hover:text-warning hover:border-warning/40"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               )}
             >
               {tab.label}
               <span className={cn(
                 "ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
                 isActive
-                  ? isDestructive ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+                  ? isDestructive
+                    ? "bg-destructive/10 text-destructive"
+                    : isWarning
+                      ? "bg-warning/15 text-warning"
+                      : "bg-primary/10 text-primary"
                   : isDestructive
                     ? "bg-destructive/10 text-destructive"
-                    : "bg-muted text-muted-foreground",
+                    : isWarning
+                      ? "bg-warning/15 text-warning"
+                      : "bg-muted text-muted-foreground",
               )}>{tab.count}</span>
             </button>
           );
