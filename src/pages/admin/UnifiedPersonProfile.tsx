@@ -773,6 +773,8 @@ export default function UnifiedPersonProfile() {
               companyName={selectedCompany?.name}
               onInvite={() => setInviteOpen(true)}
               invitation={invitation ?? null}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
             />
           </CardContent>
         </Card>
