@@ -652,13 +652,20 @@ export default function FrontDesk() {
       });
       setMessage("");
       setCompleteKind(kind);
-      setStep("complete");
+      // Inside an active case → ask for resolution + rating before closing.
+      if (activeCase) {
+        setStep("resolution");
+      } else {
+        setStep("complete");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     }
   };
 
   const goHub = () => setStep("hub");
+  /** Back from any in-case action returns to the intake picker. */
+  const goIntake = () => setStep("intake");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
