@@ -33,7 +33,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash, Building2, UserPlus, Rocket, Car, FileWarning } from "lucide-react";
+import { Plus, Search, Upload, FileSpreadsheet, CheckCircle2, MoreHorizontal, Pencil, Trash2, UserX, UserCheck, Eye, RefreshCw, ArrowUpDown, Users, Download, X, Phone, Mail, LayoutGrid, List, MessageCircle, Send, Loader2, Clock, Shield, KeyRound, Settings2, Archive, Hash, Building2, UserPlus, Rocket, Car, FileWarning, RotateCw } from "lucide-react";
+import { BulkActionsBar } from "@/components/ui/bulk-actions-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { PremiumPageHeader, type PremiumPageHeaderKpi } from "@/components/ui/premium-page-header";
 import { PremiumFilterBar, type ActiveFilterChip } from "@/components/ui/premium-filter-bar";
@@ -250,6 +251,8 @@ export default function Employees() {
   const [updateMode, setUpdateMode] = useState<"diff" | "full">("full");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [bulkInviting, setBulkInviting] = useState(false);
+  const [bulkReinviting, setBulkReinviting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [archiveTarget, setArchiveTarget] = useState<EmployeeRecord | null>(null);
   const [colPrefsOpen, setColPrefsOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -288,6 +291,56 @@ export default function Employees() {
     }
   };
 
+  // ─── Selection helpers (per-row checkboxes for bulk actions) ─────────────
+  const toggleRowSelected = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+  const selectAllInList = (ids: string[]) => setSelectedIds(new Set(ids));
+
+  /**
+   * Bulk re-invite — re-sends invitations only for currently selected workers
+   * whose latest invitation is in a failure state (failed / bounced / dlq).
+   * Reuses the existing `bulk-portal-invite` edge function with `employee_ids`.
+   */
+  const handleBulkReinviteSelected = async () => {
+    if (!selectedCompanyId) return;
+    const failedIds = Array.from(selectedIds).filter(id => {
+      const emp = employees.find(e => e.id === id);
+      return emp ? isInviteFailed(emp) : false;
+    });
+    if (failedIds.length === 0) {
+      toast({
+        title: "Nothing to re-invite",
+        description: "Select workers whose last invitation failed, bounced or hit DLQ.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBulkReinviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("bulk-portal-invite", {
+        body: { company_id: selectedCompanyId, employee_ids: failedIds },
+      });
+      if (error) { toast({ title: "Re-invite failed", description: "Could not resend invitations", variant: "destructive" }); return; }
+      if (data?.error) { toast({ title: "Re-invite failed", description: data.error, variant: "destructive" }); return; }
+      toast({
+        title: `Re-invited ${data.emails_sent ?? failedIds.length} workers ✅`,
+        description: `${data.processed ?? failedIds.length} processed${data.skipped > 0 ? `, ${data.skipped} skipped` : ""}`,
+      });
+      clearSelection();
+      await Promise.all([fetchEmployees(), refetchInvitations()]);
+    } catch (e: any) {
+      toast({ title: "Re-invite failed", description: e?.message || "Connection error", variant: "destructive" });
+    } finally {
+      setBulkReinviting(false);
+    }
+  };
+
   const emptyForm = () => Object.fromEntries(CONNECTEAM_FIELDS.map(f => [f.key, ""]));
 
   const fetchEmployees = async () => {
@@ -306,6 +359,11 @@ export default function Employees() {
   };
 
   useEffect(() => { fetchEmployees(); }, [selectedCompanyId]);
+
+  // Reset bulk selection whenever the visible scope changes — prevents acting
+  // on hidden rows. Search is debounce-free and cheap; covers all filter axes.
+  useEffect(() => { clearSelection(); }, [statusTab, filterRole, filterGroup, search, selectedCompanyId]);
+
 
   const activeEmployeeCount = employees.filter(e => e.is_active !== false).length;
   const atEmployeeLimit = !canAddEmployees(activeEmployeeCount);
@@ -940,6 +998,55 @@ export default function Employees() {
         }
       />
 
+      {/* ─── Bulk actions bar — appears when ≥1 row selected ─── */}
+      {(() => {
+        if (selectedIds.size === 0) return null;
+        const selectedFailedCount = Array.from(selectedIds).reduce((acc, id) => {
+          const emp = employees.find(e => e.id === id);
+          return emp && isInviteFailed(emp) ? acc + 1 : acc;
+        }, 0);
+        const canReinvite = selectedFailedCount > 0 && !bulkReinviting;
+        const reinviteLabel = bulkReinviting
+          ? "Re-inviting…"
+          : selectedFailedCount > 0
+            ? `Re-invite ${selectedFailedCount} failed`
+            : "Re-invite selected";
+        return (
+          <BulkActionsBar
+            selectedCount={selectedIds.size}
+            totalCount={filtered.length}
+            noun="worker"
+            onClear={clearSelection}
+            actions={
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        variant={canReinvite ? "destructive" : "outline"}
+                        size="xs"
+                        onClick={handleBulkReinviteSelected}
+                        disabled={!canReinvite}
+                      >
+                        {bulkReinviting
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <RotateCw className="h-3 w-3" />}
+                        {reinviteLabel}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-[260px]">
+                    {selectedFailedCount === 0
+                      ? "Select workers whose invitation failed, bounced or hit DLQ to enable bulk re-invite."
+                      : `Resends invitations for ${selectedFailedCount} selected worker${selectedFailedCount === 1 ? "" : "s"} with a failed delivery state. Other selected rows are skipped.`}
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            }
+          />
+        );
+      })()}
+
       {/* ─── Content ─── */}
       {initialLoading ? (
         <PageSkeleton variant="table" />
@@ -1042,7 +1149,36 @@ export default function Employees() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 h-8">
-                <TableHead className="w-8 pl-3 pr-0"></TableHead>
+                {(() => {
+                  const failedInView = filtered.filter(isInviteFailed);
+                  const allFailedSelected = failedInView.length > 0 && failedInView.every(e => selectedIds.has(e.id));
+                  const someFailedSelected = failedInView.some(e => selectedIds.has(e.id));
+                  return (
+                    <TableHead className="w-8 pl-3 pr-0">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Checkbox
+                              aria-label="Select all failed invitations in view"
+                              checked={allFailedSelected ? true : (someFailedSelected ? "indeterminate" : false)}
+                              disabled={failedInView.length === 0}
+                              onCheckedChange={(c) => {
+                                if (c) selectAllInList(failedInView.map(e => e.id));
+                                else clearSelection();
+                              }}
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="text-xs max-w-[220px]">
+                          {failedInView.length === 0
+                            ? "No failed invitations in this view"
+                            : `Select all ${failedInView.length} failed invitation${failedInView.length === 1 ? "" : "s"}`}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableHead>
+                  );
+                })()}
+                <TableHead className="w-8 pl-2 pr-0"></TableHead>
                 <TableHead className="text-[10px]">Name</TableHead>
                 {visibleColumns.includes("employer_identification") && <TableHead className="text-[10px] w-[70px]">ID</TableHead>}
                 {visibleColumns.includes("phone_number") && <TableHead className="hidden sm:table-cell text-[10px]">Phone</TableHead>}
@@ -1062,16 +1198,39 @@ export default function Employees() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((e) => (
+              {filtered.map((e) => {
+                const rowSelected = selectedIds.has(e.id);
+                const rowFailed = isInviteFailed(e);
+                return (
                 <TableRow
                   key={e.id}
                   className={cn(
                     "group hover:bg-accent/30 transition-colors cursor-pointer h-10",
-                    !e.is_active && "opacity-35"
+                    !e.is_active && "opacity-35",
+                    rowSelected && "bg-primary/[0.04]"
                   )}
                   onClick={() => navigate(`/app/employees/${e.id}`)}
                 >
-                  <TableCell className="py-1 pl-3 pr-0">
+                  <TableCell className="py-1 pl-3 pr-0" onClick={ev => ev.stopPropagation()}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Checkbox
+                            aria-label={rowFailed ? `Select ${e.first_name} ${e.last_name} for re-invite` : `Selection only enabled for failed invitations`}
+                            checked={rowSelected}
+                            disabled={!rowFailed}
+                            onCheckedChange={() => toggleRowSelected(e.id)}
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      {!rowFailed && (
+                        <TooltipContent side="right" className="text-xs max-w-[220px]">
+                          Bulk re-invite is limited to workers whose last invitation failed.
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell className="py-1 pl-2 pr-0">
                     <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="sm" />
                   </TableCell>
                   <TableCell className="py-1">
@@ -1186,7 +1345,8 @@ export default function Employees() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
