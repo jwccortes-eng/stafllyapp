@@ -157,6 +157,10 @@ export function ShiftRidesPanel({
    *   - pending_application → ya hay invitación pendiente (sólo aviso)
    */
   const handleInviteEmployee = useCallback(async (emp: Employee) => {
+    if ((emp as any).is_active === false) {
+      toast.error("Reactivate this driver before sending an invitation.");
+      return;
+    }
     const phone = (emp.phone_number ?? "").replace(/\D/g, "");
     if (!phone && !emp.email) {
       toast.error("Este empleado no tiene teléfono ni email para invitar.");

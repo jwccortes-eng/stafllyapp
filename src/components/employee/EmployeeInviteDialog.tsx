@@ -618,7 +618,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
 
               {/* Resend button */}
               {canResend && (
-                <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1.5" onClick={resendInvite} disabled={creatingInvite}>
+                <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1.5" onClick={resendInvite} disabled={creatingInvite || isInactive} title={isInactive ? "Reactivate worker before generating a new invitation" : undefined}>
                   <RefreshCw className={cn("h-3.5 w-3.5", creatingInvite && "animate-spin")} />
                   Generar nueva invitación
                 </Button>
@@ -641,13 +641,15 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                   </div>
                   {isReady ? (
                     <div className="grid grid-cols-3 gap-1.5">
-                      <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-[#25D366]/30 hover:bg-[#25D366]/10 hover:border-[#25D366]/50 text-[9px]" onClick={() => openWhatsApp("app")}>
+                      <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-[#25D366]/30 hover:bg-[#25D366]/10 hover:border-[#25D366]/50 text-[9px]" onClick={() => openWhatsApp("app")} disabled={isInactive} title={isInactive ? "Reactivate worker first" : undefined}>
                         <MessageCircle className="h-4 w-4 text-[#25D366]" />WhatsApp
                       </Button>
-                      <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-primary/30 hover:bg-primary/10 text-[9px]" asChild onClick={() => markSent("sms")}>
-                        <a href={smsLink}><Smartphone className="h-4 w-4 text-primary" />SMS</a>
+                      <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1 border-primary/30 hover:bg-primary/10 text-[9px]" asChild={!isInactive} disabled={isInactive} onClick={() => { if (!isInactive) markSent("sms"); }} title={isInactive ? "Reactivate worker first" : undefined}>
+                        {isInactive
+                          ? <span><Smartphone className="h-4 w-4 text-primary" />SMS</span>
+                          : <a href={smsLink}><Smartphone className="h-4 w-4 text-primary" />SMS</a>}
                       </Button>
-                      <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyMessage}>
+                      <Button variant="outline" size="sm" className={cn("flex-col h-auto py-2.5 gap-1 text-[9px]", copied && "border-[hsl(var(--earning)/0.5)] bg-[hsl(var(--earning)/0.1)]")} onClick={copyMessage} disabled={isInactive} title={isInactive ? "Reactivate worker first" : undefined}>
                         {copied ? <Check className="h-4 w-4 text-[hsl(var(--earning))]" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
                         {copied ? "Copiado" : "Copiar"}
                       </Button>
@@ -701,7 +703,7 @@ export function EmployeeInviteDialog({ open, onOpenChange, employee, onInviteSen
                           )}
                         </div>
                       ) : (
-                        <Button className="w-full h-8 text-xs" onClick={sendEmail} disabled={sending || !hasPin}>
+                        <Button className="w-full h-8 text-xs" onClick={sendEmail} disabled={sending || !hasPin || isInactive} title={isInactive ? "Reactivate worker before sending an email invitation" : undefined}>
                           {sending ? (
                             <>
                               <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
