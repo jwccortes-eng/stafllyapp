@@ -55,16 +55,31 @@ export type VisitStatus =
 
 export type RatingValue = "excellent" | "good" | "regular" | "bad";
 
+export type InquiryCategory =
+  | "payments"
+  | "documents"
+  | "profile"
+  | "support"
+  | "schedule"
+  | "other";
+
+export type PaymentRow = {
+  work_date: string | null;
+  total_pay: number | null;
+  total_hours: number | null;
+  pay_type: string | null;
+};
+
 export function useFrontDesk() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const lookupEmployee = useCallback(async (phone: string, pin: string) => {
+  const lookupByPhone = useCallback(async (phone: string) => {
     setLoading(true);
     setError(null);
     try {
       const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
-        body: { action: "lookup", phone, pin },
+        body: { action: "lookup_phone", phone },
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
@@ -77,6 +92,44 @@ export function useFrontDesk() {
       setLoading(false);
     }
   }, []);
+
+  const createInquiry = useCallback(async (params: {
+    phone: string;
+    category: InquiryCategory;
+    message: string;
+    inquiry_kind: "request" | "comment";
+    language?: string;
+  }) => {
+    setLoading(true);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
+        body: { action: "create_inquiry", ...params },
+      });
+      if (fnErr) throw new Error(fnErr.message);
+      if (data?.error) throw new Error(data.error);
+      return data.visit_id as string;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const listPayments = useCallback(async (phone: string) => {
+    setLoading(true);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
+        body: { action: "list_payments", phone },
+      });
+      if (fnErr) throw new Error(fnErr.message);
+      return (data?.payments ?? []) as PaymentRow[];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Legacy methods kept for backward compatibility (KioskClock, reports)
+  const lookupEmployee = useCallback(async (phone: string, _pin?: string) => {
+    return lookupByPhone(phone);
+  }, [lookupByPhone]);
 
   const createVisit = useCallback(async (params: {
     employee_id: string;
@@ -138,10 +191,20 @@ export function useFrontDesk() {
     }
   }, []);
 
-  return { loading, error, lookupEmployee, createVisit, updateVisit, submitRating };
+  return {
+    loading,
+    error,
+    lookupByPhone,
+    lookupEmployee,
+    createInquiry,
+    listPayments,
+    createVisit,
+    updateVisit,
+    submitRating,
+  };
 }
 
-// Visit type metadata
+// Visit type metadata (kept for legacy reports)
 export const VISIT_TYPES: Array<{ key: VisitType; labelEs: string; labelEn: string; icon: string; color: string }> = [
   { key: "pickup_check", labelEs: "Recoger cheque", labelEn: "Pickup check", icon: "💵", color: "bg-emerald-50 border-emerald-200 text-emerald-900" },
   { key: "update_data", labelEs: "Actualizar datos", labelEn: "Update info", icon: "✏️", color: "bg-blue-50 border-blue-200 text-blue-900" },
