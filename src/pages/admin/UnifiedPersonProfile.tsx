@@ -685,6 +685,48 @@ export default function UnifiedPersonProfile() {
         </Card>
       )}
 
+      {/* ─── FRONT DESK HISTORY ─── */}
+      {frontDeskVisits.length > 0 && (
+        <Card className="border-border/50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+                <ContactRound className="h-3.5 w-3.5" /> Front Desk history
+              </div>
+              <Link
+                to="/app/front-desk"
+                className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Open Front Desk <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border/40">
+              {frontDeskVisits.slice(0, 6).map((v: any) => (
+                <div key={v.id} className="flex items-center gap-2 py-2 text-xs">
+                  {v.case_code && (
+                    <Badge variant="outline" className="text-[9px] font-mono">{v.case_code}</Badge>
+                  )}
+                  <span className="text-muted-foreground tabular-nums shrink-0">
+                    {new Date(v.checked_in_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                  <span className="text-muted-foreground truncate">
+                    {String(v.visit_type ?? "").replace(/_/g, " ")}
+                  </span>
+                  {v.pending_count > 0 && (
+                    <Badge variant="outline" className="text-[9px] border-amber-300 bg-amber-50 text-amber-800">
+                      {v.pending_count} pending
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="ml-auto text-[9px] capitalize">
+                    {String(v.status ?? "").replace(/_/g, " ")}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ─── Dialogs ─── */}
       {employee && (
         <EmployeeInviteDialog
