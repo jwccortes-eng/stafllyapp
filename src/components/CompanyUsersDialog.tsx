@@ -269,11 +269,11 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
                 <Label className="text-xs">Usuario</Label>
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Seleccionar usuario" />
+                    <SelectValue placeholder="Seleccionar usuario sin empresa" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableUsers.length === 0 ? (
-                      <SelectItem value="__none" disabled>No hay usuarios disponibles</SelectItem>
+                      <SelectItem value="__none" disabled>No hay usuarios libres para asignar</SelectItem>
                     ) : (
                       availableUsers.map(u => (
                         <SelectItem key={u.user_id} value={u.user_id}>
@@ -283,6 +283,9 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
                     )}
                   </SelectContent>
                 </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  Solo se listan usuarios que aún no pertenecen a ninguna empresa. Para mover un usuario desde otra empresa, hazlo desde su empresa actual.
+                </p>
               </div>
               <div className="w-32 space-y-1">
                 <Label className="text-xs">Rol</Label>
