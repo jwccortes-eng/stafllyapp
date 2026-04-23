@@ -34,7 +34,36 @@ const ATTRACT_SLIDES = [
   },
 ];
 
+/**
+ * Active session backdrop — clean, premium, minimal.
+ * Used while the user is actively interacting with the kiosk
+ * (welcome, phone, selection, profile, payments, closure, etc.).
+ * No marketing artwork; just a soft gradient + barely-perceptible grid
+ * so the form content is the protagonist.
+ */
 export function FrontDeskBackdrop({ className }: { className?: string }) {
+  return (
+    <div className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)} aria-hidden="true">
+      <div className="absolute inset-0 bg-background" />
+      {/* Very soft premium gradient — adds depth without competing with content */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 12% 0%, hsl(var(--primary) / 0.05), transparent 42%), radial-gradient(circle at 92% 100%, hsl(var(--accent) / 0.05), transparent 40%), linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.35) 100%)",
+        }}
+      />
+      {/* Barely-there grid for premium SaaS feel */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.08)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.08)_1px,transparent_1px)] bg-[size:56px_56px] opacity-60" />
+    </div>
+  );
+}
+
+/**
+ * Legacy expressive backdrop — kept for attract/idle surfaces only.
+ * Do NOT use during active session flows.
+ */
+export function FrontDeskIdleBackdrop({ className }: { className?: string }) {
   return (
     <div className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)} aria-hidden="true">
       <div className="absolute inset-0 bg-background" />

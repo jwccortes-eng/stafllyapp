@@ -670,7 +670,6 @@ export default function FrontDesk() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
       <FrontDeskBackdrop />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/10 via-background/40 to-background/85" />
       {/* Premium attract / idle screen — dismissed on any interaction */}
       {attract && (
         <AttractMode
