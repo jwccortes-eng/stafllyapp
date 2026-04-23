@@ -7,9 +7,12 @@ const corsHeaders = {
 };
 
 interface CheckinPayload {
-  action: "lookup" | "create_visit" | "update_visit" | "submit_rating";
+  action: "lookup" | "lookup_phone" | "create_visit" | "update_visit" | "submit_rating" | "create_inquiry" | "list_payments";
   phone?: string;
   pin?: string;
+  category?: string;
+  message?: string;
+  inquiry_kind?: "request" | "comment";
   employee_id?: string;
   visit_id?: string;
   visit_type?: string;
