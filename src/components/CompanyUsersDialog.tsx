@@ -280,22 +280,65 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
                 <Label className="text-xs">Usuario</Label>
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Seleccionar usuario sin empresa" />
+                    <SelectValue placeholder="Seleccionar usuario elegible" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-80">
                     {availableUsers.length === 0 ? (
-                      <SelectItem value="__none" disabled>No hay usuarios libres para asignar</SelectItem>
+                      <SelectItem value="__none" disabled>No hay usuarios elegibles</SelectItem>
                     ) : (
-                      availableUsers.map(u => (
-                        <SelectItem key={u.user_id} value={u.user_id}>
-                          {u.full_name || u.email}
-                        </SelectItem>
-                      ))
+                      <>
+                        {/* Section A — users not linked to any company */}
+                        {availableUsers.filter(u => u.memberships.length === 0).length > 0 && (
+                          <>
+                            <div className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Sin empresa
+                            </div>
+                            {availableUsers
+                              .filter(u => u.memberships.length === 0)
+                              .map(u => (
+                                <SelectItem key={u.user_id} value={u.user_id}>
+                                  <div className="flex flex-col items-start">
+                                    <span className="text-sm">{u.full_name || u.email}</span>
+                                    {u.full_name && (
+                                      <span className="text-[10px] text-muted-foreground">{u.email}</span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </>
+                        )}
+
+                        {/* Section B — users belonging to other companies */}
+                        {availableUsers.filter(u => u.memberships.length > 0).length > 0 && (
+                          <>
+                            <div className="mt-1 px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground border-t border-border/60">
+                              En otras empresas
+                            </div>
+                            {availableUsers
+                              .filter(u => u.memberships.length > 0)
+                              .map(u => {
+                                const primary = u.memberships[0];
+                                const extra = u.memberships.length - 1;
+                                return (
+                                  <SelectItem key={u.user_id} value={u.user_id}>
+                                    <div className="flex flex-col items-start">
+                                      <span className="text-sm">{u.full_name || u.email}</span>
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {primary.role} en {primary.company_name}
+                                        {extra > 0 ? ` · +${extra} más` : ""}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
+                          </>
+                        )}
+                      </>
                     )}
                   </SelectContent>
                 </Select>
                 <p className="text-[10px] text-muted-foreground">
-                  Solo se listan usuarios que aún no pertenecen a ninguna empresa. Para mover un usuario desde otra empresa, hazlo desde su empresa actual.
+                  Se listan usuarios elegibles para esta empresa. Los que ya pertenecen a otra empresa se muestran con su contexto actual; agregarlos aquí les dará acceso adicional sin remover el existente.
                 </p>
               </div>
               <div className="w-32 space-y-1">
