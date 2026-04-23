@@ -243,12 +243,14 @@ function PhoneEntry({
   onChange: (v: string) => void;
   onComplete: () => void;
 }) {
-  const handlePress = (digit: string) => {
-    if (value.length >= 15) return;
-    onChange(value + digit);
-  };
-
-  const handleDelete = () => onChange(value.slice(0, -1));
+  const canContinue = value.length >= 10;
+  const pad = usePhonePadInput({
+    value,
+    setValue: onChange,
+    maxLength: 15,
+    minSubmitLength: 10,
+    onSubmit: onComplete,
+  });
 
   return (
     <div className="flex flex-col items-center gap-5">
@@ -256,6 +258,9 @@ function PhoneEntry({
         <Clock className="h-6 w-6 text-primary mx-auto" />
         <h2 className="text-lg font-bold text-white font-[var(--font-heading)]">Fichaje Kiosk</h2>
         <p className="text-xs text-white/50">Ingresa tu número de teléfono</p>
+        <p className="text-[10px] text-white/30 hidden md:block">
+          Puedes usar el teclado del computador · Enter para continuar
+        </p>
       </div>
 
       {/* Phone display */}
@@ -268,11 +273,11 @@ function PhoneEntry({
         </span>
       </div>
 
-      <KioskKeypad onPress={handlePress} onDelete={handleDelete} disableDelete={!value} />
+      <KioskKeypad onPress={pad.appendDigit} onDelete={pad.backspace} disableDelete={!value} />
 
       <button
         onClick={onComplete}
-        disabled={value.length < 10}
+        disabled={!canContinue}
         className="w-full py-4 bg-primary text-white rounded-2xl text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-primary/90 transition-all active:scale-[0.98]"
       >
         Continuar
@@ -294,16 +299,21 @@ function PinEntry({
   onBack: () => void;
   phone: string;
 }) {
-  const handlePress = (digit: string) => {
-    if (value.length >= 4) return;
-    const next = value + digit;
-    onChange(next);
-    if (next.length === 4) {
-      setTimeout(() => onComplete(next), 200);
+  // Auto-submit when 4 digits reached (touch + keyboard share this path)
+  useEffect(() => {
+    if (value.length === 4) {
+      const t = setTimeout(() => onComplete(value), 200);
+      return () => clearTimeout(t);
     }
-  };
+  }, [value, onComplete]);
 
-  const handleDelete = () => onChange(value.slice(0, -1));
+  const pad = usePhonePadInput({
+    value,
+    setValue: onChange,
+    maxLength: 4,
+    minSubmitLength: 4,
+    onCancel: onBack,
+  });
 
   return (
     <div className="flex flex-col items-center gap-5">
@@ -316,6 +326,9 @@ function PinEntry({
         <h2 className="text-lg font-bold text-white font-[var(--font-heading)]">Ingresa tu PIN</h2>
         <p className="text-xs text-white/50">
           Teléfono: {phone.slice(-4).padStart(phone.length, "•")}
+        </p>
+        <p className="text-[10px] text-white/30 hidden md:block">
+          Teclado físico soportado · Esc para volver
         </p>
       </div>
 
@@ -334,7 +347,7 @@ function PinEntry({
         ))}
       </div>
 
-      <KioskKeypad onPress={handlePress} onDelete={handleDelete} disableDelete={!value} />
+      <KioskKeypad onPress={pad.appendDigit} onDelete={pad.backspace} disableDelete={!value} />
     </div>
   );
 }
