@@ -11,7 +11,7 @@ import {
   Loader2, ArrowLeft, ArrowRight, X, Phone, Sparkles,
   UserCog, AlertCircle, Send, MessageSquare, Wallet, IdCard,
   CheckCircle2, Mail, MapPin, ShieldAlert, Building2,
-  Users, RefreshCw, Lock,
+  Users, RefreshCw, Lock, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,10 +30,19 @@ import {
   type InquiryCategory,
   type PaymentRow,
   type SelfUpdatePayload,
+  type ActiveCase,
+  type IntakeReason,
+  type FinalResolution,
+  type RatingValue,
 } from "@/hooks/useFrontDesk";
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
 import { AttractMode } from "@/components/front-desk/AttractMode";
 import { FrontDeskBackdrop } from "@/components/front-desk/FrontDeskArtwork";
+import { TicketBadge } from "@/components/front-desk/TicketBadge";
+import { IntakeReasonStep } from "@/components/front-desk/IntakeReasonStep";
+import { PhotoCaptureStep } from "@/components/front-desk/PhotoCaptureStep";
+import { ResolutionStep } from "@/components/front-desk/ResolutionStep";
+import { RatingStep } from "@/components/front-desk/RatingStep";
 import { ensureFrontDeskBundleFresh } from "@/lib/front-desk-cache-bust";
 
 type Step =
@@ -41,6 +50,7 @@ type Step =
   | "phone"
   | "select_profile"
   | "not_found"
+  | "intake"
   | "hub"
   | "update_data"
   | "pending"
@@ -48,6 +58,9 @@ type Step =
   | "comment"
   | "payments"
   | "profile"
+  | "photo_capture"
+  | "resolution"
+  | "rating"
   | "complete";
 
 type Lang = "es" | "en";
@@ -281,7 +294,11 @@ function initials(e: FrontDeskEmployee | null): string {
 }
 
 export default function FrontDesk() {
-  const { lookupByPhone, selectEmployee, updateSelf, createInquiry, listPayments, loading } = useFrontDesk();
+  const {
+    lookupByPhone, selectEmployee, updateSelf, createInquiry, listPayments,
+    startVisit, closeVisit, captureKioskPhoto,
+    loading,
+  } = useFrontDesk();
 
   const [step, setStep] = useState<Step>("welcome");
   const [lang, setLang] = useState<Lang>("es");
@@ -296,6 +313,15 @@ export default function FrontDesk() {
   const [completeKind, setCompleteKind] = useState<CompleteKind>("request");
   const [currentTime, setCurrentTime] = useState(new Date());
   const [attract, setAttract] = useState(true);
+
+  // ===== Phase 2: CRM case state =====
+  const [activeCase, setActiveCase] = useState<ActiveCase | null>(null);
+  const [pendingResolution, setPendingResolution] = useState<FinalResolution | null>(null);
+  const [pendingNote, setPendingNote] = useState<string | undefined>(undefined);
+  const [closedCase, setClosedCase] = useState<
+    (ActiveCase & { rating?: RatingValue; resolution?: FinalResolution }) | null
+  >(null);
+
   const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attractRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -344,10 +370,67 @@ export default function FrontDesk() {
     setPaymentsLoaded(false);
     setFormValues({});
     setFormErrors({});
+    setActiveCase(null);
+    setPendingResolution(null);
+    setPendingNote(undefined);
+    setClosedCase(null);
     // After resetting from any active session, return to attract mode so the
     // next visitor sees a clean welcome and no leftover data.
     setAttract(true);
   }, []);
+
+  /** Open a CRM case after the intake reason is selected. */
+  const handlePickIntake = async (reason: IntakeReason) => {
+    if (!employee) return;
+    try {
+      const opened = await startVisit({
+        employee_id: employee.id,
+        intake_reason: reason,
+        language: lang,
+      });
+      setActiveCase(opened);
+      // Route directly into the relevant action when possible.
+      if (reason === "update_data") {
+        seedFormFromEmployee(employee);
+        setStep("update_data");
+      } else if (reason === "check_pending") {
+        setStep("pending");
+      } else if (reason === "payment_issue") {
+        setCategory("payments");
+        setMessage("");
+        setStep("request");
+      } else if (reason === "documents_help") {
+        setCategory("documents");
+        setMessage("");
+        setStep("request");
+      } else if (reason === "portal_help") {
+        setCategory("support");
+        setMessage("");
+        setStep("request");
+      } else if (reason === "leave_request") {
+        setCategory("support");
+        setMessage("");
+        setStep("request");
+      } else if (reason === "leave_comment") {
+        setCategory("support");
+        setMessage("");
+        setStep("comment");
+      } else if (reason === "pickup_check") {
+        setStep("payments");
+        if (!paymentsLoaded) {
+          try {
+            const rows = await listPayments({ employee_id: employee.id });
+            setPayments(rows);
+            setPaymentsLoaded(true);
+          } catch { setPaymentsLoaded(true); }
+        }
+      } else {
+        setStep("hub");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    }
+  };
 
   // Inactivity reset (during an active session)
   useEffect(() => {
@@ -395,7 +478,7 @@ export default function FrontDesk() {
       if (res.employee && res.summary) {
         setEmployee(res.employee);
         setSummary(res.summary);
-        setStep("hub");
+        setStep("intake");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error";
@@ -410,7 +493,7 @@ export default function FrontDesk() {
       setEmployee(res.employee);
       setSummary(res.summary);
       setMatches([]);
-      setStep("hub");
+      setStep("intake");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     }
@@ -457,15 +540,96 @@ export default function FrontDesk() {
     });
 
     if (Object.keys(updates).length === 0) {
-      toast.info(t.noChanges);
-      return;
+      // Even with no field changes, advance the kiosk flow toward photo step.
+      if (!employee.avatar_url) return setStep("photo_capture");
+      return setStep("resolution");
     }
 
     try {
-      const res = await updateSelf({ employee_id: employee.id, updates, language: lang });
+      const res = await updateSelf({
+        employee_id: employee.id,
+        updates,
+        language: lang,
+        visit_id: activeCase?.id,
+      });
       setEmployee(res.employee);
       setSummary(res.summary);
       setCompleteKind("update");
+      // Offer photo capture right after a successful update if missing.
+      if (!res.employee.avatar_url) {
+        setStep("photo_capture");
+      } else {
+        setStep("resolution");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    }
+  };
+
+  /** Save photo captured in the kiosk and continue to resolution. */
+  const handleSavePhoto = async (base64: string) => {
+    if (!employee) return;
+    try {
+      const res = await captureKioskPhoto({
+        employee_id: employee.id,
+        photo_base64: base64,
+        visit_id: activeCase?.id,
+      });
+      setEmployee(res.employee);
+      toast.success(lang === "es" ? "Foto guardada" : "Photo saved");
+      setStep("resolution");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    }
+  };
+
+  /** From resolution → rating step. */
+  const handlePickResolution = (resolution: FinalResolution, note?: string) => {
+    setPendingResolution(resolution);
+    setPendingNote(note);
+    setStep("rating");
+  };
+
+  /** Submit final rating + close the case. */
+  const handleSubmitRating = async (rating: RatingValue, comment?: string) => {
+    if (!activeCase) {
+      // Defensive: if no case, just go to complete.
+      setStep("complete");
+      return;
+    }
+    try {
+      const closed = await closeVisit({
+        visit_id: activeCase.id,
+        final_resolution: pendingResolution ?? "resolved",
+        resolution_note: pendingNote,
+        rating,
+        rating_comment: comment,
+      });
+      setClosedCase({
+        ...activeCase,
+        ...closed,
+        rating,
+        resolution: pendingResolution ?? "resolved",
+      });
+      setStep("complete");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    }
+  };
+
+  const handleSkipRating = async () => {
+    if (!activeCase) return setStep("complete");
+    try {
+      const closed = await closeVisit({
+        visit_id: activeCase.id,
+        final_resolution: pendingResolution ?? "resolved",
+        resolution_note: pendingNote,
+      });
+      setClosedCase({
+        ...activeCase,
+        ...closed,
+        resolution: pendingResolution ?? "resolved",
+      });
       setStep("complete");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
@@ -488,13 +652,20 @@ export default function FrontDesk() {
       });
       setMessage("");
       setCompleteKind(kind);
-      setStep("complete");
+      // Inside an active case → ask for resolution + rating before closing.
+      if (activeCase) {
+        setStep("resolution");
+      } else {
+        setStep("complete");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     }
   };
 
   const goHub = () => setStep("hub");
+  /** Back from any in-case action returns to the intake picker. */
+  const goIntake = () => setStep("intake");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
@@ -522,6 +693,14 @@ export default function FrontDesk() {
                 {currentTime.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}
               </p>
             </div>
+            {/* Persistent ticket badge while a case is open */}
+            {activeCase?.case_code && (
+              <TicketBadge
+                caseCode={activeCase.case_code}
+                status={activeCase.status}
+                className="hidden md:inline-flex"
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -550,6 +729,12 @@ export default function FrontDesk() {
 
       <main className="relative z-[1] flex-1 flex items-start justify-center px-4 py-6 sm:py-10">
         <div className="w-full max-w-3xl">
+          {/* Mobile ticket badge */}
+          {activeCase?.case_code && step !== "complete" && (
+            <div className="mb-4 flex justify-center md:hidden">
+              <TicketBadge caseCode={activeCase.case_code} status={activeCase.status} />
+            </div>
+          )}
 
           {/* ============ WELCOME ============ */}
           {step === "welcome" && (
@@ -649,6 +834,48 @@ export default function FrontDesk() {
                 </Button>
               </div>
             </Card>
+          )}
+
+          {/* ============ INTAKE REASON ============ */}
+          {step === "intake" && employee && (
+            <IntakeReasonStep
+              lang={lang}
+              loading={loading}
+              employeeName={fullName(employee)}
+              onPick={handlePickIntake}
+              onBack={resetAll}
+            />
+          )}
+
+          {/* ============ PHOTO CAPTURE ============ */}
+          {step === "photo_capture" && employee && (
+            <PhotoCaptureStep
+              lang={lang}
+              saving={loading}
+              onSave={handleSavePhoto}
+              onSkip={() => setStep("resolution")}
+              onBack={() => setStep("update_data")}
+            />
+          )}
+
+          {/* ============ RESOLUTION ============ */}
+          {step === "resolution" && (
+            <ResolutionStep
+              lang={lang}
+              loading={loading}
+              onContinue={handlePickResolution}
+              onBack={goIntake}
+            />
+          )}
+
+          {/* ============ RATING ============ */}
+          {step === "rating" && (
+            <RatingStep
+              lang={lang}
+              loading={loading}
+              onSubmit={handleSubmitRating}
+              onSkip={handleSkipRating}
+            />
           )}
 
           {/* ============ NOT FOUND ============ */}
@@ -1051,35 +1278,61 @@ export default function FrontDesk() {
             </SectionCard>
           )}
 
-          {/* ============ COMPLETE ============ */}
-          {step === "complete" && (
-            <Card className="p-10 sm:p-16 text-center shadow-xl rounded-3xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-card">
-              <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                <CheckCircle2 className="h-10 w-10 text-white" />
-              </div>
-              <h2 className="text-3xl font-bold mb-2">
-                {completeKind === "update" ? t.updatedTitle : t.sentTitle}
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                {completeKind === "update" ? t.updatedSub : t.sentSub}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                {employee && (
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={goHub}
-                    className="h-12 px-6 rounded-xl"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" /> {t.backHome}
-                  </Button>
+          {/* ============ COMPLETE (premium with case + status) ============ */}
+          {step === "complete" && (() => {
+            const isPending = closedCase?.resolution === "pending_followup";
+            const accent = isPending
+              ? "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-card"
+              : "border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-card";
+            const iconBg = isPending
+              ? "bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-500/30"
+              : "bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/30";
+            const Icon = isPending ? Clock : CheckCircle2;
+            const title = closedCase
+              ? isPending
+                ? lang === "es" ? "Caso registrado" : "Case registered"
+                : lang === "es" ? "¡Listo!" : "All done!"
+              : completeKind === "update" ? t.updatedTitle : t.sentTitle;
+            const subtitle = closedCase
+              ? isPending
+                ? lang === "es"
+                  ? "Nuestro equipo continuará el seguimiento contigo."
+                  : "Our team will continue the follow-up with you."
+                : lang === "es"
+                  ? "Gracias por tu visita. Nos vemos pronto."
+                  : "Thanks for your visit. See you soon."
+              : completeKind === "update" ? t.updatedSub : t.sentSub;
+            return (
+              <Card className={cn("p-10 sm:p-14 text-center shadow-xl rounded-3xl border-2", accent)}>
+                <div className={cn("mx-auto mb-6 h-20 w-20 rounded-3xl flex items-center justify-center shadow-lg", iconBg)}>
+                  <Icon className="h-10 w-10 text-white" />
+                </div>
+                {closedCase?.case_code && (
+                  <div className="mb-5 flex justify-center">
+                    <TicketBadge caseCode={closedCase.case_code} />
+                  </div>
                 )}
-                <Button size="lg" onClick={resetAll} className="h-12 px-8 rounded-xl">
-                  {t.newSession}
-                </Button>
-              </div>
-            </Card>
-          )}
+                <h2 className="text-3xl font-bold mb-2 tracking-tight">{title}</h2>
+                <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">{subtitle}</p>
+                {closedCase && (
+                  <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm">
+                    <span className="text-muted-foreground">{lang === "es" ? "Estado:" : "Status:"}</span>
+                    <span className={cn("font-semibold", isPending ? "text-amber-600" : "text-emerald-600")}>
+                      {isPending
+                        ? (lang === "es" ? "Pendiente de seguimiento" : "Pending follow-up")
+                        : (lang === "es" ? "Resuelto" : "Resolved")}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-center">
+                  <Button size="lg" onClick={resetAll} className="h-12 px-8 rounded-xl">
+                    {t.newSession}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })()}
+
         </div>
       </main>
     </div>

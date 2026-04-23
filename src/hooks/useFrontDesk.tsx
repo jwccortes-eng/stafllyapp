@@ -64,6 +64,28 @@ export type VisitStatus =
 
 export type RatingValue = "excellent" | "good" | "regular" | "bad";
 
+export type IntakeReason =
+  | "update_data"
+  | "check_pending"
+  | "payment_issue"
+  | "documents_help"
+  | "portal_help"
+  | "leave_request"
+  | "leave_comment"
+  | "pickup_check"
+  | "other";
+
+export type FinalResolution = "resolved" | "pending_followup" | "escalated" | "cancelled";
+
+export interface ActiveCase {
+  id: string;
+  case_number: number | null;
+  case_code: string | null;
+  intake_reason: IntakeReason | null;
+  status: string | null;
+  checked_in_at?: string | null;
+}
+
 export type InquiryCategory =
   | "payments"
   | "documents"
@@ -125,6 +147,7 @@ export function useFrontDesk() {
     employee_id: string;
     updates: SelfUpdatePayload;
     language?: string;
+    visit_id?: string;
   }) => {
     setLoading(true);
     try {
@@ -242,6 +265,73 @@ export function useFrontDesk() {
     }
   }, []);
 
+  // ===== Phase 2: CRM evolution =====
+  const startVisit = useCallback(async (params: {
+    employee_id: string;
+    intake_reason: IntakeReason;
+    language?: string;
+    device_id?: string;
+  }) => {
+    setLoading(true);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
+        body: { action: "start_visit", ...params },
+      });
+      if (fnErr) throw new Error(fnErr.message);
+      if (data?.error) throw new Error(data.error);
+      return data.visit as ActiveCase;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const closeVisit = useCallback(async (params: {
+    visit_id: string;
+    final_resolution: FinalResolution;
+    resolution_note?: string;
+    rating?: RatingValue;
+    rating_comment?: string;
+  }) => {
+    setLoading(true);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
+        body: { action: "close_visit", ...params },
+      });
+      if (fnErr) throw new Error(fnErr.message);
+      if (data?.error) throw new Error(data.error);
+      return data.visit as ActiveCase & { rating?: RatingValue; duration_seconds?: number };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const captureKioskPhoto = useCallback(async (params: {
+    employee_id: string;
+    photo_base64: string;
+    visit_id?: string;
+  }) => {
+    setLoading(true);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
+        body: { action: "capture_kiosk_photo", ...params },
+      });
+      if (fnErr) throw new Error(fnErr.message);
+      if (data?.error) throw new Error(data.error);
+      return data as { photo_url: string; employee: FrontDeskEmployee };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getVisit = useCallback(async (visit_id: string) => {
+    const { data, error: fnErr } = await supabase.functions.invoke("front-desk-checkin", {
+      body: { action: "get_visit", visit_id },
+    });
+    if (fnErr) throw new Error(fnErr.message);
+    if (data?.error) throw new Error(data.error);
+    return data.visit as ActiveCase;
+  }, []);
+
   return {
     loading,
     error,
@@ -254,6 +344,11 @@ export function useFrontDesk() {
     createVisit,
     updateVisit,
     submitRating,
+    // Phase 2
+    startVisit,
+    closeVisit,
+    captureKioskPhoto,
+    getVisit,
   };
 }
 
