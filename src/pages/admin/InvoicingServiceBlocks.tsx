@@ -218,10 +218,10 @@ export default function InvoicingServiceBlocks() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as ServiceBlockStatus)}>
         <TabsList>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
-          <TabsTrigger value="invoiced">Invoiced</TabsTrigger>
-          <TabsTrigger value="discarded">Discarded</TabsTrigger>
+          <TabsTrigger value="pending">Pending ({counts.pending})</TabsTrigger>
+          <TabsTrigger value="approved">Approved ({counts.approved})</TabsTrigger>
+          <TabsTrigger value="invoiced">Invoiced ({counts.invoiced})</TabsTrigger>
+          <TabsTrigger value="discarded">Discarded ({counts.discarded})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={tab} className="mt-4">
