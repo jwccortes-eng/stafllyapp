@@ -1084,6 +1084,7 @@ export default function Employees() {
             }
           />
         )
+      ) : viewMode === "compact" ? (
         /* ─── Compact List ─── */
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden divide-y divide-border/40">
           {filtered.map(e => {
