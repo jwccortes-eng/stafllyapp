@@ -836,6 +836,48 @@ export default function FrontDesk() {
             </Card>
           )}
 
+          {/* ============ INTAKE REASON ============ */}
+          {step === "intake" && employee && (
+            <IntakeReasonStep
+              lang={lang}
+              loading={loading}
+              employeeName={fullName(employee)}
+              onPick={handlePickIntake}
+              onBack={resetAll}
+            />
+          )}
+
+          {/* ============ PHOTO CAPTURE ============ */}
+          {step === "photo_capture" && employee && (
+            <PhotoCaptureStep
+              lang={lang}
+              saving={loading}
+              onSave={handleSavePhoto}
+              onSkip={() => setStep("resolution")}
+              onBack={() => setStep("update_data")}
+            />
+          )}
+
+          {/* ============ RESOLUTION ============ */}
+          {step === "resolution" && (
+            <ResolutionStep
+              lang={lang}
+              loading={loading}
+              onContinue={handlePickResolution}
+              onBack={goIntake}
+            />
+          )}
+
+          {/* ============ RATING ============ */}
+          {step === "rating" && (
+            <RatingStep
+              lang={lang}
+              loading={loading}
+              onSubmit={handleSubmitRating}
+              onSkip={handleSkipRating}
+            />
+          )}
+
           {/* ============ NOT FOUND ============ */}
           {step === "not_found" && (
             <Card className="p-8 sm:p-12 text-center shadow-xl rounded-3xl border-2">
