@@ -227,7 +227,12 @@ Deno.serve(async (req) => {
       if (updErr) return jsonResp({ error: updErr.message }, 500);
 
       // Audit trail: log a closed visit summarising the self-update.
-      await adminClient.from("office_visits").insert({
+      // device_id column is UUID — only forward valid UUIDs, drop free-text labels.
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const safeDeviceId =
+        typeof device_id === "string" && UUID_RE.test(device_id) ? device_id : null;
+
+      const { error: auditErr } = await adminClient.from("office_visits").insert({
         employee_id,
         company_id: current.company_id,
         visit_type: "update_data",
@@ -236,9 +241,10 @@ Deno.serve(async (req) => {
         status: "resolved",
         channel: "front_desk_kiosk",
         language: language || "es",
-        device_id: device_id || null,
+        device_id: safeDeviceId,
         checked_out_at: new Date().toISOString(),
       });
+      if (auditErr) console.error("update_self audit insert failed", auditErr);
 
       const { data: company } = await adminClient
         .from("companies")
