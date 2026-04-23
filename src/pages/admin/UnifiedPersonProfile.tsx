@@ -468,6 +468,13 @@ export default function UnifiedPersonProfile() {
         </Button>
         <span className="text-muted-foreground/40">/</span>
         <span className="font-medium text-foreground truncate">{fullName}</span>
+        {isEditing && (
+          <Badge variant="outline" className="ml-2 gap-1.5 border-amber-400/40 bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300 text-[10px]">
+            <Pencil className="h-2.5 w-2.5" />
+            Editing
+            <span className="opacity-60 hidden sm:inline">· ⌘S to save · Esc to cancel</span>
+          </Badge>
+        )}
       </div>
 
       {/* ─── HERO ─── */}
