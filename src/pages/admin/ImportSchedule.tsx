@@ -959,6 +959,18 @@ export default function ImportSchedule() {
                 <p className="text-2xl font-bold tabular-nums">{summary.totalUnavailable}</p>
                 <p className="text-xs text-muted-foreground">Indisponibilidades</p>
               </Card>
+              <Card className="p-4 text-center">
+                <p className="text-2xl font-bold text-accent-foreground tabular-nums">{summary.reconciledShifts}</p>
+                <p className="text-xs text-muted-foreground">Turnos reconciliados</p>
+              </Card>
+              <Card className="p-4 text-center">
+                <p className="text-2xl font-bold text-accent-foreground tabular-nums">{summary.reconciledAssignments}</p>
+                <p className="text-xs text-muted-foreground">Asignaciones reconciliadas</p>
+              </Card>
+              <Card className="p-4 text-center">
+                <p className="text-2xl font-bold text-muted-foreground tabular-nums">{summary.skippedExistingAssignments}</p>
+                <p className="text-xs text-muted-foreground">Ya existían (omitidas)</p>
+              </Card>
             </div>
           )}
 
