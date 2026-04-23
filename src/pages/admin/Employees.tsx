@@ -124,9 +124,30 @@ interface UpdateDiff {
 /* ── Status badge — delegates to reusable component ── */
 import { PortalAccessBadge } from "@/components/employee/PortalAccessBadge";
 import type { InvitationMap } from "@/hooks/useEmployeeInvitations";
+import { inviteUrl } from "@/lib/app-url";
 
-function EmpStatusBadge({ employee, showInvite, onInvite, invitation }: { employee: EmployeeRecord; showInvite?: boolean; onInvite?: () => void; invitation?: InvitationMap[string] | null }) {
-  return <PortalAccessBadge employee={employee} invitation={invitation} showInviteAction={showInvite} onInvite={onInvite} />;
+function EmpStatusBadge({
+  employee,
+  showInvite,
+  onInvite,
+  onCopyLink,
+  invitation,
+}: {
+  employee: EmployeeRecord;
+  showInvite?: boolean;
+  onInvite?: () => void;
+  onCopyLink?: (token: string) => void;
+  invitation?: InvitationMap[string] | null;
+}) {
+  return (
+    <PortalAccessBadge
+      employee={employee}
+      invitation={invitation}
+      showInviteAction={showInvite}
+      onInvite={onInvite}
+      onCopyLink={onCopyLink}
+    />
+  );
 }
 
 const BOOLEAN_FIELDS = new Set(["has_car"]);
@@ -234,6 +255,16 @@ export default function Employees() {
   const [campaignOpen, setCampaignOpen] = useState(false);
   const { visibleColumns, savePreferences } = useColumnPreferences("employees");
   const { toast } = useToast();
+
+  // Quick action: copy active invite token as a shareable activation link.
+  const copyInviteLink = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl(token));
+      toast({ title: "Invite link copied", description: "Paste it into any channel to share." });
+    } catch {
+      toast({ title: "Could not copy link", variant: "destructive" });
+    }
+  };
 
   const handleBulkPortalInvite = async () => {
     if (!selectedCompanyId) return;
@@ -970,7 +1001,7 @@ export default function Employees() {
                   </div>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
+                  <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} onCopyLink={copyInviteLink} />
                   {e.access_pin && <span className="text-[9px] text-muted-foreground/50 font-mono">PIN: {e.access_pin}</span>}
                 </div>
               </div>
@@ -1093,7 +1124,7 @@ export default function Employees() {
                   )}
                   {visibleColumns.includes("status") && (
                     <TableCell className="py-1">
-                      <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
+                      <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} onCopyLink={copyInviteLink} />
                     </TableCell>
                   )}
                   {visibleColumns.includes("last_login") && (
