@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import staflyLogo from "@/assets/stafly-logo.png";
+import { StaflyLogo } from "@/components/brand/StaflyBrand";
 import { useFrontDesk, type FrontDeskEmployee, type FrontDeskSummary, type VisitType, type RatingValue, VISIT_TYPES, getVisitTypeMeta } from "@/hooks/useFrontDesk";
 import { FrontDeskStepper } from "@/components/front-desk/FrontDeskStepper";
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
@@ -233,8 +233,8 @@ export default function FrontDesk() {
       <header className="border-b bg-card/60 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={staflyLogo} alt="Stafly" className="h-8" />
-            <div className="hidden sm:block">
+            <StaflyLogo size={28} />
+            <div className="hidden sm:block border-l border-border/60 pl-3">
               <p className="text-sm font-semibold leading-tight">Front Desk</p>
               <p className="text-xs text-muted-foreground">
                 {currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ·{" "}
