@@ -26,10 +26,17 @@ interface CompanyUser {
   full_name: string;
 }
 
+interface Membership {
+  company_id: string;
+  company_name: string;
+  role: string;
+}
+
 interface AvailableUser {
   user_id: string;
   email: string;
   full_name: string;
+  memberships: Membership[];
 }
 
 const ROLE_OPTIONS = [
@@ -101,12 +108,13 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
 
     setCompanyUsers(users);
 
-    // 3) Available = profiles NOT linked to ANY company (strict tenant isolation).
-    //    We MUST resolve this server-side: client-side `company_users` reads are
-    //    restricted by RLS to the companies the caller manages, so users from
-    //    other tenants would otherwise look "free" and leak into the dropdown.
-    const { data: unassigned, error: rpcErr } = await supabase
-      .rpc("list_unassigned_profiles");
+    // 3) Eligible users for THIS company. Server-side helper resolves
+    //    cross-tenant memberships (RLS would otherwise hide them) so the
+    //    picker can show clear context: "Sin empresa" vs "En otras empresas".
+    //    Strict isolation is preserved: assignment still writes only to
+    //    company_users with the active company_id.
+    const { data: eligible, error: rpcErr } = await supabase
+      .rpc("get_eligible_users_for_company", { _company_id: companyId });
 
     if (rpcErr) {
       setAvailableUsers([]);
@@ -114,10 +122,11 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
     }
 
     setAvailableUsers(
-      (unassigned ?? []).map((p: any) => ({
+      (eligible ?? []).map((p: any) => ({
         user_id: p.user_id,
         email: p.email ?? "",
         full_name: p.full_name ?? "",
+        memberships: Array.isArray(p.memberships) ? p.memberships : [],
       }))
     );
   };
@@ -271,22 +280,65 @@ export default function CompanyUsersDialog({ companyId, companyName, open, onOpe
                 <Label className="text-xs">Usuario</Label>
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Seleccionar usuario sin empresa" />
+                    <SelectValue placeholder="Seleccionar usuario elegible" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-80">
                     {availableUsers.length === 0 ? (
-                      <SelectItem value="__none" disabled>No hay usuarios libres para asignar</SelectItem>
+                      <SelectItem value="__none" disabled>No hay usuarios elegibles</SelectItem>
                     ) : (
-                      availableUsers.map(u => (
-                        <SelectItem key={u.user_id} value={u.user_id}>
-                          {u.full_name || u.email}
-                        </SelectItem>
-                      ))
+                      <>
+                        {/* Section A — users not linked to any company */}
+                        {availableUsers.filter(u => u.memberships.length === 0).length > 0 && (
+                          <>
+                            <div className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Sin empresa
+                            </div>
+                            {availableUsers
+                              .filter(u => u.memberships.length === 0)
+                              .map(u => (
+                                <SelectItem key={u.user_id} value={u.user_id}>
+                                  <div className="flex flex-col items-start">
+                                    <span className="text-sm">{u.full_name || u.email}</span>
+                                    {u.full_name && (
+                                      <span className="text-[10px] text-muted-foreground">{u.email}</span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </>
+                        )}
+
+                        {/* Section B — users belonging to other companies */}
+                        {availableUsers.filter(u => u.memberships.length > 0).length > 0 && (
+                          <>
+                            <div className="mt-1 px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground border-t border-border/60">
+                              En otras empresas
+                            </div>
+                            {availableUsers
+                              .filter(u => u.memberships.length > 0)
+                              .map(u => {
+                                const primary = u.memberships[0];
+                                const extra = u.memberships.length - 1;
+                                return (
+                                  <SelectItem key={u.user_id} value={u.user_id}>
+                                    <div className="flex flex-col items-start">
+                                      <span className="text-sm">{u.full_name || u.email}</span>
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {primary.role} en {primary.company_name}
+                                        {extra > 0 ? ` · +${extra} más` : ""}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
+                          </>
+                        )}
+                      </>
                     )}
                   </SelectContent>
                 </Select>
                 <p className="text-[10px] text-muted-foreground">
-                  Solo se listan usuarios que aún no pertenecen a ninguna empresa. Para mover un usuario desde otra empresa, hazlo desde su empresa actual.
+                  Se listan usuarios elegibles para esta empresa. Los que ya pertenecen a otra empresa se muestran con su contexto actual; agregarlos aquí les dará acceso adicional sin remover el existente.
                 </p>
               </div>
               <div className="w-32 space-y-1">

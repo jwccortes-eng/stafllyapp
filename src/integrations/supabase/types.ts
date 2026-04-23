@@ -14610,6 +14610,15 @@ export type Database = {
           name: string
         }[]
       }
+      get_eligible_users_for_company: {
+        Args: { _company_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          memberships: Json
+          user_id: string
+        }[]
+      }
       get_employee_for_activation: {
         Args: { _employee_id: string; _invite_token: string }
         Returns: {

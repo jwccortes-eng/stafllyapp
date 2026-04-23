@@ -314,10 +314,13 @@ export function useConvertRequestToShift() {
   });
 }
 
-/** Returns the role slots configured for a given shift. */
+/** Returns the role slots configured for a given shift.
+ *  Tenant scope: companyId is part of the queryKey so switching companies
+ *  evicts cross-tenant cached entries even though RLS already filters at DB. */
 export function useShiftRoleSlots(shiftId: string | null) {
+  const { selectedCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["shift-role-slots", shiftId],
+    queryKey: ["shift-role-slots", selectedCompanyId, shiftId],
     queryFn: async () => {
       if (!shiftId) return [];
       const { data, error } = await supabase
@@ -328,7 +331,7 @@ export function useShiftRoleSlots(shiftId: string | null) {
       if (error) throw error;
       return (data ?? []) as any[];
     },
-    enabled: !!shiftId,
+    enabled: !!shiftId && !!selectedCompanyId,
   });
 }
 

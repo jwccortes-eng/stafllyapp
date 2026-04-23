@@ -42,6 +42,7 @@ import { SendNotificationDialog } from "./SendNotificationDialog";
 import { ShiftCommentsPanel } from "./ShiftCommentsPanel";
 import { ShiftAuditTrail } from "./ShiftAuditTrail";
 import { ShiftRoleSlotsTeamPanel } from "./ShiftRoleSlotsTeamPanel";
+import { GenerateBillingBlockButton } from "./GenerateBillingBlockButton";
 import {
   pickRoleSlotsForNewAssignments,
   type ShiftRoleSlot,
@@ -546,6 +547,21 @@ export function ShiftDetailDialog({
                   <div className="rounded-xl bg-muted/30 border border-border/20 px-3.5 py-2.5">
                     <p className="text-[10px] font-medium text-muted-foreground mb-1">Notas</p>
                     <p className="text-xs text-foreground/80">{shift.notes}</p>
+                  </div>
+                )}
+
+                {/* FASE 4 — Manual bridge to invoicing. Only renders when the
+                    shift has a client; idempotent, never touches payroll. */}
+                {canEdit && shift.client_id && (
+                  <div className="rounded-xl border border-border/30 bg-muted/15 px-3 py-2.5 space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Facturación
+                    </p>
+                    <GenerateBillingBlockButton
+                      shiftId={shift.id}
+                      shiftDate={shift.date}
+                      clientId={shift.client_id}
+                    />
                   </div>
                 )}
               </div>
