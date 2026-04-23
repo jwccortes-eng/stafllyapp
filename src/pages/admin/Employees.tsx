@@ -905,24 +905,6 @@ export default function Employees() {
           );
         })}
       </div>
-          <button
-            key={tab.key}
-            onClick={() => setStatusTab(tab.key)}
-            className={cn(
-              "px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px whitespace-nowrap",
-              statusTab === tab.key
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-            )}
-          >
-            {tab.label}
-            <span className={cn(
-              "ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
-              statusTab === tab.key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-            )}>{tab.count}</span>
-          </button>
-        ))}
-      </div>
 
       {/* ─── Premium Filter Bar ─── */}
       <PremiumFilterBar
