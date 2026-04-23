@@ -14668,6 +14668,14 @@ export type Database = {
         Returns: boolean
       }
       is_global_owner: { Args: { _user_id: string }; Returns: boolean }
+      list_unassigned_profiles: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          user_id: string
+        }[]
+      }
       log_activity: {
         Args: {
           _action: string
