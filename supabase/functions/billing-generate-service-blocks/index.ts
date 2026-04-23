@@ -110,7 +110,9 @@ Deno.serve(async (req) => {
     if (!membership) {
       return json({ error: "Not a member of company" }, 403);
     }
-    if (!["admin", "owner", "company_owner", "developer"].includes(String(membership.role))) {
+
+    const membershipRole = String(membership.role ?? "").trim().toLowerCase();
+    if (!["admin", "owner", "company_owner", "developer"].includes(membershipRole)) {
       return json({ error: "Admin privileges required" }, 403);
     }
 
