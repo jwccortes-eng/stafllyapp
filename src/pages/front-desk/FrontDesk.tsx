@@ -325,7 +325,7 @@ export default function FrontDesk() {
     setAttract(true);
   }, []);
 
-  // Inactivity reset
+  // Inactivity reset (during an active session)
   useEffect(() => {
     if (step === "welcome") return;
     if (inactivityRef.current) clearTimeout(inactivityRef.current);
@@ -337,6 +337,17 @@ export default function FrontDesk() {
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
     };
   }, [step, phone, message, formValues, resetAll, lang]);
+
+  // Attract mode: when sitting on the welcome screen, slide into the attract
+  // loop after ATTRACT_IDLE_MS so the kiosk never looks abandoned.
+  useEffect(() => {
+    if (step !== "welcome" || attract) return;
+    if (attractRef.current) clearTimeout(attractRef.current);
+    attractRef.current = setTimeout(() => setAttract(true), ATTRACT_IDLE_MS);
+    return () => {
+      if (attractRef.current) clearTimeout(attractRef.current);
+    };
+  }, [step, attract]);
 
   const seedFormFromEmployee = useCallback((emp: FrontDeskEmployee) => {
     setFormValues({
