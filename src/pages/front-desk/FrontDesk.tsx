@@ -310,6 +310,28 @@ export default function FrontDesk() {
     return () => clearInterval(id);
   }, []);
 
+  // Cache-busting: on mount and every time the tablet wakes/refocuses,
+  // verify the served HTML still references the same /assets/index-*.js
+  // bundle the running app was loaded from. If a newer Publish has happened,
+  // wipe caches/SW and hard-reload exactly once. Anti-loop guard inside.
+  useEffect(() => {
+    void ensureFrontDeskBundleFresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void ensureFrontDeskBundleFresh();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    // Re-check periodically while the kiosk stays open all day.
+    const poll = setInterval(() => void ensureFrontDeskBundleFresh(), 5 * 60_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      clearInterval(poll);
+    };
+  }, []);
+
   const resetAll = useCallback(() => {
     setStep("welcome");
     setPhone("");
