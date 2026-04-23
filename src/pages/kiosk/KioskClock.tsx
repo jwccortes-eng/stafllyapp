@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Camera, CheckCircle2, Clock, LogIn, LogOut, XCircle, Delete, ArrowLeft, Loader2 } from "lucide-react";
-import staflyLogo from "@/assets/stafly-logo.png";
+import { StaflyLogo } from "@/components/brand/StaflyBrand";
 
 type Step = "phone" | "pin" | "camera" | "processing" | "success" | "error";
 
@@ -167,7 +167,7 @@ export default function KioskClock() {
       <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-6">
         {/* Logo + Clock */}
         <div className="text-center space-y-2">
-          <img src={staflyLogo} alt="StaflyApps" className="h-8 mx-auto opacity-80" />
+          <div className="flex justify-center"><StaflyLogo size={28} /></div>
           <p className="text-4xl font-bold text-white font-[var(--font-heading)] tracking-tight">{timeStr}</p>
           <p className="text-sm text-white/50 capitalize">{dateStr}</p>
         </div>
