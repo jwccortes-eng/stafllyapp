@@ -622,14 +622,70 @@ export default function UnifiedPersonProfile() {
                     <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  onClick={() => setInviteOpen(true)}
-                >
-                  <Send className="h-3.5 w-3.5 mr-1.5" /> Invite
-                </Button>
+
+                {/* Invite / Resend — label and tone reflect current state */}
+                {(() => {
+                  const inFlight = invitation && isInviteStatusInFlight(invitation.status);
+                  const failed = invitation && isInviteStatusFailure(invitation.status);
+                  const accepted = invitation?.accepted_at || portalActive;
+                  const everSent = !!invitation?.sent_at;
+
+                  // Primary CTA when worker has no portal access yet and either:
+                  //  • never invited, or
+                  //  • last attempt failed/bounced.
+                  const isPrimaryAction = !portalActive && (!everSent || failed);
+
+                  let label = "Invite";
+                  let Icon = Send;
+                  if (failed) { label = "Re-invite"; Icon = RotateCw; }
+                  else if (accepted) { label = "Resend invite"; Icon = Send; }
+                  else if (everSent) { label = "Resend invite"; Icon = RotateCw; }
+
+                  return (
+                    <Button
+                      size="sm"
+                      variant={isPrimaryAction ? "default" : "outline"}
+                      className={cn(
+                        "h-8 text-xs",
+                        failed && "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive",
+                      )}
+                      onClick={() => setInviteOpen(true)}
+                      disabled={!!inFlight}
+                      title={
+                        inFlight ? "Invitation is in flight…" :
+                        failed ? `Last attempt failed${invitation?.bounce_reason ? ` — ${invitation.bounce_reason}` : ""}` :
+                        accepted ? "Worker is already active — send a fresh invite if needed" :
+                        everSent ? `Last invite sent ${invitation?.sent_at ? safeDistance(invitation.sent_at) : ""}` :
+                        "Send portal invitation"
+                      }
+                    >
+                      <Icon className="h-3.5 w-3.5 mr-1.5" />
+                      {inFlight ? "Sending…" : label}
+                    </Button>
+                  );
+                })()}
+
+                {/* Copy invite link — only when an active token exists and not yet accepted */}
+                {invitation?.invite_token && !invitation.accepted_at && !portalActive && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs"
+                    onClick={async () => {
+                      try {
+                        const { inviteUrl } = await import("@/lib/app-url");
+                        await navigator.clipboard.writeText(inviteUrl(invitation.invite_token!));
+                        toast({ title: "Invite link copied", description: "Paste it into any channel to share." });
+                      } catch {
+                        toast({ title: "Could not copy link", variant: "destructive" });
+                      }
+                    }}
+                    title="Copy a shareable activation link"
+                  >
+                    <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copy link
+                  </Button>
+                )}
+
                 {employee.phone_number && (
                   <Button
                     size="sm"
@@ -660,6 +716,34 @@ export default function UnifiedPersonProfile() {
                     <><Archive className="h-3.5 w-3.5 mr-1.5" /> Archive</>
                   )}
                 </Button>
+
+                {/* Inline invitation status hint — discreet, single line */}
+                {invitation && !isEditing && (
+                  <span className={cn(
+                    "inline-flex items-center gap-1 text-[10.5px] ml-0.5 pl-2 border-l border-border/40",
+                    isInviteStatusFailure(invitation.status) ? "text-destructive" :
+                    invitation.accepted_at ? "text-earning" :
+                    invitation.opened_at ? "text-primary" :
+                    "text-muted-foreground/80",
+                  )}>
+                    {isInviteStatusFailure(invitation.status)
+                      ? <AlertTriangle className="h-3 w-3" />
+                      : invitation.accepted_at
+                        ? <CheckCircle2 className="h-3 w-3" />
+                        : <Clock className="h-3 w-3" />}
+                    {isInviteStatusFailure(invitation.status)
+                      ? "Invite failed"
+                      : invitation.accepted_at
+                        ? `Accepted ${safeDistance(invitation.accepted_at)}`
+                        : invitation.opened_at
+                          ? `Opened ${safeDistance(invitation.opened_at)}`
+                          : invitation.delivered_at
+                            ? `Delivered ${safeDistance(invitation.delivered_at)}`
+                            : invitation.sent_at
+                              ? `Sent ${safeDistance(invitation.sent_at)}`
+                              : "Pending"}
+                  </span>
+                )}
               </div>
             </div>
           </CardContent>
