@@ -779,10 +779,15 @@ export default function FrontDesk() {
               </div>
               <div className="max-w-sm mx-auto">
                 <NumericKeypad
-                  onDigit={(d) => setPhone((p) => (p.length < 15 ? p + d : p))}
-                  onBackspace={() => setPhone((p) => p.slice(0, -1))}
-                  onClear={() => setPhone("")}
+                  onDigit={phonePad.appendDigit}
+                  onBackspace={phonePad.backspace}
+                  onClear={phonePad.clear}
                 />
+                <p className="mt-3 text-center text-[11px] text-muted-foreground/70">
+                  {lang === "es"
+                    ? "También puedes usar el teclado · Enter para continuar · Esc para cancelar"
+                    : "You can also use your keyboard · Enter to continue · Esc to cancel"}
+                </p>
               </div>
               <div className="flex gap-3 mt-6 justify-center">
                 <Button variant="ghost" onClick={resetAll} className="h-12 px-6">
