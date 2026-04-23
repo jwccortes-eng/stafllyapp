@@ -120,6 +120,7 @@ const Applications = lazy(() => import("./pages/admin/Applications"));
 const ApplicationSettings = lazy(() => import("./pages/admin/ApplicationSettings"));
 const UpgradeRequests = lazy(() => import("./pages/admin/UpgradeRequests"));
 const InvoicingClients = lazy(() => import("./pages/admin/InvoicingClients"));
+const InvoicingClientsImport = lazy(() => import("./pages/admin/InvoicingClientsImport"));
 const InvoicingServiceBlocks = lazy(() => import("./pages/admin/InvoicingServiceBlocks"));
 const InvoicingInvoices = lazy(() => import("./pages/admin/InvoicingInvoices"));
 const InvoicingInvoiceNew = lazy(() => import("./pages/admin/InvoicingInvoiceNew"));
@@ -309,6 +310,7 @@ function App() {
                 <Route path="application-settings" element={<CompanyRequiredGuard><ApplicationSettings /></CompanyRequiredGuard>} />
                 <Route path="upgrade-requests" element={<UpgradeRequests />} />
                 <Route path="invoicing/clients" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClients /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="invoicing/clients/import" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClientsImport /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="invoicing/service-blocks" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingServiceBlocks /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="invoicing/invoices" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoices /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="invoicing/invoices/new" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoiceNew /></ModuleGate></CompanyRequiredGuard>} />
