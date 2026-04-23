@@ -801,7 +801,7 @@ export default function Employees() {
             </Dialog>
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(emptyForm()); }}>
               <DialogTrigger asChild><Button disabled={atEmployeeLimit} size="sm" className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1.5" />New (full form)</Button></DialogTrigger>
-              <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter the new employee's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} employees`} /> : <EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
+              <DialogContent className="max-w-md"><DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter the new employee's information</DialogDescription></DialogHeader>{atEmployeeLimit ? <UpgradeBanner feature={`Limit of ${limits.maxEmployees} employees`} /> : <EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleCreate} submitLabel="Create" />}</DialogContent>
             </Dialog>
             <Button size="sm" variant="default" className="h-8 text-xs" disabled={atEmployeeLimit} onClick={() => setQuickAddOpen(true)}>
               <UserPlus className="h-3.5 w-3.5 mr-1.5" />Quick add
@@ -955,34 +955,6 @@ export default function Employees() {
               >
                 <div className="flex items-start gap-3">
                   <PremiumAvatar firstName={e.first_name} lastName={e.last_name} avatarUrl={e.avatar_url} size="lg" status={status} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold truncate leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</p>
-                    {e.employee_role && <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/8 text-primary">{formatDisplayText(e.employee_role, "label")}</span>}
-                    <div className="mt-1.5 space-y-0.5">
-                      {e.phone_number && <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{e.phone_number}</p>}
-                      {e.email && <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1"><Mail className="h-2.5 w-2.5" />{e.email}</p>}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
-                  {e.access_pin && <span className="text-[9px] text-muted-foreground/50 font-mono">PIN: {e.access_pin}</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-              <div
-                key={e.id}
-                onClick={() => openDetailSheet(e)}
-                className={cn(
-                  "group relative rounded-xl border border-border/40 bg-card p-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer",
-                  !e.is_active && "opacity-40"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <EmployeeAvatar firstName={e.first_name ?? ""} lastName={e.last_name ?? ""} avatarUrl={e.avatar_url} gender={e.gender} size="lg" className="ring-2 ring-background shadow" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold truncate leading-tight">{formatPersonName(`${e.first_name} ${e.last_name}`)}</p>
                     {e.employee_role && <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/8 text-primary">{formatDisplayText(e.employee_role, "label")}</span>}
@@ -1207,7 +1179,7 @@ export default function Employees() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingEmployee(null); }}>
-        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Edit employee</DialogTitle><DialogDescription>Update employee information</DialogDescription></DialogHeader><EmployeeForm fields={visibleFields} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Save changes" /></DialogContent>
+        <DialogContent className="max-w-md"><DialogHeader><DialogTitle>Edit employee</DialogTitle><DialogDescription>Update employee information</DialogDescription></DialogHeader><EmployeeForm fields={CONNECTEAM_FIELDS} form={form} setForm={setForm} loading={loading} onSubmit={handleUpdate} submitLabel="Save changes" /></DialogContent>
       </Dialog>
 
       {/* Delete Confirmation */}
