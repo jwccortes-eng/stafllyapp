@@ -517,6 +517,7 @@ function ActivityTab({ employee }: { employee: EmployeeRecord }) {
    ═══════════════════════════════════════════ */
 export function EmployeeProfileTabs({
   employee, companyId, isEditing, form, setForm, isPrivileged, onEmployeeUpdate, companyName, onInvite, invitation,
+  activeTab, onTabChange,
 }: {
   employee: EmployeeRecord; companyId: string; isEditing: boolean;
   form: Record<string, string>;
@@ -526,13 +527,19 @@ export function EmployeeProfileTabs({
   companyName?: string;
   onInvite?: () => void;
   invitation?: import("@/hooks/useEmployeeInvitations").EmployeeInvitation | null;
+  activeTab?: string;
+  onTabChange?: (value: string) => void;
 }) {
   const wpHook = useWorkerProfile({ employeeId: employee?.id });
 
   if (!employee?.id) return <div className="py-6 text-center text-[11px] text-muted-foreground">Selecciona un empleado</div>;
 
+  const tabsControlProps = activeTab !== undefined
+    ? { value: activeTab, onValueChange: onTabChange }
+    : { defaultValue: "info" };
+
   return (
-    <Tabs defaultValue="info" className="w-full">
+    <Tabs {...tabsControlProps} className="w-full">
       <TabsList className="w-full flex h-8 mb-3 bg-muted/30 rounded-lg p-0.5 overflow-x-auto">
         <TabsTrigger value="info" className="text-[10px] data-[state=active]:bg-card rounded-md gap-1 font-medium flex-1 min-w-0 px-1.5 h-7">
           <User className="h-3 w-3 shrink-0" /><span className="hidden sm:inline">Resumen</span>
