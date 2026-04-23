@@ -328,10 +328,24 @@ export default function Employees() {
       });
       if (error) { toast({ title: "Re-invite failed", description: "Could not resend invitations", variant: "destructive" }); return; }
       if (data?.error) { toast({ title: "Re-invite failed", description: data.error, variant: "destructive" }); return; }
-      toast({
-        title: `Re-invited ${data.emails_sent ?? failedIds.length} workers ✅`,
-        description: `${data.processed ?? failedIds.length} processed${data.skipped > 0 ? `, ${data.skipped} skipped` : ""}`,
-      });
+      const sent = Number(data?.emails_sent ?? 0);
+      const processed = Number(data?.processed ?? 0);
+      const skipped = Number(data?.skipped ?? 0);
+      // Backend can return success with 0 processed (e.g. all employees lack phone).
+      // Surface that as a warning instead of a misleading "Re-invited 0 ✅".
+      if (sent === 0 && processed === 0) {
+        toast({
+          title: "No invitations were sent",
+          description: data?.message
+            ?? "Selected workers may be missing a phone or have no eligible state. Open a profile to inspect.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: `Re-invited ${sent} worker${sent === 1 ? "" : "s"} ✅`,
+          description: `${processed} processed${skipped > 0 ? `, ${skipped} skipped` : ""}`,
+        });
+      }
       clearSelection();
       await Promise.all([fetchEmployees(), refetchInvitations()]);
     } catch (e: any) {
