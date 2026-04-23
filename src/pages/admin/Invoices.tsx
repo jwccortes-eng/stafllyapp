@@ -21,7 +21,9 @@ import AuditPanel from "@/components/audit/AuditPanel";
 import {
   Receipt, Plus, Loader2, Search, MoreHorizontal, Send, Eye,
   CheckCircle2, XCircle, DollarSign, FileText, Download, Printer,
+  AlertTriangle, ArrowRight,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const STATUS_CFG: Record<string, { label: string; color: string }> = {
   draft: { label: "Borrador", color: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" },
@@ -114,7 +116,7 @@ export default function Invoices() {
     if (newStatus === "paid") updates.paid_at = new Date().toISOString();
     if (newStatus === "approved") { updates.approved_by = user?.id; updates.approved_at = new Date().toISOString(); }
     if (newStatus === "voided") { updates.voided_by = user?.id; updates.voided_at = new Date().toISOString(); }
-    const { error } = await supabase.from("invoices").update(updates).eq("id", id);
+    const { error } = await supabase.from("legacy_invoices").update(updates).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Estado actualizado`);
     loadData();
