@@ -20,6 +20,7 @@ import {
   Clock, Building2, Globe, Lock, Award, Languages, Car, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
 
 /* ─── Types ─── */
 interface Employee {

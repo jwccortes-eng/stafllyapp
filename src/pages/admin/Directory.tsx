@@ -10,6 +10,7 @@ import { formatPersonName, formatDisplayText, localeSort } from "@/lib/format-he
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { useEmployeeStatuses, type EmployeeOnlineStatus } from "@/hooks/useEmployeeStatus";
 import { Badge } from "@/components/ui/badge";
+import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
 
 const STATUS_LABELS: Record<EmployeeOnlineStatus, { label: string; className: string }> = {
   online: { label: "En línea", className: "bg-earning/15 text-earning border-earning/30" },

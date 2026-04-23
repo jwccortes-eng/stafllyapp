@@ -48,6 +48,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPersonName } from "@/lib/format-helpers";
+import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
 import { type ProfileStatus, PROFILE_STATUS_LABELS } from "@/lib/onboarding/profile-status";
 import { getRequiredDocumentsForCompany } from "@/lib/onboarding/required-documents";
 
@@ -317,6 +318,11 @@ export default function Workforce() {
 
   return (
     <div className="space-y-4 pb-24">
+      <LegacyDeprecationBanner
+        replacementHref="/app/employees"
+        replacementLabel="Worker Hub"
+        description="Worker Hub consolida readiness, perfil maestro y operación de personas. Esta vista permanece durante la transición."
+      />
       <PageHeader
         icon={Users}
         title="Workforce control"
