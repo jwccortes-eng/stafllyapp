@@ -58,6 +58,7 @@ import { BulkRateAssignment } from "@/components/employee/BulkRateAssignment";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { QuickAddInviteWizard } from "@/components/employee/QuickAddInviteWizard";
 import { useEmployeeInvitations } from "@/hooks/useEmployeeInvitations";
+import { canInviteWorker } from "@/lib/worker-actions";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/billing/UpgradeBanner";
 import { formatDistanceToNow, parseISO, isValid, differenceInDays } from "date-fns";
@@ -1369,7 +1370,20 @@ export default function Employees() {
                       <DropdownMenuContent align="end" className="w-44">
                         <DropdownMenuItem onClick={() => navigate(`/app/employees/${e.id}`)} className="text-xs"><Eye className="h-3.5 w-3.5 mr-2" />Open full profile</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openDetailSheet(e)} className="text-xs"><Pencil className="h-3.5 w-3.5 mr-2" />Quick edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setViewEmployee(e); setInviteOpen(true); }} className="text-xs"><Send className="h-3.5 w-3.5 mr-2" />Invite</DropdownMenuItem>
+                        {(() => {
+                          const inviteDecision = canInviteWorker(e, invitations[e.id]);
+                          return (
+                            <DropdownMenuItem
+                              onClick={() => { setViewEmployee(e); setInviteOpen(true); }}
+                              className="text-xs"
+                              disabled={!inviteDecision.allowed}
+                              title={inviteDecision.reason}
+                            >
+                              <Send className="h-3.5 w-3.5 mr-2" />
+                              {e.is_active === false ? "Reactivate to invite" : "Invite"}
+                            </DropdownMenuItem>
+                          );
+                        })()}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => toggleActive(e)} className="text-xs">
                           {e.is_active ? <><Archive className="h-3.5 w-3.5 mr-2" />Archive</> : <><UserCheck className="h-3.5 w-3.5 mr-2" />Activate</>}
@@ -1443,7 +1457,22 @@ export default function Employees() {
                   </Badge>
                 </>
               )}
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setInviteOpen(true)}><Send className="h-3 w-3 mr-1" />Invite</Button>
+              {(() => {
+                const inviteDecision = viewEmployee ? canInviteWorker(viewEmployee, invitations[viewEmployee.id]) : { allowed: false, reason: "Select a worker first." };
+                return (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setInviteOpen(true)}
+                    disabled={!inviteDecision.allowed}
+                    title={inviteDecision.reason}
+                  >
+                    <Send className="h-3 w-3 mr-1" />
+                    {viewEmployee?.is_active === false ? "Reactivate first" : "Invite"}
+                  </Button>
+                );
+              })()}
               <div className="ml-auto flex items-center gap-0.5">
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { if (viewEmployee) toggleActive(viewEmployee); }}>
                   {viewEmployee?.is_active ? <><Archive className="h-3 w-3 mr-1" />Archive</> : <><UserCheck className="h-3 w-3 mr-1" />Activate</>}

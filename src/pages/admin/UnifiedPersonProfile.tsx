@@ -39,6 +39,7 @@ import {
 import { EmployeeProfileTabs } from "@/components/employee/EmployeeProfileTabs";
 import { EmployeeInviteDialog } from "@/components/employee/EmployeeInviteDialog";
 import { ArchiveEmployeeDialog } from "@/components/employee/ArchiveEmployeeDialog";
+import { canInviteWorker, canActivateWorker, canArchiveWorker } from "@/lib/worker-actions";
 
 import {
   ArrowLeft,
@@ -629,6 +630,7 @@ export default function UnifiedPersonProfile() {
                   const failed = invitation && isInviteStatusFailure(invitation.status);
                   const accepted = invitation?.accepted_at || portalActive;
                   const everSent = !!invitation?.sent_at;
+                  const inviteDecision = canInviteWorker(employee, invitation);
 
                   // Primary CTA when worker has no portal access yet and either:
                   //  • never invited, or
@@ -637,7 +639,8 @@ export default function UnifiedPersonProfile() {
 
                   let label = "Invite";
                   let Icon = Send;
-                  if (failed) { label = "Re-invite"; Icon = RotateCw; }
+                  if (employee.is_active === false) { label = "Reactivate first"; }
+                  else if (failed) { label = "Re-invite"; Icon = RotateCw; }
                   else if (accepted) { label = "Resend invite"; Icon = Send; }
                   else if (everSent) { label = "Resend invite"; Icon = RotateCw; }
 
@@ -650,9 +653,10 @@ export default function UnifiedPersonProfile() {
                         failed && "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive",
                       )}
                       onClick={() => setInviteOpen(true)}
-                      disabled={!!inFlight}
+                      disabled={!!inFlight || !inviteDecision.allowed}
                       title={
                         inFlight ? "Invitation is in flight…" :
+                        !inviteDecision.allowed ? inviteDecision.reason :
                         failed ? `Last attempt failed${invitation?.bounce_reason ? ` — ${invitation.bounce_reason}` : ""}` :
                         accepted ? "Worker is already active — send a fresh invite if needed" :
                         everSent ? `Last invite sent ${invitation?.sent_at ? safeDistance(invitation.sent_at) : ""}` :
@@ -698,24 +702,31 @@ export default function UnifiedPersonProfile() {
                     </a>
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 text-xs"
-                  onClick={() => {
-                    if (employee.is_active === false) {
-                      toggleActive();
-                    } else {
-                      setArchiveOpen(true);
-                    }
-                  }}
-                >
-                  {employee.is_active === false ? (
-                    <><UserCheck className="h-3.5 w-3.5 mr-1.5" /> Activate</>
-                  ) : (
-                    <><Archive className="h-3.5 w-3.5 mr-1.5" /> Archive</>
-                  )}
-                </Button>
+                {(() => {
+                  const isInactive = employee.is_active === false;
+                  const decision = isInactive ? canActivateWorker(employee) : canArchiveWorker(employee);
+                  return (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs"
+                      onClick={() => {
+                        if (isInactive) {
+                          toggleActive();
+                        } else {
+                          setArchiveOpen(true);
+                        }
+                      }}
+                      title={isInactive ? "Reactivate to enable invites and shifts" : decision.reason ?? "Archive worker"}
+                    >
+                      {isInactive ? (
+                        <><UserCheck className="h-3.5 w-3.5 mr-1.5" /> Activate</>
+                      ) : (
+                        <><Archive className="h-3.5 w-3.5 mr-1.5" /> Archive</>
+                      )}
+                    </Button>
+                  );
+                })()}
 
                 {/* Inline invitation status hint — discreet, single line */}
                 {invitation && !isEditing && (
