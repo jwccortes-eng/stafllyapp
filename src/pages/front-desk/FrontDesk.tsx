@@ -44,6 +44,7 @@ import { PhotoCaptureStep } from "@/components/front-desk/PhotoCaptureStep";
 import { ResolutionStep } from "@/components/front-desk/ResolutionStep";
 import { RatingStep } from "@/components/front-desk/RatingStep";
 import { ensureFrontDeskBundleFresh } from "@/lib/front-desk-cache-bust";
+import { usePhonePadInput } from "@/hooks/usePhonePadInput";
 
 type Step =
   | "welcome"
