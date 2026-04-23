@@ -1,0 +1,1 @@
+ALTER VIEW public.office_visits_daily_summary SET (security_invoker = true);

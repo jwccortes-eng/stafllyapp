@@ -4127,6 +4127,54 @@ export type Database = {
           },
         ]
       }
+      front_desk_devices: {
+        Row: {
+          company_id: string
+          created_at: string
+          device_name: string
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          location: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          device_name: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          location?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          device_name?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          location?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "front_desk_devices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "front_desk_devices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hourly_rate_inference_evidence: {
         Row: {
           company_id: string
@@ -7072,6 +7120,126 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      office_visits: {
+        Row: {
+          attendant_name: string | null
+          attended_by: string | null
+          channel: string
+          checked_in_at: string
+          checked_out_at: string | null
+          company_id: string
+          created_at: string
+          device_id: string | null
+          documents_uploaded: number
+          duration_seconds: number | null
+          employee_id: string
+          id: string
+          language: string
+          pending_count: number | null
+          pending_items: Json | null
+          photo_taken: boolean
+          rating: Database["public"]["Enums"]["office_visit_rating"] | null
+          rating_comment: string | null
+          rating_score: number | null
+          rating_submitted_at: string | null
+          status: Database["public"]["Enums"]["office_visit_status"]
+          updated_at: string
+          updates_made: Json | null
+          visit_detail: string | null
+          visit_type: Database["public"]["Enums"]["office_visit_type"]
+        }
+        Insert: {
+          attendant_name?: string | null
+          attended_by?: string | null
+          channel?: string
+          checked_in_at?: string
+          checked_out_at?: string | null
+          company_id: string
+          created_at?: string
+          device_id?: string | null
+          documents_uploaded?: number
+          duration_seconds?: number | null
+          employee_id: string
+          id?: string
+          language?: string
+          pending_count?: number | null
+          pending_items?: Json | null
+          photo_taken?: boolean
+          rating?: Database["public"]["Enums"]["office_visit_rating"] | null
+          rating_comment?: string | null
+          rating_score?: number | null
+          rating_submitted_at?: string | null
+          status?: Database["public"]["Enums"]["office_visit_status"]
+          updated_at?: string
+          updates_made?: Json | null
+          visit_detail?: string | null
+          visit_type?: Database["public"]["Enums"]["office_visit_type"]
+        }
+        Update: {
+          attendant_name?: string | null
+          attended_by?: string | null
+          channel?: string
+          checked_in_at?: string
+          checked_out_at?: string | null
+          company_id?: string
+          created_at?: string
+          device_id?: string | null
+          documents_uploaded?: number
+          duration_seconds?: number | null
+          employee_id?: string
+          id?: string
+          language?: string
+          pending_count?: number | null
+          pending_items?: Json | null
+          photo_taken?: boolean
+          rating?: Database["public"]["Enums"]["office_visit_rating"] | null
+          rating_comment?: string | null
+          rating_score?: number | null
+          rating_submitted_at?: string | null
+          status?: Database["public"]["Enums"]["office_visit_status"]
+          updated_at?: string
+          updates_made?: Json | null
+          visit_detail?: string | null
+          visit_type?: Database["public"]["Enums"]["office_visit_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "office_visits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "office_visits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "office_visits_device_fk"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "front_desk_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "office_visits_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "office_visits_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -14145,6 +14313,36 @@ export type Database = {
           },
         ]
       }
+      office_visits_daily_summary: {
+        Row: {
+          avg_duration_seconds: number | null
+          avg_rating: number | null
+          company_id: string | null
+          low_rating_count: number | null
+          pending_followup_count: number | null
+          rated_count: number | null
+          resolved_count: number | null
+          total_visits: number | null
+          unique_employees: number | null
+          visit_date: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "office_visits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "office_visits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles_safe: {
         Row: {
           full_name: string | null
@@ -14642,6 +14840,23 @@ export type Database = {
         | "job_site"
         | "company_site"
         | "customer_site"
+      office_visit_rating: "excellent" | "good" | "regular" | "bad"
+      office_visit_status:
+        | "in_progress"
+        | "resolved"
+        | "pending_followup"
+        | "requires_admin_review"
+        | "cancelled"
+      office_visit_type:
+        | "pickup_check"
+        | "update_data"
+        | "submit_documents"
+        | "fix_documents"
+        | "portal_help"
+        | "payment_support"
+        | "onboarding"
+        | "general_inquiry"
+        | "other"
       passport_source:
         | "stafly_shift"
         | "marketplace_booking"
@@ -15108,6 +15323,25 @@ export const Constants = {
         "job_site",
         "company_site",
         "customer_site",
+      ],
+      office_visit_rating: ["excellent", "good", "regular", "bad"],
+      office_visit_status: [
+        "in_progress",
+        "resolved",
+        "pending_followup",
+        "requires_admin_review",
+        "cancelled",
+      ],
+      office_visit_type: [
+        "pickup_check",
+        "update_data",
+        "submit_documents",
+        "fix_documents",
+        "portal_help",
+        "payment_support",
+        "onboarding",
+        "general_inquiry",
+        "other",
       ],
       passport_source: [
         "stafly_shift",
