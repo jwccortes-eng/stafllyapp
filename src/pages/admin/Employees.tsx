@@ -998,6 +998,55 @@ export default function Employees() {
         }
       />
 
+      {/* ─── Bulk actions bar — appears when ≥1 row selected ─── */}
+      {(() => {
+        if (selectedIds.size === 0) return null;
+        const selectedFailedCount = Array.from(selectedIds).reduce((acc, id) => {
+          const emp = employees.find(e => e.id === id);
+          return emp && isInviteFailed(emp) ? acc + 1 : acc;
+        }, 0);
+        const canReinvite = selectedFailedCount > 0 && !bulkReinviting;
+        const reinviteLabel = bulkReinviting
+          ? "Re-inviting…"
+          : selectedFailedCount > 0
+            ? `Re-invite ${selectedFailedCount} failed`
+            : "Re-invite selected";
+        return (
+          <BulkActionsBar
+            selectedCount={selectedIds.size}
+            totalCount={filtered.length}
+            noun="worker"
+            onClear={clearSelection}
+            actions={
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        variant={canReinvite ? "destructive" : "outline"}
+                        size="xs"
+                        onClick={handleBulkReinviteSelected}
+                        disabled={!canReinvite}
+                      >
+                        {bulkReinviting
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <RotateCw className="h-3 w-3" />}
+                        {reinviteLabel}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-[260px]">
+                    {selectedFailedCount === 0
+                      ? "Select workers whose invitation failed, bounced or hit DLQ to enable bulk re-invite."
+                      : `Resends invitations for ${selectedFailedCount} selected worker${selectedFailedCount === 1 ? "" : "s"} with a failed delivery state. Other selected rows are skipped.`}
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            }
+          />
+        );
+      })()}
+
       {/* ─── Content ─── */}
       {initialLoading ? (
         <PageSkeleton variant="table" />
