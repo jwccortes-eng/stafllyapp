@@ -67,6 +67,7 @@ const DECISIONS: Decision[] = [
   { match: "TABLE 40",                   recommendation: "review",                                                reason: "Low volume, no recent activity. Decide active/inactive or skip." },
   { match: "MAYER CATERING",             recommendation: "review",        suggestedName: "Mayer Catering",        reason: "No activity in 90d. Likely import as inactive." },
   { match: "GREEN EVENTS",               recommendation: "review",        suggestedName: "Green Events",          reason: "No activity in 90d. Likely import as inactive." },
+  { match: "21 * PASSOVER",              recommendation: "review",                                                reason: "Special event/category with 0 shifts. Requires manual decision before importing." },
 ];
 
 const norm = (s: string) => s.trim().toUpperCase().replace(/\s+/g, " ");
@@ -109,7 +110,7 @@ interface RowState {
 export default function InvoicingClientsImport() {
   const { selectedCompanyId } = useCompany();
   const [search, setSearch] = useState("");
-  const [showRecommendedOnly, setShowRecommendedOnly] = useState(true);
+  const [showRecommendedOnly, setShowRecommendedOnly] = useState(false);
   const [showInactive, setShowInactive] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [rowState, setRowState] = useState<Record<string, RowState>>({});
