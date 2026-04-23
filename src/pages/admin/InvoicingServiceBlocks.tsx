@@ -115,9 +115,13 @@ export default function InvoicingServiceBlocks() {
               <GenerateDialog
                 onClose={() => setGenOpen(false)}
                 onRun={async (input) => {
-                  const res = await generate.mutateAsync(input);
-                  setLastResult(res);
-                  setGenOpen(false);
+                  try {
+                    const res = await generate.mutateAsync(input);
+                    setLastResult(res);
+                    setGenOpen(false);
+                  } catch {
+                    // toast is already handled in the mutation; keep the dialog open
+                  }
                 }}
                 running={generate.isPending}
               />
