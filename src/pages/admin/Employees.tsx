@@ -1124,7 +1124,7 @@ export default function Employees() {
                   )}
                   {visibleColumns.includes("status") && (
                     <TableCell className="py-1">
-                      <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} />
+                      <EmpStatusBadge employee={e} invitation={invitations[e.id]} showInvite onInvite={() => { setViewEmployee(e); setInviteOpen(true); }} onCopyLink={copyInviteLink} />
                     </TableCell>
                   )}
                   {visibleColumns.includes("last_login") && (
