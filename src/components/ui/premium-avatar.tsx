@@ -127,7 +127,7 @@ export function PremiumAvatar({
         {avatarUrl ? (
           <img
             src={avatarUrl}
-            alt={name ?? `${firstName ?? ""} ${lastName ?? ""}`.trim() || "avatar"}
+            alt={name ?? (`${firstName ?? ""} ${lastName ?? ""}`.trim() || "avatar")}
             loading="lazy"
             className="h-full w-full object-cover"
           />
