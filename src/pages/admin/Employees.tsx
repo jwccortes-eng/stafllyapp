@@ -360,6 +360,11 @@ export default function Employees() {
 
   useEffect(() => { fetchEmployees(); }, [selectedCompanyId]);
 
+  // Reset bulk selection whenever the visible scope changes — prevents acting
+  // on hidden rows. Search is debounce-free and cheap; covers all filter axes.
+  useEffect(() => { clearSelection(); }, [statusTab, filterRole, filterGroup, search, selectedCompanyId]);
+
+
   const activeEmployeeCount = employees.filter(e => e.is_active !== false).length;
   const atEmployeeLimit = !canAddEmployees(activeEmployeeCount);
 
