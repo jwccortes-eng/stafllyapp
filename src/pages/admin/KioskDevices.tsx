@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Monitor, Plus, Pencil, Trash2, Copy, Check, ExternalLink } from "lucide-react";
+import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
 
 interface KioskDevice {
   id: string;
@@ -106,6 +107,11 @@ export default function KioskDevices() {
 
   return (
     <div className="space-y-6">
+      <LegacyDeprecationBanner
+        replacementHref="/app/kiosk"
+        replacementLabel="Kiosk Hub"
+        description="Kiosk Hub centraliza dispositivos, actividad en vivo y métricas de fichaje en una sola vista premium."
+      />
       <PageHeader title="Dispositivos Kiosk" subtitle="Gestiona los terminales de fichaje compartido" icon={Monitor}
         rightSlot={<div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild><a href={`${APP_BASE_URL}/kiosk`} target="_blank" rel="noopener"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Abrir Kiosk</a></Button>

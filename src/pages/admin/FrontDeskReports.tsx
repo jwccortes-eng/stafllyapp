@@ -16,6 +16,7 @@ import { getVisitTypeMeta, type VisitType } from "@/hooks/useFrontDesk";
 import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
 
 interface VisitRow {
   id: string;
@@ -133,6 +134,11 @@ export default function FrontDeskReports() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
+      <LegacyDeprecationBanner
+        replacementHref="/app/front-desk"
+        replacementLabel="Front Desk Hub"
+        description="Front Desk Hub unifica intake, cola de atención, prioridad y trazabilidad por persona."
+      />
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Front Desk · Reportes</h1>

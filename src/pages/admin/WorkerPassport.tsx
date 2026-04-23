@@ -20,6 +20,7 @@ import {
   Clock, Building2, Globe, Lock, Award, Languages, Car, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
 
 /* ─── Types ─── */
 interface Employee {
@@ -235,6 +236,11 @@ export default function WorkerPassport() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
+      <LegacyDeprecationBanner
+        replacementHref={employeeId ? `/app/people/${employeeId}` : "/app/employees"}
+        replacementLabel="Unified Person Profile"
+        description="El nuevo perfil maestro consolida identidad, readiness, documentos, asistencia, payroll y actividad reciente."
+      />
       <div className="flex items-center justify-between">
         <PageHeader title="Worker Passport" subtitle="Professional verified profile" />
         <Button variant="outline" size="sm" onClick={handleConsolidate} disabled={consolidating || !wp.profile?.id} className="gap-1.5 text-xs">

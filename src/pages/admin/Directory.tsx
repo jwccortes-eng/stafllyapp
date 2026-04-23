@@ -10,6 +10,7 @@ import { formatPersonName, formatDisplayText, localeSort } from "@/lib/format-he
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { useEmployeeStatuses, type EmployeeOnlineStatus } from "@/hooks/useEmployeeStatus";
 import { Badge } from "@/components/ui/badge";
+import { LegacyDeprecationBanner } from "@/components/transition/LegacyDeprecationBanner";
 
 const STATUS_LABELS: Record<EmployeeOnlineStatus, { label: string; className: string }> = {
   online: { label: "En línea", className: "bg-earning/15 text-earning border-earning/30" },
@@ -73,6 +74,13 @@ export default function Directory() {
 
   return (
     <div>
+      <div className="px-4 sm:px-6 pt-4">
+        <LegacyDeprecationBanner
+          replacementHref="/app/employees"
+          replacementLabel="Worker Hub"
+          description="Worker Hub incluye búsqueda, contactos, estado en línea y perfil maestro de cada persona en una sola vista."
+        />
+      </div>
       <PageHeader
         variant="1"
         icon={Users}
