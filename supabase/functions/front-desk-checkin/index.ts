@@ -464,6 +464,204 @@ Deno.serve(async (req) => {
       return jsonResp({ success: true, duration_seconds: duration });
     }
 
+    // ====================================================================
+    // ============= PHASE 2: CRM EVOLUTION ACTIONS =======================
+    // ====================================================================
+
+    // ============= START VISIT (after intake reason) =============
+    if (action === "start_visit") {
+      const { employee_id, intake_reason, language, device_id } = body;
+      if (!employee_id || !intake_reason) {
+        return jsonResp({ error: "employee_id e intake_reason requeridos" }, 400);
+      }
+
+      const { data: emp } = await adminClient
+        .from("employees")
+        .select("company_id")
+        .eq("id", employee_id)
+        .maybeSingle();
+      if (!emp) return jsonResp({ error: "Empleado no encontrado" }, 404);
+
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const safeDeviceId =
+        typeof device_id === "string" && UUID_RE.test(device_id) ? device_id : null;
+
+      const reasonToType: Record<string, string> = {
+        update_data: "update_data",
+        check_pending: "general_inquiry",
+        payment_issue: "payment_support",
+        documents_help: "fix_documents",
+        portal_help: "portal_help",
+        leave_request: "other",
+        leave_comment: "general_inquiry",
+        pickup_check: "pickup_check",
+        other: "other",
+      };
+
+      const { data: visit, error: insertErr } = await adminClient
+        .from("office_visits")
+        .insert({
+          employee_id,
+          company_id: emp.company_id,
+          visit_type: reasonToType[intake_reason] ?? "other",
+          intake_reason,
+          status: "in_progress",
+          channel: "front_desk_kiosk",
+          language: language || "es",
+          device_id: safeDeviceId,
+          activity_timeline: [
+            { at: new Date().toISOString(), kind: "case_opened", intake_reason },
+          ],
+        })
+        .select("id, case_number, case_code, intake_reason, status, checked_in_at")
+        .single();
+
+      if (insertErr) return jsonResp({ error: insertErr.message }, 500);
+      return jsonResp({ success: true, visit });
+    }
+
+    // ============= CLOSE VISIT (resolution + rating) =============
+    if (action === "close_visit") {
+      const { visit_id, final_resolution, resolution_note, rating, rating_comment } = body;
+      if (!visit_id) return jsonResp({ error: "visit_id requerido" }, 400);
+
+      const allowedRes = new Set(["resolved", "pending_followup", "escalated", "cancelled"]);
+      const res = allowedRes.has(final_resolution || "") ? final_resolution! : "resolved";
+
+      const now = new Date().toISOString();
+      const { data: existing } = await adminClient
+        .from("office_visits")
+        .select("checked_in_at, activity_timeline")
+        .eq("id", visit_id)
+        .maybeSingle();
+      if (!existing) return jsonResp({ error: "Caso no encontrado" }, 404);
+
+      const duration = existing.checked_in_at
+        ? Math.round((Date.now() - new Date(existing.checked_in_at).getTime()) / 1000)
+        : null;
+
+      const statusMap: Record<string, string> = {
+        resolved: "resolved",
+        pending_followup: "pending_followup",
+        escalated: "escalated",
+        cancelled: "cancelled",
+      };
+
+      const update: Record<string, any> = {
+        checked_out_at: now,
+        duration_seconds: duration,
+        final_resolution: res,
+        status: statusMap[res],
+      };
+      if (resolution_note !== undefined) update.resolution_note = resolution_note;
+      if (rating) {
+        update.rating = rating;
+        update.rating_score = RATING_TO_SCORE[rating] ?? null;
+        update.rating_submitted_at = now;
+      }
+      if (rating_comment !== undefined) update.rating_comment = rating_comment;
+
+      const prevTimeline = Array.isArray(existing.activity_timeline) ? existing.activity_timeline : [];
+      update.activity_timeline = [
+        ...prevTimeline,
+        { at: now, kind: "case_closed", resolution: res, has_rating: !!rating },
+      ];
+
+      const { data: updated, error: updErr } = await adminClient
+        .from("office_visits")
+        .update(update)
+        .eq("id", visit_id)
+        .select("id, case_number, case_code, status, final_resolution, rating, duration_seconds")
+        .single();
+
+      if (updErr) return jsonResp({ error: updErr.message }, 500);
+      return jsonResp({ success: true, visit: updated });
+    }
+
+    // ============= CAPTURE KIOSK PHOTO =============
+    if (action === "capture_kiosk_photo") {
+      const { employee_id, photo_base64, visit_id } = body;
+      if (!employee_id || !photo_base64) {
+        return jsonResp({ error: "employee_id y photo_base64 requeridos" }, 400);
+      }
+
+      const match = photo_base64.match(/^data:(image\/\w+);base64,(.*)$/);
+      const mime = match?.[1] ?? "image/jpeg";
+      const raw = match?.[2] ?? photo_base64;
+      if (raw.length > 3_500_000) {
+        return jsonResp({ error: "Foto demasiado grande" }, 400);
+      }
+      if (!/^image\/(jpe?g|png|webp)$/.test(mime)) {
+        return jsonResp({ error: "Formato de foto no soportado" }, 400);
+      }
+
+      let bytes: Uint8Array;
+      try {
+        const bin = atob(raw);
+        bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      } catch {
+        return jsonResp({ error: "Foto inválida (base64 corrupto)" }, 400);
+      }
+
+      const ext = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
+      const path = `${employee_id}/kiosk-${Date.now()}.${ext}`;
+
+      const { error: upErr } = await adminClient.storage
+        .from("employee-avatars")
+        .upload(path, bytes, { contentType: mime, upsert: true });
+      if (upErr) return jsonResp({ error: `Error subiendo foto: ${upErr.message}` }, 500);
+
+      const { data: pub } = adminClient.storage.from("employee-avatars").getPublicUrl(path);
+      const photoUrl = pub.publicUrl;
+
+      const { data: updated, error: empErr } = await adminClient
+        .from("employees")
+        .update({ avatar_url: photoUrl })
+        .eq("id", employee_id)
+        .select(EMPLOYEE_SELECT)
+        .single();
+      if (empErr) return jsonResp({ error: empErr.message }, 500);
+
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (visit_id && UUID_RE.test(visit_id)) {
+        const { data: v } = await adminClient
+          .from("office_visits")
+          .select("activity_timeline")
+          .eq("id", visit_id)
+          .maybeSingle();
+        const prev = Array.isArray(v?.activity_timeline) ? v!.activity_timeline : [];
+        await adminClient
+          .from("office_visits")
+          .update({
+            photo_captured_in_kiosk: true,
+            photo_url_captured: photoUrl,
+            photo_taken: true,
+            activity_timeline: [...prev, { at: new Date().toISOString(), kind: "photo_captured" }],
+          })
+          .eq("id", visit_id);
+      }
+
+      return jsonResp({ success: true, photo_url: photoUrl, employee: updated });
+    }
+
+    // ============= GET VISIT =============
+    if (action === "get_visit") {
+      const { visit_id } = body;
+      if (!visit_id) return jsonResp({ error: "visit_id requerido" }, 400);
+      const { data: visit, error: getErr } = await adminClient
+        .from("office_visits")
+        .select(
+          "id, case_number, case_code, intake_reason, status, final_resolution, " +
+            "rating, rating_comment, resolution_note, photo_captured_in_kiosk, " +
+            "activity_timeline, escalation_history, checked_in_at, checked_out_at",
+        )
+        .eq("id", visit_id)
+        .maybeSingle();
+      if (getErr) return jsonResp({ error: getErr.message }, 500);
+      return jsonResp({ success: true, visit });
+    }
+
     return jsonResp({ error: "Acción inválida" }, 400);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
