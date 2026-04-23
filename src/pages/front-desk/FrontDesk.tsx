@@ -30,10 +30,19 @@ import {
   type InquiryCategory,
   type PaymentRow,
   type SelfUpdatePayload,
+  type ActiveCase,
+  type IntakeReason,
+  type FinalResolution,
+  type RatingValue,
 } from "@/hooks/useFrontDesk";
 import { NumericKeypad } from "@/components/front-desk/NumericKeypad";
 import { AttractMode } from "@/components/front-desk/AttractMode";
 import { FrontDeskBackdrop } from "@/components/front-desk/FrontDeskArtwork";
+import { TicketBadge } from "@/components/front-desk/TicketBadge";
+import { IntakeReasonStep } from "@/components/front-desk/IntakeReasonStep";
+import { PhotoCaptureStep } from "@/components/front-desk/PhotoCaptureStep";
+import { ResolutionStep } from "@/components/front-desk/ResolutionStep";
+import { RatingStep } from "@/components/front-desk/RatingStep";
 import { ensureFrontDeskBundleFresh } from "@/lib/front-desk-cache-bust";
 
 type Step =
