@@ -310,6 +310,7 @@ function App() {
                 <Route path="application-settings" element={<CompanyRequiredGuard><ApplicationSettings /></CompanyRequiredGuard>} />
                 <Route path="upgrade-requests" element={<UpgradeRequests />} />
                 <Route path="invoicing/clients" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClients /></ModuleGate></CompanyRequiredGuard>} />
+                <Route path="invoicing/clients/import" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingClientsImport /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="invoicing/service-blocks" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingServiceBlocks /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="invoicing/invoices" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoices /></ModuleGate></CompanyRequiredGuard>} />
                 <Route path="invoicing/invoices/new" element={<CompanyRequiredGuard><ModuleGate moduleKey="tenant_invoicing"><InvoicingInvoiceNew /></ModuleGate></CompanyRequiredGuard>} />
